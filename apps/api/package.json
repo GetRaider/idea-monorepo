@@ -3,11 +3,8 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "dev": "nest start --watch",
     "build": "nest build",
-    "start": "nest start",
-    "start:debug": "nest start --debug --watch",
-    "start:prod": "node dist/main",
+    "dev": "nodemon",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
@@ -40,6 +37,7 @@
     "ts-loader": "^9.4.3",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "5.5.4"
+    "typescript": "5.5.4",
+    "nodemon": "3.1.7"
   }
 }

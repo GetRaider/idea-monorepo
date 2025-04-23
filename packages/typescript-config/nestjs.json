@@ -11,6 +11,7 @@
     "moduleResolution": "Node10",
     "noFallthroughCasesInSwitch": false,
     "noImplicitAny": false,
+    "noEmit": true,
     "removeComments": true,
     "skipLibCheck": true,
     "sourceMap": true,

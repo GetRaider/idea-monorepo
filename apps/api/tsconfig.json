@@ -1,6 +1,12 @@
 {
-  "extends": "@repo/typescript-config/nestjs.json",
+  "extends": "@denzel/typescript-config/nestjs.json",
   "compilerOptions": {
-    "baseUrl": "./"
+    "baseUrl": "src",
+    "paths": {
+      "@modules/*": ["modules/*"],
+      "@schemas/*": ["schemas/*"],
+      "@models/*": ["models/*"],
+      "@helpers/*": ["helpers/*"]
+    }
   }
 }

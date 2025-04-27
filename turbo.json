@@ -1,5 +1,6 @@
 {
   "$schema": "https://turborepo.com/schema.json",
+  "ui": "tui",
   "globalDependencies": ["**/.env.*local"],
   "tasks": {
     "dev": {
@@ -8,10 +9,11 @@
     },
     "build": {
       "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
       "outputs": [".next/**", "!.next/cache/**", "tsconfig.build.tsbuildinfo"]
     },
-    "format": {},
-    "lint": {},
+    "lint": { "dependsOn": ["^lint"] },
+    "format": { "dependsOn": ["^format"] },
     "test": {},
     "test:e2e": {}
   }

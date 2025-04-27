@@ -12,3 +12,5 @@ export const links = {
     Link,
   },
 };
+
+export const helpers = {};

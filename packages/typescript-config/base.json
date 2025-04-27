@@ -1,5 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
+  "ts-node": { "require": ["tsconfig-paths/register"] },
   "compilerOptions": {
     "declaration": true,
     "declarationMap": true,

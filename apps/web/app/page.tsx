@@ -1,11 +1,11 @@
 import { Suspense } from 'react';
 import Image from 'next/image';
 
-import { Link } from '@denzel/api/links/entities/link.entity';
+import { Link } from '@denzel/api/src/links/entities/link.entity';
 
-import { Card } from '@denzel/ui/card';
-import { Code } from '@denzel/ui/code';
-import { Button } from '@denzel/ui/button';
+import { Card } from '@denzel/ui/src/card';
+import { Code } from '@denzel/ui/src/code';
+import { Button } from '@denzel/ui/src/button';
 
 import styles from './page.module.css';
 

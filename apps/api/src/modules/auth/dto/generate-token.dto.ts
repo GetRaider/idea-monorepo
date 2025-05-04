@@ -7,7 +7,6 @@ import {
   IRoleModel,
 } from '@denzel/api/src/models/index';
 import { IGetTokenResponseDto } from '@modules/auth/dto/get-token.dto';
-import { IRoleModel } from '@models/role.model';
 
 export interface IGenerateTokenRequestDto {
   readonly id: string;

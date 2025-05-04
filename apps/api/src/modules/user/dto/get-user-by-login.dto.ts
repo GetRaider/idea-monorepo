@@ -1,7 +1,7 @@
-import { IsObject, IsString, ValidateNested } from "class-validator";
-import { Type } from "class-transformer";
+import { IsObject, IsString, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
 
-import { UserModel, IUserModel } from "@models/index";
+import { UserModel, IUserModel } from '@denzel/api/src/models/index';
 
 export interface IGetUserByLoginRequestDto {
   readonly login: string;

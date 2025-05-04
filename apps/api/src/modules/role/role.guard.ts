@@ -3,12 +3,12 @@ import {
   ExecutionContext,
   Injectable,
   Logger,
-} from "@nestjs/common";
-import { Observable } from "rxjs";
-import { Reflector } from "@nestjs/core";
+} from '@nestjs/common';
+import { Observable } from 'rxjs';
+import { Reflector } from '@nestjs/core';
 
-import { IRoleModel } from "@models/index";
-import { Role } from "@constants/roles.constants";
+import { IRoleModel } from '@denzel/api/src/models/index';
+import { Role } from '@denzel/api/src/constants/roles.constants';
 
 @Injectable()
 export class RoleGuard implements CanActivate {
@@ -22,7 +22,7 @@ export class RoleGuard implements CanActivate {
   ): boolean | Promise<boolean> | Observable<boolean> {
     try {
       const requiredRoles = this.reflector.get<Array<Role>>(
-        "roles",
+        'roles',
         context.getHandler(),
       );
 
@@ -34,8 +34,10 @@ export class RoleGuard implements CanActivate {
 
       return this.matchRoles(requiredRoles, request.user.roles);
     } catch (error) {
-      this.logger.error({ error: error.message }, "Failed to auth by roles");
-      throw new Error(error);
+      if (error instanceof Error) {
+        this.logger.error({ error: error.message }, 'Failed to auth by roles');
+        throw new Error(error.message);
+      }
     }
   }
 

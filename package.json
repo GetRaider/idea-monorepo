@@ -11,15 +11,17 @@
     "test": "turbo run test",
     "test:e2e": "turbo run test:e2e",
     "lint": "turbo run lint",
-    "format": "prettier --write \"**/*.{ts,tsx,md}\""
+    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "codeCheck": "npx tsc && pnpm lint"
   },
   "devDependencies": {
-    "@repo/eslint-config": "workspace:*",
-    "@repo/typescript-config": "workspace:*",
-    "prettier": "^3.2.5",
-    "turbo": "^2.5.1"
+    "@denzel/eslint-config": "workspace:*",
+    "@denzel/typescript-config": "workspace:*",
+    "prettier": "^3.5.3",
+    "turbo": "^2.5.2",
+    "typescript": "5.5.4"
   },
-  "packageManager": "pnpm@8.15.5",
+  "packageManager": "pnpm@10.9.0",
   "engines": {
     "node": ">=20.18.0"
   }

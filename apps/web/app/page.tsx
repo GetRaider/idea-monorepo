@@ -1,13 +1,16 @@
+'use client';
+
 import { Suspense } from 'react';
 import Image from 'next/image';
 
-import { Link } from '@repo/api/links/entities/link.entity';
+import { Link } from '@denzel/api/src/links/entities/link.entity';
 
-import { Card } from '@repo/ui/card';
-import { Code } from '@repo/ui/code';
-import { Button } from '@repo/ui/button';
+import { Card } from '@denzel/ui/src/card';
+import { Code } from '@denzel/ui/src/code';
+import { Button } from '@denzel/ui/src/components/button';
 
 import styles from './page.module.css';
+import axios from 'axios';
 
 const Gradient = ({
   conic,
@@ -64,33 +67,17 @@ const LinksSectionForTest = () => {
   );
 };
 
+const useGetUsers = () => {
+  re
+}
+
 const RootPage = ({ params }: { params: { forTest?: boolean } }) => {
   return (
     <main className={styles.main}>
-      <div className={styles.description}>
-        <p>
-          examples/<Code className={styles.code}>with-nestjs</Code>
-        </p>
-        <div>
-          <a
-            href="https://vercel.com?utm_source=create-turbo&utm_medium=basic&utm_campaign=create-turbo"
-            rel="noopener noreferrer"
-            target="_blank"
-          >
-            By{' '}
-            <Image
-              alt="Vercel Logo"
-              className={styles.vercelLogo}
-              height={24}
-              priority
-              src="/vercel.svg"
-              width={100}
-            />
-          </a>
-        </div>
-      </div>
-
-      <Button appName="web (with-nestjs)" className={styles.button}>
+      <Button
+        onClick={async () => await fetchAllUsers()}
+        className={styles.button}
+      >
         Click me!
       </Button>
 
@@ -160,5 +147,19 @@ const RootPage = ({ params }: { params: { forTest?: boolean } }) => {
     </main>
   );
 };
+
+function fetchAllUsers() {
+  let response = null;
+  try {
+    response = axios.post('http://localhost:8090/users', {
+      headers: {
+        Authorization:
+          'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsb2dpbiI6ImFsZXgubG9jYWwuYWRtaW4rNEBiZWF0LmNvbSIsImlhdCI6MTc1Mjg3MzIxOCwiZXhwIjoxNzUyOTU5NjE4fQ.3SuFrgGUmwrDLKxJGuAttSf90ZZvwk-cS-_-1R5TWMM',
+      },
+    });
+  } catch (error) {
+    console.error(error);
+  }
+}
 
 export default RootPage;

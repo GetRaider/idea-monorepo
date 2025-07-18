@@ -1,5 +1,5 @@
 {
-  "name": "@repo/jest-config",
+  "name": "@denzel/jest-config",
   "version": "0.0.0",
   "private": true,
   "license": "MIT",

@@ -1,8 +1,8 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
+  "ts-node": { "require": ["tsconfig-paths/register"] },
   "compilerOptions": {
-    "declaration": true,
-    "declarationMap": true,
+    "noEmit": true,
     "esModuleInterop": true,
     "incremental": false,
     "isolatedModules": true,

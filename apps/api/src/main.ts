@@ -1,12 +1,22 @@
 import { NestFactory } from '@nestjs/core';
+import { Logger } from '@nestjs/common';
 
 import { AppModule } from '@modules/app.module';
-import { links } from '@denzel/api/src';
+import { HttpExceptionFilter } from '@denzel/api/src/helpers/httpExceptionFilter.helper';
+import { configHelper } from '@helpers/config.helper';
 
-async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
-  await app.listen(3000);
+void (async function bootstrap() {
+  try {
+    const app = await NestFactory.create(AppModule);
+    const port = configHelper.getServerPort();
 
-  console.log({ asd: links.dto.CreateLinkDto });
-}
-bootstrap();
+    app.useGlobalFilters(new HttpExceptionFilter(new Logger()));
+    await app.listen(port, () =>
+      console.info(`Server has started on 'http://localhost:${port}'`),
+    );
+  } catch (error) {
+    const errorMessage =
+      error instanceof Error ? error.message : 'unknown reason';
+    console.error(`Server has not started because of: ${errorMessage}`);
+  }
+})();

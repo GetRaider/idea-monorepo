@@ -6,7 +6,8 @@
       "@modules/*": ["modules/*"],
       "@schemas/*": ["schemas/*"],
       "@models/*": ["models/*"],
-      "@helpers/*": ["helpers/*"]
+      "@helpers/*": ["helpers/*"],
+      "@denzel/api": ["@denzel/api/src/*"]
     }
   }
 }

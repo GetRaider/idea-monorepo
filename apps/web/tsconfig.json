@@ -1,11 +1,20 @@
 {
   "extends": "@denzel/typescript-config/nextjs.json",
   "compilerOptions": {
+    "baseUrl": "src",
     "plugins": [
       {
         "name": "next"
+      },
+      {
+        "name": "typed-css-modules"
       }
-    ]
+    ],
+    "paths": {
+      "@components/*": ["components/*"],
+      "@hooks/*": ["hooks/*"],
+      "@lib/*": ["lib/*"]
+    }
   },
   "include": [
     "next-env.d.ts",

@@ -7,8 +7,13 @@
   min-height: 100vh;
 }
 
-.vercelLogo {
-  filter: invert(1);
+.header {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6rem;
+  min-height: 100vh;
 }
 
 .description {
@@ -33,15 +38,16 @@
   position: relative;
   margin: 0;
   padding: 1rem;
-  background-color: rgba(var(--callout-rgb), 0.5);
-  border: 1px solid rgba(var(--callout-border-rgb), 0.3);
+  background-color: var(--color-slate-3);
+  border: 1px solid var(--color-slate-6);
   border-radius: var(--border-radius);
 }
 
 .code {
   font-weight: 700;
-  font-family: var(--font-mono), Menlo, Monaco, Consolas, 'Liberation Mono',
-    'Courier New', monospace;
+  font-family:
+    var(--font-mono), Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+    monospace;
 }
 
 .hero {
@@ -60,9 +66,10 @@
   justify-content: space-between;
   align-items: center;
   width: auto;
-  font-family: system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
-    'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-    'Segoe UI Symbol', 'Noto Color Emoji';
+  font-family:
+    system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans',
+    sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
+    'Noto Color Emoji';
   padding-top: 48px;
 
   @media (min-width: 768px) {
@@ -93,8 +100,8 @@
 .card {
   padding: 1rem 1.2rem;
   border-radius: var(--border-radius);
-  background: rgba(var(--card-rgb), 0);
-  border: 1px solid rgba(var(--card-border-rgb), 0);
+  background: var(--color-slate-2);
+  border: 1px solid var(--color-slate-6);
   transition:
     background 200ms,
     border 200ms;
@@ -176,13 +183,8 @@
     padding: 2rem 1rem 1.4rem;
     border-radius: 0;
     border: none;
-    border-bottom: 1px solid rgba(var(--callout-border-rgb), 0.25);
-    background: linear-gradient(
-      to bottom,
-      rgba(var(--background-start-rgb), 1),
-      rgba(var(--callout-rgb), 0.5)
-    );
-    background-clip: padding-box;
+    border-bottom: 1px solid var(--color-slate-6);
+    background: var(--color-slate-2);
     backdrop-filter: blur(24px);
   }
 
@@ -192,11 +194,7 @@
     inset: auto 0 0;
     padding: 2rem;
     height: 200px;
-    background: linear-gradient(
-      to bottom,
-      transparent 0%,
-      rgb(var(--background-end-rgb)) 40%
-    );
+    background: var(--color-slate-1);
     z-index: 1;
   }
 }
@@ -204,8 +202,8 @@
 /* Enable hover only on non-touch devices */
 @media (hover: hover) and (pointer: fine) {
   .card:hover {
-    background: rgba(var(--card-rgb), 0.1);
-    border: 1px solid rgba(var(--card-border-rgb), 0.15);
+    background: var(--color-slate-3);
+    border: 1px solid var(--color-slate-7);
   }
 
   .card:hover span {

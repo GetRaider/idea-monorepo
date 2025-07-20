@@ -9,21 +9,6 @@
     'Fira Mono', 'Droid Sans Mono', 'Courier New', monospace;
 }
 
-/* Specific override for our custom theme class */
-html .radix-theme-with-gradient {
-  background: linear-gradient(
-    135deg,
-    #f8fafc 0%,
-    #e2e8f0 20%,
-    #cbd5e1 40%,
-    #64748b 60%,
-    #475569 80%,
-    #1e293b 100%
-  ) !important;
-  background-attachment: fixed !important;
-  min-height: 100vh;
-}
-
 * {
   box-sizing: border-box;
   padding: 0;
@@ -34,6 +19,22 @@ body {
   max-width: 100vw;
   overflow-x: hidden;
   min-height: 100vh;
+}
+
+/* Specific override for our custom theme class */
+html .radix-theme-with-gradient {
+  background: linear-gradient(
+    135deg,
+    #475569 0%,
+    #334155 20%,
+    #1e293b 40%,
+    #0f172a 60%,
+    #020617 80%,
+    #000000 100%
+  ) !important;
+  background-attachment: fixed !important;
+  min-height: 100vh;
+  color: #f8fafc;
 }
 
 a {

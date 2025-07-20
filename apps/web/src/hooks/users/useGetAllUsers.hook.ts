@@ -9,6 +9,7 @@ export interface User {
   age: number;
 }
 
+// TODO: Fix getting users two times
 export function useGetAllUsers() {
   const [data, setData] = useState<User[] | null>(null);
   const [loading, setLoading] = useState<boolean>(true);

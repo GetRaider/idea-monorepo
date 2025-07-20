@@ -1,6 +1,7 @@
 import { PropsWithChildren } from 'react';
 import { Inter } from 'next/font/google';
 import { Theme } from '@radix-ui/themes';
+import Header from '../../../../packages/ui/src/components/Header/Header.component';
 
 import './globals.css';
 
@@ -17,6 +18,7 @@ export default function ({ children }: Readonly<PropsWithChildren>) {
           panelBackground="solid"
           className="radix-theme-with-gradient"
         >
+          <Header />
           {children}
         </Theme>
       </body>

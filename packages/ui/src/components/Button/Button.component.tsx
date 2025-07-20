@@ -9,5 +9,9 @@ interface ButtonProps {
 }
 
 export const Button = ({ children, className, onClick }: ButtonProps) => {
-  return <ButtonRadix size="3">{children}</ButtonRadix>;
+  return (
+    <ButtonRadix className={className} size="3" onClick={onClick}>
+      {children}
+    </ButtonRadix>
+  );
 };

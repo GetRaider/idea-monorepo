@@ -23,7 +23,7 @@ export function useGetAllUsers() {
       try {
         // TODO: Polish fetching users
         const res = await api.get('/users');
-        const users = res?.data?.users;
+        const users = res.data;
         console.log({ users });
         if (isMounted) {
           setData(users);

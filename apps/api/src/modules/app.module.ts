@@ -3,23 +3,33 @@ import { ConfigModule } from '@nestjs/config';
 import { Logger, Module } from '@nestjs/common';
 
 import { UserModule } from '@modules/user/user.module';
-import { RoleModule } from '@modules/role/role.module';
-import { AuthModule } from '@modules/auth/auth.module';
-import { CardDeckModule } from '@modules/card-deck/card-deck.module';
-import { LinksModule } from '@modules/links/links.module';
 
 import { configHelper } from '@helpers/config.helper';
 import { HttpExceptionFilter } from '@denzel/api/src/helpers/httpExceptionFilter.helper';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { UserEntity } from 'entities/user.entity';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ envFilePath: `.${process.env.NODE_ENV}.env` }),
-    configHelper.getMongooseModule(),
-    AuthModule,
+    // App modules
     UserModule,
-    RoleModule,
-    CardDeckModule,
-    LinksModule,
+
+    // PostgreSqlDB
+    TypeOrmModule.forRoot({
+      type: 'postgres',
+      host: 'localhost',
+      port: 5432,
+      username: 'postgres',
+      password: 'password',
+      database: 'devdb',
+      entities: [UserEntity],
+      synchronize: true, // ❗ Только для разработки
+      autoLoadEntities: true,
+    }),
+    TypeOrmModule.forFeature([UserEntity]),
+
+    // TODO: Enable once we have different env files
+    // ConfigModule.forRoot({ envFilePath: `.${process.env.NODE_ENV}.env` }),
   ],
   providers: [{ provide: APP_FILTER, useClass: HttpExceptionFilter }, Logger],
 })

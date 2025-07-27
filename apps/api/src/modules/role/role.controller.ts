@@ -9,23 +9,23 @@ import {
   Post,
   Put,
   Query,
-} from "@nestjs/common";
+} from '@nestjs/common';
 
-import {RoleService} from "@modules/role/role.service";
+import { RoleService } from '@modules/role/role.service';
 import {
   CreateRoleRequestDto,
   CreateRoleResponseDto,
-} from "@modules/role/dto/create-role.dto";
+} from '@modules/role/dto/create-role.dto';
 import {
   GetRolesRequestDto,
   GetRolesResponseDto,
-} from "@modules/role/dto/get-roles.dto";
+} from '@modules/role/dto/get-roles.dto';
 import {
   UpdateRoleRequestDto,
   UpdateRoleResponseDto,
-} from "@modules/role/dto/update-role.dto";
+} from '@modules/role/dto/update-role.dto';
 
-@Controller("/roles")
+@Controller('/roles')
 export class RoleController {
   constructor(private readonly roleService: RoleService) {}
 
@@ -43,17 +43,17 @@ export class RoleController {
     return this.roleService.getByQuery(query);
   }
 
-  @Put(":id")
+  @Put(':id')
   async update(
-    @Param("id") id: string,
+    @Param('id') id: string,
     @Body() dto: UpdateRoleRequestDto,
   ): Promise<UpdateRoleResponseDto> {
     return this.roleService.updateById(id, dto);
   }
 
-  @Delete(":id")
+  @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async delete(@Param("id") id: string): Promise<void> {
+  async delete(@Param('id') id: string): Promise<void> {
     return this.roleService.deleteById(id);
   }
 }

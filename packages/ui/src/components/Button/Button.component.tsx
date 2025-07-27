@@ -1,17 +1,17 @@
 'use client';
-
 import { ReactNode } from 'react';
+import { Button as ButtonRadix } from '@radix-ui/themes';
 
 interface ButtonProps {
   children: ReactNode;
   className?: string;
-  onClick: () => unknown;
+  onClick?: () => unknown;
 }
 
 export const Button = ({ children, className, onClick }: ButtonProps) => {
   return (
-    <button className={className} onClick={onClick}>
+    <ButtonRadix className={className} size="3" onClick={onClick}>
       {children}
-    </button>
+    </ButtonRadix>
   );
 };

@@ -1,11 +1,11 @@
 import {
   CreateUserRequestDto,
   ICreateUserRequestDto,
-} from "@modules/user/dto/create-user.dto";
+} from '@modules/user/dto/create-user.dto';
 import {
   GetTokenResponseDto,
   IGetTokenResponseDto,
-} from "@modules/auth/dto/get-token.dto";
+} from '@modules/auth/dto/get-token.dto';
 
 export interface IRegistrationRequestDto extends ICreateUserRequestDto {}
 

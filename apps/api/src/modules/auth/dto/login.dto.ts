@@ -3,7 +3,7 @@ import {
   IValidateUserResponseDto,
   ValidateUserRequestDto,
   ValidateUserResponseDto,
-} from "@modules/auth/dto/validate-user.dto";
+} from '@modules/auth/dto/validate-user.dto';
 
 export interface ILoginArgs extends IValidateUserRequestDto {}
 

@@ -10,24 +10,24 @@ import {
   Put,
   Query,
   UseGuards,
-} from "@nestjs/common";
+} from '@nestjs/common';
 
-import { UserService } from "@modules/user/user.service";
+import { UserService } from '@modules/user/user.service';
 import {
   CreateUserRequestDto,
   CreateUserResponseDto,
-} from "@modules/user/dto/create-user.dto";
+} from '@modules/user/dto/create-user.dto';
 import {
   GetUsersRequestDto,
   GetUsersResponseDto,
-} from "@modules/user/dto/get-users.dto";
+} from '@modules/user/dto/get-users.dto';
 import {
   UpdateUserRequestDto,
   UpdateUserResponseDto,
-} from "@modules/user/dto/update-user.dto";
-import { AuthGuard } from "@modules/auth/auth.guard";
+} from '@modules/user/dto/update-user.dto';
+import { AuthGuard } from '@modules/auth/auth.guard';
 
-@Controller("/users")
+@Controller('/users')
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
@@ -46,19 +46,19 @@ export class UserController {
     return this.userService.getByQuery(query);
   }
 
-  @Put(":id")
+  @Put(':id')
   @UseGuards(AuthGuard)
   async update(
-    @Param("id") id: string,
+    @Param('id') id: string,
     @Body() dto: UpdateUserRequestDto,
   ): Promise<UpdateUserResponseDto> {
     return this.userService.updateById(id, dto);
   }
 
-  @Delete(":id")
+  @Delete(':id')
   @UseGuards(AuthGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
-  async delete(@Param("id") id: string): Promise<void> {
+  async delete(@Param('id') id: string): Promise<void> {
     return this.userService.deleteById(id);
   }
 

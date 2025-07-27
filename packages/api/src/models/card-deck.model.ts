@@ -1,6 +1,6 @@
-import { IsArray, IsOptional, IsString } from "class-validator";
+import { IsArray, IsOptional, IsString } from 'class-validator';
 
-import { ICardModel } from "./card.model";
+import { ICardModel } from './card.model';
 
 export interface ICardDeckModel {
   readonly id: string;

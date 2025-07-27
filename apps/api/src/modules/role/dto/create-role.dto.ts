@@ -3,11 +3,11 @@ import {
   IsOptional,
   IsString,
   ValidateNested,
-} from "class-validator";
-import { Type } from "class-transformer";
+} from 'class-validator';
+import { Type } from 'class-transformer';
 
-import { RoleModel, IRoleModel } from "@denzel/api/src/models/index";
-import { Role } from "@denzel/api/src/constants/roles.constants";
+import { RoleModel, IRoleModel } from '@denzel/api/src/models/index';
+import { Role } from '@denzel/api/src/constants/roles.constants';
 
 export interface ICreateRoleRequestDto {
   readonly value?: Role;

@@ -10,28 +10,28 @@ import {
   Put,
   Query,
   UseGuards,
-} from "@nestjs/common";
+} from '@nestjs/common';
 
 import {
   CreateCardDeckRequestDto,
   CreateCardDeckResponseDto,
-} from "@modules/card-deck/dto/create-card-deck.dto";
+} from '@modules/card-deck/dto/create-card-deck.dto';
 import {
   GetCardDeckRequestDto,
   GetCardDeckResponseDto,
-} from "@modules/card-deck/dto/get-card-decks.dto";
-import { CardDeckService } from "@modules/card-deck/card-deck.service";
-import { AuthGuard } from "@modules/auth/auth.guard";
+} from '@modules/card-deck/dto/get-card-decks.dto';
+import { CardDeckService } from '@modules/card-deck/card-deck.service';
+import { AuthGuard } from '@modules/auth/auth.guard';
 import {
   UpdateUserRequestDto,
   UpdateUserResponseDto,
-} from "@modules/user/dto/update-user.dto";
+} from '@modules/user/dto/update-user.dto';
 import {
   UpdateCardDeckRequestDto,
   UpdateCardDeckResponseDto,
-} from "@modules/card-deck/dto/update-card-deck.dto";
+} from '@modules/card-deck/dto/update-card-deck.dto';
 
-@Controller("/card-deck")
+@Controller('/card-deck')
 export class CardDeckController {
   constructor(private readonly cardDeckService: CardDeckService) {}
 
@@ -44,10 +44,10 @@ export class CardDeckController {
     return this.cardDeckService.create(dto);
   }
 
-  @Put(":id")
+  @Put(':id')
   // @UseGuards(AuthGuard)
   async update(
-    @Param("id") id: string,
+    @Param('id') id: string,
     @Body() dto: UpdateCardDeckRequestDto,
   ): Promise<UpdateCardDeckResponseDto> {
     return this.cardDeckService.updateById(id, dto);
@@ -61,10 +61,10 @@ export class CardDeckController {
     return this.cardDeckService.getByQuery(query);
   }
 
-  @Delete(":id")
+  @Delete(':id')
   // @UseGuards(AuthGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
-  async delete(@Param("id") id: string): Promise<void> {
+  async delete(@Param('id') id: string): Promise<void> {
     return this.cardDeckService.deleteById(id);
   }
 

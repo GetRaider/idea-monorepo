@@ -9,6 +9,7 @@ void (async function bootstrap() {
   try {
     const app = await NestFactory.create(AppModule);
     const port = configHelper.getServerPort();
+
     // TODO: Handle CORS properly
     app.enableCors({
       origin: true, // Allow requests from any origin

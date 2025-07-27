@@ -1,9 +1,9 @@
 import { PropsWithChildren } from 'react';
 import { Inter } from 'next/font/google';
 import { Theme } from '@radix-ui/themes';
-import Header from '../../../../packages/ui/src/components/Header/Header.component';
 
 import './globals.css';
+import Header from '@denzel/ui/src/components/Header/Header.component';
 
 const inter = Inter({ subsets: ['latin'] });
 

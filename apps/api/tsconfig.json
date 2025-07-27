@@ -4,6 +4,7 @@
     "baseUrl": "src",
     "paths": {
       "@modules/*": ["modules/*"],
+      "@entities/*": ["entities/*"],
       "@schemas/*": ["schemas/*"],
       "@models/*": ["models/*"],
       "@helpers/*": ["helpers/*"]

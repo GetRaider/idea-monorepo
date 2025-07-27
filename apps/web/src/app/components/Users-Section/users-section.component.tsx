@@ -13,9 +13,9 @@ export const UsersSection = () => {
     );
   return (
     <div>
-      {users?.map((user) => (
-        <div key={user._id} className={styles.userCard}>
-          <p>{user.login}</p>
+      {users?.map((user, index) => (
+        <div key={index} className={styles.userCard}>
+          <p>{user.name}</p>
         </div>
       ))}
     </div>

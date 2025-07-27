@@ -5,7 +5,7 @@ export const api: AxiosInstance = axios.create({
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
-    Authorization: `Bearer ${process.env.NEXT_PUBLIC_API_TOKEN}`,
+    // Authorization: `Bearer ${process.env.NEXT_PUBLIC_API_TOKEN}`,
   },
 });
 

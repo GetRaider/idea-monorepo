@@ -6,27 +6,15 @@ import { UserModule } from '@modules/user/user.module';
 
 import { configHelper } from '@helpers/config.helper';
 import { HttpExceptionFilter } from '@denzel/api/src/helpers/httpExceptionFilter.helper';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { UserEntity } from 'entities/user.entity';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
     // App modules
     UserModule,
+    AuthModule,
 
-    // PostgreSqlDB
-    TypeOrmModule.forRoot({
-      type: 'postgres',
-      host: 'localhost',
-      port: 5432,
-      username: 'postgres',
-      password: 'password',
-      database: 'devdb',
-      entities: [UserEntity],
-      synchronize: true, // ❗ Только для разработки
-      autoLoadEntities: true,
-    }),
-    TypeOrmModule.forFeature([UserEntity]),
+    // Drizzle is initialized via db/client.ts, no Nest module required
 
     // TODO: Enable once we have different env files
     // ConfigModule.forRoot({ envFilePath: `.${process.env.NODE_ENV}.env` }),

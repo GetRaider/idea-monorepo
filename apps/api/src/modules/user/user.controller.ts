@@ -13,33 +13,24 @@ import {
 } from '@nestjs/common';
 
 import { UserService } from '@modules/user/user.service';
-import {
-  CreateUserRequestDto,
-  CreateUserResponseDto,
-} from '@modules/user/dto/create-user.dto';
-import {
-  GetUsersRequestDto,
-  GetUsersResponseDto,
-} from '@modules/user/dto/get-users.dto';
-import {
-  UpdateUserRequestDto,
-  UpdateUserResponseDto,
-} from '@modules/user/dto/update-user.dto';
-import { UserEntity } from '@entities/user.entity';
+import { AuthGuard, Session, UserSession } from '@thallesp/nestjs-better-auth';
+import { SelectUser } from '../../db/schema';
 
 @Controller('/users')
+// @UseGuards(AuthGuard)
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Post()
   // To create user without credentials during testing
   // @UseGuards(AuthGuard)
-  async create(@Body() dto: CreateUserRequestDto): Promise<UserEntity> {
+  async create(@Body() dto: SelectUser): Promise<SelectUser> {
+    console.log('Controllerdto', dto);
     return this.userService.create(dto);
   }
 
   @Get()
-  async getAll(): Promise<UserEntity[]> {
+  async getAll(): Promise<SelectUser[]> {
     return this.userService.getAll();
   }
 

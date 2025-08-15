@@ -5,6 +5,8 @@ config();
 interface IProcessEnvHelper {
   IS_LOCAL: string;
   PORT: string;
+  DATABASE_URL: string;
+  WEB_ORIGIN: string;
   DB_BASE_URL: string;
   DB_CLUSTER_URL: string;
   DB_LOGIN: string;

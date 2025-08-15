@@ -4,6 +4,7 @@ import { Theme } from '@radix-ui/themes';
 
 import './globals.css';
 import Header from '@denzel/ui/src/components/Header/Header.component';
+import { authClient } from '../lib/auth-client';
 
 const inter = Inter({ subsets: ['latin'] });
 

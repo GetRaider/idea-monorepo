@@ -1,5 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { Logger } from '@nestjs/common';
+// express body parsing is handled by @thallesp/nestjs-better-auth when bodyParser is false
 
 import { AppModule } from '@modules/app.module';
 import { HttpExceptionFilter } from '@denzel/api/src/helpers/httpExceptionFilter.helper';
@@ -7,8 +8,12 @@ import { configHelper } from '@helpers/config.helper';
 
 void (async function bootstrap() {
   try {
-    const app = await NestFactory.create(AppModule);
+    const app = await NestFactory.create(AppModule, {
+      bodyParser: false, // Required for Better Auth [https://www.better-auth.com/docs/integrations/nestjs]
+    });
     const port = configHelper.getServerPort();
+
+    // Body parsing is handled by @thallesp/nestjs-better-auth when bodyParser is false
 
     // TODO: Handle CORS properly
     app.enableCors({

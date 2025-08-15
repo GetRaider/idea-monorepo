@@ -1,32 +1,46 @@
 import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-
-import { UserEntity } from '@entities/user.entity';
+import { and, eq } from 'drizzle-orm';
+import { db } from '../../db/client';
+import { InsertUser, SelectUser } from '../../db/schema';
+import { users } from '../../../auth-schema';
 
 @Injectable()
 export class UserService {
-  constructor(
-    @InjectRepository(UserEntity) private userRepo: Repository<UserEntity>,
-    private readonly log: Logger,
-  ) {}
+  constructor(private readonly log: Logger) {}
 
-  async create(dto: Partial<UserEntity>): Promise<UserEntity> {
-    if (await this.getOneByGithubId(dto?.githubId)) {
-      const errorMessage = `User with githubId ${dto?.githubId} already exists`;
-      this.log.error(errorMessage);
-      throw new HttpException(errorMessage, HttpStatus.BAD_REQUEST);
+  async create(dto: Partial<SelectUser>): Promise<SelectUser> {
+    if (!dto || Object.keys(dto).length === 0) {
+      throw new HttpException('Request body is empty', HttpStatus.BAD_REQUEST);
     }
+    const now = new Date();
+    const insert: any = {
+      id: dto.id ?? crypto.randomUUID?.() ?? undefined,
+      name: dto.name ?? 'User',
+      email: dto.email ?? `user_${Date.now()}@example.com`,
+      emailVerified: dto.emailVerified ?? false,
+      image: dto.image ?? null,
+      createdAt: dto.createdAt ?? now,
+      updatedAt: dto.updatedAt ?? now,
+    };
 
-    return this.userRepo.save(dto);
+    try {
+      const [created] = await db
+        .insert(users)
+        .values(insert as InsertUser)
+        .returning();
+      return created;
+    } catch (error) {
+      this.log.error(error);
+      throw new HttpException('Failed to create user', HttpStatus.BAD_REQUEST);
+    }
   }
 
-  async getAll(): Promise<UserEntity[]> {
-    return this.userRepo.find();
+  async getAll(): Promise<SelectUser[]> {
+    return db.select().from(users);
   }
 
-  async getOneByGithubId(githubId: string): Promise<UserEntity | null> {
-    return this.userRepo.findOneBy({ githubId });
+  async getOneByGithubId(_githubId: string): Promise<SelectUser | null> {
+    return null; // schema no longer contains githubId
   }
 
   // async getByQuery(

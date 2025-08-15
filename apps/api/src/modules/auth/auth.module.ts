@@ -18,6 +18,7 @@ export const auth = betterAuth({
       verifications,
     },
   }),
+  baseURL: 'http://localhost:8090',
   trustedOrigins: [processEnv.WEB_ORIGIN ?? 'http://localhost:3001'],
   basePath: '/api/auth',
   emailAndPassword: { enabled: false },

@@ -37,6 +37,22 @@ export class BetterAuthProxyController {
     const request = new Request(url, { method, headers, body });
     const response = await auth.handler(request as any);
 
+    // Check if this is a successful OAuth callback and redirect to web app
+    if (
+      req.originalUrl.includes('/callback/github') &&
+      response.status === 302
+    ) {
+      const location = response.headers.get('location');
+      if (
+        location &&
+        (location === 'http://localhost:8090' ||
+          location === 'http://localhost:8090/')
+      ) {
+        // Redirect to web app instead of API server
+        return res.redirect('http://localhost:3001');
+      }
+    }
+
     res.status(response.status);
     response.headers.forEach((value, key) => res.setHeader(key, value));
     const arrayBuffer = await response.arrayBuffer();

@@ -1,29 +1,18 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  HttpCode,
-  HttpStatus,
-  Param,
-  Post,
-  Put,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Get, Post } from '@nestjs/common';
 
 import { UserService } from '@modules/user/user.service';
-import { AuthGuard, Session, UserSession } from '@thallesp/nestjs-better-auth';
 import { SelectUser } from '../../db/schema';
 
 @Controller('/users')
-// @UseGuards(AuthGuard)
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
+  @Get('/hello')
+  async hello(): Promise<string> {
+    return 'Hello Denzels!';
+  }
+
   @Post()
-  // To create user without credentials during testing
-  // @UseGuards(AuthGuard)
   async create(@Body() dto: SelectUser): Promise<SelectUser> {
     console.log('Controllerdto', dto);
     return this.userService.create(dto);

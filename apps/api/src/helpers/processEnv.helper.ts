@@ -1,20 +1,14 @@
-import { config } from 'dotenv';
-
-config();
+// Environment variables are loaded by Nest's ConfigModule (see AppModule)
 
 interface IProcessEnvHelper {
-  IS_LOCAL: string;
   PORT: string;
-  DATABASE_URL: string;
+  GITHUB_CLIENT_ID: string;
+  GITHUB_CLIENT_SECRET: string;
+  GITHUB_TOKEN: string;
+  AUTH_URL: string;
+  AUTH_SECRET: string;
+  DB_URL: string;
   WEB_ORIGIN: string;
-  DB_BASE_URL: string;
-  DB_CLUSTER_URL: string;
-  DB_LOGIN: string;
-  DB_PASSWORD: string;
-  MONGODB_HOST_URL: string;
-  MONGODB_USERNAME: string;
-  MONGODB_PASSWORD: string;
-  SECRET: string;
 }
 
 export const processEnv = process.env as unknown as IProcessEnvHelper;

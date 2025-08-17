@@ -1,9 +1,12 @@
-import { Controller, All, Req, Res } from '@nestjs/common';
+import { Controller, All, Req, Res, Inject } from '@nestjs/common';
 import type { Request, Response as ExpressResponse } from 'express';
-import { auth } from './auth.module';
+
+import { BETTER_AUTH } from './auth.constants';
 
 @Controller('api/auth')
 export class BetterAuthProxyController {
+  constructor(@Inject(BETTER_AUTH) private readonly auth: any) {}
+
   @All('*')
   async proxy(@Req() req: Request, @Res() res: ExpressResponse) {
     const protocol =
@@ -35,7 +38,7 @@ export class BetterAuthProxyController {
     })();
 
     const request = new Request(url, { method, headers, body });
-    const response = await auth.handler(request as any);
+    const response = await this.auth.handler(request as any);
 
     // Check if this is a successful OAuth callback and redirect to web app
     if (

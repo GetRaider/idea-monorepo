@@ -1,36 +1,48 @@
 import { Module } from '@nestjs/common';
-import { BetterAuthProxyController } from './auth.controller';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 
-import { processEnv } from '@helpers/processEnv.helper';
 import { db } from 'db/client';
 import { users, sessions, accounts, verifications } from '../../../auth-schema';
-
-export const auth = betterAuth({
-  database: drizzleAdapter(db, {
-    provider: 'pg',
-    usePlural: true,
-    schema: {
-      users,
-      sessions,
-      accounts,
-      verifications,
-    },
-  }),
-  baseURL: 'http://localhost:8090',
-  trustedOrigins: [processEnv.WEB_ORIGIN ?? 'http://localhost:3001'],
-  basePath: '/api/auth',
-  emailAndPassword: { enabled: false },
-  socialProviders: {
-    github: {
-      clientId: process.env.GITHUB_CLIENT_ID!,
-      clientSecret: process.env.GITHUB_CLIENT_SECRET!,
-    },
-  },
-});
+import { BetterAuthProxyController } from './auth.controller';
+import { BETTER_AUTH } from './auth.constants';
 
 @Module({
+  imports: [ConfigModule],
   controllers: [BetterAuthProxyController],
+  providers: [
+    {
+      provide: BETTER_AUTH,
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => {
+        const baseURL = configService.get<string>('AUTH_URL');
+        const webOrigin = configService.get<string>('WEB_ORIGIN');
+        const githubClientId = configService.get<string>('GITHUB_CLIENT_ID');
+        const githubClientSecret = configService.get<string>(
+          'GITHUB_CLIENT_SECRET',
+        );
+
+        return betterAuth({
+          database: drizzleAdapter(db, {
+            provider: 'pg',
+            usePlural: true,
+            schema: { users, sessions, accounts, verifications },
+          }),
+          baseURL,
+          trustedOrigins: [webOrigin],
+          basePath: '/api/auth',
+          emailAndPassword: { enabled: false },
+          socialProviders: {
+            github: {
+              clientId: githubClientId!,
+              clientSecret: githubClientSecret!,
+            },
+          },
+        });
+      },
+    },
+  ],
+  exports: [BETTER_AUTH],
 })
 export class AuthModule {}

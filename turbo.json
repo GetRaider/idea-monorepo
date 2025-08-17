@@ -3,19 +3,33 @@
   "ui": "tui",
   "globalDependencies": ["**/.env.*local"],
   "tasks": {
+    "build": {
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "outputs": [".next/**", "!.next/cache/**", "tsconfig.build.tsbuildinfo"]
+    },
     "dev": {
       "cache": false,
       "persistent": true
     },
-    "build": {
-      "dependsOn": ["^build"],
-      "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "outputs": [".next/**", "!.next/cache/**", "tsconfig.build.tsbuildinfo"]
+    "prod": {
+      "dependsOn": ["build"],
+      "cache": true,
+      "persistent": false
     },
-    "lint": { "dependsOn": ["^lint"] },
-    "format": { "dependsOn": ["^format"] },
-    "codeCheck": { "dependsOn": ["^codeCheck"] },
-    "test": {},
-    "test:e2e": {}
+    "lint": {
+      "dependsOn": ["^lint"]
+    },
+    "format": {
+      "dependsOn": ["^format"]
+    },
+    "codeCheck": {
+      "dependsOn": ["^codeCheck"]
+    },
+    "test": {
+      "dependsOn": ["^test"]
+    },
+    "test:e2e": {
+      "dependsOn": ["^test:e2e"]
+    }
   }
 }

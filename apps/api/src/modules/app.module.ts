@@ -2,8 +2,8 @@ import { APP_FILTER } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { Logger, Module } from '@nestjs/common';
 
-import { HttpExceptionFilter } from '@denzel/api/src/helpers/httpExceptionFilter.helper';
-import { UserModule } from '@modules/user/user.module';
+import { HttpExceptionFilter } from '../helpers/httpExceptionFilter.helper';
+import { UserModule } from './user/user.module';
 import { AuthModule } from './auth/auth.module';
 
 @Module({

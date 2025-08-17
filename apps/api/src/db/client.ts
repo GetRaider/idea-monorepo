@@ -1,7 +1,7 @@
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 
-import { processEnv } from '@helpers/processEnv.helper';
+import { processEnv } from '../helpers/processEnv.helper';
 
 const connectionString = processEnv.DB_URL;
 

@@ -3,7 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 
-import { db } from 'db/client';
+import { db } from '../../db/client';
 import { users, sessions, accounts, verifications } from '../../../auth-schema';
 import { BetterAuthProxyController } from './auth.controller';
 import { BETTER_AUTH } from './auth.constants';

@@ -16,7 +16,8 @@
     "auth:generate:config": "pnpm dlx @better-auth/cli@latest generate --config src/modules/auth/auth.module.ts",
     "auth:migrate": "pnpm dlx @better-auth/cli@latest migrate --config src/modules/auth/auth.module.ts",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "drizzle-kit migrate",
+    "vercel-build": "pnpm run build"
   },
   "dependencies": {
     "@denzel/api": "workspace:*",

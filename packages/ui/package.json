@@ -3,8 +3,12 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
+    "build": "tsc -b -v",
     "lint": "eslint . --max-warnings 0",
     "generate:component": "turbo gen react-component"
+  },
+  "exports": {
+    "./*": "./src/*.tsx"
   },
   "devDependencies": {
     "@denzel/eslint-config": "workspace:*",

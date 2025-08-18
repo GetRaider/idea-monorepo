@@ -3,8 +3,7 @@ import { Inter } from 'next/font/google';
 import { Theme } from '@radix-ui/themes';
 
 import './globals.css';
-import Header from '@denzel/ui/src/components/Header/Header.component';
-import { authClient } from '../lib/auth-client';
+import Header from '@denzel/ui/components/Header/Header.component';
 
 const inter = Inter({ subsets: ['latin'] });
 

@@ -4,8 +4,13 @@
   "globalDependencies": ["**/.env.*local"],
   "tasks": {
     "build": {
-      "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "outputs": [".next/**", "!.next/cache/**", "tsconfig.build.tsbuildinfo"]
+      "inputs": ["^build"],
+      "outputs": [
+        ".next/**",
+        "!.next/cache/**",
+        "tsconfig.build.tsbuildinfo",
+        "dist/**"
+      ]
     },
     "dev": {
       "cache": false,

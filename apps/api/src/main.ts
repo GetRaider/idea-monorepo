@@ -3,9 +3,9 @@ import { Logger } from '@nestjs/common';
 import { ExpressAdapter } from '@nestjs/platform-express';
 import express from 'express';
 
-import { AppModule } from './modules/app.module';
-import { HttpExceptionFilter } from '@denzel/api/src/helpers/httpExceptionFilter.helper';
-import { configHelper } from './helpers/config.helper';
+import { AppModule } from '@modules/app.module';
+import { HttpExceptionFilter } from '@denzel/api/helpers/httpExceptionFilter.helper';
+import { configHelper } from '@helpers/config.helper';
 
 // Single code path that supports both local dev (listen) and Vercel (handler)
 const server = express();

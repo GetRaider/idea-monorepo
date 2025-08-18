@@ -1,12 +1,20 @@
-import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
-import { and, eq } from 'drizzle-orm';
-import { db } from '../../db/client';
+import {
+  HttpException,
+  HttpStatus,
+  Inject,
+  Injectable,
+  Logger,
+} from '@nestjs/common';
+import { DRIZZLE_DB } from '../../db/tokens';
 import { InsertUser, SelectUser } from '../../db/schema';
 import { users } from '../../../auth-schema';
 
 @Injectable()
 export class UserService {
-  constructor(private readonly log: Logger) {}
+  constructor(
+    private readonly log: Logger,
+    @Inject(DRIZZLE_DB) private readonly db: any,
+  ) {}
 
   async create(dto: Partial<SelectUser>): Promise<SelectUser> {
     if (!dto || Object.keys(dto).length === 0) {
@@ -24,7 +32,7 @@ export class UserService {
     };
 
     try {
-      const [created] = await db
+      const [created] = await this.db
         .insert(users)
         .values(insert as InsertUser)
         .returning();
@@ -36,7 +44,7 @@ export class UserService {
   }
 
   async getAll(): Promise<SelectUser[]> {
-    return db.select().from(users);
+    return this.db.select().from(users);
   }
 
   async getOneByGithubId(_githubId: string): Promise<SelectUser | null> {

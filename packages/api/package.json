@@ -4,8 +4,33 @@
   "private": true,
   "license": "MIT",
   "scripts": {
+    "build": "tsc -b -v",
+    "dev": "pnpm build --watch",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\"",
     "format": "eslint \"{src,apps,libs,test}/**/*.ts\""
+  },
+  "files": [
+    "./dist/**"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "typesVersions": {
+    "*": {
+      "*": [
+        "src/*"
+      ]
+    }
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    },
+    "./*": {
+      "import": "./dist/*.js",
+      "require": "./dist/*.js"
+    }
   },
   "dependencies": {
     "@nestjs/mapped-types": "*",

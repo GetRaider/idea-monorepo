@@ -1,7 +1,6 @@
 'use client';
 
-import { useState } from 'react';
-import { Button } from '@denzel/ui/src/';
+import { Button } from '@denzel/ui/components/Button/Button.component';
 
 import styles from './page.module.css';
 

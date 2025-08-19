@@ -37,7 +37,7 @@ async function bootstrap() {
   const port = configHelper.getServerPort();
 
   app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
+    console.log(`Server is running on port ${port}!`);
   });
 }
 

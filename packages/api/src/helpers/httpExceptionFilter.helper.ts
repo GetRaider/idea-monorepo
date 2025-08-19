@@ -3,8 +3,9 @@ import {
   Catch,
   ArgumentsHost,
   HttpException,
-  Logger,
   HttpStatus,
+  Logger,
+  LoggerService,
 } from '@nestjs/common';
 import { Response } from 'express';
 import { BaseExceptionFilter } from '@nestjs/core';
@@ -14,8 +15,11 @@ export class HttpExceptionFilter
   extends BaseExceptionFilter
   implements ExceptionFilter
 {
-  constructor(private logger: Logger) {
+  private readonly logger: LoggerService;
+
+  constructor() {
     super();
+    this.logger = new Logger(HttpExceptionFilter.name);
   }
 
   catch(exception: HttpException | Error, host: ArgumentsHost) {

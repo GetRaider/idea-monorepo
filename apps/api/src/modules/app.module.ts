@@ -31,6 +31,11 @@ import { DatabaseModule } from '../db/database.module';
     UserModule,
     AuthModule,
   ],
-  providers: [{ provide: APP_FILTER, useClass: HttpExceptionFilter }, Logger],
+  providers: [
+    {
+      provide: APP_FILTER,
+      useFactory: () => new HttpExceptionFilter(),
+    },
+  ],
 })
 export class AppModule {}

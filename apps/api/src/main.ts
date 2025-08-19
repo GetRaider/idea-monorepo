@@ -1,9 +1,8 @@
-import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 
 import { AppModule } from './modules/app.module';
-import { HttpExceptionFilter } from '@denzel/api/helpers/httpExceptionFilter.helper';
 import { configHelper } from './helpers/config.helper';
+import { HttpExceptionFilter } from '@denzel/api/helpers/httpExceptionFilter.helper';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
@@ -33,7 +32,7 @@ async function bootstrap() {
     optionsSuccessStatus: 204,
   });
 
-  app.useGlobalFilters(new HttpExceptionFilter(new Logger()));
+  app.useGlobalFilters(new HttpExceptionFilter());
   const port = configHelper.getServerPort();
 
   app.listen(port, () => {

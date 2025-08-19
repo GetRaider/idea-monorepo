@@ -5,8 +5,6 @@ import { UpdateLinkDto } from './links/dto/update-link.dto';
 import { HttpExceptionFilter } from './helpers/httpExceptionFilter.helper';
 import { propertyHelper } from './helpers/property.helper';
 
-export { HttpExceptionFilter } from './helpers/httpExceptionFilter.helper';
-
 export const links = {
   dto: {
     CreateLinkDto,

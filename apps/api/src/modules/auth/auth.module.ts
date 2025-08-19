@@ -23,10 +23,6 @@ import { processEnv } from '@helpers/processEnv.helper';
         const githubClientSecret = configService.get<string>(
           'GITHUB_CLIENT_SECRET',
         );
-        console.log('baseURL', baseURL);
-        console.log('webOrigin', webOrigin);
-        console.log('githubClientId', githubClientId);
-        console.log('githubClientSecret', githubClientSecret);
 
         return betterAuth({
           database: drizzleAdapter(db, {

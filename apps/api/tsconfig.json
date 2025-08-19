@@ -1,6 +1,7 @@
 {
   "extends": "@denzel/typescript-config/nestjs.json",
   "compilerOptions": {
+    "outDir": "dist",
     "baseUrl": "src",
     "paths": {
       "@modules/*": ["modules/*"],
@@ -9,5 +10,7 @@
       "@models/*": ["models/*"],
       "@helpers/*": ["helpers/*"]
     }
-  }
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "test", "**/*spec.ts"]
 }

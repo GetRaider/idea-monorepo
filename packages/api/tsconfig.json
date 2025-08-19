@@ -1,13 +1,13 @@
 {
   "extends": "@denzel/typescript-config/nestjs.json",
   "compilerOptions": {
-    "allowJs": true,
+    "outDir": "dist",
     "baseUrl": "src",
+    "allowJs": true,
     "esModuleInterop": true,
     "incremental": false,
-    "outDir": "dist",
     "noEmit": false
   },
-  "include": ["src"],
-  "exclude": ["node_modules", "test", "dist", "**/*spec.ts"]
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "test", "**/*spec.ts"]
 }

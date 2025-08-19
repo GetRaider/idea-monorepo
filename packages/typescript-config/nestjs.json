@@ -2,6 +2,8 @@
   "$schema": "https://json.schemastore.org/tsconfig",
   "extends": "./base.json",
   "compilerOptions": {
+    "outDir": "./dist",
+    "noEmit": false,
     "allowSyntheticDefaultImports": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
@@ -11,7 +13,6 @@
     "moduleResolution": "Node10",
     "noFallthroughCasesInSwitch": false,
     "noImplicitAny": false,
-    "noEmit": true,
     "removeComments": true,
     "skipLibCheck": true,
     "sourceMap": true,

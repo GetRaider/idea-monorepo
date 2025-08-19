@@ -7,7 +7,7 @@ import { DRIZZLE_DB } from '../../db/tokens';
 import { users, sessions, accounts, verifications } from '../../../auth-schema';
 import { BetterAuthProxyController } from './auth.controller';
 import { BETTER_AUTH } from './auth.constants';
-import { processEnv } from '@helpers/processEnv.helper';
+import { processEnv } from '../../helpers/processEnv.helper';
 
 @Module({
   imports: [ConfigModule],

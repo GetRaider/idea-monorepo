@@ -5,6 +5,7 @@
   "license": "MIT",
   "scripts": {
     "build": "tsc -b -v",
+    "rebuild": "rm -rf dist && pnpm build",
     "dev": "pnpm build --watch",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\"",
     "format": "eslint \"{src,apps,libs,test}/**/*.ts\""

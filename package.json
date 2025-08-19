@@ -7,6 +7,7 @@
   "license": "MIT",
   "scripts": {
     "build": "turbo run build",
+    "rebuild": "turbo run rebuild",
     "dev": "turbo run dev",
     "prod": "turbo run prod",
     "test": "turbo run test",

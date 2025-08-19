@@ -4,8 +4,8 @@ import { Logger, Module } from '@nestjs/common';
 import { resolve } from 'path';
 
 import { HttpExceptionFilter } from '@denzel/api/helpers/httpExceptionFilter.helper';
-import { UserModule } from '@modules/user/user.module';
-import { AuthModule } from '@modules/auth/auth.module';
+import { UserModule } from './user/user.module';
+import { AuthModule } from './auth/auth.module';
 import { DatabaseModule } from '../db/database.module';
 
 @Module({

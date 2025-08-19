@@ -1,6 +1,6 @@
 import type { Config } from 'drizzle-kit';
 
-import { processEnv } from '@helpers/processEnv.helper';
+import { processEnv } from './src/helpers/processEnv.helper';
 
 export default {
   schema: ['./src/db/schema.ts', './auth-schema.ts'],

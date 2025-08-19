@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "build": "nest build && npx tsc",
+    "build": "nest build && npx tsc && cp tsconfig.json dist/",
     "dev": "NODE_ENV=development nest start --watch",
     "prod": "NODE_ENV=production node dist/main",
     "test": "jest",

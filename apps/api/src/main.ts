@@ -1,14 +1,4 @@
-import { register } from 'tsconfig-paths';
-import { loadConfig } from 'tsconfig-paths';
-
-const configResult = loadConfig(__dirname + '/../tsconfig.json');
-
-if (configResult.resultType === 'success') {
-  register({
-    baseUrl: configResult.baseUrl,
-    paths: configResult.paths,
-  });
-}
+import 'tsconfig-paths/register';
 
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';

@@ -13,7 +13,7 @@
   "routes": [
     {
       "src": "/apps/api/(.*)",
-      "dest": "/apps/api/src/main.ts",
+      "dest": "/apps/api/dist/src/main.js",
       "methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]
     }
   ],

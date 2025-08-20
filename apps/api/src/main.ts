@@ -1,8 +1,9 @@
 import { NestFactory } from '@nestjs/core';
+import { Logger } from '@nestjs/common';
 
 import { AppModule } from './modules/app.module';
 import { configHelper } from './helpers/config.helper';
-import { HttpExceptionFilter } from '../../../packages/api/src/helpers/httpExceptionFilter.helper';
+import { HttpExceptionFilter } from '@denzel/api/helpers/httpExceptionFilter.helper';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {

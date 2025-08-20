@@ -17,5 +17,5 @@
       "methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]
     }
   ],
-  "outputDirectory": "/apps/api/dist"
+  "outputDirectory": "dist"
 }

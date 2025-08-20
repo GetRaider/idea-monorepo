@@ -1,16 +1,11 @@
 {
   "version": 2,
   "installCommand": "pnpm install",
-  "buildCommand": "pnpm build",
   "framework": null,
   "public": true,
   "builds": [
     {
       "src": "src/main.ts",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "../../packages/api/src/index.ts",
       "use": "@vercel/node"
     }
   ],

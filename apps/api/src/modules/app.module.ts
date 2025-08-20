@@ -3,7 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { Logger, Module } from '@nestjs/common';
 import { resolve } from 'path';
 
-import { HttpExceptionFilter } from '@denzel/api/helpers/httpExceptionFilter.helper';
+import { HttpExceptionFilter } from '../../../../packages/api/src/helpers/httpExceptionFilter.helper';
 import { UserModule } from './user/user.module';
 import { AuthModule } from './auth/auth.module';
 import { DatabaseModule } from '../db/database.module';

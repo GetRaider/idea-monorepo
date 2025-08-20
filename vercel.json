@@ -11,5 +11,6 @@
       "src": "/(.*)",
       "dest": "/apps/api/src/vercel.ts"
     }
-  ]
+  ],
+  "outputDirectory": "dist"
 }

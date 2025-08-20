@@ -1,6 +1,7 @@
 {
   "version": 2,
   "installCommand": "pnpm install",
+  "buildCommand": "pnpm build",
   "framework": null,
   "public": true,
   "builds": [

@@ -1,8 +1,10 @@
 {
   "version": 2,
+  "installCommand": "pnpm install --recursive --frozen-lockfile",
+  "buildCommand": "pnpm build",
   "builds": [
     {
-      "src": "/src/vercel.ts",
+      "src": "src/vercel.ts",
       "use": "@vercel/node"
     }
   ],

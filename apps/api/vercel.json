@@ -1,17 +1,35 @@
 {
   "version": 2,
-  "installCommand": "pnpm install --recursive --frozen-lockfile",
+  "installCommand": "pnpm install",
   "buildCommand": "pnpm build",
+  "framework": null,
+  "public": true,
   "builds": [
     {
-      "src": "src/vercel.ts",
+      "src": "src/main.ts",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "../../packages/api/src/index.ts",
       "use": "@vercel/node"
     }
   ],
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "/src/vercel.ts"
+      "dest": "/src/main.ts",
+      "methods": [
+        "GET",
+        "POST",
+        "PUT",
+        "PATCH",
+        "OPTIONS",
+        "DELETE",
+        "HEAD",
+        "CONNECT",
+        "TRACE"
+      ],
+      "headers": { "Access-Control-Allow-Origin": "*" }
     }
   ],
   "outputDirectory": "dist"

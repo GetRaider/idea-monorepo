@@ -12,8 +12,8 @@
   ],
   "routes": [
     {
-      "src": "/apps/api/(.*)",
-      "dest": "/apps/api/dist/src/main.js",
+      "src": "/(.*)",
+      "dest": "/src/main.js",
       "methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]
     }
   ],

@@ -1,5 +1,5 @@
 {
-  "name": "@denzel/ui",
+  "name": "@repo/ui",
   "version": "0.0.0",
   "private": true,
   "scripts": {
@@ -11,8 +11,8 @@
     "./*": "./src/*.tsx"
   },
   "devDependencies": {
-    "@denzel/eslint-config": "workspace:*",
-    "@denzel/typescript-config": "workspace:*",
+    "@repo/eslint-config": "workspace:*",
+    "@repo/typescript-config": "workspace:*",
     "@turbo/gen": "^1.12.4",
     "@types/eslint": "^8.56.5",
     "@types/node": "^20.11.24",

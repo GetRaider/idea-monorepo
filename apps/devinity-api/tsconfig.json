@@ -1,0 +1,14 @@
+{
+  "extends": "@repo/typescript-config/nestjs.json",
+  "compilerOptions": {
+    "baseUrl": "./",
+    "outDir": "./dist",
+    "paths": {
+      "@modules/*": ["modules/*"],
+      "@entities/*": ["entities/*"],
+      "@schemas/*": ["schemas/*"],
+      "@models/*": ["models/*"],
+      "@helpers/*": ["helpers/*"]
+    }
+  }
+}

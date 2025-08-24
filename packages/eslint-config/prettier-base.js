@@ -1,10 +1,9 @@
-/** @type {import("prettier").Config} */
-module.exports = {
-  semi: true,
-  tabWidth: 2,
-  useTabs: false,
+/**
+ * @see https://prettier.io/docs/configuration
+ * @type {import("prettier").Config}
+ */
+const config = {
   singleQuote: true,
-  trailingComma: 'all',
-  bracketSpacing: true,
-  quoteProps: 'as-needed',
 };
+
+export default config;

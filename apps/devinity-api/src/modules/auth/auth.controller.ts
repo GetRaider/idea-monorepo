@@ -7,7 +7,7 @@ import { BETTER_AUTH } from './auth.constants';
 export class BetterAuthProxyController {
   constructor(@Inject(BETTER_AUTH) private readonly auth: any) {}
 
-  @All('*')
+  @All('*path')
   async proxy(@Req() req: Request, @Res() res: ExpressResponse) {
     const protocol =
       (req.headers['x-forwarded-proto'] as string) || req.protocol;

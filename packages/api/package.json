@@ -1,11 +1,39 @@
 {
-  "name": "@denzel/api",
+  "name": "@repo/api",
   "version": "0.0.0",
   "private": true,
   "license": "MIT",
   "scripts": {
+    "build": "tsc -b -v",
+    "rebuild": "rm -rf dist && pnpm build",
+    "dev": "pnpm build --watch",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\"",
     "format": "eslint \"{src,apps,libs,test}/**/*.ts\""
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "./dist/**"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "typesVersions": {
+    "*": {
+      "*": [
+        "src/*"
+      ]
+    }
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    },
+    "./*": {
+      "import": "./dist/*.js",
+      "require": "./dist/*.js"
+    }
   },
   "dependencies": {
     "@nestjs/mapped-types": "*",
@@ -15,8 +43,8 @@
     "@nestjs/platform-express": "^10.0.0"
   },
   "devDependencies": {
-    "@denzel/eslint-config": "workspace:*",
-    "@denzel/typescript-config": "workspace:*",
+    "@repo/eslint-config": "workspace:*",
+    "@repo/typescript-config": "workspace:*",
     "@types/node": "^20.3.1",
     "@types/express": "^4.17.17",
     "class-validator": "^0.14.1",

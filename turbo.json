@@ -1,11 +1,19 @@
 {
   "$schema": "https://turborepo.com/schema.json",
-  "ui": "tui",
   "globalDependencies": ["**/.env.*local"],
   "tasks": {
     "build": {
-      "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "outputs": [".next/**", "!.next/cache/**", "tsconfig.build.tsbuildinfo"]
+      "inputs": ["^build"],
+      "outputs": [
+        ".next/**",
+        "!.next/cache/**",
+        "tsconfig.build.tsbuildinfo",
+        "dist/**"
+      ]
+    },
+    "rebuild": {
+      "inputs": ["^rebuild"],
+      "outputs": ["dist/**"]
     },
     "dev": {
       "cache": false,

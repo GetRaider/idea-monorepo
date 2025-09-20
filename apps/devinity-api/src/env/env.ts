@@ -17,7 +17,8 @@ const envSchema = z.object({
   GITHUB_CLIENT_SECRET: z.string(),
   GITHUB_TOKEN: z.string(),
   BETTER_AUTH_SECRET: z.string(),
-  DB_URL: z.url(),
+  DEV_DB_URL: z.url(),
+  LOCAL_DB_URL: z.url().optional(),
 });
 
 const parsedEnv = envSchema.parse(process.env);
@@ -36,6 +37,7 @@ export const env = {
     secret: parsedEnv.BETTER_AUTH_SECRET,
   },
   db: {
-    url: parsedEnv.DB_URL,
+    dev_url: parsedEnv.DEV_DB_URL,
+    local_url: parsedEnv.LOCAL_DB_URL,
   },
 };

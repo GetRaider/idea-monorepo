@@ -3,5 +3,5 @@ import { Pool } from "pg";
 
 import { env } from "../env/env";
 
-export const pool = new Pool({ connectionString: env.db.url });
+export const pool = new Pool({ connectionString: env.db.dev_url });
 export const db = drizzle(pool);

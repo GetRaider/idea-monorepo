@@ -1,9 +1,10 @@
-import { Global, Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { Pool } from 'pg';
-import { drizzle } from 'drizzle-orm/node-postgres';
+import { Global, Module } from "@nestjs/common";
+import { ConfigModule, ConfigService } from "@nestjs/config";
+import { Pool } from "pg";
+import { drizzle } from "drizzle-orm/node-postgres";
 
-import { DRIZZLE_DB, PG_POOL } from './tokens';
+import { DRIZZLE_DB, PG_POOL } from "./tokens";
+import { env } from "../env/env";
 
 @Global()
 @Module({
@@ -12,22 +13,17 @@ import { DRIZZLE_DB, PG_POOL } from './tokens';
     {
       provide: PG_POOL,
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => {
-        const connectionString =
-          configService.get<string>('DB_URL') ||
-          process.env.DATABASE_URL ||
-          process.env.POSTGRES_URL ||
-          process.env.POSTGRES_PRISMA_URL;
+      useFactory: () => {
+        const connectionString = env.db.dev_url;
 
         if (!connectionString) {
           throw new Error(
-            "Database connection string is missing. Set 'DB_URL' or 'DATABASE_URL'",
+            "Database connection string is missing. Set 'DEV_DB_URL' or 'LOCAL_DB_URL'",
           );
         }
 
-        const sslEnabled =
-          configService.get('DB_SSL') === 'true' ||
-          process.env.PGSSLMODE === 'require';
+        // Supabase requires SSL connections
+        const sslEnabled = true;
 
         return new Pool({
           connectionString,

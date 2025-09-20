@@ -20,7 +20,7 @@ type NavItem = {
 };
 
 const navLinks: NavItem[] = [
-  { label: "Home", href: "/home", icon: "/icons/home.svg" },
+  { label: "Home", href: "/", icon: "/icons/home.svg" },
   { label: "Repositories", href: "/repos", icon: "/icons/repos.svg" },
   { label: "Users", href: "/users", icon: "/icons/users.svg" },
   { label: "Analytics", href: "/analytics", icon: "/icons/analytics.svg" },
@@ -55,7 +55,7 @@ export function Sidebar() {
     <SidebarContainer $collapsed={collapsed}>
       <NavGrid>
         {navLinks.map((link) => {
-          const isActive = pathname?.startsWith(link.href);
+          const isActive = pathname === link.href;
           const iconEl = link.icon ? (
             <Icon src={link.icon} alt="" width={20} height={20} />
           ) : null;

@@ -65,8 +65,8 @@ export default function Header({
             onMouseLeave={() => setShowToggle(false)}
           >
             <Logo
-              src="/denzel-logo-v2.png"
-              alt="Denzel Logo"
+              src="/devinity-logo.png"
+              alt="Devinity Logo"
               width={48}
               height={48}
             />

@@ -1,22 +1,22 @@
-import { Spinner } from '@radix-ui/themes';
-import { useGetAllUsers } from '@hooks/users/useGetAllUsers.hook';
-import styles from './users-section.module.css';
+import { Spinner } from "@radix-ui/themes";
+import { useGetAllUsers } from "@hooks/users/useGetAllUsers.hook";
+import { LoadingContainer, UserCard } from "./UsersSection.styles";
 
 export const UsersSection = () => {
   const { users, loading, error } = useGetAllUsers();
   if (loading)
     return (
-      <div className={styles.loading}>
+      <LoadingContainer>
         <Spinner size="3" />
         <p>Users are loading...</p>
-      </div>
+      </LoadingContainer>
     );
   return (
     <div>
       {users?.map((user, index) => (
-        <div key={index} className={styles.userCard}>
+        <UserCard key={index}>
           <p>{user.name}</p>
-        </div>
+        </UserCard>
       ))}
     </div>
   );

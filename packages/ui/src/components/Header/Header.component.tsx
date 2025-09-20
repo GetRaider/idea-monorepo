@@ -1,44 +1,96 @@
-'use client';
+"use client";
 
-import { Link } from '@radix-ui/themes';
-import styles from './Header.module.css';
+import { Avatar, Button, DropdownMenu, Link } from "@radix-ui/themes";
+import { PropsWithChildren } from "react";
+import {
+  HeaderContainer,
+  Container,
+  LogoContainer,
+  LogoLink,
+  Logo,
+  BrandName,
+  Actions,
+  AvatarButton,
+} from "./Header.styles";
 
-const navLinks = [
-  { label: 'Home', href: '/home' },
-  { label: 'Repositories', href: '/repos' },
-  { label: 'Users', href: '/users' },
-  { label: 'Analytics', href: '/analytics' },
-];
+export type HeaderProps = PropsWithChildren<{
+  userName?: string;
+  userEmail?: string;
+  userImageUrl?: string;
+  onProfileClick?: () => void;
+  onSignOut?: () => void;
+  rightSlot?: React.ReactNode;
+  hideBrandText?: boolean;
+}>;
 
-export default function Header() {
+export default function Header({
+  userName,
+  userEmail,
+  userImageUrl,
+  onProfileClick,
+  onSignOut,
+  rightSlot,
+  hideBrandText,
+}: HeaderProps) {
+  const initials = (userName || userEmail || "U")
+    .split(" ")
+    .map((s) => s.charAt(0).toUpperCase())
+    .slice(0, 2)
+    .join("");
+
   return (
-    <header className={styles.header}>
-      <div className={styles.container}>
-        <div className={styles.logoContainer}>
-          <Link href="/" className={styles.logoLink}>
-            <img
+    <HeaderContainer>
+      <Container>
+        <LogoContainer>
+          <LogoLink href="/">
+            <Logo
               src="/denzel-logo-v2.png"
               alt="Denzel Logo"
               width={40}
               height={40}
-              className={styles.logo}
             />
-            <span className={styles.brandName}>Denzel</span>
-          </Link>
-        </div>
+            <BrandName $hidden={hideBrandText || false}>Devinity</BrandName>
+          </LogoLink>
+        </LogoContainer>
 
-        <nav className={styles.navigation}>
-          <ul className={styles.navList}>
-            {navLinks.map((link) => (
-              <li className={styles.navItem} key={link.href}>
-                <Link href={link.href} className={styles.navLink}>
-                  {link.label}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
-      </div>
-    </header>
+        <Actions>
+          {rightSlot}
+          <DropdownMenu.Root>
+            <DropdownMenu.Trigger>
+              <AvatarButton aria-label="User menu">
+                <Avatar
+                  size="2"
+                  src={userImageUrl}
+                  fallback={initials}
+                  radius="full"
+                />
+              </AvatarButton>
+            </DropdownMenu.Trigger>
+            <DropdownMenu.Content align="end" variant="soft">
+              {userName || userEmail ? (
+                <DropdownMenu.Group>
+                  <DropdownMenu.Label>
+                    {userName || userEmail}
+                  </DropdownMenu.Label>
+                  <DropdownMenu.Item onSelect={onProfileClick}>
+                    Profile
+                  </DropdownMenu.Item>
+                  <DropdownMenu.Separator />
+                  <DropdownMenu.Item color="red" onSelect={onSignOut}>
+                    Sign out
+                  </DropdownMenu.Item>
+                </DropdownMenu.Group>
+              ) : (
+                <DropdownMenu.Item asChild>
+                  <Button size="2" variant="soft">
+                    Sign in
+                  </Button>
+                </DropdownMenu.Item>
+              )}
+            </DropdownMenu.Content>
+          </DropdownMenu.Root>
+        </Actions>
+      </Container>
+    </HeaderContainer>
   );
 }

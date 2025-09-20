@@ -1,13 +1,13 @@
-import { Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { betterAuth } from 'better-auth';
-import { drizzleAdapter } from 'better-auth/adapters/drizzle';
+import { Module } from "@nestjs/common";
+import { ConfigModule, ConfigService } from "@nestjs/config";
+import { betterAuth } from "better-auth";
+import { drizzleAdapter } from "better-auth/adapters/drizzle";
 
-import { DRIZZLE_DB } from '../../db/tokens';
-import { users, sessions, accounts, verifications } from '../../db/auth-schema';
-import { BetterAuthProxyController } from './auth.controller';
-import { BETTER_AUTH } from './auth.constants';
-import { processEnv } from '../../helpers/processEnv.helper';
+import { DRIZZLE_DB } from "../../db/tokens";
+import { users, sessions, accounts, verifications } from "../../db/auth-schema";
+import { BetterAuthProxyController } from "./auth.controller";
+import { BETTER_AUTH } from "./auth.constants";
+import { env } from "../../env/env";
 
 @Module({
   imports: [ConfigModule],
@@ -16,28 +16,21 @@ import { processEnv } from '../../helpers/processEnv.helper';
     {
       provide: BETTER_AUTH,
       inject: [ConfigService, DRIZZLE_DB],
-      useFactory: (configService: ConfigService, db: any) => {
-        const baseURL = configService.get<string>('BETTER_AUTH_URL');
-        const webOrigin = configService.get<string>('WEB_ORIGIN');
-        const githubClientId = configService.get<string>('GITHUB_CLIENT_ID');
-        const githubClientSecret = configService.get<string>(
-          'GITHUB_CLIENT_SECRET',
-        );
-
+      useFactory: (_, db: any) => {
         return betterAuth({
           database: drizzleAdapter(db, {
-            provider: 'pg',
+            provider: "pg",
             usePlural: true,
             schema: { users, sessions, accounts, verifications },
           }),
-          baseURL: processEnv.BETTER_AUTH_URL,
-          trustedOrigins: [processEnv.WEB_ORIGIN],
-          basePath: '/api/auth',
+          baseURL: env.web.baseUrl,
+          trustedOrigins: [env.web.baseUrl],
+          basePath: "/api/auth",
           emailAndPassword: { enabled: false },
           socialProviders: {
             github: {
-              clientId: processEnv.GITHUB_CLIENT_ID!,
-              clientSecret: processEnv.GITHUB_CLIENT_SECRET,
+              clientId: env.github.clientId,
+              clientSecret: env.github.clientSecret,
             },
           },
         });

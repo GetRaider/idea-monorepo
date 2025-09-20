@@ -16,10 +16,12 @@
       "outputs": ["dist/**"]
     },
     "dev": {
+      "env": ["NODE_ENV=development"],
       "cache": false,
       "persistent": true
     },
     "prod": {
+      "env": ["NODE_ENV=production"],
       "dependsOn": ["build"],
       "cache": true,
       "persistent": false

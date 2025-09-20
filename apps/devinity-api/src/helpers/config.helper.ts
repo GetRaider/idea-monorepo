@@ -1,10 +1,10 @@
-import { processEnv } from './processEnv.helper';
+import { env } from "src/env/env";
 
 class ConfigHelper {
-  private readonly defaultPort = '8090';
+  private readonly defaultPort = "8090";
 
   getServerPort(): string {
-    return processEnv?.PORT ?? this.defaultPort;
+    return env.port ?? this.defaultPort;
   }
 }
 

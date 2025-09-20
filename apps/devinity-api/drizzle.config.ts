@@ -1,10 +1,10 @@
-import type { Config } from 'drizzle-kit';
+import type { Config } from "drizzle-kit";
 
-import { processEnv } from './src/helpers/processEnv.helper';
+import { env } from "./src/env/env";
 
 export default {
-  schema: ['./src/db/schema.ts', './src/db/auth-schema.ts'],
-  dialect: 'postgresql',
-  dbCredentials: { url: processEnv.DB_URL },
-  out: './drizzle',
+  schema: ["./src/db/schema.ts", "./src/db/auth-schema.ts"],
+  dialect: "postgresql",
+  dbCredentials: { url: env.db.url },
+  out: "./drizzle",
 } satisfies Config;

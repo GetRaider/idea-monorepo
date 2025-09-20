@@ -1,17 +1,16 @@
-'use client';
+"use client";
 
-import { Button } from '@repo/ui/components/Button/Button.component';
-
-import styles from './page.module.css';
+import { Button } from "@repo/ui/components/Button/Button.component";
+import { Main, Content, MainTitle, Description } from "./page.styles";
 
 export default function HomePage() {
   return (
-    <main className={styles.main}>
-      <div className={styles.content}>
-        <h1 className={styles.mainTitle}>Welcome to Denzel!</h1>
-        <p className={styles.description}>Your engineering team's manager</p>
+    <Main>
+      <Content>
+        <MainTitle>Welcome to Devinity!</MainTitle>
+        <Description>Your engineering team's manager</Description>
         <Button>Get Started</Button>
-      </div>
-    </main>
+      </Content>
+    </Main>
   );
 }

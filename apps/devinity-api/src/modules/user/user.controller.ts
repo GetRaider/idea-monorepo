@@ -9,7 +9,7 @@ export class UserController {
 
   @Get('/hello')
   async hello(): Promise<string> {
-    return 'Hello Denzels!';
+    return 'Hello!';
   }
 
   @Post()

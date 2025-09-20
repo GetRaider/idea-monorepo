@@ -3,7 +3,7 @@ import { Inter } from 'next/font/google';
 import { Theme } from '@radix-ui/themes';
 
 import './globals.css';
-import Header from '@repo/ui/components/Header/Header.component';
+import AppShell from './components/AppShell/AppShell.component';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -18,8 +18,7 @@ export default function ({ children }: Readonly<PropsWithChildren>) {
           panelBackground="solid"
           className="radix-theme-with-gradient"
         >
-          <Header />
-          {children}
+          <AppShell>{children}</AppShell>
         </Theme>
       </body>
     </html>

@@ -1,20 +1,19 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Button } from '@repo/ui/components/Button/Button.component';
+import { useState } from "react";
+import { Button } from "@repo/ui/components/Button/Button.component";
 
-import styles from './page.module.css';
-import { UsersSection } from '../components/Users-Section/users-section.component';
-import { signIn, signOut, useSession } from '../../lib/auth-client';
+import { UsersSection } from "../components/Users-Section/users-section.component";
+import { signIn, signOut, useSession } from "../../lib/auth-client";
+import { Main, Content, AuthContainer } from "../page.styles";
 
 export default function HomePage() {
   const [showUsers, setShowUsers] = useState(false);
   const { data: session } = useSession();
   return (
-    <main className={styles.main}>
-      <div className={styles.content}>
-        <h1 className={styles.mainTitle}>Home</h1>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+    <Main>
+      <Content>
+        <AuthContainer>
           {session?.user ? (
             <>
               <span>
@@ -24,15 +23,15 @@ export default function HomePage() {
             </>
           ) : (
             <>
-              <Button onClick={() => signIn.social({ provider: 'github' })}>
+              <Button onClick={() => signIn.social({ provider: "github" })}>
                 Sign in with GitHub
               </Button>
             </>
           )}
-        </div>
+        </AuthContainer>
         <Button onClick={() => setShowUsers(!showUsers)}>Show Users</Button>
         {showUsers && <UsersSection />}
-      </div>
-    </main>
+      </Content>
+    </Main>
   );
 }

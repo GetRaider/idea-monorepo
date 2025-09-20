@@ -1,5 +1,11 @@
 import styled from "styled-components";
-import { Avatar, Button, DropdownMenu, Link } from "@radix-ui/themes";
+import {
+  Avatar,
+  Button,
+  DropdownMenu,
+  Link,
+  IconButton,
+} from "@radix-ui/themes";
 
 export const HeaderContainer = styled.header`
   position: sticky;
@@ -30,6 +36,7 @@ export const Container = styled.div`
 export const LogoContainer = styled.div`
   display: flex;
   align-items: center;
+  margin-left: -15px; /* Move logo left to align with sidebar button left edges */
 `;
 
 export const LogoLink = styled(Link)`
@@ -39,9 +46,38 @@ export const LogoLink = styled(Link)`
   text-decoration: none;
   color: inherit;
   transition: opacity 0.2s ease;
+  position: relative;
 
   &:hover {
     opacity: 0.8;
+  }
+`;
+
+export const ToggleButton = styled(IconButton)<{ $show: boolean }>`
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  min-width: 48px;
+  height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: rgba(71, 85, 105, 0.9);
+  border: none;
+  color: #cbd5e1;
+  border-radius: 8px;
+  opacity: ${(props) => (props.$show ? 1 : 0)};
+  visibility: ${(props) => (props.$show ? "visible" : "hidden")};
+  transition:
+    opacity 0.2s ease,
+    visibility 0.2s ease;
+  z-index: 10;
+
+  &:hover {
+    background: rgba(100, 116, 139, 0.9);
   }
 `;
 

@@ -7,8 +7,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   SidebarContainer,
-  TopRow,
-  ToggleButton,
   NavGrid,
   SquareButton,
   Label,
@@ -37,21 +35,24 @@ export function Sidebar() {
     if (saved) setCollapsed(saved === "true");
   }, []);
 
-  function toggle() {
-    const next = !collapsed;
-    setCollapsed(next);
-    localStorage.setItem("sidebar-collapsed", String(next));
-    const event = new CustomEvent("sidebar:collapsed", { detail: next });
-    window.dispatchEvent(event);
-  }
+  useEffect(() => {
+    function handleSidebarCollapse(e: CustomEvent) {
+      setCollapsed(e.detail);
+    }
+
+    window.addEventListener(
+      "sidebar:collapsed",
+      handleSidebarCollapse as EventListener,
+    );
+    return () =>
+      window.removeEventListener(
+        "sidebar:collapsed",
+        handleSidebarCollapse as EventListener,
+      );
+  }, []);
 
   return (
     <SidebarContainer $collapsed={collapsed}>
-      <TopRow>
-        <ToggleButton size="2" variant="soft" onClick={toggle}>
-          {collapsed ? "›" : "‹"}
-        </ToggleButton>
-      </TopRow>
       <NavGrid>
         {navLinks.map((link) => {
           const isActive = pathname?.startsWith(link.href);

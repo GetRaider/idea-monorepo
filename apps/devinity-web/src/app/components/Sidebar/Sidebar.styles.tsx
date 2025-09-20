@@ -7,10 +7,13 @@ export const SidebarContainer = styled.aside<{ $collapsed: boolean }>`
   top: 64px;
   height: calc(100vh - 64px);
   width: ${(props) => (props.$collapsed ? "80px" : "260px")};
-  padding: 0.75rem 0.5rem;
+  padding: 1rem;
   border-right: 1px solid rgba(148, 163, 184, 0.16);
-  background: rgba(15, 23, 42, 0.5);
+  background: #1e293b;
   transition: width 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 
   @media (max-width: 1024px) {
     position: fixed;
@@ -19,23 +22,6 @@ export const SidebarContainer = styled.aside<{ $collapsed: boolean }>`
     height: calc(100vh - 64px);
     z-index: 50;
   }
-`;
-
-export const TopRow = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  margin-bottom: 0.5rem;
-`;
-
-export const ToggleButton = styled(IconButton)`
-  min-width: 28px;
-  height: 28px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  color: #cbd5e1;
 `;
 
 export const NavGrid = styled.ul`
@@ -53,15 +39,26 @@ export const SquareButton = styled(Button)<{ $collapsed: boolean }>`
   gap: 10px;
   width: 100%;
   height: 44px;
-  padding: 0 10px;
-  border-radius: 10px;
+  padding: 0 12px;
+  border-radius: 8px;
   letter-spacing: 0.2px;
   justify-content: ${(props) => (props.$collapsed ? "center" : "flex-start")};
+  background: ${(props) =>
+    props.variant === "solid" ? "#8b5cf6" : "transparent"};
+  color: ${(props) => (props.variant === "solid" ? "white" : "#cbd5e1")};
+  border: none;
+
+  &:hover {
+    background: ${(props) =>
+      props.variant === "solid" ? "#7c3aed" : "#374151"};
+  }
 `;
 
 export const Label = styled.span<{ $collapsed: boolean }>`
   white-space: nowrap;
   display: ${(props) => (props.$collapsed ? "none" : "inline")};
+  color: inherit;
+  font-weight: 500;
 `;
 
 export const Icon = styled(Image)`

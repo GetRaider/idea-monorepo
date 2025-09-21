@@ -6,7 +6,7 @@
     "build": "nest build",
     "rebuild": "rm -rf dist && pnpm build",
     "dev": "NODE_ENV=development nest start --watch",
-    "prod": "NODE_ENV=production node dist/main",
+    "prod": "NODE_ENV=production node dist/src/main",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",

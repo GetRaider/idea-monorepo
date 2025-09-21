@@ -8,6 +8,8 @@ const envFileName = nodeEnv === "production" ? ".env.production" : ".env.local";
 
 let envPath: string;
 
+console.log({ nodeEnv, envFileName });
+
 if (nodeEnv === "production") {
   // Production: look for .env in root directory
   const isInAppsDir = process.cwd().includes("/apps/devinity-api");
@@ -18,6 +20,8 @@ if (nodeEnv === "production") {
 } else {
   envPath = resolve(process.cwd(), envFileName);
 }
+
+console.log({ envPath });
 
 // Load the appropriate .env file
 config({ path: envPath });
@@ -34,6 +38,8 @@ const envSchema = z.object({
 });
 
 const parsedEnv = envSchema.parse(process.env);
+
+console.log({ parsedEnv });
 
 export const env = {
   web: {

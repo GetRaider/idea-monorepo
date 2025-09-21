@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { config } from "dotenv";
 import { resolve } from "path";
+import { existsSync } from "fs";
 
 // Load environment variables based on NODE_ENV
 const nodeEnv = process.env.NODE_ENV || "development";
@@ -23,8 +24,39 @@ if (nodeEnv === "production") {
 
 console.log({ envPath });
 
+// Check if .env file exists
+if (!existsSync(envPath)) {
+  console.error(`❌ Environment file not found at: ${envPath}`);
+  console.error(`Current working directory: ${process.cwd()}`);
+
+  // Try alternative paths
+  const alternativePaths = [
+    resolve(process.cwd(), envFileName), // Current directory
+    resolve(process.cwd(), `../../${envFileName}`), // Root from current
+    resolve(process.cwd(), `../${envFileName}`), // Parent directory
+  ];
+
+  console.log("🔍 Checking alternative paths:");
+  alternativePaths.forEach((altPath, index) => {
+    const exists = existsSync(altPath);
+    console.log(
+      `  ${index + 1}. ${altPath} - ${exists ? "✅ EXISTS" : "❌ NOT FOUND"}`,
+    );
+  });
+
+  // Try to load from current directory as fallback
+  const fallbackPath = resolve(process.cwd(), envFileName);
+  if (existsSync(fallbackPath)) {
+    console.log(`🔄 Using fallback path: ${fallbackPath}`);
+    envPath = fallbackPath;
+  }
+} else {
+  console.log(`✅ Environment file found at: ${envPath}`);
+}
+
 // Load the appropriate .env file
-config({ path: envPath });
+const result = config({ path: envPath });
+console.log(`📄 Dotenv result:`, result);
 
 const envSchema = z.object({
   WEB_BASE_URL: z.url(),

@@ -5,7 +5,7 @@ import { existsSync } from "fs";
 
 // Load environment variables based on NODE_ENV
 const nodeEnv = process.env.NODE_ENV || "development";
-const envFileName = nodeEnv === "production" ? ".env.production" : ".env.local";
+const envFileName = nodeEnv === "production" ? ".env" : ".env.local";
 
 let envPath: string;
 

@@ -31,8 +31,9 @@ if (nodeEnv === "production") {
   });
 
   parsedEnv = envSchema.parse(process.env);
-  console.log({ parsedEnv });
 }
+
+console.log({ parsedEnv });
 
 export const env = {
   web: {

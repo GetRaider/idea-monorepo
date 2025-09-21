@@ -4,13 +4,25 @@ import { resolve } from "path";
 
 // Load environment variables based on NODE_ENV
 const nodeEnv = process.env.NODE_ENV || "development";
-const envFile = nodeEnv === "production" ? ".env.production" : ".env.local";
+const envFileName = nodeEnv === "production" ? ".env.production" : ".env.local";
+
+let envPath: string;
+
+if (nodeEnv === "production") {
+  // Production: look for .env in root directory
+  const isInAppsDir = process.cwd().includes("/apps/devinity-api");
+  const rootDir = isInAppsDir
+    ? resolve(process.cwd(), "../../")
+    : process.cwd();
+  envPath = resolve(rootDir, envFileName);
+} else {
+  envPath = resolve(process.cwd(), envFileName);
+}
 
 // Load the appropriate .env file
-config({ path: resolve(process.cwd(), envFile) });
+config({ path: envPath });
 
 const envSchema = z.object({
-  //   NODE_ENV: z.enum(["development", "test", "production"]),
   WEB_BASE_URL: z.url(),
   PORT: z.string().optional().default("8090"),
   GITHUB_CLIENT_ID: z.string(),

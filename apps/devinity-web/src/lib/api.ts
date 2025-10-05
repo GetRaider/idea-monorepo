@@ -5,6 +5,7 @@ import { env } from "./env";
 export const api: AxiosInstance = axios.create({
   baseURL: env.api.baseUrl,
   timeout: 10000,
+  withCredentials: true, // Enable sending cookies with cross-origin requests
   headers: {
     "Content-Type": "application/json",
     // Authorization: `Bearer ${process.env.NEXT_PUBLIC_API_TOKEN}`,

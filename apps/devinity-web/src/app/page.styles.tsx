@@ -68,8 +68,32 @@ export const Description = styled.p`
   }
 `;
 
-export const AuthContainer = styled.div`
+export const UserInfo = styled.div`
   display: flex;
-  gap: 12px;
   align-items: center;
+  gap: 1rem;
+  padding: 1.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+`;
+
+export const UserAvatar = styled.img`
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+`;
+
+export const UserDetails = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: flex-start;
+
+  span {
+    color: #f8fafc;
+    font-weight: 500;
+  }
 `;

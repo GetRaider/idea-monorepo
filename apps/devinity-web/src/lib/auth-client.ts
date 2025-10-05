@@ -6,6 +6,9 @@ type AuthClient = ReturnType<typeof createAuthClient>;
 
 export const authClient: AuthClient = createAuthClient({
   baseURL: env.api.baseUrl,
+  fetchOptions: {
+    credentials: "include", // Enable sending cookies with cross-origin requests
+  },
 });
 
 export const useSession: AuthClient["useSession"] = authClient.useSession;

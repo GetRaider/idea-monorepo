@@ -1,6 +1,9 @@
+"use client";
+
 import { PropsWithChildren } from "react";
 import { Inter } from "next/font/google";
 import { Theme } from "@radix-ui/themes";
+import { usePathname } from "next/navigation";
 
 import "./globals.css";
 import AppShell from "./components/AppShell/AppShell.component";
@@ -20,10 +23,21 @@ export default function ({ children }: Readonly<PropsWithChildren>) {
             panelBackground="solid"
             className="radix-theme-with-gradient"
           >
-            <AppShell>{children}</AppShell>
+            <LayoutWrapper>{children}</LayoutWrapper>
           </Theme>
         </StyledComponentsRegistry>
       </body>
     </html>
   );
+}
+
+function LayoutWrapper({ children }: Readonly<PropsWithChildren>) {
+  const pathname = usePathname();
+
+  // Don't show AppShell (sidebar/header) on sign-in page
+  if (pathname === "/sign-in") {
+    return <>{children}</>;
+  }
+
+  return <AppShell>{children}</AppShell>;
 }

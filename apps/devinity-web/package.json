@@ -17,6 +17,7 @@
     "@stackframe/react": "^2.8.25",
     "@types/axios": "^0.14.4",
     "axios": "^1.10.0",
+    "better-auth": "1.3.8",
     "dotenv": "^16.5.0",
     "next": "^14.1.1",
     "react": "^18.2.0",

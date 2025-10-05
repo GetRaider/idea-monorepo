@@ -14,6 +14,10 @@ const envSchema = z.object({
   BETTER_AUTH_SECRET: z.string(),
   DEV_DB_URL: z.url(),
   LOCAL_DB_URL: z.url().optional(),
+  REDIS_HOST: z.string().optional().default("localhost"),
+  REDIS_PORT: z.string().optional().default("6379"),
+  REDIS_PASSWORD: z.string().optional(),
+  REDIS_DB: z.string().optional().default("0"),
 });
 
 const parsedEnv = envSchema.parse(process.env);
@@ -37,6 +41,12 @@ export const env = {
   db: {
     dev_url: parsedEnv.DEV_DB_URL,
     local_url: parsedEnv.LOCAL_DB_URL,
+  },
+  redis: {
+    host: parsedEnv.REDIS_HOST,
+    port: parseInt(parsedEnv.REDIS_PORT, 10),
+    password: parsedEnv.REDIS_PASSWORD,
+    db: parseInt(parsedEnv.REDIS_DB, 10),
   },
 };
 

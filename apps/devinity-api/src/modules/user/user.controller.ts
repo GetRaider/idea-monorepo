@@ -1,57 +1,54 @@
-import { Body, Controller, Get, Post, Query } from "@nestjs/common";
-
+import { Controller, Get, Post, Body, Param, Logger } from "@nestjs/common";
 import { UserService } from "./user.service";
 import { SelectUser } from "../../db/schema";
 
-@Controller("/users")
+@Controller("users")
 export class UserController {
+  private readonly logger = new Logger(UserController.name);
+
   constructor(private readonly userService: UserService) {}
 
-  @Get("/hello")
-  async hello(): Promise<string> {
-    return "Hello!";
-  }
-
-  @Post()
-  async create(@Body() dto: SelectUser): Promise<SelectUser> {
-    console.log("Controllerdto", dto);
-    return this.userService.create(dto);
-  }
-
   @Get()
-  async getAll(): Promise<SelectUser[]> {
+  async getAllUsers(): Promise<SelectUser[]> {
     return this.userService.getAll();
   }
 
-  @Get("/check-email")
+  @Post()
+  async createUser(@Body() dto: Partial<SelectUser>): Promise<SelectUser> {
+    return this.userService.create(dto);
+  }
+
+  @Get("email-exists/:email")
   async checkEmail(
-    @Query("email") email: string,
+    @Param("email") email: string,
   ): Promise<{ exists: boolean }> {
-    if (!email) {
-      return { exists: false };
-    }
     const exists = await this.userService.checkEmailExists(email);
     return { exists };
   }
 
-  // @Put(':id')
-  // @UseGuards(AuthGuard)
-  // async update(
-  //   @Param('id') id: string,
-  //   @Body() dto: UpdateUserRequestDto,
-  // ): Promise<UpdateUserResponseDto> {
-  //   return this.userService.updateById(id, dto);
-  // }
+  @Post(":id/activity")
+  async setActivity(
+    @Param("id") userId: string,
+    @Body("activity") activity: string,
+  ): Promise<{ success: boolean }> {
+    await this.userService.setUserActivity(userId, activity);
+    return { success: true };
+  }
 
-  // @Delete(':id')
-  // @UseGuards(AuthGuard)
-  // @HttpCode(HttpStatus.NO_CONTENT)
-  // async delete(@Param('id') id: string): Promise<void> {
-  //   return this.userService.deleteById(id);
-  // }
+  @Get(":id/activity")
+  async getActivity(
+    @Param("id") userId: string,
+  ): Promise<{ activity: string | null }> {
+    const activity = await this.userService.getUserActivity(userId);
+    return { activity };
+  }
 
-  // @Delete()
-  // async deleteAll(): Promise<void> {
-  //   return this.userService.deleteAll();
-  // }
+  @Post(":id/login")
+  async recordLogin(
+    @Param("id") userId: string,
+  ): Promise<{ loginCount: number }> {
+    const count = await this.userService.incrementUserLoginCount(userId);
+    this.logger.log(`User ${userId} login count: ${count}`);
+    return { loginCount: count };
+  }
 }

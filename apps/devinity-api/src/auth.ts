@@ -19,17 +19,24 @@ export const auth = betterAuth({
   advanced: {
     useSecureCookies: !isDevelopment,
     cookiePrefix: "better-auth",
+    // TODO: check this out
+    // crossSubDomainCookies: {
+    //   enabled: true,
+    //   // In production, this will use the root domain (e.g., .onrender.com)
+    //   // In development, cookies won't work across localhost:3001 and localhost:8090
+    //   domain: isDevelopment ? undefined : undefined,
+    // },
     cookies: {
       session_token: {
         attributes: {
-          sameSite: "lax",
+          sameSite: isDevelopment ? "lax" : "none",
           secure: !isDevelopment,
           httpOnly: true,
         },
       },
       session_data: {
         attributes: {
-          sameSite: "lax",
+          sameSite: isDevelopment ? "lax" : "none",
           secure: !isDevelopment,
           httpOnly: true,
         },

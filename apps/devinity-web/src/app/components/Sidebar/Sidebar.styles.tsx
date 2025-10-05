@@ -63,4 +63,5 @@ export const Label = styled.span<{ $collapsed: boolean }>`
 
 export const Icon = styled(Image)`
   opacity: 0.9;
+  color: #f8fafc;
 `;

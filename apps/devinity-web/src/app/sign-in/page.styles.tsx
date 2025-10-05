@@ -88,3 +88,174 @@ export const GitHubButton = styled.button`
     flex-shrink: 0;
   }
 `;
+
+export const Divider = styled.div`
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 1rem;
+  color: #94a3b8;
+  font-size: 0.9rem;
+
+  &::before,
+  &::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.1);
+  }
+`;
+
+export const Form = styled.form`
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+`;
+
+export const Input = styled.input<{ $hasError?: boolean }>`
+  padding: 1rem 1.25rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1.5px solid
+    ${(props) => (props.$hasError ? "#f87171" : "rgba(255, 255, 255, 0.2)")};
+  border-radius: 12px;
+  color: #f8fafc;
+  font-size: 1.05rem;
+  transition: all 0.3s ease;
+  width: 100%;
+
+  &::placeholder {
+    color: #94a3b8;
+  }
+
+  &:focus {
+    outline: none;
+    border-color: ${(props) => (props.$hasError ? "#f87171" : "#8b5cf6")};
+    background: rgba(255, 255, 255, 0.15);
+    box-shadow: 0 0 0 3px
+      ${(props) =>
+        props.$hasError
+          ? "rgba(248, 113, 113, 0.15)"
+          : "rgba(139, 92, 246, 0.2)"};
+  }
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: ${(props) =>
+      props.$hasError ? "#f87171" : "rgba(255, 255, 255, 0.3)"};
+  }
+`;
+
+export const SubmitButton = styled.button`
+  padding: 1rem 2rem;
+  background: linear-gradient(135deg, #8b5cf6, #a855f7);
+  color: #ffffff;
+  border: none;
+  border-radius: 12px;
+  font-size: 1.1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(139, 92, 246, 0.4);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+`;
+
+export const ToggleText = styled.p`
+  color: #cbd5e1;
+  font-size: 0.95rem;
+  text-align: center;
+  margin: 0;
+
+  button {
+    background: none;
+    border: none;
+    color: #8b5cf6;
+    cursor: pointer;
+    font-weight: 500;
+    text-decoration: underline;
+    padding: 0;
+    margin-left: 0.25rem;
+
+    &:hover {
+      color: #a855f7;
+    }
+  }
+`;
+
+export const ErrorMessage = styled.div`
+  color: #f87171;
+  background: rgba(248, 113, 113, 0.1);
+  border: 1px solid rgba(248, 113, 113, 0.2);
+  padding: 0.75rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  text-align: center;
+`;
+
+export const PasswordStrength = styled.div<{
+  $strength: "weak" | "medium" | "strong";
+}>`
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-transform: capitalize;
+
+  ${(props) => {
+    switch (props.$strength) {
+      case "strong":
+        return `
+          color: #4ade80;
+          background: rgba(74, 222, 128, 0.1);
+          border: 1px solid rgba(74, 222, 128, 0.2);
+        `;
+      case "medium":
+        return `
+          color: #fbbf24;
+          background: rgba(251, 191, 36, 0.1);
+          border: 1px solid rgba(251, 191, 36, 0.2);
+        `;
+      case "weak":
+      default:
+        return `
+          color: #f87171;
+          background: rgba(248, 113, 113, 0.1);
+          border: 1px solid rgba(248, 113, 113, 0.2);
+        `;
+    }
+  }}
+`;
+
+export const ValidationMessage = styled.div<{ $type: "error" | "info" }>`
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+
+  ${(props) =>
+    props.$type === "error"
+      ? `
+          color: #f87171;
+          background: rgba(248, 113, 113, 0.1);
+          border: 1px solid rgba(248, 113, 113, 0.2);
+        `
+      : `
+          color: #94a3b8;
+          background: rgba(148, 163, 184, 0.1);
+          border: 1px solid rgba(148, 163, 184, 0.2);
+        `}
+`;

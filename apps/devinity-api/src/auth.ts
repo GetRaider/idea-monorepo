@@ -6,6 +6,48 @@ import { env } from "./env/env";
 
 const isDevelopment = process.env.NODE_ENV !== "production";
 
+// Password validation function
+function validatePasswordStrength(password: string): {
+  valid: boolean;
+  error?: string;
+} {
+  const minLength = 8;
+  const hasUpperCase = /[A-Z]/.test(password);
+  const hasLowerCase = /[a-z]/.test(password);
+  const hasNumber = /[0-9]/.test(password);
+  const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+
+  if (password.length < minLength) {
+    return {
+      valid: false,
+      error: "Password must be at least 8 characters long",
+    };
+  }
+  if (!hasUpperCase) {
+    return {
+      valid: false,
+      error: "Password must contain at least one uppercase letter",
+    };
+  }
+  if (!hasLowerCase) {
+    return {
+      valid: false,
+      error: "Password must contain at least one lowercase letter",
+    };
+  }
+  if (!hasNumber) {
+    return { valid: false, error: "Password must contain at least one number" };
+  }
+  if (!hasSpecialChar) {
+    return {
+      valid: false,
+      error: "Password must contain at least one special character",
+    };
+  }
+
+  return { valid: true };
+}
+
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
     provider: "pg",
@@ -19,13 +61,6 @@ export const auth = betterAuth({
   advanced: {
     useSecureCookies: !isDevelopment,
     cookiePrefix: "better-auth",
-    // TODO: check this out
-    // crossSubDomainCookies: {
-    //   enabled: true,
-    //   // In production, this will use the root domain (e.g., .onrender.com)
-    //   // In development, cookies won't work across localhost:3001 and localhost:8090
-    //   domain: isDevelopment ? undefined : undefined,
-    // },
     cookies: {
       session_token: {
         attributes: {
@@ -49,13 +84,25 @@ export const auth = betterAuth({
       maxAge: 60 * 60 * 24 * 7, // 7 days
     },
   },
-  emailAndPassword: { enabled: false },
+  emailAndPassword: {
+    enabled: true,
+    autoSignIn: true,
+    requireEmailVerification: false,
+    async onSignUpEmail(user, request) {
+      // Validate password strength before sign-up
+      const body: any = request.body;
+      if (body?.password) {
+        const validation = validatePasswordStrength(body.password);
+        if (!validation.valid) {
+          throw new Error(validation.error);
+        }
+      }
+    },
+  },
   socialProviders: {
     github: {
       clientId: env.github.clientId,
       clientSecret: env.github.clientSecret,
-      callbackURL: `${env.api.baseUrl}/api/auth/callback/github`,
-      redirectURL: env.web.baseUrl,
     },
   },
 });

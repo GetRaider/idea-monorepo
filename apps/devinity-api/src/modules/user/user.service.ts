@@ -4,10 +4,11 @@ import {
   Inject,
   Injectable,
   Logger,
-} from '@nestjs/common';
-import { DRIZZLE_DB } from '../../db/tokens';
-import { InsertUser, SelectUser } from '../../db/schema';
-import { users } from '../../db/auth-schema';
+} from "@nestjs/common";
+import { eq } from "drizzle-orm";
+import { DRIZZLE_DB } from "../../db/tokens";
+import { InsertUser, SelectUser } from "../../db/schema";
+import { users } from "../../db/auth-schema";
 
 @Injectable()
 export class UserService {
@@ -18,12 +19,12 @@ export class UserService {
 
   async create(dto: Partial<SelectUser>): Promise<SelectUser> {
     if (!dto || Object.keys(dto).length === 0) {
-      throw new HttpException('Request body is empty', HttpStatus.BAD_REQUEST);
+      throw new HttpException("Request body is empty", HttpStatus.BAD_REQUEST);
     }
     const now = new Date();
     const insert: any = {
       id: dto.id ?? crypto.randomUUID?.() ?? undefined,
-      name: dto.name ?? 'User',
+      name: dto.name ?? "User",
       email: dto.email ?? `user_${Date.now()}@example.com`,
       emailVerified: dto.emailVerified ?? false,
       image: dto.image ?? null,
@@ -39,7 +40,7 @@ export class UserService {
       return created;
     } catch (error) {
       this.log.error(error);
-      throw new HttpException('Failed to create user', HttpStatus.BAD_REQUEST);
+      throw new HttpException("Failed to create user", HttpStatus.BAD_REQUEST);
     }
   }
 
@@ -49,6 +50,20 @@ export class UserService {
 
   async getOneByGithubId(_githubId: string): Promise<SelectUser | null> {
     return null; // schema no longer contains githubId
+  }
+
+  async checkEmailExists(email: string): Promise<boolean> {
+    try {
+      const [existingUser] = await this.db
+        .select()
+        .from(users)
+        .where(eq(users.email, email))
+        .limit(1);
+      return !!existingUser;
+    } catch (error) {
+      this.log.error("Error checking email existence:", error);
+      return false;
+    }
   }
 
   // async getByQuery(

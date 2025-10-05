@@ -1,26 +1,37 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query } from "@nestjs/common";
 
-import { UserService } from './user.service';
-import { SelectUser } from '../../db/schema';
+import { UserService } from "./user.service";
+import { SelectUser } from "../../db/schema";
 
-@Controller('/users')
+@Controller("/users")
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
-  @Get('/hello')
+  @Get("/hello")
   async hello(): Promise<string> {
-    return 'Hello!';
+    return "Hello!";
   }
 
   @Post()
   async create(@Body() dto: SelectUser): Promise<SelectUser> {
-    console.log('Controllerdto', dto);
+    console.log("Controllerdto", dto);
     return this.userService.create(dto);
   }
 
   @Get()
   async getAll(): Promise<SelectUser[]> {
     return this.userService.getAll();
+  }
+
+  @Get("/check-email")
+  async checkEmail(
+    @Query("email") email: string,
+  ): Promise<{ exists: boolean }> {
+    if (!email) {
+      return { exists: false };
+    }
+    const exists = await this.userService.checkEmailExists(email);
+    return { exists };
   }
 
   // @Put(':id')

@@ -6,7 +6,6 @@ loadEnvFile();
 
 const envSchema = z.object({
   WEB_BASE_URL: z.url(),
-  API_BASE_URL: z.url(),
   PORT: z.string().optional().default("8090"),
   GITHUB_CLIENT_ID: z.string(),
   GITHUB_CLIENT_SECRET: z.string(),

@@ -11,7 +11,6 @@ async function bootstrap() {
     bodyParser: false,
   });
   // CORS configuration for cross-origin cookie authentication
-  console.log({ env });
   app.enableCors({
     origin: env.web.baseUrl, // Explicitly allow frontend origin (required with credentials)
     credentials: true, // Allow credentials (cookies, authorization headers, etc.)

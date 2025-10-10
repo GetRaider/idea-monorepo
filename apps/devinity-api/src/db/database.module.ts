@@ -14,11 +14,11 @@ import { env } from "../env/env";
       provide: PG_POOL,
       inject: [ConfigService],
       useFactory: () => {
-        const connectionString = env.db.dev_url;
+        const connectionString = env.db.connectionString;
 
         if (!connectionString) {
           throw new Error(
-            "Database connection string is missing. Set 'DEV_DB_URL' or 'LOCAL_DB_URL'",
+            "Database connection string is missing. Set 'DB_CONNECTION_STRING'",
           );
         }
 

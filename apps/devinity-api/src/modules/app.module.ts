@@ -7,6 +7,8 @@ import { AuthModule } from "@thallesp/nestjs-better-auth";
 import { HttpExceptionFilter } from "@repo/api/helpers/httpExceptionFilter.helper";
 import { UserModule } from "./user/user.module";
 import { DatabaseModule } from "../db/database.module";
+import { RedisModule } from "../db/redis.module";
+import { CacheModule } from "../db/cache.module";
 import { auth } from "../auth";
 
 @Module({
@@ -20,7 +22,7 @@ import { auth } from "../auth";
         `.env.${process.env.NODE_ENV}`,
         ".env.local",
         ".env",
-        // Monorepo root
+        // Monorepo root - specifically for Render deployments
         resolve(process.cwd(), "../../.env.local"),
         resolve(process.cwd(), `../../.env.${process.env.NODE_ENV}.local`),
         resolve(process.cwd(), `../../.env.${process.env.NODE_ENV}`),
@@ -29,6 +31,8 @@ import { auth } from "../auth";
       expandVariables: true,
     }),
     DatabaseModule,
+    RedisModule,
+    CacheModule,
     UserModule,
     AuthModule.forRoot({
       auth,

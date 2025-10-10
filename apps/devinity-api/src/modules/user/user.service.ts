@@ -5,8 +5,13 @@ import {
   Injectable,
   Logger,
 } from "@nestjs/common";
+import { CACHE_MANAGER } from "@nestjs/cache-manager";
+import { Cache } from "cache-manager";
 import { eq } from "drizzle-orm";
+import Redis from "ioredis";
+
 import { DRIZZLE_DB } from "../../db/tokens";
+import { REDIS_CLIENT } from "../../db/redis.tokens";
 import { InsertUser, SelectUser } from "../../db/schema";
 import { users } from "../../db/auth-schema";
 
@@ -15,6 +20,8 @@ export class UserService {
   constructor(
     private readonly log: Logger,
     @Inject(DRIZZLE_DB) private readonly db: any,
+    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
+    @Inject(REDIS_CLIENT) private readonly redis: Redis,
   ) {}
 
   async create(dto: Partial<SelectUser>): Promise<SelectUser> {
@@ -37,6 +44,10 @@ export class UserService {
         .insert(users)
         .values(insert as InsertUser)
         .returning();
+
+      await this.cacheManager.del("users:all");
+      this.log.log("🗑️  Invalidated users cache");
+
       return created;
     } catch (error) {
       this.log.error(error);
@@ -45,7 +56,20 @@ export class UserService {
   }
 
   async getAll(): Promise<SelectUser[]> {
-    return this.db.select().from(users);
+    const cacheKey = "users:all";
+
+    const cached = await this.cacheManager.get<SelectUser[]>(cacheKey);
+    if (cached) {
+      this.log.log("✅ Returning users from cache");
+      return cached;
+    }
+
+    this.log.log("📦 Fetching users from database");
+    const allUsers = await this.db.select().from(users);
+
+    await this.cacheManager.set(cacheKey, allUsers, 300000);
+
+    return allUsers;
   }
 
   async getOneByGithubId(_githubId: string): Promise<SelectUser | null> {
@@ -54,16 +78,44 @@ export class UserService {
 
   async checkEmailExists(email: string): Promise<boolean> {
     try {
+      const cacheKey = `user:email:${email}`;
+      const cached = await this.cacheManager.get<boolean>(cacheKey);
+
+      if (cached) return cached;
+
       const [existingUser] = await this.db
         .select()
         .from(users)
         .where(eq(users.email, email))
         .limit(1);
-      return !!existingUser;
+
+      const exists = !!existingUser;
+
+      await this.cacheManager.set(cacheKey, exists, 120000);
+
+      return exists;
     } catch (error) {
       this.log.error("Error checking email existence:", error);
       return false;
     }
+  }
+
+  async incrementUserLoginCount(userId: string): Promise<number> {
+    const key = `user:${userId}:login_count`;
+    const count = await this.redis.incr(key);
+
+    await this.redis.expire(key, 30 * 24 * 60 * 60);
+    return count;
+  }
+
+  async setUserActivity(userId: string, activity: string): Promise<void> {
+    const key = `user:${userId}:activity`;
+    await this.redis.setex(key, 3600, activity);
+  }
+
+  async getUserActivity(userId: string): Promise<string | null> {
+    const key = `user:${userId}:activity`;
+    return await this.redis.get(key);
   }
 
   // async getByQuery(

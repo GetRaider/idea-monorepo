@@ -12,8 +12,11 @@ const envSchema = z.object({
   GITHUB_CLIENT_SECRET: z.string(),
   GITHUB_TOKEN: z.string(),
   BETTER_AUTH_SECRET: z.string(),
-  DEV_DB_URL: z.url(),
-  LOCAL_DB_URL: z.url().optional(),
+  DB_CONNECTION_STRING: z.url(),
+  REDIS_HOST: z.string().optional().default("localhost"),
+  REDIS_PORT: z.string().optional().default("6379"),
+  REDIS_PASSWORD: z.string().optional(),
+  REDIS_DB: z.string().optional().default("0"),
 });
 
 const parsedEnv = envSchema.parse(process.env);
@@ -35,8 +38,13 @@ export const env = {
     secret: parsedEnv.BETTER_AUTH_SECRET,
   },
   db: {
-    dev_url: parsedEnv.DEV_DB_URL,
-    local_url: parsedEnv.LOCAL_DB_URL,
+    connectionString: parsedEnv.DB_CONNECTION_STRING,
+  },
+  redis: {
+    host: parsedEnv.REDIS_HOST,
+    port: parseInt(parsedEnv.REDIS_PORT, 10),
+    password: parsedEnv.REDIS_PASSWORD,
+    db: parseInt(parsedEnv.REDIS_DB, 10),
   },
 };
 

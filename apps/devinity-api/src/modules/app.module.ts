@@ -6,6 +6,7 @@ import { AuthModule } from "@thallesp/nestjs-better-auth";
 
 import { HttpExceptionFilter } from "@repo/api/helpers/httpExceptionFilter.helper";
 import { UserModule } from "./user/user.module";
+import { GitHubModule } from "./github/github.module";
 import { DatabaseModule } from "../db/database.module";
 import { RedisModule } from "../db/redis.module";
 import { CacheModule } from "../db/cache.module";
@@ -34,6 +35,7 @@ import { auth } from "../auth";
     RedisModule,
     CacheModule,
     UserModule,
+    GitHubModule,
     AuthModule.forRoot({
       auth,
       disableTrustedOriginsCors: true, // We handle CORS in main.ts

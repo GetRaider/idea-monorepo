@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "build": "next build",
-    "dev": "NODE_ENV=development next dev --port 3001",
+    "dev": "NODE_ENV=development next dev --port 10000",
     "prod": "NODE_ENV=production next start --port 10000",
     "lint": "eslint . --max-warnings 0",
     "test": "jest",

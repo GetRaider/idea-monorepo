@@ -37,111 +37,15 @@ export default function Sidebar({ onNavigationChange }: SidebarProps) {
           onClick={() => handleNavClick("tasks")}
           title="Tasks"
         >
-          <svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M9 12l2 2 4-4"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <rect
-              x="4"
-              y="4"
-              width="16"
-              height="16"
-              rx="2"
-              stroke="currentColor"
-              strokeWidth="2"
-              fill="none"
-            />
-          </svg>
+          <img width={24} height={24} src="/tasks.svg" alt="Tasks" />
         </NavButton>
 
         <NavButton disabled title="Calendar (disabled)">
-          <svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <rect
-              x="4"
-              y="5"
-              width="16"
-              height="16"
-              rx="2"
-              stroke="currentColor"
-              strokeWidth="2"
-              fill="none"
-            />
-            <path d="M4 9h16" stroke="currentColor" strokeWidth="2" />
-            <path
-              d="M9 3v4M15 3v4"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-            />
-          </svg>
+          <img width={24} height={24} src="/calendar.svg" alt="Calendar" />
         </NavButton>
 
         <NavButton disabled title="Workspace (disabled)">
-          <svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M4 8h16M4 16h16"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-            />
-            <rect
-              x="4"
-              y="4"
-              width="16"
-              height="16"
-              rx="2"
-              stroke="currentColor"
-              strokeWidth="2"
-              fill="none"
-            />
-          </svg>
-        </NavButton>
-
-        <NavButton disabled title="Settings (disabled)">
-          <svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <circle
-              cx="12"
-              cy="12"
-              r="3"
-              stroke="currentColor"
-              strokeWidth="2"
-              fill="none"
-            />
-            <path
-              d="M12 1v6m0 6v10M23 12h-6m-2 0H1"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-            />
-          </svg>
+          <img width={24} height={24} src="/docs.svg" alt="Calendar" />
         </NavButton>
       </Nav>
 

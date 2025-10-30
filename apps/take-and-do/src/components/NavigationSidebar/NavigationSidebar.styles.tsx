@@ -116,6 +116,7 @@ export const WorkspaceToggle = styled.button`
 export const Chevron = styled.svg<{ $expanded?: boolean }>`
   transition: transform 0.2s;
   transform: ${(props) => (props.$expanded ? "rotate(90deg)" : "rotate(0)")};
+  margin-left: auto;
 `;
 
 export const SubItems = styled.div`

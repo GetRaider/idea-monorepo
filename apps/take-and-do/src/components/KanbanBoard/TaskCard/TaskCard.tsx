@@ -22,6 +22,7 @@ interface TaskCardProps {
 export default function TaskCard({
   task: {
     id,
+    taskKey,
     summary,
     status,
     priority,
@@ -32,6 +33,7 @@ export default function TaskCard({
   },
 }: TaskCardProps) {
   const getPriorityIcon = () => {
+    console.log("priority", priority);
     switch (priority) {
       case TaskPriority.LOW:
         return "🔵";
@@ -50,7 +52,7 @@ export default function TaskCard({
     <Card>
       <Header>
         <PriorityIcon>{getPriorityIcon()}</PriorityIcon>
-        <Id>{id}</Id>
+        <Id>{taskKey || id}</Id>
         {!!subtasks.length && (
           <Subtasks>
             <img

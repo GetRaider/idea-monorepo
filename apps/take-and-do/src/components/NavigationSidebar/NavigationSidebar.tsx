@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   NavigationSidebarContainer,
   Search,
@@ -16,17 +16,51 @@ import {
   SubItems,
   SubItem,
 } from "./NavigationSidebar.styles";
+import { Folder, TaskBoard } from "@/types/workspace";
+import { foldersService } from "@/services/api/folders.service";
+import { taskBoardsService } from "@/services/api/taskBoards.service";
 
 interface NavigationSidebarProps {
   isOpen: boolean;
+  activeView?: string;
+  onViewChange?: (view: string) => void;
 }
 
-export default function NavigationSidebar({ isOpen }: NavigationSidebarProps) {
-  const [activeView, setActiveView] = useState("today");
-  const [expandedWorkspace, setExpandedWorkspace] = useState("work");
+export default function NavigationSidebar({
+  isOpen,
+  activeView = "today",
+  onViewChange,
+}: NavigationSidebarProps) {
+  const [expandedFolder, setExpandedFolder] = useState<string>("");
+  const [folders, setFolders] = useState<Folder[]>([]);
+  const [taskBoards, setTaskBoards] = useState<TaskBoard[]>([]);
 
-  const toggleWorkspace = (workspace: string) => {
-    setExpandedWorkspace(expandedWorkspace === workspace ? "" : workspace);
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [foldersData, taskBoardsData] = await Promise.all([
+          foldersService.getAll(),
+          taskBoardsService.getAll(),
+        ]);
+
+        setFolders(foldersData);
+        setTaskBoards(taskBoardsData);
+      } catch (error) {
+        console.error("Failed to fetch folders and task boards:", error);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  const handleViewChange = (view: string) => {
+    if (onViewChange) {
+      onViewChange(view);
+    }
+  };
+
+  const toggleFolder = (folderId: string) => {
+    setExpandedFolder(expandedFolder === folderId ? "" : folderId);
   };
 
   return (
@@ -54,7 +88,7 @@ export default function NavigationSidebar({ isOpen }: NavigationSidebarProps) {
       <Nav>
         <NavItem
           $active={activeView === "today"}
-          onClick={() => setActiveView("today")}
+          onClick={() => handleViewChange("today")}
         >
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
             <circle
@@ -77,7 +111,7 @@ export default function NavigationSidebar({ isOpen }: NavigationSidebarProps) {
 
         <NavItem
           $active={activeView === "tomorrow"}
-          onClick={() => setActiveView("tomorrow")}
+          onClick={() => handleViewChange("tomorrow")}
         >
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
             <circle
@@ -97,123 +131,67 @@ export default function NavigationSidebar({ isOpen }: NavigationSidebarProps) {
         <WorkspaceHeader>Workspace</WorkspaceHeader>
 
         <WorkspaceList>
-          <WorkspaceItem>
-            <WorkspaceToggle onClick={() => toggleWorkspace("personal")}>
-              <Chevron
-                width="16"
-                height="16"
-                viewBox="0 0 16 16"
-                fill="none"
-                $expanded={expandedWorkspace === "personal"}
-              >
-                <path
-                  d="M6 4l4 4-4 4"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </Chevron>
-              <span>Personal</span>
-            </WorkspaceToggle>
-            {expandedWorkspace === "personal" && (
-              <SubItems>{/* Sub-items can be added here */}</SubItems>
-            )}
-          </WorkspaceItem>
+          {folders.map((folder) => (
+            <WorkspaceItem key={folder.id}>
+              <WorkspaceToggle onClick={() => toggleFolder(folder.id)}>
+                <img width={20} height={20} src="/folder.svg" alt="Folder" />
+                <span>{folder.name}</span>
+                <Chevron
+                  width="16"
+                  height="16"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  $expanded={expandedFolder === folder.id}
+                >
+                  <path
+                    d="M6 4l4 4-4 4"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </Chevron>
+              </WorkspaceToggle>
+              {expandedFolder === folder.id && (
+                <SubItems>
+                  {taskBoards
+                    .filter((tb) => tb.folderId === folder.id)
+                    .map((taskBoard) => (
+                      <SubItem
+                        key={taskBoard.id}
+                        onClick={() => handleViewChange(taskBoard.name)}
+                      >
+                        <img
+                          width={20}
+                          height={20}
+                          src="/kanban-board.svg"
+                          alt="Task Board"
+                        />
+                        <span>{taskBoard.name}</span>
+                      </SubItem>
+                    ))}
+                </SubItems>
+              )}
+            </WorkspaceItem>
+          ))}
 
-          <WorkspaceItem>
-            <WorkspaceToggle onClick={() => toggleWorkspace("work")}>
-              <Chevron
-                width="16"
-                height="16"
-                viewBox="0 0 16 16"
-                fill="none"
-                $expanded={expandedWorkspace === "work"}
-              >
-                <path
-                  d="M6 4l4 4-4 4"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </Chevron>
-              <span>Work</span>
-            </WorkspaceToggle>
-            {expandedWorkspace === "work" && (
-              <SubItems>{/* Sub-items can be added here */}</SubItems>
-            )}
-          </WorkspaceItem>
-
-          <WorkspaceItem>
-            <WorkspaceToggle onClick={() => toggleWorkspace("sport")}>
-              <Chevron
-                width="16"
-                height="16"
-                viewBox="0 0 16 16"
-                fill="none"
-                $expanded={expandedWorkspace === "sport"}
-              >
-                <path
-                  d="M6 4l4 4-4 4"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </Chevron>
-              <span>Sport</span>
-            </WorkspaceToggle>
-            {expandedWorkspace === "sport" && (
-              <SubItems>
-                <SubItem>
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                    <rect
-                      x="4"
-                      y="4"
-                      width="8"
-                      height="8"
-                      rx="1"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      fill="none"
-                    />
-                  </svg>
-                  <span>Running</span>
-                </SubItem>
-                <SubItem>
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                    <rect
-                      x="4"
-                      y="4"
-                      width="8"
-                      height="8"
-                      rx="1"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      fill="none"
-                    />
-                  </svg>
-                  <span>Gym</span>
-                </SubItem>
-                <SubItem>
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                    <rect
-                      x="4"
-                      y="4"
-                      width="8"
-                      height="8"
-                      rx="1"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      fill="none"
-                    />
-                  </svg>
-                  <span>Swimming</span>
-                </SubItem>
-              </SubItems>
-            )}
-          </WorkspaceItem>
+          {taskBoards
+            .filter((tb) => !tb.folderId)
+            .map((taskBoard) => (
+              <WorkspaceItem key={taskBoard.id}>
+                <WorkspaceToggle
+                  onClick={() => handleViewChange(taskBoard.name)}
+                >
+                  <img
+                    width={20}
+                    height={20}
+                    src="/kanban-board.svg"
+                    alt="Task Board"
+                  />
+                  <span>{taskBoard.name}</span>
+                </WorkspaceToggle>
+              </WorkspaceItem>
+            ))}
         </WorkspaceList>
       </Workspace>
     </NavigationSidebarContainer>

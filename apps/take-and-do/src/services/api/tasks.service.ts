@@ -98,7 +98,7 @@ export const tasksService = {
 
   async update(taskId: string, updates: Partial<Task>): Promise<Task> {
     const response = await fetch(`/api/tasks/${taskId}`, {
-      method: "PUT",
+      method: "PATCH",
       headers: {
         "Content-Type": "application/json",
       },

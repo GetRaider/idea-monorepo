@@ -99,6 +99,18 @@ export const mockTasks: Record<string, Task[]> = {
       labels: ["Work", "Health"],
       status: TaskStatus.TODO,
     },
+    {
+      id: "550e8400-e29b-41d4-a716-44665542313003",
+      taskBoardId: TASKBOARD_WORK_ID,
+      taskKey: "PS-015",
+      summary: "Complete the report for the project",
+      description: "Attend HIIT workout session",
+      dueDate: new Date("2025-10-22"),
+      estimation: 2,
+      priority: TaskPriority.MEDIUM,
+      labels: ["Work", "Health"],
+      status: TaskStatus.TODO,
+    },
   ],
   [TASKBOARD_SPORT_ID]: [
     {

@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import { Task, TaskPriority } from "../KanbanBoard";
 import {
   Card,
@@ -48,8 +49,38 @@ export default function TaskCard({
     }
   };
 
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  const handleDragStart = (e: React.DragEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", JSON.stringify({ taskId: id }));
+    if (cardRef.current) {
+      cardRef.current.style.opacity = "0.4";
+      cardRef.current.style.transform = "scale(0.98)";
+      cardRef.current.style.transition =
+        "opacity 0.2s ease, transform 0.2s ease";
+      cardRef.current.style.cursor = "grabbing";
+    }
+  };
+
+  const handleDragEnd = (e: React.DragEvent<HTMLDivElement>) => {
+    if (cardRef.current) {
+      cardRef.current.style.opacity = "1";
+      cardRef.current.style.transform = "scale(1)";
+      cardRef.current.style.transition =
+        "opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)";
+      cardRef.current.style.cursor = "grab";
+    }
+  };
+
   return (
-    <Card>
+    <Card
+      ref={cardRef}
+      draggable
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+    >
       <Header>
         <PriorityIcon>{getPriorityIcon()}</PriorityIcon>
         <Id>{taskKey || id}</Id>
@@ -120,10 +151,6 @@ export default function TaskCard({
             {label}
           </Tag>
         ))}
-        <Tag $isCategory>
-          <TagDot $isCategory />
-          {status}
-        </Tag>
       </Labels>
     </Card>
   );

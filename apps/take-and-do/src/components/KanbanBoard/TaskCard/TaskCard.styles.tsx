@@ -8,8 +8,13 @@ export const Card = styled.div`
   display: flex;
   flex-direction: column;
   gap: 12px;
-  cursor: pointer;
-  transition: all 0.2s;
+  cursor: grab;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform, opacity;
+
+  &:active {
+    cursor: grabbing;
+  }
 
   &:hover {
     border-color: #3a3a3a;

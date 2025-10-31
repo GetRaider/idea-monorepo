@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { taskBoardsService } from "@/services/api/taskBoards.service";
 import { tasksService } from "@/services/api/tasks.service";
 import {
@@ -91,6 +91,421 @@ export default function KanbanBoard({
   console.log({ boardView: currentView });
 
   const title = getWorkspaceTitle(currentView, workspaceTitle);
+
+  const handleTaskStatusChange = useCallback(
+    async (taskId: string, newStatus: TaskStatus, targetIndex?: number) => {
+      try {
+        // Find the current task to check its status
+        const isScheduleWorkspace =
+          currentView === TaskSchedule.TODAY ||
+          currentView === TaskSchedule.TOMORROW;
+
+        let currentTask: Task | undefined;
+        let currentGroupIndex: number | undefined;
+        if (isScheduleWorkspace) {
+          for (
+            let groupIndex = 0;
+            groupIndex < taskGroups.length;
+            groupIndex++
+          ) {
+            const group = taskGroups[groupIndex];
+            for (const statusKey of [
+              TaskStatus.TODO,
+              TaskStatus.IN_PROGRESS,
+              TaskStatus.DONE,
+            ]) {
+              const task = group.tasks[statusKey].find((t) => t.id === taskId);
+              if (task) {
+                currentTask = task;
+                currentGroupIndex = groupIndex;
+                break;
+              }
+            }
+            if (currentTask) break;
+          }
+        } else {
+          for (const statusKey of [
+            TaskStatus.TODO,
+            TaskStatus.IN_PROGRESS,
+            TaskStatus.DONE,
+          ]) {
+            const task = tasks[statusKey].find((t) => t.id === taskId);
+            if (task) {
+              currentTask = task;
+              break;
+            }
+          }
+        }
+
+        // If task not found, log error but still proceed (might be a new task)
+        if (!currentTask) {
+          console.warn(`Task ${taskId} not found in current view`);
+        }
+
+        // If status hasn't changed, handle reordering within the same column
+        if (currentTask && currentTask.status === newStatus) {
+          // Reorder within same column
+          if (isScheduleWorkspace && typeof currentGroupIndex === "number") {
+            setTaskGroups((prevGroups) =>
+              prevGroups.map((group, groupIndex) => {
+                // Only process the group that contains the task
+                if (groupIndex !== currentGroupIndex) return group;
+
+                const updatedTasks: Record<TaskStatus, Task[]> = {
+                  [TaskStatus.TODO]: [...group.tasks[TaskStatus.TODO]],
+                  [TaskStatus.IN_PROGRESS]: [
+                    ...group.tasks[TaskStatus.IN_PROGRESS],
+                  ],
+                  [TaskStatus.DONE]: [...group.tasks[TaskStatus.DONE]],
+                };
+
+                const currentArray = updatedTasks[newStatus];
+                const currentIndex = currentArray.findIndex(
+                  (t) => t.id === taskId,
+                );
+
+                if (currentIndex === -1) return group;
+
+                // Calculate insert index (adjust if target is after current position)
+                let insertIndex =
+                  typeof targetIndex === "number" &&
+                  targetIndex >= 0 &&
+                  targetIndex <= currentArray.length
+                    ? targetIndex
+                    : currentArray.length;
+
+                // If inserting after the current position, adjust for removal
+                if (insertIndex > currentIndex) {
+                  insertIndex -= 1;
+                }
+
+                // Remove from current position
+                const [movedTask] = currentArray.splice(currentIndex, 1);
+
+                // Insert at target position
+                currentArray.splice(insertIndex, 0, movedTask);
+
+                return {
+                  ...group,
+                  tasks: updatedTasks,
+                };
+              }),
+            );
+          } else {
+            setTasks((prevTasks) => {
+              const updatedTasks: Record<TaskStatus, Task[]> = {
+                [TaskStatus.TODO]: [...prevTasks[TaskStatus.TODO]],
+                [TaskStatus.IN_PROGRESS]: [
+                  ...prevTasks[TaskStatus.IN_PROGRESS],
+                ],
+                [TaskStatus.DONE]: [...prevTasks[TaskStatus.DONE]],
+              };
+
+              const currentArray = updatedTasks[newStatus];
+              const currentIndex = currentArray.findIndex(
+                (t) => t.id === taskId,
+              );
+
+              if (currentIndex === -1) return prevTasks;
+
+              // Calculate insert index (adjust if target is after current position)
+              let insertIndex =
+                typeof targetIndex === "number" &&
+                targetIndex >= 0 &&
+                targetIndex <= currentArray.length
+                  ? targetIndex
+                  : currentArray.length;
+
+              // If inserting after the current position, adjust for removal
+              if (insertIndex > currentIndex) {
+                insertIndex -= 1;
+              }
+
+              // Remove from current position
+              const [movedTask] = currentArray.splice(currentIndex, 1);
+
+              // Insert at target position
+              currentArray.splice(insertIndex, 0, movedTask);
+
+              return updatedTasks;
+            });
+          }
+          return;
+        }
+
+        // OPTIMISTIC UPDATE: Update local state immediately for smooth animation
+        // This happens BEFORE the API call so the UI updates instantly
+        if (isScheduleWorkspace) {
+          // Update task groups optimistically
+          setTaskGroups((prevGroups) =>
+            prevGroups.map((group, groupIndex) => {
+              const updatedTasks: Record<TaskStatus, Task[]> = {
+                [TaskStatus.TODO]: [...(group.tasks[TaskStatus.TODO] || [])],
+                [TaskStatus.IN_PROGRESS]: [
+                  ...(group.tasks[TaskStatus.IN_PROGRESS] || []),
+                ],
+                [TaskStatus.DONE]: [...(group.tasks[TaskStatus.DONE] || [])],
+              };
+
+              let foundTask: Task | undefined;
+              let taskFoundInGroup = false;
+
+              // Find and remove task from old status (in this group)
+              (Object.keys(updatedTasks) as TaskStatus[]).forEach(
+                (statusKey) => {
+                  const index = updatedTasks[statusKey].findIndex(
+                    (t) => t.id === taskId,
+                  );
+                  if (index !== -1) {
+                    foundTask = updatedTasks[statusKey][index];
+                    updatedTasks[statusKey] = updatedTasks[statusKey].filter(
+                      (t) => t.id !== taskId,
+                    );
+                    taskFoundInGroup = true;
+                  }
+                },
+              );
+
+              // Only update if task was found in this group, or if we have currentTask and this is the right group
+              if (taskFoundInGroup && foundTask) {
+                // Task was found in this group, add it to new status
+                const updatedTask: Task = {
+                  ...foundTask,
+                  status: newStatus,
+                };
+                const insertIndex =
+                  typeof targetIndex === "number" &&
+                  targetIndex >= 0 &&
+                  targetIndex <= updatedTasks[newStatus].length
+                    ? targetIndex
+                    : updatedTasks[newStatus].length;
+                updatedTasks[newStatus].splice(insertIndex, 0, updatedTask);
+
+                return {
+                  ...group,
+                  tasks: updatedTasks,
+                };
+              } else if (
+                currentTask &&
+                typeof currentGroupIndex === "number" &&
+                currentGroupIndex === groupIndex
+              ) {
+                // Task wasn't in this group's arrays yet, but currentTask exists and this is the correct group
+                const updatedTask: Task = {
+                  ...currentTask,
+                  status: newStatus,
+                };
+                const insertIndex =
+                  typeof targetIndex === "number" &&
+                  targetIndex >= 0 &&
+                  targetIndex <= updatedTasks[newStatus].length
+                    ? targetIndex
+                    : updatedTasks[newStatus].length;
+                updatedTasks[newStatus].splice(insertIndex, 0, updatedTask);
+
+                return {
+                  ...group,
+                  tasks: updatedTasks,
+                };
+              }
+
+              // Task not in this group, return unchanged
+              return group;
+            }),
+          );
+        } else {
+          // Update regular tasks optimistically
+          setTasks((prevTasks) => {
+            const updatedTasks: Record<TaskStatus, Task[]> = {
+              [TaskStatus.TODO]: [...prevTasks[TaskStatus.TODO]],
+              [TaskStatus.IN_PROGRESS]: [...prevTasks[TaskStatus.IN_PROGRESS]],
+              [TaskStatus.DONE]: [...prevTasks[TaskStatus.DONE]],
+            };
+
+            let foundTask: Task | undefined;
+
+            // Find and remove task from old status
+            (Object.keys(updatedTasks) as TaskStatus[]).forEach((statusKey) => {
+              const index = updatedTasks[statusKey].findIndex(
+                (t) => t.id === taskId,
+              );
+              if (index !== -1) {
+                foundTask = updatedTasks[statusKey][index];
+                updatedTasks[statusKey] = updatedTasks[statusKey].filter(
+                  (t) => t.id !== taskId,
+                );
+              }
+            });
+
+            // Add task to new status
+            if (foundTask) {
+              const updatedTask: Task = {
+                ...foundTask,
+                status: newStatus,
+              };
+              const insertIndex =
+                typeof targetIndex === "number" &&
+                targetIndex >= 0 &&
+                targetIndex <= updatedTasks[newStatus].length
+                  ? targetIndex
+                  : updatedTasks[newStatus].length;
+              updatedTasks[newStatus].splice(insertIndex, 0, updatedTask);
+            } else if (currentTask) {
+              // Task might be moving from another view
+              const updatedTask: Task = {
+                ...currentTask,
+                status: newStatus,
+              };
+              const insertIndex =
+                typeof targetIndex === "number" &&
+                targetIndex >= 0 &&
+                targetIndex <= updatedTasks[newStatus].length
+                  ? targetIndex
+                  : updatedTasks[newStatus].length;
+              updatedTasks[newStatus].splice(insertIndex, 0, updatedTask);
+            }
+
+            return updatedTasks;
+          });
+        }
+
+        // Update task status via API (after optimistic update for smooth UX)
+        await tasksService.update(taskId, { status: newStatus });
+
+        // Note: We don't need to update state again here since we did it optimistically
+        // If the API call fails, we could revert the optimistic update, but for now
+        // we'll assume it succeeds
+
+        if (isScheduleWorkspace) {
+          // Update task groups - find the group containing the task
+          setTaskGroups((prevGroups) =>
+            prevGroups.map((group, groupIndex) => {
+              const updatedTasks: Record<TaskStatus, Task[]> = {
+                [TaskStatus.TODO]: [...(group.tasks[TaskStatus.TODO] || [])],
+                [TaskStatus.IN_PROGRESS]: [
+                  ...(group.tasks[TaskStatus.IN_PROGRESS] || []),
+                ],
+                [TaskStatus.DONE]: [...(group.tasks[TaskStatus.DONE] || [])],
+              };
+
+              let foundTask: Task | undefined;
+              let taskFoundInGroup = false;
+
+              // Find and remove task from old status (in this group)
+              (Object.keys(updatedTasks) as TaskStatus[]).forEach(
+                (statusKey) => {
+                  const index = updatedTasks[statusKey].findIndex(
+                    (t) => t.id === taskId,
+                  );
+                  if (index !== -1) {
+                    foundTask = updatedTasks[statusKey][index];
+                    updatedTasks[statusKey] = updatedTasks[statusKey].filter(
+                      (t) => t.id !== taskId,
+                    );
+                    taskFoundInGroup = true;
+                  }
+                },
+              );
+
+              // Only update if task was found in this group, or if we have currentTask and this is the right group
+              if (taskFoundInGroup && foundTask) {
+                // Task was found in this group, add it to new status
+                const updatedTask: Task = {
+                  ...foundTask,
+                  status: newStatus,
+                };
+                const insertIndex =
+                  typeof targetIndex === "number" &&
+                  targetIndex >= 0 &&
+                  targetIndex <= updatedTasks[newStatus].length
+                    ? targetIndex
+                    : updatedTasks[newStatus].length;
+                updatedTasks[newStatus].splice(insertIndex, 0, updatedTask);
+
+                return {
+                  ...group,
+                  tasks: updatedTasks,
+                };
+              } else if (
+                currentTask &&
+                typeof currentGroupIndex === "number" &&
+                currentGroupIndex === groupIndex
+              ) {
+                // Task wasn't in this group's arrays yet, but currentTask exists and this is the correct group
+                // This can happen when moving to an empty status or when task lookup failed initially
+                const updatedTask: Task = {
+                  ...currentTask,
+                  status: newStatus,
+                };
+                const insertIndex =
+                  typeof targetIndex === "number" &&
+                  targetIndex >= 0 &&
+                  targetIndex <= updatedTasks[newStatus].length
+                    ? targetIndex
+                    : updatedTasks[newStatus].length;
+                updatedTasks[newStatus].splice(insertIndex, 0, updatedTask);
+
+                return {
+                  ...group,
+                  tasks: updatedTasks,
+                };
+              }
+
+              // Task not in this group, return unchanged
+              return group;
+            }),
+          );
+        } else {
+          // Update regular tasks
+          setTasks((prevTasks) => {
+            const updatedTasks: Record<TaskStatus, Task[]> = {
+              [TaskStatus.TODO]: [...prevTasks[TaskStatus.TODO]],
+              [TaskStatus.IN_PROGRESS]: [...prevTasks[TaskStatus.IN_PROGRESS]],
+              [TaskStatus.DONE]: [...prevTasks[TaskStatus.DONE]],
+            };
+
+            let foundTask: Task | undefined;
+
+            // Find and remove task from old status
+            (Object.keys(updatedTasks) as TaskStatus[]).forEach((statusKey) => {
+              const index = updatedTasks[statusKey].findIndex(
+                (t) => t.id === taskId,
+              );
+              if (index !== -1) {
+                foundTask = updatedTasks[statusKey][index];
+                updatedTasks[statusKey] = updatedTasks[statusKey].filter(
+                  (t) => t.id !== taskId,
+                );
+              }
+            });
+
+            // Add task to new status at the correct position
+            if (foundTask) {
+              const updatedTask: Task = {
+                ...foundTask,
+                status: newStatus,
+              };
+              if (
+                typeof targetIndex === "number" &&
+                targetIndex >= 0 &&
+                targetIndex <= updatedTasks[newStatus].length
+              ) {
+                updatedTasks[newStatus].splice(targetIndex, 0, updatedTask);
+              } else {
+                updatedTasks[newStatus].push(updatedTask);
+              }
+            }
+
+            return updatedTasks;
+          });
+        }
+      } catch (error) {
+        console.error("Failed to update task status:", error);
+        // Optionally show an error message to the user
+      }
+    },
+    [currentView],
+  );
 
   return (
     <BoardContainer>
@@ -194,14 +609,17 @@ export default function KanbanBoard({
                   <Column
                     tasks={group.tasks[TaskStatus.TODO]}
                     status={TaskStatus.TODO}
+                    onTaskDrop={handleTaskStatusChange}
                   />
                   <Column
                     tasks={group.tasks[TaskStatus.IN_PROGRESS]}
                     status={TaskStatus.IN_PROGRESS}
+                    onTaskDrop={handleTaskStatusChange}
                   />
                   <Column
                     tasks={group.tasks[TaskStatus.DONE]}
                     status={TaskStatus.DONE}
+                    onTaskDrop={handleTaskStatusChange}
                   />
                 </div>
               ))}
@@ -216,12 +634,21 @@ export default function KanbanBoard({
           )
         ) : (
           <>
-            <Column tasks={tasks[TaskStatus.TODO]} status={TaskStatus.TODO} />
+            <Column
+              tasks={tasks[TaskStatus.TODO]}
+              status={TaskStatus.TODO}
+              onTaskDrop={handleTaskStatusChange}
+            />
             <Column
               tasks={tasks[TaskStatus.IN_PROGRESS]}
               status={TaskStatus.IN_PROGRESS}
+              onTaskDrop={handleTaskStatusChange}
             />
-            <Column tasks={tasks[TaskStatus.DONE]} status={TaskStatus.DONE} />
+            <Column
+              tasks={tasks[TaskStatus.DONE]}
+              status={TaskStatus.DONE}
+              onTaskDrop={handleTaskStatusChange}
+            />
           </>
         )}
       </Board>

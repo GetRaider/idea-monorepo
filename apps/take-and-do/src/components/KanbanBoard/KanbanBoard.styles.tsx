@@ -225,3 +225,32 @@ export const AddButton = styled.button`
     background: rgba(42, 42, 42, 0.3);
   }
 `;
+
+export const LoadingContainer = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  grid-column: 1 / -1;
+  min-height: 200px;
+  color: #fff;
+`;
+
+export const Spinner = styled.div`
+  width: 48px;
+  height: 48px;
+  border: 4px solid rgba(255, 255, 255, 0.1);
+  border-top-color: #7255c1;
+  border-right-color: #7255c1;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+`;

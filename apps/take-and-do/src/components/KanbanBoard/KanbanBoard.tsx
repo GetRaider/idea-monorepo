@@ -21,6 +21,8 @@ import {
   Board,
   WorkspaceSeparator,
   WorkspaceIcon,
+  LoadingContainer,
+  Spinner,
 } from "./KanbanBoard.styles";
 import { Column } from "./Column/Column";
 
@@ -582,9 +584,9 @@ export default function KanbanBoard({
 
       <Board>
         {isLoading ? (
-          <div style={{ color: "#fff", padding: "24px", gridColumn: "1 / -1" }}>
-            Loading...
-          </div>
+          <LoadingContainer>
+            <Spinner />
+          </LoadingContainer>
         ) : currentView === TaskSchedule.TODAY ||
           currentView === TaskSchedule.TOMORROW ? (
           taskGroups.length > 0 ? (

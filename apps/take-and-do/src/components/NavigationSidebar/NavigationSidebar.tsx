@@ -8,7 +8,7 @@ import {
   Nav,
   NavItem,
   Workspace,
-  WorkspaceHeader,
+  SideBarSectionHeader,
   WorkspaceList,
   WorkspaceItem,
   WorkspaceToggle,
@@ -86,6 +86,7 @@ export default function NavigationSidebar({
       </Search>
 
       <Nav>
+        <SideBarSectionHeader>Schedules</SideBarSectionHeader>
         <NavItem
           $active={activeView === "today"}
           onClick={() => handleViewChange("today")}
@@ -128,7 +129,7 @@ export default function NavigationSidebar({
       </Nav>
 
       <Workspace>
-        <WorkspaceHeader>Workspace</WorkspaceHeader>
+        <SideBarSectionHeader>Workspace</SideBarSectionHeader>
 
         <WorkspaceList>
           {folders.map((folder) => (

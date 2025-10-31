@@ -1,8 +1,4 @@
-import {
-  TaskStatus,
-  TaskPriority,
-  Task,
-} from "@/components/KanbanBoard/KanbanBoard";
+import { Task } from "@/components/KanbanBoard/KanbanBoard";
 import { Folder, TaskBoard } from "@/types/workspace";
 
 // Mock folders
@@ -10,6 +6,19 @@ const FOLDER_PERSONAL_ID = "550e8400-e29b-41d4-a716-446655440001";
 const TASKBOARD_PERSONAL_ID = "550e8400-e29b-41d4-a716-446655440002";
 const TASKBOARD_WORK_ID = "550e8400-e29b-41d4-a716-446655440003";
 const TASKBOARD_SPORT_ID = "550e8400-e29b-41d4-a716-446655440004";
+
+// Mock Enums for this file to have all statuses and priorities
+enum TaskPriority {
+  LOW = "low",
+  MEDIUM = "medium",
+  HIGH = "high",
+  CRITICAL = "critical",
+}
+enum TaskStatus {
+  TODO = "To Do",
+  IN_PROGRESS = "In Progress",
+  DONE = "Done",
+}
 
 export const mockFolders: Folder[] = [
   {
@@ -102,7 +111,7 @@ export const mockTasks: Record<string, Task[]> = {
       estimation: 3.5,
       priority: TaskPriority.HIGH,
       labels: ["Work", "Food", "Creative"],
-      status: TaskStatus.TODO,
+      status: TaskStatus.IN_PROGRESS,
       schedule: "today",
     },
     {
@@ -193,7 +202,7 @@ export function getTaskBoardsByFolder(folderId: string): TaskBoard[] {
 }
 
 export function getTasksByTaskBoardId(taskBoardId: string): Task[] {
-  return mockTasks[taskBoardId] || [];
+  return mockTasks[taskBoardId];
 }
 
 export function getAllTasks(): Task[] {
@@ -257,18 +266,28 @@ export function createTask(task: Omit<Task, "id">): Task {
   return newTask;
 }
 
+export function getTaskById(taskId: string): Task | null {
+  for (const taskBoardId in mockTasks) {
+    const task = mockTasks[taskBoardId].find((t) => t.id === taskId);
+    if (task) {
+      return task;
+    }
+  }
+  return null;
+}
+
 export function updateTask(
   taskId: string,
   updates: Partial<Task>,
 ): Task | null {
-  for (const workspaceId in mockTasks) {
-    const taskIndex = mockTasks[workspaceId].findIndex((t) => t.id === taskId);
+  for (const taskBoardId in mockTasks) {
+    const taskIndex = mockTasks[taskBoardId].findIndex((t) => t.id === taskId);
     if (taskIndex !== -1) {
-      mockTasks[workspaceId][taskIndex] = {
-        ...mockTasks[workspaceId][taskIndex],
+      mockTasks[taskBoardId][taskIndex] = {
+        ...mockTasks[taskBoardId][taskIndex],
         ...updates,
       };
-      return mockTasks[workspaceId][taskIndex];
+      return mockTasks[taskBoardId][taskIndex];
     }
   }
   return null;

@@ -3,14 +3,17 @@
 import { useState } from "react";
 import Sidebar from "@/components/Sidebar/Sidebar";
 import NavigationSidebar from "@/components/NavigationSidebar/NavigationSidebar";
-import KanbanBoard from "@/components/KanbanBoard/KanbanBoard";
-import { taskBoardsService } from "@/services/api/taskBoards.service";
+import KanbanBoard, {
+  TaskSchedule,
+} from "@/components/KanbanBoard/KanbanBoard";
 import { PageContainer, Main } from "../page.styles";
 
 export default function TasksPage() {
   const [currentPage, setCurrentPage] = useState("tasks");
   const [isNavSidebarOpen, setIsNavSidebarOpen] = useState(true);
-  const [activeView, setActiveView] = useState("today");
+  const [activeView, setActiveView] = useState<TaskSchedule | string>(
+    TaskSchedule.TODAY,
+  );
   const [workspaceTitle, setWorkspaceTitle] = useState("Today");
 
   const handleNavigationChange = (page: string) => {
@@ -18,17 +21,15 @@ export default function TasksPage() {
     setIsNavSidebarOpen(true);
   };
 
-  const handleViewChange = async (boardView: string) => {
-    setActiveView(boardView);
+  const handleViewChange = (view: string) => {
+    setActiveView(view);
 
-    console.log({ boardView });
-
-    if (boardView === "today") {
+    if (view === TaskSchedule.TODAY) {
       setWorkspaceTitle("Today");
-    } else if (boardView === "tomorrow") {
+    } else if (view === TaskSchedule.TOMORROW) {
       setWorkspaceTitle("Tomorrow");
-    } else if (boardView) {
-      setWorkspaceTitle(boardView);
+    } else if (view) {
+      setWorkspaceTitle(view);
     }
   };
 
@@ -41,7 +42,7 @@ export default function TasksPage() {
         onViewChange={handleViewChange}
       />
       <Main $withNavSidebar={isNavSidebarOpen}>
-        <KanbanBoard boardView={activeView} workspaceTitle={workspaceTitle} />
+        <KanbanBoard currentView={activeView} workspaceTitle={workspaceTitle} />
       </Main>
     </PageContainer>
   );

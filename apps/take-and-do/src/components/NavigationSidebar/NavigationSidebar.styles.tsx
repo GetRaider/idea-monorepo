@@ -74,7 +74,7 @@ export const Workspace = styled.div`
   gap: 12px;
 `;
 
-export const WorkspaceHeader = styled.div`
+export const SideBarSectionHeader = styled.div`
   font-size: 12px;
   font-weight: 600;
   color: #666;

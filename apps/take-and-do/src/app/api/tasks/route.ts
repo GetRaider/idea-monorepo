@@ -5,7 +5,7 @@ import {
   getTasksBySchedule,
   createTask,
 } from "@/app/api/mock-data";
-import { Task } from "@/components/KanbanBoard/KanbanBoard";
+import { Task } from "@/components/KanbanBoard/types";
 
 export async function GET(request: NextRequest) {
   try {

@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 
-import { TaskStatus } from "../KanbanBoard";
+import { TaskStatus, Task } from "../types";
 import {
   Column as ColumnStyles,
   ColumnHeader,
@@ -17,7 +17,6 @@ import {
   DropIndicatorEnd,
   TaskWrapper,
 } from "./Column.styles";
-import { Task } from "../KanbanBoard";
 import TaskCard from "../TaskCard/TaskCard";
 
 interface ColumnProps {

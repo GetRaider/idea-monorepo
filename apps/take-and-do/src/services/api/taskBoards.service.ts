@@ -1,5 +1,5 @@
 import { TaskBoard } from "@/types/workspace";
-import { Task, TaskPriority } from "@/components/KanbanBoard/KanbanBoard";
+import { Task, TaskPriority } from "@/components/KanbanBoard/types";
 
 export const taskBoardsService = {
   async getAll(): Promise<TaskBoard[]> {

@@ -1,5 +1,5 @@
 import styled from "styled-components";
-import { TaskStatus } from "../KanbanBoard";
+import { TaskStatus } from "../types";
 
 export const Card = styled.div`
   background: #1e1e1e;

@@ -44,7 +44,7 @@ export const CreateButton = styled.button`
   transition: all 0.2s;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.15)
+    background: rgba(255, 255, 255, 0.15);
     transform: translateY(-1px);
   }
 
@@ -172,8 +172,9 @@ export const Footer = styled.div`
 export const Board = styled.div`
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  grid-auto-rows: auto;
-  gap: 24px;
+  grid-auto-rows: min-content;
+  column-gap: 24px;
+  row-gap: 16px;
   padding: 24px;
   flex: 1;
   overflow: auto;
@@ -183,19 +184,18 @@ export const WorkspaceSeparator = styled.div`
   grid-column: 1 / -1;
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 8px;
   padding: 12px 16px;
   background: rgba(255, 255, 255, 0.05);
   border-radius: 8px;
-  margin-bottom: 16px;
-  margin-top: 16px;
+  margin: 0;
   color: #fff;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 600;
-
-  &::first-child {
-    margin-top: 0;
-  }
+  min-height: 44px;
+  max-height: 44px;
+  box-sizing: border-box;
 `;
 
 export const WorkspaceIcon = styled.div`

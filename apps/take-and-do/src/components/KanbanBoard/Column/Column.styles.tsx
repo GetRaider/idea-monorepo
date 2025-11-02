@@ -1,11 +1,12 @@
 import styled from "styled-components";
-import { TaskStatus } from "../KanbanBoard";
+import { TaskStatus } from "../types";
 
 export const Column = styled.div`
   display: flex;
   flex-direction: column;
   gap: 16px;
   min-width: 320px;
+  margin: 0;
 `;
 
 export const ColumnHeader = styled.div`

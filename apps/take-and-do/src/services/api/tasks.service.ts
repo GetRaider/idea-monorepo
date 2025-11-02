@@ -1,4 +1,4 @@
-import { Task, TaskPriority } from "@/components/KanbanBoard/KanbanBoard";
+import { Task, TaskPriority } from "@/components/KanbanBoard/types";
 
 export const tasksService = {
   async getAll(): Promise<Task[]> {
@@ -33,12 +33,6 @@ export const tasksService = {
 
     // Convert date strings back to Date objects and normalize priority
     const normalizeTask = (task: any) => {
-      console.log(
-        "Received task priority:",
-        task.priority,
-        "for task:",
-        task.id,
-      );
       return {
         ...task,
         dueDate: task.dueDate ? new Date(task.dueDate) : undefined,
@@ -117,28 +111,14 @@ export const tasksService = {
 };
 
 function normalizePriority(priority: any): TaskPriority {
-  console.log(
-    "normalizePriority called with:",
-    priority,
-    "type:",
-    typeof priority,
-  );
   if (!priority) {
-    console.log("Priority is falsy, returning MEDIUM");
     return TaskPriority.MEDIUM;
   }
 
   const priorityString = String(priority).toLowerCase();
   const validPriorities = Object.values(TaskPriority) as string[];
-  console.log(
-    "Priority string:",
-    priorityString,
-    "Valid priorities:",
-    validPriorities,
-  );
 
   if (validPriorities.includes(priorityString)) {
-    console.log("Priority matched, returning:", priorityString);
     return priorityString as TaskPriority;
   }
 

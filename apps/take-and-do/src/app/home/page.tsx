@@ -5,11 +5,7 @@ import Link from "next/link";
 import Sidebar from "@/components/Sidebar/Sidebar";
 import NavigationSidebar from "@/components/NavigationSidebar/NavigationSidebar";
 import { tasksService } from "@/services/api/tasks.service";
-import {
-  TaskStatus,
-  TaskPriority,
-  Task,
-} from "@/components/KanbanBoard/KanbanBoard";
+import { TaskStatus, TaskPriority, Task } from "@/components/KanbanBoard/types";
 import {
   PageContainer,
   MainContent,

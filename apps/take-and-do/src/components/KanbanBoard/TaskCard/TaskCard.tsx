@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import { Task, TaskPriority } from "../KanbanBoard";
+import { Task, TaskPriority } from "../types";
 import {
   Card,
   Header,
@@ -34,7 +34,6 @@ export default function TaskCard({
   },
 }: TaskCardProps) {
   const getPriorityIcon = () => {
-    console.log("priority", priority);
     switch (priority) {
       case TaskPriority.LOW:
         return "🔵";

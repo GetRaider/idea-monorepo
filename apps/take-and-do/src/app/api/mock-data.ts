@@ -1,4 +1,4 @@
-import { Task } from "@/components/KanbanBoard/KanbanBoard";
+import { Task } from "@/components/KanbanBoard/types";
 import { Folder, TaskBoard } from "@/types/workspace";
 
 // Mock folders

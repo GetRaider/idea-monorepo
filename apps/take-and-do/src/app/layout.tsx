@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import StyledComponentsRegistry from "@/lib/styled-components-registry";
+import { Theme } from "@radix-ui/themes";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -9,8 +10,16 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Take & Do - Task Management",
-  description: "A modern task management application",
+  title: "Take & Do - Productivity Management",
+  description: "A modern productivity management application",
+  icons: {
+    icon: [
+      { url: "/logo.svg", type: "image/svg+xml" },
+      { url: "/logo.svg", type: "image/svg+xml", sizes: "any" },
+    ],
+    shortcut: "/logo.svg",
+    apple: "/logo.svg",
+  },
 };
 
 export default function RootLayout({
@@ -21,7 +30,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.variable}>
-        <StyledComponentsRegistry>{children}</StyledComponentsRegistry>
+        <StyledComponentsRegistry>
+          <Theme>{children}</Theme>
+        </StyledComponentsRegistry>
       </body>
     </html>
   );

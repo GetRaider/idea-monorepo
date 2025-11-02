@@ -1,4 +1,5 @@
 import styled from "styled-components";
+import { TaskStatus } from "../KanbanBoard";
 
 export const Card = styled.div`
   background: #1e1e1e;
@@ -52,12 +53,14 @@ export const Subtasks = styled.div`
   color: #666;
 `;
 
-export const Title = styled.h3`
+export const Title = styled.h3<{ $status?: TaskStatus }>`
   font-size: 14px;
   font-weight: 500;
-  color: #fff;
+  color: ${(props) => (props.$status === TaskStatus.DONE ? "#888" : "#fff")};
   line-height: 1.4;
   margin: 0;
+  text-decoration: ${(props) =>
+    props.$status === TaskStatus.DONE ? "line-through" : "none"};
 `;
 
 export const Meta = styled.div`

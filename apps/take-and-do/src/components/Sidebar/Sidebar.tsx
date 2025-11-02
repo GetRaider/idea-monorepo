@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { HomeIcon } from "@radix-ui/react-icons";
 import {
   SidebarContainer,
   Logo,
@@ -18,14 +20,21 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ onNavigationChange }: SidebarProps) {
-  const [activePage, setActivePage] = useState("tasks");
+  const pathname = usePathname();
+  const router = useRouter();
+  const [activePage, setActivePage] = useState(
+    pathname === "/home" ? "home" : pathname === "/tasks" ? "tasks" : "home",
+  );
 
-  const handleNavClick = (page: string) => {
-    if (page === "tasks") {
-      setActivePage(page);
-      onNavigationChange(page);
-    }
+  const handleNavClick = (page: string, path: string) => {
+    setActivePage(page);
+    onNavigationChange(page);
+    router.push(path);
   };
+
+  // Determine active state based on pathname
+  const isHomeActive = pathname === "/home" || pathname === "/";
+  const isTasksActive = pathname === "/tasks";
 
   return (
     <SidebarContainer>
@@ -33,19 +42,24 @@ export default function Sidebar({ onNavigationChange }: SidebarProps) {
 
       <Nav>
         <NavButton
-          $active={activePage === "tasks"}
-          onClick={() => handleNavClick("tasks")}
-          title="Tasks"
+          $active={isHomeActive}
+          onClick={() => handleNavClick("home", "/home")}
+        >
+          <HomeIcon width={24} height={24} />
+        </NavButton>
+        <NavButton
+          $active={isTasksActive}
+          onClick={() => handleNavClick("tasks", "/tasks")}
         >
           <img width={24} height={24} src="/tasks.svg" alt="Tasks" />
         </NavButton>
 
-        <NavButton disabled title="Calendar (disabled)">
+        <NavButton disabled>
           <img width={24} height={24} src="/calendar.svg" alt="Calendar" />
         </NavButton>
 
-        <NavButton disabled title="Workspace (disabled)">
-          <img width={24} height={24} src="/docs.svg" alt="Calendar" />
+        <NavButton disabled>
+          <img width={24} height={24} src="/docs.svg" alt="Workspace" />
         </NavButton>
       </Nav>
 

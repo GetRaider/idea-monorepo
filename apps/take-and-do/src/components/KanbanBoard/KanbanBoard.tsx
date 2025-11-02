@@ -90,8 +90,6 @@ export default function KanbanBoard({
     fetchTasks();
   }, [currentView]);
 
-  console.log({ boardView: currentView });
-
   const title = getWorkspaceTitle(currentView, workspaceTitle);
 
   const handleTaskStatusChange = useCallback(

@@ -58,7 +58,7 @@ export default function Home() {
       <Content>
         <Title>Take & Do</Title>
         <Subtitle>As simple as possible</Subtitle>
-        <Button href="/tasks">Get Started</Button>
+        <Button href="/home">Get Started</Button>
       </Content>
     </Container>
   );

@@ -1,120 +1,85 @@
-# Turborepo starter
+# Idea Monorepo
 
-This is a community-maintained example. If you experience a problem, please submit a pull request with a fix. GitHub Issues will be closed.
+A repository where I invent, test, and validate product ideas. This monorepo contains multiple applications and shared packages, serving as a space to experiment with new concepts, build prototypes, and showcase development work.
 
-## Using this example
+## Projects
 
-Run the following command:
-
-```bash
-npx create-turbo@latest -e with-nestjs
-```
-
-## What's inside?
-
-This Turborepo includes the following packages/apps:
+This repository includes the following applications and packages:
 
 ### Apps and Packages
 
     .
     ├── apps
-    │   ├── api                       # NestJS app (https://nestjs.com).
-    │   └── web                       # Next.js app (https://nextjs.org).
+    │   ├── devinity-api              # NestJS API for engineering management app
+    │   ├── devinity-web              # Next.js web application for engineering management
+    │   └── take-and-do              # Next.js productivity management app
     └── packages
-        ├── @repo/api                 # Shared `NestJS` resources.
-        ├── @repo/eslint-config       # `eslint` configurations (includes `prettier`)
-        ├── @repo/jest-config         # `jest` configurations
+        ├── @repo/api                 # Shared NestJS resources
+        ├── @repo/eslint-config       # ESLint configurations (includes Prettier)
+        ├── @repo/jest-config         # Jest configurations
         ├── @repo/typescript-config   # `tsconfig.json`s used throughout the monorepo
-        └── @repo/ui                  # Shareable stub React component library.
+        └── @repo/ui                  # Shareable React component library
 
 Each package and application are 100% [TypeScript](https://www.typescriptlang.org/) safe.
 
-### Utilities
+### Tech Stack
 
-This `Turborepo` has some additional tools already set for you:
+The repository uses modern development tools and practices:
 
+- [Node.js](https://nodejs.org/) runtime for all applications
 - [TypeScript](https://www.typescriptlang.org/) for static type-safety
 - [ESLint](https://eslint.org/) for code linting
 - [Prettier](https://prettier.io) for code formatting
-- [Jest](https://prettier.io) & [Playwright](https://playwright.dev/) for testing
+- [Jest](https://jestjs.io) & [Playwright](https://playwright.dev/) for testing
 
-### Commands
-
-This `Turborepo` already configured useful commands for all your apps and packages.
+### Development Commands
 
 #### Build
 
 ```bash
-# Will build all the app & packages with the supported `build` script.
+# Build all apps and packages
 pnpm run build
 
-# ℹ️ If you plan to only build apps individually,
-# Please make sure you've built the packages first.
+# Note: If building apps individually, build packages first
 ```
 
 #### Develop
 
 ```bash
-# Will run the development server for all the app & packages with the supported `dev` script.
+# Start development servers for all apps
 pnpm run dev
+
+# Run in production mode
+pnpm run prod
 ```
 
-#### test
+#### Test
 
 ```bash
-# Will launch a test suites for all the app & packages with the supported `test` script.
+# Run all test suites
 pnpm run test
 
-# You can launch e2e testes with `test:e2e`
+# Run end-to-end tests
 pnpm run test:e2e
-
-# See `@repo/jest-config` to customize the behavior.
 ```
 
 #### Lint
 
 ```bash
-# Will lint all the app & packages with the supported `lint` script.
-# See `@repo/eslint-config` to customize the behavior.
+# Lint all apps and packages
 pnpm run lint
 ```
 
 #### Format
 
 ```bash
-# Will format all the supported `.ts,.js,json,.tsx,.jsx` files.
-# See `@repo/eslint-config/prettier-base.js` to customize the behavior.
+# Format all TypeScript and Markdown files
 pnpm format
 ```
 
-### Remote Caching
-
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
-
-Turborepo can use a technique known as [Remote Caching](https://turborepo.com/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
+#### Code Check
 
 ```bash
-npx turbo login
+# Run TypeScript type checking and linting
+pnpm run codeCheck
 ```
-
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
-
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
-
-```bash
-npx turbo link
-```
-
-## Useful Links
-
-Learn more about the power of Turborepo:
-
-- [Tasks](https://turborepo.com/docs/core-concepts/monorepos/running-tasks)
-- [Caching](https://turborepo.com/docs/core-concepts/caching)
-- [Remote Caching](https://turborepo.com/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.com/docs/core-concepts/monorepos/filtering)
-- [Configuration Options](https://turborepo.com/docs/reference/configuration)
-- [CLI Usage](https://turborepo.com/docs/reference/command-line-reference)

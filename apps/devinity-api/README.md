@@ -1,6 +1,6 @@
 # Devinity API
 
-A modern NestJS API with PostgreSQL and Redis integration.
+Backend API for Devinity, an engineering management application. Built with NestJS, PostgreSQL, and Redis.
 
 ## Features
 
@@ -109,10 +109,6 @@ src/
 
 If you plan to only build this app, make sure you've built the packages first.
 
-## Learn More
+## Development
 
-To learn more about NestJs, take a look at the following resources:
-
-- [Official Documentation](https://docs.nestjs.com) - A progressive Node.js framework for building efficient, reliable and scalable server-side applications.
-- [Official NestJS Courses](https://courses.nestjs.com) - Learn everything you need to master NestJS and tackle modern backend applications at any scale.
-- [GitHub Repo](https://github.com/nestjs/nest)
+This API is part of the Devinity engineering management application. It provides the backend services for managing engineering teams, projects, and workflows.

@@ -1,8 +1,10 @@
-# With-NestJs | Web
+# Devinity Web
+
+Frontend web application for Devinity, an engineering management platform. Built with Next.js and React.
 
 ## Getting Started
 
-> 🏁 This app depends on the [apps/api](../api/README.md) server. make sure your server is running at the port `3000`
+> 🏁 This app depends on the [devinity-api](../devinity-api/README.md) server. Make sure your API server is running.
 
 Run the development server:
 
@@ -14,23 +16,21 @@ Open [localhost:3001](http://localhost:3001) with your browser to see the result
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-To create [API routes](https://nextjs.org/docs/app/building-your-application/routing/router-handlers) add an `api/` directory to the `app/` directory with a `route.ts` file. For individual endpoints, create a subfolder in the `api` directory, as `api/hello/route.ts` would map to [http://localhost:3000/api/hello](http://localhost:3000/api/hello).
+To create [API routes](https://nextjs.org/docs/app/building-your-application/routing/router-handlers) add an `api/` directory to the `app/` directory with a `route.ts` file.
 
 ### ⚠️ Note about build
 
-If you plan to only build this app. Please make sure you've built the packages first.
+If you plan to only build this app, make sure you've built the packages first.
 
-## Learn More
+## Development
 
-To learn more about Next.js, take a look at the following resources:
+This web application is part of the Devinity engineering management application. It provides the user interface for managing engineering teams, projects, and workflows.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn/foundations/about-nextjs) - an interactive Next.js tutorial.
+## Available Scripts
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_source=github.com&utm_medium=referral&utm_campaign=turborepo-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+- `pnpm dev` - Start development server (port 3001)
+- `pnpm build` - Build for production
+- `pnpm prod` - Run production server (port 10000)
+- `pnpm test` - Run tests
+- `pnpm test:e2e` - Run end-to-end tests with Playwright
+- `pnpm lint` - Lint code

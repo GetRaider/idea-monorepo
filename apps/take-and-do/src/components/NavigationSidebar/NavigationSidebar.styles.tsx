@@ -42,12 +42,6 @@ export const SearchInput = styled.input`
   }
 `;
 
-export const Nav = styled.nav`
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-`;
-
 export const NavItem = styled.button<{ $active?: boolean }>`
   display: flex;
   align-items: center;
@@ -68,7 +62,7 @@ export const NavItem = styled.button<{ $active?: boolean }>`
   }
 `;
 
-export const Workspace = styled.div`
+export const WorkspaceContainer = styled.div`
   display: flex;
   flex-direction: column;
   gap: 12px;

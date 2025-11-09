@@ -5,9 +5,8 @@ import {
   NavigationSidebarContainer,
   Search,
   SearchInput,
-  Nav,
   NavItem,
-  Workspace,
+  WorkspaceContainer,
   SideBarSectionHeader,
   WorkspaceList,
   WorkspaceItem,
@@ -85,8 +84,9 @@ export default function NavigationSidebar({
         <SearchInput type="text" placeholder="Search..." />
       </Search>
 
-      <Nav>
+      <WorkspaceContainer>
         <SideBarSectionHeader>Schedules</SideBarSectionHeader>
+
         <NavItem
           $active={activeView === "today"}
           onClick={() => handleViewChange("today")}
@@ -126,10 +126,10 @@ export default function NavigationSidebar({
           </svg>
           <span>Tomorrow</span>
         </NavItem>
-      </Nav>
+      </WorkspaceContainer>
 
-      <Workspace>
-        <SideBarSectionHeader>Workspace</SideBarSectionHeader>
+      <WorkspaceContainer>
+        <SideBarSectionHeader>Spaces</SideBarSectionHeader>
 
         <WorkspaceList>
           {folders.map((folder) => (
@@ -194,7 +194,7 @@ export default function NavigationSidebar({
               </WorkspaceItem>
             ))}
         </WorkspaceList>
-      </Workspace>
+      </WorkspaceContainer>
     </NavigationSidebarContainer>
   );
 }

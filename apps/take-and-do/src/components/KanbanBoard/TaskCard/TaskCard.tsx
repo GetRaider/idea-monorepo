@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { Task, TaskPriority } from "../types";
 import {
   Card,
@@ -18,10 +18,11 @@ import {
 
 interface TaskCardProps {
   task: Task;
+  onTaskClick?: (task: Task) => void;
 }
 
-export default function TaskCard({
-  task: {
+export default function TaskCard({ task, onTaskClick }: TaskCardProps) {
+  const {
     id,
     taskKey,
     summary,
@@ -31,8 +32,7 @@ export default function TaskCard({
     dueDate,
     estimation = 0,
     subtasks = [],
-  },
-}: TaskCardProps) {
+  } = task;
   const getPriorityIcon = () => {
     switch (priority) {
       case TaskPriority.LOW:
@@ -49,8 +49,10 @@ export default function TaskCard({
   };
 
   const cardRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>) => {
+    setIsDragging(true);
     e.stopPropagation();
     e.dataTransfer.effectAllowed = "move";
     e.dataTransfer.setData("text/plain", JSON.stringify({ taskId: id }));
@@ -63,7 +65,8 @@ export default function TaskCard({
     }
   };
 
-  const handleDragEnd = () => {
+  const handleDragEnd = (e: React.DragEvent<HTMLDivElement>) => {
+    setIsDragging(false);
     if (cardRef.current) {
       cardRef.current.style.opacity = "1";
       cardRef.current.style.transform = "scale(1)";
@@ -73,12 +76,21 @@ export default function TaskCard({
     }
   };
 
+  const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Don't open modal if user is dragging
+    if (isDragging) return;
+    if (onTaskClick) {
+      onTaskClick(task);
+    }
+  };
+
   return (
     <Card
       ref={cardRef}
       draggable
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
+      onClick={handleClick}
     >
       <Header>
         <PriorityIcon>{getPriorityIcon()}</PriorityIcon>

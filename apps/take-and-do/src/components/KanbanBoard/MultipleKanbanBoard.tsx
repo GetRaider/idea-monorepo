@@ -11,13 +11,14 @@ import {
 import { Column } from "./Column/Column";
 import { Chevron } from "../NavigationSidebar/NavigationSidebar.styles";
 import { Toolbar } from "./shared/Toolbar";
-import { TaskStatus, TaskSchedule, TaskGroup } from "./types";
+import { TaskStatus, TaskSchedule, TaskGroup, Task } from "./types";
 import {
   fetchTaskBoardNameMap,
   loadScheduledContent,
   loadFolderContent,
 } from "./shared/dataLoaders";
 import { handleMultipleBoardsTaskStatusChange } from "./shared/taskStatusHandlers";
+import TaskView from "../TaskView/TaskView";
 
 interface MultipleKanbanBoardProps {
   schedule?: TaskSchedule;
@@ -33,6 +34,10 @@ export function MultipleKanbanBoard({
   const [taskGroups, setTaskGroups] = useState<TaskGroup[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+  const [taskBoardNameMap, setTaskBoardNameMap] = useState<
+    Record<string, string>
+  >({});
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
   useEffect(() => {
     const fetchTasks = async () => {
@@ -102,82 +107,155 @@ export function MultipleKanbanBoard({
     [taskGroups],
   );
 
+  const handleTaskClick = useCallback((task: Task) => {
+    setSelectedTask(task);
+  }, []);
+
+  const handleCloseModal = useCallback(() => {
+    setSelectedTask(null);
+  }, []);
+
+  const handleTaskUpdate = useCallback(
+    async (updatedTask: Task) => {
+      // Update the task in the local state
+      setTaskGroups((prevGroups) => {
+        return prevGroups.map((group) => {
+          if (group.taskBoardId !== updatedTask.taskBoardId) {
+            return group;
+          }
+          const newTasks = { ...group.tasks };
+          // Remove task from old status
+          Object.keys(newTasks).forEach((status) => {
+            newTasks[status as TaskStatus] = newTasks[
+              status as TaskStatus
+            ].filter((t) => t.id !== updatedTask.id);
+          });
+          // Add task to new status
+          newTasks[updatedTask.status].push(updatedTask);
+          return { ...group, tasks: newTasks };
+        });
+      });
+      // Update selected task if it's the same one
+      if (selectedTask?.id === updatedTask.id) {
+        setSelectedTask(updatedTask);
+      }
+    },
+    [selectedTask],
+  );
+
+  const handleSubtaskClick = useCallback((subtask: Task) => {
+    setSelectedTask(subtask);
+  }, []);
+
+  // Get the workspace title for the selected task
+  const getTaskWorkspaceTitle = (task: Task | null): string => {
+    if (!task) return workspaceTitle;
+    const group = taskGroups.find((g) => g.taskBoardId === task.taskBoardId);
+    return group?.taskBoardName || workspaceTitle;
+  };
+
   return (
-    <BoardContainer>
-      <Toolbar workspaceTitle={workspaceTitle} />
+    <>
+      <BoardContainer>
+        <Toolbar workspaceTitle={workspaceTitle} />
 
-      <Board>
-        {isLoading ? (
-          <LoadingContainer>
-            <Spinner />
-          </LoadingContainer>
-        ) : taskGroups.length > 0 ? (
-          <>
-            {/* Workspace rows with tasks */}
-            {taskGroups.map((group) => {
-              const isExpanded = expandedGroups.has(group.taskBoardId);
-              return (
-                <div key={group.taskBoardId} style={{ display: "contents" }}>
-                  {/* Separator above each task board row */}
-                  <WorkspaceSeparator
-                    onClick={() => toggleGroup(group.taskBoardId)}
-                    style={{ cursor: "pointer" }}
-                  >
-                    <Chevron
-                      width="16"
-                      height="16"
-                      viewBox="0 0 16 16"
-                      fill="none"
-                      $expanded={isExpanded}
-                      style={{ marginLeft: 0 }}
+        <Board>
+          {isLoading ? (
+            <LoadingContainer>
+              <Spinner />
+            </LoadingContainer>
+          ) : taskGroups.length > 0 ? (
+            <>
+              {/* Workspace rows with tasks */}
+              {taskGroups.map((group) => {
+                const isExpanded = expandedGroups.has(group.taskBoardId);
+                return (
+                  <div key={group.taskBoardId} style={{ display: "contents" }}>
+                    {/* Separator above each task board row */}
+                    <WorkspaceSeparator
+                      onClick={() => toggleGroup(group.taskBoardId)}
+                      style={{ cursor: "pointer" }}
                     >
-                      <path
-                        d="M6 4l4 4-4 4"
-                        stroke="currentColor"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </Chevron>
-                    {group.taskBoardName}
-                  </WorkspaceSeparator>
+                      <Chevron
+                        width="16"
+                        height="16"
+                        viewBox="0 0 16 16"
+                        fill="none"
+                        $expanded={isExpanded}
+                        style={{ marginLeft: 0 }}
+                      >
+                        <path
+                          d="M6 4l4 4-4 4"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </Chevron>
+                      {group.taskBoardName}
+                    </WorkspaceSeparator>
 
-                  {/* Tasks for this workspace in each column - only show if expanded */}
-                  {isExpanded && (
-                    <>
-                      <Column
-                        tasks={group.tasks[TaskStatus.TODO]}
-                        status={TaskStatus.TODO}
-                        onTaskDrop={(taskId, newStatus, targetIndex) =>
-                          handleTaskStatusChange(taskId, newStatus, targetIndex)
-                        }
-                      />
-                      <Column
-                        tasks={group.tasks[TaskStatus.IN_PROGRESS]}
-                        status={TaskStatus.IN_PROGRESS}
-                        onTaskDrop={(taskId, newStatus, targetIndex) =>
-                          handleTaskStatusChange(taskId, newStatus, targetIndex)
-                        }
-                      />
-                      <Column
-                        tasks={group.tasks[TaskStatus.DONE]}
-                        status={TaskStatus.DONE}
-                        onTaskDrop={(taskId, newStatus, targetIndex) =>
-                          handleTaskStatusChange(taskId, newStatus, targetIndex)
-                        }
-                      />
-                    </>
-                  )}
-                </div>
-              );
-            })}
-          </>
-        ) : (
-          <div style={{ color: "#fff", padding: "24px", gridColumn: "1 / -1" }}>
-            No tasks available for {workspaceTitle}
-          </div>
-        )}
-      </Board>
-    </BoardContainer>
+                    {/* Tasks for this workspace in each column - only show if expanded */}
+                    {isExpanded && (
+                      <>
+                        <Column
+                          tasks={group.tasks[TaskStatus.TODO]}
+                          status={TaskStatus.TODO}
+                          onTaskDrop={(taskId, newStatus, targetIndex) =>
+                            handleTaskStatusChange(
+                              taskId,
+                              newStatus,
+                              targetIndex,
+                            )
+                          }
+                          onTaskClick={handleTaskClick}
+                        />
+                        <Column
+                          tasks={group.tasks[TaskStatus.IN_PROGRESS]}
+                          status={TaskStatus.IN_PROGRESS}
+                          onTaskDrop={(taskId, newStatus, targetIndex) =>
+                            handleTaskStatusChange(
+                              taskId,
+                              newStatus,
+                              targetIndex,
+                            )
+                          }
+                          onTaskClick={handleTaskClick}
+                        />
+                        <Column
+                          tasks={group.tasks[TaskStatus.DONE]}
+                          status={TaskStatus.DONE}
+                          onTaskDrop={(taskId, newStatus, targetIndex) =>
+                            handleTaskStatusChange(
+                              taskId,
+                              newStatus,
+                              targetIndex,
+                            )
+                          }
+                          onTaskClick={handleTaskClick}
+                        />
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </>
+          ) : (
+            <div
+              style={{ color: "#fff", padding: "24px", gridColumn: "1 / -1" }}
+            >
+              No tasks available for {workspaceTitle}
+            </div>
+          )}
+        </Board>
+      </BoardContainer>
+      <TaskView
+        task={selectedTask}
+        workspaceTitle={getTaskWorkspaceTitle(selectedTask)}
+        onClose={handleCloseModal}
+        onTaskUpdate={handleTaskUpdate}
+        onSubtaskClick={handleSubtaskClick}
+      />
+    </>
   );
 }

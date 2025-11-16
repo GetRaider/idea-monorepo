@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getTaskById, updateTask } from "@/app/api/mock-data";
-import { Task } from "@/components/KanbanBoard/types";
 
 export async function GET(
   request: NextRequest,
@@ -32,7 +31,7 @@ export async function GET(
     };
 
     return NextResponse.json(response);
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: "Failed to fetch task" },
       { status: 500 },
@@ -78,7 +77,7 @@ export async function PATCH(
     };
 
     return NextResponse.json(response);
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: "Failed to update task" },
       { status: 500 },

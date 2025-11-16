@@ -1,6 +1,6 @@
 {
   "name": "devinity-web",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "private": true,
   "scripts": {
     "build": "next build",
@@ -12,6 +12,8 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@repo/ui": "workspace:*",
+    "@repo/api": "workspace:*",
     "next": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
@@ -23,18 +25,17 @@
     "@types/axios": "catalog:",
     "axios": "catalog:",
     "better-auth": "catalog:",
-    "dotenv": "^16.5.0",
-    "zod": "catalog:",
-    "@repo/ui": "workspace:*"
+    "dotenv": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
-    "@jest/globals": "catalog:",
-    "@next/eslint-plugin-next": "^14.1.1",
-    "@playwright/test": "catalog:",
-    "@repo/api": "workspace:*",
     "@repo/eslint-config": "workspace:*",
     "@repo/jest-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
+    "typescript": "catalog:",
+    "@jest/globals": "catalog:",
+    "@next/eslint-plugin-next": "catalog:",
+    "@playwright/test": "catalog:",
     "@testing-library/jest-dom": "catalog:",
     "@testing-library/react": "catalog:",
     "@types/node": "catalog:",
@@ -43,7 +44,6 @@
     "@types/styled-components": "catalog:",
     "jest": "catalog:",
     "jest-environment-jsdom": "catalog:",
-    "typed-css-modules": "catalog:",
-    "typescript": "catalog:"
+    "typed-css-modules": "catalog:"
   }
 }

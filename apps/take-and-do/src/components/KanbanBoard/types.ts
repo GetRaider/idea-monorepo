@@ -55,13 +55,13 @@ export const emptyTaskColumns: Record<TaskStatus, Task[]> = {
   [TaskStatus.DONE]: [],
 };
 
-export function toTaskStatus(status: any): TaskStatus {
+export function toTaskStatus(status: unknown): TaskStatus {
   return Object.values(TaskStatus).includes(status as TaskStatus)
     ? (status as TaskStatus)
     : TaskStatus.TODO;
 }
 
-export function toTaskPriority(priority: any): TaskPriority {
+export function toTaskPriority(priority: unknown): TaskPriority {
   if (!priority) return TaskPriority.MEDIUM;
 
   const priorityString = String(priority).toLowerCase();

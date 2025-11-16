@@ -9,7 +9,7 @@ import KanbanBoard, {
 import { PageContainer, Main } from "../page.styles";
 
 export default function TasksPage() {
-  const [currentPage, setCurrentPage] = useState("tasks");
+  const [, setCurrentPage] = useState("tasks");
   const [isNavSidebarOpen, setIsNavSidebarOpen] = useState(true);
   const [activeView, setActiveView] = useState<TaskSchedule | string>(
     TaskSchedule.TODAY,

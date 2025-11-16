@@ -7,14 +7,14 @@ export const tasksService = {
       throw new Error("Failed to fetch tasks");
     }
     const tasks = await response.json();
-    return tasks.map((task: any) => ({
+    return tasks.map((task: Task) => ({
       ...task,
       dueDate: task.dueDate ? new Date(task.dueDate) : undefined,
       priority: normalizePriority(task.priority),
     }));
   },
 
-  async getBySchedule(schedule: "today" | "tomorrow"): Promise<{
+  async getBySchedule(): Promise<{
     today: Task[];
     tomorrow: Task[];
   }> {
@@ -32,7 +32,7 @@ export const tasksService = {
     const tomorrowTasks = await tomorrowResponse.json();
 
     // Convert date strings back to Date objects and normalize priority
-    const normalizeTask = (task: any) => {
+    const normalizeTask = (task: Task) => {
       return {
         ...task,
         dueDate: task.dueDate ? new Date(task.dueDate) : undefined,
@@ -52,7 +52,7 @@ export const tasksService = {
       throw new Error("Failed to fetch tasks");
     }
     const tasks = await response.json();
-    return tasks.map((task: any) => ({
+    return tasks.map((task: Task) => ({
       ...task,
       dueDate: task.dueDate ? new Date(task.dueDate) : undefined,
       priority: normalizePriority(task.priority),
@@ -110,7 +110,7 @@ export const tasksService = {
   },
 };
 
-function normalizePriority(priority: any): TaskPriority {
+function normalizePriority(priority: unknown): TaskPriority {
   if (!priority) {
     return TaskPriority.MEDIUM;
   }

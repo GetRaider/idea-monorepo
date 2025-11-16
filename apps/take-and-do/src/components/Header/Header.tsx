@@ -4,8 +4,6 @@ import {
   HeaderContainer,
   Content,
   Title,
-  Actions,
-  IconButton,
 } from "./Header.styles";
 
 interface HeaderProps {

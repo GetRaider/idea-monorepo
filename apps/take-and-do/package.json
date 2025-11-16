@@ -9,14 +9,14 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@repo/ui": "workspace:*",
     "next": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
     "styled-components": "catalog:",
     "@radix-ui/react-icons": "catalog:",
     "@radix-ui/react-tooltip": "catalog:",
-    "@radix-ui/themes": "catalog:",
-    "@repo/ui": "workspace:*"
+    "@radix-ui/themes": "catalog:"
   },
   "devDependencies": {
     "typescript": "catalog:",

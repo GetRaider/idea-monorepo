@@ -33,12 +33,12 @@ import {
 } from "./page.styles";
 
 export default function HomePage() {
-  const [currentPage, setCurrentPage] = useState("home");
+  const [, setCurrentPage] = useState("home");
   const [isNavSidebarOpen, setIsNavSidebarOpen] = useState(false);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [todayTasks, setTodayTasks] = useState<Task[]>([]);
-  const [tomorrowTasks, setTomorrowTasks] = useState<Task[]>([]);
+  const [, setTomorrowTasks] = useState<Task[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -46,7 +46,7 @@ export default function HomePage() {
         setIsLoading(true);
         const [allTasks, scheduledTasks] = await Promise.all([
           tasksService.getAll(),
-          tasksService.getBySchedule("today"),
+          tasksService.getBySchedule(),
         ]);
 
         setTasks(allTasks);
@@ -91,13 +91,13 @@ export default function HomePage() {
     ).length,
   };
 
-  const recentTasks = tasks
-    .sort((a, b) => {
-      if (!a.dueDate) return 1;
-      if (!b.dueDate) return -1;
-      return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
-    })
-    .slice(0, 5);
+  // const recentTasks = tasks
+  //   .sort((a, b) => {
+  //     if (!a.dueDate) return 1;
+  //     if (!b.dueDate) return -1;
+  //     return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+  //   })
+  //   .slice(0, 5);
 
   if (isLoading) {
     return (
@@ -123,7 +123,7 @@ export default function HomePage() {
       <MainContent $withNavSidebar={isNavSidebarOpen}>
         <WelcomeSection>
           <Title>Welcome back!</Title>
-          <Subtitle>Here's an overview of your workspace</Subtitle>
+          <Subtitle>Here&apos;s an overview of your workspace</Subtitle>
         </WelcomeSection>
 
         <StatsGrid>
@@ -243,7 +243,7 @@ export default function HomePage() {
         </StatsGrid>
 
         <Section>
-          <SectionTitle>Today's Tasks</SectionTitle>
+          <SectionTitle>Today&apos;s Tasks</SectionTitle>
           {todayTasks.length > 0 ? (
             <TaskList>
               {todayTasks.slice(0, 5).map((task) => (
@@ -304,8 +304,8 @@ export default function HomePage() {
                   fontSize: "14px",
                 }}
               >
-                You've completed {taskStats.done} tasks this week. Keep up the
-                momentum!
+                You&apos;ve completed {taskStats.done} tasks this week. Keep up
+                the momentum!
               </p>
               <div
                 style={{ color: "#667eea", fontSize: "14px", fontWeight: 500 }}

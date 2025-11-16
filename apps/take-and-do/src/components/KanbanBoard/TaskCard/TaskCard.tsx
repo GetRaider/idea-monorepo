@@ -63,7 +63,7 @@ export default function TaskCard({
     }
   };
 
-  const handleDragEnd = (e: React.DragEvent<HTMLDivElement>) => {
+  const handleDragEnd = () => {
     if (cardRef.current) {
       cardRef.current.style.opacity = "1";
       cardRef.current.style.transform = "scale(1)";

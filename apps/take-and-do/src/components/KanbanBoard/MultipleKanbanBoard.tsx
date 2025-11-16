@@ -33,16 +33,12 @@ export function MultipleKanbanBoard({
   const [taskGroups, setTaskGroups] = useState<TaskGroup[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
-  const [taskBoardNameMap, setTaskBoardNameMap] = useState<
-    Record<string, string>
-  >({});
 
   useEffect(() => {
     const fetchTasks = async () => {
       setIsLoading(true);
       try {
         const taskBoardNamesMap = await fetchTaskBoardNameMap();
-        setTaskBoardNameMap(taskBoardNamesMap);
 
         let loadedGroups: TaskGroup[] = [];
         if (schedule) {
@@ -94,12 +90,7 @@ export function MultipleKanbanBoard({
   };
 
   const handleTaskStatusChange = useCallback(
-    async (
-      taskId: string,
-      newStatus: TaskStatus,
-      targetIndex?: number,
-      groupTaskBoardId?: string,
-    ) => {
+    async (taskId: string, newStatus: TaskStatus, targetIndex?: number) => {
       await handleMultipleBoardsTaskStatusChange(
         taskGroups,
         setTaskGroups,
@@ -158,36 +149,21 @@ export function MultipleKanbanBoard({
                         tasks={group.tasks[TaskStatus.TODO]}
                         status={TaskStatus.TODO}
                         onTaskDrop={(taskId, newStatus, targetIndex) =>
-                          handleTaskStatusChange(
-                            taskId,
-                            newStatus,
-                            targetIndex,
-                            group.taskBoardId,
-                          )
+                          handleTaskStatusChange(taskId, newStatus, targetIndex)
                         }
                       />
                       <Column
                         tasks={group.tasks[TaskStatus.IN_PROGRESS]}
                         status={TaskStatus.IN_PROGRESS}
                         onTaskDrop={(taskId, newStatus, targetIndex) =>
-                          handleTaskStatusChange(
-                            taskId,
-                            newStatus,
-                            targetIndex,
-                            group.taskBoardId,
-                          )
+                          handleTaskStatusChange(taskId, newStatus, targetIndex)
                         }
                       />
                       <Column
                         tasks={group.tasks[TaskStatus.DONE]}
                         status={TaskStatus.DONE}
                         onTaskDrop={(taskId, newStatus, targetIndex) =>
-                          handleTaskStatusChange(
-                            taskId,
-                            newStatus,
-                            targetIndex,
-                            group.taskBoardId,
-                          )
+                          handleTaskStatusChange(taskId, newStatus, targetIndex)
                         }
                       />
                     </>

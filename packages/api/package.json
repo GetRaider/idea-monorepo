@@ -37,20 +37,20 @@
   },
   "dependencies": {
     "@nestjs/mapped-types": "catalog:",
-    "@nestjs/common": "^10.0.0",
+    "@nestjs/common": "catalog:",
     "@nestjs/config": "catalog:",
-    "@nestjs/core": "^10.0.0",
-    "@nestjs/platform-express": "^10.0.0"
+    "@nestjs/core": "catalog:",
+    "@nestjs/platform-express": "catalog:"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
-    "@types/node": "^20.3.1",
+    "@types/node": "catalog:",
     "@types/express": "catalog:",
     "class-validator": "catalog:",
     "ts-loader": "catalog:",
     "ts-node": "catalog:",
-    "typescript": "5.5.4",
+    "typescript": "catalog:",
     "tsconfig-paths": "catalog:"
   }
 }

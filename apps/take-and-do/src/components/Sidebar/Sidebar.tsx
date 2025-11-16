@@ -1,12 +1,10 @@
 "use client";
 
-import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { HomeIcon } from "@radix-ui/react-icons";
 import {
   SidebarContainer,
   Logo,
-  LogoCircle,
   Nav,
   NavButton,
   BottomActions,
@@ -22,12 +20,8 @@ interface SidebarProps {
 export default function Sidebar({ onNavigationChange }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const [activePage, setActivePage] = useState(
-    pathname === "/home" ? "home" : pathname === "/tasks" ? "tasks" : "home",
-  );
 
   const handleNavClick = (page: string, path: string) => {
-    setActivePage(page);
     onNavigationChange(page);
     router.push(path);
   };

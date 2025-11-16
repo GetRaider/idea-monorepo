@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { Folder, TaskBoard } from "@/types/workspace";
 import { getAllFolders, getAllTaskBoards } from "@/app/api/mock-data";
 
 export async function GET() {

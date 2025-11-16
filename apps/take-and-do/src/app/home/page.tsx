@@ -103,7 +103,7 @@ export default function HomePage() {
     return (
       <PageContainer>
         <Sidebar onNavigationChange={handleNavigationChange} />
-        <MainContent>
+        <MainContent $withNavSidebar={isNavSidebarOpen}>
           <LoadingContainer>
             <Spinner />
           </LoadingContainer>

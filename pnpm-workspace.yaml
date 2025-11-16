@@ -1,3 +1,98 @@
 packages:
-  - 'apps/*'
-  - 'packages/*'
+  - apps/*
+  - packages/*
+catalog:
+  # FE
+  ## Core
+  "react": ^19.1.0
+  "react-dom": ^19.1.0
+  "next": ^15.4.2
+  "@types/react": ^18.2.61
+  "@types/react-dom": ^18.2.19
+  "@stackframe/react": ^2.8.25
+  ## UI
+  "styled-components": ^6.1.19
+  "@types/styled-components": ^5.1.34
+  "@radix-ui/react-icons": ^1.3.2
+  "@radix-ui/react-tooltip": ^1.2.8
+  "@radix-ui/themes": ^3.2.1
+  "typed-css-modules": ^0.9.1
+  ## Lint
+  "eslint-config-next": ^15.5.6
+
+  # BE
+  ## Core
+  "@nestjs/core": "^11.0.1"
+  "@nestjs/common": "^11.0.1"
+  "@nestjs/platform-express": "^11.0.1"
+  "@nestjs/cache-manager": ^2.2.2
+  "@nestjs/cli": ^11.0.1
+  "@nestjs/config": ^4.0.2
+  "@nestjs/jwt": ^11.0.0
+  "@nestjs/mapped-types": "*"
+  "@nestjs/mongoose": ^11.0.1
+  "@nestjs/schematics": ^11.0.1
+  "@nestjs/testing": ^11.0.1
+  "bcryptjs": ^2.4.3
+  "better-auth": 1.3.8
+  "cache-manager": ^5.7.6
+  "cache-manager-ioredis-yet": ^2.1.1
+  "class-transformer": ^0.5.1
+  "class-validator": ^0.14.1
+  "drizzle-kit": ^0.31.4
+  "drizzle-orm": ^0.44.4
+  "express": ^4.19.2
+  "ioredis": ^5.4.1
+  "pg": ^8.16.3
+  "reflect-metadata": ^0.2.0
+  "rxjs": ^7.8.1
+  "source-map-support": ^0.5.21
+  "ts-loader": ^9.4.3
+
+  "@thallesp/nestjs-better-auth": ^2.0.1
+  "@types/axios": ^0.14.4
+  "@types/bcryptjs": 2.4.6
+  "@types/express": ^4.17.17
+  "@types/pg": ^8.15.5
+
+  # Testing
+  "jest": ^29.7.0
+  "jest-environment-jsdom": ^29.7.0
+  "ts-jest": ^29.2.5
+  "supertest": ^6.3.3
+  "@jest/globals": ^29.7.0
+  "@jest/types": ^29.6.3
+  "@playwright/test": ^1.44.0
+  "@testing-library/jest-dom": ^6.4.5
+  "@testing-library/react": ^15.0.7
+  "@types/supertest": ^6.0.0
+
+  # Shared
+  ## Core
+  "typescript": ^5
+  "turbo": ^2.5.2
+  "ts-node": ^10.9.2
+  "tsc-alias": ^1.8.16
+  "axios": ^1.10.0
+  "uuid": 11.0.3
+  "zod": ^4.1.11
+  "tsconfig-paths": ^4.2.0
+  ## Lint
+  "eslint": ^9
+  "eslint-config-prettier": ^10.1.1
+  "eslint-plugin-only-warn": ^1.1.0
+  "eslint-plugin-react": ^7.37.5
+  "eslint-plugin-react-hooks": ^5.2.0
+  "eslint-plugin-turbo": ^2.5.0
+  "typescript-eslint": ^8.37.0
+  "globals": ^16.3.0
+  "@types/node": ^20
+  "@eslint/eslintrc": ^3
+  "@eslint/js": ^9.31.0
+  "@turbo/gen": ^1.12.4
+  "@types/eslint": ^8.56.5
+  # "@repo/api": workspace:*
+  # "@repo/eslint-config": workspace:*
+  # "@repo/jest-config": workspace:*
+  # "@repo/typescript-config": workspace:*
+  # "@repo/ui": workspace:*

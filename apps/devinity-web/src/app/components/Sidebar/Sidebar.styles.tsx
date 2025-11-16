@@ -1,5 +1,4 @@
 import styled from "styled-components";
-import { Button, IconButton } from "@radix-ui/themes";
 import Image from "next/image";
 
 export const SidebarContainer = styled.aside<{ $collapsed: boolean }>`
@@ -33,7 +32,10 @@ export const NavGrid = styled.ul`
   gap: 8px;
 `;
 
-export const SquareButton = styled(Button)<{ $collapsed: boolean }>`
+export const SquareButton = styled.button<{
+  $collapsed: boolean;
+  $variant?: string;
+}>`
   display: flex;
   align-items: center;
   gap: 10px;
@@ -44,13 +46,17 @@ export const SquareButton = styled(Button)<{ $collapsed: boolean }>`
   letter-spacing: 0.2px;
   justify-content: ${(props) => (props.$collapsed ? "center" : "flex-start")};
   background: ${(props) =>
-    props.variant === "solid" ? "#8b5cf6" : "transparent"};
-  color: ${(props) => (props.variant === "solid" ? "white" : "#cbd5e1")};
+    props.$variant === "solid" ? "#8b5cf6" : "transparent"};
+  color: ${(props) => (props.$variant === "solid" ? "white" : "#cbd5e1")};
   border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: 500;
 
   &:hover {
     background: ${(props) =>
-      props.variant === "solid" ? "#7c3aed" : "#374151"};
+      props.$variant === "solid" ? "#7c3aed" : "#374151"};
   }
 `;
 

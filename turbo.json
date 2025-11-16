@@ -21,6 +21,18 @@
       "cache": false,
       "persistent": true
     },
+    "dev:devinity": {
+      "inputs": ["^dev:devinity"],
+      "env": ["NODE_ENV=development"],
+      "cache": false,
+      "persistent": true
+    },
+    "dev:take-and-do": {
+      "inputs": ["^dev:take-and-do"],
+      "env": ["NODE_ENV=development"],
+      "cache": false,
+      "persistent": true
+    },
     "prod": {
       "env": ["NODE_ENV=production"],
       "dependsOn": ["build"],

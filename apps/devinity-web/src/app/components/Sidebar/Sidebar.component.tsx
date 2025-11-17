@@ -1,6 +1,5 @@
 "use client";
 
-import { Button, IconButton, Tooltip } from "@radix-ui/themes";
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import Link from "next/link";
@@ -60,29 +59,18 @@ export function Sidebar() {
             <Icon src={link.icon} alt="" width={20} height={20} />
           ) : null;
           const content = (
-            <SquareButton
-              asChild
-              size="3"
-              variant={isActive ? "solid" : "soft"}
-              $collapsed={collapsed}
-            >
-              <Link href={link.href}>
+            <Link href={link.href} style={{ textDecoration: "none" }}>
+              <SquareButton
+                $variant={isActive ? "solid" : undefined}
+                $collapsed={collapsed}
+                title={collapsed ? link.label : undefined}
+              >
                 {iconEl}
                 <Label $collapsed={collapsed}>{link.label}</Label>
-              </Link>
-            </SquareButton>
+              </SquareButton>
+            </Link>
           );
-          return (
-            <li key={link.href}>
-              {collapsed ? (
-                <Tooltip content={link.label} side="right" delayDuration={200}>
-                  {content}
-                </Tooltip>
-              ) : (
-                content
-              )}
-            </li>
-          );
+          return <li key={link.href}>{content}</li>;
         })}
       </NavGrid>
     </SidebarContainer>

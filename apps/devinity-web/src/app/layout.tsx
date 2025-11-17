@@ -13,19 +13,19 @@ const inter = Inter({ subsets: ["latin"] });
 
 export default function ({ children }: Readonly<PropsWithChildren>) {
   return (
-    <html lang="en">
-      <body className={inter.className}>
-        <StyledComponentsRegistry>
-          <Theme
-            accentColor="violet"
-            grayColor="slate"
-            scaling="90%"
-            panelBackground="solid"
-            className="radix-theme-with-gradient"
-          >
+    <html lang="en" suppressHydrationWarning>
+      <body className={inter.className} suppressHydrationWarning>
+        <Theme
+          accentColor="violet"
+          grayColor="slate"
+          scaling="90%"
+          panelBackground="solid"
+          className="radix-theme-with-gradient"
+        >
+          <StyledComponentsRegistry>
             <LayoutWrapper>{children}</LayoutWrapper>
-          </Theme>
-        </StyledComponentsRegistry>
+          </StyledComponentsRegistry>
+        </Theme>
       </body>
     </html>
   );

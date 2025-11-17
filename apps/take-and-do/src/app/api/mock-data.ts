@@ -237,7 +237,7 @@ export function getTasksBySchedule(schedule: "today" | "tomorrow"): Task[] {
     }
 
     // Handle both string and enum values
-    const taskSchedule = task.schedule as any;
+    const taskSchedule = task.schedule as "today" | "tomorrow" | undefined;
     console.log("Comparing:", {
       taskSchedule,
       filter: schedule,

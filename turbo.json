@@ -1,5 +1,6 @@
 {
   "$schema": "https://turborepo.com/schema.json",
+  "ui": "tui",
   "globalDependencies": ["**/.env.*local"],
   "tasks": {
     "build": {
@@ -16,6 +17,18 @@
       "outputs": ["dist/**"]
     },
     "dev": {
+      "env": ["NODE_ENV=development"],
+      "cache": false,
+      "persistent": true
+    },
+    "dev:devinity": {
+      "inputs": ["^dev:devinity"],
+      "env": ["NODE_ENV=development"],
+      "cache": false,
+      "persistent": true
+    },
+    "dev:take-and-do": {
+      "inputs": ["^dev:take-and-do"],
       "env": ["NODE_ENV=development"],
       "cache": false,
       "persistent": true

@@ -83,7 +83,6 @@ export const Column = ({ tasks, status, onTaskDrop }: ColumnProps) => {
       // Priority 1: ALWAYS check first - if mouse is anywhere in the top area, insert at position 0
       // This includes: empty space at top, above first task, or top half of first task
       const relativeY = mouseY - columnContentRect.top;
-      const firstTaskRelativeTop = firstTask.top - columnContentRect.top;
       const firstTaskRelativeMidpoint =
         firstTask.midpoint - columnContentRect.top;
 
@@ -207,10 +206,7 @@ export const Column = ({ tasks, status, onTaskDrop }: ColumnProps) => {
     }
   };
 
-  const handleTaskDragOver = (
-    e: React.DragEvent<HTMLDivElement>,
-    index: number,
-  ) => {
+  const handleTaskDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     // Let the parent handle drag over to avoid conflicts
     // This handler is kept for compatibility but parent ColumnContent handles positioning
     e.preventDefault();
@@ -288,7 +284,7 @@ export const Column = ({ tasks, status, onTaskDrop }: ColumnProps) => {
               dragOverIndex !== null && <DropIndicatorBetween />}
             <TaskWrapper
               data-task-index={index}
-              onDragOver={(e) => handleTaskDragOver(e, index)}
+              onDragOver={handleTaskDragOver}
               $isDropped={droppedTaskId === task.id}
             >
               <TaskCard task={task} />

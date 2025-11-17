@@ -25,7 +25,7 @@ export const taskBoardsService = {
     }
     const tasks = await response.json();
     // Convert date strings back to Date objects and normalize priority
-    return tasks.map((task: any) => {
+    return tasks.map((task: Task) => {
       console.log(
         "Received task priority:",
         task.priority,
@@ -41,7 +41,7 @@ export const taskBoardsService = {
   },
 };
 
-function normalizePriority(priority: any): TaskPriority {
+function normalizePriority(priority: unknown): TaskPriority {
   console.log(
     "normalizePriority called with:",
     priority,

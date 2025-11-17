@@ -1,13 +1,12 @@
-import { Spinner } from "@radix-ui/themes";
 import { useGetAllUsers } from "@hooks/users/useGetAllUsers.hook";
-import { LoadingContainer, UserCard } from "./UsersSection.styles";
+import { LoadingContainer, UserCard, Spinner } from "./UsersSection.styles";
 
 export const UsersSection = () => {
   const { users, loading, error } = useGetAllUsers();
   if (loading)
     return (
       <LoadingContainer>
-        <Spinner size="3" />
+        <Spinner />
         <p>Users are loading...</p>
       </LoadingContainer>
     );

@@ -28,16 +28,12 @@ export function SingleKanbanBoard({
   const [tasks, setTasks] =
     useState<Record<TaskStatus, Task[]>>(emptyTaskColumns);
   const [isLoading, setIsLoading] = useState(true);
-  const [taskBoardNameMap, setTaskBoardNameMap] = useState<
-    Record<string, string>
-  >({});
 
   useEffect(() => {
     const fetchTasks = async () => {
       setIsLoading(true);
       try {
         const taskBoardNamesMap = await fetchTaskBoardNameMap();
-        setTaskBoardNameMap(taskBoardNamesMap);
 
         await loadTaskBoardContent({
           boardName,

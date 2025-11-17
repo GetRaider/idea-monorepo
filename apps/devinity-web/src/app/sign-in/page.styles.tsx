@@ -58,37 +58,6 @@ export const SignInDescription = styled.p`
   max-width: 350px;
 `;
 
-export const GitHubButton = styled.button`
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 1rem 2rem;
-  background: #24292e;
-  color: #ffffff;
-  border: none;
-  border-radius: 12px;
-  font-size: 1.1rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  min-width: 250px;
-  justify-content: center;
-
-  &:hover {
-    background: #1a1e22;
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
-  }
-
-  &:active {
-    transform: translateY(0);
-  }
-
-  svg {
-    flex-shrink: 0;
-  }
-`;
-
 export const Divider = styled.div`
   display: flex;
   align-items: center;
@@ -113,86 +82,11 @@ export const Form = styled.form`
   width: 100%;
 `;
 
-export const Input = styled.input<{ $hasError?: boolean }>`
-  padding: 1rem 1.25rem;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1.5px solid
-    ${(props) => (props.$hasError ? "#f87171" : "rgba(255, 255, 255, 0.2)")};
-  border-radius: 12px;
-  color: #f8fafc;
-  font-size: 1.05rem;
-  transition: all 0.3s ease;
-  width: 100%;
-
-  &::placeholder {
-    color: #94a3b8;
-  }
-
-  &:focus {
-    outline: none;
-    border-color: ${(props) => (props.$hasError ? "#f87171" : "#8b5cf6")};
-    background: rgba(255, 255, 255, 0.15);
-    box-shadow: 0 0 0 3px
-      ${(props) =>
-        props.$hasError
-          ? "rgba(248, 113, 113, 0.15)"
-          : "rgba(139, 92, 246, 0.2)"};
-  }
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.12);
-    border-color: ${(props) =>
-      props.$hasError ? "#f87171" : "rgba(255, 255, 255, 0.3)"};
-  }
-`;
-
-export const SubmitButton = styled.button`
-  padding: 1rem 2rem;
-  background: linear-gradient(135deg, #8b5cf6, #a855f7);
-  color: #ffffff;
-  border: none;
-  border-radius: 12px;
-  font-size: 1.1rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s ease;
-
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(139, 92, 246, 0.4);
-  }
-
-  &:active {
-    transform: translateY(0);
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    transform: none;
-  }
-`;
-
 export const ToggleText = styled.p`
   color: #cbd5e1;
   font-size: 0.95rem;
   text-align: center;
   margin: 0;
-
-  button {
-    background: none;
-    border: none;
-    color: #8b5cf6;
-    cursor: pointer;
-    font-weight: 500;
-    text-decoration: underline;
-    padding: 0;
-    margin-left: 0.25rem;
-
-    &:hover {
-      color: #a855f7;
-    }
-  }
 `;
 
 export const ErrorMessage = styled.div`

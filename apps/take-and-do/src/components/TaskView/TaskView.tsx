@@ -8,7 +8,6 @@ import {
   ModalContainer,
   ModalHeader,
   HeaderLeft,
-  HeaderRight,
   CloseButton,
   TaskTitleSection,
   PriorityIcon,
@@ -42,6 +41,9 @@ import {
   DropdownContainer,
   DropdownItem,
 } from "./TaskView.styles";
+import { getStatusIcon } from "../KanbanBoard/Column/Column";
+import { StatusIcon } from "../KanbanBoard/Column/Column.styles";
+import { getPriorityIconLabel } from "../KanbanBoard/TaskCard/TaskCard";
 
 interface TaskViewProps {
   task: Task | null;
@@ -51,9 +53,9 @@ interface TaskViewProps {
   onSubtaskClick?: (subtask: Task) => void;
 }
 
-export default function TaskView({ 
-  task: initialTask, 
-  workspaceTitle, 
+export default function TaskView({
+  task: initialTask,
+  workspaceTitle,
   onClose,
   onTaskUpdate,
   onSubtaskClick,
@@ -103,22 +105,7 @@ export default function TaskView({
 
   if (!task) return null;
 
-  const getPriorityIcon = () => {
-    switch (task.priority) {
-      case TaskPriority.LOW:
-        return "🔵";
-      case TaskPriority.MEDIUM:
-        return "🟡";
-      case TaskPriority.HIGH:
-        return "🔴";
-      case TaskPriority.CRITICAL:
-        return "🟣";
-      default:
-        return "🔴";
-    }
-  };
-
-  const getPriorityLabel = (priority: TaskPriority) => {
+  const getPriorityName = (priority: TaskPriority) => {
     switch (priority) {
       case TaskPriority.LOW:
         return "Low";
@@ -220,7 +207,7 @@ export default function TaskView({
 
   const handleCreateSubtask = async () => {
     if (!task || !newSubtaskSummary.trim()) return;
-    
+
     try {
       const newSubtask: Omit<Task, "id"> = {
         taskBoardId: task.taskBoardId,
@@ -230,19 +217,21 @@ export default function TaskView({
         priority: TaskPriority.MEDIUM,
         subtasks: [],
       };
-      
+
       const createdSubtask = await tasksService.create(newSubtask);
-      
+
       // Update the parent task to include the new subtask
       const updatedSubtasks = [...(task.subtasks || []), createdSubtask];
-      const updatedTask = await tasksService.update(task.id, { subtasks: updatedSubtasks });
-      
+      const updatedTask = await tasksService.update(task.id, {
+        subtasks: updatedSubtasks,
+      });
+
       // Update local state
       setTask(updatedTask);
       if (onTaskUpdate) {
         onTaskUpdate(updatedTask);
       }
-      
+
       setNewSubtaskSummary("");
       setIsCreatingSubtask(false);
     } catch (error) {
@@ -250,61 +239,26 @@ export default function TaskView({
     }
   };
 
-  const getStatusIcon = () => {
-    switch (task.status) {
-      case TaskStatus.TODO:
-        return (
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-            <circle cx="9" cy="9" r="7" stroke="currentColor" strokeWidth="1.5" fill="none" />
-          </svg>
-        );
-      case TaskStatus.IN_PROGRESS:
-        return (
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-            <path d="M9 2L11.5 6.5L16 7L12.5 10L13 14.5L9 12L5 14.5L5.5 10L2 7L6.5 6.5L9 2Z" stroke="currentColor" strokeWidth="1.5" fill="none" />
-          </svg>
-        );
-      case TaskStatus.DONE:
-        return (
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-            <path d="M3 9L7 13L15 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        );
-      default:
-        return null;
-    }
-  };
-
   return (
     <ModalOverlay onClick={handleOverlayClick}>
       <ModalContainer onClick={(e) => e.stopPropagation()}>
-        <ModalHeader>
-          <HeaderLeft>
-            {workspaceTitle} &gt; <span style={{ color: "#fbbf24" }}>◐</span> {task.taskKey || task.id}
-          </HeaderLeft>
-          <HeaderRight>
-            <div style={{ position: "relative" }} ref={statusDropdownRef}>
-              <StatusIconButton onClick={handleStatusClick}>
-                {getStatusIcon()}
-              </StatusIconButton>
-              <DropdownContainer $isOpen={isStatusDropdownOpen}>
-                {Object.values(TaskStatus).map((status) => (
-                  <DropdownItem
-                    key={status}
-                    onClick={() => handleStatusSelect(status)}
-                  >
-                    {status}
-                  </DropdownItem>
-                ))}
-              </DropdownContainer>
-            </div>
-            <CloseButton onClick={onClose}>×</CloseButton>
-          </HeaderRight>
-        </ModalHeader>
+        <Header
+          workspaceTitle={workspaceTitle}
+          task={task}
+          statusDropdownRef={statusDropdownRef}
+          handleStatusClick={handleStatusClick}
+          handleStatusSelect={handleStatusSelect}
+          isStatusDropdownOpen={isStatusDropdownOpen}
+        />
 
         <TaskTitleSection>
-          <div style={{ position: "relative" }} ref={priorityDropdownRef}>
-            <PriorityIcon onClick={handlePriorityClick}>{getPriorityIcon()}</PriorityIcon>
+          <div
+            style={{ position: "relative", display: "flex" }}
+            ref={priorityDropdownRef}
+          >
+            <PriorityIcon onClick={handlePriorityClick}>
+              {getPriorityIconLabel(task.priority)}
+            </PriorityIcon>
             <DropdownContainer $isOpen={isPriorityDropdownOpen}>
               {Object.values(TaskPriority).map((priority) => (
                 <DropdownItem
@@ -312,12 +266,9 @@ export default function TaskView({
                   onClick={() => handlePrioritySelect(priority)}
                 >
                   <span style={{ marginRight: "8px" }}>
-                    {priority === TaskPriority.LOW && "🔵"}
-                    {priority === TaskPriority.MEDIUM && "🟡"}
-                    {priority === TaskPriority.HIGH && "🔴"}
-                    {priority === TaskPriority.CRITICAL && "🟣"}
+                    {getPriorityIconLabel(priority)}
                   </span>
-                  {getPriorityLabel(priority)}
+                  {getPriorityName(priority)}
                 </DropdownItem>
               ))}
             </DropdownContainer>
@@ -340,7 +291,7 @@ export default function TaskView({
             value={descriptionValue}
             onChange={(e) => setDescriptionValue(e.target.value)}
             onBlur={handleDescriptionBlur}
-            autoFocus
+            autoFocus={isEditingDescription}
           />
         ) : (
           <TaskDescription onClick={handleDescriptionClick}>
@@ -405,46 +356,24 @@ export default function TaskView({
           ))}
         </TaskMetadata>
 
-        <AttachmentsSection>
-          <AttachButton>
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path
-                d="M8 4v6M5 7h6"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M4 8l4-4 4 4"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-            Attach file
-          </AttachButton>
-        </AttachmentsSection>
-
         <SubtasksSection>
           <SubtasksHeader>
             <span>Subtasks</span>
             <div>
-              <button 
+              <button
                 onClick={() => setIsCreatingSubtask(true)}
-                style={{ 
-                  background: "none", 
-                  border: "none", 
-                  color: "#888", 
-                  cursor: "pointer", 
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "#888",
+                  cursor: "pointer",
                   padding: "4px",
                   fontSize: "16px",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   borderRadius: "4px",
-                  transition: "all 0.2s"
+                  transition: "all 0.2s",
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.background = "#2a2a2a";
@@ -514,11 +443,13 @@ export default function TaskView({
                   }
                 };
                 return (
-                  <SubtaskItem 
+                  <SubtaskItem
                     key={subtask.id || index}
                     onClick={() => handleSubtaskClick(subtask)}
                   >
-                    <SubtaskCheckbox $completed={subtask.status === TaskStatus.DONE}>
+                    <SubtaskCheckbox
+                      $completed={subtask.status === TaskStatus.DONE}
+                    >
                       {subtask.status === TaskStatus.DONE ? "✓" : ""}
                     </SubtaskCheckbox>
                     <SubtaskIcon>{getSubtaskIcon()}</SubtaskIcon>
@@ -535,33 +466,70 @@ export default function TaskView({
             ) : null}
           </SubtasksContainer>
         </SubtasksSection>
-
-        <HistorySection>
-          <HistoryHeader>History</HistoryHeader>
-          <CommentInputWrapper>
-            <CommentInput placeholder="Comment" />
-            <AttachIconButton>
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <path
-                  d="M8 4v6M5 7h6"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <path
-                  d="M4 8l4-4 4 4"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </AttachIconButton>
-          </CommentInputWrapper>
-        </HistorySection>
       </ModalContainer>
     </ModalOverlay>
   );
 }
 
+function Header({
+  workspaceTitle,
+  task,
+  statusDropdownRef,
+  handleStatusClick,
+  handleStatusSelect,
+  isStatusDropdownOpen,
+}: {
+  workspaceTitle: string;
+  task: Task;
+  statusDropdownRef: React.RefObject<HTMLDivElement>;
+  handleStatusClick: () => void;
+  handleStatusSelect: (status: TaskStatus) => void;
+  isStatusDropdownOpen: boolean;
+}) {
+  return (
+    <ModalHeader>
+      <HeaderLeft>
+        {workspaceTitle}{" "}
+        {
+          <img
+            src="breadcrumb-chevron.svg"
+            alt="arrow-right"
+            style={{ marginLeft: "8px" }}
+            width={14}
+            height={14}
+          />
+        }
+        {
+          <div
+            style={{
+              position: "relative",
+            }}
+            ref={statusDropdownRef}
+          >
+            <StatusIconButton onClick={handleStatusClick}>
+              <StatusIcon $status={task.status}>
+                {getStatusIcon(task.status)}
+              </StatusIcon>
+            </StatusIconButton>
+            <DropdownContainer $isOpen={isStatusDropdownOpen}>
+              {Object.values(TaskStatus).map((status) => (
+                <DropdownItem
+                  key={status}
+                  onClick={() => handleStatusSelect(status)}
+                >
+                  <span style={{ marginRight: "8px" }}>
+                    <StatusIcon $status={status}>
+                      {getStatusIcon(status)}
+                    </StatusIcon>
+                  </span>
+                  {status}
+                </DropdownItem>
+              ))}
+            </DropdownContainer>
+          </div>
+        }{" "}
+        {task.taskKey}
+      </HeaderLeft>
+    </ModalHeader>
+  );
+}

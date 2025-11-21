@@ -32,22 +32,16 @@ export const ModalHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 28px 32px;
+  padding: 18px 32px;
   border-bottom: 1px solid #2a2a2a;
 `;
 
 export const HeaderLeft = styled.div`
-  font-size: 14px;
+  font-size: 16px;
   color: #888;
   display: flex;
   align-items: center;
-  gap: 6px;
-`;
-
-export const HeaderRight = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 12px;
+  gap: 4px;
 `;
 
 export const StatusIconButton = styled.button`
@@ -98,7 +92,7 @@ export const CloseButton = styled.button`
 
 export const TaskTitleSection = styled.div`
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
   padding: 24px;
   padding-bottom: 16px;
@@ -515,4 +509,3 @@ export const AttachIconButton = styled.button`
     color: #fff;
   }
 `;
-

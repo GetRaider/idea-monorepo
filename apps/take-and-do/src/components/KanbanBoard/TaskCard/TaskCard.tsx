@@ -33,21 +33,6 @@ export default function TaskCard({ task, onTaskClick }: TaskCardProps) {
     estimation = 0,
     subtasks = [],
   } = task;
-  const getPriorityIcon = () => {
-    switch (priority) {
-      case TaskPriority.LOW:
-        return "🔵";
-      case TaskPriority.MEDIUM:
-        return "🟡";
-      case TaskPriority.HIGH:
-        return "🔴";
-      case TaskPriority.CRITICAL:
-        return "🟣";
-      default:
-        return "🚫";
-    }
-  };
-
   const cardRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
 
@@ -93,7 +78,7 @@ export default function TaskCard({ task, onTaskClick }: TaskCardProps) {
       onClick={handleClick}
     >
       <Header>
-        <PriorityIcon>{getPriorityIcon()}</PriorityIcon>
+        <PriorityIcon>{getPriorityIconLabel(priority)}</PriorityIcon>
         <Id>{taskKey || id}</Id>
         {!!subtasks.length && (
           <Subtasks>
@@ -166,4 +151,19 @@ export default function TaskCard({ task, onTaskClick }: TaskCardProps) {
       </Labels>
     </Card>
   );
+}
+
+export function getPriorityIconLabel(priority: TaskPriority): string {
+  switch (priority) {
+    case TaskPriority.LOW:
+      return "🔵";
+    case TaskPriority.MEDIUM:
+      return "🟡";
+    case TaskPriority.HIGH:
+      return "🔴";
+    case TaskPriority.CRITICAL:
+      return "🟣";
+    default:
+      return "🚫";
+  }
 }

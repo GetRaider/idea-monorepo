@@ -148,6 +148,7 @@ export const TaskTitleInput = styled.input`
   border-radius: 4px;
   padding: 4px 8px;
   outline: none;
+  scroll-snap-type: x mandatory; /* this will do the magic for parent */
 
   &:focus {
     border-color: #667eea;
@@ -170,23 +171,151 @@ export const TaskDescription = styled.p`
   }
 `;
 
-export const TaskDescriptionTextarea = styled.textarea`
-  padding: 12px 24px 24px 24px;
+export const DescriptionActions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  justify-content: flex-end;
+`;
+
+export const SaveButton = styled.button`
+  padding: 6px 16px;
+  background: #667eea;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: #5568d3;
+  }
+
+  &:active {
+    background: #4a5bc4;
+  }
+`;
+
+export const CancelButton = styled.button`
+  padding: 6px 16px;
+  background: transparent;
+  color: #888;
+  border: 1px solid #3a3a3a;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: #2a2a2a;
+    color: #fff;
+    border-color: #4a4a4a;
+  }
+`;
+
+export const TaskDescriptionMarkdown = styled.div`
+  padding: 12px 32px 24px 32px;
   color: #888;
   font-size: 14px;
   line-height: 1.6;
   margin: 0;
-  white-space: pre-wrap;
-  background: #2a2a2a;
-  border: 1px solid #3a3a3a;
+  min-height: 200px;
+  cursor: pointer;
   border-radius: 4px;
-  outline: none;
-  resize: vertical;
-  min-height: 60px;
-  font-family: inherit;
+  transition: all 0.2s;
 
-  &:focus {
-    border-color: #667eea;
+  &:hover {
+    background: #2a2a2a;
+  }
+
+  h2,
+  h3,
+  h4 {
+    color: #fff;
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    font-weight: 600;
+  }
+
+  h2 {
+    font-size: 20px;
+  }
+
+  h3 {
+    font-size: 18px;
+  }
+
+  h4 {
+    font-size: 16px;
+  }
+
+  p {
+    margin: 0.5em 0;
+  }
+
+  ul,
+  ol {
+    margin: 0.5em 0;
+    padding-left: 1.5em;
+  }
+
+  li {
+    margin: 0.25em 0;
+  }
+
+  /* Task list styles */
+  ul[data-type="taskList"] {
+    list-style: none;
+    padding-left: 0;
+  }
+
+  li[data-type="taskItem"] {
+    display: flex;
+    align-items: flex-start;
+    margin: 0.25em 0;
+
+    > label {
+      flex: 0 0 auto;
+      margin-right: 0.5em;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      margin-top: 0.1em;
+    }
+
+    > div {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+
+    input[type="checkbox"] {
+      cursor: pointer;
+      width: 16px;
+      height: 16px;
+      accent-color: #667eea;
+      margin: 0;
+    }
+
+    p {
+      margin: 0;
+    }
+  }
+
+  strong {
+    color: #fff;
+    font-weight: 600;
+  }
+
+  em {
+    font-style: italic;
+  }
+
+  u {
+    text-decoration: underline;
   }
 `;
 
@@ -194,8 +323,8 @@ export const TaskMetadata = styled.div`
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 0 24px 24px 24px;
   flex-wrap: wrap;
+  padding: 12px 0 12px 24px;
 `;
 
 export const MetadataItem = styled.div`

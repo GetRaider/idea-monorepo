@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Task, TaskPriority, TaskStatus } from "../KanbanBoard/types";
 import { tasksService } from "@/services/api/tasks.service";
+import TextEditor from "../TextEditor/TextEditor";
 import {
   ModalOverlay,
   ModalContainer,
@@ -14,17 +15,12 @@ import {
   TaskTitle,
   TaskTitleInput,
   TaskDescription,
-  TaskDescriptionTextarea,
+  TaskDescriptionMarkdown,
   TaskMetadata,
   MetadataItem,
   MetadataIcon,
   Tag,
   TagDot,
-  AttachmentsSection,
-  AttachmentsHeader,
-  AttachButton,
-  AttachmentItem,
-  AttachmentIcon,
   SubtasksSection,
   SubtasksHeader,
   SubtasksContainer,
@@ -32,11 +28,6 @@ import {
   SubtaskCheckbox,
   SubtaskIcon,
   SubtaskContent,
-  HistorySection,
-  HistoryHeader,
-  CommentInput,
-  CommentInputWrapper,
-  AttachIconButton,
   StatusIconButton,
   DropdownContainer,
   DropdownItem,
@@ -103,6 +94,33 @@ export default function TaskView({
     };
   }, []);
 
+  const handleUpdateTask = useCallback(
+    async (updates: Partial<Task>) => {
+      if (!task) return;
+      try {
+        const updatedTask = await tasksService.update(task.id, updates);
+        setTask(updatedTask);
+        if (onTaskUpdate) {
+          onTaskUpdate(updatedTask);
+        }
+      } catch (error) {
+        console.error("Failed to update task:", error);
+      }
+    },
+    [task, onTaskUpdate],
+  );
+
+  const handleDescriptionUpdate = useCallback((html: string) => {
+    setDescriptionValue(html);
+  }, []);
+
+  const handleDescriptionBlur = useCallback(() => {
+    setIsEditingDescription(false);
+    if (descriptionValue !== (task?.description || "")) {
+      handleUpdateTask({ description: descriptionValue });
+    }
+  }, [descriptionValue, task?.description, handleUpdateTask]);
+
   if (!task) return null;
 
   const getPriorityName = (priority: TaskPriority) => {
@@ -133,19 +151,6 @@ export default function TaskView({
     }
   };
 
-  const handleUpdateTask = async (updates: Partial<Task>) => {
-    if (!task) return;
-    try {
-      const updatedTask = await tasksService.update(task.id, updates);
-      setTask(updatedTask);
-      if (onTaskUpdate) {
-        onTaskUpdate(updatedTask);
-      }
-    } catch (error) {
-      console.error("Failed to update task:", error);
-    }
-  };
-
   const handleTitleClick = () => {
     setIsEditingTitle(true);
   };
@@ -168,13 +173,6 @@ export default function TaskView({
 
   const handleDescriptionClick = () => {
     setIsEditingDescription(true);
-  };
-
-  const handleDescriptionBlur = () => {
-    setIsEditingDescription(false);
-    if (descriptionValue !== (task.description || "")) {
-      handleUpdateTask({ description: descriptionValue });
-    }
   };
 
   const handlePriorityClick = () => {
@@ -287,16 +285,28 @@ export default function TaskView({
         </TaskTitleSection>
 
         {isEditingDescription ? (
-          <TaskDescriptionTextarea
-            value={descriptionValue}
-            onChange={(e) => setDescriptionValue(e.target.value)}
+          <TextEditor
+            content={descriptionValue}
+            editable={isEditingDescription}
+            placeholder="No description provided."
+            onUpdate={handleDescriptionUpdate}
             onBlur={handleDescriptionBlur}
-            autoFocus={isEditingDescription}
           />
         ) : (
-          <TaskDescription onClick={handleDescriptionClick}>
-            {task.description || "No description provided."}
-          </TaskDescription>
+          <TaskDescriptionMarkdown onClick={handleDescriptionClick}>
+            {descriptionValue ? (
+              <div
+                dangerouslySetInnerHTML={{ __html: descriptionValue }}
+                style={{
+                  color: "#888",
+                  fontSize: "14px",
+                  lineHeight: "1.6",
+                }}
+              />
+            ) : (
+              <span style={{ color: "#666" }}>No description provided.</span>
+            )}
+          </TaskDescriptionMarkdown>
         )}
 
         <TaskMetadata>

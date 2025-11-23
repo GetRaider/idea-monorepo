@@ -77,19 +77,6 @@ export default function Sidebar({ onNavigationChange }: SidebarProps) {
           </svg>
         </NavButton>
 
-        <NavButton title="Notifications">
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-            <path
-              d="M15 7A5 5 0 0 0 5 7c0 4-2 5-2 5h14s-2-1-2-5ZM11.73 16a2 2 0 0 1-3.46 0"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-          <NotificationBadge>3</NotificationBadge>
-        </NavButton>
-
         <UserAvatar>
           <Avatar src="https://i.pravatar.cc/40?img=12" alt="User" />
         </UserAvatar>

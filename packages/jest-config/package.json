@@ -37,6 +37,7 @@
     "typescript": "catalog:"
   },
   "scripts": {
+    "clean": "rm -rf dist && rm -rf .turbo",
     "build": "tsc"
   }
 }

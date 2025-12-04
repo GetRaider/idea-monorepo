@@ -4,7 +4,6 @@ import { useEffect, useCallback } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
-import { TaskList, TaskItem } from "@tiptap/extension-list";
 import type { Editor } from "@tiptap/react";
 import { EditorWrapper } from "./TextEditor.styles";
 
@@ -21,21 +20,21 @@ function EditorToolbar({ editor }: { editor: Editor }) {
         className={editor.isActive("heading", { level: 2 }) ? "is-active" : ""}
         type="button"
       >
-        H2
+        H1
       </button>
       <button
         onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
         className={editor.isActive("heading", { level: 3 }) ? "is-active" : ""}
         type="button"
       >
-        H3
+        H2
       </button>
       <button
         onClick={() => editor.chain().focus().toggleHeading({ level: 4 }).run()}
         className={editor.isActive("heading", { level: 4 }) ? "is-active" : ""}
         type="button"
       >
-        H4
+        H3
       </button>
       <button
         onClick={() => editor.chain().focus().toggleBold().run()}
@@ -49,7 +48,7 @@ function EditorToolbar({ editor }: { editor: Editor }) {
         className={editor.isActive("italic") ? "is-active" : ""}
         type="button"
       >
-        <em>I</em>
+        <em>Italic</em>
       </button>
       <button
         onClick={() => editor.chain().focus().toggleBulletList().run()}
@@ -64,13 +63,6 @@ function EditorToolbar({ editor }: { editor: Editor }) {
         type="button"
       >
         1.
-      </button>
-      <button
-        onClick={() => editor.chain().focus().toggleTaskList().run()}
-        className={editor.isActive("taskList") ? "is-active" : ""}
-        type="button"
-      >
-        ☑
       </button>
     </div>
   );
@@ -101,10 +93,6 @@ export default function TextEditor({
       }),
       Placeholder.configure({
         placeholder,
-      }),
-      TaskList,
-      TaskItem.configure({
-        nested: true,
       }),
     ],
     content: content || "",

@@ -3,6 +3,10 @@
   "ui": "tui",
   "globalDependencies": ["**/.env.*local"],
   "tasks": {
+    "clean": {
+      "inputs": ["^clean"],
+      "outputs": ["dist/**", ".next/**", ".turbo/**"]
+    },
     "build": {
       "inputs": ["^build"],
       "outputs": [
@@ -11,10 +15,6 @@
         "tsconfig.build.tsbuildinfo",
         "dist/**"
       ]
-    },
-    "rebuild": {
-      "inputs": ["^rebuild"],
-      "outputs": ["dist/**"]
     },
     "dev": {
       "env": ["NODE_ENV=development"],

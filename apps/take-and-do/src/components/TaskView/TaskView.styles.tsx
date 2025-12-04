@@ -267,44 +267,6 @@ export const TaskDescriptionMarkdown = styled.div`
     margin: 0.25em 0;
   }
 
-  /* Task list styles */
-  ul[data-type="taskList"] {
-    list-style: none;
-    padding-left: 0;
-  }
-
-  li[data-type="taskItem"] {
-    display: flex;
-    align-items: flex-start;
-    margin: 0.25em 0;
-
-    > label {
-      flex: 0 0 auto;
-      margin-right: 0.5em;
-      user-select: none;
-      display: flex;
-      align-items: center;
-      margin-top: 0.1em;
-    }
-
-    > div {
-      flex: 1 1 auto;
-      min-width: 0;
-    }
-
-    input[type="checkbox"] {
-      cursor: pointer;
-      width: 16px;
-      height: 16px;
-      accent-color: #667eea;
-      margin: 0;
-    }
-
-    p {
-      margin: 0;
-    }
-  }
-
   strong {
     color: #fff;
     font-weight: 600;

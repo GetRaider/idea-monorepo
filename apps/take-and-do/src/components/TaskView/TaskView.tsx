@@ -23,8 +23,12 @@ import {
   TagDot,
   SubtasksSection,
   SubtasksHeader,
+  SubtasksHeaderButtons,
+  SubtasksHeaderButton,
   SubtasksContainer,
   SubtaskItem,
+  SubtaskHeader,
+  SubtaskKey,
   SubtaskIcon,
   SubtaskContent,
   StatusIconButton,
@@ -395,37 +399,20 @@ export default function TaskView({
           <SubtasksSection>
             <SubtasksHeader>
               <span>Subtasks</span>
-              <div>
-                <button
+              <SubtasksHeaderButtons>
+                <SubtasksHeaderButton
                   onClick={() => setIsCreatingSubtask(true)}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    color: "#888",
-                    cursor: "pointer",
-                    padding: "4px",
-                    fontSize: "16px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    borderRadius: "4px",
-                    transition: "all 0.2s",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = "#2a2a2a";
-                    e.currentTarget.style.color = "#fff";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = "none";
-                    e.currentTarget.style.color = "#888";
-                  }}
+                  title="Add subtask"
                 >
                   +
-                </button>
-                <button onClick={handleToggleSubtasks}>
+                </SubtasksHeaderButton>
+                <SubtasksHeaderButton
+                  onClick={handleToggleSubtasks}
+                  title={isSubtasksExpanded ? "Collapse" : "Expand"}
+                >
                   {isSubtasksExpanded ? "▼" : "▶"}
-                </button>
-              </div>
+                </SubtasksHeaderButton>
+              </SubtasksHeaderButtons>
             </SubtasksHeader>
             <SubtasksContainer $isExpanded={isSubtasksExpanded}>
               {isCreatingSubtask && (
@@ -464,34 +451,23 @@ export default function TaskView({
               )}
               {task.subtasks && task.subtasks.length > 0 ? (
                 task.subtasks.map((subtask, index) => {
-                  const getSubtaskPriorityIcon = () => {
-                    switch (subtask.priority) {
-                      case TaskPriority.LOW:
-                        return "🔵";
-                      case TaskPriority.MEDIUM:
-                        return "🟡";
-                      case TaskPriority.HIGH:
-                        return "🔴";
-                      case TaskPriority.CRITICAL:
-                        return "🟣";
-                      default:
-                        return "🟡";
-                    }
-                  };
                   return (
                     <SubtaskItem
                       key={subtask.id || index}
                       onClick={() => handleSubtaskClick(subtask)}
                     >
-                      <StatusIcon $status={subtask.status}>
-                        {getStatusIcon(subtask.status)}
-                      </StatusIcon>
-                      <SubtaskIcon>{getSubtaskPriorityIcon()}</SubtaskIcon>
-                      <SubtaskContent>
-                        {subtask.taskKey
-                          ? `${subtask.taskKey} ${subtask.summary}`
-                          : subtask.summary}
-                      </SubtaskContent>
+                      <SubtaskHeader>
+                        <StatusIcon $status={subtask.status}>
+                          {getStatusIcon(subtask.status)}
+                        </StatusIcon>
+                        <SubtaskIcon>
+                          {getPriorityIconLabel(subtask.priority)}
+                        </SubtaskIcon>
+                        {subtask.taskKey && (
+                          <SubtaskKey>{subtask.taskKey}</SubtaskKey>
+                        )}
+                      </SubtaskHeader>
+                      <SubtaskContent>{subtask.summary}</SubtaskContent>
                     </SubtaskItem>
                   );
                 })

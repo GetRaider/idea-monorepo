@@ -1,5 +1,40 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getTaskById, updateTask } from "@/app/api/mock-data";
+import { Task } from "@/components/KanbanBoard/types";
+
+  // Serialized task type for JSON response
+interface SerializedTask {
+  id: string;
+  taskBoardId: string;
+  taskKey?: string;
+  summary: string;
+  description: string;
+  status: string;
+  priority: string;
+  labels: string[];
+  dueDate?: string;
+  estimation?: number;
+  subtasks: SerializedTask[];
+  schedule?: string;
+}
+
+// Helper to serialize a task (including subtasks) for JSON response
+function serializeTask(task: Task): SerializedTask {
+  return {
+    id: task.id,
+    taskBoardId: task.taskBoardId,
+    taskKey: task.taskKey,
+    summary: task.summary,
+    description: task.description,
+    status: task.status,
+    priority: task.priority,
+    labels: task.labels || [],
+    dueDate: task.dueDate?.toISOString(),
+    estimation: task.estimation,
+    subtasks: (task.subtasks || []).map((subtask) => serializeTask(subtask)),
+    schedule: task.schedule,
+  };
+}
 
 export async function GET(
   request: NextRequest,
@@ -13,24 +48,7 @@ export async function GET(
       return NextResponse.json({ error: "Task not found" }, { status: 404 });
     }
 
-    // Serialize response - explicitly include all fields including priority
-    const response = {
-      ...task,
-      id: task.id,
-      taskBoardId: task.taskBoardId,
-      taskKey: task.taskKey,
-      summary: task.summary,
-      description: task.description,
-      status: task.status,
-      priority: task.priority,
-      labels: task.labels || [],
-      dueDate: task.dueDate?.toISOString(),
-      estimation: task.estimation,
-      subtasks: task.subtasks || [],
-      schedule: task.schedule,
-    };
-
-    return NextResponse.json(response);
+    return NextResponse.json(serializeTask(task));
   } catch {
     return NextResponse.json(
       { error: "Failed to fetch task" },
@@ -59,24 +77,7 @@ export async function PATCH(
       return NextResponse.json({ error: "Task not found" }, { status: 404 });
     }
 
-    // Serialize response - explicitly include all fields including priority
-    const response = {
-      ...updatedTask,
-      id: updatedTask.id,
-      taskBoardId: updatedTask.taskBoardId,
-      taskKey: updatedTask.taskKey,
-      summary: updatedTask.summary,
-      description: updatedTask.description,
-      status: updatedTask.status,
-      priority: updatedTask.priority,
-      labels: updatedTask.labels || [],
-      dueDate: updatedTask.dueDate?.toISOString(),
-      estimation: updatedTask.estimation,
-      subtasks: updatedTask.subtasks || [],
-      schedule: updatedTask.schedule,
-    };
-
-    return NextResponse.json(response);
+    return NextResponse.json(serializeTask(updatedTask));
   } catch {
     return NextResponse.json(
       { error: "Failed to update task" },

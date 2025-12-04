@@ -25,7 +25,6 @@ import {
   SubtasksHeader,
   SubtasksContainer,
   SubtaskItem,
-  SubtaskCheckbox,
   SubtaskIcon,
   SubtaskContent,
   StatusIconButton,
@@ -38,6 +37,7 @@ import { getPriorityIconLabel } from "../KanbanBoard/TaskCard/TaskCard";
 
 interface TaskViewProps {
   task: Task | null;
+  parentTask?: Task | null;
   workspaceTitle: string;
   onClose: () => void;
   onTaskUpdate?: (updatedTask: Task) => void;
@@ -46,11 +46,13 @@ interface TaskViewProps {
 
 export default function TaskView({
   task: initialTask,
+  parentTask,
   workspaceTitle,
   onClose,
   onTaskUpdate,
   onSubtaskClick,
 }: TaskViewProps) {
+  const isSubtask = !!parentTask;
   const [task, setTask] = useState<Task | null>(initialTask);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
@@ -71,6 +73,27 @@ export default function TaskView({
       setDescriptionValue(initialTask.description || "");
     }
   }, [initialTask]);
+
+  // Update URL based on current task/subtask
+  useEffect(() => {
+    if (!initialTask?.taskKey) {
+      // Clear URL when task view is closed - go back to /tasks
+      window.history.replaceState(null, "", "/tasks");
+      return;
+    }
+
+    let newUrl: string;
+    if (parentTask?.taskKey) {
+      // Viewing a subtask: /tasks/PARENT-KEY/SUBTASK-KEY
+      newUrl = `/tasks/${parentTask.taskKey}/${initialTask.taskKey}`;
+    } else {
+      // Viewing a main task: /tasks/TASK-KEY
+      newUrl = `/tasks/${initialTask.taskKey}`;
+    }
+
+    // Update URL without page reload
+    window.history.replaceState(null, "", newUrl);
+  }, [initialTask?.taskKey, parentTask?.taskKey]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -207,7 +230,8 @@ export default function TaskView({
     if (!task || !newSubtaskSummary.trim()) return;
 
     try {
-      const newSubtask: Omit<Task, "id"> = {
+      // Create subtask without id/taskKey - API will generate them
+      const newSubtask: Partial<Task> = {
         taskBoardId: task.taskBoardId,
         summary: newSubtaskSummary.trim(),
         description: "",
@@ -216,15 +240,13 @@ export default function TaskView({
         subtasks: [],
       };
 
-      const createdSubtask = await tasksService.create(newSubtask);
-
-      // Update the parent task to include the new subtask
-      const updatedSubtasks = [...(task.subtasks || []), createdSubtask];
+      // Update parent task with new subtask - API handles id/taskKey generation
+      const updatedSubtasks = [...(task.subtasks || []), newSubtask] as Task[];
       const updatedTask = await tasksService.update(task.id, {
         subtasks: updatedSubtasks,
       });
 
-      // Update local state
+      // Update local state with response from API (includes generated id/taskKey)
       setTask(updatedTask);
       if (onTaskUpdate) {
         onTaskUpdate(updatedTask);
@@ -243,10 +265,12 @@ export default function TaskView({
         <Header
           workspaceTitle={workspaceTitle}
           task={task}
+          parentTask={parentTask}
           statusDropdownRef={statusDropdownRef}
           handleStatusClick={handleStatusClick}
           handleStatusSelect={handleStatusSelect}
           isStatusDropdownOpen={isStatusDropdownOpen}
+          onClose={onClose}
         />
 
         <TaskTitleSection>
@@ -366,116 +390,121 @@ export default function TaskView({
           ))}
         </TaskMetadata>
 
-        <SubtasksSection>
-          <SubtasksHeader>
-            <span>Subtasks</span>
-            <div>
-              <button
-                onClick={() => setIsCreatingSubtask(true)}
-                style={{
-                  background: "none",
-                  border: "none",
-                  color: "#888",
-                  cursor: "pointer",
-                  padding: "4px",
-                  fontSize: "16px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  borderRadius: "4px",
-                  transition: "all 0.2s",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "#2a2a2a";
-                  e.currentTarget.style.color = "#fff";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "none";
-                  e.currentTarget.style.color = "#888";
-                }}
-              >
-                +
-              </button>
-              <button onClick={handleToggleSubtasks}>
-                {isSubtasksExpanded ? "▼" : "▶"}
-              </button>
-            </div>
-          </SubtasksHeader>
-          <SubtasksContainer $isExpanded={isSubtasksExpanded}>
-            {isCreatingSubtask && (
-              <div style={{ marginBottom: "8px" }}>
-                <input
-                  type="text"
-                  value={newSubtaskSummary}
-                  onChange={(e) => setNewSubtaskSummary(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      handleCreateSubtask();
-                    } else if (e.key === "Escape") {
-                      setIsCreatingSubtask(false);
-                      setNewSubtaskSummary("");
-                    }
-                  }}
-                  placeholder="Enter subtask summary..."
-                  autoFocus
+        {/* Only show subtasks section for main tasks, not subtasks */}
+        {!isSubtask && (
+          <SubtasksSection>
+            <SubtasksHeader>
+              <span>Subtasks</span>
+              <div>
+                <button
+                  onClick={() => setIsCreatingSubtask(true)}
                   style={{
-                    width: "100%",
-                    padding: "10px 12px",
-                    background: "#2a2a2a",
-                    border: "1px solid #3a3a3a",
-                    borderRadius: "6px",
-                    color: "#fff",
-                    fontSize: "14px",
-                    outline: "none",
+                    background: "none",
+                    border: "none",
+                    color: "#888",
+                    cursor: "pointer",
+                    padding: "4px",
+                    fontSize: "16px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: "4px",
+                    transition: "all 0.2s",
                   }}
-                  onBlur={() => {
-                    if (!newSubtaskSummary.trim()) {
-                      setIsCreatingSubtask(false);
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "#2a2a2a";
+                    e.currentTarget.style.color = "#fff";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "none";
+                    e.currentTarget.style.color = "#888";
+                  }}
+                >
+                  +
+                </button>
+                <button onClick={handleToggleSubtasks}>
+                  {isSubtasksExpanded ? "▼" : "▶"}
+                </button>
+              </div>
+            </SubtasksHeader>
+            <SubtasksContainer $isExpanded={isSubtasksExpanded}>
+              {isCreatingSubtask && (
+                <div style={{ marginBottom: "8px" }}>
+                  <input
+                    type="text"
+                    value={newSubtaskSummary}
+                    onChange={(e) => setNewSubtaskSummary(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        handleCreateSubtask();
+                      } else if (e.key === "Escape") {
+                        setIsCreatingSubtask(false);
+                        setNewSubtaskSummary("");
+                      }
+                    }}
+                    placeholder="Enter subtask summary..."
+                    autoFocus
+                    style={{
+                      width: "100%",
+                      padding: "10px 12px",
+                      background: "#2a2a2a",
+                      border: "1px solid #3a3a3a",
+                      borderRadius: "6px",
+                      color: "#fff",
+                      fontSize: "14px",
+                      outline: "none",
+                    }}
+                    onBlur={() => {
+                      if (!newSubtaskSummary.trim()) {
+                        setIsCreatingSubtask(false);
+                      }
+                    }}
+                  />
+                </div>
+              )}
+              {task.subtasks && task.subtasks.length > 0 ? (
+                task.subtasks.map((subtask, index) => {
+                  const getSubtaskPriorityIcon = () => {
+                    switch (subtask.priority) {
+                      case TaskPriority.LOW:
+                        return "🔵";
+                      case TaskPriority.MEDIUM:
+                        return "🟡";
+                      case TaskPriority.HIGH:
+                        return "🔴";
+                      case TaskPriority.CRITICAL:
+                        return "🟣";
+                      default:
+                        return "🟡";
                     }
-                  }}
-                />
-              </div>
-            )}
-            {task.subtasks && task.subtasks.length > 0 ? (
-              task.subtasks.map((subtask, index) => {
-                const getSubtaskIcon = () => {
-                  switch (subtask.priority) {
-                    case TaskPriority.LOW:
-                      return "🔵";
-                    case TaskPriority.MEDIUM:
-                      return "🟡";
-                    case TaskPriority.HIGH:
-                      return "🔴";
-                    case TaskPriority.CRITICAL:
-                      return "🟣";
-                    default:
-                      return "🟡";
-                  }
-                };
-                return (
-                  <SubtaskItem
-                    key={subtask.id || index}
-                    onClick={() => handleSubtaskClick(subtask)}
-                  >
-                    <SubtaskCheckbox
-                      $completed={subtask.status === TaskStatus.DONE}
+                  };
+                  return (
+                    <SubtaskItem
+                      key={subtask.id || index}
+                      onClick={() => handleSubtaskClick(subtask)}
                     >
-                      {subtask.status === TaskStatus.DONE ? "✓" : ""}
-                    </SubtaskCheckbox>
-                    <SubtaskIcon>{getSubtaskIcon()}</SubtaskIcon>
-                    <SubtaskContent>
-                      {subtask.taskKey || subtask.id} {subtask.summary}
-                    </SubtaskContent>
-                  </SubtaskItem>
-                );
-              })
-            ) : !isCreatingSubtask ? (
-              <div style={{ color: "#666", fontSize: "14px", padding: "8px" }}>
-                No subtasks yet
-              </div>
-            ) : null}
-          </SubtasksContainer>
-        </SubtasksSection>
+                      <StatusIcon $status={subtask.status}>
+                        {getStatusIcon(subtask.status)}
+                      </StatusIcon>
+                      <SubtaskIcon>{getSubtaskPriorityIcon()}</SubtaskIcon>
+                      <SubtaskContent>
+                        {subtask.taskKey
+                          ? `${subtask.taskKey} ${subtask.summary}`
+                          : subtask.summary}
+                      </SubtaskContent>
+                    </SubtaskItem>
+                  );
+                })
+              ) : !isCreatingSubtask ? (
+                <div
+                  style={{ color: "#666", fontSize: "14px", padding: "8px" }}
+                >
+                  No subtasks yet
+                </div>
+              ) : null}
+            </SubtasksContainer>
+          </SubtasksSection>
+        )}
       </ModalContainer>
     </ModalOverlay>
   );
@@ -484,62 +513,79 @@ export default function TaskView({
 function Header({
   workspaceTitle,
   task,
+  parentTask,
   statusDropdownRef,
   handleStatusClick,
   handleStatusSelect,
   isStatusDropdownOpen,
+  onClose,
 }: {
   workspaceTitle: string;
   task: Task;
+  parentTask?: Task | null;
   statusDropdownRef: React.RefObject<HTMLDivElement>;
   handleStatusClick: () => void;
   handleStatusSelect: (status: TaskStatus) => void;
   isStatusDropdownOpen: boolean;
+  onClose: () => void;
 }) {
   return (
     <ModalHeader>
       <HeaderLeft>
         {workspaceTitle}{" "}
-        {
-          <img
-            src="breadcrumb-chevron.svg"
-            alt="arrow-right"
-            style={{ marginLeft: "8px" }}
-            width={14}
-            height={14}
-          />
-        }
-        {
-          <div
-            style={{
-              position: "relative",
-            }}
-            ref={statusDropdownRef}
-          >
-            <StatusIconButton onClick={handleStatusClick}>
-              <StatusIcon $status={task.status}>
-                {getStatusIcon(task.status)}
-              </StatusIcon>
-            </StatusIconButton>
-            <DropdownContainer $isOpen={isStatusDropdownOpen}>
-              {Object.values(TaskStatus).map((status) => (
-                <DropdownItem
-                  key={status}
-                  onClick={() => handleStatusSelect(status)}
-                >
-                  <span style={{ marginRight: "8px" }}>
-                    <StatusIcon $status={status}>
-                      {getStatusIcon(status)}
-                    </StatusIcon>
-                  </span>
-                  {status}
-                </DropdownItem>
-              ))}
-            </DropdownContainer>
-          </div>
-        }{" "}
+        <img
+          src="/breadcrumb-chevron.svg"
+          alt="arrow-right"
+          style={{ marginLeft: "8px" }}
+          width={14}
+          height={14}
+        />
+        {parentTask?.taskKey && (
+          <>
+            {parentTask.taskKey}
+            <img
+              src="/breadcrumb-chevron.svg"
+              alt="arrow-right"
+              style={{ marginLeft: "8px", marginRight: "8px" }}
+              width={14}
+              height={14}
+            />
+          </>
+        )}
+        <div
+          style={{
+            position: "relative",
+            display: "flex",
+            alignItems: "center",
+          }}
+          ref={statusDropdownRef}
+        >
+          <StatusIconButton onClick={handleStatusClick}>
+            <StatusIcon $status={task.status}>
+              {getStatusIcon(task.status)}
+            </StatusIcon>
+          </StatusIconButton>
+          <DropdownContainer $isOpen={isStatusDropdownOpen}>
+            {Object.values(TaskStatus).map((status) => (
+              <DropdownItem
+                key={status}
+                onClick={() => handleStatusSelect(status)}
+              >
+                <span style={{ marginRight: "8px" }}>
+                  <StatusIcon $status={status}>
+                    {getStatusIcon(status)}
+                  </StatusIcon>
+                </span>
+                {status}
+              </DropdownItem>
+            ))}
+          </DropdownContainer>
+        </div>{" "}
         {task.taskKey}
       </HeaderLeft>
+      <CloseButton onClick={onClose} title="Close">
+        ×
+      </CloseButton>
     </ModalHeader>
   );
 }

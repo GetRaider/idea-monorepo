@@ -33,6 +33,7 @@ export function SingleKanbanBoard({
     Record<string, string>
   >({});
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [parentTask, setParentTask] = useState<Task | null>(null);
 
   useEffect(() => {
     const fetchTasks = async () => {
@@ -71,10 +72,12 @@ export function SingleKanbanBoard({
 
   const handleTaskClick = useCallback((task: Task) => {
     setSelectedTask(task);
+    setParentTask(null); // Clear parent when clicking a top-level task
   }, []);
 
   const handleCloseModal = useCallback(() => {
     setSelectedTask(null);
+    setParentTask(null);
   }, []);
 
   const handleTaskUpdate = useCallback(
@@ -82,14 +85,45 @@ export function SingleKanbanBoard({
       // Update the task in the local state
       setTasks((prevTasks) => {
         const newTasks = { ...prevTasks };
-        // Remove task from old status
+
+        // Check if this is a top-level task (exists in the board)
+        let isTopLevelTask = false;
         Object.keys(newTasks).forEach((status) => {
-          newTasks[status as TaskStatus] = newTasks[
-            status as TaskStatus
-          ].filter((t) => t.id !== updatedTask.id);
+          if (
+            newTasks[status as TaskStatus].some((t) => t.id === updatedTask.id)
+          ) {
+            isTopLevelTask = true;
+          }
         });
-        // Add task to new status
-        newTasks[updatedTask.status].push(updatedTask);
+
+        if (isTopLevelTask) {
+          // Remove task from old status
+          Object.keys(newTasks).forEach((status) => {
+            newTasks[status as TaskStatus] = newTasks[
+              status as TaskStatus
+            ].filter((t) => t.id !== updatedTask.id);
+          });
+          // Add task to new status
+          newTasks[updatedTask.status].push(updatedTask);
+        } else {
+          // This is a subtask - update it within its parent task
+          Object.keys(newTasks).forEach((status) => {
+            newTasks[status as TaskStatus] = newTasks[status as TaskStatus].map(
+              (task) => {
+                if (task.subtasks?.some((st) => st.id === updatedTask.id)) {
+                  return {
+                    ...task,
+                    subtasks: task.subtasks.map((st) =>
+                      st.id === updatedTask.id ? updatedTask : st,
+                    ),
+                  };
+                }
+                return task;
+              },
+            );
+          });
+        }
+
         return newTasks;
       });
       // Update selected task if it's the same one
@@ -100,9 +134,14 @@ export function SingleKanbanBoard({
     [selectedTask],
   );
 
-  const handleSubtaskClick = useCallback((subtask: Task) => {
-    setSelectedTask(subtask);
-  }, []);
+  const handleSubtaskClick = useCallback(
+    (subtask: Task) => {
+      // When clicking a subtask, the current selectedTask becomes the parent
+      setParentTask(selectedTask);
+      setSelectedTask(subtask);
+    },
+    [selectedTask],
+  );
 
   return (
     <>
@@ -140,6 +179,7 @@ export function SingleKanbanBoard({
       </BoardContainer>
       <TaskView
         task={selectedTask}
+        parentTask={parentTask}
         workspaceTitle={workspaceTitle}
         onClose={handleCloseModal}
         onTaskUpdate={handleTaskUpdate}

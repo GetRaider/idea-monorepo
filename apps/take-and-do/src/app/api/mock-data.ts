@@ -278,29 +278,192 @@ export function createTask(task: Omit<Task, "id">): Task {
   return newTask;
 }
 
+// Helper to recursively search for a task by ID (including subtasks)
+function findTaskRecursively(tasks: Task[], taskId: string): Task | null {
+  for (const task of tasks) {
+    if (task.id === taskId) {
+      return task;
+    }
+    if (task.subtasks?.length) {
+      const found = findTaskRecursively(task.subtasks, taskId);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
 export function getTaskById(taskId: string): Task | null {
   for (const taskBoardId in mockTasks) {
+    // First check top-level tasks
     const task = mockTasks[taskBoardId].find((t) => t.id === taskId);
     if (task) {
       return task;
     }
+    // Then search within subtasks
+    const subtask = findTaskRecursively(mockTasks[taskBoardId], taskId);
+    if (subtask) {
+      return subtask;
+    }
   }
   return null;
+}
+
+// Helper to generate unique IDs
+function generateId(): string {
+  return `550e8400-${Date.now()}-41d4-a716-${Math.random().toString(36).substring(2, 14)}`;
+}
+
+// Helper to derive taskKey prefix from parent task
+function deriveTaskKeyPrefix(taskKey?: string): string {
+  if (!taskKey) return "TASK";
+  const segments = taskKey.split("-").filter(Boolean);
+  if (!segments.length) return "TASK";
+
+  const numericIndex = segments.findIndex((segment) => /^\d+$/.test(segment));
+  if (numericIndex > 0) {
+    return segments.slice(0, numericIndex).join("-");
+  }
+
+  return segments[0] || "TASK";
+}
+
+// Helper to extract numeric portion from taskKey
+function extractNumericPortion(taskKey?: string): number | null {
+  if (!taskKey) return null;
+  const matches = taskKey.match(/\d+/g);
+  if (!matches?.length) return null;
+  const numericValue = parseInt(matches[matches.length - 1], 10);
+  return Number.isNaN(numericValue) ? null : numericValue;
+}
+
+// Generate next taskKey for a subtask based on parent and existing subtasks
+function generateSubtaskKey(
+  parentTask: Task,
+  existingSubtasks: Task[],
+): string {
+  const prefix = deriveTaskKeyPrefix(parentTask.taskKey);
+  const parentNumber = extractNumericPortion(parentTask.taskKey);
+  const subtaskNumbers = existingSubtasks
+    .map((subtask) => extractNumericPortion(subtask.taskKey))
+    .filter((value): value is number => value !== null);
+
+  const highestExistingNumber = Math.max(
+    ...(parentNumber !== null ? [parentNumber] : []),
+    ...(subtaskNumbers.length ? subtaskNumbers : [0]),
+  );
+
+  return `${prefix}-${highestExistingNumber + 1}`;
+}
+
+// Process subtasks: assign id and taskKey to new subtasks (those without an id)
+function processSubtasks(parentTask: Task, subtasks: Task[]): Task[] {
+  const processedSubtasks: Task[] = [];
+
+  for (const subtask of subtasks) {
+    if (subtask.id) {
+      // Existing subtask, keep as-is
+      processedSubtasks.push(subtask);
+    } else {
+      // New subtask: generate id and taskKey
+      const newSubtask: Task = {
+        ...subtask,
+        id: generateId(),
+        taskKey: generateSubtaskKey(parentTask, processedSubtasks),
+        taskBoardId: subtask.taskBoardId || parentTask.taskBoardId,
+      };
+      processedSubtasks.push(newSubtask);
+    }
+  }
+
+  return processedSubtasks;
+}
+
+// Helper to recursively update a subtask within a subtasks array
+function updateSubtaskRecursively(
+  subtasks: Task[],
+  taskId: string,
+  updates: Partial<Task>,
+): { updated: boolean; subtasks: Task[]; updatedTask: Task | null } {
+  for (let i = 0; i < subtasks.length; i++) {
+    if (subtasks[i].id === taskId) {
+      const updatedSubtask = { ...subtasks[i], ...updates };
+      const newSubtasks = [...subtasks];
+      newSubtasks[i] = updatedSubtask;
+      return {
+        updated: true,
+        subtasks: newSubtasks,
+        updatedTask: updatedSubtask,
+      };
+    }
+    // Check nested subtasks
+    if (subtasks[i].subtasks?.length) {
+      const result = updateSubtaskRecursively(
+        subtasks[i].subtasks!,
+        taskId,
+        updates,
+      );
+      if (result.updated) {
+        const newSubtasks = [...subtasks];
+        newSubtasks[i] = { ...subtasks[i], subtasks: result.subtasks };
+        return {
+          updated: true,
+          subtasks: newSubtasks,
+          updatedTask: result.updatedTask,
+        };
+      }
+    }
+  }
+  return { updated: false, subtasks, updatedTask: null };
 }
 
 export function updateTask(
   taskId: string,
   updates: Partial<Task>,
 ): Task | null {
+  // First, try to find and update as a top-level task
   for (const taskBoardId in mockTasks) {
     const taskIndex = mockTasks[taskBoardId].findIndex((t) => t.id === taskId);
     if (taskIndex !== -1) {
+      const existingTask = mockTasks[taskBoardId][taskIndex];
+
+      // Process subtasks if they're being updated
+      const processedUpdates = { ...updates };
+      if (updates.subtasks) {
+        processedUpdates.subtasks = processSubtasks(
+          existingTask,
+          updates.subtasks,
+        );
+      }
+
       mockTasks[taskBoardId][taskIndex] = {
-        ...mockTasks[taskBoardId][taskIndex],
-        ...updates,
+        ...existingTask,
+        ...processedUpdates,
       };
       return mockTasks[taskBoardId][taskIndex];
     }
   }
+
+  // If not found as top-level, search within subtasks
+  for (const taskBoardId in mockTasks) {
+    for (let i = 0; i < mockTasks[taskBoardId].length; i++) {
+      const parentTask = mockTasks[taskBoardId][i];
+      if (parentTask.subtasks?.length) {
+        const result = updateSubtaskRecursively(
+          parentTask.subtasks,
+          taskId,
+          updates,
+        );
+        if (result.updated) {
+          // Update the parent task with the new subtasks array
+          mockTasks[taskBoardId][i] = {
+            ...parentTask,
+            subtasks: result.subtasks,
+          };
+          return result.updatedTask;
+        }
+      }
+    }
+  }
+
   return null;
 }

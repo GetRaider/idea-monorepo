@@ -1,5 +1,15 @@
 import { Task, TaskPriority } from "@/components/KanbanBoard/types";
 
+// Helper to normalize a task (including subtasks) from API response
+function normalizeTask(task: Task): Task {
+  return {
+    ...task,
+    dueDate: task.dueDate ? new Date(task.dueDate) : undefined,
+    priority: normalizePriority(task.priority),
+    subtasks: (task.subtasks || []).map((subtask) => normalizeTask(subtask)),
+  };
+}
+
 export const tasksService = {
   async getAll(): Promise<Task[]> {
     const response = await fetch("/api/tasks");
@@ -7,18 +17,13 @@ export const tasksService = {
       throw new Error("Failed to fetch tasks");
     }
     const tasks = await response.json();
-    return tasks.map((task: Task) => ({
-      ...task,
-      dueDate: task.dueDate ? new Date(task.dueDate) : undefined,
-      priority: normalizePriority(task.priority),
-    }));
+    return tasks.map((task: Task) => normalizeTask(task));
   },
 
   async getBySchedule(): Promise<{
     today: Task[];
     tomorrow: Task[];
   }> {
-    // Fetch both today and tomorrow to maintain the same return structure
     const [todayResponse, tomorrowResponse] = await Promise.all([
       fetch("/api/tasks?schedule=today"),
       fetch("/api/tasks?schedule=tomorrow"),
@@ -31,18 +36,9 @@ export const tasksService = {
     const todayTasks = await todayResponse.json();
     const tomorrowTasks = await tomorrowResponse.json();
 
-    // Convert date strings back to Date objects and normalize priority
-    const normalizeTask = (task: Task) => {
-      return {
-        ...task,
-        dueDate: task.dueDate ? new Date(task.dueDate) : undefined,
-        priority: normalizePriority(task.priority),
-      };
-    };
-
     return {
-      today: todayTasks.map(normalizeTask),
-      tomorrow: tomorrowTasks.map(normalizeTask),
+      today: todayTasks.map((task: Task) => normalizeTask(task)),
+      tomorrow: tomorrowTasks.map((task: Task) => normalizeTask(task)),
     };
   },
 
@@ -52,11 +48,7 @@ export const tasksService = {
       throw new Error("Failed to fetch tasks");
     }
     const tasks = await response.json();
-    return tasks.map((task: Task) => ({
-      ...task,
-      dueDate: task.dueDate ? new Date(task.dueDate) : undefined,
-      priority: normalizePriority(task.priority),
-    }));
+    return tasks.map((task: Task) => normalizeTask(task));
   },
 
   async getById(taskId: string): Promise<Task> {
@@ -65,11 +57,7 @@ export const tasksService = {
       throw new Error("Failed to fetch task");
     }
     const task = await response.json();
-    return {
-      ...task,
-      dueDate: task.dueDate ? new Date(task.dueDate) : undefined,
-      priority: normalizePriority(task.priority),
-    };
+    return normalizeTask(task);
   },
 
   async create(task: Omit<Task, "id">): Promise<Task> {
@@ -84,10 +72,7 @@ export const tasksService = {
       throw new Error("Failed to create task");
     }
     const createdTask = await response.json();
-    return {
-      ...createdTask,
-      dueDate: createdTask.dueDate ? new Date(createdTask.dueDate) : undefined,
-    };
+    return normalizeTask(createdTask);
   },
 
   async update(taskId: string, updates: Partial<Task>): Promise<Task> {
@@ -102,11 +87,7 @@ export const tasksService = {
       throw new Error("Failed to update task");
     }
     const updatedTask = await response.json();
-    return {
-      ...updatedTask,
-      dueDate: updatedTask.dueDate ? new Date(updatedTask.dueDate) : undefined,
-      priority: normalizePriority(updatedTask.priority),
-    };
+    return normalizeTask(updatedTask);
   },
 };
 

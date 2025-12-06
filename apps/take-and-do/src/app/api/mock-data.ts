@@ -386,7 +386,11 @@ function processSubtasks(parentTask: Task, subtasks: Task[]): Task[] {
   const processedSubtasks: Task[] = [];
 
   for (const subtask of subtasks) {
-    if (subtask.id) {
+    // Check for existing subtask - must have a truthy id that's a non-empty string
+    const hasValidId =
+      subtask.id && typeof subtask.id === "string" && subtask.id.length > 0;
+
+    if (hasValidId) {
       // Existing subtask, keep as-is
       processedSubtasks.push(subtask);
     } else {

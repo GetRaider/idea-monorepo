@@ -397,7 +397,7 @@ export default function TaskView({
     if (!task || !newSubtaskSummary.trim()) return;
 
     try {
-      // Create subtask without id/taskKey - API will generate them
+      // Create new subtask without id/taskKey - API will generate them
       const newSubtask: Partial<Task> = {
         taskBoardId: task.taskBoardId,
         summary: newSubtaskSummary.trim(),
@@ -407,10 +407,17 @@ export default function TaskView({
         subtasks: [],
       };
 
-      // Update parent task with new subtask - API handles id/taskKey generation
-      const updatedSubtasks = [...(task.subtasks || []), newSubtask] as Task[];
+      // Preserve existing subtasks with their IDs, add new one at the end
+      const existingSubtasks = (task.subtasks || []).map((st) => ({
+        ...st,
+        // Ensure dueDate is serializable
+        dueDate:
+          st.dueDate instanceof Date ? st.dueDate.toISOString() : st.dueDate,
+      }));
+
+      const updatedSubtasks = [...existingSubtasks, newSubtask];
       const updatedTask = await tasksService.update(task.id, {
-        subtasks: updatedSubtasks,
+        subtasks: updatedSubtasks as Task[],
       });
 
       // Update local state with response from API (includes generated id/taskKey)

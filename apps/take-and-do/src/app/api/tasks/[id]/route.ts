@@ -73,6 +73,13 @@ export async function PATCH(
     if ("estimation" in updates) {
       updateData.estimation = updates.estimation || undefined;
     }
+    // Process subtask dates if subtasks are being updated
+    if (updates.subtasks && Array.isArray(updates.subtasks)) {
+      updateData.subtasks = updates.subtasks.map((subtask: Record<string, unknown>) => ({
+        ...subtask,
+        dueDate: subtask.dueDate ? new Date(subtask.dueDate as string) : undefined,
+      }));
+    }
 
     const updatedTask = updateTask(taskId, updateData);
 

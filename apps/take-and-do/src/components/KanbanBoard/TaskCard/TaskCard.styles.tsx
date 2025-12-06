@@ -10,8 +10,7 @@ export const Card = styled.div`
   flex-direction: column;
   gap: 12px;
   cursor: grab;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  will-change: transform, opacity;
+  transition: border-color 0.2s ease-out;
 
   &:active {
     cursor: grabbing;
@@ -19,8 +18,6 @@ export const Card = styled.div`
 
   &:hover {
     border-color: #3a3a3a;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   }
 `;
 

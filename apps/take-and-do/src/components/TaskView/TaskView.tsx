@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Task, TaskPriority, TaskStatus } from "../KanbanBoard/types";
 import { tasksService } from "@/services/api/tasks.service";
+import { labelsService } from "@/services/api/labels.service";
 import TextEditor from "../TextEditor/TextEditor";
 import {
   ModalOverlay,
@@ -18,9 +19,17 @@ import {
   TaskDescriptionMarkdown,
   TaskMetadata,
   MetadataItem,
+  MetadataInput,
   MetadataIcon,
   Tag,
   TagDot,
+  LabelSelectorContainer,
+  LabelDropdown,
+  LabelDropdownItem,
+  LabelDropdownInput,
+  EstimationInputGroup,
+  EstimationInput,
+  EstimationLabel,
   SubtasksSection,
   SubtasksHeader,
   SubtasksHeaderButtons,
@@ -67,16 +76,77 @@ export default function TaskView({
   const [isSubtasksExpanded, setIsSubtasksExpanded] = useState(true);
   const [isCreatingSubtask, setIsCreatingSubtask] = useState(false);
   const [newSubtaskSummary, setNewSubtaskSummary] = useState("");
+  // Metadata editing states
+  const [isEditingDueDate, setIsEditingDueDate] = useState(false);
+  const [dueDateValue, setDueDateValue] = useState("");
+  const [isEditingEstimation, setIsEditingEstimation] = useState(false);
+  const [estimationDays, setEstimationDays] = useState(0);
+  const [estimationHours, setEstimationHours] = useState(0);
+  const [estimationMinutes, setEstimationMinutes] = useState(0);
+  // Label selector states
+  const [isLabelDropdownOpen, setIsLabelDropdownOpen] = useState(false);
+  const [availableLabels, setAvailableLabels] = useState<string[]>([]);
+  const [labelSearchValue, setLabelSearchValue] = useState("");
   const priorityDropdownRef = useRef<HTMLDivElement>(null);
   const statusDropdownRef = useRef<HTMLDivElement>(null);
+  const labelDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Parse hours to days/hours/minutes
+  const parseEstimation = (hours: number) => {
+    const totalMinutes = Math.round(hours * 60);
+    const days = Math.floor(totalMinutes / (24 * 60));
+    const remainingAfterDays = totalMinutes % (24 * 60);
+    const hrs = Math.floor(remainingAfterDays / 60);
+    const mins = remainingAfterDays % 60;
+    return { days, hours: hrs, minutes: mins };
+  };
+
+  // Convert days/hours/minutes to total hours
+  const toTotalHours = (days: number, hours: number, minutes: number) => {
+    return days * 24 + hours + minutes / 60;
+  };
+
+  // Format date for input element
+  const formatDateForInput = (date: Date) => {
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, "0");
+    const day = date.getDate().toString().padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
 
   useEffect(() => {
     setTask(initialTask);
     if (initialTask) {
       setTitleValue(initialTask.summary);
       setDescriptionValue(initialTask.description || "");
+      setDueDateValue(
+        initialTask.dueDate ? formatDateForInput(initialTask.dueDate) : "",
+      );
+      if (initialTask.estimation) {
+        const parsed = parseEstimation(initialTask.estimation);
+        setEstimationDays(parsed.days);
+        setEstimationHours(parsed.hours);
+        setEstimationMinutes(parsed.minutes);
+      } else {
+        setEstimationDays(0);
+        setEstimationHours(0);
+        setEstimationMinutes(0);
+      }
     }
   }, [initialTask]);
+
+  // Fetch available labels
+  useEffect(() => {
+    const fetchLabels = async () => {
+      try {
+        const labels = await labelsService.getAll();
+        setAvailableLabels(labels);
+      } catch (error) {
+        console.error("Failed to fetch labels:", error);
+      }
+    };
+    fetchLabels();
+  }, []);
 
   // Update URL based on current task/subtask
   useEffect(() => {
@@ -112,6 +182,13 @@ export default function TaskView({
         !statusDropdownRef.current.contains(event.target as Node)
       ) {
         setIsStatusDropdownOpen(false);
+      }
+      if (
+        labelDropdownRef.current &&
+        !labelDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsLabelDropdownOpen(false);
+        setLabelSearchValue("");
       }
     };
 
@@ -169,7 +246,93 @@ export default function TaskView({
     if (!date) return "";
     const day = date.getDate().toString().padStart(2, "0");
     const month = (date.getMonth() + 1).toString().padStart(2, "0");
-    return `${day}.${month}`;
+    const year = date.getFullYear();
+    return `${day}.${month}.${year}`;
+  };
+
+  const formatEstimation = (hours?: number) => {
+    if (!hours) return "";
+    const parsed = parseEstimation(hours);
+    const parts = [];
+    if (parsed.days > 0) parts.push(`${parsed.days}d`);
+    if (parsed.hours > 0) parts.push(`${parsed.hours}h`);
+    if (parsed.minutes > 0) parts.push(`${parsed.minutes}m`);
+    return parts.length > 0 ? parts.join(" ") : "0h";
+  };
+
+  const handleDueDateClick = () => {
+    setIsEditingDueDate(true);
+  };
+
+  const handleDueDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setDueDateValue(e.target.value);
+  };
+
+  const handleDueDateBlur = () => {
+    setIsEditingDueDate(false);
+    if (dueDateValue) {
+      const newDate = new Date(dueDateValue);
+      if (!isNaN(newDate.getTime())) {
+        handleUpdateTask({ dueDate: newDate });
+      }
+    } else {
+      // Use null to explicitly clear (undefined gets stripped by JSON.stringify)
+      handleUpdateTask({ dueDate: null as unknown as Date });
+    }
+  };
+
+  const handleEstimationClick = () => {
+    setIsEditingEstimation(true);
+  };
+
+  const handleEstimationSave = () => {
+    setIsEditingEstimation(false);
+    const totalHours = toTotalHours(
+      estimationDays,
+      estimationHours,
+      estimationMinutes,
+    );
+    if (totalHours > 0) {
+      handleUpdateTask({ estimation: totalHours });
+    } else {
+      // Use null to explicitly clear (undefined gets stripped by JSON.stringify)
+      handleUpdateTask({ estimation: null as unknown as number });
+    }
+  };
+
+  const handleLabelDropdownToggle = () => {
+    setIsLabelDropdownOpen(!isLabelDropdownOpen);
+    setLabelSearchValue("");
+  };
+
+  const handleSelectLabel = async (label: string) => {
+    if (!task?.labels?.includes(label)) {
+      const newLabels = [...(task?.labels || []), label];
+      handleUpdateTask({ labels: newLabels });
+    }
+    setIsLabelDropdownOpen(false);
+    setLabelSearchValue("");
+  };
+
+  const handleCreateAndSelectLabel = async () => {
+    if (labelSearchValue.trim()) {
+      const newLabel = labelSearchValue.trim();
+      try {
+        await labelsService.create(newLabel);
+        setAvailableLabels((prev) => [...prev, newLabel]);
+        const newLabels = [...(task?.labels || []), newLabel];
+        handleUpdateTask({ labels: newLabels });
+      } catch (error) {
+        console.error("Failed to create label:", error);
+      }
+      setIsLabelDropdownOpen(false);
+      setLabelSearchValue("");
+    }
+  };
+
+  const handleRemoveLabel = (labelToRemove: string) => {
+    const newLabels = (task?.labels || []).filter((l) => l !== labelToRemove);
+    handleUpdateTask({ labels: newLabels });
   };
 
   const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -338,8 +501,24 @@ export default function TaskView({
         )}
 
         <TaskMetadata>
-          {task.dueDate && (
-            <MetadataItem>
+          {/* Due Date */}
+          {isEditingDueDate ? (
+            <MetadataInput
+              type="date"
+              value={dueDateValue}
+              onChange={handleDueDateChange}
+              onBlur={handleDueDateBlur}
+              onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) =>
+                e.key === "Enter" && e.currentTarget.blur()
+              }
+              autoFocus
+              style={{ width: "130px" }}
+            />
+          ) : (
+            <MetadataItem
+              onClick={handleDueDateClick}
+              title="Click to edit due date"
+            >
               <MetadataIcon>
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                   <rect
@@ -360,11 +539,58 @@ export default function TaskView({
                   />
                 </svg>
               </MetadataIcon>
-              <span>{formatDate(task.dueDate)}</span>
+              <span>
+                {task.dueDate ? formatDate(task.dueDate) : "Set due date"}
+              </span>
             </MetadataItem>
           )}
-          {task.estimation && (
-            <MetadataItem>
+
+          {/* Estimation */}
+          {isEditingEstimation ? (
+            <EstimationInputGroup>
+              <EstimationInput
+                type="number"
+                value={estimationDays || ""}
+                onChange={(e) =>
+                  setEstimationDays(parseInt(e.target.value) || 0)
+                }
+                onKeyDown={(e) => e.key === "Enter" && handleEstimationSave()}
+                placeholder="0"
+                min="0"
+              />
+              <EstimationLabel>d</EstimationLabel>
+              <EstimationInput
+                type="number"
+                value={estimationHours || ""}
+                onChange={(e) =>
+                  setEstimationHours(parseInt(e.target.value) || 0)
+                }
+                onKeyDown={(e) => e.key === "Enter" && handleEstimationSave()}
+                placeholder="0"
+                min="0"
+                max="23"
+                autoFocus
+              />
+              <EstimationLabel>h</EstimationLabel>
+              <EstimationInput
+                type="number"
+                value={estimationMinutes || ""}
+                onChange={(e) =>
+                  setEstimationMinutes(parseInt(e.target.value) || 0)
+                }
+                onKeyDown={(e) => e.key === "Enter" && handleEstimationSave()}
+                onBlur={handleEstimationSave}
+                placeholder="0"
+                min="0"
+                max="59"
+              />
+              <EstimationLabel>m</EstimationLabel>
+            </EstimationInputGroup>
+          ) : (
+            <MetadataItem
+              onClick={handleEstimationClick}
+              title="Click to edit estimation"
+            >
               <MetadataIcon>
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                   <circle
@@ -383,15 +609,81 @@ export default function TaskView({
                   />
                 </svg>
               </MetadataIcon>
-              <span>{task.estimation}</span>
+              <span>
+                {formatEstimation(task.estimation) || "Set estimation"}
+              </span>
             </MetadataItem>
           )}
+
+          {/* Labels */}
           {task.labels?.map((label, index) => (
-            <Tag key={index}>
+            <Tag
+              key={index}
+              onClick={() => handleRemoveLabel(label)}
+              title="Click to remove"
+            >
               <TagDot />
               {label}
             </Tag>
           ))}
+
+          {/* Add Label Dropdown */}
+          <LabelSelectorContainer ref={labelDropdownRef}>
+            <Tag
+              onClick={handleLabelDropdownToggle}
+              title="Add label"
+              style={{
+                background: "transparent",
+                border: "1px dashed #3a3a3a",
+                color: "#666",
+              }}
+            >
+              + Label
+            </Tag>
+            <LabelDropdown $isOpen={isLabelDropdownOpen}>
+              <LabelDropdownInput
+                type="text"
+                value={labelSearchValue}
+                onChange={(e) => setLabelSearchValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleCreateAndSelectLabel();
+                  } else if (e.key === "Escape") {
+                    setIsLabelDropdownOpen(false);
+                    setLabelSearchValue("");
+                  }
+                }}
+                placeholder="Search or create..."
+                autoFocus={isLabelDropdownOpen}
+              />
+              {availableLabels
+                .filter(
+                  (label) =>
+                    label
+                      .toLowerCase()
+                      .includes(labelSearchValue.toLowerCase()) &&
+                    !task.labels?.includes(label),
+                )
+                .map((label) => (
+                  <LabelDropdownItem
+                    key={label}
+                    onClick={() => handleSelectLabel(label)}
+                  >
+                    <TagDot />
+                    {label}
+                  </LabelDropdownItem>
+                ))}
+              {labelSearchValue.trim() &&
+                !availableLabels.some(
+                  (l) => l.toLowerCase() === labelSearchValue.toLowerCase(),
+                ) && (
+                  <LabelDropdownItem onClick={handleCreateAndSelectLabel}>
+                    <span style={{ color: "#667eea" }}>+</span>
+                    Create &quot;{labelSearchValue}&quot;
+                  </LabelDropdownItem>
+                )}
+            </LabelDropdown>
+          </LabelSelectorContainer>
         </TaskMetadata>
 
         {/* Only show subtasks section for main tasks, not subtasks */}

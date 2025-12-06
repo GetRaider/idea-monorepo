@@ -1,6 +1,32 @@
 import { Task } from "@/components/KanbanBoard/types";
 import { Folder, TaskBoard } from "@/types/workspace";
 
+// Mock labels
+export const mockLabels: string[] = [
+  "Work",
+  "Personal",
+  "Urgent",
+  "Food",
+  "Health",
+  "Creative",
+  "Design",
+  "Development",
+  "Meeting",
+  "Research",
+  "Relaxation",
+];
+
+export function getAllLabels(): string[] {
+  return [...mockLabels];
+}
+
+export function addLabel(label: string): string {
+  if (!mockLabels.includes(label)) {
+    mockLabels.push(label);
+  }
+  return label;
+}
+
 // Mock folders
 const FOLDER_PERSONAL_ID = "550e8400-e29b-41d4-a716-446655440001";
 const TASKBOARD_PERSONAL_ID = "550e8400-e29b-41d4-a716-446655440002";

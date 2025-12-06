@@ -65,11 +65,14 @@ export async function PATCH(
     const { id: taskId } = await params;
     const updates = await request.json();
 
-    // Deserialize date if present
-    const updateData = {
-      ...updates,
-      dueDate: updates.dueDate ? new Date(updates.dueDate) : undefined,
-    };
+    // Process fields only if explicitly included in updates
+    const updateData = { ...updates };
+    if ("dueDate" in updates) {
+      updateData.dueDate = updates.dueDate ? new Date(updates.dueDate) : undefined;
+    }
+    if ("estimation" in updates) {
+      updateData.estimation = updates.estimation || undefined;
+    }
 
     const updatedTask = updateTask(taskId, updateData);
 

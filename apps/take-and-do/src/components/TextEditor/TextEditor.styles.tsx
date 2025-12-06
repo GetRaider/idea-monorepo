@@ -2,8 +2,12 @@ import styled from "styled-components";
 
 export const EditorWrapper = styled.div`
   position: relative;
-  padding: 12px 32px 24px 32px;
+  padding: 12px 24px 24px 24px;
   min-height: 200px;
+
+  @media (max-width: 600px) {
+    padding: 12px 16px 16px 16px;
+  }
 
   .editor-toolbar {
     display: flex;
@@ -13,9 +17,10 @@ export const EditorWrapper = styled.div`
     border: 1px solid #3a3a3a;
     border-radius: 4px 4px 0 0;
     margin-bottom: 0;
+    flex-wrap: wrap;
 
     button {
-      padding: 6px 12px;
+      padding: 6px 10px;
       background: transparent;
       border: none;
       color: #888;
@@ -23,6 +28,12 @@ export const EditorWrapper = styled.div`
       border-radius: 4px;
       font-size: 14px;
       transition: all 0.2s;
+      white-space: nowrap;
+
+      @media (max-width: 480px) {
+        padding: 6px 8px;
+        font-size: 12px;
+      }
 
       &:hover {
         background: #3a3a3a;

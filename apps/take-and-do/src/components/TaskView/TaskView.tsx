@@ -555,6 +555,7 @@ export default function TaskView({
                   setEstimationDays(parseInt(e.target.value) || 0)
                 }
                 onKeyDown={(e) => e.key === "Enter" && handleEstimationSave()}
+                onBlur={handleEstimationSave}
                 placeholder="0"
                 min="0"
               />
@@ -566,6 +567,7 @@ export default function TaskView({
                   setEstimationHours(parseInt(e.target.value) || 0)
                 }
                 onKeyDown={(e) => e.key === "Enter" && handleEstimationSave()}
+                onBlur={handleEstimationSave}
                 placeholder="0"
                 min="0"
                 max="23"
@@ -810,11 +812,11 @@ function Header({
         />
         {parentTask?.taskKey && (
           <>
-            {parentTask.taskKey}
+            <span style={{ marginLeft: "8px" }}>{parentTask.taskKey}</span>
             <img
               src="/breadcrumb-chevron.svg"
               alt="arrow-right"
-              style={{ marginLeft: "8px", marginRight: "8px" }}
+              style={{ marginLeft: "8px" }}
               width={14}
               height={14}
             />

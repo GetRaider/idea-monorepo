@@ -642,11 +642,10 @@ export const AttachmentIcon = styled.span`
 `;
 
 export const SubtasksSection = styled.div`
-  margin: 0 24px 24px 24px;
+  margin: 0 24px 32px 24px;
   background: #1a1a1a;
   border: 1px solid #2a2a2a;
   border-radius: 12px;
-  overflow: hidden;
 `;
 
 export const SubtasksHeader = styled.div`

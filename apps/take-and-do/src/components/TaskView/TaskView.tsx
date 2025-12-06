@@ -1,21 +1,26 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Task, TaskPriority, TaskStatus } from "../KanbanBoard/types";
+import { Task, TaskPriority, TaskStatus, TaskUpdate } from "../KanbanBoard/types";
 import { tasksService } from "@/services/api/tasks.service";
 import { labelsService } from "@/services/api/labels.service";
 import TextEditor from "../TextEditor/TextEditor";
 import {
+  parseEstimation,
+  toTotalHours,
+  formatEstimation,
+  formatDateForInput,
+  formatDisplayDate,
+  getPriorityName,
+} from "@/utils/task.utils";
+import { TaskViewHeader } from "./TaskViewHeader";
+import {
   ModalOverlay,
   ModalContainer,
-  ModalHeader,
-  HeaderLeft,
-  CloseButton,
   TaskTitleSection,
   PriorityIcon,
   TaskTitle,
   TaskTitleInput,
-  TaskDescription,
   TaskDescriptionMarkdown,
   TaskMetadata,
   MetadataItem,
@@ -40,7 +45,6 @@ import {
   SubtaskKey,
   SubtaskIcon,
   SubtaskContent,
-  StatusIconButton,
   DropdownContainer,
   DropdownItem,
 } from "./TaskView.styles";
@@ -91,29 +95,6 @@ export default function TaskView({
   const statusDropdownRef = useRef<HTMLDivElement>(null);
   const labelDropdownRef = useRef<HTMLDivElement>(null);
   const estimationGroupRef = useRef<HTMLDivElement>(null);
-
-  // Parse hours to days/hours/minutes
-  const parseEstimation = (hours: number) => {
-    const totalMinutes = Math.round(hours * 60);
-    const days = Math.floor(totalMinutes / (24 * 60));
-    const remainingAfterDays = totalMinutes % (24 * 60);
-    const hrs = Math.floor(remainingAfterDays / 60);
-    const mins = remainingAfterDays % 60;
-    return { days, hours: hrs, minutes: mins };
-  };
-
-  // Convert days/hours/minutes to total hours
-  const toTotalHours = (days: number, hours: number, minutes: number) => {
-    return days * 24 + hours + minutes / 60;
-  };
-
-  // Format date for input element
-  const formatDateForInput = (date: Date) => {
-    const year = date.getFullYear();
-    const month = (date.getMonth() + 1).toString().padStart(2, "0");
-    const day = date.getDate().toString().padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  };
 
   useEffect(() => {
     setTask(initialTask);
@@ -200,14 +181,12 @@ export default function TaskView({
   }, []);
 
   const handleUpdateTask = useCallback(
-    async (updates: Partial<Task>) => {
+    async (updates: TaskUpdate) => {
       if (!task) return;
       try {
         const updatedTask = await tasksService.update(task.id, updates);
         setTask(updatedTask);
-        if (onTaskUpdate) {
-          onTaskUpdate(updatedTask);
-        }
+        onTaskUpdate?.(updatedTask);
       } catch (error) {
         console.error("Failed to update task:", error);
       }
@@ -228,39 +207,6 @@ export default function TaskView({
 
   if (!task) return null;
 
-  const getPriorityName = (priority: TaskPriority) => {
-    switch (priority) {
-      case TaskPriority.LOW:
-        return "Low";
-      case TaskPriority.MEDIUM:
-        return "Medium";
-      case TaskPriority.HIGH:
-        return "High";
-      case TaskPriority.CRITICAL:
-        return "Critical";
-      default:
-        return "Medium";
-    }
-  };
-
-  const formatDate = (date?: Date) => {
-    if (!date) return "";
-    const day = date.getDate().toString().padStart(2, "0");
-    const month = (date.getMonth() + 1).toString().padStart(2, "0");
-    const year = date.getFullYear();
-    return `${day}.${month}.${year}`;
-  };
-
-  const formatEstimation = (hours?: number) => {
-    if (!hours) return "";
-    const parsed = parseEstimation(hours);
-    const parts = [];
-    if (parsed.days > 0) parts.push(`${parsed.days}d`);
-    if (parsed.hours > 0) parts.push(`${parsed.hours}h`);
-    if (parsed.minutes > 0) parts.push(`${parsed.minutes}m`);
-    return parts.length > 0 ? parts.join(" ") : "0h";
-  };
-
   const handleDueDateClick = () => {
     setIsEditingDueDate(true);
   };
@@ -277,8 +223,7 @@ export default function TaskView({
         handleUpdateTask({ dueDate: newDate });
       }
     } else {
-      // Use null to explicitly clear (undefined gets stripped by JSON.stringify)
-      handleUpdateTask({ dueDate: null as unknown as Date });
+      handleUpdateTask({ dueDate: null });
     }
   };
 
@@ -288,17 +233,8 @@ export default function TaskView({
 
   const handleEstimationSave = () => {
     setIsEditingEstimation(false);
-    const totalHours = toTotalHours(
-      estimationDays,
-      estimationHours,
-      estimationMinutes,
-    );
-    if (totalHours > 0) {
-      handleUpdateTask({ estimation: totalHours });
-    } else {
-      // Use null to explicitly clear (undefined gets stripped by JSON.stringify)
-      handleUpdateTask({ estimation: null as unknown as number });
-    }
+    const totalHours = toTotalHours(estimationDays, estimationHours, estimationMinutes);
+    handleUpdateTask({ estimation: totalHours > 0 ? totalHours : null });
   };
 
   const handleEstimationBlur = (e: React.FocusEvent) => {
@@ -452,14 +388,14 @@ export default function TaskView({
   return (
     <ModalOverlay onClick={handleOverlayClick}>
       <ModalContainer onClick={(e) => e.stopPropagation()}>
-        <Header
+        <TaskViewHeader
           workspaceTitle={workspaceTitle}
           task={task}
           parentTask={parentTask}
           statusDropdownRef={statusDropdownRef}
-          handleStatusClick={handleStatusClick}
-          handleStatusSelect={handleStatusSelect}
           isStatusDropdownOpen={isStatusDropdownOpen}
+          onStatusClick={handleStatusClick}
+          onStatusSelect={handleStatusSelect}
           onClose={onClose}
         />
 
@@ -563,7 +499,7 @@ export default function TaskView({
                 </svg>
               </MetadataIcon>
               <span>
-                {task.dueDate ? formatDate(task.dueDate) : "Set due date"}
+                {task.dueDate ? formatDisplayDate(task.dueDate) : "Set due date"}
               </span>
             </MetadataItem>
           )}
@@ -800,85 +736,5 @@ export default function TaskView({
         )}
       </ModalContainer>
     </ModalOverlay>
-  );
-}
-
-function Header({
-  workspaceTitle,
-  task,
-  parentTask,
-  statusDropdownRef,
-  handleStatusClick,
-  handleStatusSelect,
-  isStatusDropdownOpen,
-  onClose,
-}: {
-  workspaceTitle: string;
-  task: Task;
-  parentTask?: Task | null;
-  statusDropdownRef: React.RefObject<HTMLDivElement>;
-  handleStatusClick: () => void;
-  handleStatusSelect: (status: TaskStatus) => void;
-  isStatusDropdownOpen: boolean;
-  onClose: () => void;
-}) {
-  return (
-    <ModalHeader>
-      <HeaderLeft>
-        {workspaceTitle}{" "}
-        <img
-          src="/breadcrumb-chevron.svg"
-          alt="arrow-right"
-          style={{ marginLeft: "8px" }}
-          width={14}
-          height={14}
-        />
-        {parentTask?.taskKey && (
-          <>
-            <span style={{ marginLeft: "8px" }}>{parentTask.taskKey}</span>
-            <img
-              src="/breadcrumb-chevron.svg"
-              alt="arrow-right"
-              style={{ marginLeft: "8px" }}
-              width={14}
-              height={14}
-            />
-          </>
-        )}
-        <div
-          style={{
-            position: "relative",
-            display: "flex",
-            alignItems: "center",
-          }}
-          ref={statusDropdownRef}
-        >
-          <StatusIconButton onClick={handleStatusClick}>
-            <StatusIcon $status={task.status}>
-              {getStatusIcon(task.status)}
-            </StatusIcon>
-          </StatusIconButton>
-          <DropdownContainer $isOpen={isStatusDropdownOpen}>
-            {Object.values(TaskStatus).map((status) => (
-              <DropdownItem
-                key={status}
-                onClick={() => handleStatusSelect(status)}
-              >
-                <span style={{ marginRight: "8px" }}>
-                  <StatusIcon $status={status}>
-                    {getStatusIcon(status)}
-                  </StatusIcon>
-                </span>
-                {status}
-              </DropdownItem>
-            ))}
-          </DropdownContainer>
-        </div>{" "}
-        {task.taskKey}
-      </HeaderLeft>
-      <CloseButton onClick={onClose} title="Close">
-        ×
-      </CloseButton>
-    </ModalHeader>
   );
 }

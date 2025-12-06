@@ -1,4 +1,4 @@
-import { Task, TaskPriority } from "@/components/KanbanBoard/types";
+import { Task, TaskPriority, TaskUpdate } from "@/components/KanbanBoard/types";
 
 // Helper to normalize a task (including subtasks) from API response
 function normalizeTask(task: Task): Task {
@@ -87,7 +87,7 @@ export const tasksService = {
     return normalizeTask(createdTask);
   },
 
-  async update(taskId: string, updates: Partial<Task>): Promise<Task> {
+  async update(taskId: string, updates: TaskUpdate): Promise<Task> {
     const response = await fetch(`/api/tasks/${taskId}`, {
       method: "PATCH",
       headers: {
@@ -104,17 +104,12 @@ export const tasksService = {
 };
 
 function normalizePriority(priority: unknown): TaskPriority {
-  if (!priority) {
-    return TaskPriority.MEDIUM;
-  }
+  if (!priority) return TaskPriority.MEDIUM;
 
   const priorityString = String(priority).toLowerCase();
   const validPriorities = Object.values(TaskPriority) as string[];
 
-  if (validPriorities.includes(priorityString)) {
-    return priorityString as TaskPriority;
-  }
-
-  console.log("Priority didn't match, returning MEDIUM");
-  return TaskPriority.MEDIUM;
+  return validPriorities.includes(priorityString)
+    ? (priorityString as TaskPriority)
+    : TaskPriority.MEDIUM;
 }

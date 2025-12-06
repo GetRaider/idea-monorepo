@@ -19,6 +19,7 @@ import {
 } from "./shared/dataLoaders";
 import { handleMultipleBoardsTaskStatusChange } from "./shared/taskStatusHandlers";
 import TaskView from "../TaskView/TaskView";
+import { useTaskBoardState, updateTaskInColumns } from "@/hooks/useTaskBoardState";
 
 interface MultipleKanbanBoardProps {
   schedule?: TaskSchedule;
@@ -34,11 +35,15 @@ export function MultipleKanbanBoard({
   const [taskGroups, setTaskGroups] = useState<TaskGroup[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
-  const [taskBoardNameMap, setTaskBoardNameMap] = useState<
-    Record<string, string>
-  >({});
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-  const [parentTask, setParentTask] = useState<Task | null>(null);
+
+  const {
+    selectedTask,
+    parentTask,
+    setSelectedTask,
+    handleTaskClick,
+    handleCloseModal,
+    handleSubtaskClick,
+  } = useTaskBoardState();
 
   useEffect(() => {
     const fetchTasks = async () => {
@@ -108,84 +113,21 @@ export function MultipleKanbanBoard({
     [taskGroups],
   );
 
-  const handleTaskClick = useCallback((task: Task) => {
-    setSelectedTask(task);
-    setParentTask(null); // Clear parent when clicking a top-level task
-  }, []);
-
-  const handleCloseModal = useCallback(() => {
-    setSelectedTask(null);
-    setParentTask(null);
-  }, []);
-
   const handleTaskUpdate = useCallback(
-    async (updatedTask: Task) => {
-      // Update the task in the local state
-      setTaskGroups((prevGroups) => {
-        return prevGroups.map((group) => {
+    (updatedTask: Task) => {
+      setTaskGroups((prevGroups) =>
+        prevGroups.map((group) => {
           if (group.taskBoardId !== updatedTask.taskBoardId) {
             return group;
           }
-          const newTasks = { ...group.tasks };
-
-          // Check if this is a top-level task (exists in the board)
-          let isTopLevelTask = false;
-          Object.keys(newTasks).forEach((status) => {
-            if (
-              newTasks[status as TaskStatus].some(
-                (t) => t.id === updatedTask.id,
-              )
-            ) {
-              isTopLevelTask = true;
-            }
-          });
-
-          if (isTopLevelTask) {
-            // Remove task from old status
-            Object.keys(newTasks).forEach((status) => {
-              newTasks[status as TaskStatus] = newTasks[
-                status as TaskStatus
-              ].filter((t) => t.id !== updatedTask.id);
-            });
-            // Add task to new status
-            newTasks[updatedTask.status].push(updatedTask);
-          } else {
-            // This is a subtask - update it within its parent task
-            Object.keys(newTasks).forEach((status) => {
-              newTasks[status as TaskStatus] = newTasks[
-                status as TaskStatus
-              ].map((task) => {
-                if (task.subtasks?.some((st) => st.id === updatedTask.id)) {
-                  return {
-                    ...task,
-                    subtasks: task.subtasks.map((st) =>
-                      st.id === updatedTask.id ? updatedTask : st,
-                    ),
-                  };
-                }
-                return task;
-              });
-            });
-          }
-
-          return { ...group, tasks: newTasks };
-        });
-      });
-      // Update selected task if it's the same one
+          return { ...group, tasks: updateTaskInColumns(group.tasks, updatedTask) };
+        }),
+      );
       if (selectedTask?.id === updatedTask.id) {
         setSelectedTask(updatedTask);
       }
     },
-    [selectedTask],
-  );
-
-  const handleSubtaskClick = useCallback(
-    (subtask: Task) => {
-      // When clicking a subtask, the current selectedTask becomes the parent
-      setParentTask(selectedTask);
-      setSelectedTask(subtask);
-    },
-    [selectedTask],
+    [selectedTask, setSelectedTask],
   );
 
   // Get the workspace title for the selected task

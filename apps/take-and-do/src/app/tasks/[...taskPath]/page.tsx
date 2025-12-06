@@ -8,22 +8,24 @@ import KanbanBoard, {
   TaskSchedule,
 } from "@/components/KanbanBoard/KanbanBoard";
 import TaskView from "@/components/TaskView/TaskView";
-import { PageContainer, Main } from "../../../page.styles";
+import { PageContainer, Main } from "../../page.styles";
 import { Task } from "@/components/KanbanBoard/types";
 import { tasksService } from "@/services/api/tasks.service";
 
-interface SubtaskPageProps {
-  params: Promise<{ taskKey: string; subtaskKey: string }>;
+interface TaskPageProps {
+  params: Promise<{ taskPath: string[] }>;
 }
 
-export default function SubtaskPage({ params }: SubtaskPageProps) {
-  const { taskKey, subtaskKey } = use(params);
+export default function TaskPage({ params }: TaskPageProps) {
+  const { taskPath } = use(params);
   const router = useRouter();
-  const [, setCurrentPage] = useState("tasks");
+  
+  // Parse route: /tasks/[taskKey] or /tasks/[taskKey]/[subtaskKey]
+  const taskKey = taskPath[0];
+  const subtaskKey = taskPath[1];
+  
   const [isNavSidebarOpen, setIsNavSidebarOpen] = useState(true);
-  const [activeView, setActiveView] = useState<TaskSchedule | string>(
-    TaskSchedule.TODAY,
-  );
+  const [activeView, setActiveView] = useState<TaskSchedule | string>(TaskSchedule.TODAY);
   const [workspaceTitle, setWorkspaceTitle] = useState("Today");
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [parentTask, setParentTask] = useState<Task | null>(null);
@@ -32,14 +34,20 @@ export default function SubtaskPage({ params }: SubtaskPageProps) {
   useEffect(() => {
     const loadTask = async () => {
       try {
-        // First load the parent task
-        const parentResult = await tasksService.getByKey(taskKey);
-        
-        // Then load the subtask
-        const subtaskResult = await tasksService.getByKey(subtaskKey);
-        
-        setSelectedTask(subtaskResult.task);
-        setParentTask(parentResult.task);
+        if (subtaskKey) {
+          // Loading a subtask: fetch both parent and subtask
+          const [parentResult, subtaskResult] = await Promise.all([
+            tasksService.getByKey(taskKey),
+            tasksService.getByKey(subtaskKey),
+          ]);
+          setParentTask(parentResult.task);
+          setSelectedTask(subtaskResult.task);
+        } else {
+          // Loading a main task
+          const result = await tasksService.getByKey(taskKey);
+          setSelectedTask(result.task);
+          setParentTask(result.parent);
+        }
       } catch (error) {
         console.error("Failed to load task:", error);
         router.push("/tasks");
@@ -51,19 +59,17 @@ export default function SubtaskPage({ params }: SubtaskPageProps) {
     loadTask();
   }, [taskKey, subtaskKey, router]);
 
-  const handleNavigationChange = (page: string) => {
-    setCurrentPage(page);
+  const handleNavigationChange = () => {
     setIsNavSidebarOpen(true);
   };
 
   const handleViewChange = (view: string) => {
     setActiveView(view);
-
     if (view === TaskSchedule.TODAY) {
       setWorkspaceTitle("Today");
     } else if (view === TaskSchedule.TOMORROW) {
       setWorkspaceTitle("Tomorrow");
-    } else if (view) {
+    } else {
       setWorkspaceTitle(view);
     }
   };

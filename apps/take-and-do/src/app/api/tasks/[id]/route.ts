@@ -71,7 +71,8 @@ export async function PATCH(
       updateData.dueDate = updates.dueDate ? new Date(updates.dueDate) : undefined;
     }
     if ("estimation" in updates) {
-      updateData.estimation = updates.estimation || undefined;
+      // null means "clear", 0 is valid, undefined means "not set"
+      updateData.estimation = updates.estimation === null ? undefined : updates.estimation;
     }
     // Process subtask dates if subtasks are being updated
     if (updates.subtasks && Array.isArray(updates.subtasks)) {

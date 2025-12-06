@@ -1,4 +1,4 @@
-import { Task } from "@/components/KanbanBoard/types";
+import { Task, TaskPriority, TaskStatus } from "@/components/KanbanBoard/types";
 import { Folder, TaskBoard } from "@/types/workspace";
 
 // Mock labels
@@ -32,19 +32,6 @@ const FOLDER_PERSONAL_ID = "550e8400-e29b-41d4-a716-446655440001";
 const TASKBOARD_PERSONAL_ID = "550e8400-e29b-41d4-a716-446655440002";
 const TASKBOARD_WORK_ID = "550e8400-e29b-41d4-a716-446655440003";
 const TASKBOARD_SPORT_ID = "550e8400-e29b-41d4-a716-446655440004";
-
-// Mock Enums for this file to have all statuses and priorities
-enum TaskPriority {
-  LOW = "low",
-  MEDIUM = "medium",
-  HIGH = "high",
-  CRITICAL = "critical",
-}
-enum TaskStatus {
-  TODO = "To Do",
-  IN_PROGRESS = "In Progress",
-  DONE = "Done",
-}
 
 export const mockFolders: Folder[] = [
   {
@@ -270,41 +257,7 @@ export function getAllTasks(): Task[] {
 }
 
 export function getTasksBySchedule(schedule: "today" | "tomorrow"): Task[] {
-  const allTasks = getAllTasks();
-  console.log("=== getTasksBySchedule ===");
-  console.log("Schedule filter:", schedule);
-  console.log(
-    "All tasks:",
-    allTasks.map((t) => ({ id: t.id, schedule: t.schedule })),
-  );
-
-  const filtered = allTasks.filter((task) => {
-    if (!task.schedule) {
-      console.log("Task with no schedule:", task.id);
-      return false;
-    }
-
-    // Handle both string and enum values
-    const taskSchedule = task.schedule as "today" | "tomorrow" | undefined;
-    console.log("Comparing:", {
-      taskSchedule,
-      filter: schedule,
-      taskId: task.id,
-    });
-
-    if (schedule === "today") {
-      const matches = taskSchedule === "today";
-      if (matches) console.log("MATCH for task:", task.id);
-      return matches;
-    } else {
-      const matches = taskSchedule === "tomorrow";
-      if (matches) console.log("MATCH for task:", task.id);
-      return matches;
-    }
-  });
-
-  console.log("Filtered tasks count:", filtered.length);
-  return filtered;
+  return getAllTasks().filter((task) => task.schedule === schedule);
 }
 
 export function createTask(task: Omit<Task, "id">): Task {

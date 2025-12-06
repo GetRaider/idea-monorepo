@@ -1,0 +1,168 @@
+---
+description: Next.js frontend development rules for take-and-do task management app
+globs:
+  - "**/*.tsx"
+  - "**/*.ts"
+alwaysApply: true
+---
+
+# Next.js Task Management App Development Rules
+
+## Architecture
+- Use Next.js App Router with Turbopack
+- Server Components by default, use `"use client"` for interactive components
+- Service layer pattern for API calls (`services/api/`)
+- Colocate component files with styles and types
+
+## File Structure
+- Pages: `app/**/page.tsx`
+- Layouts: `app/**/layout.tsx`
+- API routes: `app/api/**/route.ts`
+- Components: `components/ComponentName/ComponentName.tsx`
+- Styles: `ComponentName.styles.tsx` (styled-components)
+- Services: `services/api/*.service.ts`
+- Types: `types/*.ts`
+
+## Component Patterns
+- Use PascalCase for component files
+- Export default for page components
+- Named exports for reusable components
+- Keep components focused and single-responsibility
+
+```typescript
+"use client";
+
+import { useState } from "react";
+import { Container, Title } from "./Component.styles";
+
+interface ComponentProps {
+  data: DataType;
+  onAction?: () => void;
+}
+
+export default function Component({ data, onAction }: ComponentProps) {
+  return (
+    <Container>
+      <Title>{data.title}</Title>
+    </Container>
+  );
+}
+```
+
+## Styling (styled-components)
+- Separate styles into `.styles.tsx` files
+- Use semantic naming for styled components
+- Support transient props with `$` prefix for non-DOM props
+- Include responsive breakpoints
+
+```typescript
+import styled from "styled-components";
+
+export const Card = styled.div`
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 1rem;
+`;
+
+export const Title = styled.h3<{ $status?: string }>`
+  color: ${({ $status }) => ($status === "done" ? "#666" : "#fff")};
+  text-decoration: ${({ $status }) => ($status === "done" ? "line-through" : "none")};
+`;
+```
+
+## Kanban Board Specific
+- `KanbanBoard/` is the main task management component
+- Task types: `TaskSchedule`, `TaskStatus`, `TaskPriority` enums
+- Support drag-and-drop with native HTML5 API
+- Use `SingleKanbanBoard` for individual boards, `MultipleKanbanBoard` for schedules
+
+## API Routes
+- Use Route Handlers in `app/api/`
+- Return proper HTTP status codes
+- Use `NextResponse.json()` for responses
+
+```typescript
+import { NextResponse } from "next/server";
+
+export async function GET() {
+  const data = await fetchData();
+  return NextResponse.json(data);
+}
+
+export async function POST(request: Request) {
+  const body = await request.json();
+  const result = await createItem(body);
+  return NextResponse.json(result, { status: 201 });
+}
+```
+
+## Service Layer
+- Encapsulate API calls in service files
+- Export typed functions for each operation
+- Handle errors consistently
+
+```typescript
+// services/api/tasks.service.ts
+export async function getTasks(): Promise<Task[]> {
+  const response = await fetch("/api/tasks");
+  return response.json();
+}
+
+export async function updateTaskStatus(id: string, status: TaskStatus): Promise<Task> {
+  const response = await fetch(`/api/tasks/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ status }),
+  });
+  return response.json();
+}
+```
+
+## Type Definitions
+- Define shared types in `types/` directory
+- Use enums for fixed value sets
+- Interface for object shapes
+
+```typescript
+// types/workspace.ts
+export enum TaskStatus {
+  TODO = "todo",
+  IN_PROGRESS = "in_progress",
+  DONE = "done",
+}
+
+export interface Task {
+  id: string;
+  summary: string;
+  status: TaskStatus;
+  priority: TaskPriority;
+}
+```
+
+## UI Components
+- Use `@repo/ui` for shared components
+- Use Radix UI (`@radix-ui/themes`) for primitives
+- Custom icons from `/public/*.svg`
+
+## Drag and Drop
+- Use native HTML5 drag and drop API
+- Set `draggable` attribute on draggable elements
+- Use `dataTransfer` to pass task data
+- Handle visual feedback with style transitions
+
+```typescript
+const handleDragStart = (e: React.DragEvent) => {
+  e.dataTransfer.setData("text/plain", JSON.stringify({ taskId: id }));
+  e.currentTarget.style.opacity = "0.4";
+};
+
+const handleDrop = (e: React.DragEvent) => {
+  const data = JSON.parse(e.dataTransfer.getData("text/plain"));
+  updateTaskStatus(data.taskId, newStatus);
+};
+```
+
+## Best Practices
+- Handle loading and error states
+- Use proper TypeScript types throughout
+- Keep components small and composable
+- Optimize re-renders with proper React patterns

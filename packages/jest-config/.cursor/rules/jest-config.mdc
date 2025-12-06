@@ -1,0 +1,146 @@
+---
+description: Jest configuration package rules
+globs:
+  - "**/*.ts"
+alwaysApply: true
+---
+
+# Jest Configuration Package Rules
+
+## Purpose
+This package provides shared Jest configurations for all projects in the monorepo.
+
+## Available Configurations
+- `base.ts` - Base Jest configuration for TypeScript projects
+- `nest.ts` - Configuration for NestJS applications
+- `next.ts` - Configuration for Next.js applications
+- `index.ts` - Barrel exports
+
+## Configuration Pattern
+```typescript
+import type { Config } from "jest";
+
+const config: Config = {
+  preset: "ts-jest",
+  testEnvironment: "node",
+  roots: ["<rootDir>/src"],
+  testMatch: ["**/*.spec.ts", "**/*.test.ts"],
+  moduleFileExtensions: ["ts", "tsx", "js", "jsx", "json"],
+  collectCoverageFrom: ["src/**/*.ts", "!src/**/*.d.ts"],
+  coverageDirectory: "coverage",
+  transform: {
+    "^.+\\.tsx?$": "ts-jest",
+  },
+};
+
+export default config;
+```
+
+## Usage in Apps/Packages
+```typescript
+// jest.config.ts in an app
+import { nestConfig } from "@repo/jest-config";
+import type { Config } from "jest";
+
+const config: Config = {
+  ...nestConfig,
+  // Project-specific overrides
+  moduleNameMapper: {
+    "^@/(.*)$": "<rootDir>/src/$1",
+  },
+};
+
+export default config;
+```
+
+## NestJS Configuration
+```typescript
+import type { Config } from "jest";
+
+const nestConfig: Config = {
+  preset: "ts-jest",
+  testEnvironment: "node",
+  rootDir: ".",
+  testRegex: ".*\\.spec\\.ts$",
+  transform: {
+    "^.+\\.(t|j)s$": "ts-jest",
+  },
+  collectCoverageFrom: ["**/*.(t|j)s"],
+  coverageDirectory: "../coverage",
+  moduleFileExtensions: ["js", "json", "ts"],
+};
+
+export default nestConfig;
+```
+
+## Next.js Configuration
+```typescript
+import type { Config } from "jest";
+import nextJest from "next/jest";
+
+const createJestConfig = nextJest({
+  dir: "./",
+});
+
+const config: Config = {
+  testEnvironment: "jest-environment-jsdom",
+  setupFilesAfterEnv: ["<rootDir>/jest.setup.ts"],
+  testPathIgnorePatterns: ["<rootDir>/node_modules/", "<rootDir>/.next/"],
+  moduleNameMapper: {
+    "^@/(.*)$": "<rootDir>/src/$1",
+  },
+};
+
+export default createJestConfig(config);
+```
+
+## Key Configuration Options
+- `preset` - Use `ts-jest` for TypeScript support
+- `testEnvironment` - `node` for backend, `jsdom` for frontend
+- `testMatch` / `testRegex` - Pattern for test files
+- `moduleNameMapper` - Path alias support
+- `transform` - File transformers (ts-jest)
+- `setupFilesAfterEnv` - Setup files (testing-library, etc.)
+
+## Test File Naming
+- Unit tests: `*.spec.ts` or `*.test.ts`
+- E2E tests: `*.e2e-spec.ts`
+- Integration tests: `*.integration.spec.ts`
+
+## Coverage Configuration
+```typescript
+{
+  collectCoverage: true,
+  collectCoverageFrom: [
+    "src/**/*.ts",
+    "!src/**/*.d.ts",
+    "!src/**/*.spec.ts",
+    "!src/index.ts",
+  ],
+  coverageThreshold: {
+    global: {
+      branches: 80,
+      functions: 80,
+      lines: 80,
+      statements: 80,
+    },
+  },
+}
+```
+
+## Path Aliases
+Support monorepo path aliases:
+```typescript
+moduleNameMapper: {
+  "^@repo/api$": "<rootDir>/../../packages/api/src",
+  "^@repo/ui$": "<rootDir>/../../packages/ui/src",
+  "^@/(.*)$": "<rootDir>/src/$1",
+}
+```
+
+## Best Practices
+- Keep base configuration minimal and composable
+- Let apps override specific settings
+- Include sensible defaults for coverage
+- Support both unit and e2e testing patterns
+- Export typed configurations

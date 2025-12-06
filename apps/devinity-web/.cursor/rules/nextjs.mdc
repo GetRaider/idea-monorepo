@@ -1,0 +1,124 @@
+---
+description: Next.js frontend development rules for devinity-web
+globs:
+  - "**/*.tsx"
+  - "**/*.ts"
+alwaysApply: true
+---
+
+# Next.js Frontend Development Rules
+
+## Architecture
+- Use Next.js App Router (app directory)
+- Server Components by default, use `"use client"` only when needed
+- Colocate related files (components, styles, hooks)
+
+## File Structure
+- Pages: `app/**/page.tsx`
+- Layouts: `app/**/layout.tsx`
+- API routes: `app/api/**/route.ts`
+- Components: `ComponentName/ComponentName.component.tsx`
+- Styles: `ComponentName.styles.tsx` (styled-components)
+- Hooks: `hooks/category/useName.hook.ts`
+- Lib utilities: `lib/*.ts`
+
+## Component Patterns
+- Name component files with `.component.tsx` suffix
+- Export components as named exports (not default) from component files
+- Keep components focused and single-responsibility
+
+```typescript
+"use client";
+
+import { useState } from "react";
+import { Container, Title } from "./Component.styles";
+
+interface ComponentProps {
+  title: string;
+  children: React.ReactNode;
+}
+
+export const Component = ({ title, children }: ComponentProps) => {
+  const [state, setState] = useState(false);
+
+  return (
+    <Container>
+      <Title>{title}</Title>
+      {children}
+    </Container>
+  );
+};
+```
+
+## Styling (styled-components)
+- Keep styles in separate `.styles.tsx` files
+- Export all styled components as named exports
+- Use semantic component names (not generic like `Div`, `Wrapper`)
+- Include responsive breakpoints using media queries
+- Use CSS variables for theming consistency
+
+```typescript
+import styled from "styled-components";
+
+export const Container = styled.div`
+  display: flex;
+  flex-direction: column;
+  padding: 2rem;
+
+  @media (max-width: 768px) {
+    padding: 1rem;
+  }
+`;
+
+export const Title = styled.h1`
+  font-size: 2rem;
+  color: #f8fafc;
+`;
+```
+
+## UI Components
+- Use `@repo/ui` package for shared components
+- Use Radix UI (`@radix-ui/themes`) for primitive components
+- Import shared Button: `import { Button } from "@repo/ui/components/Button/Button.component"`
+
+## Authentication
+- Use Better-Auth client from `@lib/auth-client`
+- Wrap authenticated pages with `AuthGuard` component
+- Access session via `useSession()` hook
+
+```typescript
+import { signOut, useSession } from "@lib/auth-client";
+import { AuthGuard } from "@components/AuthGuard/AuthGuard.component";
+
+export default function Page() {
+  const { data: session } = useSession();
+  
+  return (
+    <AuthGuard>
+      <div>Welcome, {session?.user?.name}</div>
+    </AuthGuard>
+  );
+}
+```
+
+## API Integration
+- Use axios from `@lib/api` for API calls
+- Create custom hooks in `hooks/` for data fetching
+- Handle loading and error states appropriately
+
+## TypeScript
+- Define interfaces for all props
+- Use strict typing, avoid `any`
+- Import types from `@repo/api` for shared models
+
+## Path Aliases
+- `@lib/*` → `src/lib/*`
+- `@components/*` → `src/components/*`
+- `@repo/ui/*` → shared UI package
+- `@repo/api/*` → shared API types
+
+## Best Practices
+- Keep pages thin, delegate logic to components and hooks
+- Use proper semantic HTML elements
+- Handle null/undefined states gracefully (optional chaining)
+- Responsive design: mobile-first approach

@@ -1,0 +1,94 @@
+---
+description: NestJS API development rules for devinity-api
+globs:
+  - "**/*.ts"
+alwaysApply: true
+---
+
+# NestJS API Development Rules
+
+## Architecture
+- Follow NestJS module-based architecture with clear separation of concerns
+- Each feature module should have: `*.module.ts`, `*.controller.ts`, `*.service.ts`
+- Use dependency injection through constructor injection
+- Use custom injection tokens for external dependencies (e.g., `DRIZZLE_DB`, `REDIS_CLIENT`)
+
+## File Naming
+- Controllers: `*.controller.ts`
+- Services: `*.service.ts`
+- Modules: `*.module.ts`
+- Database schemas: `*.schema.ts` in `db/` folder
+- DTOs: `*.dto.ts` in feature folders or shared package
+
+## Database (Drizzle ORM)
+- Use Drizzle ORM for all database operations
+- Define schemas in `src/db/` directory
+- Use `@Inject(DRIZZLE_DB)` to inject the database client
+- Prefer `returning()` for insert/update operations to get the created/updated record
+- Use typed schema exports: `InsertUser`, `SelectUser` patterns
+
+## Caching
+- Use NestJS `CACHE_MANAGER` for application caching
+- Use Redis directly (`REDIS_CLIENT`) for session/counter operations
+- Cache invalidation should happen after mutations
+- Use descriptive cache keys: `users:all`, `user:email:{email}`
+
+## Error Handling
+- Use `HttpException` with appropriate `HttpStatus` codes
+- Log errors with NestJS `Logger` before throwing
+- Keep error messages user-friendly but informative
+
+## Controller Patterns
+```typescript
+@Controller("resource")
+export class ResourceController {
+  constructor(private readonly service: ResourceService) {}
+
+  @Get()
+  async getAll(): Promise<Resource[]> {
+    return this.service.getAll();
+  }
+
+  @Post()
+  async create(@Body() dto: CreateResourceDto): Promise<Resource> {
+    return this.service.create(dto);
+  }
+
+  @Get(":id")
+  async getOne(@Param("id") id: string): Promise<Resource> {
+    return this.service.getOne(id);
+  }
+}
+```
+
+## Service Patterns
+```typescript
+@Injectable()
+export class ResourceService {
+  constructor(
+    private readonly log: Logger,
+    @Inject(DRIZZLE_DB) private readonly db: any,
+    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
+  ) {}
+
+  async create(dto: CreateResourceDto): Promise<Resource> {
+    const [created] = await this.db.insert(table).values(dto).returning();
+    await this.cacheManager.del("resource:all");
+    return created;
+  }
+}
+```
+
+## Authentication
+- Use Better-Auth via `@thallesp/nestjs-better-auth` for authentication
+- Auth configuration in `src/auth.ts`
+- Protect routes with appropriate guards
+
+## Environment
+- Use `src/env/env.ts` for environment variable configuration
+- Validate environment variables at startup
+
+## Testing
+- Use Jest for unit and e2e testing
+- Test files: `*.spec.ts` for unit, `*.e2e-spec.ts` for e2e
+- Mock injected dependencies in tests

@@ -1,0 +1,48 @@
+---
+description: General AI assistant behavior and coding principles
+alwaysApply: true
+---
+
+# Communication Style
+
+DO NOT GIVE ME HIGH LEVEL STUFF, IF I ASK FOR FIX OR EXPLANATION, I WANT ACTUAL CODE OR EXPLANATION!!! I DON'T WANT "Here's how you can blablabla"
+
+- Be casual unless otherwise specified
+- Be terse
+- Suggest solutions that I didn't think about—anticipate my needs
+- Treat me as an expert
+- Be accurate and thorough
+- Give the answer immediately. Provide detailed explanations after
+- Value good arguments over authorities, the source is irrelevant
+- Consider new technologies and contrarian ideas, not just conventional wisdom
+- You may speculate or predict, just flag it
+- No moral lectures
+- Discuss safety only when crucial and non-obvious
+- Cite sources at the end, not inline
+- Respect my prettier preferences when providing code
+- Keep code changes brief—show only a few lines of context around changes
+
+# Coding Principles
+
+- Follow SOLID and KISS principles
+- DRY—reuse existing abstractions, don't create unnecessary helpers
+- Clean up unused code
+- Don't implement changes when unsure—ask clarifying questions
+- Don't write obvious inline comments
+- Prioritize clean, efficient, maintainable code
+- Don't over-engineer or add features beyond what's asked
+
+# Monorepo Context
+
+This is a pnpm monorepo with Turborepo:
+
+- `apps/devinity-api` — NestJS API with Drizzle ORM, PostgreSQL, Redis, Better-Auth
+- `apps/devinity-web` — Next.js frontend with styled-components, Radix UI
+- `apps/take-and-do` — Next.js task management app with Kanban boards
+- `packages/api` — Shared TypeScript models and DTOs
+- `packages/ui` — Shared React components
+- `packages/eslint-config` — Shared ESLint configs
+- `packages/jest-config` — Shared Jest configs
+- `packages/typescript-config` — Shared TypeScript configs
+
+Import shared packages via `@repo/api`, `@repo/ui`, etc.

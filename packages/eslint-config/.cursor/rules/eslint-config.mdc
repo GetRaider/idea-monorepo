@@ -1,0 +1,102 @@
+---
+description: ESLint configuration package rules
+globs:
+  - "**/*.js"
+alwaysApply: true
+---
+
+# ESLint Configuration Package Rules
+
+## Purpose
+This package provides shared ESLint configurations for all projects in the monorepo.
+
+## Available Configurations
+- `base.js` - Base ESLint rules for all TypeScript projects
+- `library.js` - Rules for library packages
+- `nest.js` - Rules for NestJS applications
+- `next.js` - Rules for Next.js applications
+- `react-internal.js` - Rules for internal React libraries
+- `prettier-base.js` - Prettier integration rules
+
+## Configuration Pattern
+```javascript
+/** @type {import("eslint").Linter.Config} */
+module.exports = {
+  extends: [
+    // Base configs to extend
+  ],
+  parser: "@typescript-eslint/parser",
+  parserOptions: {
+    project: true,
+  },
+  plugins: [
+    // Plugins to use
+  ],
+  rules: {
+    // Custom rule overrides
+  },
+};
+```
+
+## Usage in Apps/Packages
+```javascript
+// In package's eslint config file
+const baseConfig = require("@repo/eslint-config/base");
+const nestConfig = require("@repo/eslint-config/nest");
+
+module.exports = {
+  ...baseConfig,
+  ...nestConfig,
+  // Project-specific overrides
+};
+```
+
+## Rule Guidelines
+- Enable strict TypeScript rules for type safety
+- Enforce consistent code style
+- Prevent common mistakes
+- Don't be overly restrictive
+
+## Key Rules to Include
+
+### TypeScript
+- `@typescript-eslint/no-explicit-any: "warn"` - Discourage any type
+- `@typescript-eslint/explicit-function-return-type: "off"` - Allow inferred returns
+- `@typescript-eslint/no-unused-vars: ["error", { "argsIgnorePattern": "^_" }]` - Allow _ prefix for unused
+
+### General
+- `no-console: "warn"` - Warn on console statements
+- `prefer-const: "error"` - Prefer const over let
+- `no-var: "error"` - Disallow var
+
+### React (for Next.js config)
+- `react-hooks/rules-of-hooks: "error"` - Enforce hooks rules
+- `react-hooks/exhaustive-deps: "warn"` - Warn on missing deps
+
+### NestJS (for nest.js config)
+- Enable decorator-related rules
+- Allow dependency injection patterns
+
+## Prettier Integration
+- Use `eslint-config-prettier` to disable conflicting rules
+- Use `eslint-plugin-prettier` to run prettier as ESLint rule
+- Keep `.prettierrc` configuration separate
+
+## File Structure
+```
+packages/eslint-config/
+├── base.js           # Base TypeScript rules
+├── library.js        # Library package rules
+├── nest.js          # NestJS-specific rules
+├── next.js          # Next.js-specific rules
+├── react-internal.js # React library rules
+├── prettier-base.js  # Prettier integration
+└── package.json
+```
+
+## Best Practices
+- Keep configurations composable
+- Document why specific rules are enabled/disabled
+- Test configurations against actual codebases
+- Update dependencies regularly for new rules
+- Avoid overly strict rules that hurt productivity

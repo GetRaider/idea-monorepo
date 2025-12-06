@@ -1,0 +1,153 @@
+---
+description: TypeScript configuration package rules
+globs:
+  - "**/*.json"
+alwaysApply: true
+---
+
+# TypeScript Configuration Package Rules
+
+## Purpose
+This package provides shared TypeScript configurations for all projects in the monorepo.
+
+## Available Configurations
+- `base.json` - Base TypeScript configuration
+- `nestjs.json` - Configuration for NestJS applications
+- `nextjs.json` - Configuration for Next.js applications
+- `react-library.json` - Configuration for React library packages
+
+## Base Configuration Pattern
+```json
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "target": "ES2020",
+    "lib": ["ES2020"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true
+  }
+}
+```
+
+## Usage in Apps/Packages
+```json
+{
+  "extends": "@repo/typescript-config/nextjs.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@lib/*": ["./src/lib/*"]
+    }
+  },
+  "include": ["src/**/*", "next-env.d.ts"],
+  "exclude": ["node_modules", ".next"]
+}
+```
+
+## NestJS Configuration
+```json
+{
+  "extends": "./base.json",
+  "compilerOptions": {
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "target": "ES2021",
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "incremental": true
+  }
+}
+```
+
+## Next.js Configuration
+```json
+{
+  "extends": "./base.json",
+  "compilerOptions": {
+    "lib": ["DOM", "DOM.Iterable", "ES2020"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "preserve",
+    "plugins": [{ "name": "next" }],
+    "noEmit": true
+  }
+}
+```
+
+## React Library Configuration
+```json
+{
+  "extends": "./base.json",
+  "compilerOptions": {
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "declaration": true,
+    "declarationMap": true
+  }
+}
+```
+
+## Key Compiler Options
+
+### Strict Mode (always enable)
+- `strict: true` - Enable all strict checks
+- `noImplicitAny: true` - Error on implicit any
+- `strictNullChecks: true` - Strict null checks
+
+### Module Resolution
+- NestJS: `"module": "CommonJS"`, `"moduleResolution": "Node"`
+- Next.js: `"module": "ESNext"`, `"moduleResolution": "Bundler"`
+- Libraries: `"module": "ESNext"`, `"moduleResolution": "Bundler"`
+
+### Decorators (NestJS)
+- `"emitDecoratorMetadata": true`
+- `"experimentalDecorators": true`
+
+### Path Aliases
+Define in consuming project's tsconfig:
+```json
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@repo/api": ["../../packages/api/src"],
+      "@repo/ui/*": ["../../packages/ui/src/*"]
+    }
+  }
+}
+```
+
+## Monorepo Considerations
+- Use `references` for project references
+- Enable `composite: true` for referenced projects
+- Use `declarationMap: true` for go-to-definition
+
+```json
+{
+  "references": [
+    { "path": "../../packages/api" },
+    { "path": "../../packages/ui" }
+  ]
+}
+```
+
+## Best Practices
+- Keep base config strict and minimal
+- Let specialized configs extend base
+- Don't disable strict checks without good reason
+- Use `skipLibCheck: true` for faster builds
+- Include `$schema` for IDE support
+- Document any non-obvious settings with comments

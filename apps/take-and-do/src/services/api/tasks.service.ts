@@ -60,6 +60,18 @@ export const tasksService = {
     return normalizeTask(task);
   },
 
+  async getByKey(taskKey: string): Promise<{ task: Task; parent: Task | null }> {
+    const response = await fetch(`/api/tasks/by-key/${taskKey}`);
+    if (!response.ok) {
+      throw new Error("Failed to fetch task");
+    }
+    const data = await response.json();
+    return {
+      task: normalizeTask(data.task),
+      parent: data.parent ? normalizeTask(data.parent) : null,
+    };
+  },
+
   async create(task: Omit<Task, "id">): Promise<Task> {
     const response = await fetch("/api/tasks", {
       method: "POST",

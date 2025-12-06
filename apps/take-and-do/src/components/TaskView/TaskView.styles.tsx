@@ -30,6 +30,7 @@ export const ModalContainer = styled.div`
   display: flex;
   flex-direction: column;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  padding-bottom: 32px;
 
   @media (max-width: 600px) {
     max-height: 95vh;
@@ -542,11 +543,11 @@ export const LabelDropdownInput = styled.input`
 export const EstimationInputGroup = styled.div`
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
   background: #2a2a2a;
   border: 1px solid #3a3a3a;
   border-radius: 6px;
-  padding: 2px 6px;
+  padding: 4px 8px;
 
   &:focus-within {
     border-color: #667eea;
@@ -554,8 +555,8 @@ export const EstimationInputGroup = styled.div`
 `;
 
 export const EstimationInput = styled.input`
-  width: 32px;
-  padding: 2px 4px;
+  width: 40px;
+  padding: 4px 6px;
   background: transparent;
   border: none;
   color: #fff;
@@ -570,6 +571,11 @@ export const EstimationInput = styled.input`
   }
 
   -moz-appearance: textfield;
+
+  &:focus {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+  }
 `;
 
 export const EstimationLabel = styled.span`

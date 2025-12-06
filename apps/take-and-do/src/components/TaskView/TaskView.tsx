@@ -90,6 +90,7 @@ export default function TaskView({
   const priorityDropdownRef = useRef<HTMLDivElement>(null);
   const statusDropdownRef = useRef<HTMLDivElement>(null);
   const labelDropdownRef = useRef<HTMLDivElement>(null);
+  const estimationGroupRef = useRef<HTMLDivElement>(null);
 
   // Parse hours to days/hours/minutes
   const parseEstimation = (hours: number) => {
@@ -298,6 +299,21 @@ export default function TaskView({
       // Use null to explicitly clear (undefined gets stripped by JSON.stringify)
       handleUpdateTask({ estimation: null as unknown as number });
     }
+  };
+
+  const handleEstimationBlur = (e: React.FocusEvent) => {
+    // Check if the new focus target is still within the estimation group
+    const relatedTarget = e.relatedTarget as HTMLElement;
+    if (
+      estimationGroupRef.current &&
+      relatedTarget &&
+      estimationGroupRef.current.contains(relatedTarget)
+    ) {
+      // Focus is moving within the group, don't save yet
+      return;
+    }
+    // Focus is leaving the group, save
+    handleEstimationSave();
   };
 
   const handleLabelDropdownToggle = () => {
@@ -554,7 +570,7 @@ export default function TaskView({
 
           {/* Estimation */}
           {isEditingEstimation ? (
-            <EstimationInputGroup>
+            <EstimationInputGroup ref={estimationGroupRef}>
               <EstimationInput
                 type="number"
                 value={estimationDays || ""}
@@ -562,7 +578,7 @@ export default function TaskView({
                   setEstimationDays(parseInt(e.target.value) || 0)
                 }
                 onKeyDown={(e) => e.key === "Enter" && handleEstimationSave()}
-                onBlur={handleEstimationSave}
+                onBlur={handleEstimationBlur}
                 placeholder="0"
                 min="0"
               />
@@ -574,7 +590,7 @@ export default function TaskView({
                   setEstimationHours(parseInt(e.target.value) || 0)
                 }
                 onKeyDown={(e) => e.key === "Enter" && handleEstimationSave()}
-                onBlur={handleEstimationSave}
+                onBlur={handleEstimationBlur}
                 placeholder="0"
                 min="0"
                 max="23"
@@ -588,7 +604,7 @@ export default function TaskView({
                   setEstimationMinutes(parseInt(e.target.value) || 0)
                 }
                 onKeyDown={(e) => e.key === "Enter" && handleEstimationSave()}
-                onBlur={handleEstimationSave}
+                onBlur={handleEstimationBlur}
                 placeholder="0"
                 min="0"
                 max="59"

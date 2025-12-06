@@ -111,6 +111,28 @@ export const mockTasks: Record<string, Task[]> = {
       labels: ["Work", "Food", "Creative"],
       status: TaskStatus.TODO,
       schedule: "today",
+      subtasks: [
+        {
+          id: "550e8400-e29b-41d4-a716-446655441002-sub1",
+          taskBoardId: TASKBOARD_WORK_ID,
+          taskKey: "PS-2",
+          summary: "Buy running shoes",
+          description: "Get new running shoes for the race",
+          priority: TaskPriority.MEDIUM,
+          status: TaskStatus.TODO,
+          labels: [],
+        },
+        {
+          id: "550e8400-e29b-41d4-a716-446655441002-sub2",
+          taskBoardId: TASKBOARD_WORK_ID,
+          taskKey: "PS-3",
+          summary: "Plan race day nutrition",
+          description: "Prepare meals and snacks for race day",
+          priority: TaskPriority.LOW,
+          status: TaskStatus.IN_PROGRESS,
+          labels: ["Food"],
+        },
+      ],
     },
     {
       id: "550e8400-e29b-41d4-a716-446655441003",
@@ -313,6 +335,43 @@ function findTaskRecursively(tasks: Task[], taskId: string): Task | null {
     if (task.subtasks?.length) {
       const found = findTaskRecursively(task.subtasks, taskId);
       if (found) return found;
+    }
+  }
+  return null;
+}
+
+// Helper to recursively search for a task by taskKey (including subtasks)
+function findTaskByKeyRecursively(
+  tasks: Task[],
+  taskKey: string,
+): { task: Task; parent: Task | null } | null {
+  for (const task of tasks) {
+    if (task.taskKey === taskKey) {
+      return { task, parent: null };
+    }
+    if (task.subtasks?.length) {
+      for (const subtask of task.subtasks) {
+        if (subtask.taskKey === taskKey) {
+          return { task: subtask, parent: task };
+        }
+        // Check nested subtasks
+        const found = findTaskByKeyRecursively(task.subtasks, taskKey);
+        if (found) {
+          return { task: found.task, parent: found.parent || task };
+        }
+      }
+    }
+  }
+  return null;
+}
+
+export function getTaskByKey(
+  taskKey: string,
+): { task: Task; parent: Task | null } | null {
+  for (const taskBoardId in mockTasks) {
+    const result = findTaskByKeyRecursively(mockTasks[taskBoardId], taskKey);
+    if (result) {
+      return result;
     }
   }
   return null;

@@ -6,7 +6,7 @@ catalog:
   ## Core
   "react": ^19.1.0
   "react-dom": ^19.1.0
-  "next": ^15.5.7
+  "next": ^15.5.9
   "@types/react": ^18.2.61
   "@types/react-dom": ^18.2.19
   "@stackframe/react": ^2.8.25

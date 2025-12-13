@@ -239,7 +239,10 @@ export const TaskDescriptionMarkdown = styled.div`
   font-size: 14px;
   line-height: 1.6;
   margin: 0;
-  min-height: 200px;
+  min-height: 100px;
+  max-height: 300px;
+  overflow-y: auto;
+  flex-shrink: 0;
   cursor: pointer;
   border-radius: 4px;
   transition: all 0.2s;
@@ -302,6 +305,7 @@ export const TaskMetadata = styled.div`
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
+  flex-shrink: 0;
   padding: 12px 24px;
 
   @media (max-width: 600px) {

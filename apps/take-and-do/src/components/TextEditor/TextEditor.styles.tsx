@@ -2,8 +2,9 @@ import styled from "styled-components";
 
 export const EditorWrapper = styled.div`
   position: relative;
+  z-index: 2;
+  flex-shrink: 0;
   padding: 12px 24px 24px 24px;
-  min-height: 200px;
 
   @media (max-width: 600px) {
     padding: 12px 16px 16px 16px;
@@ -49,7 +50,9 @@ export const EditorWrapper = styled.div`
 
   .ProseMirror {
     outline: none;
-    min-height: 200px;
+    min-height: 100px;
+    max-height: 300px;
+    overflow-y: auto;
     padding: 12px;
     color: #888;
     font-size: 14px;

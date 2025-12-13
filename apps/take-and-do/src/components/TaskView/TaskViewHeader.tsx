@@ -17,7 +17,7 @@ interface TaskViewHeaderProps {
   workspaceTitle: string;
   task: Task;
   parentTask?: Task | null;
-  statusDropdownRef: RefObject<HTMLDivElement | null>;
+  statusDropdownRef: RefObject<HTMLDivElement>;
   isStatusDropdownOpen: boolean;
   onStatusClick: () => void;
   onStatusSelect: (status: TaskStatus) => void;

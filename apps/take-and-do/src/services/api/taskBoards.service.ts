@@ -39,6 +39,25 @@ export const taskBoardsService = {
       };
     });
   },
+
+  async create(taskBoard: Omit<TaskBoard, "id" | "createdAt" | "updatedAt">): Promise<TaskBoard> {
+    const response = await fetch("/api/task-boards", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(taskBoard),
+    });
+    if (!response.ok) {
+      throw new Error("Failed to create task board");
+    }
+    const created = await response.json();
+    return {
+      ...created,
+      createdAt: new Date(created.createdAt),
+      updatedAt: new Date(created.updatedAt),
+    };
+  },
 };
 
 function normalizePriority(priority: unknown): TaskPriority {

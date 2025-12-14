@@ -19,9 +19,10 @@ import {
 
 interface ToolbarProps {
   workspaceTitle: string;
+  onCreateTask?: () => void;
 }
 
-export function Toolbar({ workspaceTitle }: ToolbarProps) {
+export function Toolbar({ workspaceTitle, onCreateTask }: ToolbarProps) {
   const [open, setOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"list" | "board">("board");
 
@@ -29,7 +30,7 @@ export function Toolbar({ workspaceTitle }: ToolbarProps) {
     <ToolbarStyled>
       <WorkspacePath>{workspaceTitle}</WorkspacePath>
       <Actions>
-        <CreateButton>
+        <CreateButton onClick={onCreateTask}>
           <Image width={20} height={20} src="/plus.svg" alt="Create Task" />
           Create Task
         </CreateButton>

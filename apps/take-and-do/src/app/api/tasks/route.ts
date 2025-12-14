@@ -4,7 +4,7 @@ import {
   getTasksByTaskBoardId,
   getTasksBySchedule,
   createTask,
-} from "@/app/api/mock-data";
+} from "@/db/queries";
 import { Task } from "@/components/KanbanBoard/types";
 
 export async function GET(request: NextRequest) {
@@ -16,34 +16,12 @@ export async function GET(request: NextRequest) {
     let tasks: Task[] = [];
 
     if (taskBoardId) {
-      console.log("by task board id");
-      tasks = getTasksByTaskBoardId(taskBoardId);
+      tasks = await getTasksByTaskBoardId(taskBoardId);
     } else if (schedule && (schedule === "today" || schedule === "tomorrow")) {
-      console.log("by schedule");
-      tasks = getTasksBySchedule(schedule);
+      tasks = await getTasksBySchedule(schedule);
     } else {
-      console.log("by all tasks");
-      tasks = getAllTasks();
+      tasks = await getAllTasks();
     }
-
-    // Serialize tasks - explicitly include all fields including priority
-    // const serializedTasks = tasks.map((task: Task) => ({
-    //   ...task,
-    //   id: task.id,
-    //   taskBoardId: task.taskBoardId,
-    //   taskKey: task.taskKey,
-    //   summary: task.summary,
-    //   description: task.description,
-    //   status: task.status,
-    //   priority: task.priority,
-    //   labels: task.labels || [],
-    //   dueDate: task.dueDate?.toISOString(),
-    //   estimation: task.estimation,
-    //   subtasks: task.subtasks || [],
-    //   schedule: task.schedule,
-    // }));
-
-    console.log({ hereTasks: tasks });
 
     return NextResponse.json(tasks);
   } catch {
@@ -64,26 +42,9 @@ export async function POST(request: NextRequest) {
       dueDate: task.dueDate ? new Date(task.dueDate) : undefined,
     };
 
-    const newTask = createTask(taskData);
+    const newTask = await createTask(taskData);
 
-    // Serialize response - explicitly include all fields including priority
-    const response = {
-      ...newTask,
-      id: newTask.id,
-      taskBoardId: newTask.taskBoardId,
-      taskKey: newTask.taskKey,
-      summary: newTask.summary,
-      description: newTask.description,
-      status: newTask.status,
-      priority: newTask.priority,
-      labels: newTask.labels || [],
-      dueDate: newTask.dueDate?.toISOString(),
-      estimation: newTask.estimation,
-      subtasks: newTask.subtasks || [],
-      schedule: newTask.schedule,
-    };
-
-    return NextResponse.json(response, { status: 201 });
+    return NextResponse.json(newTask, { status: 201 });
   } catch {
     return NextResponse.json(
       { error: "Failed to create task" },

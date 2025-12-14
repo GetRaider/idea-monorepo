@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getTaskByKey } from "@/app/api/mock-data";
+import { getTaskByKey } from "@/db/queries";
 import { Task } from "@/components/KanbanBoard/types";
 
 interface SerializedTask {
@@ -40,7 +40,7 @@ export async function GET(
 ) {
   try {
     const { taskKey } = await params;
-    const result = getTaskByKey(taskKey);
+    const result = await getTaskByKey(taskKey);
 
     if (!result) {
       return NextResponse.json({ error: "Task not found" }, { status: 404 });

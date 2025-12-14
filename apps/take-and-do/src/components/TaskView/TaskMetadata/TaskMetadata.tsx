@@ -27,7 +27,18 @@ import { labelsService } from "@/services/api/labels.service";
 export default function TaskMetadata({
   task,
   handleUpdateTask,
+  isCreating = false,
+  onTaskChange,
 }: TaskMetadataProps) {
+  const updateTask = (updates: Partial<Task>) => {
+    if (isCreating && onTaskChange) {
+      // In create mode, update local task state
+      onTaskChange({ ...task, ...updates } as Task);
+    } else if (handleUpdateTask) {
+      // In edit mode, call update handler
+      handleUpdateTask(updates);
+    }
+  };
   // Metadata editing states
   const [isEditingDueDate, setIsEditingDueDate] = useState(false);
   const [dueDateValue, setDueDateValue] = useState("");
@@ -85,10 +96,10 @@ export default function TaskMetadata({
     if (dueDateValue) {
       const newDate = new Date(dueDateValue);
       if (!isNaN(newDate.getTime())) {
-        handleUpdateTask({ dueDate: newDate });
+        updateTask({ dueDate: newDate });
       }
     } else {
-      handleUpdateTask({ dueDate: null });
+      updateTask({ dueDate: undefined });
     }
   };
   const handleEstimationClick = () => {
@@ -101,7 +112,7 @@ export default function TaskMetadata({
       estimationHours,
       estimationMinutes,
     );
-    handleUpdateTask({ estimation: totalHours > 0 ? totalHours : null });
+    updateTask({ estimation: totalHours > 0 ? totalHours : undefined });
   };
   const handleEstimationBlur = (e: React.FocusEvent) => {
     // Check if the new focus target is still within the estimation group
@@ -124,7 +135,7 @@ export default function TaskMetadata({
   const handleSelectLabel = async (label: string) => {
     if (!task?.labels?.includes(label)) {
       const newLabels = [...(task?.labels || []), label];
-      handleUpdateTask({ labels: newLabels });
+      updateTask({ labels: newLabels });
     }
     setIsLabelDropdownOpen(false);
     setLabelSearchValue("");
@@ -136,7 +147,7 @@ export default function TaskMetadata({
         await labelsService.create(newLabel);
         setAvailableLabels((prev) => [...prev, newLabel]);
         const newLabels = [...(task?.labels || []), newLabel];
-        handleUpdateTask({ labels: newLabels });
+        updateTask({ labels: newLabels });
       } catch (error) {
         console.error("Failed to create label:", error);
       }
@@ -146,7 +157,7 @@ export default function TaskMetadata({
   };
   const handleRemoveLabel = (labelToRemove: string) => {
     const newLabels = (task?.labels || []).filter((l) => l !== labelToRemove);
-    handleUpdateTask({ labels: newLabels });
+    updateTask({ labels: newLabels });
   };
 
   return (
@@ -334,5 +345,7 @@ export default function TaskMetadata({
 
 interface TaskMetadataProps {
   task: Task;
-  handleUpdateTask: (updates: TaskUpdate) => void;
+  handleUpdateTask?: (updates: TaskUpdate) => void;
+  isCreating?: boolean;
+  onTaskChange?: (task: Task) => void;
 }

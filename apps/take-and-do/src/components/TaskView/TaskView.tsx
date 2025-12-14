@@ -33,15 +33,18 @@ export default function TaskView({
   onClose,
   onTaskUpdate,
   onSubtaskClick,
+  onTaskCreated,
 }: TaskViewProps) {
   const isSubtask = !!parentTask;
   const [task, setTask] = useState<Task | null>(initialTask);
-  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const isCreating = !initialTask || !initialTask.id;
+  const [isEditingTitle, setIsEditingTitle] = useState(isCreating);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [titleValue, setTitleValue] = useState("");
   const [descriptionValue, setDescriptionValue] = useState("");
   const [isPriorityDropdownOpen, setIsPriorityDropdownOpen] = useState(false);
   const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
+  const [isCreatingTask, setIsCreatingTask] = useState(false);
 
   const priorityDropdownRef = useRef<HTMLDivElement>(null);
   const statusDropdownRef = useRef<HTMLDivElement>(null);
@@ -51,14 +54,19 @@ export default function TaskView({
     if (initialTask) {
       setTitleValue(initialTask.summary);
       setDescriptionValue(initialTask.description || "");
+    } else {
+      setTitleValue("");
+      setDescriptionValue("");
     }
   }, [initialTask]);
 
   // Update URL based on current task/subtask
   useEffect(() => {
-    if (!initialTask?.taskKey) {
-      // Clear URL when task view is closed - go back to /tasks
-      window.history.replaceState(null, "", "/tasks");
+    if (!initialTask?.taskKey || !initialTask?.id) {
+      // Don't update URL for new tasks or when task view is closed
+      if (!initialTask) {
+        window.history.replaceState(null, "", "/tasks");
+      }
       return;
     }
 
@@ -73,7 +81,7 @@ export default function TaskView({
 
     // Update URL without page reload
     window.history.replaceState(null, "", newUrl);
-  }, [initialTask?.taskKey, parentTask?.taskKey]);
+  }, [initialTask?.taskKey, initialTask?.id, parentTask?.taskKey]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -99,7 +107,7 @@ export default function TaskView({
 
   const handleUpdateTask = useCallback(
     async (updates: TaskUpdate) => {
-      if (!task) return;
+      if (!task || !task.id) return;
       try {
         const updatedTask = await tasksService.update(task.id, updates);
         setTask(updatedTask);
@@ -125,12 +133,20 @@ export default function TaskView({
 
   const handleDescriptionBlur = useCallback(() => {
     setIsEditingDescription(false);
+    if (isCreating && !task?.id) {
+      // Don't update description for new tasks until they're created
+      return;
+    }
     if (descriptionValue !== (task?.description || "")) {
       handleUpdateTask({ description: descriptionValue });
     }
-  }, [descriptionValue, task?.description, handleUpdateTask]);
-
-  if (!task) return null;
+  }, [
+    descriptionValue,
+    task?.description,
+    handleUpdateTask,
+    isCreating,
+    task?.id,
+  ]);
 
   const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) {
@@ -143,18 +159,33 @@ export default function TaskView({
   };
 
   const handleTitleBlur = () => {
+    if (isCreating && !task?.id) {
+      // In create mode, don't auto-create on blur
+      // User must click save button
+      return;
+    }
+
     setIsEditingTitle(false);
-    if (titleValue !== task.summary) {
+    if (task && titleValue !== task.summary) {
       handleUpdateTask({ summary: titleValue });
     }
   };
 
   const handleTitleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
-      e.currentTarget.blur();
+      if (isCreating && !task?.id) {
+        // In create mode, Enter just blurs (user must click save)
+        e.currentTarget.blur();
+      } else {
+        e.currentTarget.blur();
+      }
     } else if (e.key === "Escape") {
-      setTitleValue(task.summary);
-      setIsEditingTitle(false);
+      if (isCreating) {
+        onClose();
+      } else {
+        setTitleValue(task?.summary || "");
+        setIsEditingTitle(false);
+      }
     }
   };
 
@@ -168,7 +199,14 @@ export default function TaskView({
 
   const handlePrioritySelect = (priority: TaskPriority) => {
     setIsPriorityDropdownOpen(false);
-    handleUpdateTask({ priority });
+    if (isCreating && !task?.id) {
+      // Update local state for new task
+      if (task) {
+        setTask({ ...task, priority });
+      }
+    } else {
+      handleUpdateTask({ priority });
+    }
   };
 
   const handleStatusClick = () => {
@@ -177,15 +215,57 @@ export default function TaskView({
 
   const handleStatusSelect = (status: TaskStatus) => {
     setIsStatusDropdownOpen(false);
-    handleUpdateTask({ status });
+    if (isCreating && !task?.id) {
+      // Update local state for new task
+      if (task) {
+        setTask({ ...task, status });
+      }
+    } else {
+      handleUpdateTask({ status });
+    }
   };
+
+  const handleCreateTask = async () => {
+    if (!task || !titleValue.trim() || isCreatingTask || !task.taskBoardId)
+      return;
+
+    setIsCreatingTask(true);
+    try {
+      const taskData: Omit<Task, "id"> = {
+        taskBoardId: task.taskBoardId,
+        summary: titleValue.trim(),
+        description: descriptionValue || "",
+        status: task.status || TaskStatus.TODO,
+        priority: task.priority || TaskPriority.MEDIUM,
+        labels: task.labels,
+        dueDate: task.dueDate,
+        estimation: task.estimation,
+        schedule: task.schedule,
+        subtasks: task.subtasks,
+      };
+
+      const createdTask = await tasksService.create(taskData);
+      setTask(createdTask);
+      onTaskCreated?.(createdTask);
+      setIsEditingTitle(false);
+    } catch (error) {
+      console.error("Failed to create task:", error);
+    } finally {
+      setIsCreatingTask(false);
+    }
+  };
+
+  // Only render if we have a task (either existing or for creation)
+  if (!task) return null;
+
+  const displayTask = task;
 
   return (
     <TaskViewOverlay onClick={handleOverlayClick}>
       <TaskViewContainer onClick={(e) => e.stopPropagation()}>
         <TaskViewHeader
           workspaceTitle={workspaceTitle}
-          task={task}
+          task={displayTask}
           parentTask={parentTask}
           statusDropdownRef={statusDropdownRef}
           isStatusDropdownOpen={isStatusDropdownOpen}
@@ -199,7 +279,7 @@ export default function TaskView({
             ref={priorityDropdownRef}
           >
             <PriorityIcon onClick={handlePriorityClick}>
-              {getPriorityIconLabel(task.priority)}
+              {getPriorityIconLabel(displayTask.priority)}
             </PriorityIcon>
             <DropdownContainer $isOpen={isPriorityDropdownOpen}>
               {Object.values(TaskPriority).map((priority) => (
@@ -222,9 +302,12 @@ export default function TaskView({
               onBlur={handleTitleBlur}
               onKeyDown={handleTitleKeyDown}
               autoFocus
+              placeholder="Enter task summary..."
             />
           ) : (
-            <TaskTitle onClick={handleTitleClick}>{task.summary}</TaskTitle>
+            <TaskTitle onClick={handleTitleClick}>
+              {displayTask.summary || "Untitled Task"}
+            </TaskTitle>
           )}
         </TaskTitleSection>
         {/* Description */}
@@ -252,13 +335,64 @@ export default function TaskView({
             )}
           </TaskDescriptionMarkdown>
         )}
-        <TaskMetadata task={task} handleUpdateTask={handleUpdateTask} />
-        {!isSubtask && (
+        <TaskMetadata
+          task={displayTask}
+          handleUpdateTask={isCreating ? undefined : handleUpdateTask}
+          isCreating={isCreating}
+          onTaskChange={isCreating ? setTask : undefined}
+        />
+        {!isSubtask && displayTask.id && (
           <TaskSubtasks
-            task={task}
+            task={displayTask}
             onSubtaskClick={onSubtaskClick}
             onTaskUpdate={handleTaskUpdateFromSubtasks}
           />
+        )}
+        {isCreating && (
+          <div
+            style={{
+              padding: "24px",
+              borderTop: "1px solid #2a2a2a",
+              display: "flex",
+              justifyContent: "flex-end",
+              gap: "12px",
+            }}
+          >
+            <button
+              onClick={onClose}
+              style={{
+                padding: "8px 16px",
+                background: "transparent",
+                border: "1px solid #2a2a2a",
+                borderRadius: "6px",
+                color: "#888",
+                cursor: "pointer",
+                fontSize: "14px",
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleCreateTask}
+              disabled={!titleValue.trim() || isCreatingTask}
+              style={{
+                padding: "8px 16px",
+                background:
+                  titleValue.trim() && !isCreatingTask ? "#7255c1" : "#2a2a2a",
+                border: "none",
+                borderRadius: "6px",
+                color: titleValue.trim() && !isCreatingTask ? "#fff" : "#666",
+                cursor:
+                  titleValue.trim() && !isCreatingTask
+                    ? "pointer"
+                    : "not-allowed",
+                fontSize: "14px",
+                fontWeight: "500",
+              }}
+            >
+              {isCreatingTask ? "Creating..." : "Create Task"}
+            </button>
+          </div>
         )}
       </TaskViewContainer>
     </TaskViewOverlay>
@@ -272,4 +406,5 @@ interface TaskViewProps {
   onClose: () => void;
   onTaskUpdate?: (updatedTask: Task) => void;
   onSubtaskClick?: (subtask: Task) => void;
+  onTaskCreated?: (createdTask: Task) => void;
 }

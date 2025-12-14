@@ -1,8 +1,14 @@
 import { NextResponse } from "next/server";
-import { getAllFolders } from "@/app/api/mock-data";
+import { getAllFolders } from "@/db/queries";
 
 export async function GET() {
-  const folders = getAllFolders();
-
-  return NextResponse.json(folders);
+  try {
+    const folders = await getAllFolders();
+    return NextResponse.json(folders);
+  } catch {
+    return NextResponse.json(
+      { error: "Failed to fetch folders" },
+      { status: 500 },
+    );
+  }
 }

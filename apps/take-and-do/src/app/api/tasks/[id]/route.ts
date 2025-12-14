@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getTaskById, updateTask } from "@/app/api/mock-data";
+import { getTaskById, updateTask } from "@/db/queries";
 import { Task } from "@/components/KanbanBoard/types";
 
   // Serialized task type for JSON response
@@ -42,7 +42,7 @@ export async function GET(
 ) {
   try {
     const { id: taskId } = await params;
-    const task = getTaskById(taskId);
+    const task = await getTaskById(taskId);
 
     if (!task) {
       return NextResponse.json({ error: "Task not found" }, { status: 404 });
@@ -82,7 +82,7 @@ export async function PATCH(
       }));
     }
 
-    const updatedTask = updateTask(taskId, updateData);
+    const updatedTask = await updateTask(taskId, updateData);
 
     if (!updatedTask) {
       return NextResponse.json({ error: "Task not found" }, { status: 404 });

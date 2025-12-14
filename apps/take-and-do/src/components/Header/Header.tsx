@@ -1,14 +1,6 @@
 "use client";
 
-import {
-  HeaderContainer,
-  Content,
-  Title,
-} from "./Header.styles";
-
-interface HeaderProps {
-  title: string;
-}
+import { HeaderContainer, Content, Title } from "./Header.styles";
 
 export default function Header({ title }: HeaderProps) {
   return (
@@ -18,4 +10,8 @@ export default function Header({ title }: HeaderProps) {
       </Content>
     </HeaderContainer>
   );
+}
+
+interface HeaderProps {
+  title: string;
 }

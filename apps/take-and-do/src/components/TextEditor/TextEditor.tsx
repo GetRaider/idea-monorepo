@@ -5,9 +5,99 @@ import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import type { Editor } from "@tiptap/react";
+
 import { EditorWrapper } from "./TextEditor.styles";
 
-// Simple toolbar component for Tiptap
+export default function TextEditor({
+  onUpdate,
+  onBlur,
+  content = "",
+  editable = false,
+  placeholder = "No description provided.",
+}: TextEditorProps) {
+  const editor = useEditor({
+    extensions: [
+      StarterKit.configure({
+        heading: { levels: [2, 3, 4] },
+      }),
+      Placeholder.configure({ placeholder }),
+    ],
+    content,
+    editable,
+    onUpdate: ({ editor }) => {
+      const html = editor.getHTML();
+      if (onUpdate) {
+        onUpdate(html);
+      }
+    },
+    editorProps: {
+      attributes: {
+        class: "prose-editor",
+      },
+    },
+    immediatelyRender: false,
+  });
+
+  useEffect(() => {
+    if (editor && !editable) {
+      const currentContent = editor.getHTML();
+      if (content !== currentContent) {
+        editor.commands.setContent(content);
+      }
+    }
+  }, [content, editor, editable]);
+
+  useEffect(() => {
+    if (editor) {
+      editor.setEditable(editable);
+    }
+  }, [editor, editable]);
+
+  const handleBlur = useCallback(() => {
+    onBlur && onBlur();
+  }, [onBlur]);
+
+  useEffect(() => {
+    if (!editable || !editor) return;
+
+    const handleClickOutsideToSave = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (
+        target &&
+        !target.closest(".ProseMirror") &&
+        !target.closest(".editor-toolbar")
+      ) {
+        handleBlur();
+      }
+    };
+
+    const timeoutId = setTimeout(
+      () => document.addEventListener("mousedown", handleClickOutsideToSave),
+      100,
+    );
+
+    return () => {
+      clearTimeout(timeoutId);
+      document.removeEventListener("mousedown", handleClickOutsideToSave);
+    };
+  }, [editable, editor, handleBlur]);
+
+  if (!editor) {
+    return (
+      <EditorWrapper>
+        <div>Loading editor...</div>
+      </EditorWrapper>
+    );
+  }
+
+  return (
+    <EditorWrapper>
+      <EditorToolbar editor={editor} />
+      <EditorContent editor={editor} />
+    </EditorWrapper>
+  );
+}
+
 function EditorToolbar({ editor }: { editor: Editor }) {
   if (!editor) {
     return null;
@@ -74,103 +164,4 @@ interface TextEditorProps {
   placeholder?: string;
   onUpdate?: (html: string) => void;
   onBlur?: () => void;
-}
-
-export default function TextEditor({
-  content,
-  editable,
-  placeholder = "No description provided.",
-  onUpdate,
-  onBlur,
-}: TextEditorProps) {
-  // Tiptap editor instance
-  const editor = useEditor({
-    extensions: [
-      StarterKit.configure({
-        heading: {
-          levels: [2, 3, 4],
-        },
-      }),
-      Placeholder.configure({
-        placeholder,
-      }),
-    ],
-    content: content || "",
-    editable,
-    onUpdate: ({ editor }) => {
-      const html = editor.getHTML();
-      if (onUpdate) {
-        onUpdate(html);
-      }
-    },
-    editorProps: {
-      attributes: {
-        class: "prose-editor",
-      },
-    },
-    immediatelyRender: false,
-  });
-
-  // Update editor content when content changes externally (but not when editing)
-  useEffect(() => {
-    if (editor && !editable) {
-      const currentContent = editor.getHTML();
-      if (content !== currentContent) {
-        editor.commands.setContent(content || "");
-      }
-    }
-  }, [content, editor, editable]);
-
-  // Update editable state
-  useEffect(() => {
-    if (editor) {
-      editor.setEditable(editable);
-    }
-  }, [editor, editable]);
-
-  const handleBlur = useCallback(() => {
-    if (onBlur) {
-      onBlur();
-    }
-  }, [onBlur]);
-
-  // Handle click outside to trigger blur
-  useEffect(() => {
-    if (!editable || !editor) return;
-
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as HTMLElement;
-      if (
-        target &&
-        !target.closest(".ProseMirror") &&
-        !target.closest(".editor-toolbar")
-      ) {
-        handleBlur();
-      }
-    };
-
-    const timeoutId = setTimeout(() => {
-      document.addEventListener("mousedown", handleClickOutside);
-    }, 100);
-
-    return () => {
-      clearTimeout(timeoutId);
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [editable, editor, handleBlur]);
-
-  if (!editor) {
-    return (
-      <EditorWrapper>
-        <div>Loading editor...</div>
-      </EditorWrapper>
-    );
-  }
-
-  return (
-    <EditorWrapper>
-      <EditorToolbar editor={editor} />
-      <EditorContent editor={editor} />
-    </EditorWrapper>
-  );
 }

@@ -1,9 +1,9 @@
 "use client";
 
 import { RefObject } from "react";
-import { Task, TaskStatus } from "../KanbanBoard/types";
-import { getStatusIcon } from "../KanbanBoard/Column/Column";
-import { StatusIcon } from "../KanbanBoard/Column/Column.styles";
+import { Task, TaskStatus } from "../../KanbanBoard/types";
+import { getStatusIcon } from "../../KanbanBoard/Column/Column";
+import { StatusIcon } from "../../KanbanBoard/Column/Column.styles";
 import {
   ModalHeader,
   HeaderLeft,
@@ -11,7 +11,7 @@ import {
   StatusIconButton,
   DropdownContainer,
   DropdownItem,
-} from "./TaskView.styles";
+} from "../TaskView.styles";
 
 interface TaskViewHeaderProps {
   workspaceTitle: string;
@@ -74,7 +74,9 @@ export function TaskViewHeader({
             {Object.values(TaskStatus).map((status) => (
               <DropdownItem key={status} onClick={() => onStatusSelect(status)}>
                 <span style={{ marginRight: "8px" }}>
-                  <StatusIcon $status={status}>{getStatusIcon(status)}</StatusIcon>
+                  <StatusIcon $status={status}>
+                    {getStatusIcon(status)}
+                  </StatusIcon>
                 </span>
                 {status}
               </DropdownItem>
@@ -89,4 +91,3 @@ export function TaskViewHeader({
     </ModalHeader>
   );
 }
-

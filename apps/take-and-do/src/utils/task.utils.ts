@@ -2,12 +2,6 @@ import { TaskPriority, TaskStatus } from "@/components/KanbanBoard/types";
 
 // ============ Estimation Helpers ============
 
-export interface ParsedEstimation {
-  days: number;
-  hours: number;
-  minutes: number;
-}
-
 export function parseEstimation(totalHours: number): ParsedEstimation {
   const totalMinutes = Math.round(totalHours * 60);
   const days = Math.floor(totalMinutes / (24 * 60));
@@ -17,7 +11,11 @@ export function parseEstimation(totalHours: number): ParsedEstimation {
   return { days, hours, minutes };
 }
 
-export function toTotalHours(days: number, hours: number, minutes: number): number {
+export function toTotalHours(
+  days: number,
+  hours: number,
+  minutes: number,
+): number {
   return days * 24 + hours + minutes / 60;
 }
 
@@ -73,3 +71,8 @@ export function getStatusName(status: TaskStatus): string {
   return STATUS_NAMES[status] ?? status;
 }
 
+export interface ParsedEstimation {
+  days: number;
+  hours: number;
+  minutes: number;
+}

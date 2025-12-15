@@ -1,6 +1,5 @@
 "use client";
 
-import { Button } from "@radix-ui/themes";
 import { useState } from "react";
 import {
   ModalOverlay,
@@ -12,6 +11,7 @@ import {
   Label,
   Input,
   ButtonGroup,
+  Button,
 } from "./CreateTaskBoardModal.styles";
 
 export default function CreateTaskBoardModal({
@@ -65,7 +65,11 @@ export default function CreateTaskBoardModal({
             <Button type="button" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" disabled={!name.trim() || isCreating}>
+            <Button
+              type="submit"
+              $primary
+              disabled={!name.trim() || isCreating}
+            >
               {isCreating ? "Creating..." : "Save"}
             </Button>
           </ButtonGroup>

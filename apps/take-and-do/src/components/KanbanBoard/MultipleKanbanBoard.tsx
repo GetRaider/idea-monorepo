@@ -27,6 +27,7 @@ import {
 } from "./shared/dataLoaders";
 import { handleMultipleBoardsTaskStatusChange } from "./shared/taskStatusHandlers";
 import TaskView from "../TaskView/TaskView";
+import SelectBoardModal from "../NavigationSidebar/SelectBoardModal";
 import {
   useTaskBoardState,
   updateTaskInColumns,
@@ -46,6 +47,7 @@ export function MultipleKanbanBoard({
   const [taskGroups, setTaskGroups] = useState<TaskGroup[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+  const [showSelectBoardModal, setShowSelectBoardModal] = useState(false);
 
   const {
     selectedTask,
@@ -145,6 +147,12 @@ export function MultipleKanbanBoard({
   );
 
   const handleCreateTask = useCallback(() => {
+    // If we're in Today/Tomorrow section, show board selection modal
+    if (schedule) {
+      setShowSelectBoardModal(true);
+      return;
+    }
+
     // Use the first task board from groups, or if no groups, we can't create
     if (taskGroups.length === 0) {
       console.error("Cannot create task: no task boards available");
@@ -160,7 +168,7 @@ export function MultipleKanbanBoard({
       priority: TaskPriority.MEDIUM,
     };
     setSelectedTask(newTask);
-  }, [taskGroups, setSelectedTask]);
+  }, [taskGroups, setSelectedTask, schedule]);
 
   const handleTaskCreated = useCallback(
     async (createdTask: Task) => {
@@ -192,6 +200,23 @@ export function MultipleKanbanBoard({
       }
     },
     [schedule, folderId, setSelectedTask],
+  );
+
+  const handleBoardSelect = useCallback(
+    (boardId: string) => {
+      setShowSelectBoardModal(false);
+      const newTask: Task = {
+        id: "",
+        taskBoardId: boardId,
+        summary: "",
+        description: "",
+        status: TaskStatus.TODO,
+        priority: TaskPriority.MEDIUM,
+        schedule,
+      };
+      setSelectedTask(newTask);
+    },
+    [setSelectedTask, schedule],
   );
 
   const getTaskWorkspaceTitle = (task: Task | null): string => {
@@ -301,6 +326,12 @@ export function MultipleKanbanBoard({
         onSubtaskClick={handleSubtaskClick}
         onTaskCreated={handleTaskCreated}
       />
+      {showSelectBoardModal && (
+        <SelectBoardModal
+          onClose={() => setShowSelectBoardModal(false)}
+          onSelect={handleBoardSelect}
+        />
+      )}
     </>
   );
 }

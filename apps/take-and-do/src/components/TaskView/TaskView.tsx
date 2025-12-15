@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import {
   Task,
   TaskPriority,
@@ -21,6 +21,13 @@ import {
   TaskDescriptionMarkdown,
   DropdownContainer,
   DropdownItem,
+  PriorityDropdownWrapper,
+  PriorityIconSpan,
+  DescriptionContent,
+  NoDescriptionText,
+  TaskViewFooter,
+  FooterCancelButton,
+  CreateTaskButton,
 } from "./TaskView.styles";
 import { getPriorityIconLabel } from "../KanbanBoard/TaskCard/TaskCard";
 import TaskMetadata from "./TaskMetadata/TaskMetadata";
@@ -48,6 +55,10 @@ export default function TaskView({
 
   const priorityDropdownRef = useRef<HTMLDivElement>(null);
   const statusDropdownRef = useRef<HTMLDivElement>(null);
+  const shouldCreateTask = useMemo(
+    () => isCreating && !task?.id,
+    [isCreating, task?.id],
+  );
 
   useEffect(() => {
     setTask(initialTask);
@@ -133,7 +144,7 @@ export default function TaskView({
 
   const handleDescriptionBlur = useCallback(() => {
     setIsEditingDescription(false);
-    if (isCreating && !task?.id) {
+    if (shouldCreateTask) {
       // Don't update description for new tasks until they're created
       return;
     }
@@ -159,7 +170,7 @@ export default function TaskView({
   };
 
   const handleTitleBlur = () => {
-    if (isCreating && !task?.id) {
+    if (shouldCreateTask) {
       // In create mode, don't auto-create on blur
       // User must click save button
       return;
@@ -173,7 +184,7 @@ export default function TaskView({
 
   const handleTitleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
-      if (isCreating && !task?.id) {
+      if (shouldCreateTask) {
         // In create mode, Enter just blurs (user must click save)
         e.currentTarget.blur();
       } else {
@@ -199,11 +210,8 @@ export default function TaskView({
 
   const handlePrioritySelect = (priority: TaskPriority) => {
     setIsPriorityDropdownOpen(false);
-    if (isCreating && !task?.id) {
-      // Update local state for new task
-      if (task) {
-        setTask({ ...task, priority });
-      }
+    if (shouldCreateTask) {
+      task && setTask({ ...task, priority });
     } else {
       handleUpdateTask({ priority });
     }
@@ -215,11 +223,9 @@ export default function TaskView({
 
   const handleStatusSelect = (status: TaskStatus) => {
     setIsStatusDropdownOpen(false);
-    if (isCreating && !task?.id) {
+    if (shouldCreateTask) {
       // Update local state for new task
-      if (task) {
-        setTask({ ...task, status });
-      }
+      task && setTask({ ...task, status });
     } else {
       handleUpdateTask({ status });
     }
@@ -274,10 +280,7 @@ export default function TaskView({
           onClose={onClose}
         />
         <TaskTitleSection>
-          <div
-            style={{ position: "relative", display: "flex" }}
-            ref={priorityDropdownRef}
-          >
+          <PriorityDropdownWrapper ref={priorityDropdownRef}>
             <PriorityIcon onClick={handlePriorityClick}>
               {getPriorityIconLabel(displayTask.priority)}
             </PriorityIcon>
@@ -287,14 +290,14 @@ export default function TaskView({
                   key={priority}
                   onClick={() => handlePrioritySelect(priority)}
                 >
-                  <span style={{ marginRight: "8px" }}>
+                  <PriorityIconSpan>
                     {getPriorityIconLabel(priority)}
-                  </span>
+                  </PriorityIconSpan>
                   {getPriorityName(priority)}
                 </DropdownItem>
               ))}
             </DropdownContainer>
-          </div>
+          </PriorityDropdownWrapper>
           {isEditingTitle ? (
             <TaskTitleInput
               value={titleValue}
@@ -322,16 +325,11 @@ export default function TaskView({
         ) : (
           <TaskDescriptionMarkdown onClick={handleDescriptionClick}>
             {descriptionValue ? (
-              <div
+              <DescriptionContent
                 dangerouslySetInnerHTML={{ __html: descriptionValue }}
-                style={{
-                  color: "#888",
-                  fontSize: "14px",
-                  lineHeight: "1.6",
-                }}
               />
             ) : (
-              <span style={{ color: "#666" }}>No description provided.</span>
+              <NoDescriptionText>No description provided.</NoDescriptionText>
             )}
           </TaskDescriptionMarkdown>
         )}
@@ -349,50 +347,16 @@ export default function TaskView({
           />
         )}
         {isCreating && (
-          <div
-            style={{
-              padding: "24px",
-              borderTop: "1px solid #2a2a2a",
-              display: "flex",
-              justifyContent: "flex-end",
-              gap: "12px",
-            }}
-          >
-            <button
-              onClick={onClose}
-              style={{
-                padding: "8px 16px",
-                background: "transparent",
-                border: "1px solid #2a2a2a",
-                borderRadius: "6px",
-                color: "#888",
-                cursor: "pointer",
-                fontSize: "14px",
-              }}
-            >
-              Cancel
-            </button>
-            <button
+          <TaskViewFooter>
+            <FooterCancelButton onClick={onClose}>Cancel</FooterCancelButton>
+            <CreateTaskButton
               onClick={handleCreateTask}
               disabled={!titleValue.trim() || isCreatingTask}
-              style={{
-                padding: "8px 16px",
-                background:
-                  titleValue.trim() && !isCreatingTask ? "#7255c1" : "#2a2a2a",
-                border: "none",
-                borderRadius: "6px",
-                color: titleValue.trim() && !isCreatingTask ? "#fff" : "#666",
-                cursor:
-                  titleValue.trim() && !isCreatingTask
-                    ? "pointer"
-                    : "not-allowed",
-                fontSize: "14px",
-                fontWeight: "500",
-              }}
+              $disabled={!titleValue.trim() || isCreatingTask}
             >
               {isCreatingTask ? "Creating..." : "Create Task"}
-            </button>
-          </div>
+            </CreateTaskButton>
+          </TaskViewFooter>
         )}
       </TaskViewContainer>
     </TaskViewOverlay>

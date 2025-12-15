@@ -486,3 +486,51 @@ export const AttachIconButton = styled.button`
     color: #fff;
   }
 `;
+
+export const PriorityDropdownWrapper = styled.div`
+  position: relative;
+  display: flex;
+`;
+
+export const PriorityIconSpan = styled.span`
+  margin-right: 8px;
+`;
+
+export const DescriptionContent = styled.div`
+  color: #888;
+  font-size: 14px;
+  line-height: 1.6;
+`;
+
+export const NoDescriptionText = styled.span`
+  color: #666;
+`;
+
+export const TaskViewFooter = styled.div`
+  padding: 24px;
+  border-top: 1px solid #2a2a2a;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+`;
+
+export const FooterCancelButton = styled.button`
+  padding: 8px 16px;
+  background: transparent;
+  border: 1px solid #2a2a2a;
+  border-radius: 6px;
+  color: #888;
+  cursor: pointer;
+  font-size: 14px;
+`;
+
+export const CreateTaskButton = styled.button<{ $disabled: boolean }>`
+  padding: 8px 16px;
+  background: ${({ $disabled }) => ($disabled ? "#2a2a2a" : "#7255c1")};
+  border: none;
+  border-radius: 6px;
+  color: ${({ $disabled }) => ($disabled ? "#666" : "#fff")};
+  cursor: ${({ $disabled }) => ($disabled ? "not-allowed" : "pointer")};
+  font-size: 14px;
+  font-weight: 500;
+`;

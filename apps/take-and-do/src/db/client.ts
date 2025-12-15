@@ -10,7 +10,6 @@ if (!connectionString) {
   );
 }
 
-// Validate connection string format
 let hostname: string;
 try {
   const url = new URL(connectionString);
@@ -24,15 +23,13 @@ try {
   );
 }
 
-// Supabase requires SSL connections
 export const pool = new Pool({
   connectionString,
+  // TODO: Enable SSL once auth is implemented
   ssl: { rejectUnauthorized: false },
-  // Add connection timeout
   connectionTimeoutMillis: 10000,
 });
 
-// Log connection info in development (without password)
 if (process.env.NODE_ENV === "development") {
   console.log(`[DB] Connecting to: ${hostname}`);
 }

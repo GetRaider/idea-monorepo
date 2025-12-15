@@ -40,7 +40,9 @@ export const taskBoardsService = {
     });
   },
 
-  async create(taskBoard: Omit<TaskBoard, "id" | "createdAt" | "updatedAt">): Promise<TaskBoard> {
+  async create(
+    taskBoard: Omit<TaskBoard, "id" | "createdAt" | "updatedAt">,
+  ): Promise<TaskBoard> {
     const response = await fetch("/api/task-boards", {
       method: "POST",
       headers: {
@@ -49,7 +51,7 @@ export const taskBoardsService = {
       body: JSON.stringify(taskBoard),
     });
     if (!response.ok) {
-      throw new Error("Failed to create task board");
+      throw new Error(`Failed to create task board: ${response.text()}`);
     }
     const created = await response.json();
     return {

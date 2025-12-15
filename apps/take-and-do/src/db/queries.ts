@@ -3,13 +3,13 @@ import { db } from "./client";
 import { folders, taskBoards, tasks, labels, taskLabels } from "./schema";
 import { Task, TaskPriority, TaskStatus } from "@/components/KanbanBoard/types";
 import { Folder, TaskBoard } from "@/types/workspace";
+import { randomUUID } from "node:crypto";
 
-// Helper to generate unique IDs
+// Generates unique IDs
 function generateId(): string {
-  return `550e8400-${Date.now()}-41d4-a716-${Math.random().toString(36).substring(2, 14)}`;
+  return randomUUID();
 }
 
-// Helper to derive taskKey prefix from parent task
 function deriveTaskKeyPrefix(taskKey?: string | null): string {
   if (!taskKey) return "TASK";
   const segments = taskKey.split("-").filter(Boolean);
@@ -23,7 +23,6 @@ function deriveTaskKeyPrefix(taskKey?: string | null): string {
   return segments[0] || "TASK";
 }
 
-// Helper to extract numeric portion from taskKey
 function extractNumericPortion(taskKey?: string | null): number | null {
   if (!taskKey) return null;
   const matches = taskKey.match(/\d+/g);
@@ -32,7 +31,6 @@ function extractNumericPortion(taskKey?: string | null): number | null {
   return Number.isNaN(numericValue) ? null : numericValue;
 }
 
-// Generate next taskKey for a subtask based on parent and existing subtasks
 function generateSubtaskKey(
   parentTaskKey: string | null | undefined,
   existingSubtasks: Array<{ taskKey: string | null }>,
@@ -51,19 +49,13 @@ function generateSubtaskKey(
   return `${prefix}-${highestExistingNumber + 1}`;
 }
 
-// Convert database task row to Task type with subtasks and labels
 async function convertTaskRowToTask(
   taskRow: typeof tasks.$inferSelect,
   allTasks: Array<typeof tasks.$inferSelect>,
   taskLabelsMap: Map<string, string[]>,
 ): Promise<Task> {
-  // Get labels for this task
   const taskLabelNames = taskLabelsMap.get(taskRow.id) || [];
-
-  // Find subtasks (tasks with this task as parent)
   const subtaskRows = allTasks.filter((t) => t.parentTaskId === taskRow.id);
-
-  // Recursively convert subtasks
   const subtasks = await Promise.all(
     subtaskRows.map((subtaskRow) =>
       convertTaskRowToTask(subtaskRow, allTasks, taskLabelsMap),
@@ -86,13 +78,11 @@ async function convertTaskRowToTask(
   };
 }
 
-// Load all tasks with subtasks and labels
 async function loadAllTasksWithRelations(filter?: {
   taskBoardId?: string;
   schedule?: "today" | "tomorrow";
   parentTaskId?: string | null;
 }): Promise<Task[]> {
-  // Build query conditions
   const conditions = [];
   if (filter?.taskBoardId) {
     conditions.push(eq(tasks.taskBoardId, filter.taskBoardId));
@@ -108,23 +98,17 @@ async function loadAllTasksWithRelations(filter?: {
     }
   }
 
-  // Fetch all tasks (including subtasks)
   const allTaskRows = await db
     .select()
     .from(tasks)
     .where(conditions.length > 0 ? and(...conditions) : undefined);
 
-  // Fetch all task labels
   const allTaskLabelRows = await db.select().from(taskLabels);
   const allLabelRows = await db.select().from(labels);
-
-  // Create label name map
   const labelMap = new Map<string, string>();
   allLabelRows.forEach((label) => {
     labelMap.set(label.id, label.name);
   });
-
-  // Create task -> labels map
   const taskLabelsMap = new Map<string, string[]>();
   allTaskLabelRows.forEach((taskLabel) => {
     const labelName = labelMap.get(taskLabel.labelId);
@@ -135,10 +119,8 @@ async function loadAllTasksWithRelations(filter?: {
     }
   });
 
-  // Filter to only top-level tasks (no parent)
   const topLevelTasks = allTaskRows.filter((t) => !t.parentTaskId);
 
-  // Convert to Task objects with subtasks
   const result = await Promise.all(
     topLevelTasks.map((taskRow) =>
       convertTaskRowToTask(taskRow, allTaskRows, taskLabelsMap),

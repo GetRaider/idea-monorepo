@@ -180,6 +180,10 @@ export const Board = styled.div`
   overflow: auto;
 `;
 
+export const TaskGroupWrapper = styled.div`
+  display: contents;
+`;
+
 export const WorkspaceSeparator = styled.div`
   grid-column: 1 / -1;
   display: flex;
@@ -196,6 +200,22 @@ export const WorkspaceSeparator = styled.div`
   min-height: 44px;
   max-height: 44px;
   box-sizing: border-box;
+  cursor: pointer;
+`;
+
+export const GroupChevron = styled.svg<{ $expanded?: boolean }>`
+  width: 16px;
+  height: 16px;
+  transition: transform 0.2s ease;
+  transform: ${({ $expanded }) =>
+    $expanded ? "rotate(90deg)" : "rotate(0deg)"};
+  color: currentColor;
+`;
+
+export const EmptyStateMessage = styled.div`
+  color: #fff;
+  padding: 24px;
+  grid-column: 1 / -1;
 `;
 
 export const WorkspaceIcon = styled.div`

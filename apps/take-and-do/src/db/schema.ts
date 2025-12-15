@@ -3,7 +3,6 @@ import {
   text,
   timestamp,
   doublePrecision,
-  integer,
   pgEnum,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
@@ -46,7 +45,7 @@ export const taskPriorityEnum = pgEnum("task_priority", [
   "critical",
 ]);
 
-export const tasks = pgTable("tasks", {
+export const tasks: any = pgTable("tasks", {
   id: text("id").primaryKey(),
   taskBoardId: text("task_board_id")
     .notNull()
@@ -130,6 +129,3 @@ export const taskLabelsRelations = relations(taskLabels, ({ one }) => ({
     references: [labels.id],
   }),
 }));
-
-
-

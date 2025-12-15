@@ -16,7 +16,10 @@ import {
 } from "./shared/dataLoaders";
 import { handleSingleBoardTaskStatusChange } from "./shared/taskStatusHandlers";
 import TaskView from "../TaskView/TaskView";
-import { useTaskBoardState, updateTaskInColumns } from "@/hooks/useTaskBoardState";
+import {
+  useTaskBoardState,
+  updateTaskInColumns,
+} from "@/hooks/useTaskBoardState";
 
 interface SingleKanbanBoardProps {
   boardName: string;
@@ -46,12 +49,8 @@ export function SingleKanbanBoard({
       setIsLoading(true);
       try {
         const taskBoardNamesMap = await fetchTaskBoardNameMap();
+        const foundTaskBoardId = findTaskBoardId(taskBoardNamesMap, boardName);
 
-        // Find taskBoardId from boardName
-        const targetEntry = Object.entries(taskBoardNamesMap).find(
-          ([, name]) => name === boardName,
-        );
-        const foundTaskBoardId = targetEntry ? targetEntry[0] : null;
         setTaskBoardId(foundTaskBoardId);
 
         await loadTaskBoardContent({
@@ -177,4 +176,14 @@ export function SingleKanbanBoard({
       />
     </>
   );
+}
+
+function findTaskBoardId(
+  taskBoardNamesMap: Record<string, string>,
+  boardName: string,
+): string | null {
+  const targetEntry = Object.entries(taskBoardNamesMap).find(
+    ([, name]) => name === boardName,
+  );
+  return targetEntry ? targetEntry[0] : null;
 }

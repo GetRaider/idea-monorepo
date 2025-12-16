@@ -30,7 +30,7 @@ export const TaskViewContainer = styled.div`
   display: flex;
   flex-direction: column;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-  padding-bottom: 32px;
+  padding-bottom: 0px;
 
   @media (max-width: 600px) {
     max-height: 95vh;
@@ -513,6 +513,7 @@ export const TaskViewFooter = styled.div`
   display: flex;
   justify-content: flex-end;
   gap: 12px;
+  padding-top: 22px;
 `;
 
 export const FooterCancelButton = styled.button`
@@ -534,4 +535,29 @@ export const CreateTaskButton = styled.button<{ $disabled: boolean }>`
   cursor: ${({ $disabled }) => ($disabled ? "not-allowed" : "pointer")};
   font-size: 14px;
   font-weight: 500;
+`;
+
+export const TaskSaveButton = styled.button<{ $disabled: boolean }>`
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: ${({ $disabled }) => ($disabled ? "not-allowed" : "pointer")};
+  transition: all 0.2s;
+
+  ${({ $disabled }) =>
+    $disabled
+      ? `
+    background: #2a2a2a;
+    color: #666;
+  `
+      : `
+    background: #7255c1;
+    color: #fff;
+    
+    &:hover {
+      background: #5a42a1;
+    }
+  `}
 `;

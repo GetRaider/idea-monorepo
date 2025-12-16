@@ -34,11 +34,11 @@ export default function TaskMetadata({
   onTaskChange,
 }: TaskMetadataProps) {
   const updateTask = (updates: Partial<Task>) => {
-    if (isCreating && onTaskChange) {
-      // In create mode, update local task state
+    if (onTaskChange) {
+      // Update local task state (works for both create and edit modes)
       onTaskChange({ ...task, ...updates } as Task);
     } else if (handleUpdateTask) {
-      // In edit mode, call update handler
+      // Fallback: call update handler directly (shouldn't happen with new flow)
       handleUpdateTask(updates);
     }
   };

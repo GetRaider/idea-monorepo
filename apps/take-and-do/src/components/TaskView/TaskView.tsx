@@ -28,6 +28,7 @@ import {
   TaskViewFooter,
   FooterCancelButton,
   CreateTaskButton,
+  TaskSaveButton,
 } from "./TaskView.styles";
 import { getPriorityIconLabel } from "../KanbanBoard/TaskCard/TaskCard";
 import TaskMetadata from "./TaskMetadata/TaskMetadata";
@@ -52,6 +53,8 @@ export default function TaskView({
   const [isPriorityDropdownOpen, setIsPriorityDropdownOpen] = useState(false);
   const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
   const [isCreatingTask, setIsCreatingTask] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [pendingUpdates, setPendingUpdates] = useState<Partial<Task>>({});
 
   const priorityDropdownRef = useRef<HTMLDivElement>(null);
   const statusDropdownRef = useRef<HTMLDivElement>(null);
@@ -69,6 +72,7 @@ export default function TaskView({
       setTitleValue("");
       setDescriptionValue("");
     }
+    setPendingUpdates({});
   }, [initialTask]);
 
   // Update URL based on current task/subtask
@@ -123,12 +127,59 @@ export default function TaskView({
         const updatedTask = await tasksService.update(task.id, updates);
         setTask(updatedTask);
         onTaskUpdate?.(updatedTask);
+        setPendingUpdates({});
+        // Reset form values to match updated task
+        setTitleValue(updatedTask.summary);
+        setDescriptionValue(updatedTask.description || "");
       } catch (error) {
         console.error("Failed to update task:", error);
       }
     },
     [task, onTaskUpdate],
   );
+
+  const hasUnsavedChanges = useMemo(() => {
+    if (!initialTask || !initialTask.id) return false;
+    return (
+      titleValue !== initialTask.summary ||
+      descriptionValue !== (initialTask.description || "") ||
+      Object.keys(pendingUpdates).length > 0
+    );
+  }, [initialTask, titleValue, descriptionValue, pendingUpdates]);
+
+  const handleSaveChanges = useCallback(async () => {
+    if (!initialTask || !initialTask.id || isSaving || !hasUnsavedChanges)
+      return;
+
+    const updates: TaskUpdate = {};
+
+    if (titleValue !== initialTask.summary) {
+      updates.summary = titleValue;
+    }
+    if (descriptionValue !== (initialTask.description || "")) {
+      updates.description = descriptionValue;
+    }
+
+    // Merge pending updates from metadata
+    const allUpdates = { ...pendingUpdates, ...updates };
+
+    if (Object.keys(allUpdates).length === 0) return;
+
+    setIsSaving(true);
+    try {
+      await handleUpdateTask(allUpdates);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [
+    initialTask,
+    titleValue,
+    descriptionValue,
+    pendingUpdates,
+    isSaving,
+    hasUnsavedChanges,
+    handleUpdateTask,
+  ]);
 
   const handleTaskUpdateFromSubtasks = useCallback(
     (updatedTask: Task) => {
@@ -144,20 +195,7 @@ export default function TaskView({
 
   const handleDescriptionBlur = useCallback(() => {
     setIsEditingDescription(false);
-    if (shouldCreateTask) {
-      // Don't update description for new tasks until they're created
-      return;
-    }
-    if (descriptionValue !== (task?.description || "")) {
-      handleUpdateTask({ description: descriptionValue });
-    }
-  }, [
-    descriptionValue,
-    task?.description,
-    handleUpdateTask,
-    isCreating,
-    task?.id,
-  ]);
+  }, []);
 
   const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) {
@@ -165,21 +203,24 @@ export default function TaskView({
     }
   };
 
+  const handleCancel = () => {
+    if (initialTask) {
+      setTask(initialTask);
+      setTitleValue(initialTask.summary);
+      setDescriptionValue(initialTask.description || "");
+      setPendingUpdates({});
+      setIsEditingTitle(false);
+      setIsEditingDescription(false);
+    }
+    onClose();
+  };
+
   const handleTitleClick = () => {
     setIsEditingTitle(true);
   };
 
   const handleTitleBlur = () => {
-    if (shouldCreateTask) {
-      // In create mode, don't auto-create on blur
-      // User must click save button
-      return;
-    }
-
     setIsEditingTitle(false);
-    if (task && titleValue !== task.summary) {
-      handleUpdateTask({ summary: titleValue });
-    }
   };
 
   const handleTitleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -213,7 +254,8 @@ export default function TaskView({
     if (shouldCreateTask) {
       task && setTask({ ...task, priority });
     } else {
-      handleUpdateTask({ priority });
+      setPendingUpdates((prev) => ({ ...prev, priority }));
+      setTask((prev) => (prev ? { ...prev, priority } : null));
     }
   };
 
@@ -224,10 +266,10 @@ export default function TaskView({
   const handleStatusSelect = (status: TaskStatus) => {
     setIsStatusDropdownOpen(false);
     if (shouldCreateTask) {
-      // Update local state for new task
       task && setTask({ ...task, status });
     } else {
-      handleUpdateTask({ status });
+      setPendingUpdates((prev) => ({ ...prev, status }));
+      setTask((prev) => (prev ? { ...prev, status } : null));
     }
   };
 
@@ -309,7 +351,7 @@ export default function TaskView({
             />
           ) : (
             <TaskTitle onClick={handleTitleClick}>
-              {displayTask.summary || "Untitled Task"}
+              {titleValue || displayTask.summary || "Untitled Task"}
             </TaskTitle>
           )}
         </TaskTitleSection>
@@ -324,9 +366,11 @@ export default function TaskView({
           />
         ) : (
           <TaskDescriptionMarkdown onClick={handleDescriptionClick}>
-            {descriptionValue ? (
+            {descriptionValue || task.description ? (
               <DescriptionContent
-                dangerouslySetInnerHTML={{ __html: descriptionValue }}
+                dangerouslySetInnerHTML={{
+                  __html: descriptionValue || task.description || "",
+                }}
               />
             ) : (
               <NoDescriptionText>No description provided.</NoDescriptionText>
@@ -335,9 +379,72 @@ export default function TaskView({
         )}
         <TaskMetadata
           task={displayTask}
-          handleUpdateTask={isCreating ? undefined : handleUpdateTask}
+          handleUpdateTask={undefined}
           isCreating={isCreating}
-          onTaskChange={isCreating ? setTask : undefined}
+          onTaskChange={(updatedTask) => {
+            setTask(updatedTask);
+            if (!isCreating && initialTask) {
+              // Track changes for save (compare against initial task)
+              const updates: Partial<Task> = {};
+
+              const initialDueDate = initialTask.dueDate?.getTime();
+              const updatedDueDate = updatedTask.dueDate?.getTime();
+              if (initialDueDate !== updatedDueDate) {
+                updates.dueDate = updatedTask.dueDate;
+              }
+
+              const initialScheduleDate = initialTask.scheduleDate?.getTime();
+              const updatedScheduleDate = updatedTask.scheduleDate?.getTime();
+              if (initialScheduleDate !== updatedScheduleDate) {
+                updates.scheduleDate = updatedTask.scheduleDate;
+              }
+
+              if (updatedTask.estimation !== initialTask.estimation) {
+                updates.estimation = updatedTask.estimation;
+              }
+
+              if (
+                JSON.stringify(updatedTask.labels || []) !==
+                JSON.stringify(initialTask.labels || [])
+              ) {
+                updates.labels = updatedTask.labels;
+              }
+
+              if (updatedTask.priority !== initialTask.priority) {
+                updates.priority = updatedTask.priority;
+              }
+
+              if (updatedTask.status !== initialTask.status) {
+                updates.status = updatedTask.status;
+              }
+
+              setPendingUpdates((prev) => {
+                const merged = { ...prev, ...updates };
+                // Remove keys that match initial values
+                Object.keys(merged).forEach((key) => {
+                  const typedKey = key as keyof Task;
+                  const initialValue = initialTask[typedKey];
+                  const mergedValue = merged[typedKey];
+
+                  // Handle date comparisons
+                  if (typedKey === "dueDate" || typedKey === "scheduleDate") {
+                    const initialTime = (
+                      initialValue as Date | undefined
+                    )?.getTime();
+                    const mergedTime = (
+                      mergedValue as Date | undefined
+                    )?.getTime();
+                    if (initialTime === mergedTime) {
+                      delete merged[typedKey];
+                    }
+                  } else if (mergedValue === initialValue) {
+                    delete merged[typedKey];
+                  }
+                });
+                return merged;
+              });
+            }
+          }}
         />
         {!isSubtask && displayTask.id && (
           <TaskSubtasks
@@ -346,7 +453,7 @@ export default function TaskView({
             onTaskUpdate={handleTaskUpdateFromSubtasks}
           />
         )}
-        {isCreating && (
+        {isCreating ? (
           <TaskViewFooter>
             <FooterCancelButton onClick={onClose}>Cancel</FooterCancelButton>
             <CreateTaskButton
@@ -356,6 +463,19 @@ export default function TaskView({
             >
               {isCreatingTask ? "Creating..." : "Create Task"}
             </CreateTaskButton>
+          </TaskViewFooter>
+        ) : (
+          <TaskViewFooter>
+            <FooterCancelButton onClick={handleCancel}>
+              Cancel
+            </FooterCancelButton>
+            <TaskSaveButton
+              onClick={handleSaveChanges}
+              disabled={isSaving || !hasUnsavedChanges}
+              $disabled={isSaving || !hasUnsavedChanges}
+            >
+              {isSaving ? "Saving..." : "Save"}
+            </TaskSaveButton>
           </TaskViewFooter>
         )}
       </TaskViewContainer>

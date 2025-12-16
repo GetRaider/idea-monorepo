@@ -31,19 +31,47 @@ export function formatEstimation(totalHours?: number): string {
 
 // ============ Date Helpers ============
 
-export function formatDateForInput(date: Date): string {
-  const year = date.getFullYear();
-  const month = (date.getMonth() + 1).toString().padStart(2, "0");
-  const day = date.getDate().toString().padStart(2, "0");
+export function formatDateForInput(date: Date | string): string {
+  const dateObj = date instanceof Date ? date : new Date(date);
+  if (isNaN(dateObj.getTime())) return "";
+  const year = dateObj.getFullYear();
+  const month = (dateObj.getMonth() + 1).toString().padStart(2, "0");
+  const day = dateObj.getDate().toString().padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
 
-export function formatDisplayDate(date?: Date): string {
+export function formatDisplayDate(date?: Date | string): string {
   if (!date) return "";
-  const day = date.getDate().toString().padStart(2, "0");
-  const month = (date.getMonth() + 1).toString().padStart(2, "0");
-  const year = date.getFullYear();
+  const dateObj = date instanceof Date ? date : new Date(date);
+  if (isNaN(dateObj.getTime())) return "";
+  const day = dateObj.getDate().toString().padStart(2, "0");
+  const month = (dateObj.getMonth() + 1).toString().padStart(2, "0");
+  const year = dateObj.getFullYear();
   return `${day}.${month}.${year}`;
+}
+
+export function formatScheduleDate(date?: Date | string): string {
+  if (!date) return "";
+
+  const dateObj = date instanceof Date ? date : new Date(date);
+  if (isNaN(dateObj.getTime())) return "";
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  const checkDate = new Date(dateObj);
+  checkDate.setHours(0, 0, 0, 0);
+
+  if (checkDate.getTime() === today.getTime()) {
+    return "Today";
+  } else if (checkDate.getTime() === tomorrow.getTime()) {
+    return "Tomorrow";
+  } else {
+    return formatDisplayDate(dateObj);
+  }
 }
 
 // ============ Priority Helpers ============

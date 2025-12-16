@@ -36,10 +36,11 @@ export async function POST(request: NextRequest) {
   try {
     const task = await request.json();
 
-    // Deserialize date if present
+    // Deserialize dates if present
     const taskData = {
       ...task,
       dueDate: task.dueDate ? new Date(task.dueDate) : undefined,
+      scheduleDate: task.scheduleDate ? new Date(task.scheduleDate) : undefined,
     };
 
     const newTask = await createTask(taskData);

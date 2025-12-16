@@ -29,15 +29,17 @@ export interface Task {
   estimation?: number;
   subtasks?: Task[];
   schedule?: "today" | "tomorrow";
+  scheduleDate?: Date;
 }
 
 /**
  * Type for task updates where nullable fields can be explicitly set to null.
  * Use null to clear a field, undefined means "don't change".
  */
-export type TaskUpdate = Partial<Omit<Task, 'dueDate' | 'estimation'>> & {
+export type TaskUpdate = Partial<Omit<Task, 'dueDate' | 'estimation' | 'scheduleDate'>> & {
   dueDate?: Date | null;
   estimation?: number | null;
+  scheduleDate?: Date | null;
 };
 
 export interface TaskGroup {

@@ -5,6 +5,7 @@ function normalizeTask(task: Task): Task {
   return {
     ...task,
     dueDate: task.dueDate ? new Date(task.dueDate) : undefined,
+    scheduleDate: task.scheduleDate ? new Date(task.scheduleDate) : undefined,
     priority: normalizePriority(task.priority),
     subtasks: (task.subtasks || []).map((subtask) => normalizeTask(subtask)),
   };

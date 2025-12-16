@@ -16,6 +16,7 @@ interface SerializedTask {
   estimation?: number;
   subtasks: SerializedTask[];
   schedule?: string;
+  scheduleDate?: string;
 }
 
 // Helper to serialize a task (including subtasks) for JSON response
@@ -33,6 +34,7 @@ function serializeTask(task: Task): SerializedTask {
     estimation: task.estimation,
     subtasks: (task.subtasks || []).map((subtask) => serializeTask(subtask)),
     schedule: task.schedule,
+    scheduleDate: task.scheduleDate?.toISOString(),
   };
 }
 
@@ -70,6 +72,9 @@ export async function PATCH(
     if ("dueDate" in updates) {
       updateData.dueDate = updates.dueDate ? new Date(updates.dueDate) : undefined;
     }
+    if ("scheduleDate" in updates) {
+      updateData.scheduleDate = updates.scheduleDate ? new Date(updates.scheduleDate) : undefined;
+    }
     if ("estimation" in updates) {
       // null means "clear", 0 is valid, undefined means "not set"
       updateData.estimation = updates.estimation === null ? undefined : updates.estimation;
@@ -79,6 +84,7 @@ export async function PATCH(
       updateData.subtasks = updates.subtasks.map((subtask: Record<string, unknown>) => ({
         ...subtask,
         dueDate: subtask.dueDate ? new Date(subtask.dueDate as string) : undefined,
+        scheduleDate: subtask.scheduleDate ? new Date(subtask.scheduleDate as string) : undefined,
       }));
     }
 

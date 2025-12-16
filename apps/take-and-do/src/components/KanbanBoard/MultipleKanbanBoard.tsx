@@ -127,7 +127,70 @@ export function MultipleKanbanBoard({
   );
 
   const handleTaskUpdate = useCallback(
-    (updatedTask: Task) => {
+    async (updatedTask: Task) => {
+      // If we're in a scheduled view, check if the task still belongs to this schedule
+      if (schedule) {
+        // If scheduleDate was removed, task should be removed from scheduled view
+        if (!updatedTask.scheduleDate) {
+          try {
+            const taskBoardNamesMap = await fetchTaskBoardNameMap();
+            await loadScheduledContent({
+              schedule,
+              taskBoardNamesMap,
+              setTaskGroups,
+            });
+          } catch (error) {
+            console.error(
+              "Failed to refresh tasks after schedule update:",
+              error,
+            );
+          }
+          if (selectedTask?.id === updatedTask.id) {
+            setSelectedTask(updatedTask);
+          }
+          return;
+        }
+
+        // Check if scheduleDate matches the current schedule
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+
+        const taskDate = new Date(updatedTask.scheduleDate);
+        taskDate.setHours(0, 0, 0, 0);
+
+        const isToday = taskDate.getTime() === today.getTime();
+        const isTomorrow = taskDate.getTime() === tomorrow.getTime();
+
+        const shouldBeInToday = schedule === TaskSchedule.TODAY && isToday;
+        const shouldBeInTomorrow =
+          schedule === TaskSchedule.TOMORROW && isTomorrow;
+
+        // If task no longer belongs to this schedule, refresh the entire list
+        if (!shouldBeInToday && !shouldBeInTomorrow) {
+          try {
+            const taskBoardNamesMap = await fetchTaskBoardNameMap();
+            await loadScheduledContent({
+              schedule,
+              taskBoardNamesMap,
+              setTaskGroups,
+            });
+          } catch (error) {
+            console.error(
+              "Failed to refresh tasks after schedule update:",
+              error,
+            );
+          }
+          if (selectedTask?.id === updatedTask.id) {
+            setSelectedTask(updatedTask);
+          }
+          return;
+        }
+      }
+
+      // Otherwise, update the task in place
       setTaskGroups((prevGroups) =>
         prevGroups.map((group) => {
           if (group.taskBoardId !== updatedTask.taskBoardId) {
@@ -143,7 +206,7 @@ export function MultipleKanbanBoard({
         setSelectedTask(updatedTask);
       }
     },
-    [selectedTask, setSelectedTask],
+    [selectedTask, setSelectedTask, schedule],
   );
 
   const handleCreateTask = useCallback(() => {

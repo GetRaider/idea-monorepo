@@ -33,14 +33,14 @@ export const MetadataItem = styled.button`
   }
 `;
 
-export const MetadataInput = styled.input`
+export const MetadataInput = styled.input<{ $width?: string }>`
   font-size: 14px;
   color: #fff;
   background: #2a2a2a;
   border: 1px solid #3a3a3a;
   border-radius: 6px;
   padding: 4px 8px;
-  width: 80px;
+  width: ${(props) => props.$width || "80px"};
   outline: none;
 
   &:focus {
@@ -228,4 +228,14 @@ export const TagInput = styled.input`
   &:focus {
     border-color: #667eea;
   }
+`;
+
+export const AddLabelTag = styled(Tag)`
+  background: transparent;
+  border: 1px dashed #3a3a3a;
+  color: #666;
+`;
+
+export const CreateLabelSpan = styled.span`
+  color: #667eea;
 `;

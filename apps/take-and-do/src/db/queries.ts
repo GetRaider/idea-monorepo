@@ -1,4 +1,4 @@
-import { eq, and, isNull, inArray } from "drizzle-orm";
+import { eq, and, isNull, inArray, gte, lt } from "drizzle-orm";
 import { db } from "./client";
 import { folders, taskBoards, tasks, labels, taskLabels } from "./schema";
 import { Task, TaskPriority, TaskStatus } from "@/components/KanbanBoard/types";
@@ -75,6 +75,7 @@ async function convertTaskRowToTask(
     estimation: taskRow.estimation || undefined,
     subtasks: subtasks.length > 0 ? subtasks : undefined,
     schedule: (taskRow.schedule as "today" | "tomorrow") || undefined,
+    scheduleDate: taskRow.scheduleDate ? new Date(taskRow.scheduleDate) : undefined,
   };
 }
 
@@ -88,7 +89,24 @@ async function loadAllTasksWithRelations(filter?: {
     conditions.push(eq(tasks.taskBoardId, filter.taskBoardId));
   }
   if (filter?.schedule) {
-    conditions.push(eq(tasks.schedule, filter.schedule));
+    // Filter by scheduleDate matching today or tomorrow's actual date
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const targetDate = new Date(today);
+    if (filter.schedule === "tomorrow") {
+      targetDate.setDate(targetDate.getDate() + 1);
+    }
+    
+    const nextDay = new Date(targetDate);
+    nextDay.setDate(nextDay.getDate() + 1);
+    
+    conditions.push(
+      and(
+        gte(tasks.scheduleDate, targetDate),
+        lt(tasks.scheduleDate, nextDay)
+      )
+    );
   }
   if (filter?.parentTaskId !== undefined) {
     if (filter.parentTaskId === null) {
@@ -457,6 +475,7 @@ export async function createTask(taskData: Omit<Task, "id">): Promise<Task> {
     dueDate: taskData.dueDate || null,
     estimation: taskData.estimation || null,
     schedule: taskData.schedule || null,
+    scheduleDate: taskData.scheduleDate || null,
     parentTaskId: null,
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -485,6 +504,7 @@ export async function createTask(taskData: Omit<Task, "id">): Promise<Task> {
         dueDate: subtask.dueDate || null,
         estimation: subtask.estimation || null,
         schedule: subtask.schedule || null,
+        scheduleDate: subtask.scheduleDate || null,
         parentTaskId: taskId,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -590,6 +610,8 @@ export async function updateTask(
       updates.estimation !== null ? updates.estimation : null;
   if (updates.schedule !== undefined)
     updateData.schedule = updates.schedule || null;
+  if (updates.scheduleDate !== undefined)
+    updateData.scheduleDate = updates.scheduleDate ? updates.scheduleDate : null;
   if (updates.taskBoardId !== undefined)
     updateData.taskBoardId = updates.taskBoardId;
 
@@ -624,6 +646,7 @@ export async function updateTask(
           dueDate: subtask.dueDate || null,
           estimation: subtask.estimation || null,
           schedule: subtask.schedule || null,
+          scheduleDate: subtask.scheduleDate || null,
           parentTaskId: taskId,
           createdAt: new Date(),
           updatedAt: new Date(),

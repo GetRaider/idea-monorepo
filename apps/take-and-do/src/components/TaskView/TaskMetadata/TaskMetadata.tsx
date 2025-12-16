@@ -4,6 +4,7 @@ import {
   formatEstimation,
   parseEstimation,
   toTotalHours,
+  formatScheduleDate,
 } from "@/utils/task.utils";
 import {
   MetadataInput,
@@ -19,6 +20,8 @@ import {
   LabelDropdownInput,
   Tag,
   TagDot,
+  AddLabelTag,
+  CreateLabelSpan,
 } from "./TaskMetadata.styles";
 import { Task, TaskUpdate } from "../../KanbanBoard/types";
 import { useState, useRef, useEffect } from "react";
@@ -42,6 +45,8 @@ export default function TaskMetadata({
   // Metadata editing states
   const [isEditingDueDate, setIsEditingDueDate] = useState(false);
   const [dueDateValue, setDueDateValue] = useState("");
+  const [isEditingScheduleDate, setIsEditingScheduleDate] = useState(false);
+  const [scheduleDateValue, setScheduleDateValue] = useState("");
   const [isEditingEstimation, setIsEditingEstimation] = useState(false);
   const [estimationDays, setEstimationDays] = useState(0);
   const [estimationHours, setEstimationHours] = useState(0);
@@ -69,6 +74,11 @@ export default function TaskMetadata({
       setDueDateValue(formatDateForInput(task.dueDate));
     } else {
       setDueDateValue("");
+    }
+    if (task?.scheduleDate) {
+      setScheduleDateValue(formatDateForInput(task.scheduleDate));
+    } else {
+      setScheduleDateValue("");
     }
   }, [task]);
 
@@ -100,6 +110,23 @@ export default function TaskMetadata({
       }
     } else {
       updateTask({ dueDate: undefined });
+    }
+  };
+  const handleScheduleDateClick = () => {
+    setIsEditingScheduleDate(true);
+  };
+  const handleScheduleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setScheduleDateValue(e.target.value);
+  };
+  const handleScheduleDateBlur = () => {
+    setIsEditingScheduleDate(false);
+    if (scheduleDateValue) {
+      const newDate = new Date(scheduleDateValue);
+      if (!isNaN(newDate.getTime())) {
+        updateTask({ scheduleDate: newDate });
+      }
+    } else {
+      updateTask({ scheduleDate: undefined });
     }
   };
   const handleEstimationClick = () => {
@@ -162,6 +189,53 @@ export default function TaskMetadata({
 
   return (
     <MetadataContainer>
+      {/* Schedule Date */}
+      {isEditingScheduleDate ? (
+        <MetadataInput
+          type="date"
+          value={scheduleDateValue}
+          onChange={handleScheduleDateChange}
+          onBlur={handleScheduleDateBlur}
+          onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) =>
+            e.key === "Enter" && e.currentTarget.blur()
+          }
+          autoFocus
+          $width="130px"
+        />
+      ) : (
+        <MetadataItem
+          onClick={handleScheduleDateClick}
+          title="Click to edit schedule"
+        >
+          <MetadataIcon>
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <rect
+                x="2"
+                y="3"
+                width="10"
+                height="9"
+                rx="1"
+                stroke="currentColor"
+                strokeWidth="1.2"
+                fill="none"
+              />
+              <path
+                d="M2 5h10M5 2v2M9 2v2"
+                stroke="currentColor"
+                strokeWidth="1.2"
+                strokeLinecap="round"
+              />
+              <circle cx="7" cy="8" r="1.5" fill="currentColor" />
+            </svg>
+          </MetadataIcon>
+          <span>
+            {task.scheduleDate
+              ? formatScheduleDate(task.scheduleDate)
+              : "Set schedule"}
+          </span>
+        </MetadataItem>
+      )}
+
       {/* Due Date */}
       {isEditingDueDate ? (
         <MetadataInput
@@ -173,7 +247,7 @@ export default function TaskMetadata({
             e.key === "Enter" && e.currentTarget.blur()
           }
           autoFocus
-          style={{ width: "130px" }}
+          $width="130px"
         />
       ) : (
         <MetadataItem
@@ -286,17 +360,9 @@ export default function TaskMetadata({
 
       {/* Add Label */}
       <LabelSelectorContainer ref={labelDropdownRef}>
-        <Tag
-          onClick={handleLabelDropdownToggle}
-          title="Add label"
-          style={{
-            background: "transparent",
-            border: "1px dashed #3a3a3a",
-            color: "#666",
-          }}
-        >
+        <AddLabelTag onClick={handleLabelDropdownToggle} title="Add label">
           + Label
-        </Tag>
+        </AddLabelTag>
         <LabelDropdown $isOpen={isLabelDropdownOpen}>
           <LabelDropdownInput
             type="text"
@@ -333,7 +399,7 @@ export default function TaskMetadata({
               (l) => l.toLowerCase() === labelSearchValue.toLowerCase(),
             ) && (
               <LabelDropdownItem onClick={handleCreateAndSelectLabel}>
-                <span style={{ color: "#667eea" }}>+</span>
+                <CreateLabelSpan>+</CreateLabelSpan>
                 Create &quot;{labelSearchValue}&quot;
               </LabelDropdownItem>
             )}

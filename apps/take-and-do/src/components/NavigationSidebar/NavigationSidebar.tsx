@@ -14,6 +14,7 @@ import {
   Chevron,
   SubItems,
   SubItem,
+  AddButton,
 } from "./NavigationSidebar.styles";
 import { Folder, TaskBoard } from "@/types/workspace";
 import { foldersService } from "@/services/api/folders.service";
@@ -23,18 +24,33 @@ interface NavigationSidebarProps {
   isOpen: boolean;
   activeView?: string;
   onViewChange?: (view: string) => void;
+  onCreateTaskBoard?: () => void;
+  taskBoards?: TaskBoard[];
+  folders?: Folder[];
 }
 
 export default function NavigationSidebar({
   isOpen,
   activeView = "today",
   onViewChange,
+  onCreateTaskBoard,
+  taskBoards: providedTaskBoards,
+  folders: providedFolders,
 }: NavigationSidebarProps) {
   const [expandedFolder, setExpandedFolder] = useState<string>("");
-  const [folders, setFolders] = useState<Folder[]>([]);
-  const [taskBoards, setTaskBoards] = useState<TaskBoard[]>([]);
+  const [folders, setFolders] = useState<Folder[]>(providedFolders || []);
+  const [taskBoards, setTaskBoards] = useState<TaskBoard[]>(
+    providedTaskBoards || [],
+  );
 
   useEffect(() => {
+    // Only fetch if not provided as props
+    if (providedFolders && providedTaskBoards) {
+      setFolders(providedFolders);
+      setTaskBoards(providedTaskBoards);
+      return;
+    }
+
     const fetchData = async () => {
       try {
         const [foldersData, taskBoardsData] = await Promise.all([
@@ -50,7 +66,7 @@ export default function NavigationSidebar({
     };
 
     fetchData();
-  }, []);
+  }, [providedFolders, providedTaskBoards]);
 
   const handleViewChange = (view: string) => {
     if (onViewChange) {
@@ -129,7 +145,22 @@ export default function NavigationSidebar({
       </WorkspaceContainer>
 
       <WorkspaceContainer>
-        <SideBarSectionHeader>Spaces</SideBarSectionHeader>
+        <SideBarSectionHeader>
+          <span>Spaces</span>
+          <AddButton
+            onClick={() => onCreateTaskBoard?.()}
+            title="Create Task Board"
+          >
+            <svg viewBox="0 0 16 16" fill="none">
+              <path
+                d="M8 3v10M3 8h10"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
+            </svg>
+          </AddButton>
+        </SideBarSectionHeader>
 
         <WorkspaceList>
           {folders.map((folder) => (

@@ -3,29 +3,47 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
+    "clean": "rm -rf .next && rm -rf .turbo",
     "build": "next build --turbopack",
+    "dev": "next dev --turbopack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:generate": "drizzle-kit generate",
+    "db:push": "drizzle-kit push"
   },
   "dependencies": {
-    "@repo/ui": "workspace:*",
-    "next": "catalog:",
-    "react": "catalog:",
-    "react-dom": "catalog:",
-    "styled-components": "catalog:",
+    "@lexical/headless": "^0.38.2",
+    "@lexical/html": "^0.38.2",
+    "@lexical/list": "^0.38.2",
+    "@lexical/react": "^0.38.2",
+    "@lexical/rich-text": "^0.38.2",
+    "@lexical/utils": "^0.38.2",
     "@radix-ui/react-icons": "catalog:",
     "@radix-ui/react-tooltip": "catalog:",
-    "@radix-ui/themes": "catalog:"
+    "@radix-ui/themes": "catalog:",
+    "@repo/ui": "workspace:*",
+    "@tiptap/extension-placeholder": "^3.11.0",
+    "@tiptap/react": "^3.11.0",
+    "@tiptap/starter-kit": "^3.11.0",
+    "drizzle-orm": "^0.36.4",
+    "lexical": "^0.38.2",
+    "next": "catalog:",
+    "pg": "^8.13.1",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "react-markdown": "^10.1.0",
+    "styled-components": "catalog:"
   },
   "devDependencies": {
-    "typescript": "catalog:",
     "@eslint/eslintrc": "catalog:",
     "@types/node": "catalog:",
+    "@types/pg": "^8.11.10",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@types/styled-components": "catalog:",
+    "drizzle-kit": "^0.30.0",
     "eslint": "catalog:",
-    "eslint-config-next": "catalog:"
+    "eslint-config-next": "catalog:",
+    "typescript": "catalog:"
   }
 }

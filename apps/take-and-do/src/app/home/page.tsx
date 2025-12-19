@@ -243,48 +243,6 @@ export default function HomePage() {
         </StatsGrid>
 
         <Section>
-          <SectionTitle>Today&apos;s Tasks</SectionTitle>
-          {todayTasks.length > 0 ? (
-            <TaskList>
-              {todayTasks.slice(0, 5).map((task) => (
-                <TaskItem key={task.id}>
-                  <TaskSummary>
-                    <strong>{task.summary}</strong>
-                    <TaskStatusBadge $status={task.status}>
-                      {task.status}
-                    </TaskStatusBadge>
-                  </TaskSummary>
-                </TaskItem>
-              ))}
-            </TaskList>
-          ) : (
-            <p style={{ color: "#888", marginTop: "8px" }}>
-              No tasks scheduled for today
-            </p>
-          )}
-          <Link
-            href="/tasks"
-            style={{
-              marginTop: "12px",
-              display: "inline-block",
-              color: "#667eea",
-            }}
-          >
-            View all tasks →
-          </Link>
-        </Section>
-
-        <Section>
-          <SectionTitle>Calendar Events</SectionTitle>
-          <CalendarSection>
-            <p style={{ color: "#888" }}>Calendar integration coming soon...</p>
-            <p style={{ color: "#666", fontSize: "14px", marginTop: "8px" }}>
-              View and manage your upcoming events and deadlines
-            </p>
-          </CalendarSection>
-        </Section>
-
-        <Section>
           <SectionTitle>AI Analytics</SectionTitle>
           <AISection>
             <AICard>
@@ -347,6 +305,49 @@ export default function HomePage() {
             </AICard>
           </AISection>
         </Section>
+
+        <Section>
+          <SectionTitle>Today&apos;s Tasks</SectionTitle>
+          {todayTasks.length > 0 ? (
+            <TaskList>
+              {todayTasks.slice(0, 5).map((task) => (
+                <TaskItem key={task.id}>
+                  <TaskSummary>
+                    <strong>{task.summary}</strong>
+                    <TaskStatusBadge $status={task.status}>
+                      {task.status}
+                    </TaskStatusBadge>
+                  </TaskSummary>
+                </TaskItem>
+              ))}
+            </TaskList>
+          ) : (
+            <p style={{ color: "#888", marginTop: "8px" }}>
+              No tasks scheduled for today
+            </p>
+          )}
+          <Link
+            href="/tasks"
+            style={{
+              marginTop: "12px",
+              display: "inline-block",
+              color: "#667eea",
+            }}
+          >
+            View all tasks →
+          </Link>
+        </Section>
+
+        {/* TODO: Add calendar integration */}
+        {/* <Section>
+          <SectionTitle>Calendar Events</SectionTitle>
+          <CalendarSection>
+            <p style={{ color: "#888" }}>Calendar integration coming soon...</p>
+            <p style={{ color: "#666", fontSize: "14px", marginTop: "8px" }}>
+              View and manage your upcoming events and deadlines
+            </p>
+          </CalendarSection>
+        </Section> */}
 
         <QuickActions>
           <ActionButton href="/tasks">

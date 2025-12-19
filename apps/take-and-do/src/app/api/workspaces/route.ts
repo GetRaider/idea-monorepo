@@ -1,12 +1,18 @@
 import { NextResponse } from "next/server";
-import { getAllFolders, getAllTaskBoards } from "@/app/api/mock-data";
+import { getAllFolders, getAllTaskBoards } from "@/db/queries";
 
 export async function GET() {
-  // Return folders and task boards
-  const response = {
-    folders: getAllFolders(),
-    taskBoards: getAllTaskBoards(),
-  };
+  try {
+    const [folders, taskBoards] = await Promise.all([
+      getAllFolders(),
+      getAllTaskBoards(),
+    ]);
 
-  return NextResponse.json(response);
+    return NextResponse.json({ folders, taskBoards });
+  } catch {
+    return NextResponse.json(
+      { error: "Failed to fetch workspaces" },
+      { status: 500 },
+    );
+  }
 }

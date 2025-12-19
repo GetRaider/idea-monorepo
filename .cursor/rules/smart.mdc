@@ -46,3 +46,16 @@ This is a pnpm monorepo with Turborepo:
 - `packages/typescript-config` — Shared TypeScript configs
 
 Import shared packages via `@repo/api`, `@repo/ui`, etc.
+
+# General
+
+- Place all interfaces, types, and enums at the end of each file
+- Never prefix interfaces or types with 'I'
+- Put a blank line between external imports and internal ones
+- Each folder that needs exports should have an `intex.ts` file gathering all imports/exports for that folder
+- If a callback passed into a function has only one statement, omit the curly braces
+
+# FE
+
+- Never use `export default` with an anonymous component—always name components and use either named export or `export default <Name>;`
+- Never use inline styles. All styles must be in separate `.styles.tsx` files using `styled-components`.

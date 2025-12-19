@@ -74,6 +74,34 @@ export const SideBarSectionHeader = styled.div`
   color: #666;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+`;
+
+export const AddButton = styled.button`
+  background: transparent;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s;
+  width: 20px;
+  height: 20px;
+
+  &:hover {
+    background: #2a2a2a;
+    color: #fff;
+  }
+
+  svg {
+    width: 14px;
+    height: 14px;
+  }
 `;
 
 export const WorkspaceList = styled.div`

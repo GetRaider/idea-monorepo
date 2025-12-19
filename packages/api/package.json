@@ -6,6 +6,7 @@
   "scripts": {
     "build": "tsc -b -v",
     "rebuild": "rm -rf dist && pnpm build",
+    "clean": "rm -rf dist && rm -rf .turbo",
     "dev": "pnpm build --watch",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\"",
     "format": "eslint \"{src,apps,libs,test}/**/*.ts\""

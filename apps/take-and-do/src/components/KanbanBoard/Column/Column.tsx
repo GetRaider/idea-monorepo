@@ -27,9 +27,15 @@ interface ColumnProps {
     newStatus: TaskStatus,
     targetIndex?: number,
   ) => void;
+  onTaskClick?: (task: Task) => void;
 }
 
-export const Column = ({ tasks, status, onTaskDrop }: ColumnProps) => {
+export const Column = ({
+  tasks,
+  status,
+  onTaskDrop,
+  onTaskClick,
+}: ColumnProps) => {
   const [isDragOver, setIsDragOver] = useState(false);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -230,23 +236,11 @@ export const Column = ({ tasks, status, onTaskDrop }: ColumnProps) => {
       document.removeEventListener("dragend", handleDragEnd);
     };
   }, []);
-  const getStatusIcon = () => {
-    switch (status) {
-      case TaskStatus.TODO:
-        return "◯";
-      case TaskStatus.IN_PROGRESS:
-        return "◐";
-      case TaskStatus.DONE:
-        return "✓";
-      default:
-        return "◯";
-    }
-  };
   return (
     <ColumnStyles>
       <ColumnHeader>
         <ColumnTitle>
-          <StatusIcon $status={status}>{getStatusIcon()}</StatusIcon>
+          <StatusIcon $status={status}>{getStatusIcon(status)}</StatusIcon>
           <span>{status}</span>
           <Count>{tasks.length}</Count>
         </ColumnTitle>
@@ -287,7 +281,7 @@ export const Column = ({ tasks, status, onTaskDrop }: ColumnProps) => {
               onDragOver={handleTaskDragOver}
               $isDropped={droppedTaskId === task.id}
             >
-              <TaskCard task={task} />
+              <TaskCard task={task} onTaskClick={onTaskClick} />
               {/* Don't show indicator below task - we show it after all tasks instead */}
             </TaskWrapper>
           </React.Fragment>
@@ -303,3 +297,16 @@ export const Column = ({ tasks, status, onTaskDrop }: ColumnProps) => {
     </ColumnStyles>
   );
 };
+
+export function getStatusIcon(status: TaskStatus): string {
+  switch (status) {
+    case TaskStatus.TODO:
+      return "◯";
+    case TaskStatus.IN_PROGRESS:
+      return "◐";
+    case TaskStatus.DONE:
+      return "✓";
+    default:
+      return "◯";
+  }
+}

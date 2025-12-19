@@ -63,7 +63,7 @@ export async function loadScheduledContent({
   taskBoardNamesMap: Record<string, string>;
   setTaskGroups: (groups: TaskGroup[]) => void;
 }): Promise<void> {
-  const data = await tasksService.getBySchedule();
+  const data = await tasksService.getBySchedule(schedule);
   const scheduledTasks = data[schedule];
   setTaskGroups(createTaskGroups(scheduledTasks, taskBoardNamesMap));
 }

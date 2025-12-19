@@ -37,12 +37,14 @@ interface MultipleKanbanBoardProps {
   schedule?: TaskSchedule;
   workspaceTitle: string;
   folderId?: string;
+  taskBoardNameMap?: Record<string, string>;
 }
 
 export function MultipleKanbanBoard({
   schedule,
   workspaceTitle,
   folderId,
+  taskBoardNameMap = {},
 }: MultipleKanbanBoardProps) {
   const [taskGroups, setTaskGroups] = useState<TaskGroup[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -62,7 +64,10 @@ export function MultipleKanbanBoard({
     const fetchTasks = async () => {
       setIsLoading(true);
       try {
-        const taskBoardNamesMap = await fetchTaskBoardNameMap();
+        const taskBoardNamesMap =
+          Object.keys(taskBoardNameMap).length > 0
+            ? taskBoardNameMap
+            : await fetchTaskBoardNameMap();
 
         let loadedGroups: TaskGroup[] = [];
         if (schedule) {
@@ -99,6 +104,7 @@ export function MultipleKanbanBoard({
     };
 
     fetchTasks();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [schedule, folderId]);
 
   const toggleGroup = (taskBoardId: string) => {
@@ -133,7 +139,10 @@ export function MultipleKanbanBoard({
         // If scheduleDate was removed, task should be removed from scheduled view
         if (!updatedTask.scheduleDate) {
           try {
-            const taskBoardNamesMap = await fetchTaskBoardNameMap();
+            const taskBoardNamesMap =
+              Object.keys(taskBoardNameMap).length > 0
+                ? taskBoardNameMap
+                : await fetchTaskBoardNameMap();
             await loadScheduledContent({
               schedule,
               taskBoardNamesMap,
@@ -171,7 +180,10 @@ export function MultipleKanbanBoard({
         // If task no longer belongs to this schedule, refresh the entire list
         if (!shouldBeInToday && !shouldBeInTomorrow) {
           try {
-            const taskBoardNamesMap = await fetchTaskBoardNameMap();
+            const taskBoardNamesMap =
+              Object.keys(taskBoardNameMap).length > 0
+                ? taskBoardNameMap
+                : await fetchTaskBoardNameMap();
             await loadScheduledContent({
               schedule,
               taskBoardNamesMap,
@@ -206,7 +218,7 @@ export function MultipleKanbanBoard({
         setSelectedTask(updatedTask);
       }
     },
-    [selectedTask, setSelectedTask, schedule],
+    [selectedTask, setSelectedTask, schedule, taskBoardNameMap],
   );
 
   const handleCreateTask = useCallback(() => {
@@ -236,7 +248,10 @@ export function MultipleKanbanBoard({
   const handleTaskCreated = useCallback(
     async (createdTask: Task) => {
       try {
-        const taskBoardNamesMap = await fetchTaskBoardNameMap();
+        const taskBoardNamesMap =
+          Object.keys(taskBoardNameMap).length > 0
+            ? taskBoardNameMap
+            : await fetchTaskBoardNameMap();
         let loadedGroups: TaskGroup[] = [];
         if (schedule) {
           await loadScheduledContent({
@@ -262,7 +277,7 @@ export function MultipleKanbanBoard({
         console.error("Failed to refresh tasks after creation:", error);
       }
     },
-    [schedule, folderId, setSelectedTask],
+    [schedule, folderId, taskBoardNameMap, setSelectedTask],
   );
 
   const handleBoardSelect = useCallback(

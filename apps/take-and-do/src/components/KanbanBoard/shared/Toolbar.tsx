@@ -35,7 +35,8 @@ export function Toolbar({ workspaceTitle, onCreateTask }: ToolbarProps) {
           Create Task
         </CreateButton>
         <PopoverContainer>
-          <SettingsButton
+          {/* TODO: Enable board settings once buttons are working */}
+          {/* <SettingsButton
             title="Board settings"
             onClick={() => setOpen((s) => !s)}
           >
@@ -45,7 +46,7 @@ export function Toolbar({ workspaceTitle, onCreateTask }: ToolbarProps) {
               width={20}
               height={20}
             />
-          </SettingsButton>
+          </SettingsButton> */}
           {open && (
             <Popover>
               <Row>
@@ -99,4 +100,3 @@ export function Toolbar({ workspaceTitle, onCreateTask }: ToolbarProps) {
     </ToolbarStyled>
   );
 }
-

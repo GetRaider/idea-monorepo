@@ -25,6 +25,8 @@ interface NavigationSidebarProps {
   activeView?: string;
   onViewChange?: (view: string) => void;
   onCreateTaskBoard?: () => void;
+  taskBoards?: TaskBoard[];
+  folders?: Folder[];
 }
 
 export default function NavigationSidebar({
@@ -32,12 +34,23 @@ export default function NavigationSidebar({
   activeView = "today",
   onViewChange,
   onCreateTaskBoard,
+  taskBoards: providedTaskBoards,
+  folders: providedFolders,
 }: NavigationSidebarProps) {
   const [expandedFolder, setExpandedFolder] = useState<string>("");
-  const [folders, setFolders] = useState<Folder[]>([]);
-  const [taskBoards, setTaskBoards] = useState<TaskBoard[]>([]);
+  const [folders, setFolders] = useState<Folder[]>(providedFolders || []);
+  const [taskBoards, setTaskBoards] = useState<TaskBoard[]>(
+    providedTaskBoards || [],
+  );
 
   useEffect(() => {
+    // Only fetch if not provided as props
+    if (providedFolders && providedTaskBoards) {
+      setFolders(providedFolders);
+      setTaskBoards(providedTaskBoards);
+      return;
+    }
+
     const fetchData = async () => {
       try {
         const [foldersData, taskBoardsData] = await Promise.all([
@@ -53,7 +66,7 @@ export default function NavigationSidebar({
     };
 
     fetchData();
-  }, []);
+  }, [providedFolders, providedTaskBoards]);
 
   const handleViewChange = (view: string) => {
     if (onViewChange) {

@@ -21,10 +21,25 @@ export const tasksService = {
     return tasks.map((task: Task) => normalizeTask(task));
   },
 
-  async getBySchedule(): Promise<{
+  async getBySchedule(schedule?: "today" | "tomorrow"): Promise<{
     today: Task[];
     tomorrow: Task[];
   }> {
+    if (schedule) {
+      // Fetch only the requested schedule
+      const response = await fetch(`/api/tasks?schedule=${schedule}`);
+      if (!response.ok) {
+        throw new Error("Failed to fetch scheduled tasks");
+      }
+      const tasks = await response.json();
+      const normalizedTasks = tasks.map((task: Task) => normalizeTask(task));
+      return {
+        today: schedule === "today" ? normalizedTasks : [],
+        tomorrow: schedule === "tomorrow" ? normalizedTasks : [],
+      };
+    }
+
+    // Fetch both if no schedule specified (for backward compatibility)
     const [todayResponse, tomorrowResponse] = await Promise.all([
       fetch("/api/tasks?schedule=today"),
       fetch("/api/tasks?schedule=tomorrow"),

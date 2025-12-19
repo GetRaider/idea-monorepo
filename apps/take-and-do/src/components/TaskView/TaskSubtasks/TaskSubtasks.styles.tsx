@@ -127,8 +127,3 @@ export const EmptySubtasksMessage = styled.div`
   font-size: 14px;
   padding: 8px;
 `;
-
-
-
-
-

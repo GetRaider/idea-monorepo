@@ -3,7 +3,6 @@ import { getAllFolders, getAllTaskBoards } from "@/db/queries";
 
 export async function GET() {
   try {
-    // Return folders and task boards
     const [folders, taskBoards] = await Promise.all([
       getAllFolders(),
       getAllTaskBoards(),

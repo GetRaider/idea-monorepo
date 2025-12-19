@@ -641,4 +641,3 @@ export async function updateTask(
   const updated = await getTaskById(taskId);
   return updated;
 }
-

@@ -24,11 +24,13 @@ import {
 interface SingleKanbanBoardProps {
   boardName: string;
   workspaceTitle: string;
+  taskBoardNameMap?: Record<string, string>;
 }
 
 export function SingleKanbanBoard({
   boardName,
   workspaceTitle,
+  taskBoardNameMap = {},
 }: SingleKanbanBoardProps) {
   const [tasks, setTasks] =
     useState<Record<TaskStatus, Task[]>>(emptyTaskColumns);
@@ -48,7 +50,10 @@ export function SingleKanbanBoard({
     const fetchTasks = async () => {
       setIsLoading(true);
       try {
-        const taskBoardNamesMap = await fetchTaskBoardNameMap();
+        const taskBoardNamesMap =
+          Object.keys(taskBoardNameMap).length > 0
+            ? taskBoardNameMap
+            : await fetchTaskBoardNameMap();
         const foundTaskBoardId = findTaskBoardId(taskBoardNamesMap, boardName);
 
         setTaskBoardId(foundTaskBoardId);
@@ -67,6 +72,7 @@ export function SingleKanbanBoard({
     };
 
     fetchTasks();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [boardName]);
 
   const handleTaskStatusChange = useCallback(
@@ -113,7 +119,10 @@ export function SingleKanbanBoard({
     async (createdTask: Task) => {
       // Refresh tasks
       try {
-        const taskBoardNamesMap = await fetchTaskBoardNameMap();
+        const taskBoardNamesMap =
+          Object.keys(taskBoardNameMap).length > 0
+            ? taskBoardNameMap
+            : await fetchTaskBoardNameMap();
         await loadTaskBoardContent({
           boardName,
           taskBoardNamesMap,
@@ -125,7 +134,7 @@ export function SingleKanbanBoard({
         console.error("Failed to refresh tasks after creation:", error);
       }
     },
-    [boardName, setSelectedTask],
+    [boardName, taskBoardNameMap, setSelectedTask],
   );
 
   return (

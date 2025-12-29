@@ -1,4 +1,5 @@
 import { ComposeTaskInput } from "../schemas";
+import { PROMPT_RULES, PROMPT_GUIDELINES, PROMPT_OPTIONS } from "./constants";
 
 export function buildComposePrompt(input: ComposeTaskInput): string {
   return `You are a task composition assistant. Convert the following raw text into a structured task matching the Task interface.
@@ -7,33 +8,30 @@ RAW TEXT:
 ${input.text}
 
 RULES:
-- Return ONLY valid JSON, no additional text or markdown
+${PROMPT_RULES.JSON_ONLY}
 - Extract all task properties that can be inferred from the text
 - Include only fields that are explicitly mentioned or clearly implied
-- Do NOT invent details not present in the text
-- Use ISO 8601 date strings for dates (YYYY-MM-DD or YYYY-MM-DDTHH:mm:ssZ)
+${PROMPT_RULES.NO_INVENTION}
+${PROMPT_RULES.DATE_FORMAT}
+${PROMPT_RULES.INFER_REASONABLE}
 
 REQUIRED FIELDS:
 - "summary": string - concise task title (max 100 characters)
 - "description": string - detailed explanation of what needs to be done
-- "priority": "low" | "medium" | "high" | "critical" - based on urgency and importance
+- "priority": ${PROMPT_OPTIONS.PRIORITY} - based on urgency and importance
 
 OPTIONAL FIELDS (include only if mentioned in text):
 - "labels": string[] - tags or categories mentioned (e.g., ["bug", "frontend"])
 - "dueDate": string - ISO 8601 date if deadline is mentioned
 - "estimation": number - hours (default) or story points if explicitly stated
-- "schedule": "today" | "tomorrow" - if explicitly mentioned
+- "schedule": ${PROMPT_OPTIONS.SCHEDULE} - if explicitly mentioned
 - "scheduleDate": string - ISO 8601 date if specific scheduling date is mentioned
-- "status": "To Do" | "In Progress" | "Done" - only if explicitly stated
+- "status": ${PROMPT_OPTIONS.STATUS} - only if explicitly stated
 
 DO NOT INCLUDE (system-managed):
 - "id", "taskBoardId", "taskKey", "subtasks"
 
-PRIORITY GUIDELINES:
-- "critical": immediate risk or blocking issue (e.g., "ASAP", "blocking", "urgent")
-- "high": time-sensitive or deadline-driven
-- "medium": important but not urgent (default if no urgency indicators)
-- "low": optional or explicitly deferrable work
+${PROMPT_GUIDELINES.PRIORITY}
 
 ADDITIONAL RULES:
 - The description must expand on the summary with concrete intent or scope
@@ -47,13 +45,13 @@ OUTPUT FORMAT:
 {
   "summary": "string - concise task title",
   "description": "string - detailed explanation of the task",
-  "priority": "low" | "medium" | "high" | "critical",
+  "priority": ${PROMPT_OPTIONS.PRIORITY},
   "labels": ["string"] (optional),
   "dueDate": "YYYY-MM-DD" (optional),
   "estimation": number (optional),
-  "schedule": "today" | "tomorrow" (optional),
+  "schedule": ${PROMPT_OPTIONS.SCHEDULE} (optional),
   "scheduleDate": "YYYY-MM-DD" (optional),
-  "status": "To Do" | "In Progress" | "Done" (optional)
+  "status": ${PROMPT_OPTIONS.STATUS} (optional)
 }
 
 Respond with the JSON object only.`;

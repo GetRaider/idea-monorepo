@@ -1,4 +1,5 @@
 import { AnalyticsInput } from "../schemas";
+import { PROMPT_RULES } from "./constants";
 
 export function buildAnalyticsPrompt(input: AnalyticsInput): string {
   const { stats, timeframe } = input;
@@ -19,7 +20,7 @@ ANALYSIS GUIDELINES:
 - Recommendations must be specific, practical, and actionable within a task-management workflow
 
 RULES:
-- Return ONLY valid JSON, no additional text or markdown
+${PROMPT_RULES.JSON_ONLY}
 - Keep summary concise (1–2 sentences)
 - Each insight, risk, and recommendation must be a complete sentence
 - Avoid generic language (e.g., "could be improved", "might help")

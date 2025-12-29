@@ -1,4 +1,5 @@
 import { DecomposeTaskInput } from "../schemas";
+import { PROMPT_RULES, PROMPT_GUIDELINES, PROMPT_OPTIONS } from "./constants";
 
 export function buildDecomposePrompt(input: DecomposeTaskInput): string {
   const descriptionLine = input.description
@@ -12,30 +13,26 @@ Title: ${input.title}
 ${descriptionLine}
 
 RULES:
-- Return ONLY valid JSON, no additional text or markdown
+${PROMPT_RULES.JSON_ONLY}
 - Each subtask must be atomic (single action, completable in one session)
 - Each subtask must have a clear, actionable verb (e.g., "Create", "Implement", "Write", "Configure")
 - Do NOT use vague verbs like "Handle", "Manage", "Process", "Deal with"
-- Do NOT invent requirements not implied by the task
+${PROMPT_RULES.NO_INVENTION}
 - Do NOT add testing, documentation, or deployment tasks unless explicitly mentioned
 - Maximum 7 subtasks
 - Minimum 1 subtask
-- Each subtask must have a priority: "low", "medium", "high", or "critical"
-- Priority inference rules:
-    - "critical": task is blocking, urgent, or has immediate impact
-    - "high": task is important and time-sensitive
-    - "medium": important but not urgent (default if no urgency indicators)
-    - "low": optional or deferrable work
 - The description of each subtask should expand on the title with clear, actionable details
 - Do NOT include subtasks that are outside the scope of the main task
+
+${PROMPT_GUIDELINES.PRIORITY}
 
 OUTPUT FORMAT:
 {
   "tasks": [
     {
-      "title": "string - concise action title",
+      "title": "string - concise action title (max 100 characters)",
       "description": "string - detailed explanation of what needs to be done",
-      "priority": "low" | "medium" | "high" | "critical"
+      "priority": ${PROMPT_OPTIONS.PRIORITY}
     }
   ]
 }

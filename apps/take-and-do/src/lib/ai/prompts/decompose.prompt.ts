@@ -20,7 +20,14 @@ RULES:
 - Do NOT add testing, documentation, or deployment tasks unless explicitly mentioned
 - Maximum 7 subtasks
 - Minimum 1 subtask
-- Priority must be one of: "low", "medium", "high", "critical"
+- Each subtask must have a priority: "low", "medium", "high", or "critical"
+- Priority inference rules:
+    - "critical": task is blocking, urgent, or has immediate impact
+    - "high": task is important and time-sensitive
+    - "medium": important but not urgent (default if no urgency indicators)
+    - "low": optional or deferrable work
+- The description of each subtask should expand on the title with clear, actionable details
+- Do NOT include subtasks that are outside the scope of the main task
 
 OUTPUT FORMAT:
 {
@@ -35,6 +42,3 @@ OUTPUT FORMAT:
 
 Respond with the JSON object only.`;
 }
-
-
-

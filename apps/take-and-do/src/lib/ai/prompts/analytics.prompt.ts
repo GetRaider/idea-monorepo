@@ -35,6 +35,3 @@ OUTPUT FORMAT:
 
 Respond with the JSON object only.`;
 }
-
-
-

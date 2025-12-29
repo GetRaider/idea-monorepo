@@ -21,7 +21,7 @@ REQUIRED FIELDS:
 OPTIONAL FIELDS (include only if mentioned in text):
 - "labels": string[] - tags or categories mentioned (e.g., ["bug", "frontend"])
 - "dueDate": string - ISO 8601 date if deadline is mentioned
-- "estimation": number - hours or story points if time estimate is mentioned
+- "estimation": number - hours (default) or story points if explicitly stated
 - "schedule": "today" | "tomorrow" - if explicitly mentioned
 - "scheduleDate": string - ISO 8601 date if specific scheduling date is mentioned
 - "status": "To Do" | "In Progress" | "Done" - only if explicitly stated
@@ -30,10 +30,18 @@ DO NOT INCLUDE (system-managed):
 - "id", "taskBoardId", "taskKey", "subtasks"
 
 PRIORITY GUIDELINES:
-- "critical" - Urgent and important, needs immediate attention
-- "high" - Important and time-sensitive
-- "medium" - Important but not urgent (default)
-- "low" - Nice to have, can be deferred
+- "critical": immediate risk or blocking issue (e.g., "ASAP", "blocking", "urgent")
+- "high": time-sensitive or deadline-driven
+- "medium": important but not urgent (default if no urgency indicators)
+- "low": optional or explicitly deferrable work
+
+ADDITIONAL RULES:
+- The description must expand on the summary with concrete intent or scope
+- Do NOT repeat the summary verbatim in the description
+- Include "estimation" only if a numeric estimate is explicitly mentioned
+- If "schedule" is present, do NOT include "scheduleDate"
+- Do NOT decompose the task into subtasks
+- Do NOT infer task boards, workflows, or ownership
 
 OUTPUT FORMAT:
 {

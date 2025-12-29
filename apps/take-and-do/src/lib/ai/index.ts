@@ -80,17 +80,10 @@ export async function decomposeTask(
 export async function generateAnalytics(
   input: AnalyticsInput,
 ): Promise<AnalyticsOutput> {
-  // Validate input
   const validatedInput = AnalyticsInputSchema.parse(input);
-
-  // Build prompt
   const prompt = buildAnalyticsPrompt(validatedInput);
-
-  // Call AI provider
   const provider = getAIProvider();
   const response = await provider.complete(prompt);
-
-  // Parse and validate output
   const parsed = parseJSON(response);
   const result = AnalyticsOutputSchema.safeParse(parsed);
 
@@ -107,6 +100,18 @@ export async function generateAnalytics(
   return result.data;
 }
 
+function removeNullValues(
+  obj: Record<string, unknown>,
+): Record<string, unknown> {
+  const cleaned: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (value !== null) {
+      cleaned[key] = value;
+    }
+  }
+  return cleaned;
+}
+
 export async function composeTask(
   input: ComposeTaskInput,
 ): Promise<ComposeTaskOutput> {
@@ -115,7 +120,8 @@ export async function composeTask(
   const provider = getAIProvider();
   const response = await provider.complete(prompt);
   const parsed = parseJSON(response);
-  const result = ComposeTaskOutputSchema.safeParse(parsed);
+  const cleaned = removeNullValues(parsed as Record<string, unknown>);
+  const result = ComposeTaskOutputSchema.safeParse(cleaned);
 
   if (!result.success) {
     const errors = result.error.errors

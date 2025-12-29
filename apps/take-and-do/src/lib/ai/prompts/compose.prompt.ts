@@ -20,7 +20,7 @@ REQUIRED FIELDS:
 - "description": string - detailed explanation of what needs to be done
 - "priority": ${PROMPT_OPTIONS.PRIORITY} - based on urgency and importance
 
-OPTIONAL FIELDS (include only if mentioned in text):
+OPTIONAL FIELDS (include only if mentioned in text, omit if not present):
 - "labels": string[] - tags or categories mentioned (e.g., ["bug", "frontend"])
 - "dueDate": string - ISO 8601 date if deadline is mentioned
 - "estimation": number - hours (default) or story points if explicitly stated
@@ -28,8 +28,9 @@ OPTIONAL FIELDS (include only if mentioned in text):
 - "scheduleDate": string - ISO 8601 date if specific scheduling date is mentioned
 - "status": ${PROMPT_OPTIONS.STATUS} - only if explicitly stated
 
-DO NOT INCLUDE (system-managed):
-- "id", "taskBoardId", "taskKey", "subtasks"
+IMPORTANT:
+- Do NOT include optional fields with null values - omit them entirely if not present
+- Do NOT include system-managed fields: "id", "taskBoardId", "taskKey", "subtasks"
 
 ${PROMPT_GUIDELINES.PRIORITY}
 

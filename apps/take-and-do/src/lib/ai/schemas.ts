@@ -71,19 +71,19 @@ export const ComposeTaskInputSchema = z.object({
 const TaskStatusSchema = z.enum(["To Do", "In Progress", "Done"]);
 
 export const ComposeTaskOutputSchema = z.object({
-  id: z.string().optional(),
-  taskBoardId: z.string().optional(),
-  taskKey: z.string().optional(),
+  id: z.string().nullish(),
+  taskBoardId: z.string().nullish(),
+  taskKey: z.string().nullish(),
   summary: z.string().min(1),
   description: z.string().min(1),
-  status: TaskStatusSchema.optional(),
+  status: TaskStatusSchema.nullish(),
   priority: TaskPrioritySchema,
-  labels: z.array(z.string()).optional(),
-  dueDate: z.string().optional(),
-  estimation: z.number().positive().optional(),
-  subtasks: z.array(z.any()).optional(),
-  schedule: z.enum(["today", "tomorrow"]).optional(),
-  scheduleDate: z.string().optional(),
+  labels: z.array(z.string()).nullish(),
+  dueDate: z.string().nullish(),
+  estimation: z.number().positive().nullish(),
+  subtasks: z.array(z.any()).nullish(),
+  schedule: z.enum(["today", "tomorrow"]).nullish(),
+  scheduleDate: z.string().nullish(),
 });
 
 export type ComposeTaskInput = z.infer<typeof ComposeTaskInputSchema>;

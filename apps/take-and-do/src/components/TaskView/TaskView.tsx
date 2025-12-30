@@ -384,29 +384,46 @@ export default function TaskView({
           onTaskChange={(updatedTask) => {
             setTask(updatedTask);
             if (!isCreating && initialTask) {
+              // Helper to safely get timestamp from date (handles Date objects and strings)
+              const getTimestamp = (
+                date: Date | string | undefined | null,
+              ): number | undefined => {
+                if (!date) return undefined;
+                if (date instanceof Date) return date.getTime();
+                const parsed = new Date(date);
+                return isNaN(parsed.getTime()) ? undefined : parsed.getTime();
+              };
+
               // Track changes for save (compare against initial task)
               const updates: Partial<Task> = {};
 
-              const initialDueDate = initialTask.dueDate?.getTime();
-              const updatedDueDate = updatedTask.dueDate?.getTime();
+              const initialDueDate = getTimestamp(initialTask.dueDate);
+              const updatedDueDate = getTimestamp(updatedTask.dueDate);
               if (initialDueDate !== updatedDueDate) {
                 updates.dueDate = updatedTask.dueDate;
               }
 
-              const initialScheduleDate = initialTask.scheduleDate?.getTime();
-              const updatedScheduleDate = updatedTask.scheduleDate?.getTime();
+              const initialScheduleDate = getTimestamp(
+                initialTask.scheduleDate,
+              );
+              const updatedScheduleDate = getTimestamp(
+                updatedTask.scheduleDate,
+              );
               if (initialScheduleDate !== updatedScheduleDate) {
                 updates.scheduleDate = updatedTask.scheduleDate;
+              }
+
+              if (updatedTask.schedule !== initialTask.schedule) {
+                updates.schedule = updatedTask.schedule;
               }
 
               if (updatedTask.estimation !== initialTask.estimation) {
                 updates.estimation = updatedTask.estimation;
               }
 
-              if (
-                JSON.stringify(updatedTask.labels || []) !==
-                JSON.stringify(initialTask.labels || [])
-              ) {
+              const initialLabels = JSON.stringify(initialTask.labels || []);
+              const updatedLabels = JSON.stringify(updatedTask.labels || []);
+              if (updatedLabels !== initialLabels) {
                 updates.labels = updatedTask.labels;
               }
 
@@ -418,31 +435,10 @@ export default function TaskView({
                 updates.status = updatedTask.status;
               }
 
-              setPendingUpdates((prev) => {
-                const merged = { ...prev, ...updates };
-                // Remove keys that match initial values
-                Object.keys(merged).forEach((key) => {
-                  const typedKey = key as keyof Task;
-                  const initialValue = initialTask[typedKey];
-                  const mergedValue = merged[typedKey];
-
-                  // Handle date comparisons
-                  if (typedKey === "dueDate" || typedKey === "scheduleDate") {
-                    const initialTime = (
-                      initialValue as Date | undefined
-                    )?.getTime();
-                    const mergedTime = (
-                      mergedValue as Date | undefined
-                    )?.getTime();
-                    if (initialTime === mergedTime) {
-                      delete merged[typedKey];
-                    }
-                  } else if (mergedValue === initialValue) {
-                    delete merged[typedKey];
-                  }
-                });
-                return merged;
-              });
+              // Only update if there are actual changes
+              if (Object.keys(updates).length > 0) {
+                setPendingUpdates((prev) => ({ ...prev, ...updates }));
+              }
             }
           }}
         />

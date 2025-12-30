@@ -641,3 +641,81 @@ export async function updateTask(
   const updated = await getTaskById(taskId);
   return updated;
 }
+
+export interface TaskStatistics {
+  tasksCreated: number;
+  tasksCompleted: number;
+  avgCompletionTimeDays: number;
+  overdueRate: number;
+}
+
+export async function getTaskStatistics(
+  timeframe: "week" | "month" | "quarter" = "month",
+): Promise<TaskStatistics> {
+  const now = new Date();
+  const startDate = new Date(now);
+
+  switch (timeframe) {
+    case "week":
+      startDate.setDate(now.getDate() - 7);
+      break;
+    case "month":
+      startDate.setMonth(now.getMonth() - 1);
+      break;
+    case "quarter":
+      startDate.setMonth(now.getMonth() - 3);
+      break;
+  }
+
+  const allTasks = await db
+    .select({
+      id: tasks.id,
+      status: tasks.status,
+      createdAt: tasks.createdAt,
+      updatedAt: tasks.updatedAt,
+      dueDate: tasks.dueDate,
+    })
+    .from(tasks)
+    .where(gte(tasks.createdAt, startDate));
+
+  const tasksCreated = allTasks.length;
+  const completedTasks = allTasks.filter((t) => t.status === "Done");
+
+  const tasksCompleted = completedTasks.length;
+
+  let avgCompletionTimeDays = 0;
+  if (completedTasks.length > 0) {
+    const completionTimes = completedTasks
+      .map((task) => {
+        const created = new Date(task.createdAt).getTime();
+        const updated = new Date(task.updatedAt).getTime();
+        return (updated - created) / (1000 * 60 * 60 * 24);
+      })
+      .filter((days) => days >= 0);
+
+    if (completionTimes.length > 0) {
+      avgCompletionTimeDays =
+        completionTimes.reduce((sum, days) => sum + days, 0) /
+        completionTimes.length;
+    }
+  }
+
+  const tasksWithDueDate = allTasks.filter((t) => t.dueDate !== null);
+  const overdueTasks = tasksWithDueDate.filter((t) => {
+    if (t.status === "Done") return false;
+    const dueDate = new Date(t.dueDate!);
+    return dueDate < now;
+  });
+
+  const overdueRate =
+    tasksWithDueDate.length > 0
+      ? overdueTasks.length / tasksWithDueDate.length
+      : 0;
+
+  return {
+    tasksCreated,
+    tasksCompleted,
+    avgCompletionTimeDays: Math.round(avgCompletionTimeDays * 10) / 10,
+    overdueRate: Math.round(overdueRate * 100) / 100,
+  };
+}

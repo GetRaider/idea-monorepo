@@ -6,6 +6,7 @@ import {
   Board,
   LoadingContainer,
   Spinner,
+  EmptyStateWrapper,
 } from "./KanbanBoard.styles";
 import { Column } from "./Column/Column";
 import { Toolbar } from "./shared/Toolbar";
@@ -20,6 +21,7 @@ import {
   useTaskBoardState,
   updateTaskInColumns,
 } from "@/hooks/useTaskBoardState";
+import { EmptyState } from "../EmptyState";
 
 interface SingleKanbanBoardProps {
   boardName: string;
@@ -150,28 +152,42 @@ export function SingleKanbanBoard({
             <LoadingContainer>
               <Spinner />
             </LoadingContainer>
-          ) : (
-            <>
-              <Column
-                tasks={tasks[TaskStatus.TODO]}
-                status={TaskStatus.TODO}
-                onTaskDrop={handleTaskStatusChange}
-                onTaskClick={handleTaskClick}
-              />
-              <Column
-                tasks={tasks[TaskStatus.IN_PROGRESS]}
-                status={TaskStatus.IN_PROGRESS}
-                onTaskDrop={handleTaskStatusChange}
-                onTaskClick={handleTaskClick}
-              />
-              <Column
-                tasks={tasks[TaskStatus.DONE]}
-                status={TaskStatus.DONE}
-                onTaskDrop={handleTaskStatusChange}
-                onTaskClick={handleTaskClick}
-              />
-            </>
-          )}
+          ) : (() => {
+            const totalTasks =
+              tasks[TaskStatus.TODO].length +
+              tasks[TaskStatus.IN_PROGRESS].length +
+              tasks[TaskStatus.DONE].length;
+
+            return totalTasks === 0 ? (
+              <EmptyStateWrapper>
+                <EmptyState
+                  title="You have no tasks"
+                  message={`No tasks in ${workspaceTitle}`}
+                />
+              </EmptyStateWrapper>
+            ) : (
+              <>
+                <Column
+                  tasks={tasks[TaskStatus.TODO]}
+                  status={TaskStatus.TODO}
+                  onTaskDrop={handleTaskStatusChange}
+                  onTaskClick={handleTaskClick}
+                />
+                <Column
+                  tasks={tasks[TaskStatus.IN_PROGRESS]}
+                  status={TaskStatus.IN_PROGRESS}
+                  onTaskDrop={handleTaskStatusChange}
+                  onTaskClick={handleTaskClick}
+                />
+                <Column
+                  tasks={tasks[TaskStatus.DONE]}
+                  status={TaskStatus.DONE}
+                  onTaskDrop={handleTaskStatusChange}
+                  onTaskClick={handleTaskClick}
+                />
+              </>
+            );
+          })()}
         </Board>
       </BoardContainer>
       <TaskView

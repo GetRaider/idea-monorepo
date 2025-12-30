@@ -289,6 +289,7 @@ export default function TaskView({
         dueDate: task.dueDate,
         estimation: task.estimation,
         schedule: task.schedule,
+        scheduleDate: task.scheduleDate,
         subtasks: task.subtasks,
       };
 

@@ -218,6 +218,14 @@ export const EmptyStateMessage = styled.div`
   grid-column: 1 / -1;
 `;
 
+export const EmptyStateWrapper = styled.div`
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - 200px);
+`;
+
 export const WorkspaceIcon = styled.div`
   width: 16px;
   height: 16px;

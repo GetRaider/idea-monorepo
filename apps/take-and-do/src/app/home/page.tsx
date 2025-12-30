@@ -8,11 +8,10 @@ import { Task } from "@/components/KanbanBoard/types";
 import {
   StatsCards,
   StatisticsOverview,
-  SummarySection,
-  TodayTasks,
+  ScheduledTasks,
   QuickActions,
 } from ".";
-import type { TaskStats, AnalyticsData, Timeframe } from ".";
+import type { TaskStats } from ".";
 import {
   PageContainer,
   MainContent,
@@ -29,11 +28,8 @@ function HomePage() {
   const [isNavSidebarOpen, setIsNavSidebarOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [todayTasks, setTodayTasks] = useState<Task[]>([]);
-  const [, setTomorrowTasks] = useState<Task[]>([]);
+  const [tomorrowTasks, setTomorrowTasks] = useState<Task[]>([]);
   const [taskStats, setTaskStats] = useState<TaskStats | null>(null);
-  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
-  const [isGeneratingAnalytics, setIsGeneratingAnalytics] = useState(false);
-  const [summaryTimeframe, setSummaryTimeframe] = useState<Timeframe>("month");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -60,41 +56,6 @@ function HomePage() {
 
     fetchData();
   }, []);
-
-  const handleGenerateAnalytics = async (useAI: boolean) => {
-    try {
-      setIsGeneratingAnalytics(true);
-
-      const statsResponse = await fetch(
-        `/api/analytics?timeframe=${summaryTimeframe}`,
-      );
-      if (!statsResponse.ok) {
-        throw new Error("Failed to fetch statistics");
-      }
-      const { stats: fetchedStats } = await statsResponse.json();
-
-      const analyticsResponse = await fetch("/api/analytics", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          stats: fetchedStats,
-          timeframe: summaryTimeframe,
-          shouldUseAI: useAI,
-        }),
-      });
-
-      if (!analyticsResponse.ok) {
-        throw new Error("Failed to generate analytics");
-      }
-
-      const data = await analyticsResponse.json();
-      setAnalytics(data.analytics);
-    } catch (error) {
-      console.error("Failed to generate analytics:", error);
-    } finally {
-      setIsGeneratingAnalytics(false);
-    }
-  };
 
   const handleNavigationChange = (page: string) => {
     setCurrentPage(page);
@@ -136,16 +97,7 @@ function HomePage() {
           <Subtitle>Here&apos;s an overview of your workspace</Subtitle>
         </WelcomeSection>
 
-        <TwoColumnGrid>
-          <SummarySection
-            analytics={analytics}
-            timeframe={summaryTimeframe}
-            onTimeframeChange={setSummaryTimeframe}
-            onGenerateAnalytics={handleGenerateAnalytics}
-            isGenerating={isGeneratingAnalytics}
-          />
-          <TodayTasks tasks={todayTasks} />
-        </TwoColumnGrid>
+        <ScheduledTasks todayTasks={todayTasks} tomorrowTasks={tomorrowTasks} />
 
         <StatisticsOverview />
 

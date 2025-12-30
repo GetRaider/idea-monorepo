@@ -123,10 +123,30 @@ export default function TaskMetadata({
     if (scheduleDateValue) {
       const newDate = new Date(scheduleDateValue);
       if (!isNaN(newDate.getTime())) {
-        updateTask({ scheduleDate: newDate });
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const checkDate = new Date(newDate);
+        checkDate.setHours(0, 0, 0, 0);
+
+        let schedule: "today" | "tomorrow" | undefined;
+        if (checkDate.getTime() === today.getTime()) {
+          schedule = "today";
+        } else if (checkDate.getTime() === tomorrow.getTime()) {
+          schedule = "tomorrow";
+        }
+
+        updateTask({
+          scheduleDate: newDate,
+          schedule,
+        });
       }
     } else {
-      updateTask({ scheduleDate: undefined });
+      updateTask({
+        scheduleDate: undefined,
+        schedule: undefined,
+      });
     }
   };
   const handleEstimationClick = () => {

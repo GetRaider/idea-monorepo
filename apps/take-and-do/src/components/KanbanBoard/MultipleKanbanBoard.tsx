@@ -9,7 +9,7 @@ import {
   Spinner,
   TaskGroupWrapper,
   GroupChevron,
-  EmptyStateMessage,
+  EmptyStateWrapper,
 } from "./KanbanBoard.styles";
 import { Column } from "./Column/Column";
 import { Toolbar } from "./shared/Toolbar";
@@ -32,6 +32,7 @@ import {
   useTaskBoardState,
   updateTaskInColumns,
 } from "@/hooks/useTaskBoardState";
+import { EmptyState } from "../EmptyState";
 
 interface MultipleKanbanBoardProps {
   schedule?: TaskSchedule;
@@ -389,9 +390,18 @@ export function MultipleKanbanBoard({
               })}
             </>
           ) : (
-            <EmptyStateMessage>
-              No tasks available for {workspaceTitle}
-            </EmptyStateMessage>
+            <EmptyStateWrapper>
+              <EmptyState
+                title="You have no tasks"
+                message={
+                  schedule === TaskSchedule.TODAY
+                    ? "No tasks scheduled for today"
+                    : schedule === TaskSchedule.TOMORROW
+                      ? "No tasks scheduled for tomorrow"
+                      : `No tasks available for ${workspaceTitle}`
+                }
+              />
+            </EmptyStateWrapper>
           )}
         </Board>
       </BoardContainer>

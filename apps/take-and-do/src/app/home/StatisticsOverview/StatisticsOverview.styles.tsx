@@ -1,6 +1,10 @@
 "use client";
 
-import styled from "styled-components";
+import styled, { css } from "styled-components";
+import {
+  animatedGradientBackground,
+  animatedGradientHover,
+} from "./animatedGradient";
 
 export const Section = styled.div`
   background: #1a1a1a;
@@ -40,13 +44,8 @@ export const TimeframeSelect = styled.select`
   cursor: pointer;
 `;
 
-export const DropdownContainer = styled.div`
-  position: relative;
-`;
-
 export const GenerateButton = styled.button<{ $disabled?: boolean }>`
   padding: 8px 16px;
-  background: #7255c1;
   border: none;
   border-radius: 6px;
   color: #fff;
@@ -54,39 +53,28 @@ export const GenerateButton = styled.button<{ $disabled?: boolean }>`
   font-weight: 600;
   cursor: ${(props) => (props.$disabled ? "not-allowed" : "pointer")};
   opacity: ${(props) => (props.$disabled ? 0.6 : 1)};
-  display: flex;
-  align-items: center;
-  gap: 6px;
-`;
-
-export const DropdownMenu = styled.div`
-  position: absolute;
-  top: 100%;
-  right: 0;
-  margin-top: 4px;
-  background: #2a2a2a;
-  border: 1px solid #3a3a3a;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  z-index: 1001;
-  min-width: 150px;
-  overflow: hidden;
-`;
-
-export const DropdownItem = styled.button<{ $hasBorder?: boolean }>`
-  width: 100%;
-  padding: 10px 12px;
-  background: transparent;
-  border: none;
-  border-top: ${(props) => (props.$hasBorder ? "1px solid #3a3a3a" : "none")};
-  color: #fff;
-  font-size: 14px;
-  cursor: pointer;
-  text-align: left;
   transition: background 0.2s;
+  position: relative;
+  overflow: hidden;
 
-  &:hover {
-    background: #3a3a3a;
+  ${(props) =>
+    !props.$disabled
+      ? animatedGradientBackground
+      : css`
+          background: #7255c1;
+        `}
+
+  &:hover:not(:disabled) {
+    ${animatedGradientHover}
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none !important;
+    background: #7255c1 !important;
+
+    &:hover:not(:disabled) {
+      background: #8255d1 !important;
+    }
   }
 `;
 

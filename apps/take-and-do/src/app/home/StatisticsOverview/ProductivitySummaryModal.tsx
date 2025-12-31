@@ -57,18 +57,18 @@ function ProductivitySummaryModal({
             </CardList>
           </AICard>
 
-          {analytics.risks.length > 0 && (
-            <AICard>
-              <CardTitle $color="#f59e0b" style={{ marginBottom: "12px" }}>
-                Risks
-              </CardTitle>
-              <CardList>
-                {analytics.risks.map((risk, idx) => (
-                  <li key={idx}>{risk}</li>
-                ))}
-              </CardList>
-            </AICard>
-          )}
+          <AICard>
+            <CardTitle $color="#f59e0b" style={{ marginBottom: "12px" }}>
+              Risks
+            </CardTitle>
+            <CardList>
+              {analytics.risks.length > 0 ? (
+                analytics.risks.map((risk, idx) => <li key={idx}>{risk}</li>)
+              ) : (
+                <li>No significant risks detected.</li>
+              )}
+            </CardList>
+          </AICard>
 
           <AICard>
             <CardTitle $color="#10b981" style={{ marginBottom: "12px" }}>

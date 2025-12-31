@@ -23,6 +23,7 @@ export const ModalContent = styled.div`
   padding: 24px;
   max-width: 800px;
   width: 100%;
+  min-height: 400px;
   max-height: 90vh;
   overflow-y: auto;
   color: #fff;

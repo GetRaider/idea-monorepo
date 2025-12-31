@@ -14,7 +14,7 @@ interface SerializedTask {
   dueDate?: string;
   estimation?: number;
   subtasks: SerializedTask[];
-  schedule?: string;
+  scheduleDate?: string;
 }
 
 function serializeTask(task: Task): SerializedTask {
@@ -30,7 +30,7 @@ function serializeTask(task: Task): SerializedTask {
     dueDate: task.dueDate?.toISOString(),
     estimation: task.estimation,
     subtasks: (task.subtasks || []).map((subtask) => serializeTask(subtask)),
-    schedule: task.schedule,
+    scheduleDate: task.scheduleDate?.toISOString(),
   };
 }
 

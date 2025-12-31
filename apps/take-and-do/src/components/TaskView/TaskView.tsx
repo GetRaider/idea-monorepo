@@ -42,6 +42,7 @@ export default function TaskView({
   onTaskUpdate,
   onSubtaskClick,
   onTaskCreated,
+  onTaskDelete,
 }: TaskViewProps) {
   const isSubtask = !!parentTask;
   const [task, setTask] = useState<Task | null>(initialTask);
@@ -288,7 +289,6 @@ export default function TaskView({
         labels: task.labels,
         dueDate: task.dueDate,
         estimation: task.estimation,
-        schedule: task.schedule,
         scheduleDate: task.scheduleDate,
         subtasks: task.subtasks,
       };
@@ -303,6 +303,27 @@ export default function TaskView({
       setIsCreatingTask(false);
     }
   };
+
+  const handleDelete = useCallback(async () => {
+    if (!task || !task.id || isCreating) return;
+
+    if (
+      !confirm(
+        "Are you sure you want to delete this task? This action cannot be undone.",
+      )
+    ) {
+      return;
+    }
+
+    try {
+      await tasksService.delete(task.id);
+      onTaskDelete?.(task.id);
+      onClose();
+    } catch (error) {
+      console.error("Failed to delete task:", error);
+      alert("Failed to delete task. Please try again.");
+    }
+  }, [task, isCreating, onTaskDelete, onClose]);
 
   // Only render if we have a task (either existing or for creation)
   if (!task) return null;
@@ -321,6 +342,8 @@ export default function TaskView({
           onStatusClick={handleStatusClick}
           onStatusSelect={handleStatusSelect}
           onClose={onClose}
+          onDelete={handleDelete}
+          isCreating={isCreating}
         />
         <TaskTitleSection>
           <PriorityDropdownWrapper ref={priorityDropdownRef}>
@@ -414,10 +437,6 @@ export default function TaskView({
                 updates.scheduleDate = updatedTask.scheduleDate;
               }
 
-              if (updatedTask.schedule !== initialTask.schedule) {
-                updates.schedule = updatedTask.schedule;
-              }
-
               if (updatedTask.estimation !== initialTask.estimation) {
                 updates.estimation = updatedTask.estimation;
               }
@@ -488,4 +507,5 @@ interface TaskViewProps {
   onTaskUpdate?: (updatedTask: Task) => void;
   onSubtaskClick?: (subtask: Task) => void;
   onTaskCreated?: (createdTask: Task) => void;
+  onTaskDelete?: (taskId: string) => void;
 }

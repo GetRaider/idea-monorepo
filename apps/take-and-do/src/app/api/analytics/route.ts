@@ -71,6 +71,12 @@ function generateBasicAnalytics(
       "Long completion times may indicate tasks are too large or poorly scoped.",
     );
   }
+  // Always include at least one risk for Basic Summary
+  if (risks.length === 0) {
+    risks.push(
+      "No significant risks detected based on current task metrics.",
+    );
+  }
 
   const recommendations: string[] = [];
   if (completionRate < 70) {

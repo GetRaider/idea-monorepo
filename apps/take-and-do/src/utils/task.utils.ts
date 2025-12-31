@@ -40,6 +40,14 @@ export function formatDateForInput(date: Date | string): string {
   return `${year}-${month}-${day}`;
 }
 
+// Format date as YYYY-MM-DD in local timezone (not UTC)
+export function formatDateForAPI(date: Date): string {
+  const year = date.getFullYear();
+  const month = (date.getMonth() + 1).toString().padStart(2, "0");
+  const day = date.getDate().toString().padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 export function formatDisplayDate(date?: Date | string): string {
   if (!date) return "";
   const dateObj = date instanceof Date ? date : new Date(date);
@@ -50,11 +58,13 @@ export function formatDisplayDate(date?: Date | string): string {
   return `${day}.${month}.${year}`;
 }
 
-export function formatScheduleDate(date?: Date | string): string {
-  if (!date) return "";
+export function getScheduleFromDate(
+  date?: Date | string,
+): "today" | "tomorrow" | null {
+  if (!date) return null;
 
   const dateObj = date instanceof Date ? date : new Date(date);
-  if (isNaN(dateObj.getTime())) return "";
+  if (isNaN(dateObj.getTime())) return null;
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -66,12 +76,24 @@ export function formatScheduleDate(date?: Date | string): string {
   checkDate.setHours(0, 0, 0, 0);
 
   if (checkDate.getTime() === today.getTime()) {
-    return "Today";
+    return "today";
   } else if (checkDate.getTime() === tomorrow.getTime()) {
-    return "Tomorrow";
-  } else {
-    return formatDisplayDate(dateObj);
+    return "tomorrow";
   }
+  return null;
+}
+
+export function formatScheduleDate(date?: Date | string): string {
+  if (!date) return "";
+
+  const dateObj = date instanceof Date ? date : new Date(date);
+  if (isNaN(dateObj.getTime())) return "";
+
+  const schedule = getScheduleFromDate(dateObj);
+  if (schedule === "today") return "Today";
+  if (schedule === "tomorrow") return "Tomorrow";
+
+  return formatDisplayDate(dateObj);
 }
 
 // ============ Priority Helpers ============

@@ -121,31 +121,22 @@ export default function TaskMetadata({
   const handleScheduleDateBlur = () => {
     setIsEditingScheduleDate(false);
     if (scheduleDateValue) {
-      const newDate = new Date(scheduleDateValue);
-      if (!isNaN(newDate.getTime())) {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        const checkDate = new Date(newDate);
-        checkDate.setHours(0, 0, 0, 0);
-
-        let schedule: "today" | "tomorrow" | undefined;
-        if (checkDate.getTime() === today.getTime()) {
-          schedule = "today";
-        } else if (checkDate.getTime() === tomorrow.getTime()) {
-          schedule = "tomorrow";
+      // Parse YYYY-MM-DD as local date, not UTC
+      const dateParts = scheduleDateValue.split("-");
+      if (dateParts.length === 3) {
+        const year = parseInt(dateParts[0], 10);
+        const month = parseInt(dateParts[1], 10) - 1; // Month is 0-indexed
+        const day = parseInt(dateParts[2], 10);
+        const newDate = new Date(year, month, day);
+        if (!isNaN(newDate.getTime())) {
+          updateTask({
+            scheduleDate: newDate,
+          });
         }
-
-        updateTask({
-          scheduleDate: newDate,
-          schedule,
-        });
       }
     } else {
       updateTask({
         scheduleDate: undefined,
-        schedule: undefined,
       });
     }
   };
@@ -225,7 +216,7 @@ export default function TaskMetadata({
       ) : (
         <MetadataItem
           onClick={handleScheduleDateClick}
-          title="Click to edit schedule"
+          title="Click to edit schedule date"
         >
           <MetadataIcon>
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">

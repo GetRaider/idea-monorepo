@@ -3,9 +3,7 @@
 import { useState, useEffect } from "react";
 import Sidebar from "@/components/Sidebar/Sidebar";
 import NavigationSidebar from "@/components/NavigationSidebar/NavigationSidebar";
-import KanbanBoard, {
-  TaskSchedule,
-} from "@/components/KanbanBoard/KanbanBoard";
+import KanbanBoard from "@/components/KanbanBoard/KanbanBoard";
 import CreateTaskBoardModal from "@/components/NavigationSidebar/CreateTaskBoardModal";
 import { taskBoardsService } from "@/services/api/taskBoards.service";
 import { foldersService } from "@/services/api/folders.service";
@@ -16,9 +14,7 @@ import { PageContainer, Main } from "../page.styles";
 export default function TasksPage() {
   const [, setCurrentPage] = useState("tasks");
   const [isNavSidebarOpen, setIsNavSidebarOpen] = useState(true);
-  const [activeView, setActiveView] = useState<TaskSchedule | string>(
-    TaskSchedule.TODAY,
-  );
+  const [activeView, setActiveView] = useState<string>("today");
   const [workspaceTitle, setWorkspaceTitle] = useState("Today");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [taskBoardNameMap, setTaskBoardNameMap] = useState<
@@ -56,9 +52,9 @@ export default function TasksPage() {
   const handleViewChange = (view: string) => {
     setActiveView(view);
 
-    if (view === TaskSchedule.TODAY) {
+    if (view === "today") {
       setWorkspaceTitle("Today");
-    } else if (view === TaskSchedule.TOMORROW) {
+    } else if (view === "tomorrow") {
       setWorkspaceTitle("Tomorrow");
     } else if (view) {
       setWorkspaceTitle(view);

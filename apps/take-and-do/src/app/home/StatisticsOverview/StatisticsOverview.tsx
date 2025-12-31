@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import {
   BarChart,
   Bar,
@@ -19,10 +19,7 @@ import {
   SectionTitle,
   Controls,
   TimeframeSelect,
-  DropdownContainer,
   GenerateButton,
-  DropdownMenu,
-  DropdownItem,
   ChartsGrid,
   ChartCard,
   ChartTitle,
@@ -36,6 +33,7 @@ import {
   Spinner,
 } from "./StatisticsOverview.styles";
 import ProductivitySummaryModal from "./ProductivitySummaryModal";
+import ProductivitySummarySelectionModal from "./ProductivitySummarySelectionModal";
 import type {
   Timeframe,
   AnalyticsData,
@@ -57,9 +55,11 @@ function StatisticsOverview({}: StatisticsOverviewProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [isGeneratingAnalytics, setIsGeneratingAnalytics] = useState(false);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [isSelectionModalOpen, setIsSelectionModalOpen] = useState(false);
+  const [isResultsModalOpen, setIsResultsModalOpen] = useState(false);
+  const [selectedOption, setSelectedOption] = useState<"basic" | "ai" | null>(
+    null,
+  );
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -82,24 +82,20 @@ function StatisticsOverview({}: StatisticsOverviewProps) {
     fetchStats();
   }, [timeframe]);
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
-      ) {
-        setIsDropdownOpen(false);
-      }
-    };
+  const handleOpenSelectionModal = () => {
+    setIsSelectionModalOpen(true);
+    setSelectedOption(null);
+  };
 
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  const handleSelectOption = (useAI: boolean) => {
+    setSelectedOption(useAI ? "ai" : "basic");
+  };
 
-  const handleGenerateAnalytics = async (useAI: boolean) => {
+  const handleSave = async () => {
+    if (selectedOption === null) return;
+
     try {
       setIsGeneratingAnalytics(true);
-      setIsDropdownOpen(false);
 
       const statsResponse = await fetch(
         `/api/analytics?timeframe=${timeframe}`,
@@ -109,6 +105,7 @@ function StatisticsOverview({}: StatisticsOverviewProps) {
       }
       const { stats: fetchedStats } = await statsResponse.json();
 
+      const useAI = selectedOption === "ai";
       const analyticsResponse = await fetch("/api/analytics", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -125,7 +122,9 @@ function StatisticsOverview({}: StatisticsOverviewProps) {
 
       const data = await analyticsResponse.json();
       setAnalytics(data.analytics);
-      setIsModalOpen(true);
+      setIsSelectionModalOpen(false);
+      setIsResultsModalOpen(true);
+      setSelectedOption(null);
     } catch (error) {
       console.error("Failed to generate analytics:", error);
     } finally {
@@ -137,7 +136,7 @@ function StatisticsOverview({}: StatisticsOverviewProps) {
     return (
       <Section>
         <SectionHeader>
-          <SectionTitle>📊 Statistics Overview</SectionTitle>
+          <SectionTitle>📊 Productivity Overview</SectionTitle>
           <Controls>
             <TimeframeSelect
               value={timeframe}
@@ -147,49 +146,13 @@ function StatisticsOverview({}: StatisticsOverviewProps) {
               <option value="month">Month</option>
               <option value="quarter">Quarter</option>
             </TimeframeSelect>
-            <DropdownContainer ref={dropdownRef}>
-              <GenerateButton
-                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                onMouseEnter={() => setIsDropdownOpen(true)}
-                $disabled={isGeneratingAnalytics}
-                disabled={isGeneratingAnalytics}
-              >
-                {isGeneratingAnalytics
-                  ? "⚡ Composing..."
-                  : "⚡ Compose Productivity Summary"}
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 16 16"
-                  fill="none"
-                  style={{
-                    transform: isDropdownOpen ? "rotate(180deg)" : "none",
-                    transition: "transform 0.2s",
-                  }}
-                >
-                  <path
-                    d="M4 6l4 4 4-4"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </GenerateButton>
-              {isDropdownOpen && (
-                <DropdownMenu onMouseLeave={() => setIsDropdownOpen(false)}>
-                  <DropdownItem onClick={() => handleGenerateAnalytics(false)}>
-                    Basic Summary
-                  </DropdownItem>
-                  <DropdownItem
-                    $hasBorder
-                    onClick={() => handleGenerateAnalytics(true)}
-                  >
-                    AI Summary
-                  </DropdownItem>
-                </DropdownMenu>
-              )}
-            </DropdownContainer>
+            <GenerateButton
+              onClick={handleOpenSelectionModal}
+              $disabled={isGeneratingAnalytics}
+              disabled={isGeneratingAnalytics}
+            >
+              ⚡ Explore AI Productivity
+            </GenerateButton>
           </Controls>
         </SectionHeader>
         <LoadingContainer>
@@ -215,7 +178,7 @@ function StatisticsOverview({}: StatisticsOverviewProps) {
     <>
       <Section>
         <SectionHeader>
-          <SectionTitle>📊 Statistics Overview</SectionTitle>
+          <SectionTitle>📊 Productivity Overview</SectionTitle>
           <Controls>
             <TimeframeSelect
               value={timeframe}
@@ -225,49 +188,13 @@ function StatisticsOverview({}: StatisticsOverviewProps) {
               <option value="month">Month</option>
               <option value="quarter">Quarter</option>
             </TimeframeSelect>
-            <DropdownContainer ref={dropdownRef}>
-              <GenerateButton
-                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                onMouseEnter={() => setIsDropdownOpen(true)}
-                $disabled={isGeneratingAnalytics}
-                disabled={isGeneratingAnalytics}
-              >
-                {isGeneratingAnalytics
-                  ? "⚡ Composing..."
-                  : "⚡ Compose Productivity Summary"}
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 16 16"
-                  fill="none"
-                  style={{
-                    transform: isDropdownOpen ? "rotate(180deg)" : "none",
-                    transition: "transform 0.2s",
-                  }}
-                >
-                  <path
-                    d="M4 6l4 4 4-4"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </GenerateButton>
-              {isDropdownOpen && (
-                <DropdownMenu onMouseLeave={() => setIsDropdownOpen(false)}>
-                  <DropdownItem onClick={() => handleGenerateAnalytics(false)}>
-                    Basic Summary
-                  </DropdownItem>
-                  <DropdownItem
-                    $hasBorder
-                    onClick={() => handleGenerateAnalytics(true)}
-                  >
-                    AI Summary
-                  </DropdownItem>
-                </DropdownMenu>
-              )}
-            </DropdownContainer>
+            <GenerateButton
+              onClick={handleOpenSelectionModal}
+              $disabled={isGeneratingAnalytics}
+              disabled={isGeneratingAnalytics}
+            >
+              ⚡ Explore AI Productivity
+            </GenerateButton>
           </Controls>
         </SectionHeader>
         <ChartsGrid>
@@ -346,10 +273,23 @@ function StatisticsOverview({}: StatisticsOverviewProps) {
         </ChartsGrid>
       </Section>
 
-      {isModalOpen && analytics && (
+      {isSelectionModalOpen && (
+        <ProductivitySummarySelectionModal
+          onClose={() => {
+            setIsSelectionModalOpen(false);
+            setSelectedOption(null);
+          }}
+          onSelect={handleSelectOption}
+          selectedOption={selectedOption}
+          onSave={handleSave}
+          isGenerating={isGeneratingAnalytics}
+        />
+      )}
+
+      {isResultsModalOpen && analytics && (
         <ProductivitySummaryModal
           analytics={analytics}
-          onClose={() => setIsModalOpen(false)}
+          onClose={() => setIsResultsModalOpen(false)}
         />
       )}
     </>

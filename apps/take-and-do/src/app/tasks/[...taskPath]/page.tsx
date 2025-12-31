@@ -4,9 +4,7 @@ import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar/Sidebar";
 import NavigationSidebar from "@/components/NavigationSidebar/NavigationSidebar";
-import KanbanBoard, {
-  TaskSchedule,
-} from "@/components/KanbanBoard/KanbanBoard";
+import KanbanBoard from "@/components/KanbanBoard/KanbanBoard";
 import TaskView from "@/components/TaskView/TaskView";
 import { PageContainer, Main } from "../../page.styles";
 import { Task } from "@/components/KanbanBoard/types";
@@ -25,7 +23,7 @@ export default function TaskPage({ params }: TaskPageProps) {
   const subtaskKey = taskPath[1];
   
   const [isNavSidebarOpen, setIsNavSidebarOpen] = useState(true);
-  const [activeView, setActiveView] = useState<TaskSchedule | string>(TaskSchedule.TODAY);
+  const [activeView, setActiveView] = useState<string>("today");
   const [workspaceTitle, setWorkspaceTitle] = useState("Today");
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [parentTask, setParentTask] = useState<Task | null>(null);
@@ -65,9 +63,9 @@ export default function TaskPage({ params }: TaskPageProps) {
 
   const handleViewChange = (view: string) => {
     setActiveView(view);
-    if (view === TaskSchedule.TODAY) {
+    if (view === "today") {
       setWorkspaceTitle("Today");
-    } else if (view === TaskSchedule.TOMORROW) {
+    } else if (view === "tomorrow") {
       setWorkspaceTitle("Tomorrow");
     } else {
       setWorkspaceTitle(view);
@@ -91,6 +89,10 @@ export default function TaskPage({ params }: TaskPageProps) {
     }
   };
 
+  const handleTaskDelete = (taskId: string) => {
+    router.push("/tasks");
+  };
+
   return (
     <PageContainer>
       <Sidebar onNavigationChange={handleNavigationChange} />
@@ -111,6 +113,7 @@ export default function TaskPage({ params }: TaskPageProps) {
           onClose={handleCloseTaskView}
           onTaskUpdate={handleTaskUpdate}
           onSubtaskClick={handleSubtaskClick}
+          onTaskDelete={handleTaskDelete}
         />
       )}
     </PageContainer>

@@ -85,6 +85,41 @@ export const StatusIconButton = styled.button`
   }
 `;
 
+export const HeaderRight = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`;
+
+export const DeleteButton = styled.button`
+  background: none;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: all 0.2s;
+  line-height: 1;
+
+  &:hover {
+    background: #2a2a2a;
+    color: #ef4444;
+  }
+
+  svg {
+    width: 16px;
+    height: 16px;
+    display: block;
+    margin: 0;
+    flex-shrink: 0;
+  }
+`;
+
 export const CloseButton = styled.button`
   background: none;
   border: none;

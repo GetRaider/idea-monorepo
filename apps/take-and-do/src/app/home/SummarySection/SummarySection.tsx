@@ -62,7 +62,7 @@ function SummarySection({
   return (
     <Section>
       <SectionHeader>
-        <SectionTitle>⚡ Productivity Summary</SectionTitle>
+        <SectionTitle>⚡ Explore AI Productivity</SectionTitle>
         <Controls>
           <TimeframeSelect
             value={timeframe}

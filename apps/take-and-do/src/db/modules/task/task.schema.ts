@@ -32,7 +32,6 @@ export const tasks = pgTable("tasks", {
   priority: taskPriorityEnum("priority").notNull().default("medium"),
   dueDate: timestamp("due_date"),
   estimation: doublePrecision("estimation"),
-  schedule: text("schedule"), // "today" | "tomorrow" | null
   scheduleDate: timestamp("schedule_date"),
   parentTaskId: text("parent_task_id").references(() => tasks.id, {
     onDelete: "cascade",

@@ -35,16 +35,41 @@ export const ScheduleSelect = styled.select`
   cursor: pointer;
 `;
 
-export const TaskList = styled.div<{ $compact?: boolean }>`
+export const DateInputWrapper = styled.div`
   display: flex;
-  flex-direction: column;
-  gap: ${(props) => (props.$compact ? "6px" : "8px")};
+  align-items: center;
 `;
 
-export const TaskItem = styled.div<{ $compact?: boolean }>`
-  padding: ${(props) => (props.$compact ? "8px 10px" : "10px 12px")};
+export const DateInput = styled.input`
+  padding: 6px 12px;
   background: #2a2a2a;
-  border-radius: ${(props) => (props.$compact ? "6px" : "8px")};
+  border: 1px solid #3a3a3a;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+  outline: none;
+
+  &:focus {
+    border-color: #667eea;
+  }
+
+  &::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+    cursor: pointer;
+  }
+`;
+
+export const TaskList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`;
+
+export const TaskItem = styled.div`
+  padding: 12px;
+  background: #2a2a2a;
+  border-radius: 8px;
   transition: all 0.2s;
 
   &:hover {
@@ -52,16 +77,35 @@ export const TaskItem = styled.div<{ $compact?: boolean }>`
   }
 `;
 
-export const TaskSummary = styled.div<{ $compact?: boolean }>`
+export const TaskContent = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: ${(props) => (props.$compact ? "8px" : "12px")};
+  gap: 12px;
 `;
 
-export const TaskSummaryText = styled.span<{ $compact?: boolean }>`
-  font-size: ${(props) => (props.$compact ? "13px" : "14px")};
-  font-weight: ${(props) => (props.$compact ? "500" : "600")};
+export const TaskLeft = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+`;
+
+export const TaskRight = styled.div`
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+`;
+
+export const PriorityIcon = styled.span`
+  font-size: 16px;
+  flex-shrink: 0;
+`;
+
+export const TaskSummaryText = styled.span`
+  font-size: 14px;
+  font-weight: 500;
   color: #fff;
   flex: 1;
   overflow: hidden;
@@ -69,30 +113,45 @@ export const TaskSummaryText = styled.span<{ $compact?: boolean }>`
   white-space: nowrap;
 `;
 
-export const TaskStatusBadge = styled.span<{
-  $status: string;
-  $compact?: boolean;
-}>`
-  padding: ${(props) => (props.$compact ? "2px 8px" : "4px 12px")};
-  border-radius: ${(props) => (props.$compact ? "10px" : "12px")};
-  font-size: ${(props) => (props.$compact ? "10px" : "12px")};
-  font-weight: 600;
-  text-transform: uppercase;
-  background: ${(props) => {
+export const StatusContainer = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+`;
+
+export const StatusIcon = styled.span<{ $status: string }>`
+  font-size: 14px;
+  color: ${(props) => {
     switch (props.$status) {
       case "To Do":
-        return "#3b82f6";
+        return "#888";
       case "In Progress":
         return "#f59e0b";
       case "Done":
         return "#10b981";
       default:
-        return "#6b7280";
+        return "#888";
     }
   }};
-  color: #fff;
+`;
+
+export const StatusText = styled.span<{ $status: string }>`
+  font-size: 12px;
+  font-weight: 500;
+  color: ${(props) => {
+    switch (props.$status) {
+      case "To Do":
+        return "#888";
+      case "In Progress":
+        return "#f59e0b";
+      case "Done":
+        return "#10b981";
+      default:
+        return "#888";
+    }
+  }};
+  text-transform: uppercase;
   white-space: nowrap;
-  flex-shrink: 0;
 `;
 
 export const ViewAllLink = styled(Link)`

@@ -3,6 +3,7 @@ import {
   buildDecomposePrompt,
   buildAnalyticsPrompt,
   buildComposePrompt,
+  buildOptimizeSchedulePrompt,
 } from "./prompts";
 import {
   DecomposeTaskInputSchema,
@@ -11,6 +12,8 @@ import {
   AnalyticsOutputSchema,
   ComposeTaskInputSchema,
   ComposeTaskOutputSchema,
+  OptimizeScheduleInputSchema,
+  OptimizeScheduleOutputSchema,
 } from "./schemas";
 
 import type {
@@ -20,6 +23,8 @@ import type {
   AnalyticsOutput,
   ComposeTaskInput,
   ComposeTaskOutput,
+  OptimizeScheduleInput,
+  OptimizeScheduleOutput,
 } from "./schemas";
 
 export type {
@@ -31,6 +36,10 @@ export type {
   AnalyticsStats,
   ComposeTaskInput,
   ComposeTaskOutput,
+  OptimizeScheduleInput,
+  OptimizeScheduleOutput,
+  OptimizeScheduleTask,
+  ScheduleRecommendation,
 } from "./schemas";
 
 function parseJSON(content: string): unknown {
@@ -122,6 +131,29 @@ export async function composeTask(
   const parsed = parseJSON(response);
   const cleaned = removeNullValues(parsed as Record<string, unknown>);
   const result = ComposeTaskOutputSchema.safeParse(cleaned);
+
+  if (!result.success) {
+    const errors = result.error.errors
+      .map(
+        (e: { path: (string | number)[]; message: string }) =>
+          `${e.path.join(".")}: ${e.message}`,
+      )
+      .join(", ");
+    throw new Error(`AI response failed validation: ${errors}`);
+  }
+
+  return result.data;
+}
+
+export async function optimizeSchedule(
+  input: OptimizeScheduleInput,
+): Promise<OptimizeScheduleOutput> {
+  const validatedInput = OptimizeScheduleInputSchema.parse(input);
+  const prompt = buildOptimizeSchedulePrompt(validatedInput);
+  const provider = getAIProvider();
+  const response = await provider.complete(prompt);
+  const parsed = parseJSON(response);
+  const result = OptimizeScheduleOutputSchema.safeParse(parsed);
 
   if (!result.success) {
     const errors = result.error.errors

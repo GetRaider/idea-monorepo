@@ -82,9 +82,52 @@ export const ComposeTaskOutputSchema = z.object({
   dueDate: z.string().nullish(),
   estimation: z.number().positive().nullish(),
   subtasks: z.array(z.any()).nullish(),
-  schedule: z.enum(["today", "tomorrow"]).nullish(),
   scheduleDate: z.string().nullish(),
 });
 
 export type ComposeTaskInput = z.infer<typeof ComposeTaskInputSchema>;
 export type ComposeTaskOutput = z.infer<typeof ComposeTaskOutputSchema>;
+
+// ============================================
+// Schedule Optimization Schemas
+// ============================================
+
+export const OptimizeScheduleTaskSchema = z.object({
+  id: z.string(),
+  summary: z.string(),
+  priority: TaskPrioritySchema,
+  dueDate: z.string().nullish(),
+  estimation: z.number().nullish(),
+  scheduleDate: z.string().nullish(),
+  status: z.string(),
+});
+
+export const OptimizeScheduleInputSchema = z.object({
+  tasks: z.array(OptimizeScheduleTaskSchema).min(1),
+  currentDate: z.string(),
+});
+
+export const ScheduleRecommendationSchema = z.object({
+  taskId: z.string(),
+  taskSummary: z.string(),
+  currentSchedule: z.string().nullish(),
+  suggestedSchedule: z.string().nullish(),
+  reason: z.string(),
+});
+
+export const OptimizeScheduleOutputSchema = z.object({
+  summary: z.string(),
+  currentWorkload: z.object({
+    today: z.number(),
+    tomorrow: z.number(),
+    unscheduled: z.number(),
+  }),
+  recommendations: z.array(ScheduleRecommendationSchema),
+  risks: z.array(z.string()),
+  insights: z.array(z.string()),
+});
+
+export type OptimizeScheduleTask = z.infer<typeof OptimizeScheduleTaskSchema>;
+export type OptimizeScheduleInput = z.infer<typeof OptimizeScheduleInputSchema>;
+export type ScheduleRecommendation = z.infer<typeof ScheduleRecommendationSchema>;
+export type OptimizeScheduleOutput = z.infer<typeof OptimizeScheduleOutputSchema>;

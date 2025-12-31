@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getTaskById, updateTask } from "@/db/queries";
+import { getTaskById, updateTask, deleteTask } from "@/db/queries";
 import { Task } from "@/components/KanbanBoard/types";
 
   // Serialized task type for JSON response
@@ -15,7 +15,6 @@ interface SerializedTask {
   dueDate?: string;
   estimation?: number;
   subtasks: SerializedTask[];
-  schedule?: string;
   scheduleDate?: string;
 }
 
@@ -33,7 +32,6 @@ function serializeTask(task: Task): SerializedTask {
     dueDate: task.dueDate?.toISOString(),
     estimation: task.estimation,
     subtasks: (task.subtasks || []).map((subtask) => serializeTask(subtask)),
-    schedule: task.schedule,
     scheduleDate: task.scheduleDate?.toISOString(),
   };
 }
@@ -98,6 +96,23 @@ export async function PATCH(
   } catch {
     return NextResponse.json(
       { error: "Failed to update task" },
+      { status: 500 },
+    );
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    const { id: taskId } = await params;
+    await deleteTask(taskId);
+    return NextResponse.json({ success: true }, { status: 200 });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    return NextResponse.json(
+      { error: "Failed to delete task", details: message },
       { status: 500 },
     );
   }

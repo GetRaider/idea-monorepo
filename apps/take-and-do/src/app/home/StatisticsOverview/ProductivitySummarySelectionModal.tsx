@@ -43,7 +43,7 @@ function ProductivitySummarySelectionModal({
       <ModalContent>
         <ModalHeader>
           <HeaderContent>
-            <ModalTitle>⚡ Explore Productivity</ModalTitle>
+            <ModalTitle>⚡ Productivity Summary</ModalTitle>
             <ModalDescription>
               Explore your productivity by generating an AI personalized or
               basic summary, calculated based on your task statistics and
@@ -84,7 +84,7 @@ function ProductivitySummarySelectionModal({
             onClick={onSave}
             disabled={isGenerating || selectedOption === null}
           >
-            {isGenerating ? "Generating..." : "Save"}
+            {isGenerating ? "Generating..." : "Generate"}
           </SaveButton>
         </ActionsContainer>
       </ModalContent>

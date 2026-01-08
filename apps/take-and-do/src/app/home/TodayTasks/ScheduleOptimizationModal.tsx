@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { Task } from "@/components/KanbanBoard/types";
 import { tasksService } from "@/services/api/tasks.service";
+import { formatScheduleDate } from "@/utils/task.utils";
 import {
   ModalOverlay,
   ModalContent,
@@ -40,16 +42,6 @@ import {
   CancelButton,
   OptimizeButton,
 } from "./ScheduleOptimizationModal.styles";
-
-interface Task {
-  id: string;
-  summary: string;
-  scheduleDate?: Date;
-  dueDate?: Date;
-  estimation?: number;
-  priority: string;
-  status: string;
-}
 
 interface ScheduleOptimizationModalProps {
   onClose: () => void;
@@ -110,16 +102,11 @@ function ScheduleOptimizationModal({
   };
 
   const sanitizeText = (text: string): string => {
-    // Create a map of task IDs to summaries
     const taskMap = new Map(tasks.map((t) => [t.id, t.summary]));
-    
-    // Replace any task IDs (UUID format) with their summaries
     let sanitized = text;
     taskMap.forEach((summary, id) => {
-      const regex = new RegExp(id, "g");
-      sanitized = sanitized.replace(regex, `"${summary}"`);
+      sanitized = sanitized.replace(new RegExp(id, "g"), `"${summary}"`);
     });
-    
     return sanitized;
   };
 
@@ -133,8 +120,7 @@ function ScheduleOptimizationModal({
       const result = await tasksService.optimizeSchedule(
         Array.from(selectedTaskIds),
       );
-      
-      // Sanitize all text fields to remove task IDs
+
       const sanitized = {
         ...result.optimization,
         summary: sanitizeText(result.optimization.summary),
@@ -145,7 +131,7 @@ function ScheduleOptimizationModal({
           reason: sanitizeText(rec.reason),
         })),
       };
-      
+
       setExploration(sanitized);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to explore");
@@ -161,9 +147,24 @@ function ScheduleOptimizationModal({
     setError(null);
 
     try {
-      // TODO: Implement actual optimization (apply schedule changes)
-      // For now, just show success
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // Apply schedule changes from recommendations
+      const updates = exploration.recommendations
+        .filter((rec) => rec.suggestedSchedule !== null)
+        .map((rec) => ({
+          taskId: rec.taskId,
+          scheduleDate: rec.suggestedSchedule
+            ? new Date(rec.suggestedSchedule)
+            : null,
+        }));
+
+      await Promise.all(
+        updates.map((update) =>
+          tasksService.update(update.taskId, {
+            scheduleDate: update.scheduleDate || undefined,
+          }),
+        ),
+      );
+
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to optimize");
@@ -174,8 +175,10 @@ function ScheduleOptimizationModal({
 
   const formatSchedule = (schedule: string | null): string => {
     if (!schedule) return "Unscheduled";
-    if (schedule === "today") return "Today";
-    if (schedule === "tomorrow") return "Tomorrow";
+    const date = new Date(schedule);
+    if (!isNaN(date.getTime())) {
+      return formatScheduleDate(date);
+    }
     return schedule;
   };
 
@@ -184,7 +187,7 @@ function ScheduleOptimizationModal({
       <ModalContent>
         <ModalHeader>
           <HeaderContent>
-            <ModalTitle>⏳ Explore AI Planning Optimization</ModalTitle>
+            <ModalTitle>⏳ AI Planning Optimization</ModalTitle>
             <ModalDescription>
               Explore Planning Optimization with AI-powered analysis based on
               priorities, schedules, due dates, and estimations.
@@ -231,7 +234,7 @@ function ScheduleOptimizationModal({
         {error && <ErrorState>{error}</ErrorState>}
 
         {exploration && !isExploring && (
-            <OptimizationContent>
+          <OptimizationContent>
             <SummarySection>
               <SummaryText>{exploration.summary}</SummaryText>
             </SummarySection>
@@ -298,10 +301,7 @@ function ScheduleOptimizationModal({
 
             <ActionsContainer>
               <CancelButton onClick={onClose}>Cancel</CancelButton>
-              <OptimizeButton
-                onClick={handleOptimize}
-                disabled={isOptimizing}
-              >
+              <OptimizeButton onClick={handleOptimize} disabled={isOptimizing}>
                 {isOptimizing ? "Optimizing..." : "✨ Optimize"}
               </OptimizeButton>
             </ActionsContainer>

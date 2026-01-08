@@ -63,14 +63,38 @@ export const DateInput = styled.input`
 export const TaskList = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 8px;
+`;
+
+export const TaskListHeader = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 120px 100px 80px 100px;
+  gap: 12px;
+  padding: 8px 12px;
+  margin-bottom: 4px;
+`;
+
+export const HeaderCell = styled.span`
+  font-size: 12px;
+  font-weight: 600;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 `;
 
 export const TaskItem = styled.div`
-  padding: 12px;
+  display: grid;
+  grid-template-columns: 1fr 120px 100px 80px 100px;
+  gap: 12px;
+  padding: 10px 12px;
   background: #2a2a2a;
-  border-radius: 8px;
+  border-radius: 6px;
   transition: all 0.2s;
+  align-items: center;
+  margin-bottom: 6px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
 
   &:hover {
     background: #333;
@@ -79,9 +103,9 @@ export const TaskItem = styled.div`
 
 export const TaskContent = styled.div`
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+  min-width: 0;
 `;
 
 export const TaskLeft = styled.div`
@@ -92,10 +116,16 @@ export const TaskLeft = styled.div`
   min-width: 0;
 `;
 
-export const TaskRight = styled.div`
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
+export const TaskCell = styled.div`
+  font-size: 13px;
+  color: #aaa;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+`;
+
+export const TaskCellMuted = styled(TaskCell)`
+  color: #666;
 `;
 
 export const PriorityIcon = styled.span`
@@ -136,7 +166,7 @@ export const StatusIcon = styled.span<{ $status: string }>`
 `;
 
 export const StatusText = styled.span<{ $status: string }>`
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
   color: ${(props) => {
     switch (props.$status) {

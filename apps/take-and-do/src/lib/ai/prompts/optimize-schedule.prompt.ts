@@ -21,7 +21,6 @@ ${PROMPT_RULES.JSON_ONLY}
 - Consider task estimation to balance daily workload (aim for ~8 hours per day max)
 - Tasks without due dates should be distributed based on priority and workload balance
 - Never schedule a task after its due date
-- Use "today" or "tomorrow" or specific dates (YYYY-MM-DD) for schedule recommendations
 
 SCHEDULING STRATEGY:
 1. Critical/High priority with near due dates → Schedule today or tomorrow
@@ -35,8 +34,6 @@ ANALYSIS REQUIRED:
 3. Suggest optimal schedule dates for each task
 4. Provide reasoning for schedule changes
 5. Calculate workload distribution
-
-CRITICAL: NEVER include task IDs in any human-readable text (risks, insights, reasons, summary). Always use task summaries or descriptions instead. Task IDs are only for internal matching in the recommendations array.
 
 OUTPUT FORMAT:
 {
@@ -66,7 +63,6 @@ OUTPUT FORMAT:
 IMPORTANT: 
 - suggestedSchedule can be null if no schedule change is recommended
 - Use YYYY-MM-DD format for dates (e.g., "2024-01-15")
-- Do not use "today" or "tomorrow" strings, use actual dates
 - NEVER include task IDs in risks, insights, summary, or reason fields - only use task summaries or descriptions
 - When referencing tasks in risks/insights, use format like: "Task 'Task Summary Here' has..." instead of "Task 'task-id-123' has..."
 

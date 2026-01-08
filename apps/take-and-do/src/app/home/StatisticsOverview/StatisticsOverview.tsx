@@ -151,7 +151,7 @@ function StatisticsOverview({}: StatisticsOverviewProps) {
               $disabled={isGeneratingAnalytics}
               disabled={isGeneratingAnalytics}
             >
-              ⚡ Explore AI Productivity
+              ⚡ Explore AI Summary
             </GenerateButton>
           </Controls>
         </SectionHeader>
@@ -193,7 +193,7 @@ function StatisticsOverview({}: StatisticsOverviewProps) {
               $disabled={isGeneratingAnalytics}
               disabled={isGeneratingAnalytics}
             >
-              ⚡ Explore AI Productivity
+              ⚡ Explore AI Summary
             </GenerateButton>
           </Controls>
         </SectionHeader>

@@ -94,7 +94,9 @@ function HomePage() {
       <MainContent $withNavSidebar={isNavSidebarOpen}>
         <WelcomeSection>
           <Title>Home</Title>
-          <Subtitle>Supercharge your workflow with AI insights & modern planning</Subtitle>
+          <Subtitle>
+            Supercharge your workflow with AI insights & modern planning
+          </Subtitle>
         </WelcomeSection>
 
         <ScheduledTasks todayTasks={todayTasks} tomorrowTasks={tomorrowTasks} />

@@ -1,38 +1,10 @@
 "use client";
 
-import styled, { keyframes, css } from "styled-components";
-
-// Animated gradient keyframes
-const gradientShift = keyframes`
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
-  }
-`;
-
-const animatedGradientBackground = css`
-  background: linear-gradient(
-    135deg,
-    #1a0a2e 0%,
-    #2d1b4e 25%,
-    #6a00ff 50%,
-    #8b5cf6 75%,
-    #9333ea 100%
-  );
-  background-size: 200% 200%;
-  animation: ${gradientShift} 15s ease infinite;
-  will-change: background-position;
-  transform: translateZ(0);
-`;
-
-const animatedGradientHover = css`
-  animation-duration: 10s;
-`;
+import styled from "styled-components";
+import {
+  animatedGradientBackground,
+  animatedGradientHover,
+} from "../StatisticsOverview/animatedGradient";
 
 export const ModalOverlay = styled.div`
   position: fixed;
@@ -333,7 +305,7 @@ export const CancelButton = styled.button`
   }
 `;
 
-export const OptimizeButton = styled.button`
+const GradientButton = styled.button`
   padding: 10px 20px;
   border: none;
   border-radius: 6px;
@@ -366,37 +338,5 @@ export const OptimizeButton = styled.button`
   }
 `;
 
-export const GenerateOptimizationButton = styled.button`
-  padding: 10px 20px;
-  border: none;
-  border-radius: 6px;
-  color: #fff;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-
-  ${animatedGradientBackground}
-
-  &:hover:not(:disabled) {
-    ${animatedGradientHover}
-  }
-
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    animation: none;
-    background: #7255c1;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    animation: none !important;
-    background: #7255c1 !important;
-
-    &:hover:not(:disabled) {
-      background: #8255d1 !important;
-    }
-  }
-`;
-
-
+export const GenerateOptimizationButton = GradientButton;
+export const OptimizeButton = GradientButton;

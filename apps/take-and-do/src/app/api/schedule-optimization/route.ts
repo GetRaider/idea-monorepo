@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { optimizeSchedule } from "@/lib/ai";
 import { getTasksForOptimization } from "@/db/queries";
+import { formatDateForAPI } from "@/utils/task.utils";
 
 export async function POST(request: NextRequest) {
   try {
@@ -29,23 +30,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const formatDate = (date: Date): string => {
-      const year = date.getFullYear();
-      const month = (date.getMonth() + 1).toString().padStart(2, "0");
-      const day = date.getDate().toString().padStart(2, "0");
-      return `${year}-${month}-${day}`;
-    };
-
-    const currentDate = formatDate(new Date());
+    const currentDate = formatDateForAPI(new Date());
 
     const tasksForAI = tasks.map((task) => ({
       id: task.id,
       summary: task.summary,
       priority: task.priority,
-      dueDate: task.dueDate ? formatDate(new Date(task.dueDate)) : null,
+      dueDate: task.dueDate ? formatDateForAPI(new Date(task.dueDate)) : null,
       estimation: task.estimation,
       scheduleDate: task.scheduleDate
-        ? formatDate(new Date(task.scheduleDate))
+        ? formatDateForAPI(new Date(task.scheduleDate))
         : null,
       status: task.status,
     }));

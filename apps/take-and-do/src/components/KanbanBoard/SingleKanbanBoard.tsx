@@ -6,6 +6,7 @@ import {
   Board,
   LoadingContainer,
   Spinner,
+  EmptyStateWrapper,
 } from "./KanbanBoard.styles";
 import { Column } from "./Column/Column";
 import { Toolbar } from "./shared/Toolbar";
@@ -20,31 +21,58 @@ import {
   useTaskBoardState,
   updateTaskInColumns,
 } from "@/hooks/useTaskBoardState";
+import { EmptyState } from "../EmptyState";
+import { AIComposeModal } from "./shared/AIComposeModal";
+import { tasksService } from "@/services/api/tasks.service";
 
 interface SingleKanbanBoardProps {
   boardName: string;
   workspaceTitle: string;
   taskBoardNameMap?: Record<string, string>;
+  onTaskOpen?: (task: Task) => void;
+  onTaskClose?: () => void;
+  onSubtaskOpen?: (parentTask: Task, subtask: Task) => void;
 }
 
 export function SingleKanbanBoard({
   boardName,
   workspaceTitle,
   taskBoardNameMap = {},
+  onTaskOpen,
+  onTaskClose,
+  onSubtaskOpen,
 }: SingleKanbanBoardProps) {
   const [tasks, setTasks] =
     useState<Record<TaskStatus, Task[]>>(emptyTaskColumns);
   const [isLoading, setIsLoading] = useState(true);
   const [taskBoardId, setTaskBoardId] = useState<string | null>(null);
+  const [isAIComposeModalOpen, setIsAIComposeModalOpen] = useState(false);
 
   const {
     selectedTask,
     parentTask,
     setSelectedTask,
-    handleTaskClick,
-    handleCloseModal,
-    handleSubtaskClick,
+    handleTaskClick: baseHandleTaskClick,
+    handleCloseModal: baseHandleCloseModal,
+    handleSubtaskClick: baseHandleSubtaskClick,
   } = useTaskBoardState();
+
+  const handleTaskClick = (task: Task) => {
+    baseHandleTaskClick(task);
+    onTaskOpen?.(task);
+  };
+
+  const handleCloseModal = () => {
+    baseHandleCloseModal();
+    onTaskClose?.();
+  };
+
+  const handleSubtaskClick = (subtask: Task) => {
+    if (selectedTask) {
+      onSubtaskOpen?.(selectedTask, subtask);
+    }
+    baseHandleSubtaskClick(subtask);
+  };
 
   useEffect(() => {
     const fetchTasks = async () => {
@@ -115,6 +143,49 @@ export function SingleKanbanBoard({
     setSelectedTask(newTask);
   }, [taskBoardId, setSelectedTask]);
 
+  const handleCreateTaskWithAI = useCallback(() => {
+    setIsAIComposeModalOpen(true);
+  }, []);
+
+  const handleAICompose = useCallback(
+    async (text: string) => {
+      if (!taskBoardId) {
+        console.error("Cannot compose task: taskBoardId not found");
+        return;
+      }
+
+      try {
+        const composedData = await tasksService.composeWithAI(
+          text,
+          taskBoardId,
+        );
+
+        // Convert to Task format (without id, ready for editing)
+        const composedTask: Task = {
+          id: "", // Will be generated when saved
+          taskBoardId: composedData.taskBoardId,
+          taskKey: composedData.taskKey,
+          summary: composedData.summary,
+          description: composedData.description,
+          status: (composedData.status as TaskStatus) || TaskStatus.TODO,
+          priority:
+            (composedData.priority as TaskPriority) || TaskPriority.MEDIUM,
+          labels: composedData.labels,
+          dueDate: composedData.dueDate,
+          estimation: composedData.estimation,
+          scheduleDate: composedData.scheduleDate,
+          subtasks: composedData.subtasks,
+        };
+
+        setSelectedTask(composedTask);
+      } catch (error) {
+        console.error("Failed to compose task with AI:", error);
+        throw error;
+      }
+    },
+    [taskBoardId, setSelectedTask],
+  );
+
   const handleTaskCreated = useCallback(
     async (createdTask: Task) => {
       // Refresh tasks
@@ -137,12 +208,34 @@ export function SingleKanbanBoard({
     [boardName, taskBoardNameMap, setSelectedTask],
   );
 
+  const handleTaskDelete = useCallback(
+    async (taskId: string) => {
+      // Refresh tasks after deletion
+      try {
+        const taskBoardNamesMap =
+          Object.keys(taskBoardNameMap).length > 0
+            ? taskBoardNameMap
+            : await fetchTaskBoardNameMap();
+        await loadTaskBoardContent({
+          boardName,
+          taskBoardNamesMap,
+          setTasks,
+        });
+        setSelectedTask(null);
+      } catch (error) {
+        console.error("Failed to refresh tasks after deletion:", error);
+      }
+    },
+    [boardName, taskBoardNameMap, setSelectedTask],
+  );
+
   return (
     <>
       <BoardContainer>
         <Toolbar
           workspaceTitle={workspaceTitle}
           onCreateTask={handleCreateTask}
+          onCreateTaskWithAI={handleCreateTaskWithAI}
         />
 
         <Board>
@@ -151,26 +244,42 @@ export function SingleKanbanBoard({
               <Spinner />
             </LoadingContainer>
           ) : (
-            <>
-              <Column
-                tasks={tasks[TaskStatus.TODO]}
-                status={TaskStatus.TODO}
-                onTaskDrop={handleTaskStatusChange}
-                onTaskClick={handleTaskClick}
-              />
-              <Column
-                tasks={tasks[TaskStatus.IN_PROGRESS]}
-                status={TaskStatus.IN_PROGRESS}
-                onTaskDrop={handleTaskStatusChange}
-                onTaskClick={handleTaskClick}
-              />
-              <Column
-                tasks={tasks[TaskStatus.DONE]}
-                status={TaskStatus.DONE}
-                onTaskDrop={handleTaskStatusChange}
-                onTaskClick={handleTaskClick}
-              />
-            </>
+            (() => {
+              const totalTasks =
+                tasks[TaskStatus.TODO].length +
+                tasks[TaskStatus.IN_PROGRESS].length +
+                tasks[TaskStatus.DONE].length;
+
+              return totalTasks === 0 ? (
+                <EmptyStateWrapper>
+                  <EmptyState
+                    title="You have no tasks"
+                    message={`No tasks in ${workspaceTitle}`}
+                  />
+                </EmptyStateWrapper>
+              ) : (
+                <>
+                  <Column
+                    tasks={tasks[TaskStatus.TODO]}
+                    status={TaskStatus.TODO}
+                    onTaskDrop={handleTaskStatusChange}
+                    onTaskClick={handleTaskClick}
+                  />
+                  <Column
+                    tasks={tasks[TaskStatus.IN_PROGRESS]}
+                    status={TaskStatus.IN_PROGRESS}
+                    onTaskDrop={handleTaskStatusChange}
+                    onTaskClick={handleTaskClick}
+                  />
+                  <Column
+                    tasks={tasks[TaskStatus.DONE]}
+                    status={TaskStatus.DONE}
+                    onTaskDrop={handleTaskStatusChange}
+                    onTaskClick={handleTaskClick}
+                  />
+                </>
+              );
+            })()
           )}
         </Board>
       </BoardContainer>
@@ -182,6 +291,12 @@ export function SingleKanbanBoard({
         onTaskUpdate={handleTaskUpdate}
         onSubtaskClick={handleSubtaskClick}
         onTaskCreated={handleTaskCreated}
+        onTaskDelete={handleTaskDelete}
+      />
+      <AIComposeModal
+        isOpen={isAIComposeModalOpen}
+        onClose={() => setIsAIComposeModalOpen(false)}
+        onCompose={handleAICompose}
       />
     </>
   );

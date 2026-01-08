@@ -8,6 +8,20 @@
       "when": 1765710832520,
       "tag": "0000_silent_junta",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1765710832600,
+      "tag": "0001_add_schedule_date",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1765710832700,
+      "tag": "0002_remove_schedule_column",
+      "breakpoints": true
     }
   ]
 }

@@ -9,17 +9,11 @@ import {
   Spinner,
   TaskGroupWrapper,
   GroupChevron,
-  EmptyStateMessage,
+  EmptyStateWrapper,
 } from "./KanbanBoard.styles";
 import { Column } from "./Column/Column";
 import { Toolbar } from "./shared/Toolbar";
-import {
-  TaskStatus,
-  TaskSchedule,
-  TaskPriority,
-  TaskGroup,
-  Task,
-} from "./types";
+import { TaskStatus, TaskPriority, TaskGroup, Task } from "./types";
 import {
   fetchTaskBoardNameMap,
   loadScheduledContent,
@@ -32,33 +26,64 @@ import {
   useTaskBoardState,
   updateTaskInColumns,
 } from "@/hooks/useTaskBoardState";
+import { EmptyState } from "../EmptyState";
+import { AIComposeModal } from "./shared/AIComposeModal";
+import { tasksService } from "@/services/api/tasks.service";
 
 interface MultipleKanbanBoardProps {
-  schedule?: TaskSchedule;
+  scheduleDate?: Date;
   workspaceTitle: string;
   folderId?: string;
   taskBoardNameMap?: Record<string, string>;
+  onTaskOpen?: (task: Task) => void;
+  onTaskClose?: () => void;
+  onSubtaskOpen?: (parentTask: Task, subtask: Task) => void;
 }
 
 export function MultipleKanbanBoard({
-  schedule,
+  scheduleDate,
   workspaceTitle,
   folderId,
   taskBoardNameMap = {},
+  onTaskOpen,
+  onTaskClose,
+  onSubtaskOpen,
 }: MultipleKanbanBoardProps) {
   const [taskGroups, setTaskGroups] = useState<TaskGroup[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [showSelectBoardModal, setShowSelectBoardModal] = useState(false);
+  const [isAIComposeModalOpen, setIsAIComposeModalOpen] = useState(false);
+  const [isAIMode, setIsAIMode] = useState(false);
+  const [selectedBoardIdForAI, setSelectedBoardIdForAI] = useState<
+    string | null
+  >(null);
 
   const {
     selectedTask,
     parentTask,
     setSelectedTask,
-    handleTaskClick,
-    handleCloseModal,
-    handleSubtaskClick,
+    handleTaskClick: baseHandleTaskClick,
+    handleCloseModal: baseHandleCloseModal,
+    handleSubtaskClick: baseHandleSubtaskClick,
   } = useTaskBoardState();
+
+  const handleTaskClick = (task: Task) => {
+    baseHandleTaskClick(task);
+    onTaskOpen?.(task);
+  };
+
+  const handleCloseModal = () => {
+    baseHandleCloseModal();
+    onTaskClose?.();
+  };
+
+  const handleSubtaskClick = (subtask: Task) => {
+    if (selectedTask) {
+      onSubtaskOpen?.(selectedTask, subtask);
+    }
+    baseHandleSubtaskClick(subtask);
+  };
 
   useEffect(() => {
     const fetchTasks = async () => {
@@ -70,9 +95,9 @@ export function MultipleKanbanBoard({
             : await fetchTaskBoardNameMap();
 
         let loadedGroups: TaskGroup[] = [];
-        if (schedule) {
+        if (scheduleDate) {
           await loadScheduledContent({
-            schedule,
+            scheduleDate,
             taskBoardNamesMap,
             setTaskGroups: (groups) => {
               loadedGroups = groups;
@@ -105,7 +130,7 @@ export function MultipleKanbanBoard({
 
     fetchTasks();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [schedule, folderId]);
+  }, [scheduleDate, folderId]);
 
   const toggleGroup = (taskBoardId: string) => {
     setExpandedGroups((prev) => {
@@ -134,8 +159,8 @@ export function MultipleKanbanBoard({
 
   const handleTaskUpdate = useCallback(
     async (updatedTask: Task) => {
-      // If we're in a scheduled view, check if the task still belongs to this schedule
-      if (schedule) {
+      // If we're in a scheduled view, check if the task still belongs to this scheduleDate
+      if (scheduleDate) {
         // If scheduleDate was removed, task should be removed from scheduled view
         if (!updatedTask.scheduleDate) {
           try {
@@ -144,7 +169,7 @@ export function MultipleKanbanBoard({
                 ? taskBoardNameMap
                 : await fetchTaskBoardNameMap();
             await loadScheduledContent({
-              schedule,
+              scheduleDate,
               taskBoardNamesMap,
               setTaskGroups,
             });
@@ -160,32 +185,23 @@ export function MultipleKanbanBoard({
           return;
         }
 
-        // Check if scheduleDate matches the current schedule
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-
+        // Check if scheduleDate matches the current scheduleDate
         const taskDate = new Date(updatedTask.scheduleDate);
         taskDate.setHours(0, 0, 0, 0);
+        const currentDate = new Date(scheduleDate);
+        currentDate.setHours(0, 0, 0, 0);
 
-        const isToday = taskDate.getTime() === today.getTime();
-        const isTomorrow = taskDate.getTime() === tomorrow.getTime();
+        const matchesSchedule = taskDate.getTime() === currentDate.getTime();
 
-        const shouldBeInToday = schedule === TaskSchedule.TODAY && isToday;
-        const shouldBeInTomorrow =
-          schedule === TaskSchedule.TOMORROW && isTomorrow;
-
-        // If task no longer belongs to this schedule, refresh the entire list
-        if (!shouldBeInToday && !shouldBeInTomorrow) {
+        // If task no longer belongs to this scheduleDate, refresh the entire list
+        if (!matchesSchedule) {
           try {
             const taskBoardNamesMap =
               Object.keys(taskBoardNameMap).length > 0
                 ? taskBoardNameMap
                 : await fetchTaskBoardNameMap();
             await loadScheduledContent({
-              schedule,
+              scheduleDate,
               taskBoardNamesMap,
               setTaskGroups,
             });
@@ -218,12 +234,13 @@ export function MultipleKanbanBoard({
         setSelectedTask(updatedTask);
       }
     },
-    [selectedTask, setSelectedTask, schedule, taskBoardNameMap],
+    [selectedTask, setSelectedTask, scheduleDate, taskBoardNameMap],
   );
 
   const handleCreateTask = useCallback(() => {
+    setIsAIMode(false);
     // If we're in Today/Tomorrow section, show board selection modal
-    if (schedule) {
+    if (scheduleDate) {
       setShowSelectBoardModal(true);
       return;
     }
@@ -243,7 +260,91 @@ export function MultipleKanbanBoard({
       priority: TaskPriority.MEDIUM,
     };
     setSelectedTask(newTask);
-  }, [taskGroups, setSelectedTask, schedule]);
+  }, [taskGroups, setSelectedTask, scheduleDate]);
+
+  const handleCreateTaskWithAI = useCallback(() => {
+    setIsAIMode(true);
+    // If we're in Today/Tomorrow section, show board selection modal first
+    if (scheduleDate) {
+      setShowSelectBoardModal(true);
+      return;
+    }
+
+    // Use the first task board from groups
+    if (taskGroups.length === 0) {
+      console.error("Cannot create task: no task boards available");
+      return;
+    }
+    const firstTaskBoardId = taskGroups[0].taskBoardId;
+    setIsAIComposeModalOpen(true);
+  }, [taskGroups, scheduleDate]);
+
+  const handleAICompose = useCallback(
+    async (text: string) => {
+      let taskBoardId = selectedBoardIdForAI;
+      if (!taskBoardId && taskGroups.length > 0) {
+        taskBoardId = taskGroups[0].taskBoardId;
+      }
+      if (!taskBoardId) {
+        console.error("Cannot compose task: taskBoardId not found");
+        return;
+      }
+
+      try {
+        // Prepare additional data including scheduleDate if applicable
+        const additionalData: Partial<Omit<Task, "id">> = {};
+        if (scheduleDate) {
+          additionalData.scheduleDate = scheduleDate;
+        }
+
+        const composedData = await tasksService.composeWithAI(
+          text,
+          taskBoardId,
+          additionalData,
+        );
+
+        // Convert to Task format (without id, ready for editing)
+        const composedTask: Task = {
+          id: "", // Will be generated when saved
+          taskBoardId: composedData.taskBoardId,
+          taskKey: composedData.taskKey,
+          summary: composedData.summary,
+          description: composedData.description,
+          status: (composedData.status as TaskStatus) || TaskStatus.TODO,
+          priority:
+            (composedData.priority as TaskPriority) || TaskPriority.MEDIUM,
+          labels: composedData.labels,
+          dueDate: composedData.dueDate,
+          estimation: composedData.estimation,
+          scheduleDate: (() => {
+            // Prefer scheduleDate from AI or additionalData
+            if (composedData.scheduleDate) {
+              return new Date(composedData.scheduleDate);
+            }
+            if (additionalData?.scheduleDate) {
+              return additionalData.scheduleDate instanceof Date
+                ? additionalData.scheduleDate
+                : new Date(additionalData.scheduleDate);
+            }
+            // Use scheduleDate if provided
+            if (scheduleDate) {
+              return scheduleDate;
+            }
+            return undefined;
+          })(),
+          subtasks: composedData.subtasks,
+        };
+
+        setSelectedTask(composedTask);
+        setSelectedBoardIdForAI(null);
+        setIsAIMode(false);
+      } catch (error) {
+        console.error("Failed to compose task with AI:", error);
+        throw error;
+      }
+    },
+    [taskGroups, scheduleDate, selectedBoardIdForAI, setSelectedTask],
+  );
 
   const handleTaskCreated = useCallback(
     async (createdTask: Task) => {
@@ -253,9 +354,9 @@ export function MultipleKanbanBoard({
             ? taskBoardNameMap
             : await fetchTaskBoardNameMap();
         let loadedGroups: TaskGroup[] = [];
-        if (schedule) {
+        if (scheduleDate) {
           await loadScheduledContent({
-            schedule,
+            scheduleDate,
             taskBoardNamesMap,
             setTaskGroups: (groups) => {
               loadedGroups = groups;
@@ -277,24 +378,57 @@ export function MultipleKanbanBoard({
         console.error("Failed to refresh tasks after creation:", error);
       }
     },
-    [schedule, folderId, taskBoardNameMap, setSelectedTask],
+    [scheduleDate, folderId, taskBoardNameMap, setSelectedTask],
+  );
+
+  const handleTaskDelete = useCallback(
+    async (taskId: string) => {
+      try {
+        const taskBoardNamesMap =
+          Object.keys(taskBoardNameMap).length > 0
+            ? taskBoardNameMap
+            : await fetchTaskBoardNameMap();
+        if (scheduleDate) {
+          await loadScheduledContent({
+            scheduleDate,
+            taskBoardNamesMap,
+            setTaskGroups,
+          });
+        } else if (folderId) {
+          await loadFolderContent({
+            folderId,
+            taskBoardNamesMap,
+            setTaskGroups,
+          });
+        }
+        setSelectedTask(null);
+      } catch (error) {
+        console.error("Failed to refresh tasks after deletion:", error);
+      }
+    },
+    [scheduleDate, folderId, taskBoardNameMap, setSelectedTask],
   );
 
   const handleBoardSelect = useCallback(
     (boardId: string) => {
       setShowSelectBoardModal(false);
-      const newTask: Task = {
-        id: "",
-        taskBoardId: boardId,
-        summary: "",
-        description: "",
-        status: TaskStatus.TODO,
-        priority: TaskPriority.MEDIUM,
-        schedule,
-      };
-      setSelectedTask(newTask);
+      if (isAIMode) {
+        setSelectedBoardIdForAI(boardId);
+        setIsAIComposeModalOpen(true);
+      } else {
+        const newTask: Task = {
+          id: "",
+          taskBoardId: boardId,
+          summary: "",
+          description: "",
+          status: TaskStatus.TODO,
+          priority: TaskPriority.MEDIUM,
+          scheduleDate,
+        };
+        setSelectedTask(newTask);
+      }
     },
-    [setSelectedTask, schedule],
+    [setSelectedTask, scheduleDate, isAIMode],
   );
 
   const getTaskWorkspaceTitle = (task: Task | null): string => {
@@ -309,6 +443,7 @@ export function MultipleKanbanBoard({
         <Toolbar
           workspaceTitle={workspaceTitle}
           onCreateTask={handleCreateTask}
+          onCreateTaskWithAI={handleCreateTaskWithAI}
         />
 
         <Board>
@@ -389,9 +524,16 @@ export function MultipleKanbanBoard({
               })}
             </>
           ) : (
-            <EmptyStateMessage>
-              No tasks available for {workspaceTitle}
-            </EmptyStateMessage>
+            <EmptyStateWrapper>
+              <EmptyState
+                title="You have no tasks"
+                message={
+                  scheduleDate
+                    ? `No tasks scheduled for ${scheduleDate.toLocaleDateString()}`
+                    : `No tasks available for ${workspaceTitle}`
+                }
+              />
+            </EmptyStateWrapper>
           )}
         </Board>
       </BoardContainer>
@@ -403,13 +545,26 @@ export function MultipleKanbanBoard({
         onTaskUpdate={handleTaskUpdate}
         onSubtaskClick={handleSubtaskClick}
         onTaskCreated={handleTaskCreated}
+        onTaskDelete={handleTaskDelete}
       />
       {showSelectBoardModal && (
         <SelectBoardModal
-          onClose={() => setShowSelectBoardModal(false)}
+          onClose={() => {
+            setShowSelectBoardModal(false);
+            setIsAIMode(false);
+          }}
           onSelect={handleBoardSelect}
         />
       )}
+      <AIComposeModal
+        isOpen={isAIComposeModalOpen}
+        onClose={() => {
+          setIsAIComposeModalOpen(false);
+          setSelectedBoardIdForAI(null);
+          setIsAIMode(false);
+        }}
+        onCompose={handleAICompose}
+      />
     </>
   );
 }

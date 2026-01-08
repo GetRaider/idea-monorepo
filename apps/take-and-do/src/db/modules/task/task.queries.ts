@@ -72,7 +72,6 @@ async function convertTaskRowToTask(
     dueDate: taskRow.dueDate ? new Date(taskRow.dueDate) : undefined,
     estimation: taskRow.estimation || undefined,
     subtasks: subtasks.length > 0 ? subtasks : undefined,
-    schedule: (taskRow.schedule as "today" | "tomorrow") || undefined,
     scheduleDate: taskRow.scheduleDate
       ? new Date(taskRow.scheduleDate)
       : undefined,
@@ -81,25 +80,20 @@ async function convertTaskRowToTask(
 
 async function loadAllTasksWithRelations(filter?: {
   taskBoardId?: string;
-  schedule?: "today" | "tomorrow";
+  date?: Date;
   parentTaskId?: string | null;
 }): Promise<Task[]> {
   let allTaskRows: Array<typeof tasks.$inferSelect> = [];
 
-  if (filter?.schedule) {
-    // For scheduled views, first get top-level tasks that match the schedule
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const targetDate = new Date(today);
-    if (filter.schedule === "tomorrow") {
-      targetDate.setDate(targetDate.getDate() + 1);
-    }
+  if (filter?.date) {
+    // For scheduled views, first get top-level tasks that match the date
+    const targetDate = new Date(filter.date);
+    targetDate.setHours(0, 0, 0, 0);
 
     const nextDay = new Date(targetDate);
     nextDay.setDate(nextDay.getDate() + 1);
 
-    // Get top-level tasks matching the schedule
+    // Get top-level tasks matching the date
     const scheduledTopLevelTasks = await db
       .select()
       .from(tasks)
@@ -308,10 +302,8 @@ export async function getTasksByTaskBoardId(
   return loadAllTasksWithRelations({ taskBoardId });
 }
 
-export async function getTasksBySchedule(
-  schedule: "today" | "tomorrow",
-): Promise<Task[]> {
-  return loadAllTasksWithRelations({ schedule });
+export async function getTasksByDate(date: Date): Promise<Task[]> {
+  return loadAllTasksWithRelations({ date });
 }
 
 export async function getTaskById(taskId: string): Promise<Task | null> {
@@ -485,7 +477,7 @@ export async function createTask(taskData: Omit<Task, "id">): Promise<Task> {
     priority: taskData.priority,
     dueDate: taskData.dueDate || null,
     estimation: taskData.estimation || null,
-    schedule: taskData.schedule || null,
+    schedule: null, // Deprecated - use scheduleDate only
     scheduleDate: taskData.scheduleDate || null,
     parentTaskId: null,
     createdAt: new Date(),
@@ -514,7 +506,7 @@ export async function createTask(taskData: Omit<Task, "id">): Promise<Task> {
         priority: subtask.priority,
         dueDate: subtask.dueDate || null,
         estimation: subtask.estimation || null,
-        schedule: subtask.schedule || null,
+        schedule: null, // Deprecated - use scheduleDate only
         scheduleDate: subtask.scheduleDate || null,
         parentTaskId: taskId,
         createdAt: new Date(),
@@ -578,8 +570,6 @@ export async function updateTask(
   if (updates.estimation !== undefined)
     updateData.estimation =
       updates.estimation !== null ? updates.estimation : null;
-  if (updates.schedule !== undefined)
-    updateData.schedule = updates.schedule || null;
   if (updates.scheduleDate !== undefined)
     updateData.scheduleDate = updates.scheduleDate
       ? updates.scheduleDate
@@ -617,7 +607,7 @@ export async function updateTask(
           priority: subtask.priority,
           dueDate: subtask.dueDate || null,
           estimation: subtask.estimation || null,
-          schedule: subtask.schedule || null,
+          schedule: null, // Deprecated - use scheduleDate only
           scheduleDate: subtask.scheduleDate || null,
           parentTaskId: taskId,
           createdAt: new Date(),
@@ -640,4 +630,129 @@ export async function updateTask(
   // Return updated task
   const updated = await getTaskById(taskId);
   return updated;
+}
+
+export async function deleteTask(taskId: string): Promise<void> {
+  // Delete task labels first (foreign key constraint)
+  await db.delete(taskLabels).where(eq(taskLabels.taskId, taskId));
+
+  // Delete the task (cascade will handle subtasks automatically via parentTaskId foreign key)
+  await db.delete(tasks).where(eq(tasks.id, taskId));
+}
+
+export interface TaskStatistics {
+  tasksCreated: number;
+  tasksCompleted: number;
+  avgCompletionTimeDays: number;
+  overdueRate: number;
+}
+
+export interface TaskForOptimization {
+  id: string;
+  summary: string;
+  priority: string;
+  dueDate: Date | null;
+  estimation: number | null;
+  scheduleDate: Date | null;
+  status: string;
+}
+
+export async function getTasksForOptimization(
+  taskIds: string[],
+): Promise<TaskForOptimization[]> {
+  if (taskIds.length === 0) return [];
+
+  const taskRows = await db
+    .select({
+      id: tasks.id,
+      summary: tasks.summary,
+      priority: tasks.priority,
+      dueDate: tasks.dueDate,
+      estimation: tasks.estimation,
+      scheduleDate: tasks.scheduleDate,
+      status: tasks.status,
+    })
+    .from(tasks)
+    .where(inArray(tasks.id, taskIds));
+
+  return taskRows.map((row) => ({
+    id: row.id,
+    summary: row.summary,
+    priority: row.priority,
+    dueDate: row.dueDate,
+    estimation: row.estimation,
+    scheduleDate: row.scheduleDate,
+    status: row.status,
+  }));
+}
+
+export async function getTaskStatistics(
+  timeframe: "week" | "month" | "quarter" = "month",
+): Promise<TaskStatistics> {
+  const now = new Date();
+  const startDate = new Date(now);
+
+  switch (timeframe) {
+    case "week":
+      startDate.setDate(now.getDate() - 7);
+      break;
+    case "month":
+      startDate.setMonth(now.getMonth() - 1);
+      break;
+    case "quarter":
+      startDate.setMonth(now.getMonth() - 3);
+      break;
+  }
+
+  const allTasks = await db
+    .select({
+      id: tasks.id,
+      status: tasks.status,
+      createdAt: tasks.createdAt,
+      updatedAt: tasks.updatedAt,
+      dueDate: tasks.dueDate,
+    })
+    .from(tasks)
+    .where(gte(tasks.createdAt, startDate));
+
+  const tasksCreated = allTasks.length;
+  const completedTasks = allTasks.filter((t) => t.status === "Done");
+
+  const tasksCompleted = completedTasks.length;
+
+  let avgCompletionTimeDays = 0;
+  if (completedTasks.length > 0) {
+    const completionTimes = completedTasks
+      .map((task) => {
+        const created = new Date(task.createdAt).getTime();
+        const updated = new Date(task.updatedAt).getTime();
+        return (updated - created) / (1000 * 60 * 60 * 24);
+      })
+      .filter((days) => days >= 0);
+
+    if (completionTimes.length > 0) {
+      avgCompletionTimeDays =
+        completionTimes.reduce((sum, days) => sum + days, 0) /
+        completionTimes.length;
+    }
+  }
+
+  const tasksWithDueDate = allTasks.filter((t) => t.dueDate !== null);
+  const overdueTasks = tasksWithDueDate.filter((t) => {
+    if (t.status === "Done") return false;
+    const dueDate = new Date(t.dueDate!);
+    return dueDate < now;
+  });
+
+  const overdueRate =
+    tasksWithDueDate.length > 0
+      ? overdueTasks.length / tasksWithDueDate.length
+      : 0;
+
+  return {
+    tasksCreated,
+    tasksCompleted,
+    avgCompletionTimeDays: Math.round(avgCompletionTimeDays * 10) / 10,
+    overdueRate: Math.round(overdueRate * 100) / 100,
+  };
 }

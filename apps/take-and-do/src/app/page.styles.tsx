@@ -3,7 +3,7 @@ import styled from "styled-components";
 export const PageContainer = styled.div`
   display: flex;
   height: 100vh;
-  background: var(--background);
+  background: linear-gradient(135deg, #1a1a1a 0%, #3c2856 100%);
   overflow: hidden;
 `;
 
@@ -14,4 +14,5 @@ export const Main = styled.main<{ $withNavSidebar: boolean }>`
   flex-direction: column;
   transition: margin-left 0.3s ease;
   overflow: hidden;
+  background: linear-gradient(135deg, #1a1a1a 0%, #3c2856 100%);
 `;

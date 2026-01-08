@@ -4,11 +4,6 @@ export enum TaskStatus {
   DONE = "Done",
 }
 
-export enum TaskSchedule {
-  TODAY = "today",
-  TOMORROW = "tomorrow",
-}
-
 export enum TaskPriority {
   LOW = "low",
   MEDIUM = "medium",
@@ -28,7 +23,6 @@ export interface Task {
   dueDate?: Date;
   estimation?: number;
   subtasks?: Task[];
-  schedule?: "today" | "tomorrow";
   scheduleDate?: Date;
 }
 
@@ -49,7 +43,7 @@ export interface TaskGroup {
 }
 
 export interface LoadScheduledWorkspaceProps {
-  schedule: TaskSchedule;
+  scheduleDate: Date;
   taskBoardNamesMap: Record<string, string>;
   setTaskGroups: (groups: TaskGroup[]) => void;
 }
@@ -120,5 +114,22 @@ export function createTaskGroups(
     taskBoardName: taskBoardNameMap[groupKey] ?? groupKey,
     tasks: tasksByStatus,
   }));
+}
+
+// Helper to convert "today" or "tomorrow" string to Date
+export function getDateFromScheduleString(schedule: "today" | "tomorrow"): Date {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  if (schedule === "tomorrow") {
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return tomorrow;
+  }
+  return today;
+}
+
+// Helper to check if a string is "today" or "tomorrow"
+export function isScheduleString(view: string): view is "today" | "tomorrow" {
+  return view === "today" || view === "tomorrow";
 }
 

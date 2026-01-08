@@ -29,6 +29,10 @@ export const Actions = styled.div`
   gap: 12px;
 `;
 
+export const CreateButtonContainer = styled.div`
+  position: relative;
+`;
+
 export const CreateButton = styled.button`
   display: flex;
   align-items: center;
@@ -51,6 +55,40 @@ export const CreateButton = styled.button`
   svg {
     width: 18px;
     height: 18px;
+  }
+`;
+
+export const CreateButtonDropdown = styled.div`
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  background: #2a2a2a;
+  border: 1px solid #3a3a3a;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 1001;
+  min-width: 150px;
+  overflow: hidden;
+`;
+
+export const CreateButtonDropdownItem = styled.button`
+  width: 100%;
+  padding: 10px 12px;
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.2s;
+
+  &:hover {
+    background: #3a3a3a;
+  }
+
+  &:not(:last-child) {
+    border-bottom: 1px solid #3a3a3a;
   }
 `;
 
@@ -216,6 +254,14 @@ export const EmptyStateMessage = styled.div`
   color: #fff;
   padding: 24px;
   grid-column: 1 / -1;
+`;
+
+export const EmptyStateWrapper = styled.div`
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - 200px);
 `;
 
 export const WorkspaceIcon = styled.div`

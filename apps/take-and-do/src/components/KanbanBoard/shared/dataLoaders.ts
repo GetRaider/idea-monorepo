@@ -3,7 +3,6 @@ import { tasksService } from "@/services/api/tasks.service";
 import {
   TaskStatus,
   Task,
-  TaskSchedule,
   TaskGroup,
   toTaskStatus,
   toTaskPriority,
@@ -55,16 +54,15 @@ export async function loadTaskBoardContent({
 }
 
 export async function loadScheduledContent({
-  schedule,
+  scheduleDate,
   taskBoardNamesMap,
   setTaskGroups,
 }: {
-  schedule: TaskSchedule;
+  scheduleDate: Date;
   taskBoardNamesMap: Record<string, string>;
   setTaskGroups: (groups: TaskGroup[]) => void;
 }): Promise<void> {
-  const data = await tasksService.getBySchedule(schedule);
-  const scheduledTasks = data[schedule];
+  const scheduledTasks = await tasksService.getByDate(scheduleDate);
   setTaskGroups(createTaskGroups(scheduledTasks, taskBoardNamesMap));
 }
 

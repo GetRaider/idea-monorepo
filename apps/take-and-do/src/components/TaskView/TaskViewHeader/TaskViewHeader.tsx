@@ -7,6 +7,8 @@ import { StatusIcon } from "../../KanbanBoard/Column/Column.styles";
 import {
   ModalHeader,
   HeaderLeft,
+  HeaderRight,
+  DeleteButton,
   CloseButton,
   StatusIconButton,
   DropdownContainer,
@@ -22,6 +24,8 @@ interface TaskViewHeaderProps {
   onStatusClick: () => void;
   onStatusSelect: (status: TaskStatus) => void;
   onClose: () => void;
+  onDelete?: () => void;
+  isCreating?: boolean;
 }
 
 export function TaskViewHeader({
@@ -33,6 +37,8 @@ export function TaskViewHeader({
   onStatusClick,
   onStatusSelect,
   onClose,
+  onDelete,
+  isCreating = false,
 }: TaskViewHeaderProps) {
   return (
     <ModalHeader>
@@ -85,9 +91,30 @@ export function TaskViewHeader({
         </div>{" "}
         {task.taskKey}
       </HeaderLeft>
-      <CloseButton onClick={onClose} title="Close">
-        ×
-      </CloseButton>
+      <HeaderRight>
+        {!isCreating && onDelete && (
+          <DeleteButton onClick={onDelete} title="Delete task">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 16 16"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M2 4h12M5.5 4V3a1 1 0 011-1h3a1 1 0 011 1v1M5.5 7v4M10.5 7v4M4 4v8a1 1 0 001 1h6a1 1 0 001-1V4"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </DeleteButton>
+        )}
+        <CloseButton onClick={onClose} title="Close">
+          ×
+        </CloseButton>
+      </HeaderRight>
     </ModalHeader>
   );
 }

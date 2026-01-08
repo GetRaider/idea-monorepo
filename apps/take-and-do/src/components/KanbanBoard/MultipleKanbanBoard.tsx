@@ -13,12 +13,7 @@ import {
 } from "./KanbanBoard.styles";
 import { Column } from "./Column/Column";
 import { Toolbar } from "./shared/Toolbar";
-import {
-  TaskStatus,
-  TaskPriority,
-  TaskGroup,
-  Task,
-} from "./types";
+import { TaskStatus, TaskPriority, TaskGroup, Task } from "./types";
 import {
   fetchTaskBoardNameMap,
   loadScheduledContent,
@@ -40,6 +35,9 @@ interface MultipleKanbanBoardProps {
   workspaceTitle: string;
   folderId?: string;
   taskBoardNameMap?: Record<string, string>;
+  onTaskOpen?: (task: Task) => void;
+  onTaskClose?: () => void;
+  onSubtaskOpen?: (parentTask: Task, subtask: Task) => void;
 }
 
 export function MultipleKanbanBoard({
@@ -47,6 +45,9 @@ export function MultipleKanbanBoard({
   workspaceTitle,
   folderId,
   taskBoardNameMap = {},
+  onTaskOpen,
+  onTaskClose,
+  onSubtaskOpen,
 }: MultipleKanbanBoardProps) {
   const [taskGroups, setTaskGroups] = useState<TaskGroup[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -54,16 +55,35 @@ export function MultipleKanbanBoard({
   const [showSelectBoardModal, setShowSelectBoardModal] = useState(false);
   const [isAIComposeModalOpen, setIsAIComposeModalOpen] = useState(false);
   const [isAIMode, setIsAIMode] = useState(false);
-  const [selectedBoardIdForAI, setSelectedBoardIdForAI] = useState<string | null>(null);
+  const [selectedBoardIdForAI, setSelectedBoardIdForAI] = useState<
+    string | null
+  >(null);
 
   const {
     selectedTask,
     parentTask,
     setSelectedTask,
-    handleTaskClick,
-    handleCloseModal,
-    handleSubtaskClick,
+    handleTaskClick: baseHandleTaskClick,
+    handleCloseModal: baseHandleCloseModal,
+    handleSubtaskClick: baseHandleSubtaskClick,
   } = useTaskBoardState();
+
+  const handleTaskClick = (task: Task) => {
+    baseHandleTaskClick(task);
+    onTaskOpen?.(task);
+  };
+
+  const handleCloseModal = () => {
+    baseHandleCloseModal();
+    onTaskClose?.();
+  };
+
+  const handleSubtaskClick = (subtask: Task) => {
+    if (selectedTask) {
+      onSubtaskOpen?.(selectedTask, subtask);
+    }
+    baseHandleSubtaskClick(subtask);
+  };
 
   useEffect(() => {
     const fetchTasks = async () => {
@@ -291,7 +311,8 @@ export function MultipleKanbanBoard({
           summary: composedData.summary,
           description: composedData.description,
           status: (composedData.status as TaskStatus) || TaskStatus.TODO,
-          priority: (composedData.priority as TaskPriority) || TaskPriority.MEDIUM,
+          priority:
+            (composedData.priority as TaskPriority) || TaskPriority.MEDIUM,
           labels: composedData.labels,
           dueDate: composedData.dueDate,
           estimation: composedData.estimation,

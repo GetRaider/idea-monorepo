@@ -29,12 +29,18 @@ interface SingleKanbanBoardProps {
   boardName: string;
   workspaceTitle: string;
   taskBoardNameMap?: Record<string, string>;
+  onTaskOpen?: (task: Task) => void;
+  onTaskClose?: () => void;
+  onSubtaskOpen?: (parentTask: Task, subtask: Task) => void;
 }
 
 export function SingleKanbanBoard({
   boardName,
   workspaceTitle,
   taskBoardNameMap = {},
+  onTaskOpen,
+  onTaskClose,
+  onSubtaskOpen,
 }: SingleKanbanBoardProps) {
   const [tasks, setTasks] =
     useState<Record<TaskStatus, Task[]>>(emptyTaskColumns);
@@ -46,10 +52,27 @@ export function SingleKanbanBoard({
     selectedTask,
     parentTask,
     setSelectedTask,
-    handleTaskClick,
-    handleCloseModal,
-    handleSubtaskClick,
+    handleTaskClick: baseHandleTaskClick,
+    handleCloseModal: baseHandleCloseModal,
+    handleSubtaskClick: baseHandleSubtaskClick,
   } = useTaskBoardState();
+
+  const handleTaskClick = (task: Task) => {
+    baseHandleTaskClick(task);
+    onTaskOpen?.(task);
+  };
+
+  const handleCloseModal = () => {
+    baseHandleCloseModal();
+    onTaskClose?.();
+  };
+
+  const handleSubtaskClick = (subtask: Task) => {
+    if (selectedTask) {
+      onSubtaskOpen?.(selectedTask, subtask);
+    }
+    baseHandleSubtaskClick(subtask);
+  };
 
   useEffect(() => {
     const fetchTasks = async () => {

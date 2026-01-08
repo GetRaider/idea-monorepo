@@ -9,7 +9,7 @@ import {
 } from "../KanbanBoard/types";
 import { tasksService } from "@/services/api/tasks.service";
 import TextEditor from "../TextEditor/TextEditor";
-import { getPriorityName } from "@/utils/task.utils";
+import { tasksHelper } from "@/utils/task.utils";
 import { TaskViewHeader } from "./TaskViewHeader/TaskViewHeader";
 import {
   TaskViewOverlay,
@@ -75,29 +75,6 @@ export default function TaskView({
     }
     setPendingUpdates({});
   }, [initialTask]);
-
-  // Update URL based on current task/subtask
-  useEffect(() => {
-    if (!initialTask?.taskKey || !initialTask?.id) {
-      // Don't update URL for new tasks or when task view is closed
-      if (!initialTask) {
-        window.history.replaceState(null, "", "/tasks");
-      }
-      return;
-    }
-
-    let newUrl: string;
-    if (parentTask?.taskKey) {
-      // Viewing a subtask: /tasks/PARENT-KEY/SUBTASK-KEY
-      newUrl = `/tasks/${parentTask.taskKey}/${initialTask.taskKey}`;
-    } else {
-      // Viewing a main task: /tasks/TASK-KEY
-      newUrl = `/tasks/${initialTask.taskKey}`;
-    }
-
-    // Update URL without page reload
-    window.history.replaceState(null, "", newUrl);
-  }, [initialTask?.taskKey, initialTask?.id, parentTask?.taskKey]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -359,7 +336,7 @@ export default function TaskView({
                   <PriorityIconSpan>
                     {getPriorityIconLabel(priority)}
                   </PriorityIconSpan>
-                  {getPriorityName(priority)}
+                  {tasksHelper.priority.getPriorityName(priority)}
                 </DropdownItem>
               ))}
             </DropdownContainer>

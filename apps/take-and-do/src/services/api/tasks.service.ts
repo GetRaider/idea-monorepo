@@ -74,6 +74,26 @@ export const tasksService = {
     return tasks.map((task: Task) => normalizeTask(task));
   },
 
+  async getRecent(days: number = 7): Promise<Task[]> {
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    const pastDate = new Date(now);
+    pastDate.setDate(pastDate.getDate() - days);
+
+    const allTasks = await this.getAll();
+    return allTasks.filter((task) => {
+      if (task.scheduleDate) {
+        const scheduleTime = new Date(task.scheduleDate).getTime();
+        return scheduleTime >= pastDate.getTime();
+      }
+      if (task.dueDate) {
+        const dueTime = new Date(task.dueDate).getTime();
+        return dueTime >= pastDate.getTime();
+      }
+      return true;
+    });
+  },
+
   async getByTaskBoard(taskBoardId: string): Promise<Task[]> {
     const response = await fetch(`/api/tasks?taskBoardId=${taskBoardId}`);
     if (!response.ok) {

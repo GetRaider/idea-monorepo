@@ -4,7 +4,7 @@ import styled from "styled-components";
 import {
   animatedGradientBackground,
   animatedGradientHover,
-} from "../StatisticsOverview/animatedGradient";
+} from "../ProductivityOverview/animatedGradient";
 
 export const ModalOverlay = styled.div`
   position: fixed;

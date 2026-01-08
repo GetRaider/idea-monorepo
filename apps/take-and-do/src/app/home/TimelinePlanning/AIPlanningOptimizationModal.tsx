@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Task } from "@/components/KanbanBoard/types";
 import { tasksService } from "@/services/api/tasks.service";
-import { formatScheduleDate } from "@/utils/task.utils";
+import { tasksHelper } from "@/utils/task.utils";
 import {
   ModalOverlay,
   ModalContent,
@@ -41,7 +41,7 @@ import {
   ActionsContainer,
   CancelButton,
   OptimizeButton,
-} from "./ScheduleOptimizationModal.styles";
+} from "./AIPlanningOptimizationModal.styles";
 
 interface ScheduleOptimizationModalProps {
   onClose: () => void;
@@ -177,7 +177,7 @@ function ScheduleOptimizationModal({
     if (!schedule) return "Unscheduled";
     const date = new Date(schedule);
     if (!isNaN(date.getTime())) {
-      return formatScheduleDate(date);
+      return tasksHelper.date.formatScheduleDate(date);
     }
     return schedule;
   };

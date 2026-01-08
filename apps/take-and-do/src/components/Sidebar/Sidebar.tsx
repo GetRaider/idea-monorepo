@@ -8,7 +8,6 @@ import {
   Nav,
   NavButton,
   BottomActions,
-  NotificationBadge,
   UserAvatar,
   Avatar,
 } from "./Sidebar.styles";
@@ -23,12 +22,13 @@ export default function Sidebar({ onNavigationChange }: SidebarProps) {
 
   const handleNavClick = (page: string, path: string) => {
     onNavigationChange(page);
-    router.push(path);
+    if (!pathname.startsWith(path)) {
+      router.push(path);
+    }
   };
 
-  // Determine active state based on pathname
   const isHomeActive = pathname === "/home" || pathname === "/";
-  const isTasksActive = pathname === "/tasks";
+  const isTasksActive = pathname.startsWith("/tasks");
 
   return (
     <SidebarContainer>

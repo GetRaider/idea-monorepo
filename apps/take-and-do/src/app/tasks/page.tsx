@@ -1,78 +1,48 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar/Sidebar";
 import NavigationSidebar from "@/components/NavigationSidebar/NavigationSidebar";
-import KanbanBoard from "@/components/KanbanBoard/KanbanBoard";
-import CreateTaskBoardModal from "@/components/NavigationSidebar/CreateTaskBoardModal";
 import { taskBoardsService } from "@/services/api/taskBoards.service";
 import { foldersService } from "@/services/api/folders.service";
-import { TaskBoard } from "@/types/workspace";
-import { Folder } from "@/types/workspace";
 import { PageContainer, Main } from "../page.styles";
+import {
+  LoadingContainer,
+  Spinner,
+} from "@/components/KanbanBoard/KanbanBoard.styles";
+import {
+  buildBoardUrl,
+  buildScheduleUrl,
+} from "../../utils/tasks-routing.utils";
 
 export default function TasksPage() {
-  const [, setCurrentPage] = useState("tasks");
+  const router = useRouter();
   const [isNavSidebarOpen, setIsNavSidebarOpen] = useState(true);
-  const [activeView, setActiveView] = useState<string>("today");
-  const [workspaceTitle, setWorkspaceTitle] = useState("Today");
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [taskBoardNameMap, setTaskBoardNameMap] = useState<
-    Record<string, string>
-  >({});
-  const [taskBoards, setTaskBoards] = useState<TaskBoard[]>([]);
-  const [folders, setFolders] = useState<Folder[]>([]);
 
   useEffect(() => {
-    const fetchData = async () => {
+    const redirect = async () => {
       try {
-        const [boards, foldersData] = await Promise.all([
+        const [boards] = await Promise.all([
           taskBoardsService.getAll(),
           foldersService.getAll(),
         ]);
-        const nameMap: Record<string, string> = {};
-        boards.forEach((taskBoard) => {
-          nameMap[taskBoard.id] = taskBoard.name;
-        });
-        setTaskBoardNameMap(nameMap);
-        setTaskBoards(boards);
-        setFolders(foldersData);
+        if (boards.length > 0) {
+          router.replace(buildBoardUrl(boards[0].name));
+        } else {
+          router.replace(buildScheduleUrl("today"));
+        }
       } catch (error) {
-        console.error("Failed to fetch task boards:", error);
+        console.error("Failed to fetch boards:", error);
+        router.replace(buildScheduleUrl("today"));
       }
     };
-    fetchData();
-  }, []);
 
-  const handleNavigationChange = (page: string) => {
-    setCurrentPage(page);
+    redirect();
+  }, [router]);
+
+  const handleNavigationChange = () => {
     setIsNavSidebarOpen(true);
-  };
-
-  const handleViewChange = (view: string) => {
-    setActiveView(view);
-
-    if (view === "today") {
-      setWorkspaceTitle("Today");
-    } else if (view === "tomorrow") {
-      setWorkspaceTitle("Tomorrow");
-    } else if (view) {
-      setWorkspaceTitle(view);
-    }
-  };
-
-  const handleCreateTaskBoard = async (name: string) => {
-    try {
-      await taskBoardsService.create({ name });
-      setIsCreateModalOpen(false);
-      // Refresh the page to show the new board
-      window.location.reload();
-    } catch (error) {
-      console.error("Failed to create task board:", error);
-      alert(
-        "Failed to create task board. Please check the console for details.",
-      );
-    }
   };
 
   return (
@@ -80,26 +50,15 @@ export default function TasksPage() {
       <Sidebar onNavigationChange={handleNavigationChange} />
       <NavigationSidebar
         isOpen={isNavSidebarOpen}
-        activeView={activeView}
-        onViewChange={handleViewChange}
-        onCreateTaskBoard={() => setIsCreateModalOpen(true)}
-        taskBoards={taskBoards}
-        folders={folders}
+        activeView=""
+        taskBoards={[]}
+        folders={[]}
       />
       <Main $withNavSidebar={isNavSidebarOpen}>
-        <KanbanBoard
-          currentView={activeView}
-          workspaceTitle={workspaceTitle}
-          taskBoardNameMap={taskBoardNameMap}
-        />
+        <LoadingContainer>
+          <Spinner />
+        </LoadingContainer>
       </Main>
-
-      {isCreateModalOpen && (
-        <CreateTaskBoardModal
-          onClose={() => setIsCreateModalOpen(false)}
-          onCreate={handleCreateTaskBoard}
-        />
-      )}
     </PageContainer>
   );
 }

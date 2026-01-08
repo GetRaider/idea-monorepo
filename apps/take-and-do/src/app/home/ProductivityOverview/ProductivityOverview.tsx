@@ -31,14 +31,14 @@ import {
   ProgressBar,
   LoadingContainer,
   Spinner,
-} from "./StatisticsOverview.styles";
+} from "./ProductivityOverview.styles";
 import ProductivitySummaryModal from "./ProductivitySummaryModal";
 import ProductivitySummarySelectionModal from "./ProductivitySummarySelectionModal";
 import type {
   Timeframe,
   AnalyticsData,
 } from "../SummarySection/SummarySection.types";
-import type { AnalyticsStats } from "./StatisticsOverview.types";
+import type { AnalyticsStats } from "./ProductivityOverview.types";
 
 interface StatisticsOverviewProps {}
 
@@ -49,7 +49,7 @@ const CHART_TOOLTIP_STYLE = {
   color: "#fff",
 };
 
-function StatisticsOverview({}: StatisticsOverviewProps) {
+export default function StatisticsOverview({}: StatisticsOverviewProps) {
   const [timeframe, setTimeframe] = useState<Timeframe>("month");
   const [stats, setStats] = useState<AnalyticsStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -295,5 +295,3 @@ function StatisticsOverview({}: StatisticsOverviewProps) {
     </>
   );
 }
-
-export default StatisticsOverview;

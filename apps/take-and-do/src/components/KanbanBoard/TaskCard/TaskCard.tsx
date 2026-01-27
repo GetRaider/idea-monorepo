@@ -138,7 +138,7 @@ export default function TaskCard({ task, onTaskClick }: TaskCardProps) {
               strokeLinecap="round"
             />
           </svg>
-          <span>{tasksHelper.estimation.formatEstimation(estimation)}</span>
+          <span>{tasksHelper.estimation.format(estimation)}</span>
         </DateTime>
       </Meta>
 

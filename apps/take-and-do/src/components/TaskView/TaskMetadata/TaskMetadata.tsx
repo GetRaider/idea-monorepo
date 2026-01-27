@@ -1,11 +1,4 @@
-import {
-  formatDateForInput,
-  formatDisplayDate,
-  formatEstimation,
-  parseEstimation,
-  toTotalHours,
-  formatScheduleDate,
-} from "@/utils/task.utils";
+import { tasksHelper } from "@/utils/task.utils";
 import {
   MetadataInput,
   MetadataItem,
@@ -61,7 +54,7 @@ export default function TaskMetadata({
   // Set data
   useEffect(() => {
     if (task?.estimation) {
-      const parsed = parseEstimation(task.estimation);
+      const parsed = tasksHelper.estimation.parse(task.estimation);
       setEstimationDays(parsed.days);
       setEstimationHours(parsed.hours);
       setEstimationMinutes(parsed.minutes);
@@ -71,12 +64,12 @@ export default function TaskMetadata({
       setEstimationMinutes(0);
     }
     if (task?.dueDate) {
-      setDueDateValue(formatDateForInput(task.dueDate));
+      setDueDateValue(tasksHelper.date.formatForInput(task.dueDate));
     } else {
       setDueDateValue("");
     }
     if (task?.scheduleDate) {
-      setScheduleDateValue(formatDateForInput(task.scheduleDate));
+      setScheduleDateValue(tasksHelper.date.formatForInput(task.scheduleDate));
     } else {
       setScheduleDateValue("");
     }
@@ -145,7 +138,7 @@ export default function TaskMetadata({
   };
   const handleEstimationSave = () => {
     setIsEditingEstimation(false);
-    const totalHours = toTotalHours(
+    const totalHours = tasksHelper.estimation.toTotalHours(
       estimationDays,
       estimationHours,
       estimationMinutes,
@@ -241,7 +234,7 @@ export default function TaskMetadata({
           </MetadataIcon>
           <span>
             {task.scheduleDate
-              ? formatScheduleDate(task.scheduleDate)
+              ? tasksHelper.date.formatForSchedule(task.scheduleDate)
               : "Set schedule"}
           </span>
         </MetadataItem>
@@ -286,7 +279,9 @@ export default function TaskMetadata({
             </svg>
           </MetadataIcon>
           <span>
-            {task.dueDate ? formatDisplayDate(task.dueDate) : "Set due date"}
+            {task.dueDate
+              ? tasksHelper.date.formatForDisplay(task.dueDate)
+              : "Set due date"}
           </span>
         </MetadataItem>
       )}
@@ -353,7 +348,11 @@ export default function TaskMetadata({
               />
             </svg>
           </MetadataIcon>
-          <span>{formatEstimation(task.estimation) || "Set estimation"}</span>
+          <span>
+            {task.estimation
+              ? tasksHelper.estimation.format(task.estimation)
+              : "Set estimation"}
+          </span>
         </MetadataItem>
       )}
 

@@ -336,7 +336,7 @@ export default function TaskView({
                   <PriorityIconSpan>
                     {getPriorityIconLabel(priority)}
                   </PriorityIconSpan>
-                  {tasksHelper.priority.getPriorityName(priority)}
+                  {tasksHelper.priority.getName(priority)}
                 </DropdownItem>
               ))}
             </DropdownContainer>

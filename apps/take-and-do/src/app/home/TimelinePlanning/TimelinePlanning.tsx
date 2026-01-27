@@ -110,7 +110,7 @@ function TimelinePlanning({
         tasks = customDateTasks;
         break;
     }
-    return tasksHelper.status.sortByStatus(tasks);
+    return tasksHelper.status.sort(tasks);
   };
 
   const getScheduleLabel = () => {
@@ -118,14 +118,14 @@ function TimelinePlanning({
     if (schedule === "today") return "today";
     if (schedule === "tomorrow") return "tomorrow";
     if (schedule === "custom" && customDate) {
-      return tasksHelper.date.formatDisplayDate(new Date(customDate));
+      return tasksHelper.date.formatForDisplay(new Date(customDate));
     }
     return "selected date";
   };
 
   const formatDate = (date: Date | undefined): string => {
     if (!date) return "—";
-    return tasksHelper.date.formatScheduleDate(date);
+    return tasksHelper.date.formatForSchedule(date);
   };
 
   const formatEstimation = (hours: number | undefined): string => {

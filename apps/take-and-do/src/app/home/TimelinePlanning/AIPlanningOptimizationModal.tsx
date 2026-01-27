@@ -177,7 +177,7 @@ function ScheduleOptimizationModal({
     if (!schedule) return "Unscheduled";
     const date = new Date(schedule);
     if (!isNaN(date.getTime())) {
-      return tasksHelper.date.formatScheduleDate(date);
+      return tasksHelper.date.formatForSchedule(date);
     }
     return schedule;
   };

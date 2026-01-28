@@ -15,7 +15,7 @@ import {
   Tag,
   TagDot,
 } from "./TaskCard.styles";
-import { tasksHelper } from "@/utils/task.utils";
+import { tasksUtils } from "@/utils/task.utils";
 
 interface TaskCardProps {
   task: Task;
@@ -138,7 +138,7 @@ export default function TaskCard({ task, onTaskClick }: TaskCardProps) {
               strokeLinecap="round"
             />
           </svg>
-          <span>{tasksHelper.estimation.format(estimation)}</span>
+          <span>{tasksUtils.estimation.format(estimation)}</span>
         </DateTime>
       </Meta>
 

@@ -9,7 +9,7 @@ import {
 } from "../KanbanBoard/types";
 import { tasksService } from "@/services/api/tasks.service";
 import TextEditor from "../TextEditor/TextEditor";
-import { tasksHelper } from "@/utils/task.utils";
+import { tasksUtils } from "@/utils/task.utils";
 import { TaskViewHeader } from "./TaskViewHeader/TaskViewHeader";
 import {
   TaskViewOverlay,
@@ -336,7 +336,7 @@ export default function TaskView({
                   <PriorityIconSpan>
                     {getPriorityIconLabel(priority)}
                   </PriorityIconSpan>
-                  {tasksHelper.priority.getName(priority)}
+                  {tasksUtils.priority.getName(priority)}
                 </DropdownItem>
               ))}
             </DropdownContainer>

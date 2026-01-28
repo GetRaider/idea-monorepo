@@ -13,7 +13,32 @@ const STATUS_NAMES: Record<TaskStatus, string> = {
   [TaskStatus.DONE]: "Done",
 };
 
-export const tasksHelper = {
+export const tasksUtils = {
+  sortScheduledTasksByStatus(
+    schedule: ScheduleType,
+    recentTasks: Task[],
+    todayTasks: Task[],
+    tomorrowTasks: Task[],
+    customDateTasks: Task[],
+  ): Task[] {
+    const scheduledTasks = {
+      new: recentTasks,
+      today: todayTasks,
+      tomorrow: tomorrowTasks,
+      custom: customDateTasks,
+    };
+    const tasks = scheduledTasks[schedule];
+    return tasksUtils.status.sort(tasks);
+  },
+  getScheduleLabel(schedule: ScheduleType, customDate: string) {
+    if (schedule === "new") return "last 7 days";
+    if (schedule === "today") return "today";
+    if (schedule === "tomorrow") return "tomorrow";
+    if (schedule === "custom" && customDate) {
+      return tasksUtils.date.formatForDisplay(new Date(customDate));
+    }
+    return "selected date";
+  },
   estimation: {
     parse(totalHours: number): ParsedEstimation {
       const totalMinutes = Math.round(totalHours * 60);
@@ -36,6 +61,14 @@ export const tasksHelper = {
     },
   },
   date: {
+    formatCustomDate(customDate: string): Date {
+      const dateParts = customDate.split("-");
+      const year = parseInt(dateParts[0], 10);
+      const month = parseInt(dateParts[1], 10) - 1;
+      const day = parseInt(dateParts[2], 10);
+      const date = new Date(year, month, day);
+      return date;
+    },
     formatForInput(rawDate: Date | string): string {
       const date = rawDate instanceof Date ? rawDate : new Date(rawDate);
       if (isNaN(date.getTime())) return "";
@@ -115,3 +148,5 @@ export interface ParsedEstimation {
   hours: number;
   minutes: number;
 }
+
+export type ScheduleType = "new" | "today" | "tomorrow" | "custom";

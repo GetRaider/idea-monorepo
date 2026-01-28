@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 import { Task, TaskStatus } from "@/components/KanbanBoard/types";
 import { EmptyState } from "@/components/EmptyState";
 import { tasksService } from "@/services/api/tasks.service";
-import { tasksHelper } from "@/utils/task.utils";
+import { ScheduleType, tasksUtils } from "@/utils/task.utils";
 import { getPriorityIconLabel } from "@/components/KanbanBoard/TaskCard/TaskCard";
 import { getStatusIcon } from "@/components/KanbanBoard/Column/Column";
 import ScheduleOptimizationModal from "./AIPlanningOptimizationModal";
@@ -32,100 +32,28 @@ import {
   StatusText,
   ViewAllLink,
 } from "./TimelinePlanning.styles";
+import { useRecentTasks } from "@/hooks/useRecentTasks";
+import { useCustomDateTasks } from "@/hooks/useCustomDate";
 
 interface TimelinePlanningProps {
   todayTasks: Task[];
   tomorrowTasks: Task[];
 }
 
-type ScheduleType = "new" | "today" | "tomorrow" | "custom";
-
 function TimelinePlanning({
   todayTasks,
   tomorrowTasks,
 }: TimelinePlanningProps) {
-  const [schedule, setSchedule] = useState<ScheduleType>("new");
   const [customDate, setCustomDate] = useState<string>("");
-  const [customDateTasks, setCustomDateTasks] = useState<Task[]>([]);
-  const [recentTasks, setRecentTasks] = useState<Task[]>([]);
-  const [isLoadingCustomDate, setIsLoadingCustomDate] = useState(false);
-  const [isLoadingRecent, setIsLoadingRecent] = useState(true);
+  const { customDateTasks, isLoadingCustomDate, setSchedule, schedule } =
+    useCustomDateTasks(customDate);
+  const { recentTasks, isLoadingRecent } = useRecentTasks();
   const [isOptimizationModalOpen, setIsOptimizationModalOpen] = useState(false);
   const [allTasks, setAllTasks] = useState<Task[]>([]);
 
-  // Load recent tasks on mount
-  useEffect(() => {
-    setIsLoadingRecent(true);
-    tasksService
-      .getRecent(7)
-      .then((tasks) => {
-        setRecentTasks(tasks);
-      })
-      .catch((error) => {
-        console.error("Failed to fetch recent tasks:", error);
-        setRecentTasks([]);
-      })
-      .finally(() => {
-        setIsLoadingRecent(false);
-      });
-  }, []);
-
-  useEffect(() => {
-    if (schedule === "custom" && customDate) {
-      setIsLoadingCustomDate(true);
-      // Separate to function
-      const dateParts = customDate.split("-");
-      const year = parseInt(dateParts[0], 10);
-      const month = parseInt(dateParts[1], 10) - 1;
-      const day = parseInt(dateParts[2], 10);
-      const date = new Date(year, month, day);
-      tasksService
-        .getByDate(date)
-        .then((tasks) => {
-          setCustomDateTasks(tasks);
-        })
-        .catch((error) => {
-          console.error("Failed to fetch tasks for custom date:", error);
-          setCustomDateTasks([]);
-        })
-        .finally(() => {
-          setIsLoadingCustomDate(false);
-        });
-    }
-  }, [schedule, customDate]);
-
-  const getTasks = () => {
-    let tasks: Task[];
-    switch (schedule) {
-      case "new":
-        tasks = recentTasks;
-        break;
-      case "today":
-        tasks = todayTasks;
-        break;
-      case "tomorrow":
-        tasks = tomorrowTasks;
-        break;
-      default:
-        tasks = customDateTasks;
-        break;
-    }
-    return tasksHelper.status.sort(tasks);
-  };
-
-  const getScheduleLabel = () => {
-    if (schedule === "new") return "last 7 days";
-    if (schedule === "today") return "today";
-    if (schedule === "tomorrow") return "tomorrow";
-    if (schedule === "custom" && customDate) {
-      return tasksHelper.date.formatForDisplay(new Date(customDate));
-    }
-    return "selected date";
-  };
-
   const formatDate = (date: Date | undefined): string => {
     if (!date) return "—";
-    return tasksHelper.date.formatForSchedule(date);
+    return tasksUtils.date.formatForSchedule(date);
   };
 
   const formatEstimation = (hours: number | undefined): string => {
@@ -133,7 +61,13 @@ function TimelinePlanning({
     return `${hours}h`;
   };
 
-  const currentTasks = getTasks();
+  const currentTasks = tasksUtils.sortScheduledTasksByStatus(
+    schedule,
+    recentTasks,
+    todayTasks,
+    tomorrowTasks,
+    customDateTasks,
+  );
   const tasks = currentTasks.slice(0, 5);
   const isLoading = schedule === "new" ? isLoadingRecent : isLoadingCustomDate;
 
@@ -222,7 +156,7 @@ function TimelinePlanning({
       ) : (
         <EmptyState
           title="You have no tasks"
-          message={`No tasks scheduled for ${getScheduleLabel()}`}
+          message={`No tasks scheduled for ${tasksUtils.getScheduleLabel(schedule, customDate)}`}
         />
       )}
       <ViewAllLink href="/tasks">View all tasks →</ViewAllLink>

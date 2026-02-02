@@ -1,16 +1,15 @@
-import { taskBoardsService } from "@/services/api/taskBoards.service";
-import { tasksService } from "@/services/api/tasks.service";
+import { apiServices } from "@/services/api";
 import {
-  TaskStatus,
   Task,
   TaskGroup,
+  TaskStatus,
   toTaskStatus,
-  toTaskPriority,
   createTaskGroups,
 } from "../types";
+import { tasksHelper } from "@/helpers/task.helper";
 
 export async function fetchTaskBoardNameMap(): Promise<Record<string, string>> {
-  const taskBoards = await taskBoardsService.getAll();
+  const taskBoards = await apiServices.taskBoards.getAll();
   const taskBoardNamesMap: Record<string, string> = {};
   taskBoards.forEach((taskBoard) => {
     taskBoardNamesMap[taskBoard.id] = taskBoard.name;
@@ -34,7 +33,7 @@ export async function loadTaskBoardContent({
 
   let boardTasks: Task[] = [];
   if (taskBoardId) {
-    boardTasks = await taskBoardsService.getTasks(taskBoardId);
+    boardTasks = await apiServices.taskBoards.getTasks(taskBoardId);
   }
 
   const grouped: Record<TaskStatus, Task[]> = {
@@ -47,7 +46,7 @@ export async function loadTaskBoardContent({
       task.dueDate = new Date(task.dueDate);
     }
     task.status = toTaskStatus(task.status);
-    task.priority = toTaskPriority(task.priority);
+    task.priority = tasksHelper.priority.format(task.priority);
     grouped[task.status].push(task);
   });
   setTasks(grouped);
@@ -62,7 +61,7 @@ export async function loadScheduledContent({
   taskBoardNamesMap: Record<string, string>;
   setTaskGroups: (groups: TaskGroup[]) => void;
 }): Promise<void> {
-  const scheduledTasks = await tasksService.getByDate(scheduleDate);
+  const scheduledTasks = await apiServices.tasks.getByDate(scheduleDate);
   setTaskGroups(createTaskGroups(scheduledTasks, taskBoardNamesMap));
 }
 
@@ -76,13 +75,12 @@ export async function loadFolderContent({
   setTaskGroups: (groups: TaskGroup[]) => void;
 }): Promise<void> {
   // Fetch all task boards in this folder
-  const taskBoards = await taskBoardsService.getAll();
+  const taskBoards = await apiServices.taskBoards.getAll();
   const folderTaskBoards = taskBoards.filter((tb) => tb.folderId === folderId);
 
-  // Fetch tasks for each board
   const allTasks: Task[] = [];
   for (const taskBoard of folderTaskBoards) {
-    const boardTasks = await taskBoardsService.getTasks(taskBoard.id);
+    const boardTasks = await apiServices.taskBoards.getTasks(taskBoard.id);
     allTasks.push(...boardTasks);
   }
 

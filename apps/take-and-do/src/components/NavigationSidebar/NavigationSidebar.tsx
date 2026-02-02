@@ -17,8 +17,7 @@ import {
   AddButton,
 } from "./NavigationSidebar.styles";
 import { Folder, TaskBoard } from "@/types/workspace";
-import { foldersService } from "@/services/api/folders.service";
-import { taskBoardsService } from "@/services/api/taskBoards.service";
+import { apiServices } from "@/services/api";
 
 interface NavigationSidebarProps {
   isOpen: boolean;
@@ -54,8 +53,8 @@ export default function NavigationSidebar({
     const fetchData = async () => {
       try {
         const [foldersData, taskBoardsData] = await Promise.all([
-          foldersService.getAll(),
-          taskBoardsService.getAll(),
+          apiServices.folders.getAll(),
+          apiServices.taskBoards.getAll(),
         ]);
 
         setFolders(foldersData);

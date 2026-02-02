@@ -3,12 +3,12 @@
 import { useState, useEffect } from "react";
 import Sidebar from "@/components/Sidebar/Sidebar";
 import NavigationSidebar from "@/components/NavigationSidebar/NavigationSidebar";
-import { tasksService } from "@/services/api/tasks.service";
+import { apiServices } from "@/services/api";
 import { Task } from "@/components/KanbanBoard/types";
 import {
   StatsCards,
-  StatisticsOverview,
-  ScheduledTasks,
+  ProductivityOverview,
+  TimelinePlanning,
   QuickActions,
 } from ".";
 import type { TaskStats } from ".";
@@ -36,7 +36,7 @@ function HomePage() {
       try {
         setIsLoading(true);
         const [scheduledTasks, dashboardStatsResponse] = await Promise.all([
-          tasksService.getBySchedule(),
+          apiServices.tasks.getBySchedule(),
           fetch(`/api/stats?timeframe=month`).then((res) =>
             res.ok ? res.json() : null,
           ),
@@ -99,9 +99,12 @@ function HomePage() {
           </Subtitle>
         </WelcomeSection>
 
-        <ScheduledTasks todayTasks={todayTasks} tomorrowTasks={tomorrowTasks} />
+        <ProductivityOverview />
 
-        <StatisticsOverview />
+        <TimelinePlanning
+          todayTasks={todayTasks}
+          tomorrowTasks={tomorrowTasks}
+        />
 
         {taskStats && <StatsCards stats={taskStats} />}
 

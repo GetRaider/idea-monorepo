@@ -15,7 +15,7 @@
     "rebuild": "pnpm run clean && turbo run build",
     "dev": "turbo run dev",
     "dev:devinity": "turbo run dev --filter=devinity-api --filter=devinity-web --filter=@repo/api --filter=@repo/ui",
-    "dev:take-and-do": "turbo run dev --filter=take-and-do --filter=@repo/ui",
+    "dev:take-and-do": "turbo run dev --filter=take-and-do --filter=@repo/ui --filter=@repo/api",
     "prod": "turbo run prod",
     "test": "turbo run test",
     "test:e2e": "turbo run test:e2e",

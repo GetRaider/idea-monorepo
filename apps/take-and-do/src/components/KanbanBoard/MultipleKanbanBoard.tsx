@@ -28,7 +28,7 @@ import {
 } from "@/hooks/useTaskBoardState";
 import { EmptyState } from "../EmptyState";
 import { AIComposeModal } from "./shared/AIComposeModal";
-import { tasksService } from "@/services/api/tasks.service";
+import { apiServices } from "@/services/api";
 
 interface MultipleKanbanBoardProps {
   scheduleDate?: Date;
@@ -297,7 +297,7 @@ export function MultipleKanbanBoard({
           additionalData.scheduleDate = scheduleDate;
         }
 
-        const composedData = await tasksService.composeWithAI(
+        const composedData = await apiServices.tasks.composeWithAI(
           text,
           taskBoardId,
           additionalData,

@@ -1,15 +1,7 @@
-export enum TaskStatus {
-  TODO = "To Do",
-  IN_PROGRESS = "In Progress",
-  DONE = "Done",
-}
+import { TaskPriority, TaskStatus } from "@/constants/tasks.constants";
+import { tasksHelper } from "@/helpers/task.helper";
 
-export enum TaskPriority {
-  LOW = "low",
-  MEDIUM = "medium",
-  HIGH = "high",
-  CRITICAL = "critical",
-}
+export { TaskPriority, TaskStatus };
 
 export interface Task {
   id: string;
@@ -30,7 +22,9 @@ export interface Task {
  * Type for task updates where nullable fields can be explicitly set to null.
  * Use null to clear a field, undefined means "don't change".
  */
-export type TaskUpdate = Partial<Omit<Task, 'dueDate' | 'estimation' | 'scheduleDate'>> & {
+export type TaskUpdate = Partial<
+  Omit<Task, "dueDate" | "estimation" | "scheduleDate">
+> & {
   dueDate?: Date | null;
   estimation?: number | null;
   scheduleDate?: Date | null;
@@ -66,19 +60,6 @@ export function toTaskStatus(status: unknown): TaskStatus {
     : TaskStatus.TODO;
 }
 
-export function toTaskPriority(priority: unknown): TaskPriority {
-  if (!priority) return TaskPriority.MEDIUM;
-
-  const priorityString = String(priority).toLowerCase();
-  const validPriorities = Object.values(TaskPriority) as string[];
-
-  if (validPriorities.includes(priorityString)) {
-    return priorityString as TaskPriority;
-  }
-
-  return TaskPriority.MEDIUM;
-}
-
 export function createEmptyStatusBuckets(): Record<TaskStatus, Task[]> {
   return {
     [TaskStatus.TODO]: [],
@@ -105,7 +86,7 @@ export function createTaskGroups(
       task.dueDate = new Date(task.dueDate);
     }
     task.status = toTaskStatus(task.status);
-    task.priority = toTaskPriority(task.priority);
+    task.priority = tasksHelper.priority.format(task.priority);
     groupsMap[groupKey][task.status].push(task);
   });
 
@@ -117,7 +98,9 @@ export function createTaskGroups(
 }
 
 // Helper to convert "today" or "tomorrow" string to Date
-export function getDateFromScheduleString(schedule: "today" | "tomorrow"): Date {
+export function getDateFromScheduleString(
+  schedule: "today" | "tomorrow",
+): Date {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   if (schedule === "tomorrow") {
@@ -132,4 +115,3 @@ export function getDateFromScheduleString(schedule: "today" | "tomorrow"): Date 
 export function isScheduleString(view: string): view is "today" | "tomorrow" {
   return view === "today" || view === "tomorrow";
 }
-

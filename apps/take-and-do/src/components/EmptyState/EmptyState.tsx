@@ -13,16 +13,14 @@ interface EmptyStateProps {
   message?: string;
 }
 
-function EmptyState({ title = "You have no tasks", message }: EmptyStateProps) {
+function EmptyState({
+  title = "You have no tasks",
+  message,
+}: EmptyStateProps = {}) {
   return (
     <EmptyStateContainer>
       <EmptyStateImageWrapper>
-        <Image
-          src="/empty-state.svg"
-          alt="No tasks"
-          width={96}
-          height={96}
-        />
+        <Image src="/empty-state.svg" alt="No tasks" width={96} height={96} />
       </EmptyStateImageWrapper>
       <EmptyStateTitle>{title}</EmptyStateTitle>
       {message && <EmptyStateText>{message}</EmptyStateText>}
@@ -31,4 +29,3 @@ function EmptyState({ title = "You have no tasks", message }: EmptyStateProps) {
 }
 
 export default EmptyState;
-

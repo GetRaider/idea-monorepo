@@ -4,8 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar/Sidebar";
 import NavigationSidebar from "@/components/NavigationSidebar/NavigationSidebar";
-import { taskBoardsService } from "@/services/api/taskBoards.service";
-import { foldersService } from "@/services/api/folders.service";
+import { apiServices } from "@/services/api";
 import { PageContainer, Main } from "../page.styles";
 import {
   LoadingContainer,
@@ -14,7 +13,7 @@ import {
 import {
   buildBoardUrl,
   buildScheduleUrl,
-} from "../../utils/tasks-routing.utils";
+} from "../../helpers/tasks-routing.helper";
 
 export default function TasksPage() {
   const router = useRouter();
@@ -24,8 +23,8 @@ export default function TasksPage() {
     const redirect = async () => {
       try {
         const [boards] = await Promise.all([
-          taskBoardsService.getAll(),
-          foldersService.getAll(),
+          apiServices.taskBoards.getAll(),
+          apiServices.folders.getAll(),
         ]);
         if (boards.length > 0) {
           router.replace(buildBoardUrl(boards[0].name));

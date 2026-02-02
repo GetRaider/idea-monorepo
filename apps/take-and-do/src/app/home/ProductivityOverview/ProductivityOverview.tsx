@@ -39,8 +39,7 @@ import type {
   AnalyticsData,
 } from "../SummarySection/SummarySection.types";
 import type { AnalyticsStats } from "./ProductivityOverview.types";
-
-interface StatisticsOverviewProps {}
+import { EmptyState } from "@/components/EmptyState";
 
 const CHART_TOOLTIP_STYLE = {
   background: "#2a2a2a",
@@ -49,7 +48,7 @@ const CHART_TOOLTIP_STYLE = {
   color: "#fff",
 };
 
-export default function StatisticsOverview({}: StatisticsOverviewProps) {
+export function ProductivityOverview() {
   const [timeframe, setTimeframe] = useState<Timeframe>("month");
   const [stats, setStats] = useState<AnalyticsStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -68,9 +67,7 @@ export default function StatisticsOverview({}: StatisticsOverviewProps) {
         const response = await fetch(`/api/analytics?timeframe=${timeframe}`);
         if (response.ok) {
           const data = await response.json();
-          if (data?.stats) {
-            setStats(data.stats);
-          }
+          if (data?.stats) setStats(data.stats);
         }
       } catch (error) {
         console.error("Failed to fetch statistics:", error);
@@ -132,48 +129,6 @@ export default function StatisticsOverview({}: StatisticsOverviewProps) {
     }
   };
 
-  if (isLoading || !stats) {
-    return (
-      <Section>
-        <SectionHeader>
-          <SectionTitle>📊 Productivity Overview</SectionTitle>
-          <Controls>
-            <TimeframeSelect
-              value={timeframe}
-              onChange={(e) => setTimeframe(e.target.value as Timeframe)}
-            >
-              <option value="week">Week</option>
-              <option value="month">Month</option>
-              <option value="quarter">Quarter</option>
-            </TimeframeSelect>
-            <GenerateButton
-              onClick={handleOpenSelectionModal}
-              $disabled={isGeneratingAnalytics}
-              disabled={isGeneratingAnalytics}
-            >
-              ⚡ Explore AI Summary
-            </GenerateButton>
-          </Controls>
-        </SectionHeader>
-        <LoadingContainer>
-          <Spinner />
-        </LoadingContainer>
-      </Section>
-    );
-  }
-
-  const barChartData = [
-    { name: "Created", value: stats.tasksCreated },
-    { name: "Completed", value: stats.tasksCompleted },
-  ];
-
-  const pieChartData = [
-    { name: "Completed", value: stats.tasksCompleted },
-    { name: "Pending", value: stats.tasksCreated - stats.tasksCompleted },
-  ];
-
-  const isOverdueWarning = stats.overdueRate > 0.2;
-
   return (
     <>
       <Section>
@@ -191,86 +146,23 @@ export default function StatisticsOverview({}: StatisticsOverviewProps) {
             <GenerateButton
               onClick={handleOpenSelectionModal}
               $disabled={isGeneratingAnalytics}
-              disabled={isGeneratingAnalytics}
             >
               ⚡ Explore AI Summary
             </GenerateButton>
           </Controls>
         </SectionHeader>
-        <ChartsGrid>
-          <ChartCard>
-            <ChartTitle>Task Completion</ChartTitle>
-            <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={barChartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#3a3a3a" />
-                <XAxis dataKey="name" stroke="#888" />
-                <YAxis stroke="#888" />
-                <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
-                <Bar dataKey="value" fill="#667eea" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </ChartCard>
-
-          <ChartCard>
-            <ChartTitle>Completion Rate</ChartTitle>
-            <ResponsiveContainer width="100%" height={200}>
-              <PieChart>
-                <Pie
-                  data={pieChartData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) =>
-                    `${name}: ${(percent * 100).toFixed(0)}%`
-                  }
-                  outerRadius={70}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  <Cell fill="#10b981" />
-                  <Cell fill="#f59e0b" />
-                </Pie>
-                <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
-              </PieChart>
-            </ResponsiveContainer>
-          </ChartCard>
-
-          <ChartCard>
-            <ChartTitle>Performance Metrics</ChartTitle>
-            <MetricsContainer>
-              <div>
-                <MetricRow>
-                  <MetricLabel>Avg Completion Time</MetricLabel>
-                  <MetricValue>
-                    {stats.avgCompletionTimeDays.toFixed(1)} days
-                  </MetricValue>
-                </MetricRow>
-                <ProgressBarContainer>
-                  <ProgressBar
-                    $progress={Math.min(
-                      (stats.avgCompletionTimeDays / 7) * 100,
-                      100,
-                    )}
-                  />
-                </ProgressBarContainer>
-              </div>
-              <div>
-                <MetricRow>
-                  <MetricLabel>Overdue Rate</MetricLabel>
-                  <MetricValue $warning={isOverdueWarning}>
-                    {(stats.overdueRate * 100).toFixed(1)}%
-                  </MetricValue>
-                </MetricRow>
-                <ProgressBarContainer>
-                  <ProgressBar
-                    $progress={stats.overdueRate * 100}
-                    $warning={isOverdueWarning}
-                  />
-                </ProgressBarContainer>
-              </div>
-            </MetricsContainer>
-          </ChartCard>
-        </ChartsGrid>
+        {isLoading ? (
+          <LoadingContainer>
+            <Spinner />
+          </LoadingContainer>
+        ) : stats ? (
+          <Charts stats={stats} />
+        ) : (
+          <EmptyState
+            title="You have no analytics"
+            message="You have no tasks to build analytics"
+          />
+        )}
       </Section>
 
       {isSelectionModalOpen && (
@@ -293,5 +185,95 @@ export default function StatisticsOverview({}: StatisticsOverviewProps) {
         />
       )}
     </>
+  );
+}
+
+function Charts({ stats }: { stats: AnalyticsStats }) {
+  const barChartData = [
+    { name: "Created", value: stats.tasksCreated },
+    { name: "Completed", value: stats.tasksCompleted },
+  ];
+
+  const pieChartData = [
+    { name: "Completed", value: stats.tasksCompleted },
+    { name: "Pending", value: stats.tasksCreated - stats.tasksCompleted },
+  ];
+
+  const isOverdueWarning = stats.overdueRate > 0.2;
+  return (
+    <ChartsGrid>
+      <ChartCard>
+        <ChartTitle>Task Completion</ChartTitle>
+        <ResponsiveContainer width="100%" height={200}>
+          <BarChart data={barChartData}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#3a3a3a" />
+            <XAxis dataKey="name" stroke="#888" />
+            <YAxis stroke="#888" />
+            <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
+            <Bar dataKey="value" fill="#667eea" radius={[6, 6, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      </ChartCard>
+
+      <ChartCard>
+        <ChartTitle>Completion Rate</ChartTitle>
+        <ResponsiveContainer width="100%" height={200}>
+          <PieChart>
+            <Pie
+              data={pieChartData}
+              cx="50%"
+              cy="50%"
+              labelLine={false}
+              label={({ name, percent }) =>
+                `${name}: ${(percent * 100).toFixed(0)}%`
+              }
+              outerRadius={70}
+              fill="#8884d8"
+              dataKey="value"
+            >
+              <Cell fill="#10b981" />
+              <Cell fill="#f59e0b" />
+            </Pie>
+            <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
+          </PieChart>
+        </ResponsiveContainer>
+      </ChartCard>
+
+      <ChartCard>
+        <ChartTitle>Performance Metrics</ChartTitle>
+        <MetricsContainer>
+          <div>
+            <MetricRow>
+              <MetricLabel>Avg Completion Time</MetricLabel>
+              <MetricValue>
+                {stats.avgCompletionTimeDays.toFixed(1)} days
+              </MetricValue>
+            </MetricRow>
+            <ProgressBarContainer>
+              <ProgressBar
+                $progress={Math.min(
+                  (stats.avgCompletionTimeDays / 7) * 100,
+                  100,
+                )}
+              />
+            </ProgressBarContainer>
+          </div>
+          <div>
+            <MetricRow>
+              <MetricLabel>Overdue Rate</MetricLabel>
+              <MetricValue $warning={isOverdueWarning}>
+                {(stats.overdueRate * 100).toFixed(1)}%
+              </MetricValue>
+            </MetricRow>
+            <ProgressBarContainer>
+              <ProgressBar
+                $progress={stats.overdueRate * 100}
+                $warning={isOverdueWarning}
+              />
+            </ProgressBarContainer>
+          </div>
+        </MetricsContainer>
+      </ChartCard>
+    </ChartsGrid>
   );
 }

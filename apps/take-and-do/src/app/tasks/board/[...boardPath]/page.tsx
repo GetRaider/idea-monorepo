@@ -7,9 +7,7 @@ import NavigationSidebar from "@/components/NavigationSidebar/NavigationSidebar"
 import CreateTaskBoardModal from "@/components/NavigationSidebar/CreateTaskBoardModal";
 import { SingleKanbanBoard } from "@/components/KanbanBoard/SingleKanbanBoard";
 import TaskView from "@/components/TaskView/TaskView";
-import { taskBoardsService } from "@/services/api/taskBoards.service";
-import { foldersService } from "@/services/api/folders.service";
-import { tasksService } from "@/services/api/tasks.service";
+import { apiServices } from "@/services/api";
 import { TaskBoard, Folder } from "@/types/workspace";
 import { Task } from "@/components/KanbanBoard/types";
 import { PageContainer, Main } from "../../../page.styles";
@@ -21,7 +19,7 @@ import {
   parseBoardPath,
   buildScheduleUrl,
   buildBoardUrl,
-} from "../../../../utils/tasks-routing.utils";
+} from "../../../../helpers/tasks-routing.helper";
 
 interface BoardPageProps {
   params: Promise<{ boardPath: string[] }>;
@@ -58,8 +56,8 @@ export default function BoardPage({ params }: BoardPageProps) {
     const fetchData = async () => {
       try {
         const [boards, foldersData] = await Promise.all([
-          taskBoardsService.getAll(),
-          foldersService.getAll(),
+          apiServices.taskBoards.getAll(),
+          apiServices.folders.getAll(),
         ]);
 
         const nameMap: Record<string, string> = {};
@@ -93,13 +91,13 @@ export default function BoardPage({ params }: BoardPageProps) {
       try {
         if (subtaskKey) {
           const [parentResult, subtaskResult] = await Promise.all([
-            tasksService.getByKey(taskKey),
-            tasksService.getByKey(subtaskKey),
+            apiServices.tasks.getByKey(taskKey),
+            apiServices.tasks.getByKey(subtaskKey),
           ]);
           setParentTask(parentResult.task);
           setSelectedTask(subtaskResult.task);
         } else {
-          const result = await tasksService.getByKey(taskKey);
+          const result = await apiServices.tasks.getByKey(taskKey);
           setSelectedTask(result.task);
           setParentTask(result.parent);
         }
@@ -129,7 +127,7 @@ export default function BoardPage({ params }: BoardPageProps) {
 
   const handleCreateTaskBoard = async (name: string) => {
     try {
-      await taskBoardsService.create({ name });
+      await apiServices.taskBoards.create({ name });
       setIsCreateModalOpen(false);
       router.push(buildBoardUrl(name));
       window.location.reload();

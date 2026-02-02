@@ -8,4 +8,4 @@ export {
   type ScheduleView,
   type BoardView,
   type TasksView,
-} from "../../utils/tasks-routing.utils";
+} from "../../helpers/tasks-routing.helper";

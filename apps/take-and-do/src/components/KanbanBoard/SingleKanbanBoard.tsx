@@ -23,7 +23,7 @@ import {
 } from "@/hooks/useTaskBoardState";
 import { EmptyState } from "../EmptyState";
 import { AIComposeModal } from "./shared/AIComposeModal";
-import { tasksService } from "@/services/api/tasks.service";
+import { apiServices } from "@/services/api";
 
 interface SingleKanbanBoardProps {
   boardName: string;
@@ -155,7 +155,7 @@ export function SingleKanbanBoard({
       }
 
       try {
-        const composedData = await tasksService.composeWithAI(
+        const composedData = await apiServices.tasks.composeWithAI(
           text,
           taskBoardId,
         );

@@ -113,6 +113,7 @@ export const CardTitle = styled.h3<{ $color?: string }>`
   margin: 0;
   font-size: 16px;
   font-weight: 600;
+  marginBottom: "12px"
   color: ${(props) => props.$color || "#fff"};
 `;
 
@@ -144,4 +145,3 @@ export const EmptyState = styled.p`
   color: #888;
   margin: 0;
 `;
-

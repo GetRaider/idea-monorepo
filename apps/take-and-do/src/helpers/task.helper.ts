@@ -13,7 +13,7 @@ const STATUS_NAMES: Record<TaskStatus, string> = {
   [TaskStatus.DONE]: "Done",
 };
 
-export const tasksUtils = {
+export const tasksHelper = {
   sortScheduledTasksByStatus(
     schedule: ScheduleType,
     recentTasks: Task[],
@@ -28,14 +28,14 @@ export const tasksUtils = {
       custom: customDateTasks,
     };
     const tasks = scheduledTasks[schedule];
-    return tasksUtils.status.sort(tasks);
+    return tasksHelper.status.sort(tasks);
   },
   getScheduleLabel(schedule: ScheduleType, customDate: string) {
     if (schedule === "new") return "last 7 days";
     if (schedule === "today") return "today";
     if (schedule === "tomorrow") return "tomorrow";
     if (schedule === "custom" && customDate) {
-      return tasksUtils.date.formatForDisplay(new Date(customDate));
+      return tasksHelper.date.formatForDisplay(new Date(customDate));
     }
     return "selected date";
   },
@@ -58,6 +58,10 @@ export const tasksUtils = {
       if (hours > 0) parts.push(`${hours}h`);
       if (minutes > 0) parts.push(`${minutes}m`);
       return parts.length > 0 ? parts.join(" ") : "0h";
+    },
+    hours(hours: number): string {
+      if (!hours) return "—";
+      return `${hours}h`;
     },
   },
   date: {
@@ -122,6 +126,18 @@ export const tasksUtils = {
     },
   },
   priority: {
+    format(priority: unknown): TaskPriority {
+      if (!priority) return TaskPriority.MEDIUM;
+
+      const priorityString = String(priority).toLowerCase();
+      const validPriorities = Object.values(TaskPriority) as string[];
+
+      if (validPriorities.includes(priorityString)) {
+        return priorityString as TaskPriority;
+      }
+
+      return TaskPriority.MEDIUM;
+    },
     getName(priority: TaskPriority): string {
       return PRIORITY_NAMES[priority] ?? "Medium";
     },

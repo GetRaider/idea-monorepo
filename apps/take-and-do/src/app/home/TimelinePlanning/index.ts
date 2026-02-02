@@ -1,2 +1,1 @@
-export { default } from "./TimelinePlanning";
-
+export { TimelinePlanning } from "./TimelinePlanning";

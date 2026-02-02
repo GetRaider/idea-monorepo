@@ -194,3 +194,15 @@ export const ViewAllLink = styled(Link)`
     text-decoration: underline;
   }
 `;
+
+export const Loading = styled.div`
+  padding: "40px";
+  textalign: "center";
+  color: "#888";
+`;
+
+export const ScheduleSelectContainer = styled.div`
+  display: "flex";
+  gap: "8px";
+  alignitems: "center";
+`;

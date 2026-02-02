@@ -1,4 +1,4 @@
-import { tasksUtils } from "@/utils/task.utils";
+import { tasksHelper } from "@/helpers/task.helper";
 import {
   MetadataInput,
   MetadataItem,
@@ -18,7 +18,7 @@ import {
 } from "./TaskMetadata.styles";
 import { Task, TaskUpdate } from "../../KanbanBoard/types";
 import { useState, useRef, useEffect } from "react";
-import { labelsService } from "@/services/api/labels.service";
+import { apiServices } from "@/services/api";
 
 export default function TaskMetadata({
   task,
@@ -54,7 +54,7 @@ export default function TaskMetadata({
   // Set data
   useEffect(() => {
     if (task?.estimation) {
-      const parsed = tasksUtils.estimation.parse(task.estimation);
+      const parsed = tasksHelper.estimation.parse(task.estimation);
       setEstimationDays(parsed.days);
       setEstimationHours(parsed.hours);
       setEstimationMinutes(parsed.minutes);
@@ -64,12 +64,12 @@ export default function TaskMetadata({
       setEstimationMinutes(0);
     }
     if (task?.dueDate) {
-      setDueDateValue(tasksUtils.date.formatForInput(task.dueDate));
+      setDueDateValue(tasksHelper.date.formatForInput(task.dueDate));
     } else {
       setDueDateValue("");
     }
     if (task?.scheduleDate) {
-      setScheduleDateValue(tasksUtils.date.formatForInput(task.scheduleDate));
+      setScheduleDateValue(tasksHelper.date.formatForInput(task.scheduleDate));
     } else {
       setScheduleDateValue("");
     }
@@ -79,7 +79,7 @@ export default function TaskMetadata({
   useEffect(() => {
     const fetchLabels = async () => {
       try {
-        const labels = await labelsService.getAll();
+        const labels = await apiServices.labels.getAll();
         setAvailableLabels(labels);
       } catch (error) {
         console.error("Failed to fetch labels:", error);
@@ -138,7 +138,7 @@ export default function TaskMetadata({
   };
   const handleEstimationSave = () => {
     setIsEditingEstimation(false);
-    const totalHours = tasksUtils.estimation.toTotalHours(
+    const totalHours = tasksHelper.estimation.toTotalHours(
       estimationDays,
       estimationHours,
       estimationMinutes,
@@ -175,7 +175,7 @@ export default function TaskMetadata({
     if (labelSearchValue.trim()) {
       const newLabel = labelSearchValue.trim();
       try {
-        await labelsService.create(newLabel);
+        await apiServices.labels.create(newLabel);
         setAvailableLabels((prev) => [...prev, newLabel]);
         const newLabels = [...(task?.labels || []), newLabel];
         updateTask({ labels: newLabels });
@@ -234,7 +234,7 @@ export default function TaskMetadata({
           </MetadataIcon>
           <span>
             {task.scheduleDate
-              ? tasksUtils.date.formatForSchedule(task.scheduleDate)
+              ? tasksHelper.date.formatForSchedule(task.scheduleDate)
               : "Set schedule"}
           </span>
         </MetadataItem>
@@ -280,7 +280,7 @@ export default function TaskMetadata({
           </MetadataIcon>
           <span>
             {task.dueDate
-              ? tasksUtils.date.formatForDisplay(task.dueDate)
+              ? tasksHelper.date.formatForDisplay(task.dueDate)
               : "Set due date"}
           </span>
         </MetadataItem>
@@ -350,7 +350,7 @@ export default function TaskMetadata({
           </MetadataIcon>
           <span>
             {task.estimation
-              ? tasksUtils.estimation.format(task.estimation)
+              ? tasksHelper.estimation.format(task.estimation)
               : "Set estimation"}
           </span>
         </MetadataItem>

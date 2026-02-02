@@ -7,9 +7,9 @@ import {
   TaskStatus,
   TaskUpdate,
 } from "../KanbanBoard/types";
-import { tasksService } from "@/services/api/tasks.service";
+import { apiServices } from "@/services/api";
 import TextEditor from "../TextEditor/TextEditor";
-import { tasksUtils } from "@/utils/task.utils";
+import { tasksHelper } from "@/helpers/task.helper";
 import { TaskViewHeader } from "./TaskViewHeader/TaskViewHeader";
 import {
   TaskViewOverlay,
@@ -102,7 +102,7 @@ export default function TaskView({
     async (updates: TaskUpdate) => {
       if (!task || !task.id) return;
       try {
-        const updatedTask = await tasksService.update(task.id, updates);
+        const updatedTask = await apiServices.tasks.update(task.id, updates);
         setTask(updatedTask);
         onTaskUpdate?.(updatedTask);
         setPendingUpdates({});
@@ -270,7 +270,7 @@ export default function TaskView({
         subtasks: task.subtasks,
       };
 
-      const createdTask = await tasksService.create(taskData);
+      const createdTask = await apiServices.tasks.create(taskData);
       setTask(createdTask);
       onTaskCreated?.(createdTask);
       setIsEditingTitle(false);
@@ -293,7 +293,7 @@ export default function TaskView({
     }
 
     try {
-      await tasksService.delete(task.id);
+      await apiServices.tasks.delete(task.id);
       onTaskDelete?.(task.id);
       onClose();
     } catch (error) {
@@ -336,7 +336,7 @@ export default function TaskView({
                   <PriorityIconSpan>
                     {getPriorityIconLabel(priority)}
                   </PriorityIconSpan>
-                  {tasksUtils.priority.getName(priority)}
+                  {tasksHelper.priority.getName(priority)}
                 </DropdownItem>
               ))}
             </DropdownContainer>

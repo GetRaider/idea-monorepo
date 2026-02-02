@@ -124,7 +124,7 @@ function SummarySection({
           </AICard>
 
           <AICard>
-            <CardTitle style={{ marginBottom: "12px" }}>Insights</CardTitle>
+            <CardTitle>Insights</CardTitle>
             <CardList>
               {analytics.insights.map((insight, idx) => (
                 <li key={idx}>{insight}</li>
@@ -134,9 +134,7 @@ function SummarySection({
 
           {analytics.risks.length > 0 && (
             <AICard>
-              <CardTitle $color="#f59e0b" style={{ marginBottom: "12px" }}>
-                Risks
-              </CardTitle>
+              <CardTitle $color="#f59e0b">Risks</CardTitle>
               <CardList>
                 {analytics.risks.map((risk, idx) => (
                   <li key={idx}>{risk}</li>
@@ -146,9 +144,7 @@ function SummarySection({
           )}
 
           <AICard>
-            <CardTitle $color="#10b981" style={{ marginBottom: "12px" }}>
-              Recommendations
-            </CardTitle>
+            <CardTitle $color="#10b981">Recommendations</CardTitle>
             <CardList>
               {analytics.recommendations.map((rec, idx) => (
                 <li key={idx}>{rec}</li>

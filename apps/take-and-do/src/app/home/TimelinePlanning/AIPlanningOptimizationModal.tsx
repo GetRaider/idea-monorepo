@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { Task } from "@/components/KanbanBoard/types";
-import { tasksService } from "@/services/api/tasks.service";
-import { tasksUtils } from "@/utils/task.utils";
+import { apiServices } from "@/services/api";
+import { tasksHelper } from "@/helpers/task.helper";
 import {
   ModalOverlay,
   ModalContent,
@@ -117,7 +117,7 @@ function ScheduleOptimizationModal({
     setError(null);
 
     try {
-      const result = await tasksService.optimizeSchedule(
+      const result = await apiServices.tasks.optimizeSchedule(
         Array.from(selectedTaskIds),
       );
 
@@ -159,7 +159,7 @@ function ScheduleOptimizationModal({
 
       await Promise.all(
         updates.map((update) =>
-          tasksService.update(update.taskId, {
+          apiServices.tasks.update(update.taskId, {
             scheduleDate: update.scheduleDate || undefined,
           }),
         ),
@@ -177,7 +177,7 @@ function ScheduleOptimizationModal({
     if (!schedule) return "Unscheduled";
     const date = new Date(schedule);
     if (!isNaN(date.getTime())) {
-      return tasksUtils.date.formatForSchedule(date);
+      return tasksHelper.date.formatForSchedule(date);
     }
     return schedule;
   };

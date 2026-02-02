@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { optimizeSchedule } from "@/lib/ai";
 import { getTasksForOptimization } from "@/db/queries";
-import { formatDateForAPI } from "@/utils/task.utils";
+import { tasksHelper } from "@/helpers/task.helper";
 
 export async function POST(request: NextRequest) {
   try {
@@ -30,16 +30,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const currentDate = formatDateForAPI(new Date());
+    const currentDate = tasksHelper.date.formatForAPI(new Date());
 
     const tasksForAI = tasks.map((task) => ({
       id: task.id,
       summary: task.summary,
-      priority: task.priority,
-      dueDate: task.dueDate ? formatDateForAPI(new Date(task.dueDate)) : null,
+      priority: tasksHelper.priority.format(task.priority),
+      dueDate: task.dueDate
+        ? tasksHelper.date.formatForAPI(new Date(task.dueDate))
+        : null,
       estimation: task.estimation,
       scheduleDate: task.scheduleDate
-        ? formatDateForAPI(new Date(task.scheduleDate))
+        ? tasksHelper.date.formatForAPI(new Date(task.scheduleDate))
         : null,
       status: task.status,
     }));
@@ -62,4 +64,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

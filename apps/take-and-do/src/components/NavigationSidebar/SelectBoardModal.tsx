@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { TaskBoard } from "@/types/workspace";
-import { taskBoardsService } from "@/services/api/taskBoards.service";
+import { apiServices } from "@/services/api";
 import {
   ModalOverlay,
   ModalContainer,
@@ -27,7 +27,7 @@ export default function SelectBoardModal({
   useEffect(() => {
     const fetchBoards = async () => {
       try {
-        const allBoards = await taskBoardsService.getAll();
+        const allBoards = await apiServices.taskBoards.getAll();
         setBoards(allBoards);
         if (allBoards.length > 0) {
           setSelectedBoardId(allBoards[0].id);
@@ -111,5 +111,3 @@ interface SelectBoardModalProps {
   onClose: () => void;
   onSelect: (boardId: string) => void;
 }
-
-

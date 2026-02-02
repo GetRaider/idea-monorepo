@@ -4,8 +4,8 @@ import { useState } from "react";
 
 import { Task, TaskStatus } from "@/components/KanbanBoard/types";
 import { EmptyState } from "@/components/EmptyState";
-import { tasksService } from "@/services/api/tasks.service";
-import { ScheduleType, tasksUtils } from "@/utils/task.utils";
+import { apiServices } from "@/services/api";
+import { ScheduleType, tasksHelper } from "@/helpers/task.helper";
 import { getPriorityIconLabel } from "@/components/KanbanBoard/TaskCard/TaskCard";
 import { getStatusIcon } from "@/components/KanbanBoard/Column/Column";
 import ScheduleOptimizationModal from "./AIPlanningOptimizationModal";
@@ -31,6 +31,8 @@ import {
   StatusIcon,
   StatusText,
   ViewAllLink,
+  Loading,
+  ScheduleSelectContainer,
 } from "./TimelinePlanning.styles";
 import { useRecentTasks } from "@/hooks/useRecentTasks";
 import { useCustomDateTasks } from "@/hooks/useCustomDate";
@@ -40,7 +42,7 @@ interface TimelinePlanningProps {
   tomorrowTasks: Task[];
 }
 
-function TimelinePlanning({
+export function TimelinePlanning({
   todayTasks,
   tomorrowTasks,
 }: TimelinePlanningProps) {
@@ -51,29 +53,19 @@ function TimelinePlanning({
   const [isOptimizationModalOpen, setIsOptimizationModalOpen] = useState(false);
   const [allTasks, setAllTasks] = useState<Task[]>([]);
 
-  const formatDate = (date: Date | undefined): string => {
-    if (!date) return "—";
-    return tasksUtils.date.formatForSchedule(date);
-  };
-
-  const formatEstimation = (hours: number | undefined): string => {
-    if (!hours) return "—";
-    return `${hours}h`;
-  };
-
-  const currentTasks = tasksUtils.sortScheduledTasksByStatus(
+  const currentTasks = tasksHelper.sortScheduledTasksByStatus(
     schedule,
     recentTasks,
     todayTasks,
     tomorrowTasks,
     customDateTasks,
   );
-  const tasks = currentTasks.slice(0, 5);
+  const firstFiveTasks = currentTasks.slice(0, 5);
   const isLoading = schedule === "new" ? isLoadingRecent : isLoadingCustomDate;
 
   const handleOpenOptimizationModal = async () => {
     try {
-      const fetchedTasks = await tasksService.getAll();
+      const fetchedTasks = await apiServices.tasks.getAll();
       setAllTasks(fetchedTasks);
       setIsOptimizationModalOpen(true);
     } catch (error) {
@@ -85,7 +77,7 @@ function TimelinePlanning({
     <Section>
       <SectionHeader>
         <SectionTitle>⏳ Timeline Planning</SectionTitle>
-        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+        <ScheduleSelectContainer>
           <ScheduleSelect
             value={schedule}
             onChange={(e) => {
@@ -116,13 +108,11 @@ function TimelinePlanning({
           <OptimizeButton onClick={handleOpenOptimizationModal}>
             ✨ Explore AI Optimization
           </OptimizeButton>
-        </div>
+        </ScheduleSelectContainer>
       </SectionHeader>
       {isLoading ? (
-        <div style={{ padding: "40px", textAlign: "center", color: "#888" }}>
-          Loading...
-        </div>
-      ) : tasks.length > 0 ? (
+        <Loading>Loading...</Loading>
+      ) : firstFiveTasks.length > 0 ? (
         <TaskList>
           <TaskListHeader>
             <HeaderCell>Task</HeaderCell>
@@ -131,7 +121,7 @@ function TimelinePlanning({
             <HeaderCell>Est.</HeaderCell>
             <HeaderCell>Status</HeaderCell>
           </TaskListHeader>
-          {tasks.map((task: Task) => (
+          {firstFiveTasks.map((task: Task) => (
             <TaskItem key={task.id}>
               <TaskContent>
                 <TaskLeft>
@@ -141,12 +131,24 @@ function TimelinePlanning({
                   <TaskSummaryText>{task.summary}</TaskSummaryText>
                 </TaskLeft>
               </TaskContent>
-              <TaskCell>{formatDate(task.scheduleDate)}</TaskCell>
-              <TaskCell>{formatDate(task.dueDate)}</TaskCell>
-              <TaskCellMuted>{formatEstimation(task.estimation)}</TaskCellMuted>
+              <TaskCell>
+                {task.scheduleDate
+                  ? tasksHelper.date.formatForSchedule(task.scheduleDate)
+                  : "—"}
+              </TaskCell>
+              <TaskCell>
+                {task.dueDate
+                  ? tasksHelper.date.formatForSchedule(task.dueDate)
+                  : "—"}
+              </TaskCell>
+              <TaskCellMuted>
+                {task.estimation
+                  ? tasksHelper.estimation.hours(task.estimation)
+                  : "—"}
+              </TaskCellMuted>
               <StatusContainer>
                 <StatusIcon $status={task.status}>
-                  {getStatusIconForString(task.status)}
+                  {getStatusIcon(task.status)}
                 </StatusIcon>
                 <StatusText $status={task.status}>{task.status}</StatusText>
               </StatusContainer>
@@ -156,7 +158,7 @@ function TimelinePlanning({
       ) : (
         <EmptyState
           title="You have no tasks"
-          message={`No tasks scheduled for ${tasksUtils.getScheduleLabel(schedule, customDate)}`}
+          message={`No tasks scheduled for ${tasksHelper.getScheduleLabel(schedule, customDate)}`}
         />
       )}
       <ViewAllLink href="/tasks">View all tasks →</ViewAllLink>
@@ -169,19 +171,4 @@ function TimelinePlanning({
       )}
     </Section>
   );
-}
-
-export default TimelinePlanning;
-
-function getStatusIconForString(status: TaskStatus): string {
-  switch (status) {
-    case TaskStatus.TODO:
-      return getStatusIcon(TaskStatus.TODO);
-    case TaskStatus.IN_PROGRESS:
-      return getStatusIcon(TaskStatus.IN_PROGRESS);
-    case TaskStatus.DONE:
-      return getStatusIcon(TaskStatus.DONE);
-    default:
-      return getStatusIcon(TaskStatus.TODO);
-  }
 }

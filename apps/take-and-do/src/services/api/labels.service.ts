@@ -1,25 +1,19 @@
-export const labelsService = {
+import { BaseApiService } from "./base-api.service";
+
+export class LabelsService extends BaseApiService {
+  constructor() {
+    super("/labels");
+  }
+
   async getAll(): Promise<string[]> {
-    const response = await fetch("/api/labels");
-    if (!response.ok) {
-      throw new Error("Failed to fetch labels");
-    }
-    return response.json();
-  },
+    const response = await this.get<string[]>();
+    return response.data;
+  }
 
   async create(label: string): Promise<string> {
-    const response = await fetch("/api/labels", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ label }),
+    const response = await this.post<{ label: string }>({
+      body: { label },
     });
-    if (!response.ok) {
-      throw new Error("Failed to create label");
-    }
-    const data = await response.json();
-    return data.label;
-  },
-};
-
+    return response.data.label;
+  }
+}

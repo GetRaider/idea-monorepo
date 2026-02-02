@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 
 import { Task } from "@/components/KanbanBoard/types";
-import { tasksService } from "@/services/api";
-import { ScheduleType, tasksUtils } from "@/utils/task.utils";
+import { apiServices } from "@/services/api";
+import { ScheduleType, tasksHelper } from "@/helpers/task.helper";
 
 interface UseCustomDateReturn {
   customDateTasks: Task[];
@@ -17,12 +17,12 @@ export function useCustomDateTasks(customDate: string): UseCustomDateReturn {
   const [customDateTasks, setCustomDateTasks] = useState<Task[]>([]);
 
   useEffect(() => {
-    let isMounted = true;
-    const date = tasksUtils.date.formatCustomDate(customDate);
+    const isMounted = true;
+    const date = tasksHelper.date.formatCustomDate(customDate);
     const fetchTasksByDate = async () => {
       setIsLoadingCustomDate(true);
       try {
-        const tasks = await tasksService.getByDate(date);
+        const tasks = await apiServices.tasks.getByDate(date);
         if (isMounted) setCustomDateTasks(tasks);
       } catch (error) {
         console.error(error);

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Task, TaskPriority, TaskStatus } from "../../KanbanBoard/types";
-import { tasksService } from "@/services/api/tasks.service";
+import { apiServices } from "@/services/api";
 import { getStatusIcon } from "../../KanbanBoard/Column/Column";
 import { StatusIcon } from "../../KanbanBoard/Column/Column.styles";
 import { getPriorityIconLabel } from "../../KanbanBoard/TaskCard/TaskCard";
@@ -66,7 +66,7 @@ export default function TaskSubtasks({
       }));
 
       const updatedSubtasks = [...existingSubtasks, newSubtask];
-      const updatedTask = await tasksService.update(task.id, {
+      const updatedTask = await apiServices.tasks.update(task.id, {
         subtasks: updatedSubtasks as Task[],
       });
 
@@ -154,4 +154,3 @@ export default function TaskSubtasks({
     </SubtasksSection>
   );
 }
-

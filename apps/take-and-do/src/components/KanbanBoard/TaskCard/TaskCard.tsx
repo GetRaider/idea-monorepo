@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Task, TaskPriority } from "../types";
+import { Task } from "../types";
 import {
   Card,
   Header,
@@ -15,7 +15,8 @@ import {
   Tag,
   TagDot,
 } from "./TaskCard.styles";
-import { tasksUtils } from "@/utils/task.utils";
+import { tasksHelper } from "@/helpers/task.helper";
+import { TaskPriority } from "@/components/KanbanBoard/types";
 
 interface TaskCardProps {
   task: Task;
@@ -138,7 +139,7 @@ export default function TaskCard({ task, onTaskClick }: TaskCardProps) {
               strokeLinecap="round"
             />
           </svg>
-          <span>{tasksUtils.estimation.format(estimation)}</span>
+          <span>{tasksHelper.estimation.format(estimation)}</span>
         </DateTime>
       </Meta>
 

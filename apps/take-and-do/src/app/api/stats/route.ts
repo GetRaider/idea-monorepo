@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
       | "quarter";
 
     const now = new Date();
-    let whereConditions = [];
+    const whereConditions = [];
 
     if (timeframe !== "all") {
       const startDate = new Date(now);

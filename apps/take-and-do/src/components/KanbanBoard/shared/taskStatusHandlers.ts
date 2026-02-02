@@ -1,4 +1,4 @@
-import { tasksService } from "@/services/api/tasks.service";
+import { apiServices } from "@/services/api";
 import { TaskStatus, Task, TaskGroup } from "../types";
 
 /**
@@ -288,7 +288,7 @@ export async function handleSingleBoardTaskStatusChange(
     setTasks(optimisticTasks);
 
     // Update task status via API (after optimistic update for smooth UX)
-    await tasksService.update(taskId, { status: newStatus });
+    await apiServices.tasks.update(taskId, { status: newStatus });
 
     // Update state after API call (in case of any server-side changes)
     const finalTasks = moveTaskToNewStatus(
@@ -352,7 +352,7 @@ export async function handleMultipleBoardsTaskStatusChange(
     setTaskGroups(optimisticGroups);
 
     // Update task status via API (after optimistic update for smooth UX)
-    await tasksService.update(taskId, { status: newStatus });
+    await apiServices.tasks.update(taskId, { status: newStatus });
 
     // Update state after API call (in case of any server-side changes)
     const finalGroups = moveTaskToNewStatusInGroup(

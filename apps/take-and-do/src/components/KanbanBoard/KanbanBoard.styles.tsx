@@ -241,13 +241,11 @@ export const WorkspaceSeparator = styled.div`
   cursor: pointer;
 `;
 
-export const GroupChevron = styled.svg<{ $expanded?: boolean }>`
-  width: 16px;
-  height: 16px;
+export const GroupChevronWrapper = styled.span<{ $expanded?: boolean }>`
+  display: inline-flex;
   transition: transform 0.2s ease;
   transform: ${({ $expanded }) =>
     $expanded ? "rotate(90deg)" : "rotate(0deg)"};
-  color: currentColor;
 `;
 
 export const EmptyStateMessage = styled.div`

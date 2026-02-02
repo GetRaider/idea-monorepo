@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useState, useRef, useEffect } from "react";
+import { ChevronDownIcon } from "@/components/Icons";
 import {
   Toolbar as ToolbarStyled,
   WorkspacePath,
@@ -74,24 +75,13 @@ export function Toolbar({
           >
             <Image width={20} height={20} src="/plus.svg" alt="Create Task" />
             Create Task
-            <svg
-              width="12"
-              height="12"
-              viewBox="0 0 12 12"
-              fill="none"
+            <ChevronDownIcon
+              size={12}
               style={{
                 transform: isDropdownOpen ? "rotate(180deg)" : "none",
                 transition: "transform 0.2s",
               }}
-            >
-              <path
-                d="M3 4.5l3 3 3-3"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
+            />
           </CreateButton>
           {isDropdownOpen && (
             <CreateButtonDropdown onMouseLeave={() => setIsDropdownOpen(false)}>

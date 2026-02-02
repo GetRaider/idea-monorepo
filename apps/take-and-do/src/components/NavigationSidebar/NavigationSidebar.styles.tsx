@@ -135,7 +135,8 @@ export const WorkspaceToggle = styled.button`
   }
 `;
 
-export const Chevron = styled.svg<{ $expanded?: boolean }>`
+export const ChevronWrapper = styled.span<{ $expanded?: boolean }>`
+  display: inline-flex;
   transition: transform 0.2s;
   transform: ${(props) => (props.$expanded ? "rotate(90deg)" : "rotate(0)")};
   margin-left: auto;

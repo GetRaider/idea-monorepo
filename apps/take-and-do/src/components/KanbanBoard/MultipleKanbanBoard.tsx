@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { ChevronRightIcon } from "@/components/Icons";
 import {
   BoardContainer,
   Board,
@@ -8,7 +9,7 @@ import {
   LoadingContainer,
   Spinner,
   TaskGroupWrapper,
-  GroupChevron,
+  GroupChevronWrapper,
   EmptyStateWrapper,
 } from "./KanbanBoard.styles";
 import { Column } from "./Column/Column";
@@ -462,19 +463,9 @@ export function MultipleKanbanBoard({
                     <WorkspaceSeparator
                       onClick={() => toggleGroup(group.taskBoardId)}
                     >
-                      <GroupChevron
-                        viewBox="0 0 16 16"
-                        fill="none"
-                        $expanded={isExpanded}
-                      >
-                        <path
-                          d="M6 4l4 4-4 4"
-                          stroke="currentColor"
-                          strokeWidth="1.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </GroupChevron>
+                      <GroupChevronWrapper $expanded={isExpanded}>
+                        <ChevronRightIcon size={16} />
+                      </GroupChevronWrapper>
                       {group.taskBoardName}
                     </WorkspaceSeparator>
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { RefObject } from "react";
+import { TrashIcon } from "@/components/Icons";
 import { Task, TaskStatus } from "../../KanbanBoard/types";
 import { getStatusIcon } from "../../KanbanBoard/Column/Column";
 import { StatusIcon } from "../../KanbanBoard/Column/Column.styles";
@@ -94,21 +95,7 @@ export function TaskViewHeader({
       <HeaderRight>
         {!isCreating && onDelete && (
           <DeleteButton onClick={onDelete} title="Delete task">
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 16 16"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M2 4h12M5.5 4V3a1 1 0 011-1h3a1 1 0 011 1v1M5.5 7v4M10.5 7v4M4 4v8a1 1 0 001 1h6a1 1 0 001-1V4"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
+            <TrashIcon size={16} />
           </DeleteButton>
         )}
         <CloseButton onClick={onClose} title="Close">

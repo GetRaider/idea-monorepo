@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { CalendarIcon, ClockIcon } from "@/components/Icons";
 import { Task } from "../types";
 import {
   Card,
@@ -101,44 +102,12 @@ export default function TaskCard({ task, onTaskClick }: TaskCardProps) {
       <Meta>
         {!!dueDate && (
           <DateTime>
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <rect
-                x="2"
-                y="3"
-                width="10"
-                height="9"
-                rx="1"
-                stroke="currentColor"
-                strokeWidth="1.2"
-                fill="none"
-              />
-              <path
-                d="M2 5h10M5 2v2M9 2v2"
-                stroke="currentColor"
-                strokeWidth="1.2"
-                strokeLinecap="round"
-              />
-            </svg>
+            <CalendarIcon size={14} />
             <span>{dueDate?.toLocaleDateString()}</span>
           </DateTime>
         )}
         <DateTime>
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <circle
-              cx="7"
-              cy="7"
-              r="5"
-              stroke="currentColor"
-              strokeWidth="1.2"
-              fill="none"
-            />
-            <path
-              d="M7 4v3l2 1"
-              stroke="currentColor"
-              strokeWidth="1.2"
-              strokeLinecap="round"
-            />
-          </svg>
+          <ClockIcon size={14} />
           <span>{tasksHelper.estimation.format(estimation)}</span>
         </DateTime>
       </Meta>

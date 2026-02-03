@@ -17,7 +17,7 @@ interface SidebarProps {
   onNavigationChange: (page: string) => void;
 }
 
-export default function Sidebar({ onNavigationChange }: SidebarProps) {
+export function Sidebar({ onNavigationChange }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
 

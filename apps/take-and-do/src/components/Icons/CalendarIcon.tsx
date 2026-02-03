@@ -4,7 +4,7 @@ interface CalendarIconProps {
   showDot?: boolean;
 }
 
-function CalendarIcon({
+export function CalendarIcon({
   size = 14,
   className,
   showDot = false,
@@ -37,5 +37,3 @@ function CalendarIcon({
     </svg>
   );
 }
-
-export default CalendarIcon;

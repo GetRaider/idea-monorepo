@@ -17,7 +17,7 @@ import {
   DropIndicatorEnd,
   TaskWrapper,
 } from "./Column.styles";
-import TaskCard from "../TaskCard/TaskCard";
+import { TaskCard } from "../TaskCard/TaskCard";
 
 interface ColumnProps {
   tasks: Task[];

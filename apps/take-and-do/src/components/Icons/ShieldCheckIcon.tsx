@@ -3,7 +3,10 @@ interface ShieldCheckIconProps {
   className?: string;
 }
 
-function ShieldCheckIcon({ size = 24, className }: ShieldCheckIconProps) {
+export function ShieldCheckIcon({
+  size = 24,
+  className,
+}: ShieldCheckIconProps) {
   return (
     <svg
       width={size}
@@ -22,5 +25,3 @@ function ShieldCheckIcon({ size = 24, className }: ShieldCheckIconProps) {
     </svg>
   );
 }
-
-export default ShieldCheckIcon;

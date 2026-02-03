@@ -25,7 +25,7 @@ interface ProductivitySummarySelectionModalProps {
   isGenerating: boolean;
 }
 
-function ProductivitySummarySelectionModal({
+export function ProductivitySummarySelectionModal({
   onClose,
   onSelect,
   selectedOption,
@@ -91,5 +91,3 @@ function ProductivitySummarySelectionModal({
     </ModalOverlay>
   );
 }
-
-export default ProductivitySummarySelectionModal;

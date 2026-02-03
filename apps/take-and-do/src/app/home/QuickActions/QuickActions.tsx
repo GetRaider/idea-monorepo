@@ -3,7 +3,7 @@
 import { ClipboardCheckIcon, CalendarMonthIcon } from "@/components/Icons";
 import { Container, ActionButton } from "./QuickActions.styles";
 
-function QuickActions() {
+export function QuickActions() {
   return (
     <Container>
       <ActionButton href="/tasks">
@@ -17,5 +17,3 @@ function QuickActions() {
     </Container>
   );
 }
-
-export default QuickActions;

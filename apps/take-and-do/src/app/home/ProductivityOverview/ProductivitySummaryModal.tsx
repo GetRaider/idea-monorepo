@@ -14,14 +14,14 @@ import {
   CardContent,
   CardList,
 } from "./ProductivitySummaryModal.styles";
-import type { AnalyticsData } from "../SummarySection/SummarySection.types";
+import type { AnalyticsData } from "../SummarySection/SummarySection";
 
 interface ProductivitySummaryModalProps {
   analytics: AnalyticsData;
   onClose: () => void;
 }
 
-function ProductivitySummaryModal({
+export function ProductivitySummaryModal({
   analytics,
   onClose,
 }: ProductivitySummaryModalProps) {
@@ -85,6 +85,3 @@ function ProductivitySummaryModal({
     </ModalOverlay>
   );
 }
-
-export default ProductivitySummaryModal;
-

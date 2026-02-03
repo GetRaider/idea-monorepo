@@ -24,7 +24,7 @@ interface TaskCardProps {
   onTaskClick?: (task: Task) => void;
 }
 
-export default function TaskCard({ task, onTaskClick }: TaskCardProps) {
+export function TaskCard({ task, onTaskClick }: TaskCardProps) {
   const {
     id,
     taskKey,

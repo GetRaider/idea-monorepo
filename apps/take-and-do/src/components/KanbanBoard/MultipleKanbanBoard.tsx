@@ -21,8 +21,8 @@ import {
   loadFolderContent,
 } from "./shared/dataLoaders";
 import { handleMultipleBoardsTaskStatusChange } from "./shared/taskStatusHandlers";
-import TaskView from "../TaskView/TaskView";
-import SelectBoardModal from "../NavigationSidebar/SelectBoardModal";
+import { TaskView } from "../TaskView/TaskView";
+import { SelectBoardModal } from "../NavigationSidebar/SelectBoardModal";
 import {
   useTaskBoardState,
   updateTaskInColumns,

@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Sidebar from "@/components/Sidebar/Sidebar";
-import NavigationSidebar from "@/components/NavigationSidebar/NavigationSidebar";
+import { Sidebar } from "@/components/Sidebar/Sidebar";
+import { NavigationSidebar } from "@/components/NavigationSidebar/NavigationSidebar";
 import { apiServices } from "@/services/api";
 import { PageContainer, Main } from "../page.styles";
 import {

@@ -16,18 +16,7 @@ import {
   StatLabel,
 } from "./StatsCards.styles";
 
-interface StatsCardsProps {
-  stats: {
-    total: number;
-    todo: number;
-    inProgress: number;
-    done: number;
-    highPriority: number;
-    overdue: number;
-  };
-}
-
-function StatsCards({ stats }: StatsCardsProps) {
+export function StatsCards({ stats }: StatsCardsProps) {
   return (
     <StatsGrid>
       <StatCard>
@@ -81,4 +70,22 @@ function StatsCards({ stats }: StatsCardsProps) {
   );
 }
 
-export default StatsCards;
+interface StatsCardsProps {
+  stats: {
+    total: number;
+    todo: number;
+    inProgress: number;
+    done: number;
+    highPriority: number;
+    overdue: number;
+  };
+}
+
+export interface TaskStats {
+  total: number;
+  todo: number;
+  inProgress: number;
+  done: number;
+  highPriority: number;
+  overdue: number;
+}

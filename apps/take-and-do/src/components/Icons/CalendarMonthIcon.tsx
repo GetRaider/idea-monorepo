@@ -3,7 +3,10 @@ interface CalendarMonthIconProps {
   className?: string;
 }
 
-function CalendarMonthIcon({ size = 20, className }: CalendarMonthIconProps) {
+export function CalendarMonthIcon({
+  size = 20,
+  className,
+}: CalendarMonthIconProps) {
   return (
     <svg
       width={size}
@@ -21,5 +24,3 @@ function CalendarMonthIcon({ size = 20, className }: CalendarMonthIconProps) {
     </svg>
   );
 }
-
-export default CalendarMonthIcon;

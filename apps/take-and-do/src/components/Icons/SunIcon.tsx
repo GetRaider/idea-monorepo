@@ -3,7 +3,7 @@ interface SunIconProps {
   className?: string;
 }
 
-function SunIcon({ size = 20, className }: SunIconProps) {
+export function SunIcon({ size = 20, className }: SunIconProps) {
   return (
     <svg
       width={size}
@@ -29,5 +29,3 @@ function SunIcon({ size = 20, className }: SunIconProps) {
     </svg>
   );
 }
-
-export default SunIcon;

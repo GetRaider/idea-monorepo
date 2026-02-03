@@ -3,7 +3,7 @@ interface TrashIconProps {
   className?: string;
 }
 
-function TrashIcon({ size = 16, className }: TrashIconProps) {
+export function TrashIcon({ size = 16, className }: TrashIconProps) {
   return (
     <svg
       width={size}
@@ -23,5 +23,3 @@ function TrashIcon({ size = 16, className }: TrashIconProps) {
     </svg>
   );
 }
-
-export default TrashIcon;

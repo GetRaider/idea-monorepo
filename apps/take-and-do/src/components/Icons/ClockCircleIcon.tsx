@@ -3,7 +3,10 @@ interface ClockCircleIconProps {
   className?: string;
 }
 
-function ClockCircleIcon({ size = 20, className }: ClockCircleIconProps) {
+export function ClockCircleIcon({
+  size = 20,
+  className,
+}: ClockCircleIconProps) {
   return (
     <svg
       width={size}
@@ -23,5 +26,3 @@ function ClockCircleIcon({ size = 20, className }: ClockCircleIconProps) {
     </svg>
   );
 }
-
-export default ClockCircleIcon;

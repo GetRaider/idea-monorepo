@@ -32,13 +32,13 @@ import {
   LoadingContainer,
   Spinner,
 } from "./ProductivityOverview.styles";
-import ProductivitySummaryModal from "./ProductivitySummaryModal";
-import ProductivitySummarySelectionModal from "./ProductivitySummarySelectionModal";
+import { ProductivitySummaryModal } from "./ProductivitySummaryModal";
+import { ProductivitySummarySelectionModal } from "./ProductivitySummarySelectionModal";
 import type {
   Timeframe,
   AnalyticsData,
-} from "../SummarySection/SummarySection.types";
-import type { AnalyticsStats } from "./ProductivityOverview.types";
+} from "../SummarySection/SummarySection";
+import type { AnalyticsStats } from "@/lib/ai";
 import { EmptyState } from "@/components/EmptyState";
 
 const CHART_TOOLTIP_STYLE = {

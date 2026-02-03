@@ -16,7 +16,7 @@ import {
   loadTaskBoardContent,
 } from "./shared/dataLoaders";
 import { handleSingleBoardTaskStatusChange } from "./shared/taskStatusHandlers";
-import TaskView from "../TaskView/TaskView";
+import { TaskView } from "../TaskView/TaskView";
 import {
   useTaskBoardState,
   updateTaskInColumns,

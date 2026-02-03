@@ -2,7 +2,13 @@
 
 import { SingleKanbanBoard } from "./SingleKanbanBoard";
 import { MultipleKanbanBoard } from "./MultipleKanbanBoard";
-import { TaskStatus, TaskPriority, Task, isScheduleString, getDateFromScheduleString } from "./types";
+import {
+  TaskStatus,
+  TaskPriority,
+  Task,
+  isScheduleString,
+  getDateFromScheduleString,
+} from "./types";
 
 // Re-export types and enums for backward compatibility
 export { TaskStatus, TaskPriority };
@@ -16,10 +22,7 @@ interface KanbanBoardProps {
   taskBoardNameMap?: Record<string, string>;
 }
 
-function getWorkspaceTitle(
-  boardView: string,
-  workspaceTitle: string,
-): string {
+function getWorkspaceTitle(boardView: string, workspaceTitle: string): string {
   if (boardView === "today") {
     return "Today";
   } else if (boardView === "tomorrow") {
@@ -28,7 +31,7 @@ function getWorkspaceTitle(
   return workspaceTitle;
 }
 
-export default function KanbanBoard({
+export function KanbanBoard({
   currentView = "today",
   workspaceTitle = "Tasks",
   folderId,
@@ -43,7 +46,9 @@ export default function KanbanBoard({
     return (
       <MultipleKanbanBoard
         scheduleDate={
-          isScheduleWorkspace ? getDateFromScheduleString(currentView) : undefined
+          isScheduleWorkspace
+            ? getDateFromScheduleString(currentView)
+            : undefined
         }
         workspaceTitle={title}
         folderId={folderId}

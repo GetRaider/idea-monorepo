@@ -8,7 +8,7 @@ import {
   TaskUpdate,
 } from "../KanbanBoard/types";
 import { apiServices } from "@/services/api";
-import TextEditor from "../TextEditor/TextEditor";
+import { TextEditor } from "../TextEditor/TextEditor";
 import { tasksHelper } from "@/helpers/task.helper";
 import { TaskViewHeader } from "./TaskViewHeader/TaskViewHeader";
 import {
@@ -31,10 +31,10 @@ import {
   TaskSaveButton,
 } from "./TaskView.styles";
 import { getPriorityIconLabel } from "../KanbanBoard/TaskCard/TaskCard";
-import TaskMetadata from "./TaskMetadata/TaskMetadata";
-import TaskSubtasks from "./TaskSubtasks/TaskSubtasks";
+import { TaskMetadata } from "./TaskMetadata/TaskMetadata";
+import { TaskSubtasks } from "./TaskSubtasks/TaskSubtasks";
 
-export default function TaskView({
+export function TaskView({
   task: initialTask,
   parentTask,
   workspaceTitle,

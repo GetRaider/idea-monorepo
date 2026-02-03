@@ -3,7 +3,7 @@ interface PlusIconProps {
   className?: string;
 }
 
-function PlusIcon({ size = 16, className }: PlusIconProps) {
+export function PlusIcon({ size = 16, className }: PlusIconProps) {
   return (
     <svg
       width={size}
@@ -21,5 +21,3 @@ function PlusIcon({ size = 16, className }: PlusIconProps) {
     </svg>
   );
 }
-
-export default PlusIcon;

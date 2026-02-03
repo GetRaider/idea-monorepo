@@ -1,3 +1,2 @@
-export { default } from "./SummarySection";
-export type { AnalyticsData, Timeframe } from "./SummarySection.types";
-
+export { SummarySection } from "./SummarySection";
+export type { AnalyticsData, Timeframe } from "./SummarySection";

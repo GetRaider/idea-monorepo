@@ -3,7 +3,7 @@ interface OverdueIconProps {
   className?: string;
 }
 
-function OverdueIcon({ size = 24, className }: OverdueIconProps) {
+export function OverdueIcon({ size = 24, className }: OverdueIconProps) {
   return (
     <svg
       width={size}
@@ -35,5 +35,3 @@ function OverdueIcon({ size = 24, className }: OverdueIconProps) {
     </svg>
   );
 }
-
-export default OverdueIcon;

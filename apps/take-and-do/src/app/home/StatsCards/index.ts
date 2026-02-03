@@ -1,3 +1,2 @@
-export { default } from "./StatsCards";
-export type { TaskStats } from "./StatsCards.types";
-
+export { StatsCards } from "./StatsCards";
+export type { TaskStats } from "./StatsCards";

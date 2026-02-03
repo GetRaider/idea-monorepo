@@ -21,17 +21,8 @@ import {
   EmptyState,
 } from "./SummarySection.styles";
 import { ChevronDownIcon } from "@/components/Icons";
-import { AnalyticsData, Timeframe } from "./SummarySection.types";
 
-interface SummarySectionProps {
-  analytics: AnalyticsData | null;
-  timeframe: Timeframe;
-  onTimeframeChange: (timeframe: Timeframe) => void;
-  onGenerateAnalytics: (useAI: boolean) => void;
-  isGenerating: boolean;
-}
-
-function SummarySection({
+export function SummarySection({
   analytics,
   timeframe,
   onTimeframeChange,
@@ -151,4 +142,20 @@ function SummarySection({
   );
 }
 
-export default SummarySection;
+export interface AnalyticsData {
+  summary: string;
+  insights: string[];
+  risks: string[];
+  recommendations: string[];
+  aiGenerated: boolean;
+}
+
+export type Timeframe = "week" | "month" | "quarter";
+
+interface SummarySectionProps {
+  analytics: AnalyticsData | null;
+  timeframe: Timeframe;
+  onTimeframeChange: (timeframe: Timeframe) => void;
+  onGenerateAnalytics: (useAI: boolean) => void;
+  isGenerating: boolean;
+}

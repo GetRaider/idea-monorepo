@@ -3,7 +3,10 @@ interface CircleCheckIconProps {
   className?: string;
 }
 
-function CircleCheckIcon({ size = 24, className }: CircleCheckIconProps) {
+export function CircleCheckIcon({
+  size = 24,
+  className,
+}: CircleCheckIconProps) {
   return (
     <svg
       width={size}
@@ -22,5 +25,3 @@ function CircleCheckIcon({ size = 24, className }: CircleCheckIconProps) {
     </svg>
   );
 }
-
-export default CircleCheckIcon;

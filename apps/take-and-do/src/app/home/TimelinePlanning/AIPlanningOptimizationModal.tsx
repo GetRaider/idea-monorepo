@@ -66,7 +66,7 @@ interface ScheduleOptimization {
   insights: string[];
 }
 
-function ScheduleOptimizationModal({
+export function ScheduleOptimizationModal({
   onClose,
   tasks,
 }: ScheduleOptimizationModalProps) {
@@ -311,5 +311,3 @@ function ScheduleOptimizationModal({
     </ModalOverlay>
   );
 }
-
-export default ScheduleOptimizationModal;

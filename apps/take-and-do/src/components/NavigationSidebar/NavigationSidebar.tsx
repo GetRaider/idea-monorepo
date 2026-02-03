@@ -35,7 +35,7 @@ interface NavigationSidebarProps {
   folders?: Folder[];
 }
 
-export default function NavigationSidebar({
+export function NavigationSidebar({
   isOpen,
   activeView = "today",
   onViewChange,

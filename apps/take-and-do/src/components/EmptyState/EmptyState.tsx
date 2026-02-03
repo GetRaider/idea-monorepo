@@ -13,7 +13,7 @@ interface EmptyStateProps {
   message?: string;
 }
 
-function EmptyState({
+export function EmptyState({
   title = "You have no tasks",
   message,
 }: EmptyStateProps = {}) {
@@ -27,5 +27,3 @@ function EmptyState({
     </EmptyStateContainer>
   );
 }
-
-export default EmptyState;

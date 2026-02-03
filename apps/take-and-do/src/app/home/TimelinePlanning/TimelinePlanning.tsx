@@ -8,7 +8,7 @@ import { apiServices } from "@/services/api";
 import { ScheduleType, tasksHelper } from "@/helpers/task.helper";
 import { getPriorityIconLabel } from "@/components/KanbanBoard/TaskCard/TaskCard";
 import { getStatusIcon } from "@/components/KanbanBoard/Column/Column";
-import ScheduleOptimizationModal from "./AIPlanningOptimizationModal";
+import { ScheduleOptimizationModal } from "./AIPlanningOptimizationModal";
 import { OptimizeButton } from "./AIPlanningOptimizationModal.styles";
 import {
   Section,

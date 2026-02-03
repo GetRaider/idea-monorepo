@@ -3,7 +3,7 @@ interface LightningIconProps {
   className?: string;
 }
 
-function LightningIcon({ size = 24, className }: LightningIconProps) {
+export function LightningIcon({ size = 24, className }: LightningIconProps) {
   return (
     <svg
       width={size}
@@ -22,5 +22,3 @@ function LightningIcon({ size = 24, className }: LightningIconProps) {
     </svg>
   );
 }
-
-export default LightningIcon;

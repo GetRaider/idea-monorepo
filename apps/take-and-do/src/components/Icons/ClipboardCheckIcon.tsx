@@ -3,7 +3,10 @@ interface ClipboardCheckIconProps {
   className?: string;
 }
 
-function ClipboardCheckIcon({ size = 20, className }: ClipboardCheckIconProps) {
+export function ClipboardCheckIcon({
+  size = 20,
+  className,
+}: ClipboardCheckIconProps) {
   return (
     <svg
       width={size}
@@ -22,5 +25,3 @@ function ClipboardCheckIcon({ size = 20, className }: ClipboardCheckIconProps) {
     </svg>
   );
 }
-
-export default ClipboardCheckIcon;

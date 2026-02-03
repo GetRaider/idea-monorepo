@@ -21,7 +21,7 @@ import { Task, TaskUpdate } from "../../KanbanBoard/types";
 import { useState, useRef, useEffect } from "react";
 import { apiServices } from "@/services/api";
 
-export default function TaskMetadata({
+export function TaskMetadata({
   task,
   handleUpdateTask,
   isCreating = false,

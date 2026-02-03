@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Sidebar from "@/components/Sidebar/Sidebar";
-import NavigationSidebar from "@/components/NavigationSidebar/NavigationSidebar";
+import { Sidebar } from "@/components/Sidebar/Sidebar";
+import { NavigationSidebar } from "@/components/NavigationSidebar/NavigationSidebar";
 import { apiServices } from "@/services/api";
 import { Task } from "@/components/KanbanBoard/types";
 import {

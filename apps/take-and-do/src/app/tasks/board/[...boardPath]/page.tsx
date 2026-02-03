@@ -2,11 +2,11 @@
 
 import { useState, useEffect, use } from "react";
 import { useRouter, notFound } from "next/navigation";
-import Sidebar from "@/components/Sidebar/Sidebar";
-import NavigationSidebar from "@/components/NavigationSidebar/NavigationSidebar";
-import CreateTaskBoardModal from "@/components/NavigationSidebar/CreateTaskBoardModal";
+import { Sidebar } from "@/components/Sidebar/Sidebar";
+import { NavigationSidebar } from "@/components/NavigationSidebar/NavigationSidebar";
+import { CreateTaskBoardModal } from "@/components/NavigationSidebar/CreateTaskBoardModal";
 import { SingleKanbanBoard } from "@/components/KanbanBoard/SingleKanbanBoard";
-import TaskView from "@/components/TaskView/TaskView";
+import { TaskView } from "@/components/TaskView/TaskView";
 import { apiServices } from "@/services/api";
 import { TaskBoard, Folder } from "@/types/workspace";
 import { Task } from "@/components/KanbanBoard/types";

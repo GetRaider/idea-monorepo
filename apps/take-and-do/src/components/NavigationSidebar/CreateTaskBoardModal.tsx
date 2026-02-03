@@ -14,7 +14,7 @@ import {
   Button,
 } from "./CreateTaskBoardModal.styles";
 
-export default function CreateTaskBoardModal({
+export function CreateTaskBoardModal({
   onClose,
   onCreate,
 }: CreateTaskBoardModalProps) {

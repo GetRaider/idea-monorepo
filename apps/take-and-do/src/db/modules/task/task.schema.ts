@@ -4,6 +4,7 @@ import {
   timestamp,
   doublePrecision,
   pgEnum,
+  foreignKey,
 } from "drizzle-orm/pg-core";
 import { taskBoards } from "../taskBoard/taskBoard.schema";
 
@@ -20,27 +21,33 @@ export const taskPriorityEnum = pgEnum("task_priority", [
   "critical",
 ]);
 
-export const tasks = pgTable("tasks", {
-  id: text("id").primaryKey(),
-  taskBoardId: text("task_board_id")
-    .notNull()
-    .references(() => taskBoards.id, { onDelete: "cascade" }),
-  taskKey: text("task_key"),
-  summary: text("summary").notNull(),
-  description: text("description").notNull().default(""),
-  status: taskStatusEnum("status").notNull().default("To Do"),
-  priority: taskPriorityEnum("priority").notNull().default("medium"),
-  dueDate: timestamp("due_date"),
-  estimation: doublePrecision("estimation"),
-  scheduleDate: timestamp("schedule_date"),
-  parentTaskId: text("parent_task_id").references(() => tasks.id, {
-    onDelete: "cascade",
-  }),
-  createdAt: timestamp("created_at")
-    .$defaultFn(() => new Date())
-    .notNull(),
-  updatedAt: timestamp("updated_at")
-    .$defaultFn(() => new Date())
-    .notNull(),
-});
-
+export const tasks = pgTable(
+  "tasks",
+  {
+    id: text("id").primaryKey(),
+    taskBoardId: text("task_board_id")
+      .notNull()
+      .references(() => taskBoards.id, { onDelete: "cascade" }),
+    taskKey: text("task_key"),
+    summary: text("summary").notNull(),
+    description: text("description").notNull().default(""),
+    status: taskStatusEnum("status").notNull().default("To Do"),
+    priority: taskPriorityEnum("priority").notNull().default("medium"),
+    dueDate: timestamp("due_date"),
+    estimation: doublePrecision("estimation"),
+    scheduleDate: timestamp("schedule_date"),
+    parentTaskId: text("parent_task_id"),
+    createdAt: timestamp("created_at")
+      .$defaultFn(() => new Date())
+      .notNull(),
+    updatedAt: timestamp("updated_at")
+      .$defaultFn(() => new Date())
+      .notNull(),
+  },
+  (self) => [
+    foreignKey({
+      columns: [self.parentTaskId],
+      foreignColumns: [self.id],
+    }).onDelete("cascade"),
+  ],
+);

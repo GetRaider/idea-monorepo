@@ -4,7 +4,7 @@ interface ChevronDownIconProps {
   style?: React.CSSProperties;
 }
 
-function ChevronDownIcon({
+export function ChevronDownIcon({
   size = 16,
   className,
   style,
@@ -28,5 +28,3 @@ function ChevronDownIcon({
     </svg>
   );
 }
-
-export default ChevronDownIcon;

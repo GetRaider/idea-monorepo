@@ -27,7 +27,7 @@ interface TaskSubtasksProps {
   onTaskUpdate?: (updatedTask: Task) => void;
 }
 
-export default function TaskSubtasks({
+export function TaskSubtasks({
   task,
   onSubtaskClick,
   onTaskUpdate,

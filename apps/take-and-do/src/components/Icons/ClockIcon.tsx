@@ -3,7 +3,7 @@ interface ClockIconProps {
   className?: string;
 }
 
-function ClockIcon({ size = 24, className }: ClockIconProps) {
+export function ClockIcon({ size = 24, className }: ClockIconProps) {
   return (
     <svg
       width={size}
@@ -29,5 +29,3 @@ function ClockIcon({ size = 24, className }: ClockIconProps) {
     </svg>
   );
 }
-
-export default ClockIcon;

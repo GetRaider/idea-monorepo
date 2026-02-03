@@ -3,7 +3,7 @@ interface CheckListIconProps {
   className?: string;
 }
 
-function CheckListIcon({ size = 24, className }: CheckListIconProps) {
+export function CheckListIcon({ size = 24, className }: CheckListIconProps) {
   return (
     <svg
       width={size}
@@ -22,5 +22,3 @@ function CheckListIcon({ size = 24, className }: CheckListIconProps) {
     </svg>
   );
 }
-
-export default CheckListIcon;

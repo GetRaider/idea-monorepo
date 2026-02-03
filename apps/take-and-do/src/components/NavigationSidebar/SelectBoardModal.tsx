@@ -16,10 +16,7 @@ import {
   Button,
 } from "./SelectBoardModal.styles";
 
-export default function SelectBoardModal({
-  onClose,
-  onSelect,
-}: SelectBoardModalProps) {
+export function SelectBoardModal({ onClose, onSelect }: SelectBoardModalProps) {
   const [boards, setBoards] = useState<TaskBoard[]>([]);
   const [selectedBoardId, setSelectedBoardId] = useState("");
   const [isLoading, setIsLoading] = useState(true);

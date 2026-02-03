@@ -4,7 +4,7 @@ interface ChevronRightIconProps {
   style?: React.CSSProperties;
 }
 
-function ChevronRightIcon({
+export function ChevronRightIcon({
   size = 16,
   className,
   style,
@@ -28,5 +28,3 @@ function ChevronRightIcon({
     </svg>
   );
 }
-
-export default ChevronRightIcon;

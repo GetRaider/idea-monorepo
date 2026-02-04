@@ -1,6 +1,5 @@
 import { z } from "zod";
 
-// Re-use existing TaskPriority values
 const TaskPrioritySchema = z.enum(["low", "medium", "high", "critical"]);
 
 // ============================================
@@ -129,5 +128,9 @@ export const OptimizeScheduleOutputSchema = z.object({
 
 export type OptimizeScheduleTask = z.infer<typeof OptimizeScheduleTaskSchema>;
 export type OptimizeScheduleInput = z.infer<typeof OptimizeScheduleInputSchema>;
-export type ScheduleRecommendation = z.infer<typeof ScheduleRecommendationSchema>;
-export type OptimizeScheduleOutput = z.infer<typeof OptimizeScheduleOutputSchema>;
+export type ScheduleRecommendation = z.infer<
+  typeof ScheduleRecommendationSchema
+>;
+export type OptimizeScheduleOutput = z.infer<
+  typeof OptimizeScheduleOutputSchema
+>;

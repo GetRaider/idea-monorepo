@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { optimizeSchedule } from "@/lib/ai";
+import { aiServices } from "@/services/ai";
 import { getTasksForOptimization } from "@/db/queries";
 import { tasksHelper } from "@/helpers/task.helper";
 
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
       status: task.status,
     }));
 
-    const optimization = await optimizeSchedule({
+    const optimization = await aiServices.schedule.optimize({
       tasks: tasksForAI,
       currentDate,
     });

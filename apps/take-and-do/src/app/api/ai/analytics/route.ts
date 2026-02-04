@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generateAnalytics } from "@/lib/ai";
+import { aiServices } from "@/services/ai";
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const result = await generateAnalytics(body);
+    const result = await aiServices.analytics.generate(body);
     return NextResponse.json(result);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
@@ -14,6 +14,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
-
-

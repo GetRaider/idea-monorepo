@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getTaskStatistics } from "@/db/queries";
-import { generateAnalytics } from "@/lib/ai";
+import { aiServices } from "@/services/ai";
 
 function generateBasicAnalytics(
   stats: {
@@ -73,9 +73,7 @@ function generateBasicAnalytics(
   }
   // Always include at least one risk for Basic Summary
   if (risks.length === 0) {
-    risks.push(
-      "No significant risks detected based on current task metrics.",
-    );
+    risks.push("No significant risks detected based on current task metrics.");
   }
 
   const recommendations: string[] = [];
@@ -163,7 +161,7 @@ export async function POST(request: NextRequest) {
     let analytics;
 
     if (shouldUseAI === true) {
-      analytics = await generateAnalytics({
+      analytics = await aiServices.analytics.generate({
         stats,
         timeframe,
       });

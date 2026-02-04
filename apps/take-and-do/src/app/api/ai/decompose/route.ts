@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { decomposeTask } from "@/lib/ai";
+import { aiServices } from "@/services/ai";
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const result = await decomposeTask(body);
+    const result = await aiServices.task.decompose(body);
     return NextResponse.json(result);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
@@ -14,5 +14,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
-

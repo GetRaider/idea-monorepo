@@ -1,7 +1,7 @@
 import { ComposeTaskInput } from "../schemas";
 import { PROMPT_RULES, PROMPT_GUIDELINES, PROMPT_OPTIONS } from "./constants";
 
-export function buildComposePrompt(input: ComposeTaskInput): string {
+export function buildComposeTaskPrompt(input: ComposeTaskInput): string {
   return `You are a task composition assistant. Convert the following raw text into a structured task matching the Task interface.
 
 RAW TEXT:

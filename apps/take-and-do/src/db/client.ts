@@ -1,14 +1,9 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 
-const connectionString =
-  process.env.DB_CONNECTION_STRING || process.env.DATABASE_URL;
+import { env } from "@/env";
 
-if (!connectionString) {
-  throw new Error(
-    "DB connection string is missing. Set 'DB_CONNECTION_STRING' or 'DATABASE_URL' environment variable.",
-  );
-}
+const { connectionString } = env.db;
 
 let hostname: string;
 try {
@@ -25,12 +20,11 @@ try {
 
 export const pool = new Pool({
   connectionString,
-  // TODO: Enable SSL once auth is implemented
   ssl: { rejectUnauthorized: false },
   connectionTimeoutMillis: 10000,
 });
 
-if (process.env.NODE_ENV === "development") {
+if (env.nodeEnv === "development") {
   console.log(`[DB] Connecting to: ${hostname}`);
 }
 

@@ -1,7 +1,7 @@
 import { DecomposeTaskInput } from "../schemas";
 import { PROMPT_RULES, PROMPT_GUIDELINES, PROMPT_OPTIONS } from "./constants";
 
-export function buildDecomposePrompt(input: DecomposeTaskInput): string {
+export function buildDecomposeTaskPrompt(input: DecomposeTaskInput): string {
   const descriptionLine = input.description
     ? `Description: ${input.description}`
     : "";

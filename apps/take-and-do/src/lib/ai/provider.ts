@@ -1,35 +1,35 @@
-import { OllamaProvider } from "./providers/ollama.provider";
-import { OpenAIProvider } from "./providers/openai.provider";
+import OpenAI from "openai";
 
-export interface AIProvider {
-  complete(prompt: string): Promise<string>;
+import { env } from "@/env";
+import { AI_CONFIG } from "./constants";
+
+class AIProvider {
+  private readonly client: OpenAI;
+  private readonly model: string;
+
+  constructor() {
+    this.client = new OpenAI(AI_CONFIG);
+    this.model = env.ai.model;
+  }
+
+  async complete(prompt: string): Promise<string> {
+    const response = await this.client.chat.completions.create({
+      model: this.model,
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.1,
+      response_format: { type: "json_object" },
+    });
+
+    const content = response.choices[0]?.message?.content;
+
+    if (!content) throw new Error("AI returned an empty response");
+    return content;
+  }
 }
-
-export type AIProviderType = "local" | "openai";
 
 let providerInstance: AIProvider | null = null;
 
 export function getAIProvider(): AIProvider {
   if (providerInstance) return providerInstance;
-
-  const providerType = (process.env.AI_PROVIDER || "local") as AIProviderType;
-
-  switch (providerType) {
-    case "openai":
-      providerInstance = new OpenAIProvider();
-      break;
-    case "local":
-    default:
-      providerInstance = new OllamaProvider();
-      break;
-  }
-
-  return providerInstance;
+  return new AIProvider();
 }
-
-export function resetAIProvider(): void {
-  providerInstance = null;
-}
-
-
-

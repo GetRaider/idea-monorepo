@@ -28,6 +28,16 @@ class PrimitiveHelper {
     },
   };
 
+  removeNullValues(obj: Record<string, unknown>): Record<string, unknown> {
+    const cleaned: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(obj)) {
+      if (value !== null) {
+        cleaned[key] = value;
+      }
+    }
+    return cleaned;
+  }
+
   getRandomFrom<T>(values: T[]): T {
     return values[randomInt(values.length)];
   }

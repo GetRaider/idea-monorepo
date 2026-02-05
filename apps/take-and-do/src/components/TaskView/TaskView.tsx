@@ -30,7 +30,6 @@ import {
   CreateTaskButton,
   TaskSaveButton,
 } from "./TaskView.styles";
-import { getPriorityIconLabel } from "../KanbanBoard/TaskCard/TaskCard";
 import { TaskMetadata } from "./TaskMetadata/TaskMetadata";
 import { TaskSubtasks } from "./TaskSubtasks/TaskSubtasks";
 
@@ -325,7 +324,7 @@ export function TaskView({
         <TaskTitleSection>
           <PriorityDropdownWrapper ref={priorityDropdownRef}>
             <PriorityIcon onClick={handlePriorityClick}>
-              {getPriorityIconLabel(displayTask.priority)}
+              {tasksHelper.priority.getIconLabel(displayTask.priority)}
             </PriorityIcon>
             <DropdownContainer $isOpen={isPriorityDropdownOpen}>
               {Object.values(TaskPriority).map((priority) => (
@@ -334,7 +333,7 @@ export function TaskView({
                   onClick={() => handlePrioritySelect(priority)}
                 >
                   <PriorityIconSpan>
-                    {getPriorityIconLabel(priority)}
+                    {tasksHelper.priority.getIconLabel(priority)}
                   </PriorityIconSpan>
                   {tasksHelper.priority.getName(priority)}
                 </DropdownItem>

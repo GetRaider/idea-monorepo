@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getFolderById } from "@/db/queries";
+import { getFolderById } from "@/lib/db/queries";
 
 export async function GET(
   request: NextRequest,

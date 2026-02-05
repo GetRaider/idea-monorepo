@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/db/client";
-import { tasks } from "@/db/modules/task/task.schema";
+import { db } from "@/lib/db/client";
+import { tasks } from "@/lib/db/modules/task/task.schema";
 import { TaskStatus, TaskPriority } from "@/components/KanbanBoard/types";
 import { gte, and } from "drizzle-orm";
 

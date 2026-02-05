@@ -6,8 +6,6 @@ import { Task, TaskStatus } from "@/components/KanbanBoard/types";
 import { EmptyState } from "@/components/EmptyState";
 import { apiServices } from "@/services/api";
 import { ScheduleType, tasksHelper } from "@/helpers/task.helper";
-import { getPriorityIconLabel } from "@/components/KanbanBoard/TaskCard/TaskCard";
-import { getStatusIcon } from "@/components/KanbanBoard/Column/Column";
 import { ScheduleOptimizationModal } from "./AIPlanningOptimizationModal";
 import { OptimizeButton } from "./AIPlanningOptimizationModal.styles";
 import {
@@ -126,7 +124,7 @@ export function TimelinePlanning({
               <TaskContent>
                 <TaskLeft>
                   <PriorityIcon>
-                    {getPriorityIconLabel(task.priority)}
+                    {tasksHelper.priority.getIconLabel(task.priority)}
                   </PriorityIcon>
                   <TaskSummaryText>{task.summary}</TaskSummaryText>
                 </TaskLeft>
@@ -148,7 +146,7 @@ export function TimelinePlanning({
               </TaskCellMuted>
               <StatusContainer>
                 <StatusIcon $status={task.status}>
-                  {getStatusIcon(task.status)}
+                  {tasksHelper.status.getIcon(task.status)}
                 </StatusIcon>
                 <StatusText $status={task.status}>{task.status}</StatusText>
               </StatusContainer>

@@ -47,7 +47,8 @@
     "@nestjs/mapped-types": "catalog:",
     "@nestjs/platform-express": "catalog:",
     "axios": "catalog:",
-    "pino": "^10.3.0"
+    "pino": "^10.3.0",
+    "tsx": "^4.21.0"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",

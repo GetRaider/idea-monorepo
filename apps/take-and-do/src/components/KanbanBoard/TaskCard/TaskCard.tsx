@@ -81,7 +81,9 @@ export function TaskCard({ task, onTaskClick }: TaskCardProps) {
       onClick={handleClick}
     >
       <Header>
-        <PriorityIcon>{getPriorityIconLabel(priority)}</PriorityIcon>
+        <PriorityIcon>
+          {tasksHelper.priority.getIconLabel(priority)}
+        </PriorityIcon>
         <Id>{taskKey || id}</Id>
         {!!subtasks.length && (
           <Subtasks>
@@ -122,19 +124,4 @@ export function TaskCard({ task, onTaskClick }: TaskCardProps) {
       </Labels>
     </Card>
   );
-}
-
-export function getPriorityIconLabel(priority: TaskPriority): string {
-  switch (priority) {
-    case TaskPriority.LOW:
-      return "🔵";
-    case TaskPriority.MEDIUM:
-      return "🟡";
-    case TaskPriority.HIGH:
-      return "🔴";
-    case TaskPriority.CRITICAL:
-      return "🟣";
-    default:
-      return "🚫";
-  }
 }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getTaskStatistics } from "@/db/queries";
+import { getTaskStatistics } from "@/lib/db/queries";
 import { aiServices } from "@/services/ai";
 
 function generateBasicAnalytics(

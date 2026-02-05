@@ -3,7 +3,6 @@
 import { RefObject } from "react";
 import { TrashIcon } from "@/components/Icons";
 import { Task, TaskStatus } from "../../KanbanBoard/types";
-import { getStatusIcon } from "../../KanbanBoard/Column/Column";
 import { StatusIcon } from "../../KanbanBoard/Column/Column.styles";
 import {
   ModalHeader,
@@ -15,6 +14,7 @@ import {
   DropdownContainer,
   DropdownItem,
 } from "../TaskView.styles";
+import { tasksHelper } from "@/helpers/task.helper";
 
 interface TaskViewHeaderProps {
   workspaceTitle: string;
@@ -74,7 +74,7 @@ export function TaskViewHeader({
         >
           <StatusIconButton onClick={onStatusClick}>
             <StatusIcon $status={task.status}>
-              {getStatusIcon(task.status)}
+              {tasksHelper.status.getIcon(task.status)}
             </StatusIcon>
           </StatusIconButton>
           <DropdownContainer $isOpen={isStatusDropdownOpen}>
@@ -82,7 +82,7 @@ export function TaskViewHeader({
               <DropdownItem key={status} onClick={() => onStatusSelect(status)}>
                 <span style={{ marginRight: "8px" }}>
                   <StatusIcon $status={status}>
-                    {getStatusIcon(status)}
+                    {tasksHelper.status.getIcon(status)}
                   </StatusIcon>
                 </span>
                 {status}

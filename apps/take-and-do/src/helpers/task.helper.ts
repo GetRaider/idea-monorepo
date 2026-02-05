@@ -141,6 +141,20 @@ export const tasksHelper = {
     getName(priority: TaskPriority): string {
       return PRIORITY_NAMES[priority] ?? "Medium";
     },
+    getIconLabel(priority: TaskPriority): string {
+      switch (priority) {
+        case TaskPriority.LOW:
+          return "🔵";
+        case TaskPriority.MEDIUM:
+          return "🟡";
+        case TaskPriority.HIGH:
+          return "🔴";
+        case TaskPriority.CRITICAL:
+          return "🟣";
+        default:
+          return "🚫";
+      }
+    },
   },
   status: {
     getName(status: TaskStatus): string {
@@ -155,6 +169,18 @@ export const tasksHelper = {
       return [...tasks].sort(
         (a, b) => (statusOrder[a.status] ?? 99) - (statusOrder[b.status] ?? 99),
       );
+    },
+    getIcon(status: TaskStatus): string {
+      switch (status) {
+        case TaskStatus.TODO:
+          return "◯";
+        case TaskStatus.IN_PROGRESS:
+          return "◐";
+        case TaskStatus.DONE:
+          return "✓";
+        default:
+          return "◯";
+      }
     },
   },
 };

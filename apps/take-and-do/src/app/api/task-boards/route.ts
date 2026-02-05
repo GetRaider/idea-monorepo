@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { env } from "@/env";
-import { getAllTaskBoards, createTaskBoard } from "@/db/queries";
+import { getAllTaskBoards, createTaskBoard } from "@/lib/db/queries";
 import { TaskBoard } from "@/types/workspace";
 
 export async function GET() {
@@ -46,8 +46,7 @@ export async function POST(request: NextRequest) {
         {
           error:
             "Database connection failed. Please check your DB_CONNECTION_STRING environment variable and ensure the database hostname is correct.",
-          details:
-            env.nodeEnv === "development" ? errorMessage : undefined,
+          details: env.nodeEnv === "development" ? errorMessage : undefined,
         },
         { status: 500 },
       );

@@ -4,9 +4,9 @@ import {
   getTasksByTaskBoardId,
   getTasksByDate,
   createTask,
-} from "@/db/queries";
+} from "@/lib/db/queries";
 import { Task } from "@/components/KanbanBoard/types";
-import { composeTask } from "@/lib/ai";
+import { aiServices } from "@/services/ai";
 
 export async function GET(request: NextRequest) {
   try {
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
 
     // If AI composition is requested, compose the task first
     if (shouldUseAI && text) {
-      const composedData = await composeTask({ text });
+      const composedData = await aiServices.task.compose({ text });
 
       // Merge AI output with provided task data (task data takes precedence)
       let finalScheduleDate: Date | undefined;

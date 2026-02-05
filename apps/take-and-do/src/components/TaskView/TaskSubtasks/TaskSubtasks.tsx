@@ -3,9 +3,7 @@
 import { useState } from "react";
 import { Task, TaskPriority, TaskStatus } from "../../KanbanBoard/types";
 import { apiServices } from "@/services/api";
-import { getStatusIcon } from "../../KanbanBoard/Column/Column";
 import { StatusIcon } from "../../KanbanBoard/Column/Column.styles";
-import { getPriorityIconLabel } from "../../KanbanBoard/TaskCard/TaskCard";
 import {
   SubtasksSection,
   SubtasksHeader,
@@ -20,6 +18,7 @@ import {
   SubtaskInput,
   EmptySubtasksMessage,
 } from "./TaskSubtasks.styles";
+import { tasksHelper } from "@/helpers/task.helper";
 
 interface TaskSubtasksProps {
   task: Task;
@@ -134,10 +133,10 @@ export function TaskSubtasks({
               >
                 <SubtaskHeader>
                   <StatusIcon $status={subtask.status}>
-                    {getStatusIcon(subtask.status)}
+                    {tasksHelper.status.getIcon(subtask.status)}
                   </StatusIcon>
                   <SubtaskIcon>
-                    {getPriorityIconLabel(subtask.priority)}
+                    {tasksHelper.priority.getIconLabel(subtask.priority)}
                   </SubtaskIcon>
                   {subtask.taskKey && (
                     <SubtaskKey>{subtask.taskKey}</SubtaskKey>

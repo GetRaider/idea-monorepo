@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { aiServices } from "@/services/ai";
-import { getTasksForOptimization } from "@/db/queries";
+import { getTasksForOptimization } from "@/lib/db/queries";
 import { tasksHelper } from "@/helpers/task.helper";
 
 export async function POST(request: NextRequest) {

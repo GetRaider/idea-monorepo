@@ -41,14 +41,7 @@ export async function loadTaskBoardContent({
     [TaskStatus.IN_PROGRESS]: [],
     [TaskStatus.DONE]: [],
   };
-  (boardTasks || []).forEach((task) => {
-    if (task.dueDate) {
-      task.dueDate = new Date(task.dueDate);
-    }
-    task.status = toTaskStatus(task.status);
-    task.priority = tasksHelper.priority.format(task.priority);
-    grouped[task.status].push(task);
-  });
+  boardTasks.forEach((task) => grouped[task.status].push(task));
   setTasks(grouped);
 }
 

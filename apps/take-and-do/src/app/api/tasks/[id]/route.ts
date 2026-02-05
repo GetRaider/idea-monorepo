@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getTaskById, updateTask, deleteTask } from "@/db/queries";
+import { getTaskById, updateTask, deleteTask } from "@/lib/db/queries";
 import { Task } from "@/components/KanbanBoard/types";
 
-  // Serialized task type for JSON response
+// Serialized task type for JSON response
 interface SerializedTask {
   id: string;
   taskBoardId: string;
@@ -68,22 +68,33 @@ export async function PATCH(
     // Process fields only if explicitly included in updates
     const updateData = { ...updates };
     if ("dueDate" in updates) {
-      updateData.dueDate = updates.dueDate ? new Date(updates.dueDate) : undefined;
+      updateData.dueDate = updates.dueDate
+        ? new Date(updates.dueDate)
+        : undefined;
     }
     if ("scheduleDate" in updates) {
-      updateData.scheduleDate = updates.scheduleDate ? new Date(updates.scheduleDate) : undefined;
+      updateData.scheduleDate = updates.scheduleDate
+        ? new Date(updates.scheduleDate)
+        : undefined;
     }
     if ("estimation" in updates) {
       // null means "clear", 0 is valid, undefined means "not set"
-      updateData.estimation = updates.estimation === null ? undefined : updates.estimation;
+      updateData.estimation =
+        updates.estimation === null ? undefined : updates.estimation;
     }
     // Process subtask dates if subtasks are being updated
     if (updates.subtasks && Array.isArray(updates.subtasks)) {
-      updateData.subtasks = updates.subtasks.map((subtask: Record<string, unknown>) => ({
-        ...subtask,
-        dueDate: subtask.dueDate ? new Date(subtask.dueDate as string) : undefined,
-        scheduleDate: subtask.scheduleDate ? new Date(subtask.scheduleDate as string) : undefined,
-      }));
+      updateData.subtasks = updates.subtasks.map(
+        (subtask: Record<string, unknown>) => ({
+          ...subtask,
+          dueDate: subtask.dueDate
+            ? new Date(subtask.dueDate as string)
+            : undefined,
+          scheduleDate: subtask.scheduleDate
+            ? new Date(subtask.scheduleDate as string)
+            : undefined,
+        }),
+      );
     }
 
     const updatedTask = await updateTask(taskId, updateData);

@@ -5,7 +5,7 @@ const envSchema = z.object({
     .enum(["development", "production", "test"])
     .optional()
     .default("development"),
-  AI_PROVIDER: z.enum(["local", "openai"]).optional().default("local"),
+  AI_PROVIDER: z.enum(["local", "external"]).optional().default("local"),
   AI_MODEL: z.string().optional().default("llama3.1:8b"),
   AI_API_KEY: z.string().optional(),
   AI_BASE_URL: z.string().optional(),

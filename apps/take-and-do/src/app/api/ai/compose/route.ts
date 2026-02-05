@@ -1,10 +1,10 @@
+import { aiServices } from "@/services/ai";
 import { NextRequest, NextResponse } from "next/server";
-import { composeTask } from "@/lib/ai";
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const result = await composeTask(body);
+    const result = await aiServices.task.compose(body);
     return NextResponse.json(result);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
@@ -14,6 +14,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
-
-

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getTaskByKey } from "@/db/queries";
+import { getTaskByKey } from "@/lib/db/queries";
 import { Task } from "@/components/KanbanBoard/types";
 
 interface SerializedTask {
@@ -57,4 +57,3 @@ export async function GET(
     );
   }
 }
-

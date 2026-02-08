@@ -4,7 +4,7 @@ import {
   type IHttpResponse,
 } from "@repo/api/client";
 
-import { urlHelper } from "@/helpers/url.helper";
+import { urlHelper } from "@repo/shared";
 
 export class BaseApiService {
   protected readonly httpClient = new HttpClient();

@@ -11,7 +11,10 @@
     "clean:hard": "pnpm run clean && rm -rf node_modules",
     "dev": "pnpm build --watch",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\"",
-    "format": "eslint \"{src,apps,libs,test}/**/*.ts\""
+    "format": "eslint \"{src,apps,libs,test}/**/*.ts\"",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -43,9 +46,15 @@
     "tsx": "^4.21.0"
   },
   "devDependencies": {
+    "@jest/globals": "catalog:",
+    "@jest/types": "catalog:",
     "@repo/eslint-config": "workspace:*",
+    "@repo/jest-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
     "@types/node": "catalog:",
+    "jest": "catalog:",
+    "jest-environment-jsdom": "catalog:",
+    "ts-jest": "catalog:",
     "ts-loader": "catalog:",
     "ts-node": "catalog:",
     "tsconfig-paths": "catalog:",

@@ -8,14 +8,16 @@ class UrlHelper {
       shouldSkipMissingArgs = false,
     }: IConstructOptions = {},
   ): string {
+    if (shouldGetExistingArgs) {
+      return `${base}${this.getExistingParams(...params)}${this.getExistingQuery(
+        queries,
+      )}`;
+    }
+
     const strictParams = this.getParams(params, shouldSkipMissingArgs);
     const strictQuery = this.getQuery(queries, shouldSkipMissingArgs);
 
-    return shouldGetExistingArgs
-      ? `${base}${this.getExistingParams(...params)}${this.getExistingQuery(
-          queries,
-        )}`
-      : `${base}${strictParams}${strictQuery}`;
+    return `${base}${strictParams}${strictQuery}`;
   }
 
   getQueryValues(
@@ -45,23 +47,32 @@ class UrlHelper {
   private getExistingQuery(
     possibleQueries: Record<string, string | number>,
   ): string {
-    if (!possibleQueries) {
+    if (!possibleQueries || Object.keys(possibleQueries).length === 0) {
       return "";
     }
-    const queryParts = Object.keys(possibleQueries).map((key) => {
-      const possibleQuery = possibleQueries[key] ?? "";
-      return `${
-        possibleQuery &&
-        `${encodeURIComponent(key)}=${encodeURIComponent(possibleQueries[key])}`
-      }`;
-    });
-    return queryParts.some((queryPart) => queryPart.length)
-      ? primitiveHelper.string.removeLast(`?${queryParts.join("&")}`, "&")
-      : "";
+    const queryParts = Object.keys(possibleQueries)
+      .map((key) => {
+        const possibleQuery = possibleQueries[key];
+        // Skip null, undefined, empty string, but allow 0
+        if (
+          possibleQuery === null ||
+          possibleQuery === undefined ||
+          possibleQuery === ""
+        ) {
+          return "";
+        }
+        return `${encodeURIComponent(key)}=${encodeURIComponent(possibleQuery)}`;
+      })
+      .filter((part) => part.length > 0);
+    return queryParts.length > 0 ? `?${queryParts.join("&")}` : "";
   }
 
   private getParams(params: string[], shouldSkipMissingArgs: boolean): string {
-    if (shouldSkipMissingArgs && !params.length) {
+    if (shouldSkipMissingArgs && (!params || !params.length)) {
+      return "";
+    }
+
+    if (!params || params.length === 0) {
       return "";
     }
 
@@ -84,11 +95,23 @@ class UrlHelper {
     queries: Record<string, string | number>,
     shouldSkipMissingArgs: boolean,
   ): string {
-    if (shouldSkipMissingArgs && !queries) {
+    if (
+      shouldSkipMissingArgs &&
+      (!queries || Object.keys(queries).length === 0)
+    ) {
       return "";
     }
 
-    if (Object.values(queries).some((query) => !query)) {
+    if (!queries || Object.keys(queries).length === 0) {
+      return "";
+    }
+
+    // Check for null/undefined but allow 0
+    if (
+      Object.values(queries).some(
+        (query) => query === null || query === undefined || query === "",
+      )
+    ) {
       throw new Error(
         `Some of passed queries is null or undefined: ${primitiveHelper.jsonStringify(
           { value: queries },

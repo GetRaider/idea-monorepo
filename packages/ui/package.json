@@ -6,6 +6,7 @@
     "build": "tsc -b -v",
     "dev": "tsc -b -v --watch",
     "clean": "rm -rf dist && rm -rf .turbo",
+    "clean:hard": "pnpm run clean && rm -rf node_modules",
     "lint": "eslint . --max-warnings 0",
     "generate:component": "turbo gen react-component"
   },

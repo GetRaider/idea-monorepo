@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "clean": "rm -rf .next && rm -rf .turbo",
+    "clean:hard": "pnpm run clean && rm -rf node_modules",
     "build": "next build --turbopack",
     "dev": "next dev --turbopack",
     "start": "next start",
@@ -23,6 +24,7 @@
     "@radix-ui/themes": "catalog:",
     "@repo/ui": "workspace:*",
     "@repo/api": "workspace:*",
+    "@repo/shared": "workspace:*",
     "@tiptap/extension-placeholder": "^3.11.0",
     "@tiptap/react": "^3.11.0",
     "@tiptap/starter-kit": "^3.11.0",

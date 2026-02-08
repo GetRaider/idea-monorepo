@@ -38,6 +38,7 @@
   },
   "scripts": {
     "clean": "rm -rf dist && rm -rf .turbo",
+    "clean:hard": "pnpm run clean && rm -rf node_modules",
     "build": "tsc"
   }
 }

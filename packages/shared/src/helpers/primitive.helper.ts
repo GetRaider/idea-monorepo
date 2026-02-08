@@ -65,7 +65,7 @@ class PrimitiveHelper {
 
   jsonStringify(value: unknown, options: IJsonStringifyOptions = {}): string {
     const { replacer = null, spaces = 2 } = options;
-    // @ts-expect-error - replacer can be a function; JSON.stringify types are strict
+    // @ts-ignore
     return JSON.stringify(value, replacer, spaces);
   }
 }

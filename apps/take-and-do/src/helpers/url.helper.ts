@@ -1,4 +1,4 @@
-import { primitiveHelper } from "./primitive.helper";
+import { primitiveHelper } from "@repo/shared";
 
 class UrlHelper {
   construct(

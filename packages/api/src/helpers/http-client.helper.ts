@@ -1,10 +1,11 @@
-import axios, { AxiosHeaders } from "axios";
+import axios, { AxiosHeaders, RawAxiosRequestHeaders } from "axios";
 import { logger } from "./logger.helper";
+import { primitiveHelper } from "@repo/shared";
 
 export interface IHttpRequest {
   url: string;
   headers?:
-    | AxiosHeaders
+    | RawAxiosRequestHeaders
     | Record<string, string | string[] | number | boolean | null>;
   body?: unknown;
   timeout?: number;
@@ -78,7 +79,7 @@ export class HttpClient implements IHttpClient {
       };
     } catch (error) {
       // TODO: Think about better error handling on different levels besides here.
-      const errorMessage = `Failed to send request.\nRequest: ${requestBody}\nError: ${error}`;
+      const errorMessage = `Failed to send request.\nRequest: ${primitiveHelper.jsonStringify(requestBody)}\nError: ${error}`;
       logger.error(errorMessage);
       throw new Error(errorMessage);
     }

@@ -7,6 +7,10 @@
       "inputs": ["^clean"],
       "outputs": ["dist/**", ".next/**", ".turbo/**"]
     },
+    "clean:hard": {
+      "inputs": ["^clean:hard"],
+      "outputs": ["dist/**", ".next/**", ".turbo/**", ".node_modules/**"]
+    },
     "build": {
       "inputs": ["^build"],
       "outputs": [

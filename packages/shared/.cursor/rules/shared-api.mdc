@@ -1,0 +1,145 @@
+---
+description: Shared API types, models, and DTOs for the monorepo
+globs:
+  - "**/*.ts"
+alwaysApply: true
+---
+
+# Shared API Package Development Rules
+
+## Purpose
+This package contains shared TypeScript types, models, DTOs, and utilities used across the monorepo (backend and frontend).
+
+## File Structure
+- `src/models/` - Shared model interfaces and classes
+- `src/links/dto/` - Data Transfer Objects
+- `src/links/entities/` - Entity definitions
+- `src/constants/` - Shared constants (roles, enums)
+- `src/helpers/` - Utility functions and filters
+
+## Model Pattern
+- Define interface first (`I` prefix)
+- Implement class with class-validator decorators
+- Use `readonly` for immutable properties
+
+```typescript
+import { IsString, IsOptional, IsArray } from 'class-validator';
+
+export interface IUserModel {
+  readonly id: string;
+  readonly login: string;
+  readonly password: string;
+  readonly roles: Array<IRoleModel>;
+  readonly name?: string;
+}
+
+export class UserModel implements IUserModel {
+  @IsString()
+  readonly id: string;
+
+  @IsString()
+  readonly login: string;
+
+  @IsString()
+  readonly password: string;
+
+  @IsArray()
+  readonly roles: Array<IRoleModel>;
+
+  @IsString()
+  @IsOptional()
+  readonly name?: string;
+}
+```
+
+## DTO Pattern
+- Use class-validator decorators for validation
+- Extend from NestJS mapped-types when needed (PartialType, OmitType)
+- Keep DTOs focused on specific operations
+
+```typescript
+import { IsString, IsOptional, IsEmail } from 'class-validator';
+
+export class CreateUserDto {
+  @IsEmail()
+  readonly email: string;
+
+  @IsString()
+  readonly name: string;
+
+  @IsString()
+  @IsOptional()
+  readonly avatar?: string;
+}
+
+// For updates - make all fields optional
+import { PartialType } from '@nestjs/mapped-types';
+
+export class UpdateUserDto extends PartialType(CreateUserDto) {}
+```
+
+## Entity Pattern
+- Define entities for database table representations
+- Include all database columns as properties
+- Use proper TypeScript types
+
+```typescript
+export class LinkEntity {
+  id: string;
+  url: string;
+  shortCode: string;
+  createdAt: Date;
+  userId: string;
+}
+```
+
+## Constants
+- Use enums for fixed value sets
+- Export as named constants
+- Group related constants together
+
+```typescript
+// constants/roles.constants.ts
+export enum UserRole {
+  ADMIN = 'admin',
+  USER = 'user',
+  GUEST = 'guest',
+}
+
+export const DEFAULT_ROLE = UserRole.USER;
+```
+
+## Export Pattern
+- Re-export all public types from `src/index.ts`
+- Use barrel exports for clean imports
+
+```typescript
+// index.ts
+export * from './models';
+export * from './constants/roles.constants';
+export * from './links/dto/create-link.dto';
+export * from './helpers/httpExceptionFilter.helper';
+```
+
+## Usage in Other Packages
+```typescript
+// In devinity-api or devinity-web
+import { UserModel, CreateUserDto, UserRole } from '@repo/api';
+```
+
+## Validation Decorators (class-validator)
+- `@IsString()` - String validation
+- `@IsEmail()` - Email format
+- `@IsOptional()` - Optional field
+- `@IsArray()` - Array type
+- `@IsNumber()` - Number type
+- `@IsEnum(EnumType)` - Enum validation
+- `@MinLength(n)` - Minimum string length
+- `@MaxLength(n)` - Maximum string length
+
+## Best Practices
+- Keep this package dependency-light (only class-validator, NestJS decorators)
+- Don't include business logic here
+- Types should be serializable (no functions, circular refs)
+- Document complex types with JSDoc comments
+- Version breaking changes carefully (used by multiple apps)

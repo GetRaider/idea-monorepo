@@ -1,6 +1,7 @@
-import { primitiveHelper } from "@/helpers/primitive.helper";
-import { getAIProvider } from "@/lib/ai/provider";
 import { z } from "zod";
+
+import { primitiveHelper } from "@repo/shared";
+import { getAIProvider } from "@/lib/ai/provider";
 
 type AIError = { path: (string | number)[]; message: string };
 type AIResult<OutputSchema extends z.ZodTypeAny> = z.SafeParseSuccess<

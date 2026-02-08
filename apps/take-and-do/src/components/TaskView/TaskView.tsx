@@ -292,7 +292,7 @@ export function TaskView({
     }
 
     try {
-      await apiServices.tasks.delete(task.id);
+      await apiServices.tasks.deleteById(task.id);
       onTaskDelete?.(task.id);
       onClose();
     } catch (error) {

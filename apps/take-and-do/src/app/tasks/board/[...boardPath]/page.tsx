@@ -30,9 +30,7 @@ export default function BoardPage({ params }: BoardPageProps) {
   const router = useRouter();
 
   const parsed = parseBoardPath(boardPath);
-  if (!parsed) {
-    notFound();
-  }
+  if (!parsed) notFound();
 
   const { boardName, taskKey, subtaskKey } = parsed;
 

@@ -19,7 +19,7 @@ export interface IHttpResponse<T> {
 }
 
 export interface IBaseRequest {
-  queryParams?: Record<string, string>;
+  queries?: Record<string, string>;
   pathParams?: string[];
   body?: unknown;
   timeout?: number;

@@ -12,7 +12,7 @@
       "outputs": ["dist/**", ".next/**", ".turbo/**", ".node_modules/**"]
     },
     "build": {
-      "inputs": ["^build"],
+      "dependsOn": ["^build"],
       "outputs": [
         ".next/**",
         "!.next/cache/**",
@@ -21,6 +21,7 @@
       ]
     },
     "dev": {
+      "dependsOn": ["^build"],
       "env": ["NODE_ENV=development"],
       "cache": false,
       "persistent": true

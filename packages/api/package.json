@@ -48,6 +48,7 @@
     "@nestjs/core": "catalog:",
     "@nestjs/mapped-types": "catalog:",
     "@nestjs/platform-express": "catalog:",
+    "@repo/shared": "workspace:*",
     "axios": "catalog:",
     "pino": "^10.3.0",
     "tsx": "^4.21.0"
@@ -55,7 +56,6 @@
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
-    "@repo/shared": "workspace:*",
     "@types/express": "catalog:",
     "@types/node": "catalog:",
     "class-validator": "catalog:",

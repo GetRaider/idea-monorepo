@@ -10,20 +10,20 @@ export class BaseApiService {
   protected readonly httpClient = new HttpClient();
   protected readonly baseUrl = "/api";
   protected readonly defaultHeaders = {
-    Accept: "*/*",
-    "Accept-Encoding": "gzip, deflate, br",
-    "Accept-Language": "en-US,en;q=0.9",
-    "User-Agent": "Mozilla/5.0",
-    Connection: "keep-alive",
+    // Accept: "*/*",
+    // "Accept-Encoding": "gzip, deflate, br",
+    // "Accept-Language": "en-US,en;q=0.9",
+    // "User-Agent": "Mozilla/5.0",
+    // Connection: "keep-alive",
   };
 
   protected constructor(protected readonly relativeUrl: string) {}
 
-  async get<T>({ pathParams, queryParams, token }: IBaseRequest = {}): Promise<
+  async get<T>({ pathParams, queries, token }: IBaseRequest = {}): Promise<
     IHttpResponse<T>
   > {
     return this.httpClient.get({
-      url: this.getUrl(pathParams, queryParams),
+      url: this.getUrl(pathParams, queries),
       headers: this.getDefaultHeaders(token),
     });
   }
@@ -46,11 +46,11 @@ export class BaseApiService {
   async post<T>({
     body,
     pathParams,
-    queryParams,
+    queries,
     token,
   }: IBaseRequest = {}): Promise<IHttpResponse<T>> {
     return this.httpClient.post({
-      url: this.getUrl(pathParams, queryParams),
+      url: this.getUrl(pathParams, queries),
       headers: this.getDefaultHeaders(token),
       body,
     });
@@ -58,12 +58,12 @@ export class BaseApiService {
 
   async put<T>({
     pathParams,
-    queryParams,
+    queries,
     body,
     token,
   }: IBaseRequest = {}): Promise<IHttpResponse<T>> {
     return this.httpClient.put({
-      url: this.getUrl(pathParams, queryParams),
+      url: this.getUrl(pathParams, queries),
       headers: this.getDefaultHeaders(token),
       body,
     });
@@ -71,24 +71,22 @@ export class BaseApiService {
 
   async patch<T>({
     pathParams,
-    queryParams,
+    queries,
     body,
     token,
   }: IBaseRequest = {}): Promise<IHttpResponse<T>> {
     return this.httpClient.patch({
-      url: this.getUrl(pathParams, queryParams),
+      url: this.getUrl(pathParams, queries),
       headers: this.getDefaultHeaders(token),
       body,
     });
   }
 
-  async delete<T>({
-    pathParams,
-    queryParams,
-    token,
-  }: IBaseRequest = {}): Promise<IHttpResponse<T>> {
+  async delete<T>({ pathParams, queries, token }: IBaseRequest = {}): Promise<
+    IHttpResponse<T>
+  > {
     return this.httpClient.delete({
-      url: this.getUrl(pathParams, queryParams),
+      url: this.getUrl(pathParams, queries),
       headers: this.getDefaultHeaders(token),
     });
   }

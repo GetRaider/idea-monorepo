@@ -684,24 +684,28 @@ export async function getTasksForOptimization(
 }
 
 export async function getTaskStatistics(
-  timeframe: "week" | "month" | "quarter" = "month",
+  timeframe: "week" | "month" | "quarter" | "all" = "month",
 ): Promise<TaskStatistics> {
   const now = new Date();
-  const startDate = new Date(now);
+
+  let startDate: Date | null = null;
 
   switch (timeframe) {
     case "week":
+      startDate = new Date(now);
       startDate.setDate(now.getDate() - 7);
       break;
     case "month":
+      startDate = new Date(now);
       startDate.setMonth(now.getMonth() - 1);
       break;
     case "quarter":
+      startDate = new Date(now);
       startDate.setMonth(now.getMonth() - 3);
       break;
   }
 
-  const allTasks = await db
+  const query = db
     .select({
       id: tasks.id,
       status: tasks.status,
@@ -709,8 +713,11 @@ export async function getTaskStatistics(
       updatedAt: tasks.updatedAt,
       dueDate: tasks.dueDate,
     })
-    .from(tasks)
-    .where(gte(tasks.createdAt, startDate));
+    .from(tasks);
+
+  const allTasks = startDate
+    ? await query.where(gte(tasks.createdAt, startDate))
+    : await query;
 
   const tasksCreated = allTasks.length;
   const completedTasks = allTasks.filter((t) => t.status === "Done");

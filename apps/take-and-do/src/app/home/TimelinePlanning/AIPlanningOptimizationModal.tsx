@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { Task } from "@/components/KanbanBoard/types";
 import { apiServices } from "@/services/api";
 import { tasksHelper } from "@/helpers/task.helper";
+import { CloseIcon } from "@/components/Icons";
+import { SecondaryButton } from "@/components/Buttons";
 import {
   ModalOverlay,
   ModalContent,
@@ -39,7 +41,6 @@ import {
   TaskLabel,
   GenerateOptimizationButton,
   ActionsContainer,
-  CancelButton,
   OptimizeButton,
 } from "./AIPlanningOptimizationModal.styles";
 
@@ -102,7 +103,7 @@ export function ScheduleOptimizationModal({
   };
 
   const sanitizeText = (text: string): string => {
-    const taskMap = new Map(tasks.map((t) => [t.id, t.summary]));
+    const taskMap = new Map(tasks.map((tasks) => [tasks.id, tasks.summary]));
     let sanitized = text;
     taskMap.forEach((summary, id) => {
       sanitized = sanitized.replace(new RegExp(id, "g"), `"${summary}"`);
@@ -193,7 +194,7 @@ export function ScheduleOptimizationModal({
               priorities, schedules, due dates, and estimations.
             </ModalDescription>
           </HeaderContent>
-          <CloseButton onClick={onClose}>×</CloseButton>
+          <CloseButton onClick={onClose}><CloseIcon /></CloseButton>
         </ModalHeader>
 
         {!exploration && !isExploring && (
@@ -213,7 +214,7 @@ export function ScheduleOptimizationModal({
             </TaskSelectionSection>
 
             <ActionsContainer>
-              <CancelButton onClick={onClose}>Cancel</CancelButton>
+              <SecondaryButton onClick={onClose}>Cancel</SecondaryButton>
               <GenerateOptimizationButton
                 onClick={handleExplore}
                 disabled={selectedTaskIds.size === 0}
@@ -300,7 +301,7 @@ export function ScheduleOptimizationModal({
             )}
 
             <ActionsContainer>
-              <CancelButton onClick={onClose}>Cancel</CancelButton>
+              <SecondaryButton onClick={onClose}>Cancel</SecondaryButton>
               <OptimizeButton onClick={handleOptimize} disabled={isOptimizing}>
                 {isOptimizing ? "Optimizing..." : "✨ Optimize"}
               </OptimizeButton>

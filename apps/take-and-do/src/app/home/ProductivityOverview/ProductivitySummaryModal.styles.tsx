@@ -47,7 +47,8 @@ export const CloseButton = styled.button`
   background: transparent;
   border: none;
   color: #888;
-  font-size: 24px;
+  font-size: 20px;
+  line-height: 1;
   cursor: pointer;
   padding: 0;
   width: 32px;
@@ -114,4 +115,3 @@ export const CardList = styled.ul`
   font-size: 14px;
   line-height: 1.8;
 `;
-

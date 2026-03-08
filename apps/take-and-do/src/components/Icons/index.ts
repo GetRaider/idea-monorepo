@@ -5,6 +5,7 @@ export { ChevronDownIcon } from "./ChevronDownIcon";
 export { ChevronRightIcon } from "./ChevronRightIcon";
 export { CircleCheckIcon } from "./CircleCheckIcon";
 export { ClipboardCheckIcon } from "./ClipboardCheckIcon";
+export { CloseIcon } from "./CloseIcon";
 export { ClockCircleIcon } from "./ClockCircleIcon";
 export { ClockIcon } from "./ClockIcon";
 export { ClockNavIcon } from "./ClockNavIcon";

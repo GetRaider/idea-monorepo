@@ -1,11 +1,11 @@
-import { FoldersService } from "./folders.service";
-import { LabelsService } from "./labels.service";
-import { TaskBoardsService } from "./taskBoards.service";
-import { TasksService } from "./tasks.service";
+import { FoldersApiService } from "./folders.api.service";
+import { LabelsApiService } from "./labels.api.service";
+import { TaskBoardsApiService } from "./task-boards.api.service";
+import { TasksApiService } from "./tasks.api.service";
 
 export const apiServices = {
-  tasks: new TasksService(),
-  folders: new FoldersService(),
-  labels: new LabelsService(),
-  taskBoards: new TaskBoardsService(),
+  tasks: new TasksApiService(),
+  folders: new FoldersApiService(),
+  labels: new LabelsApiService(),
+  taskBoards: new TaskBoardsApiService(),
 };

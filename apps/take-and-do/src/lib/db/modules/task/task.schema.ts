@@ -6,7 +6,7 @@ import {
   pgEnum,
   foreignKey,
 } from "drizzle-orm/pg-core";
-import { taskBoards } from "../taskBoard/taskBoard.schema";
+import { taskBoardsTable } from "../taskBoard/taskBoard.schema";
 
 export const taskStatusEnum = pgEnum("task_status", [
   "To Do",
@@ -27,7 +27,7 @@ export const tasks = pgTable(
     id: text("id").primaryKey(),
     taskBoardId: text("task_board_id")
       .notNull()
-      .references(() => taskBoards.id, { onDelete: "cascade" }),
+      .references(() => taskBoardsTable.id, { onDelete: "cascade" }),
     taskKey: text("task_key"),
     summary: text("summary").notNull(),
     description: text("description").notNull().default(""),

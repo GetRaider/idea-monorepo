@@ -2,7 +2,7 @@ import { eq, and, isNull, inArray, gte, lt } from "drizzle-orm";
 import { db } from "../../client";
 import { tasks } from "./task.schema";
 import { taskLabels } from "../taskLabel/taskLabel.schema";
-import { labels } from "../label/label.schema";
+import { labelsTable } from "../label/label.schema";
 import { Task, TaskPriority, TaskStatus } from "@/components/KanbanBoard/types";
 import { generateId } from "../utils";
 import { getTaskBoardById } from "../taskBoard/taskBoard.queries";
@@ -172,7 +172,7 @@ async function loadAllTasksWithRelations(filter?: {
   }
 
   const allTaskLabelRows = await db.select().from(taskLabels);
-  const allLabelRows = await db.select().from(labels);
+  const allLabelRows = await db.select().from(labelsTable);
   const labelMap = new Map<string, string>();
   allLabelRows.forEach((label) => {
     labelMap.set(label.id, label.name);
@@ -208,15 +208,15 @@ async function syncTaskLabels(
   for (const labelName of labelNames) {
     const existingLabels = await db
       .select()
-      .from(labels)
-      .where(eq(labels.name, labelName));
+      .from(labelsTable)
+      .where(eq(labelsTable.name, labelName));
 
     let labelId: string;
     if (existingLabels.length > 0) {
       labelId = existingLabels[0].id;
     } else {
       labelId = generateId();
-      await db.insert(labels).values({
+      await db.insert(labelsTable).values({
         id: labelId,
         name: labelName,
         createdAt: new Date(),
@@ -328,7 +328,7 @@ export async function getTaskById(taskId: string): Promise<Task | null> {
   const labelIds = taskLabelRows.map((tl) => tl.labelId);
   const labelRows =
     labelIds.length > 0
-      ? await db.select().from(labels).where(inArray(labels.id, labelIds))
+      ? await db.select().from(labelsTable).where(inArray(labelsTable.id, labelIds))
       : [];
 
   const taskLabelsMap = new Map<string, string[]>();
@@ -377,7 +377,7 @@ export async function getTaskByKey(
 
       // Load labels
       const allTaskLabelRows = await db.select().from(taskLabels);
-      const allLabelRows = await db.select().from(labels);
+      const allLabelRows = await db.select().from(labelsTable);
       const labelMap = new Map<string, string>();
       allLabelRows.forEach((label) => {
         labelMap.set(label.id, label.name);
@@ -408,7 +408,7 @@ export async function getTaskByKey(
 
   // Load labels
   const allTaskLabelRows = await db.select().from(taskLabels);
-  const allLabelRows = await db.select().from(labels);
+  const allLabelRows = await db.select().from(labelsTable);
   const labelMap = new Map<string, string>();
   allLabelRows.forEach((label) => {
     labelMap.set(label.id, label.name);
@@ -477,7 +477,6 @@ export async function createTask(taskData: Omit<Task, "id">): Promise<Task> {
     priority: taskData.priority,
     dueDate: taskData.dueDate || null,
     estimation: taskData.estimation || null,
-    schedule: null, // Deprecated - use scheduleDate only
     scheduleDate: taskData.scheduleDate || null,
     parentTaskId: null,
     createdAt: new Date(),
@@ -506,7 +505,6 @@ export async function createTask(taskData: Omit<Task, "id">): Promise<Task> {
         priority: subtask.priority,
         dueDate: subtask.dueDate || null,
         estimation: subtask.estimation || null,
-        schedule: null, // Deprecated - use scheduleDate only
         scheduleDate: subtask.scheduleDate || null,
         parentTaskId: taskId,
         createdAt: new Date(),
@@ -607,7 +605,6 @@ export async function updateTask(
           priority: subtask.priority,
           dueDate: subtask.dueDate || null,
           estimation: subtask.estimation || null,
-          schedule: null, // Deprecated - use scheduleDate only
           scheduleDate: subtask.scheduleDate || null,
           parentTaskId: taskId,
           createdAt: new Date(),

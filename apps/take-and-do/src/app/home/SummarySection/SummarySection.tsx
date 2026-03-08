@@ -150,7 +150,7 @@ export interface AnalyticsData {
   aiGenerated: boolean;
 }
 
-export type Timeframe = "week" | "month" | "quarter";
+export type Timeframe = "all" | "week" | "month" | "quarter";
 
 interface SummarySectionProps {
   analytics: AnalyticsData | null;

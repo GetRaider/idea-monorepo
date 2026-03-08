@@ -37,7 +37,7 @@ export const AnalyticsStatsSchema = z.object({
 
 export const AnalyticsInputSchema = z.object({
   stats: AnalyticsStatsSchema,
-  timeframe: z.enum(["week", "month", "quarter"]),
+  timeframe: z.enum(["week", "month", "quarter", "all"]),
 });
 
 export const AnalyticsOutputSchema = z.object({

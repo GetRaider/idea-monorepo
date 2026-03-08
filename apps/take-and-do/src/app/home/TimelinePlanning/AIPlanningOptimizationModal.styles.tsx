@@ -288,23 +288,6 @@ export const ActionsContainer = styled.div`
   border-top: 1px solid #2a2a2a;
 `;
 
-export const CancelButton = styled.button`
-  padding: 10px 20px;
-  background: transparent;
-  border: 1px solid #3a3a3a;
-  border-radius: 6px;
-  color: #fff;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-
-  &:hover {
-    background: #2a2a2a;
-    border-color: #4a4a4a;
-  }
-`;
-
 const GradientButton = styled.button`
   padding: 10px 20px;
   border: none;
@@ -317,10 +300,6 @@ const GradientButton = styled.button`
 
   ${animatedGradientBackground}
 
-  &:hover:not(:disabled) {
-    ${animatedGradientHover}
-  }
-
   &:disabled {
     opacity: 0.6;
     cursor: not-allowed;
@@ -331,10 +310,6 @@ const GradientButton = styled.button`
   @media (prefers-reduced-motion: reduce) {
     animation: none !important;
     background: #7255c1 !important;
-
-    &:hover:not(:disabled) {
-      background: #8255d1 !important;
-    }
   }
 `;
 

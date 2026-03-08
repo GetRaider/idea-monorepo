@@ -59,18 +59,18 @@ export class HttpClient implements IHttpClient {
     method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
     { url, headers, body, timeout = 0 }: IHttpRequest,
   ): Promise<IHttpResponse<T>> {
-    const requestBody = {
+    const requestConfig = {
       url,
       method,
+      data: body,
+      timeout,
       headers:
         headers instanceof AxiosHeaders
           ? headers
           : new AxiosHeaders(headers ?? {}),
-      body,
-      timeout,
     };
     try {
-      const response = await axios.request(requestBody);
+      const response = await axios.request(requestConfig);
       return {
         data: response.data,
         status: response.status,
@@ -79,7 +79,7 @@ export class HttpClient implements IHttpClient {
       };
     } catch (error) {
       // TODO: Think about better error handling on different levels besides here.
-      const errorMessage = `Failed to send request.\nRequest: ${primitiveHelper.jsonStringify(requestBody)}\nError: ${error}`;
+      const errorMessage = `Failed to send request.\nRequest: ${primitiveHelper.jsonStringify(requestConfig)}\nError: ${error}`;
       logger.error(errorMessage);
       throw new Error(errorMessage);
     }

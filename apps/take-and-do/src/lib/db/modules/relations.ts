@@ -1,26 +1,29 @@
 import { relations } from "drizzle-orm";
-import { folders } from "./folder/folder.schema";
-import { taskBoards } from "./taskBoard/taskBoard.schema";
+import { foldersTable } from "./folder/folder.schema";
+import { taskBoardsTable } from "./taskBoard/taskBoard.schema";
 import { tasks } from "./task/task.schema";
-import { labels } from "./label/label.schema";
+import { labelsTable } from "./label/label.schema";
 import { taskLabels } from "./taskLabel/taskLabel.schema";
 
-export const foldersRelations = relations(folders, ({ many }) => ({
-  taskBoards: many(taskBoards),
+export const foldersRelations = relations(foldersTable, ({ many }) => ({
+  taskBoards: many(taskBoardsTable),
 }));
 
-export const taskBoardsRelations = relations(taskBoards, ({ one, many }) => ({
-  folder: one(folders, {
-    fields: [taskBoards.folderId],
-    references: [folders.id],
+export const taskBoardsRelations = relations(
+  taskBoardsTable,
+  ({ one, many }) => ({
+    folder: one(foldersTable, {
+      fields: [taskBoardsTable.folderId],
+      references: [foldersTable.id],
+    }),
+    tasks: many(tasks),
   }),
-  tasks: many(tasks),
-}));
+);
 
 export const tasksRelations = relations(tasks, ({ one, many }) => ({
-  taskBoard: one(taskBoards, {
+  taskBoard: one(taskBoardsTable, {
     fields: [tasks.taskBoardId],
-    references: [taskBoards.id],
+    references: [taskBoardsTable.id],
   }),
   parentTask: one(tasks, {
     fields: [tasks.parentTaskId],
@@ -33,7 +36,7 @@ export const tasksRelations = relations(tasks, ({ one, many }) => ({
   taskLabels: many(taskLabels),
 }));
 
-export const labelsRelations = relations(labels, ({ many }) => ({
+export const labelsRelations = relations(labelsTable, ({ many }) => ({
   taskLabels: many(taskLabels),
 }));
 
@@ -42,9 +45,8 @@ export const taskLabelsRelations = relations(taskLabels, ({ one }) => ({
     fields: [taskLabels.taskId],
     references: [tasks.id],
   }),
-  label: one(labels, {
+  label: one(labelsTable, {
     fields: [taskLabels.labelId],
-    references: [labels.id],
+    references: [labelsTable.id],
   }),
 }));
-

@@ -10,6 +10,7 @@ export class BaseApiService {
   protected readonly httpClient = new HttpClient();
   protected readonly baseUrl = "/api";
   protected readonly defaultHeaders = {
+    // TODO: Define default headers
     // Accept: "*/*",
     // "Accept-Encoding": "gzip, deflate, br",
     // "Accept-Language": "en-US,en;q=0.9",

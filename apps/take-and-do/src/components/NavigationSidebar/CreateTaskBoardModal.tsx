@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { CloseIcon } from "@/components/Icons";
 import {
   ModalOverlay,
   ModalContainer,
@@ -44,7 +45,7 @@ export function CreateTaskBoardModal({
       <ModalContainer onClick={(e) => e.stopPropagation()}>
         <ModalHeader>
           <ModalTitle>Create Task Board</ModalTitle>
-          <CloseButton onClick={onClose}>×</CloseButton>
+          <CloseButton onClick={onClose}><CloseIcon /></CloseButton>
         </ModalHeader>
 
         <form onSubmit={handleSubmit}>

@@ -9,14 +9,16 @@ function generateBasicAnalytics(
     avgCompletionTimeDays: number;
     overdueRate: number;
   },
-  timeframe: "week" | "month" | "quarter",
+  timeframe: "week" | "month" | "quarter" | "all",
 ) {
   const completionRate =
     stats.tasksCreated > 0
       ? (stats.tasksCompleted / stats.tasksCreated) * 100
       : 0;
 
-  const summary = `In the past ${timeframe}, you created ${stats.tasksCreated} tasks and completed ${stats.tasksCompleted} (${completionRate.toFixed(1)}% completion rate). Average completion time was ${stats.avgCompletionTimeDays} days, with ${(stats.overdueRate * 100).toFixed(1)}% of tasks with due dates being overdue.`;
+  const periodLabel =
+    timeframe === "all" ? "all time" : `the past ${timeframe}`;
+  const summary = `Over ${periodLabel}, you created ${stats.tasksCreated} tasks and completed ${stats.tasksCompleted} (${completionRate.toFixed(1)}% completion rate). Average completion time was ${stats.avgCompletionTimeDays} days, with ${(stats.overdueRate * 100).toFixed(1)}% of tasks with due dates being overdue.`;
 
   const insights: string[] = [];
   if (completionRate >= 80) {
@@ -112,11 +114,15 @@ export async function GET(request: NextRequest) {
     const timeframe = (searchParams.get("timeframe") || "month") as
       | "week"
       | "month"
-      | "quarter";
+      | "quarter"
+      | "all";
 
-    if (!["week", "month", "quarter"].includes(timeframe)) {
+    if (!["week", "month", "quarter", "all"].includes(timeframe)) {
       return NextResponse.json(
-        { error: "Invalid timeframe. Must be 'week', 'month', or 'quarter'" },
+        {
+          error:
+            "Invalid timeframe. Must be 'week', 'month', 'quarter', or 'all'",
+        },
         { status: 400 },
       );
     }
@@ -139,7 +145,11 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { stats, timeframe, shouldUseAI } = body;
+    const { stats, timeframe, shouldUseAI } = body as {
+      stats: Parameters<typeof generateBasicAnalytics>[0];
+      timeframe: "week" | "month" | "quarter" | "all";
+      shouldUseAI?: boolean;
+    };
 
     if (!stats || !timeframe) {
       return NextResponse.json(
@@ -151,9 +161,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!["week", "month", "quarter"].includes(timeframe)) {
+    if (!["week", "month", "quarter", "all"].includes(timeframe)) {
       return NextResponse.json(
-        { error: "Invalid timeframe. Must be 'week', 'month', or 'quarter'" },
+        {
+          error:
+            "Invalid timeframe. Must be 'week', 'month', 'quarter', or 'all'",
+        },
         { status: 400 },
       );
     }

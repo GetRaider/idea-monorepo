@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { CloseIcon } from "@/components/Icons";
+import { SecondaryButton } from "@/components/Buttons";
 import {
   ModalOverlay,
   ModalContent,
@@ -9,7 +11,6 @@ import {
   CloseButton,
   TextArea,
   ButtonGroup,
-  CancelButton,
   CreateButton,
   LoadingOverlay,
   LoadingText,
@@ -63,7 +64,7 @@ export function AIComposeModal({
         <ModalHeader>
           <ModalTitle>⚡ Compose Task with AI</ModalTitle>
           <CloseButton onClick={handleClose} disabled={isComposing}>
-            ×
+            <CloseIcon />
           </CloseButton>
         </ModalHeader>
         <TextArea
@@ -74,9 +75,9 @@ export function AIComposeModal({
           autoFocus
         />
         <ButtonGroup>
-          <CancelButton onClick={handleClose} disabled={isComposing}>
+          <SecondaryButton onClick={handleClose} disabled={isComposing}>
             Cancel
-          </CancelButton>
+          </SecondaryButton>
           <CreateButton
             onClick={handleCreate}
             disabled={!text.trim() || isComposing}

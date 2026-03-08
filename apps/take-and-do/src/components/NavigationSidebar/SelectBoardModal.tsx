@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { TaskBoard } from "@/types/workspace";
 import { apiServices } from "@/services/api";
+import { CloseIcon } from "@/components/Icons";
 import {
   ModalOverlay,
   ModalContainer,
@@ -56,7 +57,7 @@ export function SelectBoardModal({ onClose, onSelect }: SelectBoardModalProps) {
       <ModalContainer onClick={(e) => e.stopPropagation()}>
         <ModalHeader>
           <ModalTitle>Select Task Board</ModalTitle>
-          <CloseButton onClick={onClose}>×</CloseButton>
+          <CloseButton onClick={onClose}><CloseIcon /></CloseButton>
         </ModalHeader>
 
         <form onSubmit={handleSubmit}>

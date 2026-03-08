@@ -1,6 +1,6 @@
 import { BaseApiService } from "./base-api.service";
 
-export class LabelsService extends BaseApiService {
+export class LabelsApiService extends BaseApiService {
   constructor() {
     super("/labels");
   }

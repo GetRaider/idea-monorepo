@@ -1,7 +1,7 @@
 "use client";
 
 import { RefObject } from "react";
-import { TrashIcon } from "@/components/Icons";
+import { TrashIcon, CloseIcon } from "@/components/Icons";
 import { Task, TaskStatus } from "../../KanbanBoard/types";
 import { StatusIcon } from "../../KanbanBoard/Column/Column.styles";
 import {
@@ -99,7 +99,7 @@ export function TaskViewHeader({
           </DeleteButton>
         )}
         <CloseButton onClick={onClose} title="Close">
-          ×
+          <CloseIcon />
         </CloseButton>
       </HeaderRight>
     </ModalHeader>

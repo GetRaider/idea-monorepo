@@ -1,10 +1,10 @@
 import { eq } from "drizzle-orm";
 import { db } from "../../client";
-import { folders } from "./folder.schema";
+import { foldersTable } from "./folder.schema";
 import { Folder } from "@/types/workspace";
 
 export async function getAllFolders(): Promise<Folder[]> {
-  const rows = await db.select().from(folders);
+  const rows = await db.select().from(foldersTable);
   return rows.map((row) => ({
     id: row.id,
     name: row.name,
@@ -14,7 +14,10 @@ export async function getAllFolders(): Promise<Folder[]> {
 }
 
 export async function getFolderById(id: string): Promise<Folder | undefined> {
-  const rows = await db.select().from(folders).where(eq(folders.id, id));
+  const rows = await db
+    .select()
+    .from(foldersTable)
+    .where(eq(foldersTable.id, id));
   if (rows.length === 0) return undefined;
   const row = rows[0];
   return {

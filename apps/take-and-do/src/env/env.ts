@@ -14,17 +14,13 @@ const envSchema = z.object({
     .min(1, "Set DB_CONNECTION_STRING or DATABASE_URL"),
   LOG_LEVEL: z.string().optional(),
 });
-// .refine(
-//   (data) => data.AI_PROVIDER !== "openai" || !!data.OPENAI_API_KEY?.trim(),
-//   { message: "OPENAI_API_KEY is required when AI_PROVIDER=openai" },
-// );
 
 const parsedEnv = envSchema.parse(process.env);
 
 export const env = {
   nodeEnv: parsedEnv.NODE_ENV,
   ai: {
-    apiKey: parsedEnv.AI_PROVIDER,
+    apiKey: parsedEnv.AI_API_KEY,
     model: parsedEnv.AI_MODEL,
     provider: parsedEnv.AI_PROVIDER,
     baseUrl: parsedEnv.AI_BASE_URL,

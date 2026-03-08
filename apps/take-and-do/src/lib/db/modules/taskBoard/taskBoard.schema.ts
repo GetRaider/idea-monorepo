@@ -1,10 +1,10 @@
 import { pgTable, text, timestamp } from "drizzle-orm/pg-core";
-import { folders } from "../folder/folder.schema";
+import { foldersTable } from "../folder/folder.schema";
 
-export const taskBoards = pgTable("task_boards", {
+export const taskBoardsTable = pgTable("task_boards", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
-  folderId: text("folder_id").references(() => folders.id, {
+  folderId: text("folder_id").references(() => foldersTable.id, {
     onDelete: "set null",
   }),
   createdAt: timestamp("created_at")

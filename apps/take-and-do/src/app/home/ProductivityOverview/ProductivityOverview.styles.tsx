@@ -64,17 +64,9 @@ export const GenerateButton = styled.button<{ $disabled?: boolean }>`
           background: #7255c1;
         `}
 
-  &:hover:not(:disabled) {
-    ${animatedGradientHover}
-  }
-
   @media (prefers-reduced-motion: reduce) {
     animation: none !important;
     background: #7255c1 !important;
-
-    &:hover:not(:disabled) {
-      background: #8255d1 !important;
-    }
   }
 `;
 

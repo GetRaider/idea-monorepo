@@ -1,5 +1,7 @@
 "use client";
 
+import { CloseIcon } from "@/components/Icons";
+import { SecondaryButton } from "@/components/Buttons";
 import {
   ModalOverlay,
   ModalContent,
@@ -12,7 +14,6 @@ import {
   OptionTitle,
   OptionDescription,
   ActionsContainer,
-  CancelButton,
   SaveButton,
   ModalDescription,
 } from "./ProductivitySummarySelectionModal.styles";
@@ -50,7 +51,9 @@ export function ProductivitySummarySelectionModal({
               completion rates.
             </ModalDescription>
           </HeaderContent>
-          <CloseButton onClick={onClose}>×</CloseButton>
+          <CloseButton onClick={onClose}>
+            <CloseIcon />
+          </CloseButton>
         </ModalHeader>
 
         <OptionsContainer>
@@ -79,7 +82,7 @@ export function ProductivitySummarySelectionModal({
         </OptionsContainer>
 
         <ActionsContainer>
-          <CancelButton onClick={onClose}>Cancel</CancelButton>
+          <SecondaryButton onClick={onClose}>Cancel</SecondaryButton>
           <SaveButton
             onClick={onSave}
             disabled={isGenerating || selectedOption === null}

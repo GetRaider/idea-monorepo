@@ -2,7 +2,7 @@ import { Folder } from "@/types/workspace";
 
 import { BaseApiService } from "./base-api.service";
 
-export class FoldersService extends BaseApiService {
+export class FoldersApiService extends BaseApiService {
   constructor() {
     super("/folders");
   }

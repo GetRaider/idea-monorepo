@@ -5,6 +5,7 @@ import {
   animatedGradientBackground,
   animatedGradientHover,
 } from "./animatedGradient";
+import { SecondaryButton } from "@/components/Buttons";
 
 export const ModalOverlay = styled.div`
   position: fixed;
@@ -161,24 +162,7 @@ export const ActionsContainer = styled.div`
   border-top: 1px solid #2a2a2a;
 `;
 
-export const CancelButton = styled.button`
-  padding: 10px 20px;
-  background: transparent;
-  border: 1px solid #3a3a3a;
-  border-radius: 6px;
-  color: #fff;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-
-  &:hover {
-    background: #2a2a2a;
-    border-color: #4a4a4a;
-  }
-`;
-
-export const SaveButton = styled.button`
+export const SaveButton = styled(SecondaryButton)`
   padding: 10px 20px;
   background: #7255c1;
   border: none;

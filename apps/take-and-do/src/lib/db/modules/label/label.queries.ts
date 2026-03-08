@@ -1,29 +1,27 @@
 import { eq } from "drizzle-orm";
 import { db } from "../../client";
-import { labels } from "./label.schema";
+import { labelsTable } from "./label.schema";
 import { generateId } from "../utils";
 
 export async function getAllLabels(): Promise<string[]> {
-  const rows = await db.select().from(labels);
+  const rows = await db.select().from(labelsTable);
   return rows.map((row) => row.name);
 }
 
 export async function addLabel(label: string): Promise<string> {
   const trimmedLabel = label.trim();
 
-  // Check if label already exists
-  const existing = await db
+  const existingLabels = await db
     .select()
-    .from(labels)
-    .where(eq(labels.name, trimmedLabel));
+    .from(labelsTable)
+    .where(eq(labelsTable.name, trimmedLabel));
 
-  if (existing.length > 0) {
+  if (existingLabels.length > 0) {
     return trimmedLabel;
   }
 
-  // Create new label
   const labelId = generateId();
-  await db.insert(labels).values({
+  await db.insert(labelsTable).values({
     id: labelId,
     name: trimmedLabel,
     createdAt: new Date(),

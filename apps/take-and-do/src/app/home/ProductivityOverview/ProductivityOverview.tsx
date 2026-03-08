@@ -49,7 +49,7 @@ const CHART_TOOLTIP_STYLE = {
 };
 
 export function ProductivityOverview() {
-  const [timeframe, setTimeframe] = useState<Timeframe>("month");
+  const [timeframe, setTimeframe] = useState<Timeframe>("all");
   const [stats, setStats] = useState<AnalyticsStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
@@ -102,16 +102,16 @@ export function ProductivityOverview() {
       }
       const { stats: fetchedStats } = await statsResponse.json();
 
-      const useAI = selectedOption === "ai";
       const analyticsResponse = await fetch("/api/analytics", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           stats: fetchedStats,
           timeframe,
-          shouldUseAI: useAI,
+          shouldUseAI: selectedOption === "ai",
         }),
       });
+      console.log({ analyticsResponse });
 
       if (!analyticsResponse.ok) {
         throw new Error("Failed to generate analytics");
@@ -135,10 +135,12 @@ export function ProductivityOverview() {
         <SectionHeader>
           <SectionTitle>📊 Productivity Overview</SectionTitle>
           <Controls>
+            <>Time Frame</>
             <TimeframeSelect
               value={timeframe}
               onChange={(e) => setTimeframe(e.target.value as Timeframe)}
             >
+              <option value="all">All</option>
               <option value="week">Week</option>
               <option value="month">Month</option>
               <option value="quarter">Quarter</option>

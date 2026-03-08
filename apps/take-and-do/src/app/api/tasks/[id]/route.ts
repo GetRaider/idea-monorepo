@@ -49,9 +49,10 @@ export async function GET(
     }
 
     return NextResponse.json(serializeTask(task));
-  } catch {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      { error: "Failed to fetch task" },
+      { error: "Failed to fetch task", details: message },
       { status: 500 },
     );
   }
@@ -104,9 +105,10 @@ export async function PATCH(
     }
 
     return NextResponse.json(serializeTask(updatedTask));
-  } catch {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      { error: "Failed to update task" },
+      { error: "Failed to update task", details: message },
       { status: 500 },
     );
   }

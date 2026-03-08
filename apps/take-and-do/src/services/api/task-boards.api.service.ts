@@ -4,7 +4,7 @@ import { TaskBoard } from "@/types/workspace";
 
 import { BaseApiService } from "./base-api.service";
 
-export class TaskBoardsService extends BaseApiService {
+export class TaskBoardsApiService extends BaseApiService {
   constructor() {
     super("/task-boards");
   }

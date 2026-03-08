@@ -1,5 +1,6 @@
 "use client";
 
+import { CloseIcon } from "@/components/Icons";
 import {
   ModalOverlay,
   ModalContent,
@@ -36,7 +37,7 @@ export function ProductivitySummaryModal({
       <ModalContent>
         <ModalHeader>
           <ModalTitle>⚡ Productivity Summary</ModalTitle>
-          <CloseButton onClick={onClose}>×</CloseButton>
+          <CloseButton onClick={onClose}><CloseIcon /></CloseButton>
         </ModalHeader>
 
         <AISection>

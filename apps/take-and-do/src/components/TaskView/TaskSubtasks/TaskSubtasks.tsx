@@ -19,6 +19,7 @@ import {
   EmptySubtasksMessage,
 } from "./TaskSubtasks.styles";
 import { tasksHelper } from "@/helpers/task.helper";
+import { PlusIcon } from "@/components/Icons";
 
 interface TaskSubtasksProps {
   task: Task;
@@ -89,7 +90,7 @@ export function TaskSubtasks({
             onClick={() => setIsCreatingSubtask(true)}
             title="Add subtask"
           >
-            +
+            <PlusIcon />
           </SubtasksHeaderButton>
           <SubtasksHeaderButton
             onClick={handleToggleSubtasks}

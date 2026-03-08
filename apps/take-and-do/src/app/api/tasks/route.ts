@@ -7,6 +7,7 @@ import {
 } from "@/lib/db/queries";
 import { Task } from "@/components/KanbanBoard/types";
 import { aiServices } from "@/services/ai";
+import { plainTextToHtml } from "@/helpers/task.helper";
 
 export async function GET(request: NextRequest) {
   try {
@@ -62,7 +63,6 @@ export async function POST(request: NextRequest) {
     if (shouldUseAI && text) {
       const composedData = await aiServices.task.compose({ text });
 
-      // Merge AI output with provided task data (task data takes precedence)
       let finalScheduleDate: Date | undefined;
       if (composedData.scheduleDate) {
         finalScheduleDate = new Date(composedData.scheduleDate);
@@ -73,7 +73,9 @@ export async function POST(request: NextRequest) {
       taskData = {
         ...task,
         summary: composedData.summary,
-        description: composedData.description,
+        description: composedData.description
+          ? plainTextToHtml(composedData.description)
+          : undefined,
         priority: (composedData.priority as Task["priority"]) || task.priority,
         status: (composedData.status as Task["status"]) || task.status,
         labels: composedData.labels || task.labels,

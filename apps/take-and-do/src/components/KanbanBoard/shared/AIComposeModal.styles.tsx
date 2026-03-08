@@ -100,27 +100,6 @@ export const ButtonGroup = styled.div`
   justify-content: flex-end;
 `;
 
-export const CancelButton = styled.button`
-  padding: 10px 20px;
-  background: transparent;
-  border: 1px solid #3a3a3a;
-  border-radius: 8px;
-  color: #cbd5e1;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-
-  &:hover:not(:disabled) {
-    background: #2a2a2a;
-    border-color: #4a4a4a;
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-`;
 
 export const CreateButton = styled.button`
   padding: 10px 20px;

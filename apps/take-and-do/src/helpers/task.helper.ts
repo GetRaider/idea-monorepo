@@ -185,6 +185,49 @@ export const tasksHelper = {
   },
 };
 
+export function plainTextToHtml(text: string): string {
+  const lines = text.split("\n");
+  const result: string[] = [];
+  let listItems: string[] = [];
+  let listType: "ol" | "ul" | null = null;
+
+  const flushList = () => {
+    if (!listItems.length || !listType) return;
+    result.push(
+      `<${listType}>${listItems.map((item) => `<li>${item}</li>`).join("")}</${listType}>`,
+    );
+    listItems = [];
+    listType = null;
+  };
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      flushList();
+      continue;
+    }
+
+    const numberedMatch = trimmed.match(/^\d+\.\s+(.+)/);
+    const bulletMatch = trimmed.match(/^[•\-*]\s+(.+)/);
+
+    if (numberedMatch) {
+      if (listType === "ul") flushList();
+      listType = "ol";
+      listItems.push(numberedMatch[1]);
+    } else if (bulletMatch) {
+      if (listType === "ol") flushList();
+      listType = "ul";
+      listItems.push(bulletMatch[1]);
+    } else {
+      flushList();
+      result.push(`<p>${trimmed}</p>`);
+    }
+  }
+
+  flushList();
+  return result.join("");
+}
+
 export interface ParsedEstimation {
   days: number;
   hours: number;

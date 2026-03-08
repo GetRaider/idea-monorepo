@@ -84,7 +84,7 @@ export const AddButton = styled.button`
   border: none;
   color: #666;
   cursor: pointer;
-  padding: 4px;
+  padding: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -96,11 +96,6 @@ export const AddButton = styled.button`
   &:hover {
     background: #2a2a2a;
     color: #fff;
-  }
-
-  svg {
-    width: 14px;
-    height: 14px;
   }
 `;
 

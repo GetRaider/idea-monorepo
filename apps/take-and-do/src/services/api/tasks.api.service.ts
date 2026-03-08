@@ -2,7 +2,7 @@ import { Task, TaskPriority, TaskUpdate } from "@/components/KanbanBoard/types";
 import { BaseApiService } from "./base-api.service";
 import { tasksHelper } from "@/helpers/task.helper";
 
-export class TasksService extends BaseApiService {
+export class TasksApiService extends BaseApiService {
   constructor() {
     super("/tasks");
   }
@@ -150,6 +150,7 @@ export class TasksService extends BaseApiService {
   ): Promise<ScheduleOptimizationResult> {
     const response = await super.post<ScheduleOptimizationResult>({
       body: { taskIds },
+      pathParams: ["optimization"],
     });
     return response.data;
   }

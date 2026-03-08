@@ -108,10 +108,12 @@ export function TaskCard({ task, onTaskClick }: TaskCardProps) {
             <span>{dueDate?.toLocaleDateString()}</span>
           </DateTime>
         )}
-        <DateTime>
-          <ClockIcon size={14} />
-          <span>{tasksHelper.estimation.format(estimation)}</span>
-        </DateTime>
+        {!!estimation && (
+          <DateTime>
+            <ClockIcon size={14} />
+            <span>{tasksHelper.estimation.format(estimation)}</span>
+          </DateTime>
+        )}
       </Meta>
 
       <Labels>

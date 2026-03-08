@@ -11,6 +11,7 @@ import { apiServices } from "@/services/api";
 import { TextEditor } from "../TextEditor/TextEditor";
 import { tasksHelper } from "@/helpers/task.helper";
 import { TaskViewHeader } from "./TaskViewHeader/TaskViewHeader";
+import { SecondaryButton } from "@/components/Buttons";
 import {
   TaskViewOverlay,
   TaskViewContainer,
@@ -26,7 +27,6 @@ import {
   DescriptionContent,
   NoDescriptionText,
   TaskViewFooter,
-  FooterCancelButton,
   CreateTaskButton,
   TaskSaveButton,
 } from "./TaskView.styles";
@@ -447,20 +447,20 @@ export function TaskView({
         )}
         {isCreating ? (
           <TaskViewFooter>
-            <FooterCancelButton onClick={onClose}>Cancel</FooterCancelButton>
+            <SecondaryButton onClick={onClose}>Cancel</SecondaryButton>
             <CreateTaskButton
               onClick={handleCreateTask}
               disabled={!titleValue.trim() || isCreatingTask}
               $disabled={!titleValue.trim() || isCreatingTask}
             >
-              {isCreatingTask ? "Creating..." : "Create Task"}
+              {isCreatingTask ? "Creating..." : "Create"}
             </CreateTaskButton>
           </TaskViewFooter>
         ) : (
           <TaskViewFooter>
-            <FooterCancelButton onClick={handleCancel}>
+            <SecondaryButton onClick={handleCancel}>
               Cancel
-            </FooterCancelButton>
+            </SecondaryButton>
             <TaskSaveButton
               onClick={handleSaveChanges}
               disabled={isSaving || !hasUnsavedChanges}

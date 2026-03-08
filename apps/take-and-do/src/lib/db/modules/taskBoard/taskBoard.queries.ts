@@ -1,11 +1,11 @@
 import { eq } from "drizzle-orm";
 import { db } from "../../client";
-import { taskBoards } from "./taskBoard.schema";
+import { taskBoardsTable } from "./taskBoard.schema";
 import { TaskBoard } from "@/types/workspace";
 import { generateId } from "../utils";
 
 export async function getAllTaskBoards(): Promise<TaskBoard[]> {
-  const rows = await db.select().from(taskBoards);
+  const rows = await db.select().from(taskBoardsTable);
   return rows.map((row) => ({
     id: row.id,
     name: row.name,
@@ -18,7 +18,10 @@ export async function getAllTaskBoards(): Promise<TaskBoard[]> {
 export async function getTaskBoardById(
   id: string,
 ): Promise<TaskBoard | undefined> {
-  const rows = await db.select().from(taskBoards).where(eq(taskBoards.id, id));
+  const rows = await db
+    .select()
+    .from(taskBoardsTable)
+    .where(eq(taskBoardsTable.id, id));
   if (rows.length === 0) return undefined;
   const row = rows[0];
   return {
@@ -35,8 +38,8 @@ export async function getTaskBoardsByFolder(
 ): Promise<TaskBoard[]> {
   const rows = await db
     .select()
-    .from(taskBoards)
-    .where(eq(taskBoards.folderId, folderId));
+    .from(taskBoardsTable)
+    .where(eq(taskBoardsTable.folderId, folderId));
   return rows.map((row) => ({
     id: row.id,
     name: row.name,
@@ -51,7 +54,7 @@ export async function createTaskBoard(
 ): Promise<TaskBoard> {
   const taskBoardId = generateId();
 
-  await db.insert(taskBoards).values({
+  await db.insert(taskBoardsTable).values({
     id: taskBoardId,
     name: taskBoardData.name,
     folderId: taskBoardData.folderId || null,

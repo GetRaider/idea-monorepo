@@ -196,13 +196,13 @@ export const ViewAllLink = styled(Link)`
 `;
 
 export const Loading = styled.div`
-  padding: "40px";
-  textalign: "center";
-  color: "#888";
+  padding: 40px;
+  text-align: center;
+  color: #888;
 `;
 
 export const ScheduleSelectContainer = styled.div`
-  display: "flex";
-  gap: "8px";
-  alignitems: "center";
+  display: flex;
+  gap: 12px;
+  align-items: center;
 `;

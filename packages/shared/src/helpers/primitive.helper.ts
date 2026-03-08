@@ -64,9 +64,22 @@ class PrimitiveHelper {
   }
 
   jsonStringify(value: unknown, options: IJsonStringifyOptions = {}): string {
-    const { replacer = null, spaces = 2 } = options;
-    // @ts-ignore
+    const { replacer = this.defaultReplacer, spaces = 2 } = options;
     return JSON.stringify(value, replacer, spaces);
+  }
+
+  defaultReplacer(_: string, value: unknown) {
+    if (typeof value === "function")
+      return `[Function: ${value.name || "anonymous"}]`;
+    if (value instanceof Error) {
+      const errorObj: Record<string, unknown> = {};
+
+      Object.getOwnPropertyNames(value).forEach((k) => {
+        errorObj[k] = value[k];
+      });
+      return errorObj;
+    }
+    return value;
   }
 }
 

@@ -110,10 +110,10 @@ export class TasksApiService extends BaseApiService {
         text,
         taskBoardId,
         ...additionalData,
-        _composeOnly: true, // we only want composition, not creation
+        _composeOnly: true,
       },
     });
-    return normalizeTask(response.data);
+    return response.data as Omit<Task, "id">;
   }
 
   async createWithAI(

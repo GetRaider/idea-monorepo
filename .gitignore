@@ -31,7 +31,7 @@ playwright-report/
 out/
 build
 dist
-tsconfig.build.tsbuildinfo
+*.tsbuildinfo
 
 # IDEs and editors
 /.idea

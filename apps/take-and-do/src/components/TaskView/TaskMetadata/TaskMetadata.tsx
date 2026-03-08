@@ -1,11 +1,5 @@
-import {
-  formatDateForInput,
-  formatDisplayDate,
-  formatEstimation,
-  parseEstimation,
-  toTotalHours,
-  formatScheduleDate,
-} from "@/utils/task.utils";
+import { tasksHelper } from "@/helpers/task.helper";
+import { CalendarIcon, ClockIcon } from "@/components/Icons";
 import {
   MetadataInput,
   MetadataItem,
@@ -25,9 +19,9 @@ import {
 } from "./TaskMetadata.styles";
 import { Task, TaskUpdate } from "../../KanbanBoard/types";
 import { useState, useRef, useEffect } from "react";
-import { labelsService } from "@/services/api/labels.service";
+import { apiServices } from "@/services/api";
 
-export default function TaskMetadata({
+export function TaskMetadata({
   task,
   handleUpdateTask,
   isCreating = false,
@@ -61,7 +55,7 @@ export default function TaskMetadata({
   // Set data
   useEffect(() => {
     if (task?.estimation) {
-      const parsed = parseEstimation(task.estimation);
+      const parsed = tasksHelper.estimation.parse(task.estimation);
       setEstimationDays(parsed.days);
       setEstimationHours(parsed.hours);
       setEstimationMinutes(parsed.minutes);
@@ -71,12 +65,12 @@ export default function TaskMetadata({
       setEstimationMinutes(0);
     }
     if (task?.dueDate) {
-      setDueDateValue(formatDateForInput(task.dueDate));
+      setDueDateValue(tasksHelper.date.formatForInput(task.dueDate));
     } else {
       setDueDateValue("");
     }
     if (task?.scheduleDate) {
-      setScheduleDateValue(formatDateForInput(task.scheduleDate));
+      setScheduleDateValue(tasksHelper.date.formatForInput(task.scheduleDate));
     } else {
       setScheduleDateValue("");
     }
@@ -86,7 +80,7 @@ export default function TaskMetadata({
   useEffect(() => {
     const fetchLabels = async () => {
       try {
-        const labels = await labelsService.getAll();
+        const labels = await apiServices.labels.getAll();
         setAvailableLabels(labels);
       } catch (error) {
         console.error("Failed to fetch labels:", error);
@@ -121,12 +115,23 @@ export default function TaskMetadata({
   const handleScheduleDateBlur = () => {
     setIsEditingScheduleDate(false);
     if (scheduleDateValue) {
-      const newDate = new Date(scheduleDateValue);
-      if (!isNaN(newDate.getTime())) {
-        updateTask({ scheduleDate: newDate });
+      // Parse YYYY-MM-DD as local date, not UTC
+      const dateParts = scheduleDateValue.split("-");
+      if (dateParts.length === 3) {
+        const year = parseInt(dateParts[0], 10);
+        const month = parseInt(dateParts[1], 10) - 1; // Month is 0-indexed
+        const day = parseInt(dateParts[2], 10);
+        const newDate = new Date(year, month, day);
+        if (!isNaN(newDate.getTime())) {
+          updateTask({
+            scheduleDate: newDate,
+          });
+        }
       }
     } else {
-      updateTask({ scheduleDate: undefined });
+      updateTask({
+        scheduleDate: undefined,
+      });
     }
   };
   const handleEstimationClick = () => {
@@ -134,7 +139,7 @@ export default function TaskMetadata({
   };
   const handleEstimationSave = () => {
     setIsEditingEstimation(false);
-    const totalHours = toTotalHours(
+    const totalHours = tasksHelper.estimation.toTotalHours(
       estimationDays,
       estimationHours,
       estimationMinutes,
@@ -171,7 +176,7 @@ export default function TaskMetadata({
     if (labelSearchValue.trim()) {
       const newLabel = labelSearchValue.trim();
       try {
-        await labelsService.create(newLabel);
+        await apiServices.labels.create(newLabel);
         setAvailableLabels((prev) => [...prev, newLabel]);
         const newLabels = [...(task?.labels || []), newLabel];
         updateTask({ labels: newLabels });
@@ -205,32 +210,14 @@ export default function TaskMetadata({
       ) : (
         <MetadataItem
           onClick={handleScheduleDateClick}
-          title="Click to edit schedule"
+          title="Click to edit schedule date"
         >
           <MetadataIcon>
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <rect
-                x="2"
-                y="3"
-                width="10"
-                height="9"
-                rx="1"
-                stroke="currentColor"
-                strokeWidth="1.2"
-                fill="none"
-              />
-              <path
-                d="M2 5h10M5 2v2M9 2v2"
-                stroke="currentColor"
-                strokeWidth="1.2"
-                strokeLinecap="round"
-              />
-              <circle cx="7" cy="8" r="1.5" fill="currentColor" />
-            </svg>
+            <CalendarIcon size={14} showDot />
           </MetadataIcon>
           <span>
             {task.scheduleDate
-              ? formatScheduleDate(task.scheduleDate)
+              ? tasksHelper.date.formatForSchedule(task.scheduleDate)
               : "Set schedule"}
           </span>
         </MetadataItem>
@@ -255,27 +242,12 @@ export default function TaskMetadata({
           title="Click to edit due date"
         >
           <MetadataIcon>
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <rect
-                x="2"
-                y="3"
-                width="10"
-                height="9"
-                rx="1"
-                stroke="currentColor"
-                strokeWidth="1.2"
-                fill="none"
-              />
-              <path
-                d="M2 5h10M5 2v2M9 2v2"
-                stroke="currentColor"
-                strokeWidth="1.2"
-                strokeLinecap="round"
-              />
-            </svg>
+            <CalendarIcon size={14} />
           </MetadataIcon>
           <span>
-            {task.dueDate ? formatDisplayDate(task.dueDate) : "Set due date"}
+            {task.dueDate
+              ? tasksHelper.date.formatForDisplay(task.dueDate)
+              : "Set due date"}
           </span>
         </MetadataItem>
       )}
@@ -325,24 +297,13 @@ export default function TaskMetadata({
           title="Click to edit estimation"
         >
           <MetadataIcon>
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <circle
-                cx="7"
-                cy="7"
-                r="5"
-                stroke="currentColor"
-                strokeWidth="1.2"
-                fill="none"
-              />
-              <path
-                d="M7 4v3l2 1"
-                stroke="currentColor"
-                strokeWidth="1.2"
-                strokeLinecap="round"
-              />
-            </svg>
+            <ClockIcon size={14} />
           </MetadataIcon>
-          <span>{formatEstimation(task.estimation) || "Set estimation"}</span>
+          <span>
+            {task.estimation
+              ? tasksHelper.estimation.format(task.estimation)
+              : "Set estimation"}
+          </span>
         </MetadataItem>
       )}
 

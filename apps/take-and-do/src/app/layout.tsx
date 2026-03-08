@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import StyledComponentsRegistry from "@/lib/styled-components-registry";
+import { StyledComponentsRegistry } from "@/lib/styled-components-registry";
 import { Theme } from "@radix-ui/themes";
 
 const inter = Inter({

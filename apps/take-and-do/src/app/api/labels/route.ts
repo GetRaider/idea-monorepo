@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAllLabels, addLabel } from "@/db/queries";
+import { getAllLabels, addLabel } from "@/lib/db/queries";
 
 export async function GET() {
   try {
@@ -18,10 +18,7 @@ export async function POST(request: NextRequest) {
     const { label } = await request.json();
 
     if (!label || typeof label !== "string") {
-      return NextResponse.json(
-        { error: "Label is required" },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "Label is required" }, { status: 400 });
     }
 
     const newLabel = await addLabel(label.trim());
@@ -33,4 +30,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

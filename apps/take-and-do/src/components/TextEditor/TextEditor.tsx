@@ -8,7 +8,7 @@ import type { Editor } from "@tiptap/react";
 
 import { EditorWrapper } from "./TextEditor.styles";
 
-export default function TextEditor({
+export function TextEditor({
   onUpdate,
   onBlur,
   content = "",

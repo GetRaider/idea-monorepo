@@ -1,7 +1,8 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Task, TaskPriority } from "../types";
+import { CalendarIcon, ClockIcon } from "@/components/Icons";
+import { Task } from "../types";
 import {
   Card,
   Header,
@@ -15,14 +16,15 @@ import {
   Tag,
   TagDot,
 } from "./TaskCard.styles";
-import { formatEstimation } from "@/utils/task.utils";
+import { tasksHelper } from "@/helpers/task.helper";
+import { TaskPriority } from "@/components/KanbanBoard/types";
 
 interface TaskCardProps {
   task: Task;
   onTaskClick?: (task: Task) => void;
 }
 
-export default function TaskCard({ task, onTaskClick }: TaskCardProps) {
+export function TaskCard({ task, onTaskClick }: TaskCardProps) {
   const {
     id,
     taskKey,
@@ -79,7 +81,9 @@ export default function TaskCard({ task, onTaskClick }: TaskCardProps) {
       onClick={handleClick}
     >
       <Header>
-        <PriorityIcon>{getPriorityIconLabel(priority)}</PriorityIcon>
+        <PriorityIcon>
+          {tasksHelper.priority.getIconLabel(priority)}
+        </PriorityIcon>
         <Id>{taskKey || id}</Id>
         {!!subtasks.length && (
           <Subtasks>
@@ -100,46 +104,16 @@ export default function TaskCard({ task, onTaskClick }: TaskCardProps) {
       <Meta>
         {!!dueDate && (
           <DateTime>
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <rect
-                x="2"
-                y="3"
-                width="10"
-                height="9"
-                rx="1"
-                stroke="currentColor"
-                strokeWidth="1.2"
-                fill="none"
-              />
-              <path
-                d="M2 5h10M5 2v2M9 2v2"
-                stroke="currentColor"
-                strokeWidth="1.2"
-                strokeLinecap="round"
-              />
-            </svg>
+            <CalendarIcon size={14} />
             <span>{dueDate?.toLocaleDateString()}</span>
           </DateTime>
         )}
-        <DateTime>
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <circle
-              cx="7"
-              cy="7"
-              r="5"
-              stroke="currentColor"
-              strokeWidth="1.2"
-              fill="none"
-            />
-            <path
-              d="M7 4v3l2 1"
-              stroke="currentColor"
-              strokeWidth="1.2"
-              strokeLinecap="round"
-            />
-          </svg>
-          <span>{formatEstimation(estimation)}</span>
-        </DateTime>
+        {!!estimation && (
+          <DateTime>
+            <ClockIcon size={14} />
+            <span>{tasksHelper.estimation.format(estimation)}</span>
+          </DateTime>
+        )}
       </Meta>
 
       <Labels>
@@ -152,19 +126,4 @@ export default function TaskCard({ task, onTaskClick }: TaskCardProps) {
       </Labels>
     </Card>
   );
-}
-
-export function getPriorityIconLabel(priority: TaskPriority): string {
-  switch (priority) {
-    case TaskPriority.LOW:
-      return "🔵";
-    case TaskPriority.MEDIUM:
-      return "🟡";
-    case TaskPriority.HIGH:
-      return "🔴";
-    case TaskPriority.CRITICAL:
-      return "🟣";
-    default:
-      return "🚫";
-  }
 }

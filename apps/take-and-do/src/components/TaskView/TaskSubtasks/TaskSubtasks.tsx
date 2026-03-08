@@ -2,10 +2,8 @@
 
 import { useState } from "react";
 import { Task, TaskPriority, TaskStatus } from "../../KanbanBoard/types";
-import { tasksService } from "@/services/api/tasks.service";
-import { getStatusIcon } from "../../KanbanBoard/Column/Column";
+import { apiServices } from "@/services/api";
 import { StatusIcon } from "../../KanbanBoard/Column/Column.styles";
-import { getPriorityIconLabel } from "../../KanbanBoard/TaskCard/TaskCard";
 import {
   SubtasksSection,
   SubtasksHeader,
@@ -20,6 +18,8 @@ import {
   SubtaskInput,
   EmptySubtasksMessage,
 } from "./TaskSubtasks.styles";
+import { tasksHelper } from "@/helpers/task.helper";
+import { PlusIcon } from "@/components/Icons";
 
 interface TaskSubtasksProps {
   task: Task;
@@ -27,7 +27,7 @@ interface TaskSubtasksProps {
   onTaskUpdate?: (updatedTask: Task) => void;
 }
 
-export default function TaskSubtasks({
+export function TaskSubtasks({
   task,
   onSubtaskClick,
   onTaskUpdate,
@@ -66,7 +66,7 @@ export default function TaskSubtasks({
       }));
 
       const updatedSubtasks = [...existingSubtasks, newSubtask];
-      const updatedTask = await tasksService.update(task.id, {
+      const updatedTask = await apiServices.tasks.update(task.id, {
         subtasks: updatedSubtasks as Task[],
       });
 
@@ -90,7 +90,7 @@ export default function TaskSubtasks({
             onClick={() => setIsCreatingSubtask(true)}
             title="Add subtask"
           >
-            +
+            <PlusIcon />
           </SubtasksHeaderButton>
           <SubtasksHeaderButton
             onClick={handleToggleSubtasks}
@@ -134,10 +134,10 @@ export default function TaskSubtasks({
               >
                 <SubtaskHeader>
                   <StatusIcon $status={subtask.status}>
-                    {getStatusIcon(subtask.status)}
+                    {tasksHelper.status.getIcon(subtask.status)}
                   </StatusIcon>
                   <SubtaskIcon>
-                    {getPriorityIconLabel(subtask.priority)}
+                    {tasksHelper.priority.getIconLabel(subtask.priority)}
                   </SubtaskIcon>
                   {subtask.taskKey && (
                     <SubtaskKey>{subtask.taskKey}</SubtaskKey>
@@ -154,4 +154,3 @@ export default function TaskSubtasks({
     </SubtasksSection>
   );
 }
-

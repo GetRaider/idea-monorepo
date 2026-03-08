@@ -17,7 +17,8 @@ import {
   DropIndicatorEnd,
   TaskWrapper,
 } from "./Column.styles";
-import TaskCard from "../TaskCard/TaskCard";
+import { TaskCard } from "../TaskCard/TaskCard";
+import { tasksHelper } from "@/helpers/task.helper";
 
 interface ColumnProps {
   tasks: Task[];
@@ -240,7 +241,9 @@ export const Column = ({
     <ColumnStyles>
       <ColumnHeader>
         <ColumnTitle>
-          <StatusIcon $status={status}>{getStatusIcon(status)}</StatusIcon>
+          <StatusIcon $status={status}>
+            {tasksHelper.status.getIcon(status)}
+          </StatusIcon>
           <span>{status}</span>
           <Count>{tasks.length}</Count>
         </ColumnTitle>
@@ -297,16 +300,3 @@ export const Column = ({
     </ColumnStyles>
   );
 };
-
-export function getStatusIcon(status: TaskStatus): string {
-  switch (status) {
-    case TaskStatus.TODO:
-      return "◯";
-    case TaskStatus.IN_PROGRESS:
-      return "◐";
-    case TaskStatus.DONE:
-      return "✓";
-    default:
-      return "◯";
-  }
-}

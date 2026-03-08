@@ -7,10 +7,11 @@ import {
   TaskStatus,
   TaskUpdate,
 } from "../KanbanBoard/types";
-import { tasksService } from "@/services/api/tasks.service";
-import TextEditor from "../TextEditor/TextEditor";
-import { getPriorityName } from "@/utils/task.utils";
+import { apiServices } from "@/services/api";
+import { TextEditor } from "../TextEditor/TextEditor";
+import { tasksHelper } from "@/helpers/task.helper";
 import { TaskViewHeader } from "./TaskViewHeader/TaskViewHeader";
+import { SecondaryButton } from "@/components/Buttons";
 import {
   TaskViewOverlay,
   TaskViewContainer,
@@ -26,15 +27,13 @@ import {
   DescriptionContent,
   NoDescriptionText,
   TaskViewFooter,
-  FooterCancelButton,
   CreateTaskButton,
   TaskSaveButton,
 } from "./TaskView.styles";
-import { getPriorityIconLabel } from "../KanbanBoard/TaskCard/TaskCard";
-import TaskMetadata from "./TaskMetadata/TaskMetadata";
-import TaskSubtasks from "./TaskSubtasks/TaskSubtasks";
+import { TaskMetadata } from "./TaskMetadata/TaskMetadata";
+import { TaskSubtasks } from "./TaskSubtasks/TaskSubtasks";
 
-export default function TaskView({
+export function TaskView({
   task: initialTask,
   parentTask,
   workspaceTitle,
@@ -42,6 +41,7 @@ export default function TaskView({
   onTaskUpdate,
   onSubtaskClick,
   onTaskCreated,
+  onTaskDelete,
 }: TaskViewProps) {
   const isSubtask = !!parentTask;
   const [task, setTask] = useState<Task | null>(initialTask);
@@ -75,29 +75,6 @@ export default function TaskView({
     setPendingUpdates({});
   }, [initialTask]);
 
-  // Update URL based on current task/subtask
-  useEffect(() => {
-    if (!initialTask?.taskKey || !initialTask?.id) {
-      // Don't update URL for new tasks or when task view is closed
-      if (!initialTask) {
-        window.history.replaceState(null, "", "/tasks");
-      }
-      return;
-    }
-
-    let newUrl: string;
-    if (parentTask?.taskKey) {
-      // Viewing a subtask: /tasks/PARENT-KEY/SUBTASK-KEY
-      newUrl = `/tasks/${parentTask.taskKey}/${initialTask.taskKey}`;
-    } else {
-      // Viewing a main task: /tasks/TASK-KEY
-      newUrl = `/tasks/${initialTask.taskKey}`;
-    }
-
-    // Update URL without page reload
-    window.history.replaceState(null, "", newUrl);
-  }, [initialTask?.taskKey, initialTask?.id, parentTask?.taskKey]);
-
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -124,7 +101,7 @@ export default function TaskView({
     async (updates: TaskUpdate) => {
       if (!task || !task.id) return;
       try {
-        const updatedTask = await tasksService.update(task.id, updates);
+        const updatedTask = await apiServices.tasks.update(task.id, updates);
         setTask(updatedTask);
         onTaskUpdate?.(updatedTask);
         setPendingUpdates({});
@@ -288,11 +265,11 @@ export default function TaskView({
         labels: task.labels,
         dueDate: task.dueDate,
         estimation: task.estimation,
-        schedule: task.schedule,
+        scheduleDate: task.scheduleDate,
         subtasks: task.subtasks,
       };
 
-      const createdTask = await tasksService.create(taskData);
+      const createdTask = await apiServices.tasks.create(taskData);
       setTask(createdTask);
       onTaskCreated?.(createdTask);
       setIsEditingTitle(false);
@@ -302,6 +279,27 @@ export default function TaskView({
       setIsCreatingTask(false);
     }
   };
+
+  const handleDelete = useCallback(async () => {
+    if (!task || !task.id || isCreating) return;
+
+    if (
+      !confirm(
+        "Are you sure you want to delete this task? This action cannot be undone.",
+      )
+    ) {
+      return;
+    }
+
+    try {
+      await apiServices.tasks.deleteById(task.id);
+      onTaskDelete?.(task.id);
+      onClose();
+    } catch (error) {
+      console.error("Failed to delete task:", error);
+      alert("Failed to delete task. Please try again.");
+    }
+  }, [task, isCreating, onTaskDelete, onClose]);
 
   // Only render if we have a task (either existing or for creation)
   if (!task) return null;
@@ -320,11 +318,13 @@ export default function TaskView({
           onStatusClick={handleStatusClick}
           onStatusSelect={handleStatusSelect}
           onClose={onClose}
+          onDelete={handleDelete}
+          isCreating={isCreating}
         />
         <TaskTitleSection>
           <PriorityDropdownWrapper ref={priorityDropdownRef}>
             <PriorityIcon onClick={handlePriorityClick}>
-              {getPriorityIconLabel(displayTask.priority)}
+              {tasksHelper.priority.getIconLabel(displayTask.priority)}
             </PriorityIcon>
             <DropdownContainer $isOpen={isPriorityDropdownOpen}>
               {Object.values(TaskPriority).map((priority) => (
@@ -333,9 +333,9 @@ export default function TaskView({
                   onClick={() => handlePrioritySelect(priority)}
                 >
                   <PriorityIconSpan>
-                    {getPriorityIconLabel(priority)}
+                    {tasksHelper.priority.getIconLabel(priority)}
                   </PriorityIconSpan>
-                  {getPriorityName(priority)}
+                  {tasksHelper.priority.getName(priority)}
                 </DropdownItem>
               ))}
             </DropdownContainer>
@@ -384,17 +384,31 @@ export default function TaskView({
           onTaskChange={(updatedTask) => {
             setTask(updatedTask);
             if (!isCreating && initialTask) {
+              // Helper to safely get timestamp from date (handles Date objects and strings)
+              const getTimestamp = (
+                date: Date | string | undefined | null,
+              ): number | undefined => {
+                if (!date) return undefined;
+                if (date instanceof Date) return date.getTime();
+                const parsed = new Date(date);
+                return isNaN(parsed.getTime()) ? undefined : parsed.getTime();
+              };
+
               // Track changes for save (compare against initial task)
               const updates: Partial<Task> = {};
 
-              const initialDueDate = initialTask.dueDate?.getTime();
-              const updatedDueDate = updatedTask.dueDate?.getTime();
+              const initialDueDate = getTimestamp(initialTask.dueDate);
+              const updatedDueDate = getTimestamp(updatedTask.dueDate);
               if (initialDueDate !== updatedDueDate) {
                 updates.dueDate = updatedTask.dueDate;
               }
 
-              const initialScheduleDate = initialTask.scheduleDate?.getTime();
-              const updatedScheduleDate = updatedTask.scheduleDate?.getTime();
+              const initialScheduleDate = getTimestamp(
+                initialTask.scheduleDate,
+              );
+              const updatedScheduleDate = getTimestamp(
+                updatedTask.scheduleDate,
+              );
               if (initialScheduleDate !== updatedScheduleDate) {
                 updates.scheduleDate = updatedTask.scheduleDate;
               }
@@ -403,10 +417,9 @@ export default function TaskView({
                 updates.estimation = updatedTask.estimation;
               }
 
-              if (
-                JSON.stringify(updatedTask.labels || []) !==
-                JSON.stringify(initialTask.labels || [])
-              ) {
+              const initialLabels = JSON.stringify(initialTask.labels || []);
+              const updatedLabels = JSON.stringify(updatedTask.labels || []);
+              if (updatedLabels !== initialLabels) {
                 updates.labels = updatedTask.labels;
               }
 
@@ -418,31 +431,10 @@ export default function TaskView({
                 updates.status = updatedTask.status;
               }
 
-              setPendingUpdates((prev) => {
-                const merged = { ...prev, ...updates };
-                // Remove keys that match initial values
-                Object.keys(merged).forEach((key) => {
-                  const typedKey = key as keyof Task;
-                  const initialValue = initialTask[typedKey];
-                  const mergedValue = merged[typedKey];
-
-                  // Handle date comparisons
-                  if (typedKey === "dueDate" || typedKey === "scheduleDate") {
-                    const initialTime = (
-                      initialValue as Date | undefined
-                    )?.getTime();
-                    const mergedTime = (
-                      mergedValue as Date | undefined
-                    )?.getTime();
-                    if (initialTime === mergedTime) {
-                      delete merged[typedKey];
-                    }
-                  } else if (mergedValue === initialValue) {
-                    delete merged[typedKey];
-                  }
-                });
-                return merged;
-              });
+              // Only update if there are actual changes
+              if (Object.keys(updates).length > 0) {
+                setPendingUpdates((prev) => ({ ...prev, ...updates }));
+              }
             }
           }}
         />
@@ -455,20 +447,20 @@ export default function TaskView({
         )}
         {isCreating ? (
           <TaskViewFooter>
-            <FooterCancelButton onClick={onClose}>Cancel</FooterCancelButton>
+            <SecondaryButton onClick={onClose}>Cancel</SecondaryButton>
             <CreateTaskButton
               onClick={handleCreateTask}
               disabled={!titleValue.trim() || isCreatingTask}
               $disabled={!titleValue.trim() || isCreatingTask}
             >
-              {isCreatingTask ? "Creating..." : "Create Task"}
+              {isCreatingTask ? "Creating..." : "Create"}
             </CreateTaskButton>
           </TaskViewFooter>
         ) : (
           <TaskViewFooter>
-            <FooterCancelButton onClick={handleCancel}>
+            <SecondaryButton onClick={handleCancel}>
               Cancel
-            </FooterCancelButton>
+            </SecondaryButton>
             <TaskSaveButton
               onClick={handleSaveChanges}
               disabled={isSaving || !hasUnsavedChanges}
@@ -491,4 +483,5 @@ interface TaskViewProps {
   onTaskUpdate?: (updatedTask: Task) => void;
   onSubtaskClick?: (subtask: Task) => void;
   onTaskCreated?: (createdTask: Task) => void;
+  onTaskDelete?: (taskId: string) => void;
 }

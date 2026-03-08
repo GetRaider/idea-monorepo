@@ -1,4 +1,5 @@
 import styled from "styled-components";
+import { SecondaryButton } from "../Buttons";
 
 export const TaskViewOverlay = styled.div`
   position: fixed;
@@ -82,6 +83,41 @@ export const StatusIconButton = styled.button`
   svg {
     width: 18px;
     height: 18px;
+  }
+`;
+
+export const HeaderRight = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`;
+
+export const DeleteButton = styled.button`
+  background: none;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: all 0.2s;
+  line-height: 1;
+
+  &:hover {
+    background: #2a2a2a;
+    color: #ef4444;
+  }
+
+  svg {
+    width: 16px;
+    height: 16px;
+    display: block;
+    margin: 0;
+    flex-shrink: 0;
   }
 `;
 
@@ -196,7 +232,7 @@ export const DescriptionActions = styled.div`
   justify-content: flex-end;
 `;
 
-export const SaveButton = styled.button`
+export const SaveButton = styled(SecondaryButton)`
   padding: 6px 16px;
   background: #667eea;
   color: #fff;
@@ -213,24 +249,6 @@ export const SaveButton = styled.button`
 
   &:active {
     background: #4a5bc4;
-  }
-`;
-
-export const CancelButton = styled.button`
-  padding: 6px 16px;
-  background: transparent;
-  color: #888;
-  border: 1px solid #3a3a3a;
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-
-  &:hover {
-    background: #2a2a2a;
-    color: #fff;
-    border-color: #4a4a4a;
   }
 `;
 
@@ -514,16 +532,6 @@ export const TaskViewFooter = styled.div`
   justify-content: flex-end;
   gap: 12px;
   padding-top: 22px;
-`;
-
-export const FooterCancelButton = styled.button`
-  padding: 8px 16px;
-  background: transparent;
-  border: 1px solid #2a2a2a;
-  border-radius: 6px;
-  color: #888;
-  cursor: pointer;
-  font-size: 14px;
 `;
 
 export const CreateTaskButton = styled.button<{ $disabled: boolean }>`

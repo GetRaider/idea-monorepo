@@ -1,4 +1,5 @@
-import { Task, TaskPriority, TaskStatus } from "@/components/KanbanBoard/types";
+import { Task } from "@/components/KanbanBoard/types";
+import { TaskPriority, TaskStatus } from "@/components/KanbanBoard/types";
 import { Folder, TaskBoard } from "@/types/workspace";
 
 // Mock labels
@@ -82,7 +83,7 @@ export const mockTasks: Record<string, Task[]> = {
       priority: TaskPriority.MEDIUM,
       labels: ["Work", "Food"],
       status: TaskStatus.TODO,
-      schedule: "today",
+      scheduleDate: new Date(),
     },
   ],
   [TASKBOARD_WORK_ID]: [
@@ -97,7 +98,7 @@ export const mockTasks: Record<string, Task[]> = {
       priority: TaskPriority.HIGH,
       labels: ["Work", "Food", "Creative"],
       status: TaskStatus.TODO,
-      schedule: "today",
+      scheduleDate: new Date(),
       subtasks: [
         {
           id: "550e8400-e29b-41d4-a716-446655441002-sub1",
@@ -159,7 +160,7 @@ export const mockTasks: Record<string, Task[]> = {
       priority: TaskPriority.HIGH,
       labels: ["Work", "Food", "Creative"],
       status: TaskStatus.IN_PROGRESS,
-      schedule: "today",
+      scheduleDate: new Date(),
     },
     {
       id: "550e8400-e29b-41d4-a716-446655441005",
@@ -257,7 +258,21 @@ export function getAllTasks(): Task[] {
 }
 
 export function getTasksBySchedule(schedule: "today" | "tomorrow"): Task[] {
-  return getAllTasks().filter((task) => task.schedule === schedule);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  return getAllTasks().filter((task) => {
+    if (!task.scheduleDate) return false;
+    const taskDate = new Date(task.scheduleDate);
+    taskDate.setHours(0, 0, 0, 0);
+    if (schedule === "today") {
+      return taskDate.getTime() === today.getTime();
+    } else {
+      return taskDate.getTime() === tomorrow.getTime();
+    }
+  });
 }
 
 export function createTask(task: Omit<Task, "id">): Task {

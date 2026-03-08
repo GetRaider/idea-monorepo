@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getTaskById, updateTask } from "@/db/queries";
+import { getTaskById, updateTask, deleteTask } from "@/lib/db/queries";
 import { Task } from "@/components/KanbanBoard/types";
 
-  // Serialized task type for JSON response
+// Serialized task type for JSON response
 interface SerializedTask {
   id: string;
   taskBoardId: string;
@@ -15,7 +15,6 @@ interface SerializedTask {
   dueDate?: string;
   estimation?: number;
   subtasks: SerializedTask[];
-  schedule?: string;
   scheduleDate?: string;
 }
 
@@ -33,7 +32,6 @@ function serializeTask(task: Task): SerializedTask {
     dueDate: task.dueDate?.toISOString(),
     estimation: task.estimation,
     subtasks: (task.subtasks || []).map((subtask) => serializeTask(subtask)),
-    schedule: task.schedule,
     scheduleDate: task.scheduleDate?.toISOString(),
   };
 }
@@ -51,9 +49,10 @@ export async function GET(
     }
 
     return NextResponse.json(serializeTask(task));
-  } catch {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      { error: "Failed to fetch task" },
+      { error: "Failed to fetch task", details: message },
       { status: 500 },
     );
   }
@@ -70,22 +69,33 @@ export async function PATCH(
     // Process fields only if explicitly included in updates
     const updateData = { ...updates };
     if ("dueDate" in updates) {
-      updateData.dueDate = updates.dueDate ? new Date(updates.dueDate) : undefined;
+      updateData.dueDate = updates.dueDate
+        ? new Date(updates.dueDate)
+        : undefined;
     }
     if ("scheduleDate" in updates) {
-      updateData.scheduleDate = updates.scheduleDate ? new Date(updates.scheduleDate) : undefined;
+      updateData.scheduleDate = updates.scheduleDate
+        ? new Date(updates.scheduleDate)
+        : undefined;
     }
     if ("estimation" in updates) {
       // null means "clear", 0 is valid, undefined means "not set"
-      updateData.estimation = updates.estimation === null ? undefined : updates.estimation;
+      updateData.estimation =
+        updates.estimation === null ? undefined : updates.estimation;
     }
     // Process subtask dates if subtasks are being updated
     if (updates.subtasks && Array.isArray(updates.subtasks)) {
-      updateData.subtasks = updates.subtasks.map((subtask: Record<string, unknown>) => ({
-        ...subtask,
-        dueDate: subtask.dueDate ? new Date(subtask.dueDate as string) : undefined,
-        scheduleDate: subtask.scheduleDate ? new Date(subtask.scheduleDate as string) : undefined,
-      }));
+      updateData.subtasks = updates.subtasks.map(
+        (subtask: Record<string, unknown>) => ({
+          ...subtask,
+          dueDate: subtask.dueDate
+            ? new Date(subtask.dueDate as string)
+            : undefined,
+          scheduleDate: subtask.scheduleDate
+            ? new Date(subtask.scheduleDate as string)
+            : undefined,
+        }),
+      );
     }
 
     const updatedTask = await updateTask(taskId, updateData);
@@ -95,9 +105,27 @@ export async function PATCH(
     }
 
     return NextResponse.json(serializeTask(updatedTask));
-  } catch {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      { error: "Failed to update task" },
+      { error: "Failed to update task", details: message },
+      { status: 500 },
+    );
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    const { id: taskId } = await params;
+    await deleteTask(taskId);
+    return NextResponse.json({ success: true }, { status: 200 });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    return NextResponse.json(
+      { error: "Failed to delete task", details: message },
       { status: 500 },
     );
   }

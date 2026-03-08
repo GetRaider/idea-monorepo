@@ -2,7 +2,7 @@
 
 import { HeaderContainer, Content, Title } from "./Header.styles";
 
-export default function Header({ title }: HeaderProps) {
+export function Header({ title }: HeaderProps) {
   return (
     <HeaderContainer>
       <Content>

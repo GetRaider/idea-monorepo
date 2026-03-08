@@ -3,10 +3,12 @@
   "version": "0.0.0",
   "private": true,
   "license": "MIT",
+  "type": "commonjs",
   "scripts": {
     "build": "tsc -b -v",
     "rebuild": "rm -rf dist && pnpm build",
     "clean": "rm -rf dist && rm -rf .turbo",
+    "clean:hard": "pnpm run clean && rm -rf node_modules",
     "dev": "pnpm build --watch",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\"",
     "format": "eslint \"{src,apps,libs,test}/**/*.ts\""
@@ -31,27 +33,35 @@
       "import": "./dist/index.js",
       "require": "./dist/index.js"
     },
+    "./client": {
+      "import": "./dist/client.js",
+      "require": "./dist/client.js"
+    },
     "./*": {
       "import": "./dist/*.js",
       "require": "./dist/*.js"
     }
   },
   "dependencies": {
-    "@nestjs/mapped-types": "catalog:",
     "@nestjs/common": "catalog:",
     "@nestjs/config": "catalog:",
     "@nestjs/core": "catalog:",
-    "@nestjs/platform-express": "catalog:"
+    "@nestjs/mapped-types": "catalog:",
+    "@nestjs/platform-express": "catalog:",
+    "@repo/shared": "workspace:*",
+    "axios": "catalog:",
+    "pino": "^10.3.0",
+    "tsx": "^4.21.0"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
-    "@types/node": "catalog:",
     "@types/express": "catalog:",
+    "@types/node": "catalog:",
     "class-validator": "catalog:",
     "ts-loader": "catalog:",
     "ts-node": "catalog:",
-    "typescript": "catalog:",
-    "tsconfig-paths": "catalog:"
+    "tsconfig-paths": "catalog:",
+    "typescript": "catalog:"
   }
 }

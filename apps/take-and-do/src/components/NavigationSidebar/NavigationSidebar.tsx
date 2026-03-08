@@ -2,6 +2,13 @@
 
 import { useState, useEffect } from "react";
 import {
+  ChevronRightIcon,
+  ClockCircleIcon,
+  ClockNavIcon,
+  PlusIcon,
+  SearchIcon,
+} from "@/components/Icons";
+import {
   NavigationSidebarContainer,
   Search,
   SearchInput,
@@ -11,14 +18,13 @@ import {
   WorkspaceList,
   WorkspaceItem,
   WorkspaceToggle,
-  Chevron,
+  ChevronWrapper,
   SubItems,
   SubItem,
   AddButton,
 } from "./NavigationSidebar.styles";
 import { Folder, TaskBoard } from "@/types/workspace";
-import { foldersService } from "@/services/api/folders.service";
-import { taskBoardsService } from "@/services/api/taskBoards.service";
+import { apiServices } from "@/services/api";
 
 interface NavigationSidebarProps {
   isOpen: boolean;
@@ -29,7 +35,7 @@ interface NavigationSidebarProps {
   folders?: Folder[];
 }
 
-export default function NavigationSidebar({
+export function NavigationSidebar({
   isOpen,
   activeView = "today",
   onViewChange,
@@ -54,8 +60,8 @@ export default function NavigationSidebar({
     const fetchData = async () => {
       try {
         const [foldersData, taskBoardsData] = await Promise.all([
-          foldersService.getAll(),
-          taskBoardsService.getAll(),
+          apiServices.folders.getAll(),
+          apiServices.taskBoards.getAll(),
         ]);
 
         setFolders(foldersData);
@@ -81,22 +87,7 @@ export default function NavigationSidebar({
   return (
     <NavigationSidebarContainer $isOpen={isOpen}>
       <Search>
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-          <circle
-            cx="6.5"
-            cy="6.5"
-            r="5"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            fill="none"
-          />
-          <path
-            d="M10 10l4 4"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-          />
-        </svg>
+        <SearchIcon size={16} />
         <SearchInput type="text" placeholder="Search..." />
       </Search>
 
@@ -107,22 +98,7 @@ export default function NavigationSidebar({
           $active={activeView === "today"}
           onClick={() => handleViewChange("today")}
         >
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-            <circle
-              cx="10"
-              cy="10"
-              r="7"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              fill="none"
-            />
-            <path
-              d="M10 6v4l3 2"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-            />
-          </svg>
+          <ClockNavIcon size={20} />
           <span>Today</span>
         </NavItem>
 
@@ -130,16 +106,7 @@ export default function NavigationSidebar({
           $active={activeView === "tomorrow"}
           onClick={() => handleViewChange("tomorrow")}
         >
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-            <circle
-              cx="10"
-              cy="10"
-              r="7"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              fill="none"
-            />
-          </svg>
+          <ClockCircleIcon size={20} />
           <span>Tomorrow</span>
         </NavItem>
       </WorkspaceContainer>
@@ -151,14 +118,7 @@ export default function NavigationSidebar({
             onClick={() => onCreateTaskBoard?.()}
             title="Create Task Board"
           >
-            <svg viewBox="0 0 16 16" fill="none">
-              <path
-                d="M8 3v10M3 8h10"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-              />
-            </svg>
+            <PlusIcon size={16} />
           </AddButton>
         </SideBarSectionHeader>
 
@@ -168,21 +128,9 @@ export default function NavigationSidebar({
               <WorkspaceToggle onClick={() => toggleFolder(folder.id)}>
                 <img width={20} height={20} src="/folder.svg" alt="Folder" />
                 <span>{folder.name}</span>
-                <Chevron
-                  width="16"
-                  height="16"
-                  viewBox="0 0 16 16"
-                  fill="none"
-                  $expanded={expandedFolder === folder.id}
-                >
-                  <path
-                    d="M6 4l4 4-4 4"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </Chevron>
+                <ChevronWrapper $expanded={expandedFolder === folder.id}>
+                  <ChevronRightIcon size={16} />
+                </ChevronWrapper>
               </WorkspaceToggle>
               {expandedFolder === folder.id && (
                 <SubItems>

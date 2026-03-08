@@ -2,42 +2,42 @@
 
 import { SingleKanbanBoard } from "./SingleKanbanBoard";
 import { MultipleKanbanBoard } from "./MultipleKanbanBoard";
-import { TaskSchedule, TaskStatus, TaskPriority, Task } from "./types";
+import {
+  TaskStatus,
+  TaskPriority,
+  Task,
+  isScheduleString,
+  getDateFromScheduleString,
+} from "./types";
 
 // Re-export types and enums for backward compatibility
-export { TaskSchedule, TaskStatus, TaskPriority };
+export { TaskStatus, TaskPriority };
 export type { Task };
 
 interface KanbanBoardProps {
-  currentView?: TaskSchedule | string;
+  currentView?: string;
   workspaceTitle?: string;
   taskBoardId?: string;
   folderId?: string;
   taskBoardNameMap?: Record<string, string>;
 }
 
-function getWorkspaceTitle(
-  boardView: TaskSchedule | string,
-  workspaceTitle: string,
-): string {
-  switch (boardView) {
-    case TaskSchedule.TODAY:
-      return "Today";
-    case TaskSchedule.TOMORROW:
-      return "Tomorrow";
-    default:
-      return workspaceTitle;
+function getWorkspaceTitle(boardView: string, workspaceTitle: string): string {
+  if (boardView === "today") {
+    return "Today";
+  } else if (boardView === "tomorrow") {
+    return "Tomorrow";
   }
+  return workspaceTitle;
 }
 
-export default function KanbanBoard({
-  currentView = TaskSchedule.TODAY,
+export function KanbanBoard({
+  currentView = "today",
   workspaceTitle = "Tasks",
   folderId,
   taskBoardNameMap = {},
 }: KanbanBoardProps) {
-  const isScheduleWorkspace =
-    currentView === TaskSchedule.TODAY || currentView === TaskSchedule.TOMORROW;
+  const isScheduleWorkspace = isScheduleString(currentView);
 
   const title = getWorkspaceTitle(currentView, workspaceTitle);
 
@@ -45,8 +45,10 @@ export default function KanbanBoard({
   if (isScheduleWorkspace || folderId) {
     return (
       <MultipleKanbanBoard
-        schedule={
-          isScheduleWorkspace ? (currentView as TaskSchedule) : undefined
+        scheduleDate={
+          isScheduleWorkspace
+            ? getDateFromScheduleString(currentView)
+            : undefined
         }
         workspaceTitle={title}
         folderId={folderId}

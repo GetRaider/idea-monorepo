@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "clean": "rm -rf dist && rm -rf .turbo",
+    "clean:hard": "pnpm run clean && rm -rf node_modules",
     "build": "nest build",
     "rebuild": "pnpm clean && pnpm build",
     "dev": "NODE_ENV=development nest start --watch",

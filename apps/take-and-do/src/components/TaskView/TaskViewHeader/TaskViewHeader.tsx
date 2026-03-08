@@ -1,17 +1,20 @@
 "use client";
 
 import { RefObject } from "react";
+import { TrashIcon, CloseIcon } from "@/components/Icons";
 import { Task, TaskStatus } from "../../KanbanBoard/types";
-import { getStatusIcon } from "../../KanbanBoard/Column/Column";
 import { StatusIcon } from "../../KanbanBoard/Column/Column.styles";
 import {
   ModalHeader,
   HeaderLeft,
+  HeaderRight,
+  DeleteButton,
   CloseButton,
   StatusIconButton,
   DropdownContainer,
   DropdownItem,
 } from "../TaskView.styles";
+import { tasksHelper } from "@/helpers/task.helper";
 
 interface TaskViewHeaderProps {
   workspaceTitle: string;
@@ -22,6 +25,8 @@ interface TaskViewHeaderProps {
   onStatusClick: () => void;
   onStatusSelect: (status: TaskStatus) => void;
   onClose: () => void;
+  onDelete?: () => void;
+  isCreating?: boolean;
 }
 
 export function TaskViewHeader({
@@ -33,6 +38,8 @@ export function TaskViewHeader({
   onStatusClick,
   onStatusSelect,
   onClose,
+  onDelete,
+  isCreating = false,
 }: TaskViewHeaderProps) {
   return (
     <ModalHeader>
@@ -67,7 +74,7 @@ export function TaskViewHeader({
         >
           <StatusIconButton onClick={onStatusClick}>
             <StatusIcon $status={task.status}>
-              {getStatusIcon(task.status)}
+              {tasksHelper.status.getIcon(task.status)}
             </StatusIcon>
           </StatusIconButton>
           <DropdownContainer $isOpen={isStatusDropdownOpen}>
@@ -75,7 +82,7 @@ export function TaskViewHeader({
               <DropdownItem key={status} onClick={() => onStatusSelect(status)}>
                 <span style={{ marginRight: "8px" }}>
                   <StatusIcon $status={status}>
-                    {getStatusIcon(status)}
+                    {tasksHelper.status.getIcon(status)}
                   </StatusIcon>
                 </span>
                 {status}
@@ -85,9 +92,16 @@ export function TaskViewHeader({
         </div>{" "}
         {task.taskKey}
       </HeaderLeft>
-      <CloseButton onClick={onClose} title="Close">
-        ×
-      </CloseButton>
+      <HeaderRight>
+        {!isCreating && onDelete && (
+          <DeleteButton onClick={onDelete} title="Delete task">
+            <TrashIcon size={16} />
+          </DeleteButton>
+        )}
+        <CloseButton onClick={onClose} title="Close">
+          <CloseIcon />
+        </CloseButton>
+      </HeaderRight>
     </ModalHeader>
   );
 }

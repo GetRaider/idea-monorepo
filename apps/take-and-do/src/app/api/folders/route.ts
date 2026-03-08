@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAllFolders } from "@/db/queries";
+import { getAllFolders } from "@/lib/db/queries";
 
 export async function GET() {
   try {

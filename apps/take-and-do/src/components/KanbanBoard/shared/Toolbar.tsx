@@ -1,12 +1,16 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
+import { ChevronDownIcon } from "@/components/Icons";
 import {
   Toolbar as ToolbarStyled,
   WorkspacePath,
   Actions,
   CreateButton,
+  CreateButtonContainer,
+  CreateButtonDropdown,
+  CreateButtonDropdownItem,
   SettingsButton,
   PopoverContainer,
   Popover,
@@ -20,20 +24,76 @@ import {
 interface ToolbarProps {
   workspaceTitle: string;
   onCreateTask?: () => void;
+  onCreateTaskWithAI?: () => void;
 }
 
-export function Toolbar({ workspaceTitle, onCreateTask }: ToolbarProps) {
+export function Toolbar({
+  workspaceTitle,
+  onCreateTask,
+  onCreateTaskWithAI,
+}: ToolbarProps) {
   const [open, setOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"list" | "board">("board");
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    if (isDropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [isDropdownOpen]);
+
+  const handleManualCreate = () => {
+    setIsDropdownOpen(false);
+    onCreateTask?.();
+  };
+
+  const handleAICreate = () => {
+    setIsDropdownOpen(false);
+    onCreateTaskWithAI?.();
+  };
 
   return (
     <ToolbarStyled>
       <WorkspacePath>{workspaceTitle}</WorkspacePath>
       <Actions>
-        <CreateButton onClick={onCreateTask}>
-          <Image width={20} height={20} src="/plus.svg" alt="Create Task" />
-          Create Task
-        </CreateButton>
+        <CreateButtonContainer ref={dropdownRef}>
+          <CreateButton
+            onMouseEnter={() => setIsDropdownOpen(true)}
+            onClick={handleManualCreate}
+          >
+            <Image width={20} height={20} src="/plus.svg" alt="Create Task" />
+            Create Task
+            <ChevronDownIcon
+              size={12}
+              style={{
+                transform: isDropdownOpen ? "rotate(180deg)" : "none",
+                transition: "transform 0.2s",
+              }}
+            />
+          </CreateButton>
+          {isDropdownOpen && (
+            <CreateButtonDropdown onMouseLeave={() => setIsDropdownOpen(false)}>
+              <CreateButtonDropdownItem onClick={handleAICreate}>
+                AI
+              </CreateButtonDropdownItem>
+              <CreateButtonDropdownItem onClick={handleManualCreate}>
+                Manual
+              </CreateButtonDropdownItem>
+            </CreateButtonDropdown>
+          )}
+        </CreateButtonContainer>
         <PopoverContainer>
           {/* TODO: Enable board settings once buttons are working */}
           {/* <SettingsButton

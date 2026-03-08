@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { TaskBoard } from "@/types/workspace";
-import { taskBoardsService } from "@/services/api/taskBoards.service";
+import { apiServices } from "@/services/api";
+import { CloseIcon } from "@/components/Icons";
 import {
   ModalOverlay,
   ModalContainer,
@@ -16,10 +17,7 @@ import {
   Button,
 } from "./SelectBoardModal.styles";
 
-export default function SelectBoardModal({
-  onClose,
-  onSelect,
-}: SelectBoardModalProps) {
+export function SelectBoardModal({ onClose, onSelect }: SelectBoardModalProps) {
   const [boards, setBoards] = useState<TaskBoard[]>([]);
   const [selectedBoardId, setSelectedBoardId] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -27,7 +25,7 @@ export default function SelectBoardModal({
   useEffect(() => {
     const fetchBoards = async () => {
       try {
-        const allBoards = await taskBoardsService.getAll();
+        const allBoards = await apiServices.taskBoards.getAll();
         setBoards(allBoards);
         if (allBoards.length > 0) {
           setSelectedBoardId(allBoards[0].id);
@@ -59,7 +57,7 @@ export default function SelectBoardModal({
       <ModalContainer onClick={(e) => e.stopPropagation()}>
         <ModalHeader>
           <ModalTitle>Select Task Board</ModalTitle>
-          <CloseButton onClick={onClose}>×</CloseButton>
+          <CloseButton onClick={onClose}><CloseIcon /></CloseButton>
         </ModalHeader>
 
         <form onSubmit={handleSubmit}>
@@ -111,5 +109,3 @@ interface SelectBoardModalProps {
   onClose: () => void;
   onSelect: (boardId: string) => void;
 }
-
-

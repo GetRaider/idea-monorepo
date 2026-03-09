@@ -5,12 +5,7 @@ import { Sidebar } from "@/components/Sidebar/Sidebar";
 import { NavigationSidebar } from "@/components/NavigationSidebar/NavigationSidebar";
 import { apiServices } from "@/services/api";
 import { Task } from "@/components/KanbanBoard/types";
-import {
-  StatsCards,
-  ProductivityOverview,
-  TimelinePlanning,
-  QuickActions,
-} from ".";
+import { StatsCards, ProductivityOverview, TimelinePlanning } from ".";
 import type { TaskStats } from ".";
 import {
   PageContainer,
@@ -107,8 +102,6 @@ function HomePage() {
         />
 
         {taskStats && <StatsCards stats={taskStats} />}
-
-        <QuickActions />
       </MainContent>
     </PageContainer>
   );

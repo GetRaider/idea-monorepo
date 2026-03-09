@@ -15,8 +15,8 @@ export class TaskBoardsApiService extends BaseApiService {
   }
 
   async getById(id: string): Promise<TaskBoard> {
-    const response = await this.get<TaskBoard>({ pathParams: [id] });
-    return normalizeTaskBoard(response.data);
+    const response = await this.get<TaskBoard[]>({ queries: { id } });
+    return normalizeTaskBoard(response.data[0]);
   }
 
   async getTasks(taskBoardId: string): Promise<Task[]> {

@@ -113,7 +113,7 @@ export function NavigationSidebar({
 
       <WorkspaceContainer>
         <SideBarSectionHeader>
-          <span>Spaces</span>
+          <span>Boards</span>
           <AddButton
             onClick={() => onCreateTaskBoard?.()}
             title="Create Task Board"

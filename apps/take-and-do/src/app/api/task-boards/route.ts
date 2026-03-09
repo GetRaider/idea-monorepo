@@ -1,12 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { env } from "@/env";
-import { getAllTaskBoards, createTaskBoard } from "@/lib/db/queries";
+import {
+  getAllTaskBoards,
+  createTaskBoard,
+  getTaskBoardById,
+} from "@/lib/db/queries";
 import { TaskBoard } from "@/types/workspace";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get("id");
+
   try {
-    const taskBoards = await getAllTaskBoards();
+    const taskBoards = id
+      ? [await getTaskBoardById(id)]
+      : await getAllTaskBoards();
     return NextResponse.json(taskBoards);
   } catch {
     return NextResponse.json(

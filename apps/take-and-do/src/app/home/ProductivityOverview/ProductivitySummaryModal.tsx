@@ -1,12 +1,12 @@
 "use client";
 
 import { CloseIcon } from "@/components/Icons";
+import { CloseButton } from "@/components/Buttons";
 import {
   ModalOverlay,
   ModalContent,
   ModalHeader,
   ModalTitle,
-  CloseButton,
   AISection,
   AICard,
   CardHeader,

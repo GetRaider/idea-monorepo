@@ -77,7 +77,6 @@ export const HeaderCell = styled.span`
   font-size: 12px;
   font-weight: 600;
   color: #888;
-  text-transform: uppercase;
   letter-spacing: 0.5px;
 `;
 
@@ -91,6 +90,7 @@ export const TaskItem = styled.div`
   transition: all 0.2s;
   align-items: center;
   margin-bottom: 6px;
+  cursor: pointer;
 
   &:last-child {
     margin-bottom: 0;

@@ -5,13 +5,12 @@ import { Task } from "@/components/KanbanBoard/types";
 import { apiServices } from "@/services/api";
 import { tasksHelper } from "@/helpers/task.helper";
 import { CloseIcon } from "@/components/Icons";
-import { SecondaryButton } from "@/components/Buttons";
+import { SecondaryButton, CloseButton } from "@/components/Buttons";
 import {
   ModalOverlay,
   ModalContent,
   ModalHeader,
   ModalTitle,
-  CloseButton,
   HeaderContent,
   ModalDescription,
   OptimizationContent,
@@ -37,16 +36,18 @@ import {
   LoadingState,
   ErrorState,
   TaskSelectionSection,
+  TaskSelectionHeader,
   TaskCheckbox,
   TaskLabel,
+  SelectAllRow,
   GenerateOptimizationButton,
   ActionsContainer,
   OptimizeButton,
 } from "./AIPlanningOptimizationModal.styles";
+import { useTasks } from "@/hooks/useTasks";
 
 interface ScheduleOptimizationModalProps {
   onClose: () => void;
-  tasks: Task[];
 }
 
 interface ScheduleOptimization {
@@ -69,7 +70,6 @@ interface ScheduleOptimization {
 
 export function ScheduleOptimizationModal({
   onClose,
-  tasks,
 }: ScheduleOptimizationModalProps) {
   const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(
     new Set(),
@@ -80,6 +80,7 @@ export function ScheduleOptimizationModal({
   const [isExploring, setIsExploring] = useState(false);
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { tasks, isLoading: isTasksLoading } = useTasks({});
 
   useEffect(() => {
     const notDoneTasks = tasks.filter((t) => t.status !== "Done");
@@ -89,6 +90,8 @@ export function ScheduleOptimizationModal({
   const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) onClose();
   };
+
+  const allSelected = tasks.length > 0 && selectedTaskIds.size === tasks.length;
 
   const toggleTask = (taskId: string) => {
     setSelectedTaskIds((prev) => {
@@ -100,6 +103,14 @@ export function ScheduleOptimizationModal({
       }
       return next;
     });
+  };
+
+  const toggleAll = () => {
+    if (allSelected) {
+      setSelectedTaskIds(new Set());
+    } else {
+      setSelectedTaskIds(new Set(tasks.map((t) => t.id)));
+    }
   };
 
   const sanitizeText = (text: string): string => {
@@ -194,23 +205,38 @@ export function ScheduleOptimizationModal({
               priorities, schedules, due dates, and estimations.
             </ModalDescription>
           </HeaderContent>
-          <CloseButton onClick={onClose}><CloseIcon /></CloseButton>
+          <CloseButton onClick={onClose}>
+            <CloseIcon />
+          </CloseButton>
         </ModalHeader>
-
         {!exploration && !isExploring && (
           <>
-            <TaskSelectionSection>
+            <TaskSelectionHeader>
               <SectionTitle>Select tasks to explore</SectionTitle>
-              {tasks.map((task) => (
-                <TaskLabel key={task.id}>
-                  <TaskCheckbox
-                    type="checkbox"
-                    checked={selectedTaskIds.has(task.id)}
-                    onChange={() => toggleTask(task.id)}
-                  />
-                  <span>{task.summary}</span>
-                </TaskLabel>
-              ))}
+              {!isTasksLoading && tasks.length > 0 && (
+                <SelectAllRow onClick={toggleAll}>
+                  {allSelected ? "Deselect all" : "Select all"}
+                </SelectAllRow>
+              )}
+            </TaskSelectionHeader>
+            <TaskSelectionSection>
+              {isTasksLoading ? (
+                <LoadingContainer>
+                  <Spinner />
+                  <LoadingState>Loading tasks...</LoadingState>
+                </LoadingContainer>
+              ) : (
+                tasks.map((task) => (
+                  <TaskLabel key={task.id}>
+                    <TaskCheckbox
+                      type="checkbox"
+                      checked={selectedTaskIds.has(task.id)}
+                      onChange={() => toggleTask(task.id)}
+                    />
+                    <span>{task.summary}</span>
+                  </TaskLabel>
+                ))
+              )}
             </TaskSelectionSection>
 
             <ActionsContainer>
@@ -224,16 +250,14 @@ export function ScheduleOptimizationModal({
             </ActionsContainer>
           </>
         )}
-
         {isExploring && (
           <LoadingContainer>
             <Spinner />
             <LoadingState>Exploring planning optimization...</LoadingState>
           </LoadingContainer>
         )}
-
         {error && <ErrorState>{error}</ErrorState>}
-
+        
         {exploration && !isExploring && (
           <OptimizationContent>
             <SummarySection>

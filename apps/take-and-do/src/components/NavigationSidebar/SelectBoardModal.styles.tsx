@@ -52,26 +52,6 @@ export const ModalTitle = styled.h2`
   margin: 0;
 `;
 
-export const CloseButton = styled.button`
-  background: transparent;
-  border: none;
-  color: #888;
-  font-size: 24px;
-  cursor: pointer;
-  padding: 0;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 6px;
-  transition: all 0.2s;
-
-  &:hover {
-    background: #2a2a2a;
-    color: #fff;
-  }
-`;
 
 export const FormGroup = styled.div`
   margin-bottom: 20px;

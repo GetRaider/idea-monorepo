@@ -1,14 +1,13 @@
 "use client";
 
 import { CloseIcon } from "@/components/Icons";
-import { SecondaryButton } from "@/components/Buttons";
+import { SecondaryButton, CloseButton } from "@/components/Buttons";
 import {
   ModalOverlay,
   ModalContent,
   ModalHeader,
   HeaderContent,
   ModalTitle,
-  CloseButton,
   OptionsContainer,
   OptionBlock,
   OptionTitle,

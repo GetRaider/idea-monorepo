@@ -63,26 +63,6 @@ export const ModalDescription = styled.h3`
   color: #cbd5e1;
 `;
 
-export const CloseButton = styled.button`
-  background: transparent;
-  border: none;
-  color: #888;
-  font-size: 24px;
-  cursor: pointer;
-  padding: 0;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 4px;
-  transition: all 0.2s;
-
-  &:hover {
-    background: #2a2a2a;
-    color: #fff;
-  }
-`;
 
 export const OptimizationContent = styled.div`
   display: flex;
@@ -234,6 +214,7 @@ export const LoadingState = styled.div`
 `;
 
 export const ErrorState = styled.div`
+  margin-top: 16px;
   padding: 20px;
   text-align: center;
   color: #ef4444;
@@ -242,10 +223,32 @@ export const ErrorState = styled.div`
   border-radius: 8px;
 `;
 
+export const TaskSelectionHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+`;
+
+export const SelectAllRow = styled.button`
+  background: none;
+  border: none;
+  color: #7255c1;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.15s;
+
+  &:hover {
+    color: #9678e3;
+  }
+`;
+
 export const TaskSelectionSection = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
   max-height: 300px;
   overflow-y: auto;
   padding-right: 8px;

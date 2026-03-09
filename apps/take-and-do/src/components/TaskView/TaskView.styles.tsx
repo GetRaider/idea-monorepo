@@ -121,28 +121,6 @@ export const DeleteButton = styled.button`
   }
 `;
 
-export const CloseButton = styled.button`
-  background: none;
-  border: none;
-  color: #888;
-  font-size: 28px;
-  cursor: pointer;
-  padding: 0;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 6px;
-  transition: all 0.2s;
-  line-height: 1;
-
-  &:hover {
-    background: #2a2a2a;
-    color: #fff;
-  }
-`;
-
 export const TaskTitleSection = styled.div`
   display: flex;
   align-items: center;

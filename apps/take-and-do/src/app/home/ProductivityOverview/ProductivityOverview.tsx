@@ -40,6 +40,7 @@ import type {
 } from "../SummarySection/SummarySection";
 import type { AnalyticsStats } from "@/lib/ai";
 import { EmptyState } from "@/components/EmptyState";
+import { Dropdown } from "@/components/Dropdown";
 
 const CHART_TOOLTIP_STYLE = {
   background: "#2a2a2a",
@@ -111,7 +112,6 @@ export function ProductivityOverview() {
           shouldUseAI: selectedOption === "ai",
         }),
       });
-      console.log({ analyticsResponse });
 
       if (!analyticsResponse.ok) {
         throw new Error("Failed to generate analytics");
@@ -135,16 +135,16 @@ export function ProductivityOverview() {
         <SectionHeader>
           <SectionTitle>📊 Productivity Overview</SectionTitle>
           <Controls>
-            <>Time Frame</>
-            <TimeframeSelect
+            <Dropdown
+              options={[
+                { label: "All", value: "all" },
+                { label: "Week", value: "week" },
+                { label: "Month", value: "month" },
+                { label: "Quarter", value: "quarter" },
+              ]}
               value={timeframe}
-              onChange={(e) => setTimeframe(e.target.value as Timeframe)}
-            >
-              <option value="all">All</option>
-              <option value="week">Week</option>
-              <option value="month">Month</option>
-              <option value="quarter">Quarter</option>
-            </TimeframeSelect>
+              onChange={(value: Timeframe) => setTimeframe(value)}
+            />
             <GenerateButton
               onClick={handleOpenSelectionModal}
               $disabled={isGeneratingAnalytics}

@@ -67,28 +67,6 @@ export const ModalDescription = styled.h3`
   line-height: 1.5;
 `;
 
-export const CloseButton = styled.button`
-  background: transparent;
-  border: none;
-  color: #888;
-  font-size: 24px;
-  cursor: pointer;
-  padding: 0;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 4px;
-  transition: all 0.2s;
-  flex-shrink: 0;
-  margin-top: -4px;
-
-  &:hover {
-    background: #2a2a2a;
-    color: #fff;
-  }
-`;
 
 export const OptionsContainer = styled.div`
   display: flex;

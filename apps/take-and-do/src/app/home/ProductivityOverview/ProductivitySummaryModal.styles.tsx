@@ -43,27 +43,6 @@ export const ModalTitle = styled.h2`
   color: #fff;
 `;
 
-export const CloseButton = styled.button`
-  background: transparent;
-  border: none;
-  color: #888;
-  font-size: 20px;
-  line-height: 1;
-  cursor: pointer;
-  padding: 0;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 4px;
-  transition: all 0.2s;
-
-  &:hover {
-    background: #2a2a2a;
-    color: #fff;
-  }
-`;
 
 export const AISection = styled.div`
   display: grid;

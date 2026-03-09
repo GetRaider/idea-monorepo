@@ -2,12 +2,12 @@
 
 import { useState } from "react";
 import { CloseIcon } from "@/components/Icons";
+import { CloseButton } from "@/components/Buttons";
 import {
   ModalOverlay,
   ModalContainer,
   ModalHeader,
   ModalTitle,
-  CloseButton,
   FormGroup,
   Label,
   Input,

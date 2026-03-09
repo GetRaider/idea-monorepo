@@ -2,13 +2,12 @@
 
 import { useState } from "react";
 import { CloseIcon } from "@/components/Icons";
-import { SecondaryButton } from "@/components/Buttons";
+import { SecondaryButton, CloseButton } from "@/components/Buttons";
 import {
   ModalOverlay,
   ModalContent,
   ModalHeader,
   ModalTitle,
-  CloseButton,
   TextArea,
   ButtonGroup,
   CreateButton,
@@ -82,11 +81,10 @@ export function AIComposeModal({
             onClick={handleCreate}
             disabled={!text.trim() || isComposing}
           >
-            {isComposing ? "Composing..." : "Create"}
+            {isComposing ? "Composing..." : "Compose"}
           </CreateButton>
         </ButtonGroup>
       </ModalContent>
     </ModalOverlay>
   );
 }
-

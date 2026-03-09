@@ -4,12 +4,12 @@ import { useState, useEffect } from "react";
 import { TaskBoard } from "@/types/workspace";
 import { apiServices } from "@/services/api";
 import { CloseIcon } from "@/components/Icons";
+import { CloseButton } from "@/components/Buttons";
 import {
   ModalOverlay,
   ModalContainer,
   ModalHeader,
   ModalTitle,
-  CloseButton,
   FormGroup,
   Label,
   Select,

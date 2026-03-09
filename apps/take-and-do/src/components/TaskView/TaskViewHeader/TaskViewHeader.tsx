@@ -4,12 +4,12 @@ import { RefObject } from "react";
 import { TrashIcon, CloseIcon } from "@/components/Icons";
 import { Task, TaskStatus } from "../../KanbanBoard/types";
 import { StatusIcon } from "../../KanbanBoard/Column/Column.styles";
+import { CloseButton } from "@/components/Buttons";
 import {
   ModalHeader,
   HeaderLeft,
   HeaderRight,
   DeleteButton,
-  CloseButton,
   StatusIconButton,
   DropdownContainer,
   DropdownItem,

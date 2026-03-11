@@ -34,13 +34,11 @@ import {
 } from "./ProductivityOverview.styles";
 import { ProductivitySummaryModal } from "./ProductivitySummaryModal";
 import { ProductivitySummarySelectionModal } from "./ProductivitySummarySelectionModal";
-import type {
-  Timeframe,
-  AnalyticsData,
-} from "../SummarySection/SummarySection";
 import type { AnalyticsStats } from "@/lib/ai";
 import { EmptyState } from "@/components/EmptyState";
 import { Dropdown } from "@/components/Dropdown";
+import { AnalyticsData, Timeframe } from "@/services/api/analytics.api.service";
+import { apiServices } from "@/services/api";
 
 const CHART_TOOLTIP_STYLE = {
   background: "#2a2a2a",
@@ -65,6 +63,7 @@ export function ProductivityOverview() {
     const fetchStats = async () => {
       try {
         setIsLoading(true);
+        // TODO: Use apiServices.analytics.getStatsByTimeframe(timeframe);
         const response = await fetch(`/api/analytics?timeframe=${timeframe}`);
         if (response.ok) {
           const data = await response.json();

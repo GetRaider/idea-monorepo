@@ -1,5 +1,9 @@
 "use client";
 
+import {
+  animatedGradientBackground,
+  animatedGradientHover,
+} from "@/app/home/ProductivityOverview/animatedGradient";
 import styled from "styled-components";
 
 export const DropdownMenu = styled.div`
@@ -38,7 +42,7 @@ export const Trigger = styled.button`
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 20px;
+  padding: 12px 22px;
   width: 100%;
   background: #7255c1;
   border: none;
@@ -73,4 +77,8 @@ export const DropdownItem = styled.button`
   &:not(:last-child) {
     border-bottom: 1px solid #3a3a3a;
   }
+`;
+
+export const AIDropdownItem = styled(DropdownItem)`
+  ${animatedGradientBackground}
 `;

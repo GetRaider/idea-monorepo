@@ -21,6 +21,7 @@ import {
   EmptyState,
 } from "./SummarySection.styles";
 import { ChevronDownIcon } from "@/components/Icons";
+import { AnalyticsData, Timeframe } from "@/services/api/analytics.api.service";
 
 export function SummarySection({
   analytics,
@@ -141,16 +142,6 @@ export function SummarySection({
     </Section>
   );
 }
-
-export interface AnalyticsData {
-  summary: string;
-  insights: string[];
-  risks: string[];
-  recommendations: string[];
-  aiGenerated: boolean;
-}
-
-export type Timeframe = "all" | "week" | "month" | "quarter";
 
 interface SummarySectionProps {
   analytics: AnalyticsData | null;

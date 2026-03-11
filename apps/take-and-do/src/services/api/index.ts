@@ -1,3 +1,4 @@
+import { AnalyticsApiService } from "./analytics.api.service";
 import { FoldersApiService } from "./folders.api.service";
 import { LabelsApiService } from "./labels.api.service";
 import { TaskBoardsApiService } from "./task-boards.api.service";
@@ -8,4 +9,5 @@ export const apiServices = {
   folders: new FoldersApiService(),
   labels: new LabelsApiService(),
   taskBoards: new TaskBoardsApiService(),
+  analytics: new AnalyticsApiService(),
 };

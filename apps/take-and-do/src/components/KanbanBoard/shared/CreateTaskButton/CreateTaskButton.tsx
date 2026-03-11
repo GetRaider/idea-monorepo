@@ -5,11 +5,13 @@ import Image from "next/image";
 import { ChevronDownIcon } from "@/components/Icons";
 
 import {
+  AIDropdownItem,
   DropdownItem,
   DropdownMenu,
   Trigger,
   Wrapper,
 } from "./CreateTaskButton.styles";
+import { Separator } from "@radix-ui/themes";
 
 interface CreateTaskButtonProps {
   onManualCreate?: () => void;
@@ -27,8 +29,8 @@ export function CreateTaskButton({
         Create Task
       </Trigger>
       <DropdownMenu>
+        <DropdownItem onClick={onManualCreate}>Compose Manually</DropdownItem>
         <DropdownItem onClick={onAICreate}>Compose with AI</DropdownItem>
-        <DropdownItem onClick={onManualCreate}>Manually</DropdownItem>
       </DropdownMenu>
     </Wrapper>
   );

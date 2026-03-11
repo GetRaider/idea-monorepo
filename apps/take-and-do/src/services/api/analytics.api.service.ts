@@ -1,3 +1,4 @@
+import { AnalyticsStats } from "@/lib/ai";
 import { BaseApiService } from "./base-api.service";
 
 export class AnalyticsApiService extends BaseApiService {
@@ -5,8 +6,20 @@ export class AnalyticsApiService extends BaseApiService {
     super("/analytics");
   }
 
-  async get(): Promise<Folder[]> {
-    const response = await this.get<Folder[]>();
-    return response.data.map(normalizeFolder);
+  async getStatsByTimeframe(timeframe: Timeframe): Promise<AnalyticsData[]> {
+    const response = await this.get<AnalyticsData[]>({
+      queries: { timeframe },
+    });
+    return response.data;
   }
 }
+
+export interface AnalyticsData {
+  summary: string;
+  insights: string[];
+  risks: string[];
+  recommendations: string[];
+  aiGenerated: boolean;
+}
+
+export type Timeframe = "all" | "week" | "month" | "quarter";

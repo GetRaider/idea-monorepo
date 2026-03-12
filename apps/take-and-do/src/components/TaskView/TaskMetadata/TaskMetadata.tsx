@@ -339,6 +339,7 @@ export function TaskMetadata({
             }}
             placeholder="Search or create..."
             autoFocus={isLabelDropdownOpen}
+            maxLength={32}
           />
           {availableLabels
             .filter(

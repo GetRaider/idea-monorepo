@@ -44,8 +44,9 @@ export const ModalTitle = styled.h2`
   margin: 0;
 `;
 
-
-export const TextArea = styled.textarea`
+export const TextArea = styled.textarea.attrs({
+  maxLength: 700,
+})`
   width: 100%;
   min-height: 200px;
   padding: 12px;
@@ -79,7 +80,6 @@ export const ButtonGroup = styled.div`
   gap: 12px;
   justify-content: flex-end;
 `;
-
 
 export const CreateButton = styled.button`
   padding: 10px 20px;
@@ -123,4 +123,3 @@ export const LoadingText = styled.div`
   font-size: 16px;
   font-weight: 500;
 `;
-

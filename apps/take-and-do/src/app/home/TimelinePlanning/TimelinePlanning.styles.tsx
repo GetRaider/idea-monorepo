@@ -3,6 +3,8 @@
 import styled from "styled-components";
 import Link from "next/link";
 
+import { Input } from "@/components/Input";
+
 export const Section = styled.div`
   background: #1a1a1a;
   border: 1px solid #2a2a2a;
@@ -40,19 +42,10 @@ export const DateInputWrapper = styled.div`
   align-items: center;
 `;
 
-export const DateInput = styled.input`
+export const DateInput = styled(Input)`
+  width: auto;
   padding: 6px 12px;
-  background: #2a2a2a;
-  border: 1px solid #3a3a3a;
-  border-radius: 6px;
-  color: #fff;
-  font-size: 14px;
   cursor: pointer;
-  outline: none;
-
-  &:focus {
-    border-color: #667eea;
-  }
 
   &::-webkit-calendar-picker-indicator {
     filter: invert(1);

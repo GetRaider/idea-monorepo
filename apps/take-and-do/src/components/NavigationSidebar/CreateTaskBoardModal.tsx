@@ -45,7 +45,9 @@ export function CreateTaskBoardModal({
       <ModalContainer onClick={(e) => e.stopPropagation()}>
         <ModalHeader>
           <ModalTitle>Create Task Board</ModalTitle>
-          <CloseButton onClick={onClose}><CloseIcon /></CloseButton>
+          <CloseButton onClick={onClose}>
+            <CloseIcon />
+          </CloseButton>
         </ModalHeader>
 
         <form onSubmit={handleSubmit}>
@@ -59,6 +61,7 @@ export function CreateTaskBoardModal({
               placeholder="Enter task board name..."
               autoFocus
               required
+              maxLength={32}
             />
           </FormGroup>
 

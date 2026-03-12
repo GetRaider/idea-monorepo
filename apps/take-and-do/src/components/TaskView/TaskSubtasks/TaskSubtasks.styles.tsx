@@ -1,5 +1,7 @@
 import styled from "styled-components";
 
+import { Input } from "@/components/Input";
+
 export const SubtasksSection = styled.div`
   margin: 0 24px 32px 24px;
   background: #1a1a1a;
@@ -107,20 +109,7 @@ export const SubtaskContent = styled.div`
   text-overflow: ellipsis;
 `;
 
-export const SubtaskInput = styled.input`
-  width: 100%;
-  padding: 10px 12px;
-  background: #2a2a2a;
-  border: 1px solid #3a3a3a;
-  border-radius: 6px;
-  color: #fff;
-  font-size: 14px;
-  outline: none;
-
-  &:focus {
-    border-color: #667eea;
-  }
-`;
+export const SubtaskInput = styled(Input)``;
 
 export const EmptySubtasksMessage = styled.div`
   color: #666;

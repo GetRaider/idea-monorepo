@@ -1,5 +1,7 @@
 import styled from "styled-components";
 
+import { Input as BaseInput } from "@/components/Input";
+
 export const ModalOverlay = styled.div`
   position: fixed;
   top: 0;
@@ -65,24 +67,13 @@ export const Label = styled.label`
   margin-bottom: 8px;
 `;
 
-export const Input = styled.input`
-  width: 100%;
-  padding: 10px 12px;
-  background: #2a2a2a;
-  border: 1px solid #3a3a3a;
+export const Input = styled(BaseInput)`
   border-radius: 8px;
-  color: #fff;
-  font-size: 14px;
-  outline: none;
   transition: all 0.2s;
 
   &:focus {
     border-color: #7255c1;
     background: #252525;
-  }
-
-  &::placeholder {
-    color: #666;
   }
 `;
 

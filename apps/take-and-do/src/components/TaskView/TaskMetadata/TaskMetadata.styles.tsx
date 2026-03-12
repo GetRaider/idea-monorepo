@@ -1,5 +1,7 @@
 import { styled } from "styled-components";
 
+import { Input } from "@/components/Input";
+
 export const MetadataContainer = styled.div`
   display: flex;
   align-items: center;
@@ -33,19 +35,9 @@ export const MetadataItem = styled.button`
   }
 `;
 
-export const MetadataInput = styled.input<{ $width?: string }>`
-  font-size: 14px;
-  color: #fff;
-  background: #2a2a2a;
-  border: 1px solid #3a3a3a;
-  border-radius: 6px;
+export const MetadataInput = styled(Input)<{ $width?: string }>`
   padding: 4px 8px;
   width: ${(props) => props.$width || "80px"};
-  outline: none;
-
-  &:focus {
-    border-color: #667eea;
-  }
 `;
 
 export const MetadataIcon = styled.span`
@@ -139,7 +131,7 @@ export const LabelDropdownItem = styled.button<{ $isSelected?: boolean }>`
   }
 `;
 
-export const LabelDropdownInput = styled.input`
+export const LabelDropdownInput = styled(Input)`
   width: 100%;
   padding: 10px 12px;
   background: transparent;
@@ -212,21 +204,6 @@ export const AddTagButton = styled.button`
     background: #2a2a2a;
     border-color: #4a4a4a;
     color: #888;
-  }
-`;
-
-export const TagInput = styled.input`
-  font-size: 12px;
-  color: #fff;
-  background: #2a2a2a;
-  border: 1px solid #3a3a3a;
-  border-radius: 6px;
-  padding: 4px 10px;
-  width: 100px;
-  outline: none;
-
-  &:focus {
-    border-color: #667eea;
   }
 `;
 

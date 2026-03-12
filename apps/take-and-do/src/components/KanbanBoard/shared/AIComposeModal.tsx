@@ -14,6 +14,7 @@ import {
   LoadingOverlay,
   LoadingText,
 } from "./AIComposeModal.styles";
+import { CharCounter } from "@/components/Labels/CharCounter.styles";
 
 interface AIComposeModalProps {
   isOpen: boolean;
@@ -73,6 +74,9 @@ export function AIComposeModal({
           disabled={isComposing}
           autoFocus
         />
+        <CharCounter $nearLimit={text.length > 600}>
+          {text.length} / {700}
+        </CharCounter>
         <ButtonGroup>
           <SecondaryButton onClick={handleClose} disabled={isComposing}>
             Cancel

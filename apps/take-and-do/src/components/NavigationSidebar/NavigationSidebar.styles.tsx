@@ -1,4 +1,5 @@
 import styled from "styled-components";
+import { Input } from "../Input";
 
 export const NavigationSidebarContainer = styled.aside<{ $isOpen: boolean }>`
   width: 280px;
@@ -25,11 +26,13 @@ export const Search = styled.div`
   background: #2a2a2a;
   border: 1px solid #3a3a3a;
   border-radius: 8px;
-  padding: 8px 12px;
+  padding: 1px 8px;
   color: #888;
 `;
 
-export const SearchInput = styled.input`
+export const SearchInput = styled(Input).attrs({
+  maxLength: 64,
+})`
   flex: 1;
   background: transparent;
   border: none;

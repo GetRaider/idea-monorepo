@@ -1,6 +1,8 @@
 import styled from "styled-components";
 import { SecondaryButton } from "../Buttons";
 
+import { Input } from "@/components/Input";
+
 export const TaskViewOverlay = styled.div`
   position: fixed;
   top: 0;
@@ -167,23 +169,16 @@ export const TaskTitle = styled.h2`
   }
 `;
 
-export const TaskTitleInput = styled.input`
+export const TaskTitleInput = styled(Input)`
   font-size: 18px;
   font-weight: 600;
-  color: #fff;
   margin: 0;
   line-height: 1.4;
+  width: auto;
   flex: 1;
-  background: #2a2a2a;
-  border: 1px solid #3a3a3a;
   border-radius: 4px;
   padding: 4px 8px;
-  outline: none;
   scroll-snap-type: x mandatory; /* this will do the magic for parent */
-
-  &:focus {
-    border-color: #667eea;
-  }
 `;
 
 export const TaskDescription = styled.p`
@@ -453,18 +448,6 @@ export const CommentInputWrapper = styled.div`
   padding: 12px;
 `;
 
-export const CommentInput = styled.input`
-  flex: 1;
-  background: transparent;
-  border: none;
-  color: #fff;
-  font-size: 14px;
-  outline: none;
-
-  &::placeholder {
-    color: #666;
-  }
-`;
 
 export const AttachIconButton = styled.button`
   background: none;

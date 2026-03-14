@@ -5,6 +5,8 @@ import {
   getAllTaskBoards,
   createTaskBoard,
   getTaskBoardById,
+  updateTaskBoard,
+  deleteTaskBoard,
 } from "@/lib/db/queries";
 import { TaskBoard } from "@/types/workspace";
 
@@ -20,6 +22,51 @@ export async function GET(request: NextRequest) {
   } catch {
     return NextResponse.json(
       { error: "Failed to fetch task boards" },
+      { status: 500 },
+    );
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get("id");
+
+  if (!id) {
+    return NextResponse.json({ error: "id is required" }, { status: 400 });
+  }
+
+  try {
+    const body = await request.json();
+    const { name } = body;
+
+    if (!name || typeof name !== "string" || !name.trim()) {
+      return NextResponse.json({ error: "Name is required" }, { status: 400 });
+    }
+
+    const updated = await updateTaskBoard(id, { name: name.trim() });
+    return NextResponse.json(updated);
+  } catch {
+    return NextResponse.json(
+      { error: "Failed to update task board" },
+      { status: 500 },
+    );
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get("id");
+
+  if (!id) {
+    return NextResponse.json({ error: "id is required" }, { status: 400 });
+  }
+
+  try {
+    await deleteTaskBoard(id);
+    return new NextResponse(null, { status: 204 });
+  } catch {
+    return NextResponse.json(
+      { error: "Failed to delete task board" },
       { status: 500 },
     );
   }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { ReactNode, useEffect, useRef, useState } from "react";
 
 import {
   ChevronIcon,
@@ -8,18 +8,23 @@ import {
   DropdownMenu,
   DropdownTrigger,
   DropdownWrapper,
+  TriggerWrapper,
 } from "./Dropdown.styles";
 
 export interface DropdownOption<T extends string = string> {
   label: string;
   value: T;
+  danger?: boolean;
 }
 
 interface DropdownProps<T extends string = string> {
   options: DropdownOption<T>[];
-  value: T;
+  value?: T;
   onChange: (value: T) => void;
   placeholder?: string;
+  trigger?: ReactNode;
+  onOpenChange?: (isOpen: boolean) => void;
+  className?: string;
 }
 
 export function Dropdown<T extends string = string>({
@@ -27,6 +32,9 @@ export function Dropdown<T extends string = string>({
   value,
   onChange,
   placeholder = "Select...",
+  trigger,
+  onOpenChange,
+  className,
 }: DropdownProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -34,31 +42,43 @@ export function Dropdown<T extends string = string>({
   const selectedLabel =
     options.find((o) => o.value === value)?.label ?? placeholder;
 
+  const updateOpen = (next: boolean) => {
+    setIsOpen(next);
+    onOpenChange?.(next);
+  };
+
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node))
-        setIsOpen(false);
+        updateOpen(false);
     };
 
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  }, [onOpenChange]);
 
   return (
-    <DropdownWrapper ref={wrapperRef}>
-      <DropdownTrigger onClick={() => setIsOpen((prev) => !prev)}>
-        {selectedLabel}
-        <ChevronIcon $open={isOpen}>▼</ChevronIcon>
-      </DropdownTrigger>
+    <DropdownWrapper ref={wrapperRef} className={className}>
+      {trigger ? (
+        <TriggerWrapper onClick={() => updateOpen(!isOpen)}>
+          {trigger}
+        </TriggerWrapper>
+      ) : (
+        <DropdownTrigger onClick={() => updateOpen(!isOpen)}>
+          {selectedLabel}
+          <ChevronIcon $open={isOpen}>▼</ChevronIcon>
+        </DropdownTrigger>
+      )}
       {isOpen && (
         <DropdownMenu>
           {options.map((option) => (
             <DropdownItem
               key={option.value}
               $active={option.value === value}
+              $danger={option.danger}
               onClick={() => {
                 onChange(option.value);
-                setIsOpen(false);
+                updateOpen(false);
               }}
             >
               {option.label}

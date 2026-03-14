@@ -72,9 +72,11 @@ export class TasksApiService extends BaseApiService {
     });
   }
 
-  async getByTaskBoard(taskBoardId: string): Promise<Task[]> {
-    const tasks = await super.get<Task[]>({ queries: { taskBoardId } });
-    return tasks.data.map((task: Task) => normalizeTask(task));
+  async getByBoardId(boardId: string): Promise<Task[]> {
+    const response = await super.get<Task[]>({
+      queries: { taskBoardId: boardId },
+    });
+    return response.data.map((task: Task) => normalizeTask(task));
   }
 
   async getById(taskId: string): Promise<Task> {

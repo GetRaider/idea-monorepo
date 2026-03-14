@@ -17,9 +17,8 @@ export type { Task };
 interface KanbanBoardProps {
   currentView?: string;
   workspaceTitle?: string;
-  taskBoardId?: string;
+  taskBoardId: string;
   folderId?: string;
-  taskBoardNameMap?: Record<string, string>;
 }
 
 function getWorkspaceTitle(boardView: string, workspaceTitle: string): string {
@@ -35,7 +34,7 @@ export function KanbanBoard({
   currentView = "today",
   workspaceTitle = "Tasks",
   folderId,
-  taskBoardNameMap = {},
+  taskBoardId,
 }: KanbanBoardProps) {
   const isScheduleWorkspace = isScheduleString(currentView);
 
@@ -52,7 +51,6 @@ export function KanbanBoard({
         }
         workspaceTitle={title}
         folderId={folderId}
-        taskBoardNameMap={taskBoardNameMap}
       />
     );
   }
@@ -60,9 +58,9 @@ export function KanbanBoard({
   // Use SingleKanbanBoard for individual boards
   return (
     <SingleKanbanBoard
+      boardId={taskBoardId}
       boardName={String(currentView)}
       workspaceTitle={title}
-      taskBoardNameMap={taskBoardNameMap}
     />
   );
 }

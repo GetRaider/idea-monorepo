@@ -22,7 +22,7 @@ import {
 } from "./shared/dataLoaders";
 import { handleMultipleBoardsTaskStatusChange } from "./shared/taskStatusHandlers";
 import { TaskView } from "../TaskView/TaskView";
-import { SelectBoardModal } from "../NavigationSidebar/SelectBoardModal";
+import { CreateTaskBoardModal } from "../TasksSidebar/CreateBoard/CreateTaskBoardModal";
 import {
   useTaskBoardState,
   updateTaskInColumns,
@@ -539,12 +539,9 @@ export function MultipleKanbanBoard({
         onTaskDelete={handleTaskDelete}
       />
       {showSelectBoardModal && (
-        <SelectBoardModal
-          onClose={() => {
-            setShowSelectBoardModal(false);
-            setIsAIMode(false);
-          }}
-          onSelect={handleBoardSelect}
+        <CreateTaskBoardModal
+          onClose={() => setShowSelectBoardModal(false)}
+          onCreate={handleBoardSelect}
         />
       )}
       <AIComposeModal

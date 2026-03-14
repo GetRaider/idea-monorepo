@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Sidebar } from "@/components/Sidebar/Sidebar";
-import { NavigationSidebar } from "@/components/NavigationSidebar/NavigationSidebar";
+import { TasksSidebar } from "@/components/TasksSidebar/TasksSidebar";
 import { apiServices } from "@/services/api";
 import { Task } from "@/components/KanbanBoard/types";
 import { StatsCards, ProductivityOverview, TimelinePlanning } from ".";
@@ -81,11 +81,6 @@ function HomePage() {
   return (
     <PageContainer>
       <Sidebar onNavigationChange={handleNavigationChange} />
-      <NavigationSidebar
-        isOpen={isNavSidebarOpen}
-        activeView="today"
-        onViewChange={handleViewChange}
-      />
       <MainContent $withNavSidebar={isNavSidebarOpen}>
         <WelcomeSection>
           <Title>Home</Title>

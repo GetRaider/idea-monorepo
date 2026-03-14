@@ -15,6 +15,12 @@ import {
   LoadingText,
 } from "./AIComposeModal.styles";
 import { CharCounter } from "@/components/Labels/CharCounter.styles";
+import {
+  DialogContainer,
+  DialogHeader,
+  DialogOverlay,
+  DialogTitle,
+} from "@/components/Dialogs/Dialog.styles";
 
 interface AIComposeModalProps {
   isOpen: boolean;
@@ -54,19 +60,19 @@ export function AIComposeModal({
   };
 
   return (
-    <ModalOverlay onClick={handleClose}>
-      <ModalContent onClick={(e) => e.stopPropagation()}>
+    <DialogOverlay onClick={handleClose}>
+      <DialogContainer onClick={(e) => e.stopPropagation()}>
         {isComposing && (
           <LoadingOverlay>
             <LoadingText>⚡ Composing task...</LoadingText>
           </LoadingOverlay>
         )}
-        <ModalHeader>
-          <ModalTitle>⚡ Compose Task with AI</ModalTitle>
+        <DialogHeader>
+          <DialogTitle>⚡ Compose Task with AI</DialogTitle>
           <CloseButton onClick={handleClose} disabled={isComposing}>
             <CloseIcon />
           </CloseButton>
-        </ModalHeader>
+        </DialogHeader>
         <TextArea
           value={text}
           onChange={(e) => setText(e.target.value)}
@@ -88,7 +94,7 @@ export function AIComposeModal({
             {isComposing ? "Composing..." : "Compose"}
           </CreateButton>
         </ButtonGroup>
-      </ModalContent>
-    </ModalOverlay>
+      </DialogContainer>
+    </DialogOverlay>
   );
 }

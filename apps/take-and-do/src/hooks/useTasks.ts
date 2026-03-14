@@ -36,7 +36,7 @@ async function getTasks({ date, taskBoardId }: UseTasksParams = {}): Promise<
   Task[]
 > {
   if (date) return apiServices.tasks.getByDate(date);
-  if (taskBoardId) return apiServices.tasks.getByTaskBoard(taskBoardId);
+  if (taskBoardId) return apiServices.tasks.getByBoardId(taskBoardId);
 
   return apiServices.tasks.getAll();
 }

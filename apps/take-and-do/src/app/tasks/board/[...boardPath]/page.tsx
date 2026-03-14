@@ -1,14 +1,16 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { useState, useEffect, use, useRef } from "react";
 import { useRouter, notFound } from "next/navigation";
 import { Sidebar } from "@/components/Sidebar/Sidebar";
-import { NavigationSidebar } from "@/components/NavigationSidebar/NavigationSidebar";
-import { CreateTaskBoardModal } from "@/components/NavigationSidebar/CreateTaskBoardModal";
-import { SingleKanbanBoard } from "@/components/KanbanBoard/SingleKanbanBoard";
+import { TasksSidebar } from "@/components/TasksSidebar/TasksSidebar";
+import { CreateTaskBoardModal } from "@/components/TasksSidebar/CreateBoard/CreateTaskBoardModal";
+import {
+  SingleKanbanBoard,
+  type SingleKanbanBoardRef,
+} from "@/components/KanbanBoard/SingleKanbanBoard";
 import { TaskView } from "@/components/TaskView/TaskView";
 import { apiServices } from "@/services/api";
-import { TaskBoard, Folder } from "@/types/workspace";
 import { Task } from "@/components/KanbanBoard/types";
 import { PageContainer, Main } from "../../../page.styles";
 import {
@@ -20,6 +22,8 @@ import {
   buildScheduleUrl,
   buildBoardUrl,
 } from "../../../../helpers/tasks-routing.helper";
+import { useFolders } from "@/hooks/useFolders";
+import { useBoards } from "@/hooks/useBoards";
 
 interface BoardPageProps {
   params: Promise<{ boardPath: string[] }>;
@@ -29,94 +33,39 @@ export default function BoardPage({ params }: BoardPageProps) {
   const { boardPath } = use(params);
   const router = useRouter();
 
-  const parsed = parseBoardPath(boardPath);
-  if (!parsed) notFound();
+  const { folders, isLoading: isFoldersLoading, setFolders } = useFolders();
+  const {
+    boards: taskBoards,
+    isLoading: isBoardsLoading,
+    setBoards: setTaskBoards,
+  } = useBoards();
 
-  const { boardName, taskKey, subtaskKey } = parsed;
+  const parsedBoardPath = parseBoardPath(boardPath);
+  if (!parsedBoardPath) notFound();
+
+  useEffect(() => {
+    if (!isBoardsLoading && !isFoldersLoading) {
+      setIsReady(true);
+    }
+  }, [isBoardsLoading, isFoldersLoading]);
+
+  const { boardName } = parsedBoardPath;
 
   const [isNavSidebarOpen, setIsNavSidebarOpen] = useState(true);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [taskBoardNameMap, setTaskBoardNameMap] = useState<
-    Record<string, string>
-  >({});
-  const [taskBoards, setTaskBoards] = useState<TaskBoard[]>([]);
-  const [folders, setFolders] = useState<Folder[]>([]);
-  const [isInitialized, setIsInitialized] = useState(false);
+  const [isReady, setIsReady] = useState(false);
   const [boardExists, setBoardExists] = useState(true);
+  const boardRef = useRef<SingleKanbanBoardRef>(null);
 
   // Task view state
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [parentTask, setParentTask] = useState<Task | null>(null);
   const [isLoadingTask, setIsLoadingTask] = useState(false);
 
-  // Fetch boards and folders
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [boards, foldersData] = await Promise.all([
-          apiServices.taskBoards.getAll(),
-          apiServices.folders.getAll(),
-        ]);
-
-        const nameMap: Record<string, string> = {};
-        boards.forEach((board) => {
-          nameMap[board.id] = board.name;
-        });
-
-        setTaskBoardNameMap(nameMap);
-        setTaskBoards(boards);
-        setFolders(foldersData);
-
-        // Check if board exists
-        const boardFound = boards.some((b) => b.name === boardName);
-        setBoardExists(boardFound);
-
-        setIsInitialized(true);
-      } catch (error) {
-        console.error("Failed to fetch data:", error);
-        setIsInitialized(true);
-      }
-    };
-
-    fetchData();
-  }, [boardName]);
-
-  useEffect(() => {
-    if (!taskKey || !isInitialized) return;
-
-    const loadTask = async () => {
-      setIsLoadingTask(true);
-      try {
-        if (subtaskKey) {
-          const [parentResult, subtaskResult] = await Promise.all([
-            apiServices.tasks.getByKey(taskKey),
-            apiServices.tasks.getByKey(subtaskKey),
-          ]);
-          setParentTask(parentResult.task);
-          setSelectedTask(subtaskResult.task);
-        } else {
-          const result = await apiServices.tasks.getByKey(taskKey);
-          setSelectedTask(result.task);
-          setParentTask(result.parent);
-        }
-      } catch (error) {
-        console.error("Failed to load task:", error);
-        router.push(buildBoardUrl(boardName));
-      } finally {
-        setIsLoadingTask(false);
-      }
-    };
-
-    loadTask();
-  }, [taskKey, subtaskKey, isInitialized, boardName, router]);
-
   const handleViewChange = (view: string) => {
-    if (view === "today" || view === "tomorrow") {
-      router.push(buildScheduleUrl(view));
-    } else {
-      // View is a board name
-      router.push(buildBoardUrl(view));
-    }
+    view === "today" || view === "tomorrow"
+      ? router.push(buildScheduleUrl(view))
+      : router.push(buildBoardUrl(view));
   };
 
   const handleNavigationChange = () => {
@@ -131,6 +80,7 @@ export default function BoardPage({ params }: BoardPageProps) {
       window.location.reload();
     } catch (error) {
       console.error("Failed to create task board:", error);
+      // TODO: Use notification toast instead of alert
       alert("Failed to create task board.");
     }
   };
@@ -147,7 +97,6 @@ export default function BoardPage({ params }: BoardPageProps) {
 
   const handleSubtaskClick = (subtask: Task) => {
     if (selectedTask && selectedTask.taskKey && subtask.taskKey) {
-      // Navigate to subtask URL
       router.push(
         buildBoardUrl(boardName, selectedTask.taskKey, subtask.taskKey),
       );
@@ -155,6 +104,7 @@ export default function BoardPage({ params }: BoardPageProps) {
   };
 
   const handleTaskDelete = () => {
+    boardRef.current?.refetch();
     router.push(buildBoardUrl(boardName));
   };
 
@@ -184,17 +134,21 @@ export default function BoardPage({ params }: BoardPageProps) {
     }
   };
 
-  if (!isInitialized) {
+  if (!isReady) {
     return (
       <PageContainer>
         <Sidebar onNavigationChange={handleNavigationChange} />
-        <NavigationSidebar
+        <TasksSidebar
           isOpen={isNavSidebarOpen}
           activeView=""
           onViewChange={handleViewChange}
           onCreateTaskBoard={() => setIsCreateModalOpen(true)}
-          taskBoards={[]}
-          folders={[]}
+          folders={folders}
+          taskBoards={taskBoards}
+          setTaskBoards={setTaskBoards}
+          setFolders={setFolders}
+          isFoldersLoading={isFoldersLoading}
+          isBoardsLoading={isBoardsLoading}
         />
         <Main $withNavSidebar={isNavSidebarOpen}>
           <LoadingContainer>
@@ -209,13 +163,17 @@ export default function BoardPage({ params }: BoardPageProps) {
     return (
       <PageContainer>
         <Sidebar onNavigationChange={handleNavigationChange} />
-        <NavigationSidebar
+        <TasksSidebar
           isOpen={isNavSidebarOpen}
           activeView=""
           onViewChange={handleViewChange}
           onCreateTaskBoard={() => setIsCreateModalOpen(true)}
-          taskBoards={taskBoards}
           folders={folders}
+          taskBoards={taskBoards}
+          setTaskBoards={setTaskBoards}
+          setFolders={setFolders}
+          isFoldersLoading={isFoldersLoading}
+          isBoardsLoading={isBoardsLoading}
         />
         <Main $withNavSidebar={isNavSidebarOpen}>
           <div style={{ padding: "40px", color: "#888" }}>
@@ -229,19 +187,24 @@ export default function BoardPage({ params }: BoardPageProps) {
   return (
     <PageContainer>
       <Sidebar onNavigationChange={handleNavigationChange} />
-      <NavigationSidebar
+      <TasksSidebar
         isOpen={isNavSidebarOpen}
         activeView={boardName}
         onViewChange={handleViewChange}
         onCreateTaskBoard={() => setIsCreateModalOpen(true)}
-        taskBoards={taskBoards}
         folders={folders}
+        taskBoards={taskBoards}
+        setFolders={setFolders}
+        isFoldersLoading={isFoldersLoading}
+        isBoardsLoading={isBoardsLoading}
+        setTaskBoards={setTaskBoards}
       />
       <Main $withNavSidebar={isNavSidebarOpen}>
         <SingleKanbanBoard
-          boardName={boardName}
+          ref={boardRef}
           workspaceTitle={boardName}
-          taskBoardNameMap={taskBoardNameMap}
+          boardId={taskBoards.find((tb) => tb.name === boardName)?.id || ""}
+          boardName={boardName}
           onTaskOpen={handleTaskOpen}
           onTaskClose={handleTaskClose}
           onSubtaskOpen={handleSubtaskOpen}

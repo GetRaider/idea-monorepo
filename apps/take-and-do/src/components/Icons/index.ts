@@ -1,4 +1,5 @@
 export { CalendarIcon } from "./CalendarIcon";
+export { DotsVerticalIcon } from "./DotsVerticalIcon";
 export { CalendarMonthIcon } from "./CalendarMonthIcon";
 export { CheckListIcon } from "./CheckListIcon";
 export { ChevronDownIcon } from "./ChevronDownIcon";

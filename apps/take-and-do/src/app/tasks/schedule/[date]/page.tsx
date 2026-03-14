@@ -3,8 +3,7 @@
 import { useState, useEffect, use } from "react";
 import { notFound, useRouter } from "next/navigation";
 import { Sidebar } from "@/components/Sidebar/Sidebar";
-import { NavigationSidebar } from "@/components/NavigationSidebar/NavigationSidebar";
-import { CreateTaskBoardModal } from "@/components/NavigationSidebar/CreateTaskBoardModal";
+import { TasksSidebar } from "@/components/TasksSidebar/TasksSidebar";
 import { MultipleKanbanBoard } from "@/components/KanbanBoard/MultipleKanbanBoard";
 import { apiServices } from "@/services/api";
 import { TaskBoard, Folder } from "@/types/workspace";
@@ -20,6 +19,7 @@ import {
   buildBoardUrl,
   ScheduleDate,
 } from "../../../../helpers/tasks-routing.helper";
+import { CreateTaskBoardModal } from "@/components/TasksSidebar/CreateBoard/CreateTaskBoardModal";
 
 interface SchedulePageProps {
   params: Promise<{ date: string }>;
@@ -115,12 +115,16 @@ export default function SchedulePage({ params }: SchedulePageProps) {
     return (
       <PageContainer>
         <Sidebar onNavigationChange={handleNavigationChange} />
-        <NavigationSidebar
+        <TasksSidebar
           isOpen={isNavSidebarOpen}
           activeView=""
           onViewChange={(view: string) =>
             handleViewChange(view as ScheduleDate)
           }
+          setTaskBoards={setTaskBoards}
+          setFolders={setFolders}
+          isFoldersLoading={false}
+          isBoardsLoading={false}
           onCreateTaskBoard={() => setIsCreateModalOpen(true)}
           taskBoards={[]}
           folders={[]}
@@ -137,13 +141,17 @@ export default function SchedulePage({ params }: SchedulePageProps) {
   return (
     <PageContainer>
       <Sidebar onNavigationChange={handleNavigationChange} />
-      <NavigationSidebar
+      <TasksSidebar
         isOpen={isNavSidebarOpen}
         activeView={date}
         onViewChange={(view: string) => handleViewChange(view as ScheduleDate)}
         onCreateTaskBoard={() => setIsCreateModalOpen(true)}
         taskBoards={taskBoards}
         folders={folders}
+        setTaskBoards={setTaskBoards}
+        setFolders={setFolders}
+        isFoldersLoading={false}
+        isBoardsLoading={false}
       />
       <Main $withNavSidebar={isNavSidebarOpen}>
         <MultipleKanbanBoard

@@ -49,6 +49,24 @@ export async function getTaskBoardsByFolder(
   }));
 }
 
+export async function updateTaskBoard(
+  id: string,
+  data: Partial<Pick<TaskBoard, "name">>,
+): Promise<TaskBoard> {
+  await db
+    .update(taskBoardsTable)
+    .set({ ...data, updatedAt: new Date() })
+    .where(eq(taskBoardsTable.id, id));
+
+  const updated = await getTaskBoardById(id);
+  if (!updated) throw new Error("Failed to retrieve updated task board");
+  return updated;
+}
+
+export async function deleteTaskBoard(id: string): Promise<void> {
+  await db.delete(taskBoardsTable).where(eq(taskBoardsTable.id, id));
+}
+
 export async function createTaskBoard(
   taskBoardData: Omit<TaskBoard, "id" | "createdAt" | "updatedAt">,
 ): Promise<TaskBoard> {

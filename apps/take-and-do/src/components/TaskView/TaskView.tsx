@@ -458,9 +458,7 @@ export function TaskView({
           </TaskViewFooter>
         ) : (
           <TaskViewFooter>
-            <SecondaryButton onClick={handleCancel}>
-              Cancel
-            </SecondaryButton>
+            <SecondaryButton onClick={handleCancel}>Cancel</SecondaryButton>
             <TaskSaveButton
               onClick={handleSaveChanges}
               disabled={isSaving || !hasUnsavedChanges}

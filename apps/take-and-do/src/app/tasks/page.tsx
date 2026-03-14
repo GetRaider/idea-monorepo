@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Sidebar } from "@/components/Sidebar/Sidebar";
-import { NavigationSidebar } from "@/components/NavigationSidebar/NavigationSidebar";
+import { TasksSidebar } from "@/components/TasksSidebar/TasksSidebar";
 import { apiServices } from "@/services/api";
 import { PageContainer, Main } from "../page.styles";
 import {
@@ -47,7 +47,7 @@ export default function TasksPage() {
   return (
     <PageContainer>
       <Sidebar onNavigationChange={handleNavigationChange} />
-      <NavigationSidebar
+      <TasksSidebar
         isOpen={isNavSidebarOpen}
         activeView=""
         taskBoards={[]}

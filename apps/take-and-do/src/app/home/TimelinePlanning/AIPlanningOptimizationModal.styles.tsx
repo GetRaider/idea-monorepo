@@ -63,7 +63,6 @@ export const ModalDescription = styled.h3`
   color: #cbd5e1;
 `;
 
-
 export const OptimizationContent = styled.div`
   display: flex;
   flex-direction: column;

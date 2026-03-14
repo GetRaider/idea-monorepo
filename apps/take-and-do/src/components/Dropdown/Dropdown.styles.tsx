@@ -26,6 +26,12 @@ export const DropdownTrigger = styled.button`
   }
 `;
 
+export const TriggerWrapper = styled.span`
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+`;
+
 export const ChevronIcon = styled.span<{ $open: boolean }>`
   font-size: 10px;
   color: #888;
@@ -51,10 +57,16 @@ export const DropdownMenu = styled.ul`
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 `;
 
-export const DropdownItem = styled.li<{ $active: boolean }>`
+export const DropdownItem = styled.li<{
+  $active: boolean;
+  $danger?: boolean;
+}>`
   padding: 8px 12px;
   font-size: 14px;
-  color: ${({ $active }) => ($active ? "#fff" : "#aaa")};
+  color: ${({ $active, $danger }) => {
+    if ($danger) return "#ef4444";
+    return $active ? "#fff" : "#aaa";
+  }};
   background: ${({ $active }) => ($active ? "#3a3a3a" : "transparent")};
   border-radius: 4px;
   cursor: pointer;
@@ -65,6 +77,6 @@ export const DropdownItem = styled.li<{ $active: boolean }>`
 
   &:hover {
     background: #3a3a3a;
-    color: #fff;
+    color: ${({ $danger }) => ($danger ? "#f87171" : "#fff")};
   }
 `;

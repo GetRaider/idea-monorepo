@@ -15,7 +15,7 @@ import {
   CardContent,
   CardList,
 } from "./ProductivitySummaryModal.styles";
-import type { AnalyticsData } from "../SummarySection/SummarySection";
+import type { AnalyticsData } from "@/services/api/analytics.api.service";
 
 interface ProductivitySummaryModalProps {
   analytics: AnalyticsData;
@@ -37,7 +37,9 @@ export function ProductivitySummaryModal({
       <ModalContent>
         <ModalHeader>
           <ModalTitle>⚡ Productivity Summary</ModalTitle>
-          <CloseButton onClick={onClose}><CloseIcon /></CloseButton>
+          <CloseButton onClick={onClose}>
+            <CloseIcon />
+          </CloseButton>
         </ModalHeader>
 
         <AISection>

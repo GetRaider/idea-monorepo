@@ -62,18 +62,19 @@ export function updateTaskInColumns(
   if (isTopLevelTask) {
     // Remove from old status, add to new status
     for (const status of Object.values(TaskStatus)) {
-      newTasks[status] = newTasks[status].filter((t) => t.id !== updatedTask.id);
+      newTasks[status] = newTasks[status].filter(
+        (task) => task.id !== updatedTask.id,
+      );
     }
     newTasks[updatedTask.status].push(updatedTask);
   } else {
-    // Update subtask within parent
     for (const status of Object.values(TaskStatus)) {
       newTasks[status] = newTasks[status].map((task) => {
-        if (task.subtasks?.some((st) => st.id === updatedTask.id)) {
+        if (task.subtasks?.some((subtask) => subtask.id === updatedTask.id)) {
           return {
             ...task,
-            subtasks: task.subtasks.map((st) =>
-              st.id === updatedTask.id ? updatedTask : st,
+            subtasks: task.subtasks.map((subtask) =>
+              subtask.id === updatedTask.id ? updatedTask : subtask,
             ),
           };
         }
@@ -84,4 +85,3 @@ export function updateTaskInColumns(
 
   return newTasks;
 }
-

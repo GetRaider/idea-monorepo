@@ -82,11 +82,6 @@ export function ScheduleOptimizationModal({
   const [error, setError] = useState<string | null>(null);
   const { tasks, isLoading: isTasksLoading } = useTasks({});
 
-  useEffect(() => {
-    const notDoneTasks = tasks.filter((t) => t.status !== "Done");
-    setSelectedTaskIds(new Set(notDoneTasks.map((t) => t.id)));
-  }, [tasks]);
-
   const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) onClose();
   };
@@ -257,7 +252,7 @@ export function ScheduleOptimizationModal({
           </LoadingContainer>
         )}
         {error && <ErrorState>{error}</ErrorState>}
-        
+
         {exploration && !isExploring && (
           <OptimizationContent>
             <SummarySection>

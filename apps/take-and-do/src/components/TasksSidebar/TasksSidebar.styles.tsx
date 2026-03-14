@@ -1,7 +1,8 @@
-import styled from "styled-components";
+import styled, { css } from "styled-components";
+
 import { Input } from "../Input";
 
-export const NavigationSidebarContainer = styled.aside<{ $isOpen: boolean }>`
+export const TasksSidebarContainer = styled.aside<{ $isOpen: boolean }>`
   width: 280px;
   height: 100vh;
   background: #1e1e1e;
@@ -131,6 +132,91 @@ export const WorkspaceToggle = styled.button`
     background: #2a2a2a;
     color: #fff;
   }
+`;
+
+export const BoardToggle = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: #888;
+  cursor: pointer;
+  transition: color 0.2s;
+  text-align: left;
+  font-size: 14px;
+  flex: 1;
+`;
+
+export const BoardActionsWrapper = styled.div`
+  opacity: 0;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding-right: 12px;
+  padding-left: 4px;
+  color: #888;
+  transition: opacity 0.15s;
+
+  [data-board-actions-trigger] {
+    padding: 4px;
+    border-radius: 4px;
+    transition:
+      background 0.15s,
+      color 0.15s;
+  }
+
+  [data-board-actions-trigger]:hover {
+    background: #3a3a3a;
+    color: #fff;
+  }
+`;
+
+export const BoardRow = styled.div<{ $active?: boolean; $selected?: boolean }>`
+  display: flex;
+  align-items: center;
+  border-radius: 8px;
+  position: relative;
+  background: ${({ $active, $selected }) =>
+    $active || $selected ? "#2a2a2a" : "transparent"};
+  transition: background 0.15s;
+
+  &:hover {
+    background: #2a2a2a;
+  }
+
+  &:hover ${BoardToggle} {
+    color: #fff;
+  }
+
+  &:hover ${BoardActionsWrapper} {
+    opacity: 1;
+  }
+
+  ${({ $active, $selected }) =>
+    ($active || $selected) &&
+    css`
+      ${BoardActionsWrapper} {
+        opacity: 1;
+      }
+
+      ${BoardToggle} {
+        color: #fff;
+      }
+    `}
+
+  &[data-selected] ${BoardToggle} {
+    cursor: default;
+  }
+`;
+
+export const BoardNameInput = styled(Input)`
+  flex: 1;
+  padding: 5px 10px;
+  font-size: 14px;
+  height: 34px;
 `;
 
 export const ChevronWrapper = styled.span<{ $expanded?: boolean }>`

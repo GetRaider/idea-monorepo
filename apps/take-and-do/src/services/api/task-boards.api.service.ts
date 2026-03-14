@@ -32,6 +32,18 @@ export class TaskBoardsApiService extends BaseApiService {
     const response = await this.post<TaskBoard>({ body: taskBoard });
     return normalizeTaskBoard(response.data);
   }
+
+  async update(id: string, name: string): Promise<TaskBoard> {
+    const response = await this.patch<TaskBoard>({
+      queries: { id },
+      body: { name },
+    });
+    return normalizeTaskBoard(response.data);
+  }
+
+  async deleteBoard(id: string): Promise<void> {
+    await this.delete({ queries: { id } });
+  }
 }
 
 function normalizeTaskBoard(board: TaskBoard): TaskBoard {

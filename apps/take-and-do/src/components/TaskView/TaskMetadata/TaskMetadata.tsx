@@ -17,7 +17,7 @@ import {
   AddLabelTag,
   CreateLabelSpan,
 } from "./TaskMetadata.styles";
-import { Task, TaskUpdate } from "../../KanbanBoard/types";
+import { Task, TaskUpdate } from "../../Boards/KanbanBoard/types";
 import { useState, useRef, useEffect } from "react";
 import { apiServices } from "@/services/api";
 

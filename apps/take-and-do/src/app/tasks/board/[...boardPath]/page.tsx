@@ -4,19 +4,19 @@ import { useState, useEffect, use, useRef } from "react";
 import { useRouter, notFound } from "next/navigation";
 import { Sidebar } from "@/components/Sidebar/Sidebar";
 import { TasksSidebar } from "@/components/TasksSidebar/TasksSidebar";
-import { CreateTaskBoardModal } from "@/components/TasksSidebar/CreateBoard/CreateTaskBoardModal";
+import { CreateTaskBoardModal } from "@/components/TasksSidebar/Workspaces/CreateBoard/CreateTaskBoardModal";
 import {
   SingleKanbanBoard,
   type SingleKanbanBoardRef,
-} from "@/components/KanbanBoard/SingleKanbanBoard";
+} from "@/components/Boards/KanbanBoard/SingleKanbanBoard";
 import { TaskView } from "@/components/TaskView/TaskView";
 import { apiServices } from "@/services/api";
-import { Task } from "@/components/KanbanBoard/types";
+import { Task } from "@/components/Boards/KanbanBoard/types";
 import { PageContainer, Main } from "../../../page.styles";
 import {
   LoadingContainer,
   Spinner,
-} from "@/components/KanbanBoard/KanbanBoard.styles";
+} from "@/components/Boards/KanbanBoard/KanbanBoard.styles";
 import {
   parseBoardPath,
   buildScheduleUrl,
@@ -45,22 +45,22 @@ export default function BoardPage({ params }: BoardPageProps) {
 
   useEffect(() => {
     if (!isBoardsLoading && !isFoldersLoading) {
-      setIsReady(true);
+      setIsBoardReady(true);
     }
   }, [isBoardsLoading, isFoldersLoading]);
 
   const { boardName } = parsedBoardPath;
 
   const [isNavSidebarOpen, setIsNavSidebarOpen] = useState(true);
+  const [isWorkspaceCreateModalOpen, setIsWorkspaceCreateModalOpen] =
+    useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [isReady, setIsReady] = useState(false);
-  const [boardExists, setBoardExists] = useState(true);
+  const [isBoardReady, setIsBoardReady] = useState(false);
   const boardRef = useRef<SingleKanbanBoardRef>(null);
 
-  // Task view state
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [parentTask, setParentTask] = useState<Task | null>(null);
-  const [isLoadingTask, setIsLoadingTask] = useState(false);
+  const [isLoadingTask] = useState(false);
 
   const handleViewChange = (view: string) => {
     view === "today" || view === "tomorrow"
@@ -108,7 +108,6 @@ export default function BoardPage({ params }: BoardPageProps) {
     router.push(buildBoardUrl(boardName));
   };
 
-  // Update URL when a task is opened from the KanbanBoard
   const handleTaskOpen = (task: Task) => {
     if (task.taskKey) {
       const newUrl = buildBoardUrl(boardName, task.taskKey);
@@ -116,13 +115,11 @@ export default function BoardPage({ params }: BoardPageProps) {
     }
   };
 
-  // Reset URL when task view is closed
   const handleTaskClose = () => {
     const newUrl = buildBoardUrl(boardName);
     window.history.replaceState(null, "", newUrl);
   };
 
-  // Update URL when a subtask is opened
   const handleSubtaskOpen = (parentTask: Task, subtask: Task) => {
     if (parentTask.taskKey && subtask.taskKey) {
       const newUrl = buildBoardUrl(
@@ -134,7 +131,7 @@ export default function BoardPage({ params }: BoardPageProps) {
     }
   };
 
-  if (!isReady) {
+  if (!isBoardReady) {
     return (
       <PageContainer>
         <Sidebar onNavigationChange={handleNavigationChange} />
@@ -159,7 +156,7 @@ export default function BoardPage({ params }: BoardPageProps) {
     );
   }
 
-  if (!boardExists) {
+  if (!taskBoards.find((board) => board.name === boardName)) {
     return (
       <PageContainer>
         <Sidebar onNavigationChange={handleNavigationChange} />

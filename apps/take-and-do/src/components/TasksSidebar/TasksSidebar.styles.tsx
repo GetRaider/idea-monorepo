@@ -73,10 +73,9 @@ export const WorkspaceContainer = styled.div`
 `;
 
 export const SideBarSectionHeader = styled.div`
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 800;
   color: #666;
-  text-transform: uppercase;
   letter-spacing: 0.5px;
   display: flex;
   align-items: center;

@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db/client";
 import { tasks } from "@/lib/db/modules/task/task.schema";
-import { TaskStatus, TaskPriority } from "@/components/KanbanBoard/types";
+import {
+  TaskStatus,
+  TaskPriority,
+} from "@/components/Boards/KanbanBoard/types";
 import { gte, and } from "drizzle-orm";
 
 export async function GET(request: NextRequest) {

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import { Task } from "@/components/KanbanBoard/types";
+import { Task } from "@/components/Boards/KanbanBoard/types";
 import { apiServices } from "@/services/api";
 
 interface UseTasksReturn {

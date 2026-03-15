@@ -17,7 +17,7 @@ import {
   TagDot,
 } from "./TaskCard.styles";
 import { tasksHelper } from "@/helpers/task.helper";
-import { TaskPriority } from "@/components/KanbanBoard/types";
+import { TaskPriority } from "@/components/Boards/KanbanBoard/types";
 
 interface TaskCardProps {
   task: Task;

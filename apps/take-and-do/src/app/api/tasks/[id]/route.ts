@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getTaskById, updateTask, deleteTask } from "@/lib/db/queries";
-import { Task } from "@/components/KanbanBoard/types";
+import { Task } from "@/components/Boards/KanbanBoard/types";
 
 // Serialized task type for JSON response
 interface SerializedTask {

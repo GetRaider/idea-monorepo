@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Task } from "@/components/KanbanBoard/types";
+import { Task } from "@/components/Boards/KanbanBoard/types";
 import { apiServices } from "@/services/api";
 import { tasksHelper } from "@/helpers/task.helper";
 import { CloseIcon } from "@/components/Icons";

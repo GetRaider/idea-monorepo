@@ -4,7 +4,7 @@ import styled, { css } from "styled-components";
 import {
   animatedGradientBackground,
   animatedGradientHover,
-} from "./animatedGradient";
+} from "../../../components/AnimatedGradient.styles";
 
 export const Section = styled.div`
   background: #1a1a1a;

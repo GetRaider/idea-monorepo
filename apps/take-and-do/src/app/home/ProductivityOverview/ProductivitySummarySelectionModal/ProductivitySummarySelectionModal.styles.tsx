@@ -4,7 +4,7 @@ import styled, { css } from "styled-components";
 import {
   animatedGradientBackground,
   animatedGradientHover,
-} from "./animatedGradient";
+} from "../../../../components/AnimatedGradient.styles";
 import { SecondaryButton } from "@/components/Buttons";
 
 export const ModalOverlay = styled.div`
@@ -66,7 +66,6 @@ export const ModalDescription = styled.h3`
   color: #cbd5e1;
   line-height: 1.5;
 `;
-
 
 export const OptionsContainer = styled.div`
   display: flex;

@@ -1,4 +1,8 @@
-import { Task, TaskPriority, TaskUpdate } from "@/components/KanbanBoard/types";
+import {
+  Task,
+  TaskPriority,
+  TaskUpdate,
+} from "@/components/Boards/KanbanBoard/types";
 import { BaseApiService } from "./base-api.service";
 import { tasksHelper } from "@/helpers/task.helper";
 

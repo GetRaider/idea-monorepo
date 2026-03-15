@@ -1,6 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback, useImperativeHandle, forwardRef } from "react";
+import {
+  useState,
+  useEffect,
+  useCallback,
+  useImperativeHandle,
+  forwardRef,
+} from "react";
 import {
   BoardContainer,
   Board,
@@ -12,12 +18,12 @@ import { Column } from "./Column/Column";
 import { Toolbar } from "./shared/Toolbar";
 import { TaskStatus, TaskPriority, Task, emptyTaskColumns } from "./types";
 import { handleSingleBoardTaskStatusChange } from "./shared/taskStatusHandlers";
-import { TaskView } from "../TaskView/TaskView";
+import { TaskView } from "../../TaskView/TaskView";
 import {
   useTaskBoardState,
   updateTaskInColumns,
 } from "@/hooks/useTaskBoardState";
-import { EmptyState } from "../EmptyState";
+import { EmptyState } from "../../EmptyState";
 import { AIComposeModal } from "./shared/AIComposeModal";
 import { apiServices } from "@/services/api";
 
@@ -191,15 +197,23 @@ export const SingleKanbanBoard = forwardRef<
     [boardId, setSelectedTask],
   );
 
-  const handleTaskCreated = useCallback((createdTask: Task) => {
-    fetchTasks();
-    setSelectedTask(createdTask);
-  }, [fetchTasks]);
+  const handleTaskCreated = useCallback(
+    (createdTask: Task) => {
+      fetchTasks();
+      setSelectedTask(createdTask);
+    },
+    [fetchTasks],
+  );
 
   const handleTaskDelete = useCallback(() => {
     fetchTasks();
     setSelectedTask(null);
   }, [fetchTasks]);
+
+  const totalTasksLength =
+    tasksByStatus[TaskStatus.TODO].length +
+    tasksByStatus[TaskStatus.IN_PROGRESS].length +
+    tasksByStatus[TaskStatus.DONE].length;
 
   return (
     <>
@@ -216,42 +230,13 @@ export const SingleKanbanBoard = forwardRef<
               <Spinner />
             </LoadingContainer>
           ) : (
-            (() => {
-              const totalTasks =
-                tasksByStatus[TaskStatus.TODO].length +
-                tasksByStatus[TaskStatus.IN_PROGRESS].length +
-                tasksByStatus[TaskStatus.DONE].length;
-
-              return totalTasks === 0 ? (
-                <EmptyStateWrapper>
-                  <EmptyState
-                    title="You have no tasks"
-                    message={`No tasks in ${workspaceTitle}`}
-                  />
-                </EmptyStateWrapper>
-              ) : (
-                <>
-                  <Column
-                    status={TaskStatus.TODO}
-                    tasks={tasksByStatus[TaskStatus.TODO]}
-                    onTaskDrop={handleTaskStatusChange}
-                    onTaskClick={handleTaskClick}
-                  />
-                  <Column
-                    status={TaskStatus.IN_PROGRESS}
-                    tasks={tasksByStatus[TaskStatus.IN_PROGRESS]}
-                    onTaskDrop={handleTaskStatusChange}
-                    onTaskClick={handleTaskClick}
-                  />
-                  <Column
-                    status={TaskStatus.DONE}
-                    tasks={tasksByStatus[TaskStatus.DONE]}
-                    onTaskDrop={handleTaskStatusChange}
-                    onTaskClick={handleTaskClick}
-                  />
-                </>
-              );
-            })()
+            <BoardContent
+              totalTasksLength={totalTasksLength}
+              tasksByStatus={tasksByStatus}
+              handleTaskStatusChange={handleTaskStatusChange}
+              handleTaskClick={handleTaskClick}
+              workspaceTitle={workspaceTitle}
+            />
           )}
         </Board>
       </BoardContainer>
@@ -273,3 +258,53 @@ export const SingleKanbanBoard = forwardRef<
     </>
   );
 });
+
+function BoardContent({
+  totalTasksLength,
+  tasksByStatus,
+  handleTaskStatusChange,
+  handleTaskClick,
+  workspaceTitle,
+}: BoardContentProps) {
+  return totalTasksLength === 0 ? (
+    <EmptyStateWrapper>
+      <EmptyState
+        title="You have no tasks"
+        message={`No tasks in ${workspaceTitle}`}
+      />
+    </EmptyStateWrapper>
+  ) : (
+    <>
+      <Column
+        status={TaskStatus.TODO}
+        tasks={tasksByStatus[TaskStatus.TODO]}
+        onTaskDrop={handleTaskStatusChange}
+        onTaskClick={handleTaskClick}
+      />
+      <Column
+        status={TaskStatus.IN_PROGRESS}
+        tasks={tasksByStatus[TaskStatus.IN_PROGRESS]}
+        onTaskDrop={handleTaskStatusChange}
+        onTaskClick={handleTaskClick}
+      />
+      <Column
+        status={TaskStatus.DONE}
+        tasks={tasksByStatus[TaskStatus.DONE]}
+        onTaskDrop={handleTaskStatusChange}
+        onTaskClick={handleTaskClick}
+      />
+    </>
+  );
+}
+
+interface BoardContentProps {
+  totalTasksLength: number;
+  tasksByStatus: Record<TaskStatus, Task[]>;
+  handleTaskStatusChange: (
+    taskId: string,
+    newStatus: TaskStatus,
+    targetIndex?: number,
+  ) => void;
+  handleTaskClick: (task: Task) => void;
+  workspaceTitle: string;
+}

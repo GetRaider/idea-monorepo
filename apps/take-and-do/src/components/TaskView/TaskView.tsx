@@ -6,7 +6,7 @@ import {
   TaskPriority,
   TaskStatus,
   TaskUpdate,
-} from "../KanbanBoard/types";
+} from "../Boards/KanbanBoard/types";
 import { apiServices } from "@/services/api";
 import { TextEditor } from "../TextEditor/TextEditor";
 import { tasksHelper } from "@/helpers/task.helper";

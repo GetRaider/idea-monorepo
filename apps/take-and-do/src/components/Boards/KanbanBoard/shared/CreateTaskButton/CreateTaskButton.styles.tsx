@@ -3,7 +3,7 @@
 import {
   animatedGradientBackground,
   animatedGradientHover,
-} from "@/app/home/ProductivityOverview/animatedGradient";
+} from "@/components/AnimatedGradient.styles";
 import styled from "styled-components";
 
 export const DropdownMenu = styled.div`

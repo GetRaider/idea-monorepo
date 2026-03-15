@@ -8,9 +8,9 @@ import {
   Input,
   ButtonGroup,
   Button,
-} from "./CreateTaskBoardModal.styles";
+} from "./CreateWorkspaceModal.styles";
 
-export function CreateTaskBoardModal({
+export function CreateWorkspaceModal({
   onClose,
   onCreate,
 }: CreateTaskBoardModalProps) {
@@ -30,12 +30,12 @@ export function CreateTaskBoardModal({
   };
 
   return (
-    <Dialog title="Create Board" onClose={onClose}>
+    <Dialog title="Create Workspace" onClose={onClose}>
       <form onSubmit={handleSubmit}>
         <FormGroup>
-          <Label htmlFor="task-board-name">Name</Label>
+          <Label htmlFor="workspace-name">Name</Label>
           <Input
-            id="task-board-name"
+            id="workspace-name"
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -50,11 +50,7 @@ export function CreateTaskBoardModal({
           <Button type="button" onClick={onClose}>
             Cancel
           </Button>
-          <Button
-            type="submit"
-            $primary
-            disabled={!name.trim() || isCreating}
-          >
+          <Button type="submit" $primary disabled={!name.trim() || isCreating}>
             {isCreating ? "Creating..." : "Save"}
           </Button>
         </ButtonGroup>

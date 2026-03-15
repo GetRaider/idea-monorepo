@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { Task, TaskStatus } from "@/components/KanbanBoard/types";
+import { Task, TaskStatus } from "@/components/Boards/KanbanBoard/types";
 
 interface UseTaskBoardStateReturn {
   selectedTask: Task | null;

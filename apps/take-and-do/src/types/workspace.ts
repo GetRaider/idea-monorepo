@@ -1,4 +1,4 @@
-import { Task } from "@/components/KanbanBoard/types";
+import { Task } from "@/components/Boards/KanbanBoard/types";
 
 export interface Folder {
   id: string;

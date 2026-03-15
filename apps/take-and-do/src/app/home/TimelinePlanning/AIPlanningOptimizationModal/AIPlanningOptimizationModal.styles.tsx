@@ -1,10 +1,7 @@
 "use client";
 
 import styled from "styled-components";
-import {
-  animatedGradientBackground,
-  animatedGradientHover,
-} from "../ProductivityOverview/animatedGradient";
+import { animatedGradientBackground } from "@/components/AnimatedGradient.styles";
 
 export const ModalOverlay = styled.div`
   position: fixed;

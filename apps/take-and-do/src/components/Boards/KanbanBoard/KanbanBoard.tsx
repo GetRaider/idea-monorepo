@@ -37,26 +37,19 @@ export function KanbanBoard({
   taskBoardId,
 }: KanbanBoardProps) {
   const isScheduleWorkspace = isScheduleString(currentView);
+  const isMultipleWorkspace = isScheduleWorkspace || folderId;
 
   const title = getWorkspaceTitle(currentView, workspaceTitle);
 
-  // Use MultipleKanbanBoard for schedules or folders
-  if (isScheduleWorkspace || folderId) {
-    return (
-      <MultipleKanbanBoard
-        scheduleDate={
-          isScheduleWorkspace
-            ? getDateFromScheduleString(currentView)
-            : undefined
-        }
-        workspaceTitle={title}
-        folderId={folderId}
-      />
-    );
-  }
-
-  // Use SingleKanbanBoard for individual boards
-  return (
+  return isMultipleWorkspace ? (
+    <MultipleKanbanBoard
+      scheduleDate={
+        isScheduleWorkspace ? getDateFromScheduleString(currentView) : undefined
+      }
+      workspaceTitle={title}
+      folderId={folderId}
+    />
+  ) : (
     <SingleKanbanBoard
       boardId={taskBoardId}
       boardName={String(currentView)}

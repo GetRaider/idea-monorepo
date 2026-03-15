@@ -4,22 +4,22 @@ import { useState, useEffect, use } from "react";
 import { notFound, useRouter } from "next/navigation";
 import { Sidebar } from "@/components/Sidebar/Sidebar";
 import { TasksSidebar } from "@/components/TasksSidebar/TasksSidebar";
-import { MultipleKanbanBoard } from "@/components/KanbanBoard/MultipleKanbanBoard";
+import { MultipleKanbanBoard } from "@/components/Boards/KanbanBoard/MultipleKanbanBoard";
 import { apiServices } from "@/services/api";
 import { TaskBoard, Folder } from "@/types/workspace";
-import { Task } from "@/components/KanbanBoard/types";
+import { Task } from "@/components/Boards/KanbanBoard/types";
 import { PageContainer, Main } from "../../../page.styles";
 import {
   LoadingContainer,
   Spinner,
-} from "@/components/KanbanBoard/KanbanBoard.styles";
+} from "@/components/Boards/KanbanBoard/KanbanBoard.styles";
 import {
   isValidScheduleDate,
   buildScheduleUrl,
   buildBoardUrl,
   ScheduleDate,
 } from "../../../../helpers/tasks-routing.helper";
-import { CreateTaskBoardModal } from "@/components/TasksSidebar/CreateBoard/CreateTaskBoardModal";
+import { CreateTaskBoardModal } from "@/components/TasksSidebar/Workspaces/CreateBoard/CreateTaskBoardModal";
 
 interface SchedulePageProps {
   params: Promise<{ date: string }>;
@@ -30,7 +30,6 @@ export default function SchedulePage({ params }: SchedulePageProps) {
   const router = useRouter();
   const availableDates: ScheduleDate[] = ["today", "tomorrow"];
 
-  // Validate date param
   if (!isValidScheduleDate(date)) {
     notFound();
   }
@@ -47,6 +46,7 @@ export default function SchedulePage({ params }: SchedulePageProps) {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        // TODO: Use hooks to fetch data
         const [boards, foldersData] = await Promise.all([
           apiServices.taskBoards.getAll(),
           apiServices.folders.getAll(),

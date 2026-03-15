@@ -21,13 +21,13 @@ import {
   loadFolderContent,
 } from "./shared/dataLoaders";
 import { handleMultipleBoardsTaskStatusChange } from "./shared/taskStatusHandlers";
-import { TaskView } from "../TaskView/TaskView";
-import { CreateTaskBoardModal } from "../TasksSidebar/CreateBoard/CreateTaskBoardModal";
+import { TaskView } from "../../TaskView/TaskView";
+import { CreateTaskBoardModal } from "../../TasksSidebar/Workspaces/CreateBoard/CreateTaskBoardModal";
 import {
   useTaskBoardState,
   updateTaskInColumns,
 } from "@/hooks/useTaskBoardState";
-import { EmptyState } from "../EmptyState";
+import { EmptyState } from "../../EmptyState";
 import { AIComposeModal } from "./shared/AIComposeModal";
 import { apiServices } from "@/services/api";
 

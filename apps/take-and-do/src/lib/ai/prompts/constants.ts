@@ -1,4 +1,7 @@
-import { TaskPriority, TaskStatus } from "@/components/KanbanBoard/types";
+import {
+  TaskPriority,
+  TaskStatus,
+} from "@/components/Boards/KanbanBoard/types";
 
 const PRIORITY_VALUES = Object.values(TaskPriority) as string[];
 const STATUS_VALUES = Object.values(TaskStatus) as string[];

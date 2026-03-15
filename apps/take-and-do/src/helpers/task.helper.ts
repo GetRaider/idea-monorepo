@@ -1,4 +1,8 @@
-import { Task, TaskPriority, TaskStatus } from "@/components/KanbanBoard/types";
+import {
+  Task,
+  TaskPriority,
+  TaskStatus,
+} from "@/components/Boards/KanbanBoard/types";
 
 const PRIORITY_NAMES: Record<TaskPriority, string> = {
   [TaskPriority.LOW]: "Low",

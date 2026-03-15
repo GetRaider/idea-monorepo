@@ -2,8 +2,8 @@
 
 import { RefObject } from "react";
 import { TrashIcon, CloseIcon } from "@/components/Icons";
-import { Task, TaskStatus } from "../../KanbanBoard/types";
-import { StatusIcon } from "../../KanbanBoard/Column/Column.styles";
+import { Task, TaskStatus } from "../../Boards/KanbanBoard/types";
+import { StatusIcon } from "../../Boards/KanbanBoard/Column/Column.styles";
 import { CloseButton } from "@/components/Buttons";
 import {
   ModalHeader,

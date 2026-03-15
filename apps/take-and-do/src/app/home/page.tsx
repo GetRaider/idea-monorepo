@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Sidebar } from "@/components/Sidebar/Sidebar";
 import { TasksSidebar } from "@/components/TasksSidebar/TasksSidebar";
 import { apiServices } from "@/services/api";
-import { Task } from "@/components/KanbanBoard/types";
+import { Task } from "@/components/Boards/KanbanBoard/types";
 import { StatsCards, ProductivityOverview, TimelinePlanning } from ".";
 import type { TaskStats } from ".";
 import {

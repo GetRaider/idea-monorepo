@@ -1,5 +1,8 @@
-import { Task } from "@/components/KanbanBoard/types";
-import { TaskPriority, TaskStatus } from "@/components/KanbanBoard/types";
+import { Task } from "@/components/Boards/KanbanBoard/types";
+import {
+  TaskPriority,
+  TaskStatus,
+} from "@/components/Boards/KanbanBoard/types";
 import { Folder, TaskBoard } from "@/types/workspace";
 
 // Mock labels

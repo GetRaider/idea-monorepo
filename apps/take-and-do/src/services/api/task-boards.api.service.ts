@@ -1,4 +1,4 @@
-import { Task } from "@/components/KanbanBoard/types";
+import { Task } from "@/components/Boards/KanbanBoard/types";
 import { tasksHelper } from "@/helpers/task.helper";
 import { TaskBoard } from "@/types/workspace";
 

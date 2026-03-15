@@ -5,7 +5,7 @@ import {
   getTasksByDate,
   createTask,
 } from "@/lib/db/queries";
-import { Task } from "@/components/KanbanBoard/types";
+import { Task } from "@/components/Boards/KanbanBoard/types";
 import { aiServices } from "@/services/ai";
 import { plainTextToHtml } from "@/helpers/task.helper";
 

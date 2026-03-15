@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Task, TaskPriority, TaskStatus } from "../../KanbanBoard/types";
+import { Task, TaskPriority, TaskStatus } from "../../Boards/KanbanBoard/types";
 import { apiServices } from "@/services/api";
-import { StatusIcon } from "../../KanbanBoard/Column/Column.styles";
+import { StatusIcon } from "../../Boards/KanbanBoard/Column/Column.styles";
 import {
   SubtasksSection,
   SubtasksHeader,

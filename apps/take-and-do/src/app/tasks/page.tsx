@@ -9,7 +9,7 @@ import { PageContainer, Main } from "../page.styles";
 import {
   LoadingContainer,
   Spinner,
-} from "@/components/KanbanBoard/KanbanBoard.styles";
+} from "@/components/Boards/KanbanBoard/KanbanBoard.styles";
 import {
   buildBoardUrl,
   buildScheduleUrl,

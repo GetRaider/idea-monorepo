@@ -31,7 +31,7 @@ import {
 } from "./TasksSidebar.styles";
 import { Folder, TaskBoard } from "@/types/workspace";
 import { apiServices } from "@/services/api";
-import { DeleteBoardModal } from "./DeleteBoard/DeleteBoard";
+import { DeleteBoardModal } from "./Workspaces/DeleteBoard/DeleteBoard";
 import { useWorkspaces } from "@/hooks/useWorkspaces";
 import { useFolders } from "@/hooks/useFolders";
 import { useBoards } from "@/hooks/useBoards";
@@ -209,7 +209,7 @@ export function TasksSidebar({
 
         <WorkspaceContainer>
           <SideBarSectionHeader>
-            <span>Boards</span>
+            <span>Workspaces</span>
             <AddButton
               onClick={() => onCreateTaskBoard?.()}
               title="Create Task Board"

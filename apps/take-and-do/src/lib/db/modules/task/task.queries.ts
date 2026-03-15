@@ -3,7 +3,11 @@ import { db } from "../../client";
 import { tasks } from "./task.schema";
 import { taskLabels } from "../taskLabel/taskLabel.schema";
 import { labelsTable } from "../label/label.schema";
-import { Task, TaskPriority, TaskStatus } from "@/components/KanbanBoard/types";
+import {
+  Task,
+  TaskPriority,
+  TaskStatus,
+} from "@/components/Boards/KanbanBoard/types";
 import { generateId } from "../utils";
 import { getTaskBoardById } from "../taskBoard/taskBoard.queries";
 
@@ -328,7 +332,10 @@ export async function getTaskById(taskId: string): Promise<Task | null> {
   const labelIds = taskLabelRows.map((tl) => tl.labelId);
   const labelRows =
     labelIds.length > 0
-      ? await db.select().from(labelsTable).where(inArray(labelsTable.id, labelIds))
+      ? await db
+          .select()
+          .from(labelsTable)
+          .where(inArray(labelsTable.id, labelIds))
       : [];
 
   const taskLabelsMap = new Map<string, string[]>();

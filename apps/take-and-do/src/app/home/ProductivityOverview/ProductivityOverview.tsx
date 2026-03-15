@@ -32,8 +32,8 @@ import {
   LoadingContainer,
   Spinner,
 } from "./ProductivityOverview.styles";
-import { ProductivitySummaryModal } from "./ProductivitySummaryModal";
-import { ProductivitySummarySelectionModal } from "./ProductivitySummarySelectionModal";
+import { ProductivitySummaryModal } from "./ProductivitySummaryModal/ProductivitySummaryModal";
+import { ProductivitySummarySelectionModal } from "./ProductivitySummarySelectionModal/ProductivitySummarySelectionModal";
 import type { AnalyticsStats } from "@/lib/ai";
 import { EmptyState } from "@/components/EmptyState";
 import { Dropdown } from "@/components/Dropdown";

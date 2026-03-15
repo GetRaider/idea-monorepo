@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getTaskByKey } from "@/lib/db/queries";
-import { Task } from "@/components/KanbanBoard/types";
+import { Task } from "@/components/Boards/KanbanBoard/types";
 
 interface SerializedTask {
   id: string;

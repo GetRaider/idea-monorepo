@@ -1,12 +1,5 @@
 import { apiServices } from "@/services/api";
-import {
-  Task,
-  TaskGroup,
-  TaskStatus,
-  toTaskStatus,
-  createTaskGroups,
-} from "../types";
-import { tasksHelper } from "@/helpers/task.helper";
+import { Task, TaskGroup, createTaskGroups } from "../types";
 
 export async function fetchTaskBoardNameMap(): Promise<Record<string, string>> {
   const taskBoards = await apiServices.taskBoards.getAll();
@@ -15,34 +8,6 @@ export async function fetchTaskBoardNameMap(): Promise<Record<string, string>> {
     taskBoardNamesMap[taskBoard.id] = taskBoard.name;
   });
   return taskBoardNamesMap;
-}
-
-export async function loadTaskBoardContent({
-  boardName,
-  taskBoardNamesMap,
-  setTasks,
-}: {
-  boardName: string;
-  taskBoardNamesMap: Record<string, string>;
-  setTasks: (tasks: Record<TaskStatus, Task[]>) => void;
-}): Promise<void> {
-  const targetEntry = Object.entries(taskBoardNamesMap).find(
-    ([, name]) => name === boardName,
-  );
-  const taskBoardId = targetEntry ? targetEntry[0] : undefined;
-
-  let boardTasks: Task[] = [];
-  if (taskBoardId) {
-    boardTasks = await apiServices.taskBoards.getTasks(taskBoardId);
-  }
-
-  const grouped: Record<TaskStatus, Task[]> = {
-    [TaskStatus.TODO]: [],
-    [TaskStatus.IN_PROGRESS]: [],
-    [TaskStatus.DONE]: [],
-  };
-  boardTasks.forEach((task) => grouped[task.status].push(task));
-  setTasks(grouped);
 }
 
 export async function loadScheduledContent({

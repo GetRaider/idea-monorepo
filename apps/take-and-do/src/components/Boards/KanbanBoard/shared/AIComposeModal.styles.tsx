@@ -1,6 +1,6 @@
 "use client";
 
-import styled from "styled-components";
+import styled, { keyframes, css } from "styled-components";
 
 export const ModalOverlay = styled.div`
   position: fixed;
@@ -117,11 +117,22 @@ export const ProgressState = styled.div`
   min-height: 280px;
 `;
 
+const segmentFill = keyframes`
+  from { opacity: 0.5; transform: scaleX(0.95); }
+  to { opacity: 1; transform: scaleX(1); }
+`;
+
+const shimmer = keyframes`
+  0% { opacity: 0.4; }
+  50% { opacity: 1; }
+  100% { opacity: 0.4; }
+`;
+
 export const ProgressBarWrapper = styled.div`
   display: flex;
-  gap: 6px;
+  gap: 8px;
   width: 100%;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 `;
 
 export const ProgressSegment = styled.div<{
@@ -129,19 +140,32 @@ export const ProgressSegment = styled.div<{
   $active?: boolean;
 }>`
   flex: 1;
-  height: 8px;
-  border-radius: 4px;
+  height: 10px;
+  border-radius: 5px;
   background: ${(p) =>
     p.$filled
       ? p.$active
         ? "linear-gradient(90deg, #667eea, #764ba2)"
         : "linear-gradient(90deg, #5a67d8, #6b46c1)"
       : "#2a2a2a"};
-  transition: background 0.25s ease;
+  transform-origin: left center;
+  transition: background 0.3s ease, transform 0.3s ease;
+  ${(p) =>
+    p.$filled &&
+    css`
+      animation: ${segmentFill} 0.35s ease-out forwards;
+    `}
+  ${(p) =>
+    p.$active &&
+    css`
+      box-shadow: 0 0 12px rgba(102, 126, 234, 0.5);
+      animation: ${segmentFill} 0.35s ease-out, ${shimmer} 1.2s ease-in-out infinite;
+    `}
 `;
 
 export const ProgressLabel = styled.div`
-  color: #888;
+  color: #a0a0a0;
   font-size: 14px;
   font-weight: 500;
+  transition: opacity 0.2s ease;
 `;

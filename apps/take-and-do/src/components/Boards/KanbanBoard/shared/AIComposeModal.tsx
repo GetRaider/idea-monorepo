@@ -30,6 +30,12 @@ interface AIComposeModalProps {
 
 const COMPOSE_STEPS = 4;
 const STEP_INTERVAL_MS = 800;
+const STEP_LABELS = [
+  "Analyzing your request...",
+  "Structuring the task...",
+  "Adding details...",
+  "Almost there...",
+];
 
 export function AIComposeModal({
   isOpen,
@@ -100,7 +106,9 @@ export function AIComposeModal({
                   />
                 ))}
               </ProgressBarWrapper>
-              <ProgressLabel>Composing task...</ProgressLabel>
+              <ProgressLabel>
+                {STEP_LABELS[Math.min(progressStep, STEP_LABELS.length - 1)]}
+              </ProgressLabel>
             </ProgressState>
           ) : (
             <>

@@ -85,3 +85,21 @@ export function parseBoardPath(boardPath: string[]): BoardView | null {
     subtaskKey,
   };
 }
+
+/**
+ * Get board name from pathname (e.g. /tasks/board/MyBoard or /tasks/board/MyBoard/task/TASK-1)
+ */
+export function getBoardNameFromPathname(pathname: string): string | null {
+  const match = pathname.match(/^\/tasks\/board\/([^/]+)/);
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+/**
+ * Get active view for sidebar from pathname: "today" | "tomorrow" | boardName | ""
+ */
+export function getActiveViewFromPathname(pathname: string): string {
+  if (pathname.startsWith("/tasks/schedule/today")) return "today";
+  if (pathname.startsWith("/tasks/schedule/tomorrow")) return "tomorrow";
+  const board = getBoardNameFromPathname(pathname);
+  return board ?? "";
+}

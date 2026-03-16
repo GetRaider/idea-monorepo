@@ -1,25 +1,15 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
-import { notFound, useRouter } from "next/navigation";
-import { Sidebar } from "@/components/Sidebar/Sidebar";
-import { TasksSidebar } from "@/components/TasksSidebar/TasksSidebar";
+import { useMemo, use } from "react";
+import { notFound } from "next/navigation";
 import { MultipleKanbanBoard } from "@/components/Boards/KanbanBoard/MultipleKanbanBoard";
-import { apiServices } from "@/services/api";
-import { TaskBoard, Folder } from "@/types/workspace";
 import { Task } from "@/components/Boards/KanbanBoard/types";
-import { PageContainer, Main } from "../../../page.styles";
-import {
-  LoadingContainer,
-  Spinner,
-} from "@/components/Boards/KanbanBoard/KanbanBoard.styles";
 import {
   isValidScheduleDate,
   buildScheduleUrl,
-  buildBoardUrl,
   ScheduleDate,
 } from "../../../../helpers/tasks-routing.helper";
-import { CreateTaskBoardModal } from "@/components/TasksSidebar/Workspaces/CreateBoard/CreateTaskBoardModal";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 
 interface SchedulePageProps {
   params: Promise<{ date: string }>;
@@ -27,70 +17,20 @@ interface SchedulePageProps {
 
 export default function SchedulePage({ params }: SchedulePageProps) {
   const { date } = use(params);
-  const router = useRouter();
-  const availableDates: ScheduleDate[] = ["today", "tomorrow"];
+  const { taskBoards } = useWorkspace();
 
   if (!isValidScheduleDate(date)) {
     notFound();
   }
 
-  const [isNavSidebarOpen, setIsNavSidebarOpen] = useState(true);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [taskBoardNameMap, setTaskBoardNameMap] = useState<
-    Record<string, string>
-  >({});
-  const [taskBoards, setTaskBoards] = useState<TaskBoard[]>([]);
-  const [folders, setFolders] = useState<Folder[]>([]);
-  const [isInitialized, setIsInitialized] = useState(false);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // TODO: Use hooks to fetch data
-        const [boards, foldersData] = await Promise.all([
-          apiServices.taskBoards.getAll(),
-          apiServices.folders.getAll(),
-        ]);
-
-        const nameMap: Record<string, string> = {};
-        boards.forEach((board) => {
-          nameMap[board.id] = board.name;
-        });
-
-        setTaskBoardNameMap(nameMap);
-        setTaskBoards(boards);
-        setFolders(foldersData);
-        setIsInitialized(true);
-      } catch (error) {
-        console.error("Failed to fetch data:", error);
-        setIsInitialized(true);
-      }
-    };
-
-    fetchData();
-  }, []);
-
-  const handleViewChange = (view: ScheduleDate) => {
-    availableDates.includes(view)
-      ? router.push(buildScheduleUrl(view))
-      : router.push(buildBoardUrl(view));
-  };
-
-  const handleNavigationChange = () => {
-    setIsNavSidebarOpen(true);
-  };
-
-  const handleCreateTaskBoard = async (name: string) => {
-    try {
-      await apiServices.taskBoards.create({ name });
-      setIsCreateModalOpen(false);
-      router.push(buildBoardUrl(name));
-      window.location.reload();
-    } catch (error) {
-      console.error("Failed to create task board:", error);
-      alert("Failed to create task board.");
-    }
-  };
+  const taskBoardNameMap = useMemo(
+    () =>
+      taskBoards.reduce<Record<string, string>>((acc, board) => {
+        acc[board.id] = board.name;
+        return acc;
+      }, {}),
+    [taskBoards],
+  );
 
   const handleTaskOpen = (task: Task) => {
     if (task.taskKey) {
@@ -100,8 +40,7 @@ export default function SchedulePage({ params }: SchedulePageProps) {
   };
 
   const handleTaskClose = () => {
-    const newUrl = buildScheduleUrl(date);
-    window.history.replaceState(null, "", newUrl);
+    window.history.replaceState(null, "", buildScheduleUrl(date));
   };
 
   const handleSubtaskOpen = (parentTask: Task, subtask: Task) => {
@@ -111,66 +50,15 @@ export default function SchedulePage({ params }: SchedulePageProps) {
     }
   };
 
-  if (!isInitialized) {
-    return (
-      <PageContainer>
-        <Sidebar onNavigationChange={handleNavigationChange} />
-        <TasksSidebar
-          isOpen={isNavSidebarOpen}
-          activeView=""
-          onViewChange={(view: string) =>
-            handleViewChange(view as ScheduleDate)
-          }
-          setTaskBoards={setTaskBoards}
-          setFolders={setFolders}
-          isFoldersLoading={false}
-          isBoardsLoading={false}
-          onCreateTaskBoard={() => setIsCreateModalOpen(true)}
-          taskBoards={[]}
-          folders={[]}
-        />
-        <Main $withNavSidebar={isNavSidebarOpen}>
-          <LoadingContainer>
-            <Spinner />
-          </LoadingContainer>
-        </Main>
-      </PageContainer>
-    );
-  }
-
   return (
-    <PageContainer>
-      <Sidebar onNavigationChange={handleNavigationChange} />
-      <TasksSidebar
-        isOpen={isNavSidebarOpen}
-        activeView={date}
-        onViewChange={(view: string) => handleViewChange(view as ScheduleDate)}
-        onCreateTaskBoard={() => setIsCreateModalOpen(true)}
-        taskBoards={taskBoards}
-        folders={folders}
-        setTaskBoards={setTaskBoards}
-        setFolders={setFolders}
-        isFoldersLoading={false}
-        isBoardsLoading={false}
-      />
-      <Main $withNavSidebar={isNavSidebarOpen}>
-        <MultipleKanbanBoard
-          scheduleDate={getScheduleDate(date)}
-          workspaceTitle={getWorkspaceTitle(date)}
-          taskBoardNameMap={taskBoardNameMap}
-          onTaskOpen={handleTaskOpen}
-          onTaskClose={handleTaskClose}
-          onSubtaskOpen={handleSubtaskOpen}
-        />
-      </Main>
-
-      {isCreateModalOpen && (
-        <CreateTaskBoardModal
-          onClose={() => setIsCreateModalOpen(false)}
-          onCreate={handleCreateTaskBoard}
-        />
-      )}
-    </PageContainer>
+    <MultipleKanbanBoard
+      scheduleDate={getScheduleDate(date)}
+      workspaceTitle={getScheduleTitle(date)}
+      taskBoardNameMap={taskBoardNameMap}
+      onTaskOpen={handleTaskOpen}
+      onTaskClose={handleTaskClose}
+      onSubtaskOpen={handleSubtaskOpen}
+    />
   );
 }
 
@@ -183,6 +71,6 @@ function getScheduleDate(date: ScheduleDate): Date {
   return now;
 }
 
-function getWorkspaceTitle(date: ScheduleDate): string {
+function getScheduleTitle(date: ScheduleDate): string {
   return date === "today" ? "Today" : "Tomorrow";
 }

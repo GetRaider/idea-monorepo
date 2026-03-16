@@ -1,4 +1,9 @@
-import { useEffect, useState } from "react";
+import {
+  useEffect,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
 
 import { apiServices } from "@/services/api";
 import { Folder, TaskBoard } from "@/types/workspace";
@@ -6,28 +11,28 @@ import { Folder, TaskBoard } from "@/types/workspace";
 interface UseWorkspacesReturn {
   folders: Folder[];
   taskBoards: TaskBoard[];
-  areFoldersLoading: boolean;
-  areBoardsLoading: boolean;
-  setTaskBoards: (taskBoards: TaskBoard[]) => void;
-  setFolders: (folders: Folder[]) => void;
+  isFoldersLoading: boolean;
+  isBoardsLoading: boolean;
+  setFolders: Dispatch<SetStateAction<Folder[]>>;
+  setTaskBoards: Dispatch<SetStateAction<TaskBoard[]>>;
 }
 
 export function useWorkspaces(): UseWorkspacesReturn {
   const [folders, setFolders] = useState<Folder[]>([]);
-  const [areFoldersLoading, setAreFoldersLoading] = useState(true);
+  const [isFoldersLoading, setIsFoldersLoading] = useState(true);
   const [taskBoards, setTaskBoards] = useState<TaskBoard[]>([]);
-  const [areBoardsLoading, setAreBoardsLoading] = useState(true);
+  const [isBoardsLoading, setIsBoardsLoading] = useState(true);
 
   useEffect(() => {
     const fetchWorkspaces = async () => {
-      const [folders, taskBoards] = await Promise.all([
+      const [fetchedFolders, fetchedBoards] = await Promise.all([
         apiServices.folders.getAll(),
         apiServices.taskBoards.getAll(),
       ]);
-      setFolders(folders);
-      setTaskBoards(taskBoards);
-      setAreFoldersLoading(false);
-      setAreBoardsLoading(false);
+      setFolders(fetchedFolders);
+      setTaskBoards(fetchedBoards);
+      setIsFoldersLoading(false);
+      setIsBoardsLoading(false);
     };
     fetchWorkspaces();
   }, []);
@@ -35,9 +40,9 @@ export function useWorkspaces(): UseWorkspacesReturn {
   return {
     folders,
     taskBoards,
-    areFoldersLoading,
-    areBoardsLoading,
-    setTaskBoards,
+    isFoldersLoading,
+    isBoardsLoading,
     setFolders,
+    setTaskBoards,
   };
 }

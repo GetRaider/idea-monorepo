@@ -37,13 +37,23 @@ export async function PATCH(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { name } = body;
+    const { name, folderId } = body;
 
-    if (!name || typeof name !== "string" || !name.trim()) {
-      return NextResponse.json({ error: "Name is required" }, { status: 400 });
+    const updates: { name?: string; folderId?: string | null } = {};
+    if (name !== undefined) {
+      if (typeof name !== "string" || !name.trim()) {
+        return NextResponse.json({ error: "Name must be a non-empty string" }, { status: 400 });
+      }
+      updates.name = name.trim();
+    }
+    if (folderId !== undefined) {
+      updates.folderId = folderId === null || folderId === "" ? null : (folderId as string);
+    }
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json({ error: "No updates provided" }, { status: 400 });
     }
 
-    const updated = await updateTaskBoard(id, { name: name.trim() });
+    const updated = await updateTaskBoard(id, updates);
     return NextResponse.json(updated);
   } catch {
     return NextResponse.json(

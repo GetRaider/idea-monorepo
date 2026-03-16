@@ -39,13 +39,14 @@ export const ChevronIcon = styled.span<{ $open: boolean }>`
   transform: ${({ $open }) => ($open ? "rotate(180deg)" : "rotate(0deg)")};
 `;
 
-export const DropdownMenu = styled.ul`
-  position: absolute;
+export const DropdownMenu = styled.ul<{ $portal?: boolean }>`
+  position: ${(p) => (p.$portal ? "fixed" : "absolute")};
   display: flex;
   flex-direction: column;
   gap: 2px;
-  top: calc(100% + 4px);
-  right: 0;
+  top: ${(p) => (p.$portal ? "0" : "calc(100% + 4px)")};
+  right: ${(p) => (p.$portal ? "auto" : "0")};
+  left: ${(p) => (p.$portal ? "0" : "auto")};
   z-index: 100;
   min-width: 100%;
   background: #2a2a2a;

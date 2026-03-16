@@ -6,14 +6,20 @@ import {
   FormGroup,
   Label,
   Input,
+  TypeSelector,
+  TypeButton,
   ButtonGroup,
   Button,
-} from "./CreateWorkspaceModal.styles";
+} from "./CreateWorkspace.styles";
+
+export type WorkspaceCreateType = "folder" | "board";
 
 export function CreateWorkspaceModal({
   onClose,
-  onCreate,
-}: CreateTaskBoardModalProps) {
+  onCreateFolder,
+  onCreateBoard,
+}: CreateWorkspaceModalProps) {
+  const [type, setType] = useState<WorkspaceCreateType>("board");
   const [name, setName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
 
@@ -23,7 +29,11 @@ export function CreateWorkspaceModal({
 
     setIsCreating(true);
     try {
-      await onCreate(name.trim());
+      if (type === "folder") {
+        await onCreateFolder(name.trim());
+      } else {
+        await onCreateBoard(name.trim());
+      }
     } finally {
       setIsCreating(false);
     }
@@ -33,13 +43,39 @@ export function CreateWorkspaceModal({
     <Dialog title="Create Workspace" onClose={onClose}>
       <form onSubmit={handleSubmit}>
         <FormGroup>
+          <Label>Type</Label>
+          <TypeSelector>
+            <TypeButton
+              type="button"
+              $selected={type === "folder"}
+              onClick={() => setType("folder")}
+            >
+              <img src="/folder.svg" alt="Folder" />
+              Folder
+            </TypeButton>
+            <TypeButton
+              type="button"
+              $selected={type === "board"}
+              onClick={() => setType("board")}
+            >
+              <img src="/kanban-board.svg" alt="Board" />
+              Board
+            </TypeButton>
+          </TypeSelector>
+        </FormGroup>
+
+        <FormGroup>
           <Label htmlFor="workspace-name">Name</Label>
           <Input
             id="workspace-name"
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Enter task board name..."
+            placeholder={
+              type === "folder"
+                ? "Enter folder name..."
+                : "Enter task board name..."
+            }
             autoFocus
             required
             maxLength={32}
@@ -51,7 +87,7 @@ export function CreateWorkspaceModal({
             Cancel
           </Button>
           <Button type="submit" $primary disabled={!name.trim() || isCreating}>
-            {isCreating ? "Creating..." : "Save"}
+            {isCreating ? "Creating..." : "Create"}
           </Button>
         </ButtonGroup>
       </form>
@@ -59,7 +95,8 @@ export function CreateWorkspaceModal({
   );
 }
 
-interface CreateTaskBoardModalProps {
+interface CreateWorkspaceModalProps {
   onClose: () => void;
-  onCreate: (name: string) => void;
+  onCreateFolder: (name: string) => Promise<void>;
+  onCreateBoard: (name: string) => Promise<void>;
 }

@@ -51,11 +51,15 @@ export async function getTaskBoardsByFolder(
 
 export async function updateTaskBoard(
   id: string,
-  data: Partial<Pick<TaskBoard, "name">>,
+  data: Partial<Pick<TaskBoard, "name" | "folderId">>,
 ): Promise<TaskBoard> {
   await db
     .update(taskBoardsTable)
-    .set({ ...data, updatedAt: new Date() })
+    .set({
+      ...(data.name !== undefined && { name: data.name }),
+      ...(data.folderId !== undefined && { folderId: data.folderId ?? null }),
+      updatedAt: new Date(),
+    })
     .where(eq(taskBoardsTable.id, id));
 
   const updated = await getTaskBoardById(id);

@@ -24,6 +24,39 @@ export const Input = styled(BaseInput)`
   }
 `;
 
+export const TypeSelector = styled.div`
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+`;
+
+export const TypeButton = styled.button<{ $selected?: boolean }>`
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px 16px;
+  background: ${(p) => (p.$selected ? "#2a2540" : "#1e1e1e")};
+  border: 1px solid ${(p) => (p.$selected ? "#7255c1" : "#2a2a2a")};
+  border-radius: 8px;
+  color: #e0e0e0;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: ${(p) => (p.$selected ? "#2a2540" : "#252525")};
+    border-color: ${(p) => (p.$selected ? "#7255c1" : "#3a3a3a")};
+  }
+
+  img {
+    width: 20px;
+    height: 20px;
+  }
+`;
+
 export const ButtonGroup = styled.div`
   display: flex;
   justify-content: flex-end;

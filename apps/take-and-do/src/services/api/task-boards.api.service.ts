@@ -33,10 +33,13 @@ export class TaskBoardsApiService extends BaseApiService {
     return normalizeTaskBoard(response.data);
   }
 
-  async update(id: string, name: string): Promise<TaskBoard> {
+  async update(
+    id: string,
+    updates: { name?: string; folderId?: string | null },
+  ): Promise<TaskBoard> {
     const response = await this.patch<TaskBoard>({
       queries: { id },
-      body: { name },
+      body: updates,
     });
     return normalizeTaskBoard(response.data);
   }

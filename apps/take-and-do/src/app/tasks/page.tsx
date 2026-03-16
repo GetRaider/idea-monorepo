@@ -1,11 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Sidebar } from "@/components/Sidebar/Sidebar";
-import { TasksSidebar } from "@/components/TasksSidebar/TasksSidebar";
 import { apiServices } from "@/services/api";
-import { PageContainer, Main } from "../page.styles";
 import {
   LoadingContainer,
   Spinner,
@@ -17,7 +14,6 @@ import {
 
 export default function TasksPage() {
   const router = useRouter();
-  const [isNavSidebarOpen, setIsNavSidebarOpen] = useState(true);
 
   useEffect(() => {
     const redirect = async () => {
@@ -26,13 +22,11 @@ export default function TasksPage() {
           apiServices.taskBoards.getAll(),
           apiServices.folders.getAll(),
         ]);
-        if (boards.length > 0) {
-          router.replace(buildBoardUrl(boards[0].name));
-        } else {
-          router.replace(buildScheduleUrl("today"));
-        }
+        boards.length > 0
+          ? router.replace(buildBoardUrl(boards[0].name))
+          : router.replace(buildScheduleUrl("today"));
       } catch (error) {
-        console.error("Failed to fetch boards:", error);
+        console.error("[TasksPage] Failed to fetch boards:", error);
         router.replace(buildScheduleUrl("today"));
       }
     };
@@ -40,24 +34,9 @@ export default function TasksPage() {
     redirect();
   }, [router]);
 
-  const handleNavigationChange = () => {
-    setIsNavSidebarOpen(true);
-  };
-
   return (
-    <PageContainer>
-      <Sidebar onNavigationChange={handleNavigationChange} />
-      <TasksSidebar
-        isOpen={isNavSidebarOpen}
-        activeView=""
-        taskBoards={[]}
-        folders={[]}
-      />
-      <Main $withNavSidebar={isNavSidebarOpen}>
-        <LoadingContainer>
-          <Spinner />
-        </LoadingContainer>
-      </Main>
-    </PageContainer>
+    <LoadingContainer>
+      <Spinner />
+    </LoadingContainer>
   );
 }

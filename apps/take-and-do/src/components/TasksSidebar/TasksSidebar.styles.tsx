@@ -55,7 +55,7 @@ export const NavItem = styled.button<{ $active?: boolean }>`
   border: none;
   border-radius: 8px;
   color: ${(props) => (props.$active ? "#fff" : "#888")};
-  cursor: pointer;
+  cursor: ${(props) => (props.$active ? "default" : "pointer")};
   transition: all 0.2s;
   text-align: left;
   font-size: 14px;
@@ -66,10 +66,11 @@ export const NavItem = styled.button<{ $active?: boolean }>`
   }
 `;
 
-export const WorkspaceContainer = styled.div`
+export const WorkspaceContainer = styled.div<{ $grow?: boolean }>`
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
+  ${(p) => p.$grow && "flex: 1; min-height: 0;"}
 `;
 
 export const SideBarSectionHeader = styled.div`
@@ -102,10 +103,20 @@ export const AddButton = styled.button`
   }
 `;
 
-export const WorkspaceList = styled.div`
+export const WorkspaceList = styled.div<{ $isDragOver?: boolean }>`
   display: flex;
   flex-direction: column;
   gap: 4px;
+  flex: 1;
+  min-height: 120px;
+  border-radius: 8px;
+  border: 1px dashed ${(p) => (p.$isDragOver ? "#7255c1" : "transparent")};
+  background: ${(p) =>
+    p.$isDragOver ? "rgba(114, 85, 193, 0.12)" : "transparent"};
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+  padding: 2px 0;
 `;
 
 export const WorkspaceItem = styled.div`
@@ -118,12 +129,15 @@ export const WorkspaceToggle = styled.button`
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
+  width: 100%;
   background: transparent;
   border: none;
   border-radius: 8px;
   color: #888;
   cursor: pointer;
-  transition: all 0.2s;
+  transition:
+    background 0.15s,
+    color 0.15s;
   text-align: left;
   font-size: 14px;
 
@@ -197,10 +211,6 @@ export const BoardRow = styled.div<{ $active?: boolean; $selected?: boolean }>`
   ${({ $active, $selected }) =>
     ($active || $selected) &&
     css`
-      ${BoardActionsWrapper} {
-        opacity: 1;
-      }
-
       ${BoardToggle} {
         color: #fff;
       }
@@ -213,9 +223,44 @@ export const BoardRow = styled.div<{ $active?: boolean; $selected?: boolean }>`
 
 export const BoardNameInput = styled(Input)`
   flex: 1;
-  padding: 5px 10px;
+  min-width: 0;
+  padding: 8px 12px;
   font-size: 14px;
-  height: 34px;
+  height: auto;
+  line-height: 1.4;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+
+  &:focus {
+    border-color: #3a3a3a;
+    background: #2a2a2a;
+  }
+`;
+
+export const BoardEditWrap = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  flex: 1;
+  min-width: 0;
+`;
+
+export const BoardEditInput = styled(Input)`
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  font-size: 14px;
+  height: auto;
+  line-height: 1.4;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+
+  &:focus {
+    outline: none;
+  }
 `;
 
 export const ChevronWrapper = styled.span<{ $expanded?: boolean }>`
@@ -239,7 +284,7 @@ export const SubItem = styled.div`
   gap: 8px;
   padding: 6px 12px;
   color: #888;
-  font-size: 13px;
+  font-size: 14px;
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s;
@@ -248,4 +293,132 @@ export const SubItem = styled.div`
     background: #2a2a2a;
     color: #fff;
   }
+`;
+
+export const FolderActionsWrapper = styled.div`
+  opacity: 0;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding-right: 12px;
+  padding-left: 4px;
+  color: #888;
+  transition: opacity 0.15s;
+
+  [data-folder-actions-trigger] {
+    padding: 4px;
+    border-radius: 4px;
+    transition:
+      background 0.15s,
+      color 0.15s;
+  }
+
+  [data-folder-actions-trigger]:hover {
+    background: #3a3a3a;
+    color: #fff;
+  }
+`;
+
+export const FolderNameInput = styled(Input)`
+  flex: 1;
+  min-width: 0;
+  padding: 8px 12px;
+  font-size: 14px;
+  height: auto;
+  line-height: 1.4;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+
+  &:focus {
+    border-color: #3a3a3a;
+    background: #2a2a2a;
+  }
+`;
+
+export const FolderEditWrap = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  flex: 1;
+  min-width: 0;
+`;
+
+export const FolderEditInput = styled(Input)`
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  font-size: 14px;
+  height: auto;
+  line-height: 1.4;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+
+  &:focus {
+    outline: none;
+  }
+`;
+
+export const FolderRow = styled.div<{ $active?: boolean }>`
+  display: flex;
+  align-items: center;
+  width: 100%;
+  border-radius: 8px;
+  transition: background 0.15s;
+
+  & ${WorkspaceToggle} {
+    flex: 1;
+  }
+
+  & ${FolderEditWrap} {
+    flex: 1;
+  }
+
+  & ${FolderNameInput} {
+    flex: 1;
+  }
+
+  &:hover {
+    background: #2a2a2a;
+  }
+
+  &:hover ${WorkspaceToggle} {
+    color: #fff;
+  }
+
+  &:hover ${FolderActionsWrapper} {
+    opacity: 1;
+  }
+
+  ${({ $active }) =>
+    $active &&
+    css`
+      ${FolderActionsWrapper} {
+        opacity: 1;
+      }
+    `}
+`;
+
+export const FolderDropTarget = styled.div<{ $isDragOver?: boolean }>`
+  border-radius: 8px;
+  border: 1px solid ${(p) => (p.$isDragOver ? "#7255c1" : "transparent")};
+  background: ${(p) =>
+    p.$isDragOver ? "rgba(114, 85, 193, 0.15)" : "transparent"};
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+
+  &:hover ${WorkspaceToggle} {
+    background: #2a2a2a;
+    color: #fff;
+  }
+`;
+
+export const RootBoardsDropZone = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 0;
 `;

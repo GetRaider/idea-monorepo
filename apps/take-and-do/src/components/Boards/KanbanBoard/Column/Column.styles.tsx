@@ -6,6 +6,7 @@ export const Column = styled.div`
   flex-direction: column;
   gap: 16px;
   min-width: 320px;
+  min-height: 0;
   margin: 0;
 `;
 
@@ -66,7 +67,7 @@ export const ColumnContent = styled.div<{
   flex: 1;
   position: relative;
   background-color: ${(props) =>
-    props.$isDragOver ? "rgba(245, 158, 11, 0.1)" : "transparent"};
+    props.$isDragOver ? "rgba(114, 85, 193, 0.15)" : "transparent"};
   border-radius: ${(props) => (props.$isDragOver ? "8px" : "0")};
   transition: background-color 0.2s;
   min-height: ${(props) => (props.$isEmpty ? "100px" : "auto")};
@@ -108,9 +109,11 @@ export const ColumnContent = styled.div<{
   }
 `;
 
+const DROP_HIGHLIGHT = "#7255c1";
+
 export const EmptyColumnTopIndicator = styled.div`
   height: 4px;
-  background: #f59e0b;
+  background: ${DROP_HIGHLIGHT};
   border-radius: 2px;
   margin-bottom: 8px;
   transition: all 0.2s ease;
@@ -120,7 +123,7 @@ export const EmptyColumnPlaceholder = styled.div<{ $isDragOver?: boolean }>`
   background: transparent;
   border: ${(props) =>
     props.$isDragOver
-      ? "2px dashed rgba(245, 158, 11, 0.5)"
+      ? `2px dashed ${DROP_HIGHLIGHT}`
       : "1px dashed rgba(42, 42, 42, 0.5)"};
   border-radius: 12px;
   padding: 16px;
@@ -132,14 +135,14 @@ export const EmptyColumnPlaceholder = styled.div<{ $isDragOver?: boolean }>`
   justify-content: center;
   transition: all 0.2s;
   color: ${(props) =>
-    props.$isDragOver ? "#f59e0b" : "rgba(102, 102, 102, 0.5)"};
+    props.$isDragOver ? DROP_HIGHLIGHT : "rgba(102, 102, 102, 0.5)"};
   font-size: 14px;
   opacity: ${(props) => (props.$isDragOver ? 1 : 0.3)};
 `;
 
 export const DropIndicator = styled.div`
   height: 2px;
-  background: #f59e0b;
+  background: ${DROP_HIGHLIGHT};
   border-radius: 1px;
   margin-bottom: 8px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -148,7 +151,7 @@ export const DropIndicator = styled.div`
 
 export const DropIndicatorBetween = styled.div`
   height: 2px;
-  background: #f59e0b;
+  background: ${DROP_HIGHLIGHT};
   border-radius: 1px;
   margin-bottom: 6px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -157,7 +160,7 @@ export const DropIndicatorBetween = styled.div`
 
 export const DropIndicatorEnd = styled.div`
   height: 2px;
-  background: #f59e0b;
+  background: ${DROP_HIGHLIGHT};
   border-radius: 1px;
   margin-top: 8px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);

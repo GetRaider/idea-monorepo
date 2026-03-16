@@ -14,15 +14,14 @@ import {
   Spinner,
   EmptyStateWrapper,
 } from "./KanbanBoard.styles";
-import { Column } from "./Column/Column";
 import { Toolbar } from "./shared/Toolbar";
-import { TaskStatus, TaskPriority, Task, emptyTaskColumns } from "./types";
+import { KanbanColumns } from "./shared/KanbanColumns";
+import { TaskStatus, Task, emptyTaskColumns } from "./types";
 import { handleSingleBoardTaskStatusChange } from "./shared/taskStatusHandlers";
+import { composedDataToTask, createNewTaskTemplate } from "./shared/taskComposeHelpers";
+import { useKanbanTaskHandlers } from "./shared/useKanbanTaskHandlers";
 import { TaskView } from "../../TaskView/TaskView";
-import {
-  useTaskBoardState,
-  updateTaskInColumns,
-} from "@/hooks/useTaskBoardState";
+import { updateTaskInColumns } from "@/hooks/useTaskBoardState";
 import { EmptyState } from "../../EmptyState";
 import { AIComposeModal } from "./shared/AIComposeModal";
 import { apiServices } from "@/services/api";
@@ -63,27 +62,10 @@ export const SingleKanbanBoard = forwardRef<
     selectedTask,
     parentTask,
     setSelectedTask,
-    handleTaskClick: baseHandleTaskClick,
-    handleCloseModal: baseHandleCloseModal,
-    handleSubtaskClick: baseHandleSubtaskClick,
-  } = useTaskBoardState();
-
-  const handleTaskClick = (task: Task) => {
-    baseHandleTaskClick(task);
-    onTaskOpen?.(task);
-  };
-
-  const handleCloseModal = () => {
-    baseHandleCloseModal();
-    onTaskClose?.();
-  };
-
-  const handleSubtaskClick = (subtask: Task) => {
-    if (selectedTask) {
-      onSubtaskOpen?.(selectedTask, subtask);
-    }
-    baseHandleSubtaskClick(subtask);
-  };
+    handleTaskClick,
+    handleCloseModal,
+    handleSubtaskClick,
+  } = useKanbanTaskHandlers({ onTaskOpen, onTaskClose, onSubtaskOpen });
 
   const fetchTasks = useCallback(async () => {
     if (!boardId) return;
@@ -143,16 +125,8 @@ export const SingleKanbanBoard = forwardRef<
       console.error("Cannot create task: taskBoardId not found");
       return;
     }
-    const newTaskTemplate: Task = {
-      id: "",
-      taskBoardId: boardId,
-      summary: "",
-      description: "",
-      status: TaskStatus.TODO,
-      priority: TaskPriority.MEDIUM,
-    };
-    setSelectedTask(newTaskTemplate);
-  }, [boardId]);
+    setSelectedTask(createNewTaskTemplate({ taskBoardId: boardId }));
+  }, [boardId, setSelectedTask]);
 
   const handleCreateTaskWithAI = useCallback(() => {
     setIsAIComposeModalOpen(true);
@@ -164,31 +138,12 @@ export const SingleKanbanBoard = forwardRef<
         console.error("Cannot compose task: taskBoardId not found");
         return;
       }
-
       try {
         const composedData = await apiServices.tasks.composeWithAI(
           text,
           boardId,
         );
-
-        // Convert to Task format (without id, ready for editing)
-        const composedTask: Task = {
-          id: "", // Will be generated when saved
-          taskBoardId: composedData.taskBoardId,
-          taskKey: composedData.taskKey,
-          summary: composedData.summary,
-          description: composedData.description,
-          status: (composedData.status as TaskStatus) || TaskStatus.TODO,
-          priority:
-            (composedData.priority as TaskPriority) || TaskPriority.MEDIUM,
-          labels: composedData.labels,
-          dueDate: composedData.dueDate,
-          estimation: composedData.estimation,
-          scheduleDate: composedData.scheduleDate,
-          subtasks: composedData.subtasks,
-        };
-
-        setSelectedTask(composedTask);
+        setSelectedTask(composedDataToTask(composedData));
       } catch (error) {
         console.error("Failed to compose task with AI:", error);
         throw error;
@@ -224,7 +179,7 @@ export const SingleKanbanBoard = forwardRef<
           onCreateTaskWithAI={handleCreateTaskWithAI}
         />
 
-        <Board>
+        <Board $fillHeight>
           {isLoading ? (
             <LoadingContainer>
               <Spinner />
@@ -274,26 +229,11 @@ function BoardContent({
       />
     </EmptyStateWrapper>
   ) : (
-    <>
-      <Column
-        status={TaskStatus.TODO}
-        tasks={tasksByStatus[TaskStatus.TODO]}
-        onTaskDrop={handleTaskStatusChange}
-        onTaskClick={handleTaskClick}
-      />
-      <Column
-        status={TaskStatus.IN_PROGRESS}
-        tasks={tasksByStatus[TaskStatus.IN_PROGRESS]}
-        onTaskDrop={handleTaskStatusChange}
-        onTaskClick={handleTaskClick}
-      />
-      <Column
-        status={TaskStatus.DONE}
-        tasks={tasksByStatus[TaskStatus.DONE]}
-        onTaskDrop={handleTaskStatusChange}
-        onTaskClick={handleTaskClick}
-      />
-    </>
+    <KanbanColumns
+      tasksByStatus={tasksByStatus}
+      onTaskDrop={handleTaskStatusChange}
+      onTaskClick={handleTaskClick}
+    />
   );
 }
 

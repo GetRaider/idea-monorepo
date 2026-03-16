@@ -104,22 +104,44 @@ export const CreateButton = styled.button`
   }
 `;
 
-export const LoadingOverlay = styled.div`
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(26, 26, 26, 0.9);
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10;
+export const DialogBodyFixed = styled.div`
+  min-height: 280px;
 `;
 
-export const LoadingText = styled.div`
-  color: #fff;
-  font-size: 16px;
+export const ProgressState = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 280px;
+`;
+
+export const ProgressBarWrapper = styled.div`
+  display: flex;
+  gap: 6px;
+  width: 100%;
+  margin-bottom: 20px;
+`;
+
+export const ProgressSegment = styled.div<{
+  $filled?: boolean;
+  $active?: boolean;
+}>`
+  flex: 1;
+  height: 8px;
+  border-radius: 4px;
+  background: ${(p) =>
+    p.$filled
+      ? p.$active
+        ? "linear-gradient(90deg, #667eea, #764ba2)"
+        : "linear-gradient(90deg, #5a67d8, #6b46c1)"
+      : "#2a2a2a"};
+  transition: background 0.25s ease;
+`;
+
+export const ProgressLabel = styled.div`
+  color: #888;
+  font-size: 14px;
   font-weight: 500;
 `;

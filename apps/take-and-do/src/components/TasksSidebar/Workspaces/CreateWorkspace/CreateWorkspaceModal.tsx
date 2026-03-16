@@ -11,6 +11,7 @@ import {
   ButtonGroup,
   Button,
 } from "./CreateWorkspace.styles";
+import { toast } from "sonner";
 
 export type WorkspaceCreateType = "folder" | "board";
 
@@ -34,6 +35,17 @@ export function CreateWorkspaceModal({
       } else {
         await onCreateBoard(name.trim());
       }
+      toast.success(
+        type === "folder"
+          ? "Folder created successfully"
+          : "Board created successfully",
+      );
+    } catch {
+      toast.error(
+        type === "folder"
+          ? "Failed to create folder"
+          : "Failed to create board",
+      );
     } finally {
       setIsCreating(false);
     }

@@ -7,11 +7,13 @@ import {
   TaskStatus,
   TaskUpdate,
 } from "../Boards/KanbanBoard/types";
+import { toast } from "sonner";
 import { apiServices } from "@/services/api";
 import { TextEditor } from "../TextEditor/TextEditor";
 import { tasksHelper } from "@/helpers/task.helper";
 import { TaskViewHeader } from "./TaskViewHeader/TaskViewHeader";
 import { SecondaryButton } from "@/components/Buttons";
+import { ConfirmDialog } from "@/components/Dialogs";
 import {
   TaskViewOverlay,
   TaskViewContainer,
@@ -105,11 +107,12 @@ export function TaskView({
         setTask(updatedTask);
         onTaskUpdate?.(updatedTask);
         setPendingUpdates({});
-        // Reset form values to match updated task
         setTitleValue(updatedTask.summary);
         setDescriptionValue(updatedTask.description || "");
+        toast.success("Task updated");
       } catch (error) {
         console.error("Failed to update task:", error);
+        toast.error("Failed to update task");
       }
     },
     [task, onTaskUpdate],
@@ -273,33 +276,34 @@ export function TaskView({
       setTask(createdTask);
       onTaskCreated?.(createdTask);
       setIsEditingTitle(false);
+      toast.success("Task created");
     } catch (error) {
       console.error("Failed to create task:", error);
+      toast.error("Failed to create task");
     } finally {
       setIsCreatingTask(false);
     }
   };
 
-  const handleDelete = useCallback(async () => {
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const handleDeleteConfirm = useCallback(async () => {
     if (!task || !task.id || isCreating) return;
-
-    if (
-      !confirm(
-        "Are you sure you want to delete this task? This action cannot be undone.",
-      )
-    ) {
-      return;
-    }
-
     try {
       await apiServices.tasks.deleteById(task.id);
       onTaskDelete?.(task.id);
       onClose();
+      toast.success("Task deleted");
     } catch (error) {
       console.error("Failed to delete task:", error);
-      alert("Failed to delete task. Please try again.");
+      toast.error("Failed to delete task");
     }
   }, [task, isCreating, onTaskDelete, onClose]);
+
+  const handleDeleteClick = useCallback(() => {
+    if (!task || !task.id || isCreating) return;
+    setShowDeleteConfirm(true);
+  }, [task, isCreating]);
 
   // Only render if we have a task (either existing or for creation)
   if (!task) return null;
@@ -318,7 +322,7 @@ export function TaskView({
           onStatusClick={handleStatusClick}
           onStatusSelect={handleStatusSelect}
           onClose={onClose}
-          onDelete={handleDelete}
+          onDelete={handleDeleteClick}
           isCreating={isCreating}
         />
         <TaskTitleSection>
@@ -469,6 +473,15 @@ export function TaskView({
           </TaskViewFooter>
         )}
       </TaskViewContainer>
+      {showDeleteConfirm && (
+        <ConfirmDialog
+          title="Delete task?"
+          description="This will permanently delete this task. This action cannot be undone."
+          confirmLabel="Delete task"
+          onConfirm={handleDeleteConfirm}
+          onClose={() => setShowDeleteConfirm(false)}
+        />
+      )}
     </TaskViewOverlay>
   );
 }

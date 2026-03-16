@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { Toaster } from "sonner";
 import "./globals.css";
 import { StyledComponentsRegistry } from "@/lib/styled-components-registry";
 import { Theme } from "@radix-ui/themes";
@@ -31,7 +32,15 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={inter.variable} suppressHydrationWarning>
         <StyledComponentsRegistry>
-          <Theme>{children}</Theme>
+          <Theme>
+            {children}
+            <Toaster
+            theme="dark"
+            position="bottom-right"
+            closeButton
+            toastOptions={{ duration: 5000 }}
+          />
+          </Theme>
         </StyledComponentsRegistry>
       </body>
     </html>

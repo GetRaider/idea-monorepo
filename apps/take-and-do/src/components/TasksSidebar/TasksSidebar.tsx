@@ -38,8 +38,9 @@ const DRAG_BOARD_KEY = "application/x-task-board-id";
 const ROOT_DROP_ID = "__root__";
 const isRootDrop = (id: string) => id === ROOT_DROP_ID;
 import { Folder, TaskBoard } from "@/types/workspace";
+import { toast } from "sonner";
 import { apiServices } from "@/services/api";
-import { DeleteBoardModal } from "./Workspaces/DeleteBoard/DeleteBoard";
+import { ConfirmDialog } from "@/components/Dialogs";
 import { LoadingContainer, Spinner } from "@/app/home/page.styles";
 
 interface TasksSidebarProps {
@@ -76,6 +77,7 @@ export function TasksSidebar({
   const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
   const [editingFolderName, setEditingFolderName] = useState("");
   const [openMenuFolderId, setOpenMenuFolderId] = useState<string | null>(null);
+  const [deletingFolder, setDeletingFolder] = useState<Folder | null>(null);
 
   const handleViewChange = (view: string) => onViewChange?.(view);
 
@@ -98,8 +100,10 @@ export function TasksSidebar({
         setTaskBoards((prev: TaskBoard[]) =>
           prev.map((b: TaskBoard) => (b.id === updated.id ? updated : b)),
         );
+        toast.success("Board renamed");
       } catch (error) {
         console.error("Failed to rename task board:", error);
+        toast.error("Failed to rename board");
       }
     },
     [editingName],
@@ -114,8 +118,10 @@ export function TasksSidebar({
       setTaskBoards((prev: TaskBoard[]) =>
         prev.filter((b: TaskBoard) => b.id !== id),
       );
+      toast.success("Board deleted");
     } catch (error) {
       console.error("Failed to delete task board:", error);
+      toast.error("Failed to delete board");
     }
   };
 
@@ -139,8 +145,10 @@ export function TasksSidebar({
         setFolders((prev) =>
           prev.map((f) => (f.id === updated.id ? updated : f)),
         );
+        toast.success("Folder renamed");
       } catch (error) {
         console.error("Failed to rename folder:", error);
+        toast.error("Failed to rename folder");
       }
     },
     [editingFolderName, setFolders],
@@ -148,20 +156,25 @@ export function TasksSidebar({
 
   const handleFolderAction = (folder: Folder, action: string) => {
     if (action === "edit") handleFolderEditStart(folder);
-    if (action === "delete") {
-      if (window.confirm(`Delete folder "${folder.name}"? Boards inside will move to root.`)) {
-        apiServices.folders
-          .deleteFolder(folder.id)
-          .then(() => {
-            setFolders((prev) => prev.filter((f) => f.id !== folder.id));
-            setTaskBoards((prev) =>
-              prev.map((b) =>
-                b.folderId === folder.id ? { ...b, folderId: undefined } : b,
-              ),
-            );
-          })
-          .catch((err) => console.error("Failed to delete folder:", err));
-      }
+    if (action === "delete") setDeletingFolder(folder);
+  };
+
+  const handleFolderDeleteConfirm = async () => {
+    if (!deletingFolder) return;
+    const folder = deletingFolder;
+    setDeletingFolder(null);
+    try {
+      await apiServices.folders.deleteFolder(folder.id);
+      setFolders((prev) => prev.filter((f) => f.id !== folder.id));
+      setTaskBoards((prev) =>
+        prev.map((b) =>
+          b.folderId === folder.id ? { ...b, folderId: undefined } : b,
+        ),
+      );
+      toast.success("Folder deleted");
+    } catch (err) {
+      console.error("Failed to delete folder:", err);
+      toast.error("Failed to delete folder");
     }
   };
 
@@ -187,8 +200,12 @@ export function TasksSidebar({
             prev.map((b) => (b.id === updated.id ? updated : b)),
           );
           if (folderId && expandedFolder !== folderId) setExpandedFolder(folderId);
+          toast.success("Board moved");
         })
-        .catch((err) => console.error("Failed to move board:", err));
+        .catch((err) => {
+          console.error("Failed to move board:", err);
+          toast.error("Failed to move board");
+        });
     },
     [expandedFolder, setTaskBoards, taskBoards],
   );
@@ -432,10 +449,22 @@ export function TasksSidebar({
       </TasksSidebarContainer>
 
       {deletingBoard && (
-        <DeleteBoardModal
+        <ConfirmDialog
+          title={`Delete "${deletingBoard.name}" board?`}
+          description="This will permanently delete the board and all its tasks. This action cannot be undone."
+          confirmLabel="Delete board"
+          onConfirm={handleDeleteConfirm}
           onClose={() => setDeletingBoard(null)}
-          onDelete={handleDeleteConfirm}
-          boardName={deletingBoard.name}
+        />
+      )}
+
+      {deletingFolder && (
+        <ConfirmDialog
+          title={`Delete "${deletingFolder.name}" folder?`}
+          description="The folder will be removed. Boards inside will move to the root. This action cannot be undone."
+          confirmLabel="Delete folder"
+          onConfirm={handleFolderDeleteConfirm}
+          onClose={() => setDeletingFolder(null)}
         />
       )}
     </>

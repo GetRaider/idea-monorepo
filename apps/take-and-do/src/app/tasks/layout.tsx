@@ -14,6 +14,7 @@ import {
 import { useWorkspaces } from "@/hooks/useWorkspaces";
 import { WorkspaceProvider } from "@/contexts/WorkspaceContext";
 import { apiServices } from "@/services/api";
+import { toast } from "sonner";
 
 export default function TasksLayout({
   children,
@@ -52,8 +53,7 @@ export default function TasksLayout({
       setIsWorkspaceCreateModalOpen(false);
     } catch (error) {
       console.error("[TasksLayout] Failed to create folder:", error);
-      // TODO: Use notification toast
-      alert("Failed to create folder.");
+      toast.error("Failed to create folder.");
     }
   };
 
@@ -65,8 +65,7 @@ export default function TasksLayout({
       window.location.reload();
     } catch (error) {
       console.error("[TasksLayout] Failed to create task board:", error);
-      // TODO: Use notification toast
-      alert("Failed to create task board.");
+      toast.error("Failed to create task board.");
     }
   };
 

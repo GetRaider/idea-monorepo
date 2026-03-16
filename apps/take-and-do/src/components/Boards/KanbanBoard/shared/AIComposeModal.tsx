@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 import { CloseIcon } from "@/components/Icons";
 import { SecondaryButton, CloseButton } from "@/components/Buttons";
 import {
@@ -48,6 +49,7 @@ export function AIComposeModal({
       onClose();
     } catch (error) {
       console.error("Failed to compose task:", error);
+      toast.error("Failed to compose task with AI");
     } finally {
       setIsComposing(false);
     }
@@ -61,7 +63,7 @@ export function AIComposeModal({
 
   return (
     <DialogOverlay onClick={handleClose}>
-      <DialogContainer onClick={(e) => e.stopPropagation()}>
+      <DialogContainer $maxWidth={720} onClick={(e) => e.stopPropagation()}>
         {isComposing && (
           <LoadingOverlay>
             <LoadingText>⚡ Composing task...</LoadingText>

@@ -46,9 +46,13 @@ export async function PATCH(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { name, folderId } = body;
+    const { name, folderId, emoji } = body as {
+      name?: unknown;
+      folderId?: unknown;
+      emoji?: unknown;
+    };
 
-    const updates: { name?: string; folderId?: string | null } = {};
+    const updates: { name?: string; folderId?: string | null; emoji?: string | null } = {};
     if (name !== undefined) {
       if (typeof name !== "string" || !name.trim()) {
         return NextResponse.json({ error: "Name must be a non-empty string" }, { status: 400 });
@@ -63,6 +67,25 @@ export async function PATCH(request: NextRequest) {
       } else {
         return NextResponse.json(
           { error: "folderId must be a string or null" },
+          { status: 400 },
+        );
+      }
+    }
+    if (emoji !== undefined) {
+      if (emoji === null) {
+        updates.emoji = null;
+      } else if (typeof emoji === "string") {
+        const trimmed = emoji.trim();
+        if (!trimmed) {
+          return NextResponse.json(
+            { error: "Emoji must be a non-empty string or null" },
+            { status: 400 },
+          );
+        }
+        updates.emoji = trimmed;
+      } else {
+        return NextResponse.json(
+          { error: "Emoji must be a string or null" },
           { status: 400 },
         );
       }

@@ -9,6 +9,7 @@ export async function getAllTaskBoards(): Promise<TaskBoard[]> {
   return rows.map((row) => ({
     id: row.id,
     name: row.name,
+    emoji: row.emoji,
     folderId: row.folderId || undefined,
     createdAt: new Date(row.createdAt),
     updatedAt: new Date(row.updatedAt),
@@ -27,6 +28,7 @@ export async function getTaskBoardById(
   return {
     id: row.id,
     name: row.name,
+    emoji: row.emoji,
     folderId: row.folderId || undefined,
     createdAt: new Date(row.createdAt),
     updatedAt: new Date(row.updatedAt),
@@ -43,6 +45,7 @@ export async function getTaskBoardsByFolder(
   return rows.map((row) => ({
     id: row.id,
     name: row.name,
+    emoji: row.emoji,
     folderId: row.folderId || undefined,
     createdAt: new Date(row.createdAt),
     updatedAt: new Date(row.updatedAt),
@@ -51,13 +54,14 @@ export async function getTaskBoardsByFolder(
 
 export async function updateTaskBoard(
   id: string,
-  data: Partial<Pick<TaskBoard, "name" | "folderId">>,
+  data: Partial<Pick<TaskBoard, "name" | "folderId" | "emoji">>,
 ): Promise<TaskBoard> {
   await db
     .update(taskBoardsTable)
     .set({
       ...(data.name !== undefined && { name: data.name }),
       ...(data.folderId !== undefined && { folderId: data.folderId ?? null }),
+      ...(data.emoji !== undefined && { emoji: data.emoji }),
       updatedAt: new Date(),
     })
     .where(eq(taskBoardsTable.id, id));
@@ -79,6 +83,7 @@ export async function createTaskBoard(
   await db.insert(taskBoardsTable).values({
     id: taskBoardId,
     name: taskBoardData.name,
+    emoji: taskBoardData.emoji ?? null,
     folderId: taskBoardData.folderId || null,
     createdAt: new Date(),
     updatedAt: new Date(),

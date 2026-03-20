@@ -92,6 +92,8 @@ export const DropdownItem = styled.button<{
   border-radius: 4px;
   cursor: pointer;
   white-space: nowrap;
+  text-align: left;
+  width: 100%;
   transition:
     background 0.15s,
     color 0.15s;

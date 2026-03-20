@@ -38,7 +38,7 @@ export class TaskBoardsApiService extends BaseApiService {
 
   async update(
     id: string,
-    updates: { name?: string; folderId?: string | null },
+    updates: { name?: string; folderId?: string | null; emoji?: string | null },
   ): Promise<TaskBoard> {
     const response = await this.patch<TaskBoard>({
       queries: { id },

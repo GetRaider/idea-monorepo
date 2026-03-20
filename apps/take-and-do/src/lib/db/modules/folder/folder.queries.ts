@@ -9,6 +9,7 @@ export async function createFolder(name: string): Promise<Folder> {
   await db.insert(foldersTable).values({
     id,
     name,
+    emoji: null,
     createdAt: new Date(),
     updatedAt: new Date(),
   });
@@ -22,6 +23,7 @@ export async function getAllFolders(): Promise<Folder[]> {
   return rows.map((row) => ({
     id: row.id,
     name: row.name,
+    emoji: row.emoji,
     createdAt: new Date(row.createdAt),
     updatedAt: new Date(row.updatedAt),
   }));
@@ -37,6 +39,7 @@ export async function getFolderById(id: string): Promise<Folder | undefined> {
   return {
     id: row.id,
     name: row.name,
+    emoji: row.emoji,
     createdAt: new Date(row.createdAt),
     updatedAt: new Date(row.updatedAt),
   };
@@ -44,7 +47,7 @@ export async function getFolderById(id: string): Promise<Folder | undefined> {
 
 export async function updateFolder(
   id: string,
-  data: { name: string },
+  data: { name?: string; emoji?: string | null },
 ): Promise<Folder> {
   const existing = await getFolderById(id);
   if (!existing) {
@@ -53,7 +56,11 @@ export async function updateFolder(
 
   await db
     .update(foldersTable)
-    .set({ name: data.name, updatedAt: new Date() })
+    .set({
+      ...(data.name !== undefined && { name: data.name }),
+      ...(data.emoji !== undefined && { emoji: data.emoji }),
+      updatedAt: new Date(),
+    })
     .where(eq(foldersTable.id, id));
 
   const updated = await getFolderById(id);

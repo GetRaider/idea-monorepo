@@ -45,14 +45,48 @@ export async function PATCH(
       }
       throw error;
     }
-    const { name } = body as { name?: unknown };
-    if (!name || typeof name !== "string" || !name.trim()) {
+    const { name, emoji } = body as { name?: unknown; emoji?: unknown };
+
+    const updates: { name?: string; emoji?: string | null } = {};
+
+    if (name !== undefined) {
+      if (typeof name !== "string" || !name.trim()) {
+        return NextResponse.json(
+          { error: "Name must be a non-empty string" },
+          { status: 400 },
+        );
+      }
+      updates.name = name.trim();
+    }
+
+    if (emoji !== undefined) {
+      if (emoji === null) {
+        updates.emoji = null;
+      } else if (typeof emoji === "string") {
+        const trimmed = emoji.trim();
+        if (!trimmed) {
+          return NextResponse.json(
+            { error: "Emoji must be a non-empty string or null" },
+            { status: 400 },
+          );
+        }
+        updates.emoji = trimmed;
+      } else {
+        return NextResponse.json(
+          { error: "Emoji must be a string or null" },
+          { status: 400 },
+        );
+      }
+    }
+
+    if (Object.keys(updates).length === 0) {
       return NextResponse.json(
-        { error: "Name is required" },
+        { error: "No updates provided" },
         { status: 400 },
       );
     }
-    const updated = await updateFolder(folderId, { name: name.trim() });
+
+    const updated = await updateFolder(folderId, updates);
     return NextResponse.json(updated);
   } catch {
     return NextResponse.json(

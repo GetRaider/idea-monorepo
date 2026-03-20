@@ -31,6 +31,7 @@ import {
   BoardActionsWrapper,
   BoardEditWrap,
   BoardEditInput,
+  EmojiPreview,
   FolderDropTarget,
   FolderRow,
   FolderActionsWrapper,
@@ -52,6 +53,8 @@ import {
   buildScheduleUrl,
 } from "@/helpers/tasks-routing.helper";
 import { useRouter } from "next/navigation";
+import { EmojiPickerField } from "./EmojiPickerField";
+import { useEmojiPickerState } from "./useEmojiPickerState";
 
 interface TasksSidebarProps {
   isOpen: boolean;
@@ -89,6 +92,16 @@ export function TasksSidebar({
   const [editingFolderName, setEditingFolderName] = useState("");
   const [openMenuFolderId, setOpenMenuFolderId] = useState<string | null>(null);
   const [deletingFolder, setDeletingFolder] = useState<Folder | null>(null);
+  const {
+    editingBoardEmoji,
+    setEditingBoardEmoji,
+    openBoardEmojiPickerId,
+    setOpenBoardEmojiPickerId,
+    editingFolderEmoji,
+    setEditingFolderEmoji,
+    openFolderEmojiPickerId,
+    setOpenFolderEmojiPickerId,
+  } = useEmojiPickerState();
 
   const handleViewChange = (view: string) => onViewChange?.(view);
 
@@ -97,30 +110,51 @@ export function TasksSidebar({
 
   const handleEditStart = (board: TaskBoard) => {
     setEditingName(board.name);
+    setEditingBoardEmoji(board.emoji ?? null);
     setEditingBoardId(board.id);
+    setOpenBoardEmojiPickerId(null);
   };
 
   const handleEditBoard = useCallback(
-    async (board: TaskBoard) => {
-      const trimmed = editingName.trim();
+    async (
+      board: TaskBoard,
+      opts?: {
+        emoji?: string | null;
+      },
+    ) => {
+      const trimmedName = editingName.trim();
+      // `opts?.emoji === undefined` means "don't change emoji".
+      // If it's `null`, that's a real "clear emoji" request.
+      const desiredEmoji =
+        opts?.emoji === undefined ? editingBoardEmoji : opts?.emoji ?? null;
+
+      const nameChanged =
+        !!trimmedName && trimmedName !== (board.name ?? "");
+      const emojiChanged = desiredEmoji !== (board.emoji ?? null);
+
       setEditingBoardId(null);
-      if (!trimmed || trimmed === board.name) return;
+      setOpenBoardEmojiPickerId(null);
+
+      if (!nameChanged && !emojiChanged) return;
+
+      const updates: { name?: string; emoji?: string | null } = {};
+      if (nameChanged) updates.name = trimmedName;
+      if (emojiChanged) updates.emoji = desiredEmoji;
 
       try {
-        const updated = await apiServices.taskBoards.update(board.id, {
-          name: trimmed,
-        });
+        const updated = await apiServices.taskBoards.update(board.id, updates);
         setTaskBoards((prev: TaskBoard[]) =>
           prev.map((b: TaskBoard) => (b.id === updated.id ? updated : b)),
         );
-        router.push(buildBoardUrl(updated.name));
-        toast.success("Board renamed");
+
+        if (nameChanged) router.push(buildBoardUrl(updated.name));
+        toast.success(nameChanged ? "Board renamed" : "Board emoji updated");
       } catch (error) {
-        console.error("Failed to rename task board:", error);
-        toast.error("Failed to rename board");
+        console.error("Failed to update task board:", error);
+        toast.error("Failed to update board");
       }
     },
-    [editingName],
+    [editingName, editingBoardEmoji, router, setTaskBoards],
   );
 
   const handleDeleteConfirm = async () => {
@@ -151,26 +185,50 @@ export function TasksSidebar({
 
   const handleFolderEditStart = (folder: Folder) => {
     setEditingFolderName(folder.name);
+    setEditingFolderEmoji(folder.emoji ?? null);
     setEditingFolderId(folder.id);
+    setOpenFolderEmojiPickerId(null);
   };
 
   const handleEditFolder = useCallback(
-    async (folder: Folder) => {
-      const trimmed = editingFolderName.trim();
+    async (
+      folder: Folder,
+      opts?: {
+        emoji?: string | null;
+      },
+    ) => {
+      const trimmedName = editingFolderName.trim();
+      // `opts?.emoji === undefined` means "don't change emoji".
+      // If it's `null`, that's a real "clear emoji" request.
+      const desiredEmoji =
+        opts?.emoji === undefined ? editingFolderEmoji : opts?.emoji ?? null;
+
+      const nameChanged =
+        !!trimmedName && trimmedName !== (folder.name ?? "");
+      const emojiChanged = desiredEmoji !== (folder.emoji ?? null);
+
       setEditingFolderId(null);
-      if (!trimmed || trimmed === folder.name) return;
+      setOpenFolderEmojiPickerId(null);
+
+      if (!nameChanged && !emojiChanged) return;
+
       try {
-        const updated = await apiServices.folders.update(folder.id, trimmed);
+        const updated = await apiServices.folders.update(folder.id, {
+          ...(nameChanged ? { name: trimmedName } : {}),
+          ...(emojiChanged ? { emoji: desiredEmoji } : {}),
+        });
+
         setFolders((prev) =>
           prev.map((f) => (f.id === updated.id ? updated : f)),
         );
-        toast.success("Folder renamed");
+
+        toast.success(nameChanged ? "Folder renamed" : "Folder emoji updated");
       } catch (error) {
-        console.error("Failed to rename folder:", error);
-        toast.error("Failed to rename folder");
+        console.error("Failed to update folder:", error);
+        toast.error("Failed to update folder");
       }
     },
-    [editingFolderName, setFolders],
+    [editingFolderEmoji, editingFolderName, setFolders],
   );
 
   const handleFolderAction = (folder: Folder, action: string) => {
@@ -247,20 +305,44 @@ export function TasksSidebar({
         >
           {isEditing ? (
             <BoardEditWrap>
-              <img
-                width={20}
-                height={20}
-                src="/kanban-board.svg"
-                alt="Task Board"
+              <EmojiPickerField
+                emoji={editingBoardEmoji}
+                isOpen={openBoardEmojiPickerId === taskBoard.id}
+                fallbackIconSrc="/kanban-board.svg"
+                fallbackIconAlt="Task Board"
+                onToggle={() =>
+                  setOpenBoardEmojiPickerId((prev) =>
+                    prev === taskBoard.id ? null : taskBoard.id,
+                  )
+                }
+                onSelect={(emoji) => {
+                  setEditingBoardEmoji(emoji);
+                  void handleEditBoard(taskBoard, { emoji });
+                }}
+                onClear={() => {
+                  setEditingBoardEmoji(null);
+                  void handleEditBoard(taskBoard, { emoji: null });
+                }}
               />
               <BoardEditInput
                 value={editingName}
                 onChange={(e) => setEditingName(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") handleEditBoard(taskBoard);
-                  if (e.key === "Escape") setEditingBoardId(null);
+                  if (e.key === "Escape") {
+                    setEditingBoardId(null);
+                    setOpenBoardEmojiPickerId(null);
+                  }
                 }}
-                onBlur={() => handleEditBoard(taskBoard)}
+                onBlur={(e) => {
+                  const next = e.relatedTarget as HTMLElement | null;
+                  if (
+                    next?.closest("[data-emoji-picker-popover]") ||
+                    next?.closest("[data-emoji-trigger]")
+                  )
+                    return;
+                  handleEditBoard(taskBoard);
+                }}
                 autoFocus
                 maxLength={64}
               />
@@ -271,12 +353,16 @@ export function TasksSidebar({
                 if (!isSelected) handleViewChange(taskBoard.name);
               }}
             >
-              <img
-                width={20}
-                height={20}
-                src="/kanban-board.svg"
-                alt="Task Board"
-              />
+              {taskBoard.emoji ? (
+                <EmojiPreview>{taskBoard.emoji}</EmojiPreview>
+              ) : (
+                <img
+                  width={20}
+                  height={20}
+                  src="/kanban-board.svg"
+                  alt="Task Board"
+                />
+              )}
               <span>{taskBoard.name}</span>
             </BoardToggle>
           )}
@@ -385,11 +471,24 @@ export function TasksSidebar({
                     <FolderRow $active={openMenuFolderId === folder.id}>
                       {editingFolderId === folder.id ? (
                         <FolderEditWrap onClick={(e) => e.stopPropagation()}>
-                          <img
-                            width={20}
-                            height={20}
-                            src="/folder.svg"
-                            alt="Folder"
+                          <EmojiPickerField
+                            emoji={editingFolderEmoji}
+                            isOpen={openFolderEmojiPickerId === folder.id}
+                            fallbackIconSrc="/folder.svg"
+                            fallbackIconAlt="Folder"
+                            onToggle={() =>
+                              setOpenFolderEmojiPickerId((prev) =>
+                                prev === folder.id ? null : folder.id,
+                              )
+                            }
+                            onSelect={(emoji) => {
+                              setEditingFolderEmoji(emoji);
+                              void handleEditFolder(folder, { emoji });
+                            }}
+                            onClear={() => {
+                              setEditingFolderEmoji(null);
+                              void handleEditFolder(folder, { emoji: null });
+                            }}
                           />
                           <FolderEditInput
                             value={editingFolderName}
@@ -398,9 +497,20 @@ export function TasksSidebar({
                             }
                             onKeyDown={(e) => {
                               if (e.key === "Enter") handleEditFolder(folder);
-                              if (e.key === "Escape") setEditingFolderId(null);
+                              if (e.key === "Escape") {
+                                setEditingFolderId(null);
+                                setOpenFolderEmojiPickerId(null);
+                              }
                             }}
-                            onBlur={() => handleEditFolder(folder)}
+                            onBlur={(e) => {
+                              const next = e.relatedTarget as HTMLElement | null;
+                              if (
+                                next?.closest("[data-emoji-picker-popover]") ||
+                                next?.closest("[data-emoji-trigger]")
+                              )
+                                return;
+                              handleEditFolder(folder);
+                            }}
                             autoFocus
                             maxLength={64}
                             onClick={(e) => e.stopPropagation()}
@@ -413,12 +523,16 @@ export function TasksSidebar({
                             toggleFolder(folder.id);
                           }}
                         >
-                          <img
-                            width={20}
-                            height={20}
-                            src="/folder.svg"
-                            alt="Folder"
-                          />
+                          {folder.emoji ? (
+                            <EmojiPreview>{folder.emoji}</EmojiPreview>
+                          ) : (
+                            <img
+                              width={20}
+                              height={20}
+                              src="/folder.svg"
+                              alt="Folder"
+                            />
+                          )}
                           <span>{folder.name}</span>
                         </WorkspaceToggle>
                       )}

@@ -22,10 +22,13 @@ export class FoldersApiService extends BaseApiService {
     return normalizeFolder(response.data);
   }
 
-  async update(id: string, name: string): Promise<Folder> {
+  async update(
+    id: string,
+    updates: { name?: string; emoji?: string | null },
+  ): Promise<Folder> {
     const response = await this.patch<Folder>({
       pathParams: [id],
-      body: { name },
+      body: updates,
     });
     return normalizeFolder(response.data);
   }

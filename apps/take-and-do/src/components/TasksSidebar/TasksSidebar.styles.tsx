@@ -176,14 +176,6 @@ export const BoardActionsWrapper = styled.div`
   [data-board-actions-trigger] {
     padding: 4px;
     border-radius: 4px;
-    transition:
-      background 0.15s,
-      color 0.15s;
-  }
-
-  [data-board-actions-trigger]:hover {
-    background: #3a3a3a;
-    color: #fff;
   }
 `;
 
@@ -263,6 +255,75 @@ export const BoardEditInput = styled(Input)`
   }
 `;
 
+export const EmojiPickerHolder = styled.div`
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+`;
+
+export const EmojiButton = styled.button<{ $hasEmoji?: boolean }>`
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  border: 1px solid #3a3a3a;
+  background: #2a2a2a;
+  color: ${({ $hasEmoji }) => ($hasEmoji ? "#fff" : "#888")};
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s;
+
+  &:hover {
+    background: #2f2f2f;
+    border-color: #4a4a4a;
+    color: #fff;
+  }
+`;
+
+export const EmojiPreview = styled.span`
+  font-size: 16px;
+  line-height: 1;
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+`;
+
+export const EmojiPickerPopover = styled.div`
+  position: absolute;
+  top: 34px;
+  left: 0;
+  width: 320px;
+  z-index: 200;
+  background: #1e1e1e;
+  border: 1px solid #2a2a2a;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+`;
+
+export const EmojiClearButton = styled.button`
+  width: 100%;
+  padding: 10px 12px;
+  background: transparent;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  border-top: 1px solid #2a2a2a;
+
+  &:hover {
+    color: #fff;
+    background: #2a2a2a;
+  }
+`;
+
 export const ChevronWrapper = styled.span<{ $expanded?: boolean }>`
   display: inline-flex;
   transition: transform 0.2s;
@@ -308,14 +369,6 @@ export const FolderActionsWrapper = styled.div`
   [data-folder-actions-trigger] {
     padding: 4px;
     border-radius: 4px;
-    transition:
-      background 0.15s,
-      color 0.15s;
-  }
-
-  [data-folder-actions-trigger]:hover {
-    background: #3a3a3a;
-    color: #fff;
   }
 `;
 

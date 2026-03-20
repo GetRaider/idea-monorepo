@@ -55,6 +55,8 @@ import {
 import { useRouter } from "next/navigation";
 import { EmojiPickerField } from "./EmojiPickerField";
 import { useEmojiPickerState } from "./useEmojiPickerState";
+import { useSidebarEditingState } from "./useSidebarEditingState";
+import { useSidebarDeleteState } from "./useSidebarDeleteState";
 
 interface TasksSidebarProps {
   isOpen: boolean;
@@ -84,14 +86,22 @@ export function TasksSidebar({
   const router = useRouter();
   const [expandedFolder, setExpandedFolder] = useState<string>("");
   const [openMenuBoardId, setOpenMenuBoardId] = useState<string | null>(null);
-  const [editingBoardId, setEditingBoardId] = useState<string | null>(null);
-  const [editingName, setEditingName] = useState("");
-  const [deletingBoard, setDeletingBoard] = useState<TaskBoard | null>(null);
   const [dragOverTarget, setDragOverTarget] = useState<string | null>(null);
-  const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
-  const [editingFolderName, setEditingFolderName] = useState("");
   const [openMenuFolderId, setOpenMenuFolderId] = useState<string | null>(null);
-  const [deletingFolder, setDeletingFolder] = useState<Folder | null>(null);
+  const {
+    editingBoardId,
+    setEditingBoardId,
+    editingName,
+    setEditingName,
+    editingFolderId,
+    setEditingFolderId,
+    editingFolderName,
+    setEditingFolderName,
+    startBoardEdit,
+    startFolderEdit,
+  } = useSidebarEditingState();
+  const { deletingBoard, setDeletingBoard, deletingFolder, setDeletingFolder } =
+    useSidebarDeleteState();
   const {
     editingBoardEmoji,
     setEditingBoardEmoji,
@@ -109,9 +119,8 @@ export function TasksSidebar({
     setExpandedFolder(expandedFolder === folderId ? "" : folderId);
 
   const handleEditStart = (board: TaskBoard) => {
-    setEditingName(board.name);
-    setEditingBoardEmoji(board.emoji ?? null);
-    setEditingBoardId(board.id);
+    const boardEmoji = startBoardEdit(board);
+    setEditingBoardEmoji(boardEmoji);
     setOpenBoardEmojiPickerId(null);
   };
 
@@ -184,9 +193,8 @@ export function TasksSidebar({
   };
 
   const handleFolderEditStart = (folder: Folder) => {
-    setEditingFolderName(folder.name);
-    setEditingFolderEmoji(folder.emoji ?? null);
-    setEditingFolderId(folder.id);
+    const folderEmoji = startFolderEdit(folder);
+    setEditingFolderEmoji(folderEmoji);
     setOpenFolderEmojiPickerId(null);
   };
 

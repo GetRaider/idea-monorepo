@@ -18,6 +18,7 @@ interface DialogProps {
   children: ReactNode;
   showCloseButton?: boolean;
   maxWidth?: number;
+  minHeight?: number;
 }
 
 export function Dialog({
@@ -26,6 +27,7 @@ export function Dialog({
   children,
   showCloseButton = true,
   maxWidth = 500,
+  minHeight,
 }: DialogProps) {
   const handleOverlayClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) onClose();
@@ -36,6 +38,7 @@ export function Dialog({
       <DialogContainer
         onClick={(e) => e.stopPropagation()}
         $maxWidth={maxWidth}
+        $minHeight={minHeight}
       >
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>

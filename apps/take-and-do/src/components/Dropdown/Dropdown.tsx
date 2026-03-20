@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useEffect, useRef, useState } from "react";
+import { ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import {
@@ -26,6 +26,9 @@ interface DropdownProps<T extends string = string> {
   trigger?: ReactNode;
   onOpenChange?: (isOpen: boolean) => void;
   className?: string;
+  menuMinWidth?: number;
+  fullWidth?: boolean;
+  id?: string;
 }
 
 export function Dropdown<T extends string = string>({
@@ -36,12 +39,16 @@ export function Dropdown<T extends string = string>({
   trigger,
   onOpenChange,
   className,
+  menuMinWidth,
+  fullWidth = false,
+  id,
 }: DropdownProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
   const [menuRect, setMenuRect] = useState<{
     top: number;
     left: number;
     minWidth: number;
+    transform: string;
   } | null>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLUListElement>(null);
@@ -49,21 +56,50 @@ export function Dropdown<T extends string = string>({
   const selectedLabel =
     options.find((o) => o.value === value)?.label ?? placeholder;
 
-  const updateOpen = (next: boolean) => {
-    setIsOpen(next);
-    onOpenChange?.(next);
-    if (!next) setMenuRect(null);
-  };
+  const updateOpen = useCallback(
+    (next: boolean) => {
+      setIsOpen(next);
+      onOpenChange?.(next);
+      if (!next) setMenuRect(null);
+    },
+    [onOpenChange],
+  );
+
+  const measureMenu = useCallback(() => {
+    const el = wrapperRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const minWidth =
+      menuMinWidth !== undefined
+        ? Math.max(rect.width, menuMinWidth)
+        : rect.width;
+    if (trigger) {
+      setMenuRect({
+        top: rect.bottom + 4,
+        left: rect.right,
+        minWidth,
+        transform: "translateX(-100%)",
+      });
+    } else {
+      setMenuRect({
+        top: rect.bottom + 4,
+        left: rect.left,
+        minWidth,
+        transform: "none",
+      });
+    }
+  }, [trigger, menuMinWidth]);
 
   useEffect(() => {
-    if (!isOpen || !trigger || !wrapperRef.current) return;
-    const rect = wrapperRef.current.getBoundingClientRect();
-    setMenuRect({
-      top: rect.bottom + 4,
-      left: rect.right,
-      minWidth: rect.width,
-    });
-  }, [isOpen, trigger]);
+    if (!isOpen) return;
+    measureMenu();
+    window.addEventListener("scroll", measureMenu, true);
+    window.addEventListener("resize", measureMenu);
+    return () => {
+      window.removeEventListener("scroll", measureMenu, true);
+      window.removeEventListener("resize", measureMenu);
+    };
+  }, [isOpen, measureMenu]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -78,68 +114,60 @@ export function Dropdown<T extends string = string>({
 
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [onOpenChange]);
+  }, [updateOpen]);
 
   return (
     <>
-      <DropdownWrapper ref={wrapperRef} className={className}>
+      <DropdownWrapper
+        ref={wrapperRef}
+        className={className}
+        $fullWidth={fullWidth}
+      >
         {trigger ? (
           <TriggerWrapper onClick={() => updateOpen(!isOpen)}>
             {trigger}
           </TriggerWrapper>
         ) : (
-          <DropdownTrigger onClick={() => updateOpen(!isOpen)}>
+          <DropdownTrigger
+            type="button"
+            id={id}
+            $fullWidth={fullWidth}
+            onClick={() => updateOpen(!isOpen)}
+          >
             {selectedLabel}
             <ChevronIcon $open={isOpen}>▼</ChevronIcon>
           </DropdownTrigger>
         )}
       </DropdownWrapper>
       {isOpen &&
-        (trigger && menuRect
-          ? createPortal(
-              <DropdownMenu
-                ref={menuRef}
-                $portal
-                style={{
-                  top: menuRect.top,
-                  left: menuRect.left,
-                  transform: "translateX(-100%)",
-                  minWidth: menuRect.minWidth,
+        menuRect &&
+        createPortal(
+          <DropdownMenu
+            ref={menuRef}
+            $portal
+            style={{
+              top: menuRect.top,
+              left: menuRect.left,
+              transform: menuRect.transform,
+              minWidth: menuRect.minWidth,
+            }}
+          >
+            {options.map((option) => (
+              <DropdownItem
+                key={String(option.value)}
+                $active={option.value === value}
+                $danger={option.danger}
+                onClick={() => {
+                  onChange(option.value);
+                  updateOpen(false);
                 }}
               >
-                {options.map((option) => (
-                  <DropdownItem
-                    key={option.value}
-                    $active={option.value === value}
-                    $danger={option.danger}
-                    onClick={() => {
-                      onChange(option.value);
-                      updateOpen(false);
-                    }}
-                  >
-                    {option.label}
-                  </DropdownItem>
-                ))}
-              </DropdownMenu>,
-              document.body,
-            )
-          : !trigger && (
-              <DropdownMenu>
-                {options.map((option) => (
-                  <DropdownItem
-                    key={option.value}
-                    $active={option.value === value}
-                    $danger={option.danger}
-                    onClick={() => {
-                      onChange(option.value);
-                      updateOpen(false);
-                    }}
-                  >
-                    {option.label}
-                  </DropdownItem>
-                ))}
-              </DropdownMenu>
+                {option.label}
+              </DropdownItem>
             ))}
+          </DropdownMenu>,
+          document.body,
+        )}
     </>
   );
 }

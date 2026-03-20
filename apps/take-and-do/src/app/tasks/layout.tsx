@@ -11,6 +11,7 @@ import {
   buildBoardUrl,
   getActiveViewFromPathname,
 } from "@/helpers/tasks-routing.helper";
+import { waiterHelper } from "@/helpers/waiter.helper";
 import { useWorkspaces } from "@/hooks/useWorkspaces";
 import { WorkspaceProvider } from "@/contexts/WorkspaceContext";
 import { apiServices } from "@/services/api";
@@ -39,17 +40,39 @@ export default function TasksLayout({
   const activeView = getActiveViewFromPathname(pathname ?? "");
 
   const handleViewChange = (view: string) => {
-    view === "today" || view === "tomorrow"
-      ? router.push(buildScheduleUrl(view))
-      : router.push(buildBoardUrl(view));
+    if (view === "today" || view === "tomorrow") {
+      router.push(buildScheduleUrl(view));
+      return;
+    }
+    router.push(buildBoardUrl(view));
   };
 
   const handleNavigationChange = () => setIsNavSidebarOpen(true);
 
-  const handleCreateFolder = async (name: string) => {
+  const handleCreateFolder = async (
+    name: string,
+    boardIdsToMove: string[] = [],
+  ) => {
     try {
       const folder = await apiServices.folders.create(name);
       setFolders((prev) => [...prev, folder]);
+
+      if (boardIdsToMove.length > 0) {
+        const uniqueBoardIds = Array.from(new Set(boardIdsToMove));
+        const updatedBoards = await Promise.all(
+          uniqueBoardIds.map((boardId) =>
+            apiServices.taskBoards.update(boardId, { folderId: folder.id }),
+          ),
+        );
+
+        setTaskBoards((prev) => {
+          const updatedById = new Map(
+            updatedBoards.map((board) => [board.id, board]),
+          );
+          return prev.map((board) => updatedById.get(board.id) ?? board);
+        });
+      }
+
       setIsWorkspaceCreateModalOpen(false);
     } catch (error) {
       console.error("[TasksLayout] Failed to create folder:", error);
@@ -57,12 +80,30 @@ export default function TasksLayout({
     }
   };
 
-  const handleCreateTaskBoard = async (name: string) => {
+  const handleCreateTaskBoard = async (name: string, folderId: string) => {
     try {
-      await apiServices.taskBoards.create({ name });
+      const createdBoard = await apiServices.taskBoards.create({
+        name,
+        folderId: folderId || undefined,
+      });
+      const resolvedBoard = await waiterHelper.retry(
+        () => apiServices.taskBoards.getById(createdBoard.id),
+        { retries: 5, timeout: 150 },
+      );
+
+      setTaskBoards((prev) => {
+        const existing = prev.find((board) => board.id === resolvedBoard.id);
+        if (existing) {
+          return prev.map((board) =>
+            board.id === resolvedBoard.id ? resolvedBoard : board,
+          );
+        }
+        return [...prev, resolvedBoard];
+      });
+
       setIsWorkspaceCreateModalOpen(false);
-      router.push(buildBoardUrl(name));
-      window.location.reload();
+      router.push(buildBoardUrl(resolvedBoard.name));
+      router.refresh();
     } catch (error) {
       console.error("[TasksLayout] Failed to create task board:", error);
       toast.error("Failed to create task board.");
@@ -101,6 +142,8 @@ export default function TasksLayout({
             onClose={() => setIsWorkspaceCreateModalOpen(false)}
             onCreateFolder={handleCreateFolder}
             onCreateBoard={handleCreateTaskBoard}
+            taskBoards={taskBoards}
+            folders={folders}
           />
         )}
       </PageContainer>

@@ -18,7 +18,10 @@ import { Toolbar } from "./shared/Toolbar";
 import { KanbanColumns } from "./shared/KanbanColumns";
 import { TaskStatus, Task, emptyTaskColumns } from "./types";
 import { handleSingleBoardTaskStatusChange } from "./shared/taskStatusHandlers";
-import { composedDataToTask, createNewTaskTemplate } from "./shared/taskComposeHelpers";
+import {
+  composedDataToTask,
+  createNewTaskTemplate,
+} from "./shared/taskComposeHelpers";
 import { useKanbanTaskHandlers } from "./shared/useKanbanTaskHandlers";
 import { TaskView } from "../../TaskView/TaskView";
 import { updateTaskInColumns } from "@/hooks/useTaskBoardState";
@@ -224,8 +227,8 @@ function BoardContent({
   return totalTasksLength === 0 ? (
     <EmptyStateWrapper>
       <EmptyState
-        title="You have no tasks"
-        message={`No tasks in ${workspaceTitle}`}
+        title="No tasks"
+        message={`No tasks in '${workspaceTitle}' board`}
       />
     </EmptyStateWrapper>
   ) : (

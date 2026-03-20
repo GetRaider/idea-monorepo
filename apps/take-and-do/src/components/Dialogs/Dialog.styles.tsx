@@ -19,12 +19,16 @@ export const DialogOverlay = styled.div`
   }
 `;
 
-export const DialogContainer = styled.div<{ $maxWidth?: number }>`
+export const DialogContainer = styled.div<{
+  $maxWidth?: number;
+  $minHeight?: number;
+}>`
   background: #1e1e1e;
   border: 1px solid #2a2a2a;
   border-radius: 12px;
   width: 100%;
   max-width: ${({ $maxWidth = 500 }) => $maxWidth}px;
+  min-height: ${({ $minHeight }) => ($minHeight ? `${$minHeight}px` : "0")};
   max-height: 90vh;
   overflow-y: auto;
   padding: 24px;

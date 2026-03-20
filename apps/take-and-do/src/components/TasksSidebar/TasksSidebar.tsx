@@ -1,6 +1,11 @@
 "use client";
 
-import { useState, useCallback, type Dispatch, type SetStateAction } from "react";
+import {
+  useState,
+  useCallback,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
 import {
   ClockCircleIcon,
   ClockNavIcon,
@@ -42,6 +47,11 @@ import { toast } from "sonner";
 import { apiServices } from "@/services/api";
 import { ConfirmDialog } from "@/components/Dialogs";
 import { LoadingContainer, Spinner } from "@/app/home/page.styles";
+import {
+  buildBoardUrl,
+  buildScheduleUrl,
+} from "@/helpers/tasks-routing.helper";
+import { useRouter } from "next/navigation";
 
 interface TasksSidebarProps {
   isOpen: boolean;
@@ -68,6 +78,7 @@ export function TasksSidebar({
   isFoldersLoading,
   isBoardsLoading,
 }: TasksSidebarProps) {
+  const router = useRouter();
   const [expandedFolder, setExpandedFolder] = useState<string>("");
   const [openMenuBoardId, setOpenMenuBoardId] = useState<string | null>(null);
   const [editingBoardId, setEditingBoardId] = useState<string | null>(null);
@@ -96,10 +107,13 @@ export function TasksSidebar({
       if (!trimmed || trimmed === board.name) return;
 
       try {
-        const updated = await apiServices.taskBoards.update(board.id, { name: trimmed });
+        const updated = await apiServices.taskBoards.update(board.id, {
+          name: trimmed,
+        });
         setTaskBoards((prev: TaskBoard[]) =>
           prev.map((b: TaskBoard) => (b.id === updated.id ? updated : b)),
         );
+        router.push(buildBoardUrl(updated.name));
         toast.success("Board renamed");
       } catch (error) {
         console.error("Failed to rename task board:", error);
@@ -111,17 +125,22 @@ export function TasksSidebar({
 
   const handleDeleteConfirm = async () => {
     if (!deletingBoard) return;
-    const id = deletingBoard.id;
+    const { id, name } = deletingBoard;
     setDeletingBoard(null);
     try {
       await apiServices.taskBoards.deleteBoard(id);
       setTaskBoards((prev: TaskBoard[]) =>
-        prev.filter((b: TaskBoard) => b.id !== id),
+        prev.filter((board: TaskBoard) => board.id !== id),
       );
-      toast.success("Board deleted");
+      router.push(
+        taskBoards.length > 0
+          ? buildBoardUrl(taskBoards[0].name)
+          : buildScheduleUrl("today"),
+      );
+      toast.success(`'${name}' board deleted`);
     } catch (error) {
-      console.error("Failed to delete task board:", error);
-      toast.error("Failed to delete board");
+      console.error("Failed to delete board:", error);
+      toast.error(`Failed to delete '${deletingBoard.name}' board`);
     }
   };
 
@@ -179,7 +198,8 @@ export function TasksSidebar({
   };
 
   const handleBoardDragStart = (e: React.DragEvent, boardId: string) => {
-    if ((e.target as HTMLElement).closest("[data-board-actions-trigger]")) return;
+    if ((e.target as HTMLElement).closest("[data-board-actions-trigger]"))
+      return;
     e.dataTransfer.setData(DRAG_BOARD_KEY, boardId);
     e.dataTransfer.effectAllowed = "move";
   };
@@ -199,7 +219,8 @@ export function TasksSidebar({
           setTaskBoards((prev) =>
             prev.map((b) => (b.id === updated.id ? updated : b)),
           );
-          if (folderId && expandedFolder !== folderId) setExpandedFolder(folderId);
+          if (folderId && expandedFolder !== folderId)
+            setExpandedFolder(folderId);
           toast.success("Board moved");
         })
         .catch((err) => {
@@ -376,10 +397,8 @@ export function TasksSidebar({
                               setEditingFolderName(e.target.value)
                             }
                             onKeyDown={(e) => {
-                              if (e.key === "Enter")
-                                handleEditFolder(folder);
-                              if (e.key === "Escape")
-                                setEditingFolderId(null);
+                              if (e.key === "Enter") handleEditFolder(folder);
+                              if (e.key === "Escape") setEditingFolderId(null);
                             }}
                             onBlur={() => handleEditFolder(folder)}
                             autoFocus

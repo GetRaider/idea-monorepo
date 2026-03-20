@@ -2,12 +2,14 @@
 
 import styled from "styled-components";
 
-export const DropdownWrapper = styled.div`
+export const DropdownWrapper = styled.div<{ $fullWidth?: boolean }>`
   position: relative;
-  display: inline-block;
+  display: ${({ $fullWidth }) => ($fullWidth ? "block" : "inline-block")};
+  width: ${({ $fullWidth }) => ($fullWidth ? "100%" : "auto")};
 `;
 
-export const DropdownTrigger = styled.button`
+
+export const DropdownTrigger = styled.button<{ $fullWidth?: boolean }>`
   display: flex;
   align-items: center;
   gap: 6px;
@@ -20,6 +22,9 @@ export const DropdownTrigger = styled.button`
   cursor: pointer;
   white-space: nowrap;
   transition: border-color 0.2s;
+  width: ${({ $fullWidth }) => ($fullWidth ? "100%" : "auto")};
+  justify-content: ${({ $fullWidth }) =>
+    $fullWidth ? "space-between" : "flex-start"};
 
   &:hover {
     border-color: #555;
@@ -47,8 +52,9 @@ export const DropdownMenu = styled.ul<{ $portal?: boolean }>`
   top: ${(p) => (p.$portal ? "0" : "calc(100% + 4px)")};
   right: ${(p) => (p.$portal ? "auto" : "0")};
   left: ${(p) => (p.$portal ? "0" : "auto")};
-  z-index: 100;
-  min-width: 100%;
+  z-index: ${(p) => (p.$portal ? 1100 : 100)};
+  min-width: ${(p) => (p.$portal ? "0" : "100%")};
+  width: ${(p) => (p.$portal ? "max-content" : "auto")};
   background: #2a2a2a;
   border: 1px solid #3a3a3a;
   border-radius: 6px;

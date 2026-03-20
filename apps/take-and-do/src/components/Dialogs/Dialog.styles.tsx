@@ -97,6 +97,21 @@ export const ConfirmCancelBtn = styled.button`
     background: #2a2a2a;
     color: #fff;
   }
+
+  &:focus-visible {
+    outline: 2px solid #7255c1;
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  &:disabled:hover {
+    background: transparent;
+    color: #888;
+  }
 `;
 
 export const ConfirmDangerBtn = styled.button`
@@ -112,5 +127,19 @@ export const ConfirmDangerBtn = styled.button`
 
   &:hover {
     background: #dc2626;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #10b981;
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  &:disabled:hover {
+    background: #ef4444;
   }
 `;

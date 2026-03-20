@@ -17,6 +17,7 @@ export const MultiSelectTrigger = styled(DropdownTrigger)`
 export const TriggerLabel = styled.span`
   flex: 1;
   min-width: 0;
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   text-align: left;
@@ -37,5 +38,5 @@ export const EmptyHintText = styled.p`
   margin: 0;
   padding: 8px 4px;
   font-size: 14px;
-  color: #666;
+  color: #94a3b8;
 `;

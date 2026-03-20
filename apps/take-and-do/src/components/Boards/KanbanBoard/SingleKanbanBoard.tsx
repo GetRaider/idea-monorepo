@@ -4,6 +4,7 @@ import {
   useState,
   useEffect,
   useCallback,
+  useRef,
   useImperativeHandle,
   forwardRef,
 } from "react";
@@ -60,6 +61,8 @@ export const SingleKanbanBoard = forwardRef<
     useState<Record<TaskStatus, Task[]>>(emptyTaskColumns);
   const [isLoading, setIsLoading] = useState(true);
   const [isAIComposeModalOpen, setIsAIComposeModalOpen] = useState(false);
+  const fetchSeqRef = useRef(0);
+  const isMountedRef = useRef(true);
 
   const {
     selectedTask,
@@ -70,8 +73,17 @@ export const SingleKanbanBoard = forwardRef<
     handleSubtaskClick,
   } = useKanbanTaskHandlers({ onTaskOpen, onTaskClose, onSubtaskOpen });
 
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
   const fetchTasks = useCallback(async () => {
     if (!boardId) return;
+
+    const seq = ++fetchSeqRef.current;
     setIsLoading(true);
     try {
       const tasks = await apiServices.tasks.getByBoardId(boardId);
@@ -81,13 +93,21 @@ export const SingleKanbanBoard = forwardRef<
         [TaskStatus.DONE]: [],
       };
       tasks.forEach((task) => {
-        tasksByStatusMap[task.status].push(task);
+        const safeStatus = (Object.values(TaskStatus) as string[]).includes(
+          task.status as unknown as string,
+        )
+          ? task.status
+          : TaskStatus.TODO;
+        tasksByStatusMap[safeStatus].push(task);
       });
+      if (!isMountedRef.current || seq !== fetchSeqRef.current) return;
       setTasksByStatus(tasksByStatusMap);
     } catch (error) {
+      if (!isMountedRef.current || seq !== fetchSeqRef.current) return;
       console.error("Failed to fetch tasks:", error);
       setTasksByStatus(emptyTaskColumns);
     } finally {
+      if (!isMountedRef.current || seq !== fetchSeqRef.current) return;
       setIsLoading(false);
     }
   }, [boardId]);

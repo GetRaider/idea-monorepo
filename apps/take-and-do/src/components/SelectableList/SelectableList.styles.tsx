@@ -29,6 +29,16 @@ export const SelectAllRow = styled.button`
   &:hover {
     color: #9678e3;
   }
+
+  &:focus-visible {
+    outline: 2px solid #7255c1;
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
 `;
 
 export const TaskSelectionSection = styled.div`
@@ -45,6 +55,11 @@ export const TaskCheckbox = styled.input`
   height: 18px;
   cursor: pointer;
   accent-color: #7255c1;
+
+  &:focus-visible {
+    outline: 2px solid #7255c1;
+    outline-offset: 2px;
+  }
 `;
 
 export const TaskLabel = styled.label`
@@ -66,5 +81,10 @@ export const TaskLabel = styled.label`
   &:hover {
     border-color: #4a4a4a;
     background: #2f2f2f;
+  }
+
+  &:focus-within {
+    border-color: #7255c1;
+    box-shadow: 0 0 0 3px rgba(114, 85, 193, 0.25);
   }
 `;

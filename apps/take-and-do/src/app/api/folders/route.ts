@@ -15,8 +15,19 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { name } = body;
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch (error) {
+      if (error instanceof SyntaxError) {
+        return NextResponse.json(
+          { error: "Invalid JSON body" },
+          { status: 400 },
+        );
+      }
+      throw error;
+    }
+    const { name } = body as { name?: unknown };
     if (!name || typeof name !== "string" || !name.trim()) {
       return NextResponse.json(
         { error: "Name is required" },

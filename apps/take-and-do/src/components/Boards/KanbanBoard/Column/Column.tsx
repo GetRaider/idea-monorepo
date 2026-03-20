@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 
 import { TaskStatus, Task } from "../types";
 import {
@@ -41,6 +41,16 @@ export const Column = ({
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [droppedTaskId, setDroppedTaskId] = useState<string | null>(null);
+  const droppedTimeoutRef = useRef<number | null>(null);
+
+  React.useEffect(() => {
+    return () => {
+      if (droppedTimeoutRef.current) {
+        window.clearTimeout(droppedTimeoutRef.current);
+      }
+      droppedTimeoutRef.current = null;
+    };
+  }, []);
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -203,8 +213,13 @@ export const Column = ({
       setDroppedTaskId(taskId);
 
       // Remove animation class after animation completes
-      setTimeout(() => {
+      if (droppedTimeoutRef.current) {
+        window.clearTimeout(droppedTimeoutRef.current);
+      }
+
+      droppedTimeoutRef.current = window.setTimeout(() => {
         setDroppedTaskId(null);
+        droppedTimeoutRef.current = null;
       }, 400); // Match animation duration
 
       onTaskDrop(taskId, status, targetIndex);

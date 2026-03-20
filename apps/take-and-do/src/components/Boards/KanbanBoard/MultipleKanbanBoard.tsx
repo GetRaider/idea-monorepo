@@ -363,6 +363,7 @@ export function MultipleKanbanBoard({
                     $expanded={isExpanded}
                   >
                     <WorkspaceSeparator
+                      type="button"
                       onClick={() => toggleGroup(group.taskBoardId)}
                     >
                       <GroupChevronWrapper $expanded={isExpanded}>

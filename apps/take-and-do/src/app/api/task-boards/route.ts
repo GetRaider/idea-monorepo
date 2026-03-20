@@ -15,9 +15,18 @@ export async function GET(request: NextRequest) {
   const id = searchParams.get("id");
 
   try {
-    const taskBoards = id
-      ? [await getTaskBoardById(id)]
-      : await getAllTaskBoards();
+    if (id) {
+      const board = await getTaskBoardById(id);
+      if (!board) {
+        return NextResponse.json(
+          { error: "Task board not found" },
+          { status: 404 },
+        );
+      }
+      return NextResponse.json([board]);
+    }
+
+    const taskBoards = await getAllTaskBoards();
     return NextResponse.json(taskBoards);
   } catch {
     return NextResponse.json(
@@ -47,7 +56,16 @@ export async function PATCH(request: NextRequest) {
       updates.name = name.trim();
     }
     if (folderId !== undefined) {
-      updates.folderId = folderId === null || folderId === "" ? null : (folderId as string);
+      if (folderId === null || folderId === "") {
+        updates.folderId = null;
+      } else if (typeof folderId === "string") {
+        updates.folderId = folderId;
+      } else {
+        return NextResponse.json(
+          { error: "folderId must be a string or null" },
+          { status: 400 },
+        );
+      }
     }
     if (Object.keys(updates).length === 0) {
       return NextResponse.json({ error: "No updates provided" }, { status: 400 });

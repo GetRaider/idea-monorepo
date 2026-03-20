@@ -3,8 +3,13 @@ import styled from "styled-components";
 export const BoardContainer = styled.div`
   display: flex;
   flex-direction: column;
+  min-height: 100vh;
   height: 100vh;
   background: linear-gradient(135deg, #1a1a1a 0%, #3c2856 100%);
+
+  @supports (height: 100dvh) {
+    height: 100dvh;
+  }
 `;
 
 export const Toolbar = styled.div`
@@ -189,7 +194,7 @@ export const TaskGroupColumnsGrid = styled.div`
   min-height: 0;
 `;
 
-export const WorkspaceSeparator = styled.div`
+export const WorkspaceSeparator = styled.button`
   grid-column: 1 / -1;
   display: flex;
   align-items: center;
@@ -199,6 +204,8 @@ export const WorkspaceSeparator = styled.div`
   background: rgba(255, 255, 255, 0.05);
   border-radius: 8px;
   margin: 0;
+  border: none;
+  appearance: none;
   color: #fff;
   font-size: 12px;
   font-weight: 600;

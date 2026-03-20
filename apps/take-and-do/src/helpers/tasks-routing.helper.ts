@@ -98,8 +98,9 @@ export function getBoardNameFromPathname(pathname: string): string | null {
  * Get active view for sidebar from pathname: "today" | "tomorrow" | boardName | ""
  */
 export function getActiveViewFromPathname(pathname: string): string {
-  if (pathname.startsWith("/tasks/schedule/today")) return "today";
-  if (pathname.startsWith("/tasks/schedule/tomorrow")) return "tomorrow";
+  if (/^\/tasks\/schedule\/today(?:\/|$)/.test(pathname)) return "today";
+  if (/^\/tasks\/schedule\/tomorrow(?:\/|$)/.test(pathname))
+    return "tomorrow";
   const board = getBoardNameFromPathname(pathname);
   return board ?? "";
 }

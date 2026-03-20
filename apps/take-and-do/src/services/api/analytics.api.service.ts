@@ -1,4 +1,3 @@
-import { AnalyticsStats } from "@/lib/ai";
 import { BaseApiService } from "./base-api.service";
 
 export class AnalyticsApiService extends BaseApiService {

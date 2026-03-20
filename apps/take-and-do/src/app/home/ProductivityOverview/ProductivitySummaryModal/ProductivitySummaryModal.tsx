@@ -32,6 +32,11 @@ export function ProductivitySummaryModal({
     }
   };
 
+  const insights = Array.isArray(analytics.insights) ? analytics.insights : [];
+  const recommendations = Array.isArray(analytics.recommendations)
+    ? analytics.recommendations
+    : [];
+
   return (
     <ModalOverlay onClick={handleOverlayClick}>
       <ModalContent>
@@ -54,7 +59,7 @@ export function ProductivitySummaryModal({
           <AICard>
             <CardTitle style={{ marginBottom: "12px" }}>Insights</CardTitle>
             <CardList>
-              {analytics.insights.map((insight, idx) => (
+              {insights.map((insight, idx) => (
                 <li key={idx}>{insight}</li>
               ))}
             </CardList>
@@ -78,9 +83,9 @@ export function ProductivitySummaryModal({
               Recommendations
             </CardTitle>
             <CardList>
-              {analytics.recommendations.map((rec, idx) => (
-                <li key={idx}>{rec}</li>
-              ))}
+              {recommendations.length > 0
+                ? recommendations.map((rec, idx) => <li key={idx}>{rec}</li>)
+                : null}
             </CardList>
           </AICard>
         </AISection>

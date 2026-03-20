@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Task } from "@/components/Boards/KanbanBoard/types";
+import { useEffect, useId, useRef, useState } from "react";
 import { apiServices } from "@/services/api";
 import { tasksHelper } from "@/helpers/task.helper";
 import { CloseIcon } from "@/components/Icons";
@@ -71,6 +70,9 @@ interface ScheduleOptimization {
 export function ScheduleOptimizationModal({
   onClose,
 }: ScheduleOptimizationModalProps) {
+  const modalTitleId = useId();
+  const modalContentRef = useRef<HTMLDivElement>(null);
+
   const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(
     new Set(),
   );
@@ -81,6 +83,72 @@ export function ScheduleOptimizationModal({
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { tasks, isLoading: isTasksLoading } = useTasks({});
+
+  useEffect(() => {
+    const prevFocused = document.activeElement as HTMLElement | null;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const focusFirst = () => {
+      const root = modalContentRef.current;
+      if (!root) return;
+      const focusables = Array.from(
+        root.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+        ),
+      ).filter((el) => !el.hasAttribute("disabled") && !el.getAttribute("aria-hidden"));
+
+      (focusables[0] ?? root).focus?.();
+    };
+
+    focusFirst();
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onClose();
+        return;
+      }
+
+      if (e.key !== "Tab") return;
+      const root = modalContentRef.current;
+      if (!root) return;
+
+      const focusables = Array.from(
+        root.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+        ),
+      ).filter((el) => !el.hasAttribute("disabled") && !el.getAttribute("aria-hidden"));
+
+      if (focusables.length === 0) {
+        e.preventDefault();
+        root.focus?.();
+        return;
+      }
+
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      const active = document.activeElement as HTMLElement | null;
+
+      if (e.shiftKey) {
+        if (!active || active === first) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else if (!active || active === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener("keydown", onKeyDown, true);
+
+    return () => {
+      document.removeEventListener("keydown", onKeyDown, true);
+      document.body.style.overflow = prevOverflow;
+      prevFocused?.focus?.();
+    };
+  }, [onClose]);
 
   const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) onClose();
@@ -159,18 +227,34 @@ export function ScheduleOptimizationModal({
         .filter((rec) => rec.suggestedSchedule !== null)
         .map((rec) => ({
           taskId: rec.taskId,
-          scheduleDate: rec.suggestedSchedule
-            ? new Date(rec.suggestedSchedule)
-            : null,
+          scheduleDate: new Date(rec.suggestedSchedule as string),
         }));
 
-      await Promise.all(
+      const results = await Promise.allSettled(
         updates.map((update) =>
           apiServices.tasks.update(update.taskId, {
-            scheduleDate: update.scheduleDate || undefined,
+            scheduleDate: update.scheduleDate,
           }),
         ),
       );
+
+      const rejected = results
+        .map((result, idx) => ({ result, idx }))
+        .filter(({ result }) => result.status === "rejected") as {
+        result: PromiseRejectedResult;
+        idx: number;
+      }[];
+
+      if (rejected.length > 0) {
+        const failedTaskIds = rejected
+          .slice(0, 5)
+          .map(({ idx }) => updates[idx].taskId);
+        console.error("[AIPlanningOptimizationModal] Failed task updates:", rejected);
+        setError(
+          `Failed to update ${rejected.length} task(s): ${failedTaskIds.join(", ")}.`,
+        );
+        return;
+      }
 
       onClose();
     } catch (err) {
@@ -190,11 +274,16 @@ export function ScheduleOptimizationModal({
   };
 
   return (
-    <ModalOverlay onClick={handleOverlayClick}>
-      <ModalContent>
+    <ModalOverlay
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={modalTitleId}
+      onClick={handleOverlayClick}
+    >
+      <ModalContent ref={modalContentRef} tabIndex={-1}>
         <ModalHeader>
           <HeaderContent>
-            <ModalTitle>⏳ AI Planning Optimization</ModalTitle>
+            <ModalTitle id={modalTitleId}>⏳ AI Planning Optimization</ModalTitle>
             <ModalDescription>
               Explore Planning Optimization with AI-powered analysis based on
               priorities, schedules, due dates, and estimations.
@@ -289,7 +378,9 @@ export function ScheduleOptimizationModal({
                     <ScheduleChange>
                       {formatSchedule(rec.currentSchedule)}
                       <ArrowIcon>→</ArrowIcon>
-                      <strong>{formatSchedule(rec.suggestedSchedule)}</strong>
+                    <strong aria-label={`Updated schedule to ${formatSchedule(rec.suggestedSchedule)}`}>
+                      {formatSchedule(rec.suggestedSchedule)}
+                    </strong>
                     </ScheduleChange>
                     <ReasonText>{rec.reason}</ReasonText>
                   </RecommendationCard>
@@ -302,7 +393,9 @@ export function ScheduleOptimizationModal({
                 <SectionTitle>⚠️ Risks</SectionTitle>
                 <RisksList>
                   {exploration.risks.map((risk, idx) => (
-                    <RiskItem key={idx}>{risk}</RiskItem>
+                    <RiskItem key={idx} aria-label={`Risk: ${risk}`}>
+                      {risk}
+                    </RiskItem>
                   ))}
                 </RisksList>
               </RecommendationsSection>

@@ -61,7 +61,7 @@ export const ModalTitle = styled.h2`
   color: #fff;
 `;
 
-export const ModalDescription = styled.h3`
+export const ModalDescription = styled.p`
   font-size: 14px;
   font-weight: 400;
   margin: 0;
@@ -89,8 +89,16 @@ export const SummaryText = styled.p`
 
 export const WorkloadGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: 1fr;
   gap: 12px;
+
+  @media (min-width: 600px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @media (min-width: 900px) {
+    grid-template-columns: repeat(3, 1fr);
+  }
 `;
 
 export const WorkloadCard = styled.div`
@@ -150,6 +158,14 @@ export const ScheduleChange = styled.div`
 
   strong {
     color: #10b981;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  strong::before {
+    content: "✓";
+    font-weight: 700;
   }
 `;
 
@@ -173,6 +189,15 @@ export const RiskItem = styled.li`
   font-size: 14px;
   line-height: 1.6;
   margin-bottom: 4px;
+
+  display: flex;
+  align-items: center;
+
+  &::before {
+    content: "⚠";
+    margin-right: 8px;
+    flex: 0 0 auto;
+  }
 `;
 
 export const InsightsList = styled.ul`
@@ -261,4 +286,4 @@ const GradientButton = styled.button`
 `;
 
 export const GenerateOptimizationButton = GradientButton;
-export const OptimizeButton = GradientButton;
+export const OptimizeButton = styled(GradientButton)``;

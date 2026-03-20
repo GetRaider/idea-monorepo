@@ -124,7 +124,12 @@ export function Dropdown<T extends string = string>({
         $fullWidth={fullWidth}
       >
         {trigger ? (
-          <TriggerWrapper onClick={() => updateOpen(!isOpen)}>
+          <TriggerWrapper
+            type="button"
+            aria-haspopup="menu"
+            aria-expanded={isOpen}
+            onClick={() => updateOpen(!isOpen)}
+          >
             {trigger}
           </TriggerWrapper>
         ) : (
@@ -132,6 +137,8 @@ export function Dropdown<T extends string = string>({
             type="button"
             id={id}
             $fullWidth={fullWidth}
+            aria-haspopup="menu"
+            aria-expanded={isOpen}
             onClick={() => updateOpen(!isOpen)}
           >
             {selectedLabel}

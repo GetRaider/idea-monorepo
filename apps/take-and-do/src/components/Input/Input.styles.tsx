@@ -1,7 +1,7 @@
 import styled from "styled-components";
 
 export const Input = styled.input.attrs((props) => ({
-  maxLength: props.maxLength || 64,
+  maxLength: props.maxLength ?? 64,
 }))`
   width: 100%;
   padding: 10px 12px;

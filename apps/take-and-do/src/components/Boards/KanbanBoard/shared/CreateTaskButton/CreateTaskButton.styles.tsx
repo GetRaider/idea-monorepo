@@ -2,7 +2,6 @@
 
 import {
   animatedGradientBackground,
-  animatedGradientHover,
 } from "@/components/AnimatedGradient.styles";
 import styled from "styled-components";
 
@@ -50,7 +49,7 @@ export const Trigger = styled.button`
   color: #fff;
   font-size: 14px;
   font-weight: 500;
-  cursor: default;
+  cursor: pointer;
   transition: background 0.2s;
 
   svg {

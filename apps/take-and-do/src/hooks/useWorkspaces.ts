@@ -24,17 +24,33 @@ export function useWorkspaces(): UseWorkspacesReturn {
   const [isBoardsLoading, setIsBoardsLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
+
     const fetchWorkspaces = async () => {
-      const [fetchedFolders, fetchedBoards] = await Promise.all([
-        apiServices.folders.getAll(),
-        apiServices.taskBoards.getAll(),
-      ]);
-      setFolders(fetchedFolders);
-      setTaskBoards(fetchedBoards);
-      setIsFoldersLoading(false);
-      setIsBoardsLoading(false);
+      try {
+        const [fetchedFolders, fetchedBoards] = await Promise.all([
+          apiServices.folders.getAll(),
+          apiServices.taskBoards.getAll(),
+        ]);
+        if (!isMounted) return;
+        setFolders(fetchedFolders);
+        setTaskBoards(fetchedBoards);
+      } catch (error) {
+        if (!isMounted) return;
+        console.error("[useWorkspaces] Failed to fetch workspaces:", error);
+        setFolders([]);
+        setTaskBoards([]);
+      } finally {
+        if (!isMounted) return;
+        setIsFoldersLoading(false);
+        setIsBoardsLoading(false);
+      }
     };
+
     fetchWorkspaces();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   return {

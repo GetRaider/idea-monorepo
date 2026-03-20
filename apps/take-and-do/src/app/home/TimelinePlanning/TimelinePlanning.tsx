@@ -29,7 +29,6 @@ import {
   StatusIcon,
   StatusText,
   ViewAllLink,
-  Loading,
   ScheduleSelectContainer,
 } from "./TimelinePlanning.styles";
 import { useRecentTasks } from "@/hooks/useRecentTasks";
@@ -37,6 +36,7 @@ import { useCustomDateTasks } from "@/hooks/useCustomDate";
 import { LoadingContainer, Spinner } from "../page.styles";
 import { buildTasksUrl } from "@/helpers/tasks-routing.helper";
 import { Dropdown } from "@/components/Dropdown";
+import { toast } from "sonner";
 
 interface TimelinePlanningProps {
   todayTasks: Task[];
@@ -69,14 +69,21 @@ export function TimelinePlanning({
   };
 
   const handleTaskClick = async (task: Task) => {
-    const taskBoard = await apiServices.taskBoards.getById(task.taskBoardId);
-    router.push(
-      buildTasksUrl({
-        type: "board",
-        boardName: taskBoard.name,
-        taskKey: task.taskKey,
-      }),
-    );
+    try {
+      const taskBoard = await apiServices.taskBoards.getById(
+        task.taskBoardId,
+      );
+      router.push(
+        buildTasksUrl({
+          type: "board",
+          boardName: taskBoard.name,
+          taskKey: task.taskKey,
+        }),
+      );
+    } catch (error) {
+      console.error("[TimelinePlanning] Failed to open task:", error);
+      toast.error("Failed to open task board.");
+    }
   };
 
   return (

@@ -46,10 +46,16 @@ export async function updateFolder(
   id: string,
   data: { name: string },
 ): Promise<Folder> {
+  const existing = await getFolderById(id);
+  if (!existing) {
+    throw new Error("Folder not found");
+  }
+
   await db
     .update(foldersTable)
     .set({ name: data.name, updatedAt: new Date() })
     .where(eq(foldersTable.id, id));
+
   const updated = await getFolderById(id);
   if (!updated) throw new Error("Failed to retrieve updated folder");
   return updated;

@@ -36,8 +36,16 @@ export async function PATCH(
     if (!folder) {
       return NextResponse.json({ error: "Folder not found" }, { status: 404 });
     }
-    const body = await request.json();
-    const { name } = body;
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch (error) {
+      if (error instanceof SyntaxError) {
+        return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+      }
+      throw error;
+    }
+    const { name } = body as { name?: unknown };
     if (!name || typeof name !== "string" || !name.trim()) {
       return NextResponse.json(
         { error: "Name is required" },

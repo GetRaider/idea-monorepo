@@ -29,12 +29,20 @@ export const DropdownTrigger = styled.button<{ $fullWidth?: boolean }>`
   &:hover {
     border-color: #555;
   }
+
+  &:focus-visible {
+    outline: 2px solid #7255c1;
+    outline-offset: 2px;
+  }
 `;
 
-export const TriggerWrapper = styled.span`
+export const TriggerWrapper = styled.button`
   display: inline-flex;
   align-items: center;
   cursor: pointer;
+  padding: 0;
+  background: transparent;
+  border: none;
 `;
 
 export const ChevronIcon = styled.span<{ $open: boolean }>`
@@ -49,9 +57,9 @@ export const DropdownMenu = styled.ul<{ $portal?: boolean }>`
   display: flex;
   flex-direction: column;
   gap: 2px;
-  top: ${(p) => (p.$portal ? "0" : "calc(100% + 4px)")};
+  top: ${(p) => (p.$portal ? "auto" : "calc(100% + 4px)")};
   right: ${(p) => (p.$portal ? "auto" : "0")};
-  left: ${(p) => (p.$portal ? "0" : "auto")};
+  left: ${(p) => (p.$portal ? "auto" : "auto")};
   z-index: ${(p) => (p.$portal ? 1100 : 100)};
   min-width: ${(p) => (p.$portal ? "0" : "100%")};
   width: ${(p) => (p.$portal ? "max-content" : "auto")};
@@ -62,12 +70,18 @@ export const DropdownMenu = styled.ul<{ $portal?: boolean }>`
   margin: 0;
   list-style: none;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  max-height: 60vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 `;
 
-export const DropdownItem = styled.li<{
+export const DropdownItem = styled.button<{
   $active: boolean;
   $danger?: boolean;
 }>`
+  appearance: none;
+  border: none;
+  background: transparent;
   padding: 8px 12px;
   font-size: 14px;
   color: ${({ $active, $danger }) => {
@@ -85,5 +99,15 @@ export const DropdownItem = styled.li<{
   &:hover {
     background: #3a3a3a;
     color: ${({ $danger }) => ($danger ? "#f87171" : "#fff")};
+  }
+
+  &:focus-visible {
+    outline: 2px solid #7255c1;
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 `;

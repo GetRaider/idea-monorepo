@@ -114,7 +114,8 @@ export function AIComposeModal({
             <>
               <TextArea
                 value={text}
-                onChange={(e) => setText(e.target.value)}
+                maxLength={700}
+                onChange={(e) => setText(e.target.value.slice(0, 700))}
                 placeholder="Describe your task in natural language...&#10;&#10;Example:&#10;Buy groceries for New Year celebration, high priority, due tomorrow, estimate 2 hours"
                 autoFocus
               />

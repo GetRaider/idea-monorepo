@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { Sidebar } from "@/components/Sidebar/Sidebar";
-import { TasksSidebar } from "@/components/TasksSidebar/TasksSidebar";
 import { apiServices } from "@/services/api";
 import { Task } from "@/components/Boards/KanbanBoard/types";
 import { StatsCards, ProductivityOverview, TimelinePlanning } from ".";
@@ -15,7 +14,6 @@ import {
   Subtitle,
   LoadingContainer,
   Spinner,
-  TwoColumnGrid,
 } from "./page.styles";
 
 function HomePage() {
@@ -56,12 +54,6 @@ function HomePage() {
     setCurrentPage(page);
     if (page === "tasks") {
       setIsNavSidebarOpen(true);
-    }
-  };
-
-  const handleViewChange = (view: string) => {
-    if (view === "today" || view === "tomorrow") {
-      window.location.href = "/tasks";
     }
   };
 

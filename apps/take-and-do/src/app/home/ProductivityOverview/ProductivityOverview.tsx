@@ -18,7 +18,6 @@ import {
   SectionHeader,
   SectionTitle,
   Controls,
-  TimeframeSelect,
   GenerateButton,
   ChartsGrid,
   ChartCard,
@@ -38,7 +37,6 @@ import type { AnalyticsStats } from "@/lib/ai";
 import { EmptyState } from "@/components/EmptyState";
 import { Dropdown } from "@/components/Dropdown";
 import { AnalyticsData, Timeframe } from "@/services/api/analytics.api.service";
-import { apiServices } from "@/services/api";
 
 const CHART_TOOLTIP_STYLE = {
   background: "#2a2a2a",

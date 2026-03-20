@@ -16,6 +16,9 @@ export class TaskBoardsApiService extends BaseApiService {
 
   async getById(id: string): Promise<TaskBoard> {
     const response = await this.get<TaskBoard[]>({ queries: { id } });
+    if (!response.data || response.data.length === 0) {
+      throw new Error("TaskBoard not found");
+    }
     return normalizeTaskBoard(response.data[0]);
   }
 

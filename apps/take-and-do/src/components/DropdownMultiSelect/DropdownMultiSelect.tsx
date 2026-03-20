@@ -86,6 +86,8 @@ export function DropdownMultiSelect<T extends string = string>({
   }, [isOpen, measurePanel]);
 
   useEffect(() => {
+    if (!isOpen) return;
+
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as Node;
       if (
@@ -98,7 +100,7 @@ export function DropdownMultiSelect<T extends string = string>({
 
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [updateOpen]);
+  }, [isOpen, updateOpen]);
 
   useEffect(() => {
     if (!isOpen) return;

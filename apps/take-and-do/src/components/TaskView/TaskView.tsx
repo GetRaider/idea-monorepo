@@ -232,7 +232,7 @@ export function TaskView({
   const handlePrioritySelect = (priority: TaskPriority) => {
     setIsPriorityDropdownOpen(false);
     if (shouldCreateTask) {
-      task && setTask({ ...task, priority });
+      if (task) setTask({ ...task, priority });
     } else {
       setPendingUpdates((prev) => ({ ...prev, priority }));
       setTask((prev) => (prev ? { ...prev, priority } : null));
@@ -246,7 +246,7 @@ export function TaskView({
   const handleStatusSelect = (status: TaskStatus) => {
     setIsStatusDropdownOpen(false);
     if (shouldCreateTask) {
-      task && setTask({ ...task, status });
+      if (task) setTask({ ...task, status });
     } else {
       setPendingUpdates((prev) => ({ ...prev, status }));
       setTask((prev) => (prev ? { ...prev, status } : null));
@@ -312,7 +312,10 @@ export function TaskView({
 
   return (
     <TaskViewOverlay onClick={handleOverlayClick}>
-      <TaskViewContainer onClick={(e) => e.stopPropagation()}>
+      <TaskViewContainer
+        data-task-view-container=""
+        onClick={(e) => e.stopPropagation()}
+      >
         <TaskViewHeader
           boardName={boardName}
           task={displayTask}

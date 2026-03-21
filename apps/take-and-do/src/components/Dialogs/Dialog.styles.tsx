@@ -11,7 +11,7 @@ export const DialogOverlay = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 4000;
   padding: 20px;
 
   @media (max-width: 600px) {

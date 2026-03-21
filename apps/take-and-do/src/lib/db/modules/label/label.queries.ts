@@ -29,3 +29,46 @@ export async function addLabel(label: string): Promise<string> {
 
   return trimmedLabel;
 }
+
+export async function renameLabel(
+  oldName: string,
+  newName: string,
+): Promise<string> {
+  const trimmedNew = newName.trim();
+  if (!trimmedNew) {
+    throw new Error("Label name is required");
+  }
+  if (trimmedNew === oldName) {
+    return oldName;
+  }
+
+  const [existingOld] = await db
+    .select()
+    .from(labelsTable)
+    .where(eq(labelsTable.name, oldName));
+
+  if (!existingOld) {
+    throw new Error("Label not found");
+  }
+
+  const [nameTaken] = await db
+    .select()
+    .from(labelsTable)
+    .where(eq(labelsTable.name, trimmedNew));
+
+  if (nameTaken) {
+    throw new Error("A label with that name already exists");
+  }
+
+  await db
+    .update(labelsTable)
+    .set({ name: trimmedNew })
+    .where(eq(labelsTable.name, oldName));
+
+  return trimmedNew;
+}
+
+export async function deleteLabelByName(name: string): Promise<void> {
+  const trimmed = name.trim();
+  await db.delete(labelsTable).where(eq(labelsTable.name, trimmed));
+}

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useRef, useState } from "react";
 import { CalendarIcon, ClockIcon } from "@/components/Icons";
 import { Task } from "../types";
@@ -17,7 +18,7 @@ import {
   TagDot,
 } from "./TaskCard.styles";
 import { tasksHelper } from "@/helpers/task.helper";
-import { TaskPriority } from "@/components/Boards/KanbanBoard/types";
+import { getLabelAccent } from "@/helpers/label-color.helper";
 
 interface TaskCardProps {
   task: Task;
@@ -53,7 +54,7 @@ export function TaskCard({ task, onTaskClick }: TaskCardProps) {
     }
   };
 
-  const handleDragEnd = (e: React.DragEvent<HTMLDivElement>) => {
+  const handleDragEnd = () => {
     setIsDragging(false);
     if (cardRef.current) {
       cardRef.current.style.opacity = "1";
@@ -64,7 +65,7 @@ export function TaskCard({ task, onTaskClick }: TaskCardProps) {
     }
   };
 
-  const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handleClick = () => {
     // Don't open modal if user is dragging
     if (isDragging) return;
     if (onTaskClick) {
@@ -87,12 +88,12 @@ export function TaskCard({ task, onTaskClick }: TaskCardProps) {
         <Id>{taskKey || id}</Id>
         {!!subtasks.length && (
           <Subtasks>
-            <img
+            <Image
               src="/subtask.svg"
               alt="Subtasks"
               width={18}
               height={18}
-              style={{ marginRight: 2, color: "#666" }}
+              style={{ marginRight: 2 }}
             />
             <span>{subtasks.length}</span>
           </Subtasks>
@@ -117,12 +118,15 @@ export function TaskCard({ task, onTaskClick }: TaskCardProps) {
       </Meta>
 
       <Labels>
-        {labels.map((label, index) => (
-          <Tag key={index}>
-            <TagDot />
-            {label}
-          </Tag>
-        ))}
+        {labels.map((label) => {
+          const accent = getLabelAccent(label);
+          return (
+            <Tag key={label} $tintBg={accent.tintBg}>
+              <TagDot $color={accent.dot} />
+              {label}
+            </Tag>
+          );
+        })}
       </Labels>
     </Card>
   );

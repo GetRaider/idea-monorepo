@@ -28,7 +28,9 @@ export const TaskViewContainer = styled.div`
   border-radius: 12px;
   width: 100%;
   max-width: 800px;
+  min-width: 0;
   max-height: 90vh;
+  overflow-x: hidden;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -129,6 +131,7 @@ export const TaskTitleSection = styled.div`
   gap: 12px;
   padding: 24px;
   padding-bottom: 16px;
+  min-width: 0;
 `;
 
 export const PriorityIcon = styled.button`
@@ -174,11 +177,11 @@ export const TaskTitleInput = styled(Input)`
   font-weight: 600;
   margin: 0;
   line-height: 1.4;
+  min-width: 0;
   width: auto;
   flex: 1;
   border-radius: 4px;
   padding: 4px 8px;
-  scroll-snap-type: x mandatory; /* this will do the magic for parent */
 `;
 
 export const TaskDescription = styled.p`
@@ -447,7 +450,6 @@ export const CommentInputWrapper = styled.div`
   border-radius: 8px;
   padding: 12px;
 `;
-
 
 export const AttachIconButton = styled.button`
   background: none;

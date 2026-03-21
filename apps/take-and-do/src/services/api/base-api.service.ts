@@ -83,12 +83,16 @@ export class BaseApiService {
     });
   }
 
-  async delete<T>({ pathParams, queries, token }: IBaseRequest = {}): Promise<
-    IHttpResponse<T>
-  > {
+  async delete<T>({
+    pathParams,
+    queries,
+    token,
+    body,
+  }: IBaseRequest = {}): Promise<IHttpResponse<T>> {
     return this.httpClient.delete({
       url: this.getUrl(pathParams, queries),
       headers: this.getDefaultHeaders(token),
+      body,
     });
   }
 

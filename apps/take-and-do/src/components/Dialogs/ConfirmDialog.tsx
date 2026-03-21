@@ -13,6 +13,7 @@ interface ConfirmDialogProps {
   description: string;
   confirmLabel: string;
   cancelLabel?: string;
+  maxWidth?: number;
   onConfirm: () => void | Promise<void>;
   onClose: () => void;
 }
@@ -22,6 +23,7 @@ export function ConfirmDialog({
   description,
   confirmLabel,
   cancelLabel = "Cancel",
+  maxWidth,
   onConfirm,
   onClose,
 }: ConfirmDialogProps) {
@@ -34,7 +36,7 @@ export function ConfirmDialog({
   };
 
   return (
-    <Dialog title={title} onClose={onClose} showCloseButton>
+    <Dialog title={title} onClose={onClose} showCloseButton maxWidth={maxWidth}>
       <ConfirmBody>{description}</ConfirmBody>
       <ConfirmActions>
         <ConfirmCancelBtn type="button" onClick={onClose}>

@@ -152,6 +152,7 @@ export function Dropdown<T extends string = string>({
           <DropdownMenu
             ref={menuRef}
             $portal
+            data-dropdown-portal
             style={{
               top: menuRect.top,
               left: menuRect.left,

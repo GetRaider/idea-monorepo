@@ -1,5 +1,7 @@
 import { tasksHelper } from "@/helpers/task.helper";
-import { CalendarIcon, ClockIcon } from "@/components/Icons";
+import { CalendarIcon, ClockIcon, DotsVerticalIcon } from "@/components/Icons";
+import { Dropdown } from "@/components/Dropdown";
+import { ConfirmDialog } from "@/components/Dialogs";
 import {
   MetadataInput,
   MetadataItem,
@@ -12,19 +14,29 @@ import {
   LabelDropdownItem,
   LabelDropdown,
   LabelDropdownInput,
+  LabelDropdownRow,
+  LabelDropdownRowToggle,
+  LabelDropdownRowLabelText,
+  LabelRowActions,
+  LabelDropdownEditInput,
   Tag,
+  TagText,
   TagDot,
   AddLabelTag,
   CreateLabelSpan,
 } from "./TaskMetadata.styles";
 import { Task, TaskUpdate } from "../../Boards/KanbanBoard/types";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useLayoutEffect, useMemo } from "react";
 import { apiServices } from "@/services/api";
+import { getLabelAccent } from "@/helpers/label-color.helper";
+import { toast } from "sonner";
+
+const LABEL_MENU_WIDTH = 200;
+const LABEL_MENU_EDGE = 10;
 
 export function TaskMetadata({
   task,
   handleUpdateTask,
-  isCreating = false,
   onTaskChange,
 }: TaskMetadataProps) {
   const updateTask = (updates: Partial<Task>) => {
@@ -49,8 +61,25 @@ export function TaskMetadata({
   const [isLabelDropdownOpen, setIsLabelDropdownOpen] = useState(false);
   const [availableLabels, setAvailableLabels] = useState<string[]>([]);
   const [labelSearchValue, setLabelSearchValue] = useState("");
+  const [openMenuLabelName, setOpenMenuLabelName] = useState<string | null>(
+    null,
+  );
+  const [editingCatalogLabel, setEditingCatalogLabel] = useState<string | null>(
+    null,
+  );
+  const [editingCatalogLabelValue, setEditingCatalogLabelValue] = useState("");
+  const [labelPendingDelete, setLabelPendingDelete] = useState<string | null>(
+    null,
+  );
   const labelDropdownRef = useRef<HTMLDivElement>(null);
   const estimationGroupRef = useRef<HTMLDivElement>(null);
+
+  const filteredCatalogLabels = useMemo(() => {
+    const q = labelSearchValue.toLowerCase();
+    return [...availableLabels]
+      .filter((label) => label.toLowerCase().includes(q))
+      .sort((a, b) => a.localeCompare(b));
+  }, [availableLabels, labelSearchValue]);
 
   // Set data
   useEffect(() => {
@@ -88,6 +117,65 @@ export function TaskMetadata({
     };
     fetchLabels();
   }, []);
+
+  useLayoutEffect(() => {
+    if (!isLabelDropdownOpen) {
+      labelDropdownRef.current?.style.removeProperty("--label-menu-left");
+      return;
+    }
+    const wrap = labelDropdownRef.current;
+    if (!wrap) return;
+
+    const run = () => {
+      const el = labelDropdownRef.current;
+      if (!el) return;
+      const shell = el.closest(
+        "[data-task-view-container]",
+      ) as HTMLElement | null;
+      const tr = el.getBoundingClientRect();
+      const sr = shell?.getBoundingClientRect();
+      const lo = sr ? sr.left + LABEL_MENU_EDGE : LABEL_MENU_EDGE;
+      const hi = sr
+        ? sr.right - LABEL_MENU_EDGE - LABEL_MENU_WIDTH
+        : window.innerWidth - LABEL_MENU_EDGE - LABEL_MENU_WIDTH;
+      const desiredLeft = Math.max(lo, Math.min(tr.left, Math.max(lo, hi)));
+      el.style.setProperty("--label-menu-left", `${desiredLeft - tr.left}px`);
+    };
+
+    run();
+    const shell = wrap.closest(
+      "[data-task-view-container]",
+    ) as HTMLElement | null;
+    window.addEventListener("resize", run);
+    shell?.addEventListener("scroll", run, { passive: true });
+
+    return () => {
+      window.removeEventListener("resize", run);
+      shell?.removeEventListener("scroll", run);
+      wrap.style.removeProperty("--label-menu-left");
+    };
+  }, [
+    isLabelDropdownOpen,
+    filteredCatalogLabels.length,
+    editingCatalogLabel,
+    labelSearchValue,
+  ]);
+
+  useEffect(() => {
+    if (!isLabelDropdownOpen) return;
+    const handleMouseDown = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (labelDropdownRef.current?.contains(t)) return;
+      const el = t as Element;
+      if (el.closest?.("[data-dropdown-portal]")) return;
+      setIsLabelDropdownOpen(false);
+      setLabelSearchValue("");
+      setEditingCatalogLabel(null);
+      setOpenMenuLabelName(null);
+    };
+    document.addEventListener("mousedown", handleMouseDown);
+    return () => document.removeEventListener("mousedown", handleMouseDown);
+  }, [isLabelDropdownOpen]);
 
   const handleDueDateClick = () => {
     setIsEditingDueDate(true);
@@ -161,16 +249,76 @@ export function TaskMetadata({
     handleEstimationSave();
   };
   const handleLabelDropdownToggle = () => {
-    setIsLabelDropdownOpen(!isLabelDropdownOpen);
+    setIsLabelDropdownOpen((open) => !open);
     setLabelSearchValue("");
+    setEditingCatalogLabel(null);
+    setOpenMenuLabelName(null);
   };
-  const handleSelectLabel = async (label: string) => {
-    if (!task?.labels?.includes(label)) {
-      const newLabels = [...(task?.labels || []), label];
-      updateTask({ labels: newLabels });
+
+  const handleToggleLabelOnTask = (label: string) => {
+    const current = task?.labels || [];
+    if (current.includes(label)) {
+      updateTask({ labels: current.filter((l) => l !== label) });
+    } else {
+      updateTask({ labels: [...current, label] });
     }
-    setIsLabelDropdownOpen(false);
-    setLabelSearchValue("");
+  };
+
+  const handleCatalogLabelAction = (label: string, action: string) => {
+    if (action === "edit") {
+      setEditingCatalogLabel(label);
+      setEditingCatalogLabelValue(label);
+    }
+    if (action === "delete") {
+      setIsLabelDropdownOpen(false);
+      setLabelSearchValue("");
+      setEditingCatalogLabel(null);
+      setOpenMenuLabelName(null);
+      setLabelPendingDelete(label);
+    }
+  };
+
+  const handleSaveCatalogLabelRename = async (oldName: string) => {
+    const trimmed = editingCatalogLabelValue.trim();
+    if (!trimmed || trimmed === oldName) {
+      setEditingCatalogLabel(null);
+      return;
+    }
+    try {
+      const newName = await apiServices.labels.rename(oldName, trimmed);
+      setAvailableLabels((prev) =>
+        [...prev.map((l) => (l === oldName ? newName : l))].sort((a, b) =>
+          a.localeCompare(b),
+        ),
+      );
+      if (task.labels?.includes(oldName)) {
+        updateTask({
+          labels: task.labels.map((l) => (l === oldName ? newName : l)),
+        });
+      }
+      setEditingCatalogLabel(null);
+      toast.success("Label renamed");
+    } catch (error) {
+      console.error("Failed to rename label:", error);
+      toast.error("Failed to rename label");
+    }
+  };
+
+  const handleConfirmDeleteLabel = async () => {
+    if (!labelPendingDelete) return;
+    const name = labelPendingDelete;
+    setLabelPendingDelete(null);
+    try {
+      await apiServices.labels.remove(name);
+      setAvailableLabels((prev) => prev.filter((l) => l !== name));
+      if (task.labels?.includes(name)) {
+        updateTask({ labels: task.labels.filter((l) => l !== name) });
+      }
+      toast.success("Label deleted");
+    } catch (error) {
+      console.error("Failed to delete label:", error);
+      toast.error("Failed to delete label");
+    }
   };
   const handleCreateAndSelectLabel = async () => {
     if (labelSearchValue.trim()) {
@@ -307,19 +455,23 @@ export function TaskMetadata({
         </MetadataItem>
       )}
 
-      {/* Labels */}
-      {task.labels?.map((label, index) => (
-        <Tag
-          key={index}
-          onClick={() => handleRemoveLabel(label)}
-          title="Click to remove"
-        >
-          <TagDot />
-          {label}
-        </Tag>
-      ))}
+      {task.labels?.map((label) => {
+        const accent = getLabelAccent(label);
+        return (
+          <Tag
+            key={label}
+            $tintBg={accent.tintBg}
+            $tintHoverBg={accent.tintHoverBg}
+            $tintBorder={accent.tintBorder}
+            onClick={() => handleRemoveLabel(label)}
+            title="Click to remove"
+          >
+            <TagDot $color={accent.dot} />
+            <TagText>{label}</TagText>
+          </Tag>
+        );
+      })}
 
-      {/* Add Label */}
       <LabelSelectorContainer ref={labelDropdownRef}>
         <AddLabelTag onClick={handleLabelDropdownToggle} title="Add label">
           + Label
@@ -335,38 +487,119 @@ export function TaskMetadata({
               } else if (e.key === "Escape") {
                 setIsLabelDropdownOpen(false);
                 setLabelSearchValue("");
+                setEditingCatalogLabel(null);
+                setOpenMenuLabelName(null);
               }
             }}
             placeholder="Search or create..."
             autoFocus={isLabelDropdownOpen}
             maxLength={32}
           />
-          {availableLabels
-            .filter(
-              (label) =>
-                label.toLowerCase().includes(labelSearchValue.toLowerCase()) &&
-                !task.labels?.includes(label),
-            )
-            .map((label) => (
-              <LabelDropdownItem
+          {filteredCatalogLabels.map((label) => {
+            const accent = getLabelAccent(label);
+            const onTask = !!task.labels?.includes(label);
+            const isEditingRow = editingCatalogLabel === label;
+            const isMenuOpen = openMenuLabelName === label;
+
+            return (
+              <LabelDropdownRow
                 key={label}
-                onClick={() => handleSelectLabel(label)}
+                $activeMenu={isMenuOpen}
+                data-menu-open={isMenuOpen ? "true" : undefined}
               >
-                <TagDot />
-                {label}
-              </LabelDropdownItem>
-            ))}
+                {isEditingRow ? (
+                  <LabelDropdownEditInput
+                    value={editingCatalogLabelValue}
+                    onChange={(e) =>
+                      setEditingCatalogLabelValue(e.target.value)
+                    }
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        void handleSaveCatalogLabelRename(label);
+                      }
+                      if (e.key === "Escape") {
+                        setEditingCatalogLabel(null);
+                        setEditingCatalogLabelValue("");
+                      }
+                    }}
+                    onBlur={(e) => {
+                      const next = e.relatedTarget as HTMLElement | null;
+                      if (
+                        next?.closest("[data-dropdown-portal]") ||
+                        (next &&
+                          labelDropdownRef.current?.contains(next) &&
+                          next.closest('[aria-haspopup="menu"]'))
+                      )
+                        return;
+                      void handleSaveCatalogLabelRename(label);
+                    }}
+                    autoFocus
+                    maxLength={32}
+                  />
+                ) : (
+                  <>
+                    <LabelDropdownRowToggle
+                      type="button"
+                      $onTask={onTask}
+                      onClick={() => handleToggleLabelOnTask(label)}
+                      title={onTask ? "Remove from task" : "Add to task"}
+                    >
+                      <TagDot $color={accent.dot} />
+                      <LabelDropdownRowLabelText>
+                        {label}
+                      </LabelDropdownRowLabelText>
+                    </LabelDropdownRowToggle>
+                    <LabelRowActions>
+                      <Dropdown
+                        options={[
+                          { label: "Edit", value: "edit" },
+                          { label: "Delete", value: "delete", danger: true },
+                        ]}
+                        onChange={(value) =>
+                          handleCatalogLabelAction(label, value)
+                        }
+                        trigger={
+                          <span data-label-actions-trigger>
+                            <DotsVerticalIcon size={14} />
+                          </span>
+                        }
+                        onOpenChange={(open) =>
+                          setOpenMenuLabelName(open ? label : null)
+                        }
+                      />
+                    </LabelRowActions>
+                  </>
+                )}
+              </LabelDropdownRow>
+            );
+          })}
           {labelSearchValue.trim() &&
             !availableLabels.some(
               (l) => l.toLowerCase() === labelSearchValue.toLowerCase(),
             ) && (
               <LabelDropdownItem onClick={handleCreateAndSelectLabel}>
-                <CreateLabelSpan>+</CreateLabelSpan>
+                <CreateLabelSpan
+                  $accentColor={getLabelAccent(labelSearchValue.trim()).dot}
+                >
+                  +
+                </CreateLabelSpan>
                 Create &quot;{labelSearchValue}&quot;
               </LabelDropdownItem>
             )}
         </LabelDropdown>
       </LabelSelectorContainer>
+
+      {labelPendingDelete && (
+        <ConfirmDialog
+          title={`Delete "${labelPendingDelete}" label?`}
+          description="This removes the label from your workspace and unassigns it from all tasks. This cannot be undone."
+          confirmLabel="Delete label"
+          maxWidth={380}
+          onConfirm={handleConfirmDeleteLabel}
+          onClose={() => setLabelPendingDelete(null)}
+        />
+      )}
     </MetadataContainer>
   );
 }

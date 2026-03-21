@@ -80,22 +80,33 @@ export const Labels = styled.div`
   gap: 6px;
 `;
 
-export const Tag = styled.span<{ $isCategory?: boolean }>`
+export const Tag = styled.span<{
+  $isCategory?: boolean;
+  $tintBg?: string;
+}>`
   display: flex;
   align-items: center;
   gap: 4px;
   padding: 4px 8px;
-  background: ${(props) =>
-    props.$isCategory ? "rgba(245, 158, 11, 0.1)" : "rgba(102, 126, 234, 0.1)"};
+  background: ${(props) => {
+    if (props.$isCategory) return "rgba(245, 158, 11, 0.1)";
+    if (props.$tintBg) return props.$tintBg;
+    return "rgba(102, 126, 234, 0.1)";
+  }};
   border-radius: 6px;
   font-size: 11px;
   color: #888;
   font-weight: 500;
 `;
 
-export const TagDot = styled.span<{ $isCategory?: boolean }>`
+export const TagDot = styled.span<{ $isCategory?: boolean; $color?: string }>`
+  flex-shrink: 0;
   width: 4px;
   height: 4px;
   border-radius: 50%;
-  background: ${(props) => (props.$isCategory ? "#f59e0b" : "#667eea")};
+  background: ${(props) => {
+    if (props.$isCategory) return "#f59e0b";
+    if (props.$color) return props.$color;
+    return "#667eea";
+  }};
 `;

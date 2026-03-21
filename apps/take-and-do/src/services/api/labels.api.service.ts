@@ -16,4 +16,15 @@ export class LabelsApiService extends BaseApiService {
     });
     return response.data.label;
   }
+
+  async rename(oldName: string, newName: string): Promise<string> {
+    const response = await this.patch<{ label: string }>({
+      body: { oldName, newName },
+    });
+    return response.data.label;
+  }
+
+  async remove(name: string): Promise<void> {
+    await this.delete<{ ok: boolean }>({ body: { name } });
+  }
 }

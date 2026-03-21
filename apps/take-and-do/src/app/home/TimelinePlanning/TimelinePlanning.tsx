@@ -7,7 +7,7 @@ import { Task } from "@/components/Boards/KanbanBoard/types";
 import { EmptyState } from "@/components/EmptyState";
 import { apiServices } from "@/services/api";
 import { ScheduleType, tasksHelper } from "@/helpers/task.helper";
-import { ScheduleOptimizationModal } from "./AIPlanningOptimizationModal/AIPlanningOptimizationModal";
+import { AIPlanningOptimizationModal } from "./AIPlanningOptimizationModal/AIPlanningOptimizationModal";
 import { OptimizeButton } from "./AIPlanningOptimizationModal/AIPlanningOptimizationModal.styles";
 import {
   Section,
@@ -70,9 +70,7 @@ export function TimelinePlanning({
 
   const handleTaskClick = async (task: Task) => {
     try {
-      const taskBoard = await apiServices.taskBoards.getById(
-        task.taskBoardId,
-      );
+      const taskBoard = await apiServices.taskBoards.getById(task.taskBoardId);
       router.push(
         buildTasksUrl({
           type: "board",
@@ -176,7 +174,7 @@ export function TimelinePlanning({
       <ViewAllLink href="/tasks">View all tasks →</ViewAllLink>
 
       {isOptimizationModalOpen && (
-        <ScheduleOptimizationModal
+        <AIPlanningOptimizationModal
           onClose={() => setIsOptimizationModalOpen(false)}
         />
       )}

@@ -18,7 +18,7 @@ import {
 
 function HomePage() {
   const [, setCurrentPage] = useState("home");
-  const [isNavSidebarOpen, setIsNavSidebarOpen] = useState(false);
+  const [isTasksSidebarOpen, setIsTasksSidebarOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [todayTasks, setTodayTasks] = useState<Task[]>([]);
   const [tomorrowTasks, setTomorrowTasks] = useState<Task[]>([]);
@@ -46,18 +46,18 @@ function HomePage() {
     fetchData();
   }, []);
 
-  const handleNavigationChange = (page: string) => {
+  const handleNavigationToTasksPage = (page: string) => {
     setCurrentPage(page);
     if (page === "tasks") {
-      setIsNavSidebarOpen(true);
+      setIsTasksSidebarOpen(true);
     }
   };
 
   if (isLoading) {
     return (
       <PageContainer>
-        <Sidebar onNavigationChange={handleNavigationChange} />
-        <MainContent $withNavSidebar={isNavSidebarOpen}>
+        <Sidebar onNavigationChange={handleNavigationToTasksPage} />
+        <MainContent $withNavSidebar={isTasksSidebarOpen}>
           <LoadingContainer>
             <Spinner />
           </LoadingContainer>
@@ -68,8 +68,8 @@ function HomePage() {
 
   return (
     <PageContainer>
-      <Sidebar onNavigationChange={handleNavigationChange} />
-      <MainContent $withNavSidebar={isNavSidebarOpen}>
+      <Sidebar onNavigationChange={handleNavigationToTasksPage} />
+      <MainContent $withNavSidebar={isTasksSidebarOpen}>
         <WelcomeSection>
           <Title>Home</Title>
           <Subtitle>

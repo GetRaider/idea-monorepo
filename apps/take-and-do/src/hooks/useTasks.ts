@@ -16,7 +16,7 @@ interface UseTasksParams {
 export function useTasks({
   date,
   taskBoardId,
-}: UseTasksParams): UseTasksReturn {
+}: UseTasksParams = {}): UseTasksReturn {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const requestIdRef = useRef(0);
@@ -52,10 +52,9 @@ export function useTasks({
 async function getTasks({
   dateTimestamp,
   taskBoardId,
-}: UseTasksParams & { dateTimestamp?: number } = {}): Promise<
-  Task[]
-> {
-  if (dateTimestamp) return apiServices.tasks.getByDate(new Date(dateTimestamp));
+}: UseTasksParams & { dateTimestamp?: number } = {}): Promise<Task[]> {
+  if (dateTimestamp)
+    return apiServices.tasks.getByDate(new Date(dateTimestamp));
   if (taskBoardId) return apiServices.tasks.getByBoardId(taskBoardId);
 
   return apiServices.tasks.getAll();

@@ -45,7 +45,7 @@ import {
 } from "./AIPlanningOptimizationModal.styles";
 import { useTasks } from "@/hooks/useTasks";
 
-interface ScheduleOptimizationModalProps {
+interface AIPlanningOptimizationModalProps {
   onClose: () => void;
 }
 
@@ -67,9 +67,9 @@ interface ScheduleOptimization {
   insights: string[];
 }
 
-export function ScheduleOptimizationModal({
+export function AIPlanningOptimizationModal({
   onClose,
-}: ScheduleOptimizationModalProps) {
+}: AIPlanningOptimizationModalProps) {
   const modalTitleId = useId();
   const modalContentRef = useRef<HTMLDivElement>(null);
 
@@ -82,7 +82,7 @@ export function ScheduleOptimizationModal({
   const [isExploring, setIsExploring] = useState(false);
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { tasks, isLoading: isTasksLoading } = useTasks({});
+  const { tasks, isLoading: isTasksLoading } = useTasks();
 
   useEffect(() => {
     const prevFocused = document.activeElement as HTMLElement | null;
@@ -96,7 +96,9 @@ export function ScheduleOptimizationModal({
         root.querySelectorAll<HTMLElement>(
           'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
         ),
-      ).filter((el) => !el.hasAttribute("disabled") && !el.getAttribute("aria-hidden"));
+      ).filter(
+        (el) => !el.hasAttribute("disabled") && !el.getAttribute("aria-hidden"),
+      );
 
       (focusables[0] ?? root).focus?.();
     };
@@ -118,7 +120,9 @@ export function ScheduleOptimizationModal({
         root.querySelectorAll<HTMLElement>(
           'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
         ),
-      ).filter((el) => !el.hasAttribute("disabled") && !el.getAttribute("aria-hidden"));
+      ).filter(
+        (el) => !el.hasAttribute("disabled") && !el.getAttribute("aria-hidden"),
+      );
 
       if (focusables.length === 0) {
         e.preventDefault();
@@ -159,21 +163,15 @@ export function ScheduleOptimizationModal({
   const toggleTask = (taskId: string) => {
     setSelectedTaskIds((prev) => {
       const next = new Set(prev);
-      if (next.has(taskId)) {
-        next.delete(taskId);
-      } else {
-        next.add(taskId);
-      }
+      next.has(taskId) ? next.delete(taskId) : next.add(taskId);
       return next;
     });
   };
 
   const toggleAll = () => {
-    if (allSelected) {
-      setSelectedTaskIds(new Set());
-    } else {
-      setSelectedTaskIds(new Set(tasks.map((t) => t.id)));
-    }
+    setSelectedTaskIds(
+      allSelected ? new Set() : new Set(tasks.map((t) => t.id)),
+    );
   };
 
   const sanitizeText = (text: string): string => {
@@ -249,7 +247,10 @@ export function ScheduleOptimizationModal({
         const failedTaskIds = rejected
           .slice(0, 5)
           .map(({ idx }) => updates[idx].taskId);
-        console.error("[AIPlanningOptimizationModal] Failed task updates:", rejected);
+        console.error(
+          "[AIPlanningOptimizationModal] Failed task updates:",
+          rejected,
+        );
         setError(
           `Failed to update ${rejected.length} task(s): ${failedTaskIds.join(", ")}.`,
         );
@@ -283,7 +284,9 @@ export function ScheduleOptimizationModal({
       <ModalContent ref={modalContentRef} tabIndex={-1}>
         <ModalHeader>
           <HeaderContent>
-            <ModalTitle id={modalTitleId}>⏳ AI Planning Optimization</ModalTitle>
+            <ModalTitle id={modalTitleId}>
+              ⏳ AI Planning Optimization
+            </ModalTitle>
             <ModalDescription>
               Explore Planning Optimization with AI-powered analysis based on
               priorities, schedules, due dates, and estimations.
@@ -378,9 +381,11 @@ export function ScheduleOptimizationModal({
                     <ScheduleChange>
                       {formatSchedule(rec.currentSchedule)}
                       <ArrowIcon>→</ArrowIcon>
-                    <strong aria-label={`Updated schedule to ${formatSchedule(rec.suggestedSchedule)}`}>
-                      {formatSchedule(rec.suggestedSchedule)}
-                    </strong>
+                      <strong
+                        aria-label={`Updated schedule to ${formatSchedule(rec.suggestedSchedule)}`}
+                      >
+                        {formatSchedule(rec.suggestedSchedule)}
+                      </strong>
                     </ScheduleChange>
                     <ReasonText>{rec.reason}</ReasonText>
                   </RecommendationCard>

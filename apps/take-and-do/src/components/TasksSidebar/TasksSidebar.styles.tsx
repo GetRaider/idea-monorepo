@@ -163,17 +163,22 @@ export const BoardToggle = styled.button`
   flex: 1;
 `;
 
-export const BoardActionsWrapper = styled.div`
+export const WorkspaceRowActions = styled.div`
   opacity: 0;
-  display: flex;
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
   flex-shrink: 0;
-  padding-right: 12px;
-  padding-left: 4px;
+  align-self: center;
+  padding: 0 8px;
   color: #888;
   transition: opacity 0.15s;
 
-  [data-board-actions-trigger] {
+  [data-board-actions-trigger],
+  [data-folder-actions-trigger] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     padding: 4px;
     border-radius: 4px;
   }
@@ -196,7 +201,7 @@ export const BoardRow = styled.div<{ $active?: boolean; $selected?: boolean }>`
     color: #fff;
   }
 
-  &:hover ${BoardActionsWrapper} {
+  &:hover ${WorkspaceRowActions} {
     opacity: 1;
   }
 
@@ -205,6 +210,14 @@ export const BoardRow = styled.div<{ $active?: boolean; $selected?: boolean }>`
     css`
       ${BoardToggle} {
         color: #fff;
+      }
+    `}
+
+  ${({ $active }) =>
+    $active &&
+    css`
+      ${WorkspaceRowActions} {
+        opacity: 1;
       }
     `}
 
@@ -331,6 +344,18 @@ export const ChevronWrapper = styled.span<{ $expanded?: boolean }>`
   margin-left: auto;
 `;
 
+export const FolderChevron = styled.span<{ $expanded?: boolean }>`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 18px;
+  color: inherit;
+  opacity: 0.7;
+  transition: transform 0.2s ease;
+  transform: ${(p) => (p.$expanded ? "rotate(90deg)" : "rotate(0)")};
+`;
+
 export const SubItems = styled.div`
   display: flex;
   flex-direction: column;
@@ -353,22 +378,6 @@ export const SubItem = styled.div`
   &:hover {
     background: #2a2a2a;
     color: #fff;
-  }
-`;
-
-export const FolderActionsWrapper = styled.div`
-  opacity: 0;
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-  padding-right: 12px;
-  padding-left: 4px;
-  color: #888;
-  transition: opacity 0.15s;
-
-  [data-folder-actions-trigger] {
-    padding: 4px;
-    border-radius: 4px;
   }
 `;
 
@@ -441,14 +450,14 @@ export const FolderRow = styled.div<{ $active?: boolean }>`
     color: #fff;
   }
 
-  &:hover ${FolderActionsWrapper} {
+  &:hover ${WorkspaceRowActions} {
     opacity: 1;
   }
 
   ${({ $active }) =>
     $active &&
     css`
-      ${FolderActionsWrapper} {
+      ${WorkspaceRowActions} {
         opacity: 1;
       }
     `}

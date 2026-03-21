@@ -7,6 +7,7 @@ import {
   type SetStateAction,
 } from "react";
 import {
+  ChevronRightIcon,
   ClockCircleIcon,
   ClockNavIcon,
   DotsVerticalIcon,
@@ -28,13 +29,13 @@ import {
   AddButton,
   BoardRow,
   BoardToggle,
-  BoardActionsWrapper,
   BoardEditWrap,
   BoardEditInput,
   EmojiPreview,
   FolderDropTarget,
   FolderRow,
-  FolderActionsWrapper,
+  FolderChevron,
+  WorkspaceRowActions,
   FolderEditWrap,
   FolderEditInput,
   RootBoardsDropZone,
@@ -52,6 +53,7 @@ import {
   buildBoardUrl,
   buildScheduleUrl,
 } from "@/helpers/tasks-routing.helper";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { EmojiPickerField } from "./EmojiPickerField";
 import { useEmojiPickerState } from "./useEmojiPickerState";
@@ -135,10 +137,9 @@ export function TasksSidebar({
       // `opts?.emoji === undefined` means "don't change emoji".
       // If it's `null`, that's a real "clear emoji" request.
       const desiredEmoji =
-        opts?.emoji === undefined ? editingBoardEmoji : opts?.emoji ?? null;
+        opts?.emoji === undefined ? editingBoardEmoji : (opts?.emoji ?? null);
 
-      const nameChanged =
-        !!trimmedName && trimmedName !== (board.name ?? "");
+      const nameChanged = !!trimmedName && trimmedName !== (board.name ?? "");
       const emojiChanged = desiredEmoji !== (board.emoji ?? null);
 
       setEditingBoardId(null);
@@ -163,7 +164,14 @@ export function TasksSidebar({
         toast.error("Failed to update board");
       }
     },
-    [editingName, editingBoardEmoji, router, setTaskBoards],
+    [
+      editingName,
+      editingBoardEmoji,
+      router,
+      setEditingBoardId,
+      setOpenBoardEmojiPickerId,
+      setTaskBoards,
+    ],
   );
 
   const handleDeleteConfirm = async () => {
@@ -209,10 +217,9 @@ export function TasksSidebar({
       // `opts?.emoji === undefined` means "don't change emoji".
       // If it's `null`, that's a real "clear emoji" request.
       const desiredEmoji =
-        opts?.emoji === undefined ? editingFolderEmoji : opts?.emoji ?? null;
+        opts?.emoji === undefined ? editingFolderEmoji : (opts?.emoji ?? null);
 
-      const nameChanged =
-        !!trimmedName && trimmedName !== (folder.name ?? "");
+      const nameChanged = !!trimmedName && trimmedName !== (folder.name ?? "");
       const emojiChanged = desiredEmoji !== (folder.emoji ?? null);
 
       setEditingFolderId(null);
@@ -236,7 +243,13 @@ export function TasksSidebar({
         toast.error("Failed to update folder");
       }
     },
-    [editingFolderEmoji, editingFolderName, setFolders],
+    [
+      editingFolderEmoji,
+      editingFolderName,
+      setEditingFolderId,
+      setOpenFolderEmojiPickerId,
+      setFolders,
+    ],
   );
 
   const handleFolderAction = (folder: Folder, action: string) => {
@@ -364,7 +377,7 @@ export function TasksSidebar({
               {taskBoard.emoji ? (
                 <EmojiPreview>{taskBoard.emoji}</EmojiPreview>
               ) : (
-                <img
+                <Image
                   width={20}
                   height={20}
                   src="/kanban-board.svg"
@@ -375,7 +388,7 @@ export function TasksSidebar({
             </BoardToggle>
           )}
           {!isEditing && (
-            <BoardActionsWrapper>
+            <WorkspaceRowActions>
               <Dropdown
                 options={[
                   { label: "Edit", value: "edit" },
@@ -391,7 +404,7 @@ export function TasksSidebar({
                   setOpenMenuBoardId(open ? taskBoard.id : null)
                 }
               />
-            </BoardActionsWrapper>
+            </WorkspaceRowActions>
           )}
         </BoardRow>
       </WorkspaceItem>
@@ -511,7 +524,8 @@ export function TasksSidebar({
                               }
                             }}
                             onBlur={(e) => {
-                              const next = e.relatedTarget as HTMLElement | null;
+                              const next =
+                                e.relatedTarget as HTMLElement | null;
                               if (
                                 next?.closest("[data-emoji-picker-popover]") ||
                                 next?.closest("[data-emoji-trigger]")
@@ -526,15 +540,23 @@ export function TasksSidebar({
                         </FolderEditWrap>
                       ) : (
                         <WorkspaceToggle
+                          type="button"
+                          aria-expanded={expandedFolder === folder.id}
                           onClick={(e) => {
                             e.stopPropagation();
                             toggleFolder(folder.id);
                           }}
                         >
+                          <FolderChevron
+                            $expanded={expandedFolder === folder.id}
+                            aria-hidden
+                          >
+                            <ChevronRightIcon size={14} />
+                          </FolderChevron>
                           {folder.emoji ? (
                             <EmojiPreview>{folder.emoji}</EmojiPreview>
                           ) : (
-                            <img
+                            <Image
                               width={20}
                               height={20}
                               src="/folder.svg"
@@ -545,7 +567,7 @@ export function TasksSidebar({
                         </WorkspaceToggle>
                       )}
                       {editingFolderId !== folder.id && (
-                        <FolderActionsWrapper>
+                        <WorkspaceRowActions>
                           <Dropdown
                             options={[
                               { label: "Edit", value: "edit" },
@@ -567,7 +589,7 @@ export function TasksSidebar({
                               setOpenMenuFolderId(open ? folder.id : null)
                             }
                           />
-                        </FolderActionsWrapper>
+                        </WorkspaceRowActions>
                       )}
                     </FolderRow>
                   </FolderDropTarget>

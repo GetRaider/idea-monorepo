@@ -36,6 +36,7 @@ import { ProductivitySummarySelectionModal } from "./ProductivitySummarySelectio
 import type { AnalyticsStats } from "@/lib/ai";
 import { EmptyState } from "@/components/EmptyState";
 import { Dropdown } from "@/components/Dropdown";
+import { apiServices } from "@/services/api";
 import { AnalyticsData, Timeframe } from "@/services/api/analytics.api.service";
 
 const CHART_TOOLTIP_STYLE = {
@@ -61,12 +62,9 @@ export function ProductivityOverview() {
     const fetchStats = async () => {
       try {
         setIsLoading(true);
-        // TODO: Use apiServices.analytics.getStatsByTimeframe(timeframe);
-        const response = await fetch(`/api/analytics?timeframe=${timeframe}`);
-        if (response.ok) {
-          const data = await response.json();
-          if (data?.stats) setStats(data.stats);
-        }
+        const fetchedStats =
+          await apiServices.analytics.getStatsByTimeframe(timeframe);
+        setStats(fetchedStats);
       } catch (error) {
         console.error("Failed to fetch statistics:", error);
       } finally {
@@ -92,30 +90,17 @@ export function ProductivityOverview() {
     try {
       setIsGeneratingAnalytics(true);
 
-      const statsResponse = await fetch(
-        `/api/analytics?timeframe=${timeframe}`,
+      const fetchedStats = await apiServices.analytics.getStatsByTimeframe(
+        timeframe,
       );
-      if (!statsResponse.ok) {
-        throw new Error("Failed to fetch statistics");
-      }
-      const { stats: fetchedStats } = await statsResponse.json();
 
-      const analyticsResponse = await fetch("/api/analytics", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          stats: fetchedStats,
-          timeframe,
-          shouldUseAI: selectedOption === "ai",
-        }),
+      const generatedAnalytics = await apiServices.analytics.generateSummary({
+        stats: fetchedStats,
+        timeframe,
+        shouldUseAI: selectedOption === "ai",
       });
 
-      if (!analyticsResponse.ok) {
-        throw new Error("Failed to generate analytics");
-      }
-
-      const data = await analyticsResponse.json();
-      setAnalytics(data.analytics);
+      setAnalytics(generatedAnalytics);
       setIsSelectionModalOpen(false);
       setIsResultsModalOpen(true);
       setSelectedOption(null);

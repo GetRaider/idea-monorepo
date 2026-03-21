@@ -30,16 +30,12 @@ function HomePage() {
         setIsLoading(true);
         const [scheduledTasks, dashboardStatsResponse] = await Promise.all([
           apiServices.tasks.getBySchedule(),
-          fetch(`/api/stats?timeframe=month`).then((res) =>
-            res.ok ? res.json() : null,
-          ),
+          apiServices.stats.getByTimeframe("month"),
         ]);
 
         setTodayTasks(scheduledTasks.today);
         setTomorrowTasks(scheduledTasks.tomorrow);
-        if (dashboardStatsResponse) {
-          setTaskStats(dashboardStatsResponse);
-        }
+        setTaskStats(dashboardStatsResponse);
       } catch (error) {
         console.error("Failed to fetch data:", error);
       } finally {

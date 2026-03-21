@@ -3,12 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "prepare": "husky install",
     "clean": "rm -rf .next && rm -rf .turbo",
     "clean:hard": "pnpm run clean && rm -rf node_modules",
     "build": "next build --turbopack",
     "dev": "next dev --turbopack",
     "prod": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push"
   },
@@ -53,6 +55,13 @@
     "drizzle-kit": "^0.30.0",
     "eslint": "catalog:",
     "eslint-config-next": "catalog:",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
+    "prettier": "catalog:",
+    "pretty-quick": "^4.2.2",
     "typescript": "catalog:"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,mjs,cjs}": "eslint --max-warnings=0"
   }
 }

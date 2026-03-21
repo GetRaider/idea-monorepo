@@ -41,7 +41,7 @@ import {
 } from "./AIPlanningOptimizationModal.styles";
 import { useDialogFocusLock } from "@/hooks/useDialogFocusLock";
 import { useTasks } from "@/hooks/useTasks";
-import { Task } from "@/components/Boards/KanbanBoard/KanbanBoard";
+import type { Task } from "@/components/Boards/KanbanBoard/types";
 
 export function AIPlanningOptimizationDialog({
   onClose,
@@ -211,7 +211,7 @@ export function AIPlanningOptimizationDialog({
               Object.entries(exploration.currentWorkload).map(
                 ([schedule, workload]) => {
                   return (
-                    <WorkloadGrid>
+                    <WorkloadGrid key={schedule}>
                       <WorkloadCard>
                         <WorkloadLabel>{schedule}</WorkloadLabel>
                         <WorkloadValue>{workload}h</WorkloadValue>

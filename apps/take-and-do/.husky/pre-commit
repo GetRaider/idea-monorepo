@@ -1,0 +1,7 @@
+#!/usr/bin/env sh
+set -e
+cd "$(git rev-parse --show-toplevel)/apps/take-and-do" || exit 1
+export PATH="$(pwd)/node_modules/.bin:$PATH"
+npx pretty-quick --staged
+npx tsc
+npx lint-staged

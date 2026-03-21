@@ -22,7 +22,7 @@ interface ProductivitySummaryModalProps {
   onClose: () => void;
 }
 
-export function ProductivitySummaryModal({
+export function ProductivitySummaryDialog({
   analytics,
   onClose,
 }: ProductivitySummaryModalProps) {

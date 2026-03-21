@@ -17,55 +17,41 @@ import {
 } from "./StatsCards.styles";
 
 export function StatsCards({ stats }: StatsCardsProps) {
+  const statMap = {
+    total: {
+      icon: <CircleCheckIcon />,
+      label: "Total Tasks",
+    },
+    todo: {
+      icon: <CheckListIcon />,
+      label: "To Do",
+    },
+    inProgress: {
+      icon: <ClockIcon />,
+      label: "In Progress",
+    },
+    done: {
+      icon: <ShieldCheckIcon />,
+      label: "Completed",
+    },
+    highPriority: {
+      icon: <LightningIcon />,
+      label: "High Priority",
+    },
+    overdue: {
+      icon: <OverdueIcon />,
+      label: "Overdue",
+    },
+  };
   return (
     <StatsGrid>
-      <StatCard>
-        <StatIcon>
-          <CircleCheckIcon size={24} />
-        </StatIcon>
-        <StatValue>{stats.total}</StatValue>
-        <StatLabel>Total Tasks</StatLabel>
-      </StatCard>
-
-      <StatCard>
-        <StatIcon>
-          <CheckListIcon size={24} />
-        </StatIcon>
-        <StatValue>{stats.todo}</StatValue>
-        <StatLabel>To Do</StatLabel>
-      </StatCard>
-
-      <StatCard>
-        <StatIcon>
-          <ClockIcon size={24} />
-        </StatIcon>
-        <StatValue>{stats.inProgress}</StatValue>
-        <StatLabel>In Progress</StatLabel>
-      </StatCard>
-
-      <StatCard>
-        <StatIcon>
-          <ShieldCheckIcon size={24} />
-        </StatIcon>
-        <StatValue>{stats.done}</StatValue>
-        <StatLabel>Completed</StatLabel>
-      </StatCard>
-
-      <StatCard>
-        <StatIcon>
-          <LightningIcon size={24} />
-        </StatIcon>
-        <StatValue>{stats.highPriority}</StatValue>
-        <StatLabel>High Priority</StatLabel>
-      </StatCard>
-
-      <StatCard>
-        <StatIcon>
-          <OverdueIcon size={24} />
-        </StatIcon>
-        <StatValue>{stats.overdue}</StatValue>
-        <StatLabel>Overdue</StatLabel>
-      </StatCard>
+      {Object.entries(statMap).map(([statName, stat]) => (
+        <StatCard key={statName}>
+          <StatIcon>{stat.icon}</StatIcon>
+          <StatValue>{stats[statName as keyof TaskStats]}</StatValue>
+          <StatLabel>{stat.label}</StatLabel>
+        </StatCard>
+      ))}
     </StatsGrid>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, use, useRef } from "react";
 import { useRouter, notFound } from "next/navigation";
+
 import {
   SingleKanbanBoard,
   type SingleKanbanBoardRef,
@@ -14,18 +15,10 @@ import { BoardLoadingWrapper, BoardLoadingLabel } from "./BoardPage.styles";
 import { Spinner } from "@/components/Boards/KanbanBoard/KanbanBoard.styles";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 
-interface BoardPageProps {
-  params: Promise<{ boardPath: string[] }>;
-}
-
 export default function BoardPage({ params }: BoardPageProps) {
   const { boardPath } = use(params);
   const router = useRouter();
-  const {
-    taskBoards,
-    isFoldersLoading,
-    isBoardsLoading,
-  } = useWorkspace();
+  const { taskBoards, isFoldersLoading, isBoardsLoading } = useWorkspace();
 
   const parsedBoardPath = parseBoardPath(boardPath);
   if (!parsedBoardPath) notFound();
@@ -40,7 +33,11 @@ export default function BoardPage({ params }: BoardPageProps) {
 
   const handleTaskOpen = (task: { taskKey?: string }) => {
     if (task.taskKey)
-      window.history.replaceState(null, "", buildBoardUrl(boardName, task.taskKey));
+      window.history.replaceState(
+        null,
+        "",
+        buildBoardUrl(boardName, task.taskKey),
+      );
   };
 
   const handleTaskClose = () => {
@@ -93,4 +90,8 @@ export default function BoardPage({ params }: BoardPageProps) {
       onSubtaskOpen={handleSubtaskOpen}
     />
   );
+}
+
+interface BoardPageProps {
+  params: Promise<{ boardPath: string[] }>;
 }

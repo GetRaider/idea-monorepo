@@ -7,7 +7,7 @@ import { Task } from "@/components/Boards/KanbanBoard/types";
 import { EmptyState } from "@/components/EmptyState";
 import { apiServices } from "@/services/api";
 import { ScheduleType, tasksHelper } from "@/helpers/task.helper";
-import { AIPlanningOptimizationModal } from "./AIPlanningOptimizationModal/AIPlanningOptimizationModal";
+import { AIPlanningOptimizationDialog } from "./AIPlanningOptimizationModal/AIPlanningOptimizationModal";
 import { OptimizeButton } from "./AIPlanningOptimizationModal/AIPlanningOptimizationModal.styles";
 import {
   Section,
@@ -174,7 +174,7 @@ export function TimelinePlanning({
       <ViewAllLink href="/tasks">View all tasks →</ViewAllLink>
 
       {isOptimizationModalOpen && (
-        <AIPlanningOptimizationModal
+        <AIPlanningOptimizationDialog
           onClose={() => setIsOptimizationModalOpen(false)}
         />
       )}

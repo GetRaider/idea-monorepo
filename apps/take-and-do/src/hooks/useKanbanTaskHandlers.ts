@@ -1,14 +1,10 @@
 import { useCallback } from "react";
 import { useTaskBoardState } from "@/hooks/useTaskBoardState";
-import { Task } from "../types";
+import { Task } from "../components/Boards/KanbanBoard/types";
 
-interface UseKanbanTaskHandlersOptions {
-  onTaskOpen?: (task: Task) => void;
-  onTaskClose?: () => void;
-  onSubtaskOpen?: (parentTask: Task, subtask: Task) => void;
-}
-
-export function useKanbanTaskHandlers(options: UseKanbanTaskHandlersOptions = {}) {
+export function useKanbanTaskHandlers(
+  options: UseKanbanTaskHandlersOptions = {},
+) {
   const {
     selectedTask,
     parentTask,
@@ -49,4 +45,10 @@ export function useKanbanTaskHandlers(options: UseKanbanTaskHandlersOptions = {}
     handleCloseModal,
     handleSubtaskClick,
   };
+}
+
+interface UseKanbanTaskHandlersOptions {
+  onTaskOpen?: (task: Task) => void;
+  onTaskClose?: () => void;
+  onSubtaskOpen?: (parentTask: Task, subtask: Task) => void;
 }

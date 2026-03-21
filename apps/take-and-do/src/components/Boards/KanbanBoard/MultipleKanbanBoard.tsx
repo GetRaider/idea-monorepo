@@ -22,8 +22,11 @@ import {
   loadFolderContent,
 } from "./shared/dataLoaders";
 import { handleMultipleBoardsTaskStatusChange } from "./shared/taskStatusHandlers";
-import { composedDataToTask, createNewTaskTemplate } from "./shared/taskComposeHelpers";
-import { useKanbanTaskHandlers } from "./shared/useKanbanTaskHandlers";
+import {
+  composedDataToTask,
+  createNewTaskTemplate,
+} from "./shared/taskComposeHelpers";
+import { useKanbanTaskHandlers } from "../../../hooks/useKanbanTaskHandlers";
 import { TaskView } from "../../TaskView/TaskView";
 import { updateTaskInColumns } from "@/hooks/useTaskBoardState";
 import { EmptyState } from "../../EmptyState";

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Sidebar } from "@/components/Sidebar/Sidebar";
 import { TasksSidebar } from "@/components/TasksSidebar/TasksSidebar";
-import { CreateWorkspaceModal } from "@/components/TasksSidebar/Workspaces/CreateWorkspace/CreateWorkspaceModal";
+import { CreateWorkspaceDialog } from "@/components/TasksSidebar/Workspaces/CreateWorkspace/CreateWorkspaceModal";
 import { PageContainer, Main } from "../page.styles";
 import {
   buildScheduleUrl,
@@ -138,7 +138,7 @@ export default function TasksLayout({
         <Main $withNavSidebar={isNavSidebarOpen}>{children}</Main>
 
         {isWorkspaceCreateModalOpen && (
-          <CreateWorkspaceModal
+          <CreateWorkspaceDialog
             onClose={() => setIsWorkspaceCreateModalOpen(false)}
             onCreateFolder={handleCreateFolder}
             onCreateBoard={handleCreateTaskBoard}

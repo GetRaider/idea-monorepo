@@ -3,14 +3,6 @@
 import styled from "styled-components";
 import { animatedGradientBackground } from "@/components/AnimatedGradient.styles";
 
-export {
-  TaskSelectionHeader,
-  SelectAllRow,
-  TaskSelectionSection,
-  TaskCheckbox,
-  TaskLabel,
-} from "@/components/SelectableList";
-
 export const ModalOverlay = styled.div`
   position: fixed;
   top: 0;

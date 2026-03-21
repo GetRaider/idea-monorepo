@@ -31,7 +31,7 @@ import {
   LoadingContainer,
   Spinner,
 } from "./ProductivityOverview.styles";
-import { ProductivitySummaryModal } from "./ProductivitySummaryModal/ProductivitySummaryModal";
+import { ProductivitySummaryDialog } from "./ProductivitySummaryModal/ProductivitySummaryModal";
 import { ProductivitySummarySelectionModal } from "./ProductivitySummarySelectionModal/ProductivitySummarySelectionModal";
 import type { AnalyticsStats } from "@/lib/ai";
 import { EmptyState } from "@/components/EmptyState";
@@ -90,9 +90,8 @@ export function ProductivityOverview() {
     try {
       setIsGeneratingAnalytics(true);
 
-      const fetchedStats = await apiServices.analytics.getStatsByTimeframe(
-        timeframe,
-      );
+      const fetchedStats =
+        await apiServices.analytics.getStatsByTimeframe(timeframe);
 
       const generatedAnalytics = await apiServices.analytics.generateSummary({
         stats: fetchedStats,
@@ -163,7 +162,7 @@ export function ProductivityOverview() {
       )}
 
       {isResultsModalOpen && analytics && (
-        <ProductivitySummaryModal
+        <ProductivitySummaryDialog
           analytics={analytics}
           onClose={() => setIsResultsModalOpen(false)}
         />

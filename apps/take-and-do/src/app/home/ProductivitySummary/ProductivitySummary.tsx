@@ -19,11 +19,11 @@ import {
   CardContent,
   CardList,
   EmptyState,
-} from "./SummarySection.styles";
+} from "./ProductivitySummary.styles";
 import { ChevronDownIcon } from "@/components/Icons";
 import { AnalyticsData, Timeframe } from "@/services/api/analytics.api.service";
 
-export function SummarySection({
+export function ProductivitySummary({
   analytics,
   timeframe,
   onTimeframeChange,

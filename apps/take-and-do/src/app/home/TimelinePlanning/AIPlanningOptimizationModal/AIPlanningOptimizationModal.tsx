@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { apiServices } from "@/services/api";
 import { tasksHelper } from "@/helpers/task.helper";
 import { CloseIcon } from "@/components/Icons";
+import { SelectList } from "@/components/SelectList";
 import { SecondaryButton, CloseButton } from "@/components/Buttons";
 import {
   ModalOverlay,
@@ -34,153 +35,35 @@ import {
   Spinner,
   LoadingState,
   ErrorState,
-  TaskSelectionSection,
-  TaskSelectionHeader,
-  TaskCheckbox,
-  TaskLabel,
-  SelectAllRow,
   GenerateOptimizationButton,
   ActionsContainer,
   OptimizeButton,
 } from "./AIPlanningOptimizationModal.styles";
+import { useDialogFocusLock } from "@/hooks/useDialogFocusLock";
 import { useTasks } from "@/hooks/useTasks";
+import { Task } from "@/components/Boards/KanbanBoard/KanbanBoard";
 
-interface AIPlanningOptimizationModalProps {
-  onClose: () => void;
-}
-
-interface ScheduleOptimization {
-  summary: string;
-  currentWorkload: {
-    today: number;
-    tomorrow: number;
-    unscheduled: number;
-  };
-  recommendations: Array<{
-    taskId: string;
-    taskSummary: string;
-    currentSchedule: string | null;
-    suggestedSchedule: string | null;
-    reason: string;
-  }>;
-  risks: string[];
-  insights: string[];
-}
-
-export function AIPlanningOptimizationModal({
+export function AIPlanningOptimizationDialog({
   onClose,
 }: AIPlanningOptimizationModalProps) {
   const modalTitleId = useId();
   const modalContentRef = useRef<HTMLDivElement>(null);
 
+  const [isExploring, setIsExploring] = useState(false);
+  const [isOptimizing, setIsOptimizing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(
     new Set(),
   );
   const [exploration, setExploration] = useState<ScheduleOptimization | null>(
     null,
   );
-  const [isExploring, setIsExploring] = useState(false);
-  const [isOptimizing, setIsOptimizing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const { tasks, isLoading: isTasksLoading } = useTasks();
 
-  useEffect(() => {
-    const prevFocused = document.activeElement as HTMLElement | null;
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
-    const focusFirst = () => {
-      const root = modalContentRef.current;
-      if (!root) return;
-      const focusables = Array.from(
-        root.querySelectorAll<HTMLElement>(
-          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-        ),
-      ).filter(
-        (el) => !el.hasAttribute("disabled") && !el.getAttribute("aria-hidden"),
-      );
-
-      (focusables[0] ?? root).focus?.();
-    };
-
-    focusFirst();
-
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        onClose();
-        return;
-      }
-
-      if (e.key !== "Tab") return;
-      const root = modalContentRef.current;
-      if (!root) return;
-
-      const focusables = Array.from(
-        root.querySelectorAll<HTMLElement>(
-          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-        ),
-      ).filter(
-        (el) => !el.hasAttribute("disabled") && !el.getAttribute("aria-hidden"),
-      );
-
-      if (focusables.length === 0) {
-        e.preventDefault();
-        root.focus?.();
-        return;
-      }
-
-      const first = focusables[0];
-      const last = focusables[focusables.length - 1];
-      const active = document.activeElement as HTMLElement | null;
-
-      if (e.shiftKey) {
-        if (!active || active === first) {
-          e.preventDefault();
-          last.focus();
-        }
-      } else if (!active || active === last) {
-        e.preventDefault();
-        first.focus();
-      }
-    };
-
-    document.addEventListener("keydown", onKeyDown, true);
-
-    return () => {
-      document.removeEventListener("keydown", onKeyDown, true);
-      document.body.style.overflow = prevOverflow;
-      prevFocused?.focus?.();
-    };
-  }, [onClose]);
+  useDialogFocusLock(modalContentRef, onClose);
 
   const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) onClose();
-  };
-
-  const allSelected = tasks.length > 0 && selectedTaskIds.size === tasks.length;
-
-  const toggleTask = (taskId: string) => {
-    setSelectedTaskIds((prev) => {
-      const next = new Set(prev);
-      next.has(taskId) ? next.delete(taskId) : next.add(taskId);
-      return next;
-    });
-  };
-
-  const toggleAll = () => {
-    setSelectedTaskIds(
-      allSelected ? new Set() : new Set(tasks.map((t) => t.id)),
-    );
-  };
-
-  const sanitizeText = (text: string): string => {
-    const taskMap = new Map(tasks.map((tasks) => [tasks.id, tasks.summary]));
-    let sanitized = text;
-    taskMap.forEach((summary, id) => {
-      sanitized = sanitized.replace(new RegExp(id, "g"), `"${summary}"`);
-    });
-    return sanitized;
   };
 
   const handleExplore = async () => {
@@ -196,12 +79,16 @@ export function AIPlanningOptimizationModal({
 
       const sanitized = {
         ...result.optimization,
-        summary: sanitizeText(result.optimization.summary),
-        risks: result.optimization.risks.map(sanitizeText),
-        insights: result.optimization.insights.map(sanitizeText),
+        summary: sanitizeText(result.optimization.summary, tasks),
+        risks: result.optimization.risks.map((risk) =>
+          sanitizeText(risk, tasks),
+        ),
+        insights: result.optimization.insights.map((insight) =>
+          sanitizeText(insight, tasks),
+        ),
         recommendations: result.optimization.recommendations.map((rec) => ({
           ...rec,
-          reason: sanitizeText(rec.reason),
+          reason: sanitizeText(rec.reason, tasks),
         })),
       };
 
@@ -220,7 +107,6 @@ export function AIPlanningOptimizationModal({
     setError(null);
 
     try {
-      // Apply schedule changes from recommendations
       const updates = exploration.recommendations
         .filter((rec) => rec.suggestedSchedule !== null)
         .map((rec) => ({
@@ -265,15 +151,6 @@ export function AIPlanningOptimizationModal({
     }
   };
 
-  const formatSchedule = (schedule: string | null): string => {
-    if (!schedule) return "Unscheduled";
-    const date = new Date(schedule);
-    if (!isNaN(date.getTime())) {
-      return tasksHelper.date.formatForSchedule(date);
-    }
-    return schedule;
-  };
-
   return (
     <ModalOverlay
       role="dialog"
@@ -298,33 +175,12 @@ export function AIPlanningOptimizationModal({
         </ModalHeader>
         {!exploration && !isExploring && (
           <>
-            <TaskSelectionHeader>
-              <SectionTitle>Select tasks to explore</SectionTitle>
-              {!isTasksLoading && tasks.length > 0 && (
-                <SelectAllRow onClick={toggleAll}>
-                  {allSelected ? "Deselect all" : "Select all"}
-                </SelectAllRow>
-              )}
-            </TaskSelectionHeader>
-            <TaskSelectionSection>
-              {isTasksLoading ? (
-                <LoadingContainer>
-                  <Spinner />
-                  <LoadingState>Loading tasks...</LoadingState>
-                </LoadingContainer>
-              ) : (
-                tasks.map((task) => (
-                  <TaskLabel key={task.id}>
-                    <TaskCheckbox
-                      type="checkbox"
-                      checked={selectedTaskIds.has(task.id)}
-                      onChange={() => toggleTask(task.id)}
-                    />
-                    <span>{task.summary}</span>
-                  </TaskLabel>
-                ))
-              )}
-            </TaskSelectionSection>
+            <SelectList
+              tasks={tasks}
+              isLoading={isTasksLoading}
+              selectedIds={selectedTaskIds}
+              onSelectionChange={setSelectedTaskIds}
+            />
 
             <ActionsContainer>
               <SecondaryButton onClick={onClose}>Cancel</SecondaryButton>
@@ -351,43 +207,36 @@ export function AIPlanningOptimizationModal({
               <SummaryText>{exploration.summary}</SummaryText>
             </SummarySection>
 
-            <WorkloadGrid>
-              <WorkloadCard>
-                <WorkloadLabel>Today</WorkloadLabel>
-                <WorkloadValue>
-                  {exploration.currentWorkload.today}h
-                </WorkloadValue>
-              </WorkloadCard>
-              <WorkloadCard>
-                <WorkloadLabel>Tomorrow</WorkloadLabel>
-                <WorkloadValue>
-                  {exploration.currentWorkload.tomorrow}h
-                </WorkloadValue>
-              </WorkloadCard>
-              <WorkloadCard>
-                <WorkloadLabel>Unscheduled</WorkloadLabel>
-                <WorkloadValue>
-                  {exploration.currentWorkload.unscheduled}h
-                </WorkloadValue>
-              </WorkloadCard>
-            </WorkloadGrid>
+            {exploration?.currentWorkload &&
+              Object.entries(exploration.currentWorkload).map(
+                ([schedule, workload]) => {
+                  return (
+                    <WorkloadGrid>
+                      <WorkloadCard>
+                        <WorkloadLabel>{schedule}</WorkloadLabel>
+                        <WorkloadValue>{workload}h</WorkloadValue>
+                      </WorkloadCard>
+                    </WorkloadGrid>
+                  );
+                },
+              )}
 
             {exploration.recommendations.length > 0 && (
               <RecommendationsSection>
                 <SectionTitle>📋 Recommendations</SectionTitle>
-                {exploration.recommendations.map((rec, idx) => (
-                  <RecommendationCard key={idx}>
-                    <TaskName>{rec.taskSummary}</TaskName>
+                {exploration.recommendations.map((recommendation, index) => (
+                  <RecommendationCard key={index}>
+                    <TaskName>{recommendation.taskSummary}</TaskName>
                     <ScheduleChange>
-                      {formatSchedule(rec.currentSchedule)}
+                      {formatSchedule(recommendation.currentSchedule)}
                       <ArrowIcon>→</ArrowIcon>
                       <strong
-                        aria-label={`Updated schedule to ${formatSchedule(rec.suggestedSchedule)}`}
+                        aria-label={`Updated schedule to ${formatSchedule(recommendation.suggestedSchedule)}`}
                       >
-                        {formatSchedule(rec.suggestedSchedule)}
+                        {formatSchedule(recommendation.suggestedSchedule)}
                       </strong>
                     </ScheduleChange>
-                    <ReasonText>{rec.reason}</ReasonText>
+                    <ReasonText>{recommendation.reason}</ReasonText>
                   </RecommendationCard>
                 ))}
               </RecommendationsSection>
@@ -428,4 +277,44 @@ export function AIPlanningOptimizationModal({
       </ModalContent>
     </ModalOverlay>
   );
+}
+
+function sanitizeText(text: string, tasks: Task[]): string {
+  const taskMap = new Map(tasks.map((tasks) => [tasks.id, tasks.summary]));
+  let sanitized = text;
+  taskMap.forEach((summary, id) => {
+    sanitized = sanitized.replace(new RegExp(id, "g"), `"${summary}"`);
+  });
+  return sanitized;
+}
+
+function formatSchedule(schedule: string | null): string {
+  if (!schedule) return "Unscheduled";
+  const date = new Date(schedule);
+  if (!isNaN(date.getTime())) {
+    return tasksHelper.date.formatForSchedule(date);
+  }
+  return schedule;
+}
+
+interface AIPlanningOptimizationModalProps {
+  onClose: () => void;
+}
+
+interface ScheduleOptimization {
+  summary: string;
+  currentWorkload: {
+    today: number;
+    tomorrow: number;
+    unscheduled: number;
+  };
+  recommendations: Array<{
+    taskId: string;
+    taskSummary: string;
+    currentSchedule: string | null;
+    suggestedSchedule: string | null;
+    reason: string;
+  }>;
+  risks: string[];
+  insights: string[];
 }

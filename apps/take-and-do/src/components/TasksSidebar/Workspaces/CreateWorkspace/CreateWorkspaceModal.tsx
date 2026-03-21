@@ -18,7 +18,7 @@ import { Folder, TaskBoard } from "@/types/workspace";
 
 export type WorkspaceCreateType = "folder" | "board";
 
-export function CreateWorkspaceModal({
+export function CreateWorkspaceDialog({
   onClose,
   onCreateFolder,
   onCreateBoard,
@@ -42,11 +42,7 @@ export function CreateWorkspaceModal({
       } else {
         await onCreateBoard(name.trim(), folderId);
       }
-      toast.success(
-        type === "folder"
-          ? "Folder created"
-          : "Board created",
-      );
+      toast.success(type === "folder" ? "Folder created" : "Board created");
     } catch {
       toast.error(
         type === "folder"

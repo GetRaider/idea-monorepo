@@ -23,7 +23,7 @@ import {
   composedDataToTask,
   createNewTaskTemplate,
 } from "./shared/taskComposeHelpers";
-import { useKanbanTaskHandlers } from "./shared/useKanbanTaskHandlers";
+import { useKanbanTaskHandlers } from "../../../hooks/useKanbanTaskHandlers";
 import { TaskView } from "../../TaskView/TaskView";
 import { updateTaskInColumns } from "@/hooks/useTaskBoardState";
 import { EmptyState } from "../../EmptyState";

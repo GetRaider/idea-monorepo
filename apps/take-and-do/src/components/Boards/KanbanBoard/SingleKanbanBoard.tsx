@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  useState,
-  useEffect,
-  useCallback,
-  useRef,
-  useImperativeHandle,
-  forwardRef,
-} from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   BoardContainer,
   Board,
@@ -30,10 +23,6 @@ import { EmptyState } from "../../EmptyState";
 import { AIComposeModal } from "./shared/AIComposeModal";
 import { apiServices } from "@/services/api";
 
-export interface SingleKanbanBoardRef {
-  refetch: () => void;
-}
-
 interface SingleKanbanBoardProps {
   boardId: string;
   workspaceTitle: string;
@@ -43,20 +32,14 @@ interface SingleKanbanBoardProps {
   onSubtaskOpen?: (parentTask: Task, subtask: Task) => void;
 }
 
-export const SingleKanbanBoard = forwardRef<
-  SingleKanbanBoardRef,
-  SingleKanbanBoardProps
->(function SingleKanbanBoard(
-  {
-    boardId,
-    workspaceTitle,
-    boardEmoji,
-    onTaskOpen,
-    onTaskClose,
-    onSubtaskOpen,
-  },
-  ref,
-) {
+export function SingleKanbanBoard({
+  boardId,
+  workspaceTitle,
+  boardEmoji,
+  onTaskOpen,
+  onTaskClose,
+  onSubtaskOpen,
+}: SingleKanbanBoardProps) {
   const [tasksByStatus, setTasksByStatus] =
     useState<Record<TaskStatus, Task[]>>(emptyTaskColumns);
   const [isLoading, setIsLoading] = useState(true);
@@ -115,8 +98,6 @@ export const SingleKanbanBoard = forwardRef<
   useEffect(() => {
     fetchTasks();
   }, [fetchTasks]);
-
-  useImperativeHandle(ref, () => ({ refetch: fetchTasks }), [fetchTasks]);
 
   const handleTaskStatusChange = useCallback(
     async (taskId: string, newStatus: TaskStatus, targetIndex?: number) => {
@@ -236,7 +217,7 @@ export const SingleKanbanBoard = forwardRef<
       />
     </>
   );
-});
+}
 
 function BoardContent({
   totalTasksLength,

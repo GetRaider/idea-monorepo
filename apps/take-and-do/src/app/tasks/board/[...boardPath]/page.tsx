@@ -1,12 +1,9 @@
 "use client";
 
-import { useState, useEffect, use, useRef } from "react";
-import { useRouter, notFound } from "next/navigation";
+import { useState, useEffect, use } from "react";
+import { notFound } from "next/navigation";
 
-import {
-  SingleKanbanBoard,
-  type SingleKanbanBoardRef,
-} from "@/components/Boards/KanbanBoard/SingleKanbanBoard";
+import { SingleKanbanBoard } from "@/components/Boards/KanbanBoard/SingleKanbanBoard";
 import {
   parseBoardPath,
   buildBoardUrl,
@@ -17,14 +14,12 @@ import { useWorkspace } from "@/contexts/WorkspaceContext";
 
 export default function BoardPage({ params }: BoardPageProps) {
   const { boardPath } = use(params);
-  const router = useRouter();
   const { taskBoards, isFoldersLoading, isBoardsLoading } = useWorkspace();
 
   const parsedBoardPath = parseBoardPath(boardPath);
   if (!parsedBoardPath) notFound();
 
   const [isBoardReady, setIsBoardReady] = useState(false);
-  const boardRef = useRef<SingleKanbanBoardRef>(null);
   const { boardName } = parsedBoardPath;
 
   useEffect(() => {
@@ -57,11 +52,6 @@ export default function BoardPage({ params }: BoardPageProps) {
     }
   };
 
-  const handleTaskDelete = () => {
-    boardRef.current?.refetch();
-    router.push(buildBoardUrl(boardName));
-  };
-
   if (!isBoardReady) {
     return (
       <BoardLoadingWrapper>
@@ -83,7 +73,6 @@ export default function BoardPage({ params }: BoardPageProps) {
 
   return (
     <SingleKanbanBoard
-      ref={boardRef}
       workspaceTitle={boardName}
       boardId={currentBoard.id}
       boardEmoji={currentBoard.emoji}

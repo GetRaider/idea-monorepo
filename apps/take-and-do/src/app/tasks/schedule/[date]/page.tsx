@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, use } from "react";
+import { use } from "react";
 import { notFound } from "next/navigation";
 import { MultipleKanbanBoard } from "@/components/Boards/KanbanBoard/MultipleKanbanBoard";
 import { Task } from "@/components/Boards/KanbanBoard/types";
@@ -9,7 +9,6 @@ import {
   buildScheduleUrl,
   ScheduleDate,
 } from "../../../../helpers/tasks-routing.helper";
-import { useWorkspace } from "@/contexts/WorkspaceContext";
 
 interface SchedulePageProps {
   params: Promise<{ date: string }>;
@@ -17,20 +16,10 @@ interface SchedulePageProps {
 
 export default function SchedulePage({ params }: SchedulePageProps) {
   const { date } = use(params);
-  const { taskBoards } = useWorkspace();
 
   if (!isValidScheduleDate(date)) {
     notFound();
   }
-
-  const taskBoardNameMap = useMemo(
-    () =>
-      taskBoards.reduce<Record<string, string>>((acc, board) => {
-        acc[board.id] = board.name;
-        return acc;
-      }, {}),
-    [taskBoards],
-  );
 
   const handleTaskOpen = (task: Task) => {
     if (task.taskKey) {
@@ -54,7 +43,6 @@ export default function SchedulePage({ params }: SchedulePageProps) {
     <MultipleKanbanBoard
       scheduleDate={getScheduleDate(date)}
       workspaceTitle={getScheduleTitle(date)}
-      taskBoardNameMap={taskBoardNameMap}
       onTaskOpen={handleTaskOpen}
       onTaskClose={handleTaskClose}
       onSubtaskOpen={handleSubtaskOpen}

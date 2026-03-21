@@ -17,7 +17,7 @@ import {
 import { tasksHelper } from "@/helpers/task.helper";
 
 interface TaskViewHeaderProps {
-  workspaceTitle: string;
+  boardName: string;
   task: Task;
   parentTask?: Task | null;
   statusDropdownRef: RefObject<HTMLDivElement>;
@@ -30,7 +30,7 @@ interface TaskViewHeaderProps {
 }
 
 export function TaskViewHeader({
-  workspaceTitle,
+  boardName,
   task,
   parentTask,
   statusDropdownRef,
@@ -44,7 +44,7 @@ export function TaskViewHeader({
   return (
     <ModalHeader>
       <HeaderLeft>
-        {workspaceTitle}{" "}
+        {boardName}{" "}
         <img
           src="/breadcrumb-chevron.svg"
           alt="arrow-right"

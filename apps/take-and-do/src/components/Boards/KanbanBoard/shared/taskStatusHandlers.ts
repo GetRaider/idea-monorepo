@@ -1,5 +1,7 @@
 import { apiServices } from "@/services/api";
-import { TaskStatus, Task, TaskGroup } from "../types";
+import type { TaskBoardWithTasks } from "@/types/workspace";
+
+import { TaskStatus, Task } from "../types";
 
 /**
  * Reorder a task within the same column
@@ -92,57 +94,55 @@ export function moveTaskToNewStatus(
 }
 
 /**
- * Reorder a task within the same column for a specific group
+ * Reorder a task within the same column for a specific board
  */
-export function reorderTaskInGroupColumn(
-  taskGroups: TaskGroup[],
+export function reorderTaskInBoardColumn(
+  boardsWithTasks: TaskBoardWithTasks[],
   taskId: string,
   newStatus: TaskStatus,
-  currentGroupIndex: number,
+  currentBoardIndex: number,
   targetIndex?: number,
-): TaskGroup[] {
-  return taskGroups.map((group, groupIndex) => {
-    // Only process the group that contains the task
-    if (groupIndex !== currentGroupIndex) return group;
+): TaskBoardWithTasks[] {
+  return boardsWithTasks.map((board, boardIndex) => {
+    if (boardIndex !== currentBoardIndex) return board;
 
     const updatedTasks = reorderTaskInColumn(
-      group.tasks,
+      board.tasks,
       taskId,
       newStatus,
       targetIndex,
     );
 
     return {
-      ...group,
+      ...board,
       tasks: updatedTasks,
     };
   });
 }
 
 /**
- * Move a task to a new status within a specific group (optimistic update)
+ * Move a task to a new status within a specific board (optimistic update)
  */
-export function moveTaskToNewStatusInGroup(
-  taskGroups: TaskGroup[],
+export function moveTaskToNewStatusInBoard(
+  boardsWithTasks: TaskBoardWithTasks[],
   taskId: string,
   newStatus: TaskStatus,
   currentTask: Task | undefined,
-  currentGroupIndex: number | undefined,
+  currentBoardIndex: number | undefined,
   targetIndex?: number,
-): TaskGroup[] {
-  return taskGroups.map((group, groupIndex) => {
+): TaskBoardWithTasks[] {
+  return boardsWithTasks.map((board, boardIndex) => {
     const updatedTasks: Record<TaskStatus, Task[]> = {
-      [TaskStatus.TODO]: [...(group.tasks[TaskStatus.TODO] || [])],
+      [TaskStatus.TODO]: [...(board.tasks[TaskStatus.TODO] || [])],
       [TaskStatus.IN_PROGRESS]: [
-        ...(group.tasks[TaskStatus.IN_PROGRESS] || []),
+        ...(board.tasks[TaskStatus.IN_PROGRESS] || []),
       ],
-      [TaskStatus.DONE]: [...(group.tasks[TaskStatus.DONE] || [])],
+      [TaskStatus.DONE]: [...(board.tasks[TaskStatus.DONE] || [])],
     };
 
     let foundTask: Task | undefined;
-    let taskFoundInGroup = false;
+    let taskFoundInBoard = false;
 
-    // Find and remove task from old status (in this group)
     (Object.keys(updatedTasks) as TaskStatus[]).forEach((statusKey) => {
       const index = updatedTasks[statusKey].findIndex((t) => t.id === taskId);
       if (index !== -1) {
@@ -150,13 +150,11 @@ export function moveTaskToNewStatusInGroup(
         updatedTasks[statusKey] = updatedTasks[statusKey].filter(
           (t) => t.id !== taskId,
         );
-        taskFoundInGroup = true;
+        taskFoundInBoard = true;
       }
     });
 
-    // Only update if task was found in this group, or if we have currentTask and this is the right group
-    if (taskFoundInGroup && foundTask) {
-      // Task was found in this group, add it to new status
+    if (taskFoundInBoard && foundTask) {
       const updatedTask: Task = {
         ...foundTask,
         status: newStatus,
@@ -170,15 +168,14 @@ export function moveTaskToNewStatusInGroup(
       updatedTasks[newStatus].splice(insertIndex, 0, updatedTask);
 
       return {
-        ...group,
+        ...board,
         tasks: updatedTasks,
       };
     } else if (
       currentTask &&
-      typeof currentGroupIndex === "number" &&
-      currentGroupIndex === groupIndex
+      typeof currentBoardIndex === "number" &&
+      currentBoardIndex === boardIndex
     ) {
-      // Task wasn't in this group's arrays yet, but currentTask exists and this is the correct group
       const updatedTask: Task = {
         ...currentTask,
         status: newStatus,
@@ -192,13 +189,12 @@ export function moveTaskToNewStatusInGroup(
       updatedTasks[newStatus].splice(insertIndex, 0, updatedTask);
 
       return {
-        ...group,
+        ...board,
         tasks: updatedTasks,
       };
     }
 
-    // Task not in this group, return unchanged
-    return group;
+    return board;
   });
 }
 
@@ -223,29 +219,29 @@ export function findTaskInTasks(
 }
 
 /**
- * Find a task in task groups
+ * Find a task across multiple boards (each with column buckets)
  */
-export function findTaskInGroups(
-  taskGroups: TaskGroup[],
+export function findTaskInBoards(
+  boardsWithTasks: TaskBoardWithTasks[],
   taskId: string,
 ): {
   task: Task | undefined;
-  groupIndex: number | undefined;
+  boardIndex: number | undefined;
 } {
-  for (let groupIndex = 0; groupIndex < taskGroups.length; groupIndex++) {
-    const group = taskGroups[groupIndex];
+  for (let boardIndex = 0; boardIndex < boardsWithTasks.length; boardIndex++) {
+    const board = boardsWithTasks[boardIndex];
     for (const statusKey of [
       TaskStatus.TODO,
       TaskStatus.IN_PROGRESS,
       TaskStatus.DONE,
     ]) {
-      const task = group.tasks[statusKey].find((t) => t.id === taskId);
+      const task = board.tasks[statusKey].find((t) => t.id === taskId);
       if (task) {
-        return { task, groupIndex };
+        return { task, boardIndex };
       }
     }
   }
-  return { task: undefined, groupIndex: undefined };
+  return { task: undefined, boardIndex: undefined };
 }
 
 /**
@@ -306,64 +302,60 @@ export async function handleSingleBoardTaskStatusChange(
 }
 
 /**
- * Handle task status change for multiple boards (task groups)
+ * Handle task status change when several boards are shown at once
  */
 export async function handleMultipleBoardsTaskStatusChange(
-  taskGroups: TaskGroup[],
-  setTaskGroups: (groups: TaskGroup[]) => void,
+  boardsWithTasks: TaskBoardWithTasks[],
+  setBoardsWithTasks: (boards: TaskBoardWithTasks[]) => void,
   taskId: string,
   newStatus: TaskStatus,
   targetIndex?: number,
 ): Promise<void> {
   try {
-    const { task: currentTask, groupIndex: currentGroupIndex } =
-      findTaskInGroups(taskGroups, taskId);
+    const { task: currentTask, boardIndex: currentBoardIndex } =
+      findTaskInBoards(boardsWithTasks, taskId);
 
     if (!currentTask) {
       console.warn(`Task ${taskId} not found in current view`);
     }
 
-    // If status hasn't changed, handle reordering within the same column
     if (
       currentTask &&
       currentTask.status === newStatus &&
-      typeof currentGroupIndex === "number"
+      typeof currentBoardIndex === "number"
     ) {
-      const updatedGroups = reorderTaskInGroupColumn(
-        taskGroups,
+      const updated = reorderTaskInBoardColumn(
+        boardsWithTasks,
         taskId,
         newStatus,
-        currentGroupIndex,
+        currentBoardIndex,
         targetIndex,
       );
-      setTaskGroups(updatedGroups);
+      setBoardsWithTasks(updated);
       return;
     }
 
-    // OPTIMISTIC UPDATE: Update local state immediately for smooth animation
-    const optimisticGroups = moveTaskToNewStatusInGroup(
-      taskGroups,
+    const optimistic = moveTaskToNewStatusInBoard(
+      boardsWithTasks,
       taskId,
       newStatus,
       currentTask,
-      currentGroupIndex,
+      currentBoardIndex,
       targetIndex,
     );
-    setTaskGroups(optimisticGroups);
+    setBoardsWithTasks(optimistic);
 
-    // Update task status via API (after optimistic update for smooth UX)
     await apiServices.tasks.update(taskId, { status: newStatus });
 
-    // Update state after API call (in case of any server-side changes)
-    const finalGroups = moveTaskToNewStatusInGroup(
-      optimisticGroups,
+    const finalBoards = moveTaskToNewStatusInBoard(
+      optimistic,
       taskId,
       newStatus,
       currentTask,
-      currentGroupIndex,
+      currentBoardIndex,
       targetIndex,
     );
-    setTaskGroups(finalGroups);
+    setBoardsWithTasks(finalBoards);
   } catch (error) {
     console.error("Failed to update task status:", error);
     // Optionally show an error message to the user

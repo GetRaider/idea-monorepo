@@ -22,10 +22,27 @@ export const Toolbar = styled.div`
 `;
 
 export const WorkspacePath = styled.h1`
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 18px;
   font-weight: 600;
   color: #fff;
   margin: 0;
+`;
+
+export const BoardTitleEmoji = styled.span`
+  flex-shrink: 0;
+  font-size: 1.125rem;
+  line-height: 1;
+`;
+
+export const WorkspacePathLeading = styled.span`
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
 `;
 
 export const Actions = styled.div`
@@ -162,10 +179,6 @@ export const Board = styled.div<{ $fillHeight?: boolean }>`
   overflow: auto;
 `;
 
-export const TaskGroupWrapper = styled.div`
-  display: contents;
-`;
-
 export const BoardMultiLayout = styled.div`
   display: flex;
   flex-direction: column;
@@ -176,22 +189,19 @@ export const BoardMultiLayout = styled.div`
   overflow: auto;
 `;
 
-export const TaskGroupSection = styled.div<{ $expanded?: boolean }>`
+export const MultiBoardSection = styled.div`
   display: flex;
   flex-direction: column;
   gap: 16px;
-  min-height: 0;
-  ${(p) => p.$expanded && "flex: 1;"}
+  flex-shrink: 0;
 `;
 
-export const TaskGroupColumnsGrid = styled.div`
+export const MultiBoardColumnsGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  grid-template-rows: minmax(0, 1fr);
+  grid-auto-rows: min-content;
   column-gap: 24px;
   padding: 0 16px;
-  flex: 1;
-  min-height: 0;
 `;
 
 export const WorkspaceSeparator = styled.button`

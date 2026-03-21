@@ -1,12 +1,12 @@
 import styled from "styled-components";
 import { TaskStatus } from "../types";
 
-export const Column = styled.div`
+export const Column = styled.div<{ $bodyScrolls?: boolean }>`
   display: flex;
   flex-direction: column;
   gap: 16px;
   min-width: 320px;
-  min-height: 0;
+  min-height: ${(p) => (p.$bodyScrolls !== false ? 0 : "auto")};
   margin: 0;
 `;
 
@@ -58,19 +58,25 @@ export const Count = styled.span`
 export const ColumnContent = styled.div<{
   $isDragOver?: boolean;
   $isEmpty?: boolean;
+  $bodyScrolls?: boolean;
+  /** Multi-board: always room for one more task than currently shown. */
+  $contentMinHeightPx?: number;
 }>`
   display: flex;
   flex-direction: column;
   gap: 12px;
-  overflow-y: auto;
+  overflow-y: ${(p) => (p.$bodyScrolls !== false ? "auto" : "visible")};
   padding-right: 4px;
-  flex: 1;
+  flex: ${(p) => (p.$bodyScrolls !== false ? "1" : "0 0 auto")};
   position: relative;
   background-color: ${(props) =>
     props.$isDragOver ? "rgba(114, 85, 193, 0.15)" : "transparent"};
   border-radius: ${(props) => (props.$isDragOver ? "8px" : "0")};
   transition: background-color 0.2s;
-  min-height: ${(props) => (props.$isEmpty ? "100px" : "auto")};
+  min-height: ${(p) => {
+    if (p.$contentMinHeightPx != null) return `${p.$contentMinHeightPx}px`;
+    return p.$isEmpty ? "100px" : "auto";
+  }};
 
   & > * {
     transition:

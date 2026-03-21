@@ -1,5 +1,4 @@
 import { TaskPriority, TaskStatus } from "@/constants/tasks.constants";
-import { tasksHelper } from "@/helpers/task.helper";
 
 export { TaskPriority, TaskStatus };
 
@@ -30,24 +29,6 @@ export type TaskUpdate = Partial<
   scheduleDate?: Date | null;
 };
 
-export interface TaskGroup {
-  taskBoardId: string;
-  taskBoardName: string;
-  tasks: Record<TaskStatus, Task[]>;
-}
-
-export interface LoadScheduledWorkspaceProps {
-  scheduleDate: Date;
-  taskBoardNamesMap: Record<string, string>;
-  setTaskGroups: (groups: TaskGroup[]) => void;
-}
-
-export interface LoadTaskBoardWorkspaceProps {
-  boardName: string;
-  taskBoardNamesMap: Record<string, string>;
-  setTasks: (tasks: Record<TaskStatus, Task[]>) => void;
-}
-
 export const emptyTaskColumns: Record<TaskStatus, Task[]> = {
   [TaskStatus.TODO]: [],
   [TaskStatus.IN_PROGRESS]: [],
@@ -66,52 +47,4 @@ export function createEmptyStatusBuckets(): Record<TaskStatus, Task[]> {
     [TaskStatus.IN_PROGRESS]: [],
     [TaskStatus.DONE]: [],
   };
-}
-
-export function createTaskGroups(
-  tasks: Task[],
-  taskBoardNameMap: Record<string, string>,
-): TaskGroup[] {
-  const groupsMap: Record<string, Record<TaskStatus, Task[]>> = {};
-
-  (tasks || []).forEach((task) => {
-    if (!task.taskBoardId) return;
-
-    const groupKey = task.taskBoardId;
-
-    if (!groupsMap[groupKey]) {
-      groupsMap[groupKey] = createEmptyStatusBuckets();
-    }
-    if (task.dueDate) {
-      task.dueDate = new Date(task.dueDate);
-    }
-    task.status = toTaskStatus(task.status);
-    task.priority = tasksHelper.priority.format(task.priority);
-    groupsMap[groupKey][task.status].push(task);
-  });
-
-  return Object.entries(groupsMap).map(([groupKey, tasksByStatus]) => ({
-    taskBoardId: groupKey,
-    taskBoardName: taskBoardNameMap[groupKey] ?? groupKey,
-    tasks: tasksByStatus,
-  }));
-}
-
-// Helper to convert "today" or "tomorrow" string to Date
-export function getDateFromScheduleString(
-  schedule: "today" | "tomorrow",
-): Date {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  if (schedule === "tomorrow") {
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    return tomorrow;
-  }
-  return today;
-}
-
-// Helper to check if a string is "today" or "tomorrow"
-export function isScheduleString(view: string): view is "today" | "tomorrow" {
-  return view === "today" || view === "tomorrow";
 }

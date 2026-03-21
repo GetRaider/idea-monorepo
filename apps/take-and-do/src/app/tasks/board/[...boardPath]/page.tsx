@@ -11,7 +11,7 @@ import {
   parseBoardPath,
   buildBoardUrl,
 } from "../../../../helpers/tasks-routing.helper";
-import { BoardLoadingWrapper, BoardLoadingLabel } from "./BoardPage.styles";
+import { BoardLoadingWrapper, BoardLoadingLabel } from "./page.styles";
 import { Spinner } from "@/components/Boards/KanbanBoard/KanbanBoard.styles";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 
@@ -71,7 +71,9 @@ export default function BoardPage({ params }: BoardPageProps) {
     );
   }
 
-  if (!taskBoards.find((board) => board.name === boardName)) {
+  const currentBoard = taskBoards.find((board) => board.name === boardName);
+
+  if (!currentBoard) {
     return (
       <div style={{ padding: "40px", color: "#888" }}>
         Board &quot;{boardName}&quot; not found.
@@ -83,8 +85,8 @@ export default function BoardPage({ params }: BoardPageProps) {
     <SingleKanbanBoard
       ref={boardRef}
       workspaceTitle={boardName}
-      boardId={taskBoards.find((tb) => tb.name === boardName)?.id ?? ""}
-      boardName={boardName}
+      boardId={currentBoard.id}
+      boardEmoji={currentBoard.emoji}
       onTaskOpen={handleTaskOpen}
       onTaskClose={handleTaskClose}
       onSubtaskOpen={handleSubtaskOpen}

@@ -2,13 +2,8 @@
 
 import { SingleKanbanBoard } from "./SingleKanbanBoard";
 import { MultipleKanbanBoard } from "./MultipleKanbanBoard";
-import {
-  TaskStatus,
-  TaskPriority,
-  Task,
-  isScheduleString,
-  getDateFromScheduleString,
-} from "./types";
+import { TaskStatus, TaskPriority, Task } from "./types";
+import { tasksHelper } from "@/helpers/task.helper";
 
 // Re-export types and enums for backward compatibility
 export { TaskStatus, TaskPriority };
@@ -19,15 +14,18 @@ export function KanbanBoard({
   workspaceTitle = "Tasks",
   folderId,
   taskBoardId,
+  boardEmoji,
 }: KanbanBoardProps) {
-  const isScheduleWorkspace = isScheduleString(currentView);
+  const isScheduleWorkspace = tasksHelper.schedule.isSchedule(currentView);
   const isMultipleWorkspace = isScheduleWorkspace || folderId;
   const title = getWorkspaceTitle(currentView, workspaceTitle);
 
   return isMultipleWorkspace ? (
     <MultipleKanbanBoard
       scheduleDate={
-        isScheduleWorkspace ? getDateFromScheduleString(currentView) : undefined
+        isScheduleWorkspace
+          ? tasksHelper.schedule.getDate(currentView as "today" | "tomorrow")
+          : undefined
       }
       workspaceTitle={title}
       folderId={folderId}
@@ -35,8 +33,8 @@ export function KanbanBoard({
   ) : (
     <SingleKanbanBoard
       boardId={taskBoardId}
-      boardName={String(currentView)}
       workspaceTitle={title}
+      boardEmoji={boardEmoji}
     />
   );
 }
@@ -52,4 +50,5 @@ interface KanbanBoardProps {
   workspaceTitle?: string;
   taskBoardId: string;
   folderId?: string;
+  boardEmoji?: string | null;
 }

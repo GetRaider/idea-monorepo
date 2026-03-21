@@ -38,7 +38,7 @@ import { TaskSubtasks } from "./TaskSubtasks/TaskSubtasks";
 export function TaskView({
   task: initialTask,
   parentTask,
-  workspaceTitle,
+  boardName,
   onClose,
   onTaskUpdate,
   onSubtaskClick,
@@ -314,7 +314,7 @@ export function TaskView({
     <TaskViewOverlay onClick={handleOverlayClick}>
       <TaskViewContainer onClick={(e) => e.stopPropagation()}>
         <TaskViewHeader
-          workspaceTitle={workspaceTitle}
+          boardName={boardName}
           task={displayTask}
           parentTask={parentTask}
           statusDropdownRef={statusDropdownRef}
@@ -489,7 +489,7 @@ export function TaskView({
 interface TaskViewProps {
   task: Task | null;
   parentTask?: Task | null;
-  workspaceTitle: string;
+  boardName: string;
   onClose: () => void;
   onTaskUpdate?: (updatedTask: Task) => void;
   onSubtaskClick?: (subtask: Task) => void;

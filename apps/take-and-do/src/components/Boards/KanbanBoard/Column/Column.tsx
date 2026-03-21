@@ -18,11 +18,14 @@ import {
   TaskWrapper,
 } from "./Column.styles";
 import { TaskCard } from "../TaskCard/TaskCard";
+import { columnContentMinHeightForExtraSlot } from "./columnLayout.constants";
 import { tasksHelper } from "@/helpers/task.helper";
 
 interface ColumnProps {
   tasks: Task[];
   status: TaskStatus;
+  /** When false, column body grows with tasks (multi-board); when true, fills viewport and scrolls (single board). */
+  bodyScrolls?: boolean;
   onTaskDrop?: (
     taskId: string,
     newStatus: TaskStatus,
@@ -34,9 +37,14 @@ interface ColumnProps {
 export const Column = ({
   tasks,
   status,
+  bodyScrolls = true,
   onTaskDrop,
   onTaskClick,
 }: ColumnProps) => {
+  const contentMinHeightPx = bodyScrolls
+    ? undefined
+    : columnContentMinHeightForExtraSlot(tasks.length);
+
   const [isDragOver, setIsDragOver] = useState(false);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -253,7 +261,7 @@ export const Column = ({
     };
   }, []);
   return (
-    <ColumnStyles>
+    <ColumnStyles $bodyScrolls={bodyScrolls}>
       <ColumnHeader>
         <ColumnTitle>
           <StatusIcon $status={status}>
@@ -269,6 +277,8 @@ export const Column = ({
         onDrop={handleDrop}
         $isDragOver={isDragOver}
         $isEmpty={tasks.length === 0}
+        $bodyScrolls={bodyScrolls}
+        $contentMinHeightPx={contentMinHeightPx}
       >
         {/* Placeholder at the top when dragging over empty column or before first task */}
         {isDragging && tasks.length === 0 && isDragOver && (

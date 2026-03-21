@@ -36,8 +36,8 @@ export interface SingleKanbanBoardRef {
 
 interface SingleKanbanBoardProps {
   boardId: string;
-  boardName: string;
   workspaceTitle: string;
+  boardEmoji?: string | null;
   onTaskOpen?: (task: Task) => void;
   onTaskClose?: () => void;
   onSubtaskOpen?: (parentTask: Task, subtask: Task) => void;
@@ -49,8 +49,8 @@ export const SingleKanbanBoard = forwardRef<
 >(function SingleKanbanBoard(
   {
     boardId,
-    boardName,
     workspaceTitle,
+    boardEmoji,
     onTaskOpen,
     onTaskClose,
     onSubtaskOpen,
@@ -198,6 +198,7 @@ export const SingleKanbanBoard = forwardRef<
       <BoardContainer>
         <Toolbar
           workspaceTitle={workspaceTitle}
+          workspaceEmoji={boardEmoji}
           onCreateTask={handleCreateTask}
           onCreateTaskWithAI={handleCreateTaskWithAI}
         />

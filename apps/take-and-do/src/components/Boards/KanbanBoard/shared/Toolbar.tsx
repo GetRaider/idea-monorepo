@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import {
   Toolbar as ToolbarStyled,
   WorkspacePath,
+  BoardTitleEmoji,
+  WorkspacePathLeading,
   Actions,
   SettingsButton,
   PopoverContainer,
@@ -18,12 +20,15 @@ import { CreateTaskButton } from "./CreateTaskButton";
 
 interface ToolbarProps {
   workspaceTitle: string;
+  /** Emoji string or icon (e.g. sidebar clock icons for Today / Tomorrow). */
+  workspaceEmoji?: ReactNode;
   onCreateTask?: () => void;
   onCreateTaskWithAI?: () => void;
 }
 
 export function Toolbar({
   workspaceTitle,
+  workspaceEmoji,
   onCreateTask,
   onCreateTaskWithAI,
 }: ToolbarProps) {
@@ -32,7 +37,18 @@ export function Toolbar({
 
   return (
     <ToolbarStyled>
-      <WorkspacePath>{workspaceTitle}</WorkspacePath>
+      <WorkspacePath>
+        {workspaceEmoji != null && workspaceEmoji !== "" ? (
+          <WorkspacePathLeading aria-hidden>
+            {typeof workspaceEmoji === "string" ? (
+              <BoardTitleEmoji>{workspaceEmoji}</BoardTitleEmoji>
+            ) : (
+              workspaceEmoji
+            )}
+          </WorkspacePathLeading>
+        ) : null}
+        {workspaceTitle}
+      </WorkspacePath>
       <Actions>
         <CreateTaskButton
           onManualCreate={onCreateTask}

@@ -54,7 +54,7 @@ export function TimelinePlanning({
   const [isOptimizationModalOpen, setIsOptimizationModalOpen] = useState(false);
   const router = useRouter();
 
-  const currentTasks = tasksHelper.sortScheduledTasksByStatus(
+  const currentTasks = tasksHelper.schedule.sortTasksByStatus(
     schedule,
     recentTasks,
     todayTasks,
@@ -168,7 +168,7 @@ export function TimelinePlanning({
       ) : (
         <EmptyState
           title="You have no tasks"
-          message={`No tasks scheduled for ${tasksHelper.getScheduleLabel(schedule, customDate)}`}
+          message={`No tasks scheduled for ${tasksHelper.schedule.getLabel(schedule, customDate)}`}
         />
       )}
       <ViewAllLink href="/tasks">View all tasks →</ViewAllLink>

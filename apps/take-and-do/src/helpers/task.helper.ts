@@ -18,30 +18,45 @@ const STATUS_NAMES: Record<TaskStatus, string> = {
 };
 
 export const tasksHelper = {
-  sortScheduledTasksByStatus(
-    schedule: ScheduleType,
-    recentTasks: Task[],
-    todayTasks: Task[],
-    tomorrowTasks: Task[],
-    customDateTasks: Task[],
-  ): Task[] {
-    const scheduledTasks = {
-      new: recentTasks,
-      today: todayTasks,
-      tomorrow: tomorrowTasks,
-      custom: customDateTasks,
-    };
-    const tasks = scheduledTasks[schedule];
-    return tasksHelper.status.sort(tasks);
-  },
-  getScheduleLabel(schedule: ScheduleType, customDate: string) {
-    if (schedule === "new") return "last 7 days";
-    if (schedule === "today") return "today";
-    if (schedule === "tomorrow") return "tomorrow";
-    if (schedule === "custom" && customDate) {
-      return tasksHelper.date.formatForDisplay(new Date(customDate));
-    }
-    return "selected date";
+  schedule: {
+    sortTasksByStatus(
+      schedule: ScheduleType,
+      recentTasks: Task[],
+      todayTasks: Task[],
+      tomorrowTasks: Task[],
+      customDateTasks: Task[],
+    ): Task[] {
+      const scheduledTasks = {
+        new: recentTasks,
+        today: todayTasks,
+        tomorrow: tomorrowTasks,
+        custom: customDateTasks,
+      };
+      const tasks = scheduledTasks[schedule];
+      return tasksHelper.status.sort(tasks);
+    },
+    getLabel(schedule: ScheduleType, customDate: string) {
+      if (schedule === "new") return "last 7 days";
+      if (schedule === "today") return "today";
+      if (schedule === "tomorrow") return "tomorrow";
+      if (schedule === "custom" && customDate) {
+        return tasksHelper.date.formatForDisplay(new Date(customDate));
+      }
+      return "selected date";
+    },
+    getDate(schedule: "today" | "tomorrow"): Date {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (schedule === "tomorrow") {
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        return tomorrow;
+      }
+      return today;
+    },
+    isSchedule(view: string): view is "today" | "tomorrow" {
+      return view === "today" || view === "tomorrow";
+    },
   },
   estimation: {
     parse(totalHours: number): ParsedEstimation {

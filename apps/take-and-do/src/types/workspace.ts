@@ -1,4 +1,4 @@
-import { Task } from "@/components/Boards/KanbanBoard/types";
+import type { Task, TaskStatus } from "@/components/Boards/KanbanBoard/types";
 
 export interface Folder {
   id: string;
@@ -16,6 +16,10 @@ export interface TaskBoard {
   createdAt: Date;
   updatedAt: Date;
 }
+
+export type TaskBoardWithTasks = TaskBoard & {
+  tasks: Record<TaskStatus, Task[]>;
+};
 
 export interface ScheduledTasksResponse {
   today: Task[];

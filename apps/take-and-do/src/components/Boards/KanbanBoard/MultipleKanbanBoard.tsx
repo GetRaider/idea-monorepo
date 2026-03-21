@@ -1,60 +1,57 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { ChevronRightIcon } from "@/components/Icons";
+import { useState, useCallback } from "react";
+import {
+  ChevronRightIcon,
+  ClockCircleIcon,
+  ClockNavIcon,
+} from "@/components/Icons";
 import {
   BoardContainer,
   BoardMultiLayout,
   WorkspaceSeparator,
   LoadingContainer,
   Spinner,
-  TaskGroupSection,
-  TaskGroupColumnsGrid,
+  MultiBoardSection,
+  MultiBoardColumnsGrid,
   GroupChevronWrapper,
   EmptyStateWrapper,
+  BoardTitleEmoji,
 } from "./KanbanBoard.styles";
 import { Toolbar } from "./shared/Toolbar";
 import { KanbanColumns } from "./shared/KanbanColumns";
-import { TaskStatus, TaskGroup, Task } from "./types";
-import {
-  fetchTaskBoardNameMap,
-  loadScheduledContent,
-  loadFolderContent,
-} from "./shared/dataLoaders";
+import { TaskStatus, Task } from "./types";
 import { handleMultipleBoardsTaskStatusChange } from "./shared/taskStatusHandlers";
 import {
   composedDataToTask,
   createNewTaskTemplate,
 } from "./shared/taskComposeHelpers";
 import { useKanbanTaskHandlers } from "../../../hooks/useKanbanTaskHandlers";
+import { useMultipleKanbanBoardData } from "../../../hooks/useMultipleKanbanBoardData";
 import { TaskView } from "../../TaskView/TaskView";
 import { updateTaskInColumns } from "@/hooks/useTaskBoardState";
 import { EmptyState } from "../../EmptyState";
 import { AIComposeModal } from "./shared/AIComposeModal";
 import { apiServices } from "@/services/api";
-
-interface MultipleKanbanBoardProps {
-  scheduleDate?: Date;
-  workspaceTitle: string;
-  folderId?: string;
-  taskBoardNameMap?: Record<string, string>;
-  onTaskOpen?: (task: Task) => void;
-  onTaskClose?: () => void;
-  onSubtaskOpen?: (parentTask: Task, subtask: Task) => void;
-}
+import type { TaskBoardWithTasks } from "@/types/workspace";
 
 export function MultipleKanbanBoard({
   scheduleDate,
   workspaceTitle,
   folderId,
-  taskBoardNameMap = {},
   onTaskOpen,
   onTaskClose,
   onSubtaskOpen,
 }: MultipleKanbanBoardProps) {
-  const [taskGroups, setTaskGroups] = useState<TaskGroup[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+  const {
+    boardsWithTasks,
+    setBoardsWithTasks,
+    isLoading,
+    fetchBoards,
+    expandedBoardIds,
+    toggleBoardExpanded,
+  } = useMultipleKanbanBoardData(scheduleDate, folderId);
+
   const [isAIComposeModalOpen, setIsAIComposeModalOpen] = useState(false);
   const [selectedBoardIdForAI, setSelectedBoardIdForAI] = useState<
     string | null
@@ -69,94 +66,25 @@ export function MultipleKanbanBoard({
     handleSubtaskClick,
   } = useKanbanTaskHandlers({ onTaskOpen, onTaskClose, onSubtaskOpen });
 
-  useEffect(() => {
-    const fetchTasks = async () => {
-      setIsLoading(true);
-      try {
-        const taskBoardNamesMap =
-          Object.keys(taskBoardNameMap).length > 0
-            ? taskBoardNameMap
-            : await fetchTaskBoardNameMap();
-
-        let loadedGroups: TaskGroup[] = [];
-        if (scheduleDate) {
-          await loadScheduledContent({
-            scheduleDate,
-            taskBoardNamesMap,
-            setTaskGroups: (groups) => {
-              loadedGroups = groups;
-              setTaskGroups(groups);
-            },
-          });
-        } else if (folderId) {
-          await loadFolderContent({
-            folderId,
-            taskBoardNamesMap,
-            setTaskGroups: (groups) => {
-              loadedGroups = groups;
-              setTaskGroups(groups);
-            },
-          });
-        }
-
-        // Expand all groups by default
-        if (loadedGroups.length > 0) {
-          const allGroupIds = loadedGroups.map((g) => g.taskBoardId);
-          setExpandedGroups(new Set(allGroupIds));
-        }
-      } catch (error) {
-        console.error("Failed to fetch tasks:", error);
-        setTaskGroups([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchTasks();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scheduleDate, folderId]);
-
-  const toggleGroup = (taskBoardId: string) => {
-    setExpandedGroups((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(taskBoardId)) {
-        newSet.delete(taskBoardId);
-      } else {
-        newSet.add(taskBoardId);
-      }
-      return newSet;
-    });
-  };
-
   const handleTaskStatusChange = useCallback(
     async (taskId: string, newStatus: TaskStatus, targetIndex?: number) => {
       await handleMultipleBoardsTaskStatusChange(
-        taskGroups,
-        setTaskGroups,
+        boardsWithTasks,
+        setBoardsWithTasks,
         taskId,
         newStatus,
         targetIndex,
       );
     },
-    [taskGroups],
+    [boardsWithTasks, setBoardsWithTasks],
   );
 
   const handleTaskUpdate = useCallback(
     async (updatedTask: Task) => {
-      // If we're in a scheduled view, check if the task still belongs to this scheduleDate
       if (scheduleDate) {
-        // If scheduleDate was removed, task should be removed from scheduled view
         if (!updatedTask.scheduleDate) {
           try {
-            const taskBoardNamesMap =
-              Object.keys(taskBoardNameMap).length > 0
-                ? taskBoardNameMap
-                : await fetchTaskBoardNameMap();
-            await loadScheduledContent({
-              scheduleDate,
-              taskBoardNamesMap,
-              setTaskGroups,
-            });
+            setBoardsWithTasks(await fetchBoards());
           } catch (error) {
             console.error(
               "Failed to refresh tasks after schedule update:",
@@ -169,7 +97,6 @@ export function MultipleKanbanBoard({
           return;
         }
 
-        // Check if scheduleDate matches the current scheduleDate
         const taskDate = new Date(updatedTask.scheduleDate);
         taskDate.setHours(0, 0, 0, 0);
         const currentDate = new Date(scheduleDate);
@@ -177,18 +104,9 @@ export function MultipleKanbanBoard({
 
         const matchesSchedule = taskDate.getTime() === currentDate.getTime();
 
-        // If task no longer belongs to this scheduleDate, refresh the entire list
         if (!matchesSchedule) {
           try {
-            const taskBoardNamesMap =
-              Object.keys(taskBoardNameMap).length > 0
-                ? taskBoardNameMap
-                : await fetchTaskBoardNameMap();
-            await loadScheduledContent({
-              scheduleDate,
-              taskBoardNamesMap,
-              setTaskGroups,
-            });
+            setBoardsWithTasks(await fetchBoards());
           } catch (error) {
             console.error(
               "Failed to refresh tasks after schedule update:",
@@ -202,52 +120,54 @@ export function MultipleKanbanBoard({
         }
       }
 
-      // Otherwise, update the task in place
-      setTaskGroups((prevGroups) =>
-        prevGroups.map((group) => {
-          if (group.taskBoardId !== updatedTask.taskBoardId) {
-            return group;
-          }
-          return {
-            ...group,
-            tasks: updateTaskInColumns(group.tasks, updatedTask),
-          };
-        }),
+      setBoardsWithTasks((prev) =>
+        prev.map((board) =>
+          board.id !== updatedTask.taskBoardId
+            ? board
+            : {
+                ...board,
+                tasks: updateTaskInColumns(board.tasks, updatedTask),
+              },
+        ),
       );
-      if (selectedTask?.id === updatedTask.id) {
-        setSelectedTask(updatedTask);
-      }
+      if (selectedTask?.id === updatedTask.id) setSelectedTask(updatedTask);
     },
-    [selectedTask, setSelectedTask, scheduleDate, taskBoardNameMap],
+    [
+      selectedTask,
+      setSelectedTask,
+      scheduleDate,
+      fetchBoards,
+      setBoardsWithTasks,
+    ],
   );
 
   const handleCreateTask = useCallback(() => {
-    if (taskGroups.length === 0) {
+    if (boardsWithTasks.length === 0) {
       console.error("Cannot create task: no task boards available");
       return;
     }
     setSelectedTask(
       createNewTaskTemplate({
-        taskBoardId: taskGroups[0].taskBoardId,
+        taskBoardId: boardsWithTasks[0].id,
         scheduleDate: scheduleDate ?? undefined,
       }),
     );
-  }, [taskGroups, setSelectedTask, scheduleDate]);
+  }, [boardsWithTasks, setSelectedTask, scheduleDate]);
 
   const handleCreateTaskWithAI = useCallback(() => {
-    if (taskGroups.length === 0) {
+    if (boardsWithTasks.length === 0) {
       console.error("Cannot create task: no task boards available");
       return;
     }
-    setSelectedBoardIdForAI(taskGroups[0].taskBoardId);
+    setSelectedBoardIdForAI(boardsWithTasks[0].id);
     setIsAIComposeModalOpen(true);
-  }, [taskGroups]);
+  }, [boardsWithTasks]);
 
   const handleAICompose = useCallback(
     async (text: string) => {
       let taskBoardId = selectedBoardIdForAI;
-      if (!taskBoardId && taskGroups.length > 0) {
-        taskBoardId = taskGroups[0].taskBoardId;
+      if (!taskBoardId && boardsWithTasks.length > 0) {
+        taskBoardId = boardsWithTasks[0].id;
       }
       if (!taskBoardId) {
         console.error("Cannot compose task: taskBoardId not found");
@@ -270,83 +190,44 @@ export function MultipleKanbanBoard({
         throw error;
       }
     },
-    [taskGroups, scheduleDate, selectedBoardIdForAI, setSelectedTask],
+    [boardsWithTasks, scheduleDate, selectedBoardIdForAI, setSelectedTask],
   );
 
   const handleTaskCreated = useCallback(
     async (createdTask: Task) => {
       try {
-        const taskBoardNamesMap =
-          Object.keys(taskBoardNameMap).length > 0
-            ? taskBoardNameMap
-            : await fetchTaskBoardNameMap();
-        let loadedGroups: TaskGroup[] = [];
-        if (scheduleDate) {
-          await loadScheduledContent({
-            scheduleDate,
-            taskBoardNamesMap,
-            setTaskGroups: (groups) => {
-              loadedGroups = groups;
-              setTaskGroups(groups);
-            },
-          });
-        } else if (folderId) {
-          await loadFolderContent({
-            folderId,
-            taskBoardNamesMap,
-            setTaskGroups: (groups) => {
-              loadedGroups = groups;
-              setTaskGroups(groups);
-            },
-          });
-        }
+        setBoardsWithTasks(await fetchBoards());
         setSelectedTask(createdTask);
       } catch (error) {
         console.error("Failed to refresh tasks after creation:", error);
       }
     },
-    [scheduleDate, folderId, taskBoardNameMap, setSelectedTask],
+    [fetchBoards, setSelectedTask, setBoardsWithTasks],
   );
 
-  const handleTaskDelete = useCallback(
-    async (taskId: string) => {
-      try {
-        const taskBoardNamesMap =
-          Object.keys(taskBoardNameMap).length > 0
-            ? taskBoardNameMap
-            : await fetchTaskBoardNameMap();
-        if (scheduleDate) {
-          await loadScheduledContent({
-            scheduleDate,
-            taskBoardNamesMap,
-            setTaskGroups,
-          });
-        } else if (folderId) {
-          await loadFolderContent({
-            folderId,
-            taskBoardNamesMap,
-            setTaskGroups,
-          });
-        }
-        setSelectedTask(null);
-      } catch (error) {
-        console.error("Failed to refresh tasks after deletion:", error);
-      }
-    },
-    [scheduleDate, folderId, taskBoardNameMap, setSelectedTask],
-  );
-
-  const getTaskWorkspaceTitle = (task: Task | null): string => {
-    if (!task) return workspaceTitle;
-    const group = taskGroups.find((g) => g.taskBoardId === task.taskBoardId);
-    return group?.taskBoardName || workspaceTitle;
-  };
+  const handleTaskDelete = useCallback(async () => {
+    try {
+      setBoardsWithTasks(await fetchBoards());
+      setSelectedTask(null);
+    } catch (error) {
+      console.error("Failed to refresh tasks after deletion:", error);
+    }
+  }, [fetchBoards, setSelectedTask, setBoardsWithTasks]);
 
   return (
     <>
       <BoardContainer>
         <Toolbar
           workspaceTitle={workspaceTitle}
+          workspaceEmoji={
+            workspaceTitle === "Today" ? (
+              <ClockNavIcon size={20} />
+            ) : workspaceTitle === "Tomorrow" ? (
+              <ClockCircleIcon size={20} />
+            ) : (
+              (boardsWithTasks[0]?.emoji ?? null)
+            )
+          }
           onCreateTask={handleCreateTask}
           onCreateTaskWithAI={handleCreateTaskWithAI}
         />
@@ -356,35 +237,38 @@ export function MultipleKanbanBoard({
             <LoadingContainer>
               <Spinner />
             </LoadingContainer>
-          ) : taskGroups.length > 0 ? (
+          ) : boardsWithTasks.length > 0 ? (
             <>
-              {taskGroups.map((group) => {
-                const isExpanded = expandedGroups.has(group.taskBoardId);
+              {boardsWithTasks.map((board) => {
+                const isExpanded = expandedBoardIds.has(board.id);
                 return (
-                  <TaskGroupSection
-                    key={group.taskBoardId}
-                    $expanded={isExpanded}
-                  >
+                  <MultiBoardSection key={board.id}>
                     <WorkspaceSeparator
                       type="button"
-                      onClick={() => toggleGroup(group.taskBoardId)}
+                      onClick={() => toggleBoardExpanded(board.id)}
                     >
                       <GroupChevronWrapper $expanded={isExpanded}>
                         <ChevronRightIcon size={16} />
                       </GroupChevronWrapper>
-                      {group.taskBoardName}
+                      {board.emoji ? (
+                        <BoardTitleEmoji aria-hidden>
+                          {board.emoji}
+                        </BoardTitleEmoji>
+                      ) : null}
+                      {board.name}
                     </WorkspaceSeparator>
 
                     {isExpanded && (
-                      <TaskGroupColumnsGrid>
+                      <MultiBoardColumnsGrid>
                         <KanbanColumns
-                          tasksByStatus={group.tasks}
+                          tasksByStatus={board.tasks}
+                          columnBodyScrolls={false}
                           onTaskDrop={handleTaskStatusChange}
                           onTaskClick={handleTaskClick}
                         />
-                      </TaskGroupColumnsGrid>
+                      </MultiBoardColumnsGrid>
                     )}
-                  </TaskGroupSection>
+                  </MultiBoardSection>
                 );
               })}
             </>
@@ -405,7 +289,11 @@ export function MultipleKanbanBoard({
       <TaskView
         task={selectedTask}
         parentTask={parentTask}
-        workspaceTitle={getTaskWorkspaceTitle(selectedTask)}
+        boardName={getTaskWorkspaceTitle(
+          selectedTask,
+          boardsWithTasks,
+          workspaceTitle,
+        )}
         onClose={handleCloseModal}
         onTaskUpdate={handleTaskUpdate}
         onSubtaskClick={handleSubtaskClick}
@@ -422,4 +310,23 @@ export function MultipleKanbanBoard({
       />
     </>
   );
+}
+
+function getTaskWorkspaceTitle(
+  task: Task | null,
+  boardsWithTasks: TaskBoardWithTasks[],
+  workspaceTitle: string,
+): string {
+  if (!task) return workspaceTitle;
+  const board = boardsWithTasks.find((board) => board.id === task.taskBoardId);
+  return board?.name || workspaceTitle;
+}
+
+interface MultipleKanbanBoardProps {
+  scheduleDate?: Date;
+  workspaceTitle: string;
+  folderId?: string;
+  onTaskOpen?: (task: Task) => void;
+  onTaskClose?: () => void;
+  onSubtaskOpen?: (parentTask: Task, subtask: Task) => void;
 }

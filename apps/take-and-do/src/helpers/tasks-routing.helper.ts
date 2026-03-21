@@ -38,6 +38,17 @@ export function buildScheduleUrl(date: ScheduleDate): string {
   return `/tasks/schedule/${date}`;
 }
 
+export function buildScheduleTaskUrl(
+  date: ScheduleDate,
+  taskKey?: string,
+  subtaskKey?: string,
+): string {
+  const base = buildScheduleUrl(date);
+  if (subtaskKey && taskKey) return `${base}/${taskKey}/${subtaskKey}`;
+  if (taskKey) return `${base}/${taskKey}`;
+  return base;
+}
+
 /**
  * Build URL for board view, optionally with task/subtask
  */

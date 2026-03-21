@@ -25,7 +25,7 @@ import { apiServices } from "@/services/api";
 
 interface SingleKanbanBoardProps {
   boardId: string;
-  workspaceTitle: string;
+  boardName: string;
   boardEmoji?: string | null;
   onTaskOpen?: (task: Task) => void;
   onTaskClose?: () => void;
@@ -34,7 +34,7 @@ interface SingleKanbanBoardProps {
 
 export function SingleKanbanBoard({
   boardId,
-  workspaceTitle,
+  boardName,
   boardEmoji,
   onTaskOpen,
   onTaskClose,
@@ -178,7 +178,7 @@ export function SingleKanbanBoard({
     <>
       <BoardContainer>
         <Toolbar
-          workspaceTitle={workspaceTitle}
+          workspaceTitle={boardName}
           workspaceEmoji={boardEmoji}
           onCreateTask={handleCreateTask}
           onCreateTaskWithAI={handleCreateTaskWithAI}
@@ -195,7 +195,7 @@ export function SingleKanbanBoard({
               tasksByStatus={tasksByStatus}
               handleTaskStatusChange={handleTaskStatusChange}
               handleTaskClick={handleTaskClick}
-              workspaceTitle={workspaceTitle}
+              boardName={boardName}
             />
           )}
         </Board>
@@ -203,7 +203,7 @@ export function SingleKanbanBoard({
       <TaskView
         task={selectedTask}
         parentTask={parentTask}
-        workspaceTitle={workspaceTitle}
+        boardName={boardName}
         onClose={handleCloseModal}
         onTaskUpdate={handleTaskUpdate}
         onSubtaskClick={handleSubtaskClick}
@@ -224,13 +224,13 @@ function BoardContent({
   tasksByStatus,
   handleTaskStatusChange,
   handleTaskClick,
-  workspaceTitle,
+  boardName,
 }: BoardContentProps) {
   return totalTasksLength === 0 ? (
     <EmptyStateWrapper>
       <EmptyState
         title="No tasks"
-        message={`No tasks in '${workspaceTitle}' board`}
+        message={`No tasks in '${boardName}' board`}
       />
     </EmptyStateWrapper>
   ) : (
@@ -251,5 +251,5 @@ interface BoardContentProps {
     targetIndex?: number,
   ) => void;
   handleTaskClick: (task: Task) => void;
-  workspaceTitle: string;
+  boardName: string;
 }

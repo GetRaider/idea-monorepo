@@ -2,13 +2,13 @@
 
 import { use } from "react";
 import { notFound } from "next/navigation";
+
 import { MultipleKanbanBoard } from "@/components/Boards/KanbanBoard/MultipleKanbanBoard";
-import { Task } from "@/components/Boards/KanbanBoard/types";
+import { useScheduleTaskUrlSync } from "@/hooks/useKanbanTaskUrlSync";
 import {
   isValidScheduleDate,
-  buildScheduleUrl,
-  ScheduleDate,
-} from "../../../../helpers/tasks-routing.helper";
+  type ScheduleDate,
+} from "@/helpers/tasks-routing.helper";
 
 interface SchedulePageProps {
   params: Promise<{ date: string }>;
@@ -16,36 +16,24 @@ interface SchedulePageProps {
 
 export default function SchedulePage({ params }: SchedulePageProps) {
   const { date } = use(params);
+  const scheduleDate: ScheduleDate = isValidScheduleDate(date)
+    ? date
+    : "today";
+
+  const { onTaskOpen, onTaskClose, onSubtaskOpen } =
+    useScheduleTaskUrlSync(scheduleDate);
 
   if (!isValidScheduleDate(date)) {
     notFound();
   }
 
-  const handleTaskOpen = (task: Task) => {
-    if (task.taskKey) {
-      const newUrl = `/tasks/schedule/${date}/${task.taskKey}`;
-      window.history.replaceState(null, "", newUrl);
-    }
-  };
-
-  const handleTaskClose = () => {
-    window.history.replaceState(null, "", buildScheduleUrl(date));
-  };
-
-  const handleSubtaskOpen = (parentTask: Task, subtask: Task) => {
-    if (parentTask.taskKey && subtask.taskKey) {
-      const newUrl = `/tasks/schedule/${date}/${parentTask.taskKey}/${subtask.taskKey}`;
-      window.history.replaceState(null, "", newUrl);
-    }
-  };
-
   return (
     <MultipleKanbanBoard
-      scheduleDate={getScheduleDate(date)}
-      workspaceTitle={getScheduleTitle(date)}
-      onTaskOpen={handleTaskOpen}
-      onTaskClose={handleTaskClose}
-      onSubtaskOpen={handleSubtaskOpen}
+      scheduleDate={getScheduleDate(scheduleDate)}
+      workspaceName={getScheduleTitle(scheduleDate)}
+      onTaskOpen={onTaskOpen}
+      onTaskClose={onTaskClose}
+      onSubtaskOpen={onSubtaskOpen}
     />
   );
 }

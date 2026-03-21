@@ -37,7 +37,7 @@ import type { TaskBoardWithTasks } from "@/types/workspace";
 
 export function MultipleKanbanBoard({
   scheduleDate,
-  workspaceTitle,
+  workspaceName,
   folderId,
   onTaskOpen,
   onTaskClose,
@@ -218,11 +218,11 @@ export function MultipleKanbanBoard({
     <>
       <BoardContainer>
         <Toolbar
-          workspaceTitle={workspaceTitle}
+          workspaceTitle={workspaceName}
           workspaceEmoji={
-            workspaceTitle === "Today" ? (
+            workspaceName === "Today" ? (
               <ClockNavIcon size={20} />
-            ) : workspaceTitle === "Tomorrow" ? (
+            ) : workspaceName === "Tomorrow" ? (
               <ClockCircleIcon size={20} />
             ) : (
               (boardsWithTasks[0]?.emoji ?? null)
@@ -279,7 +279,7 @@ export function MultipleKanbanBoard({
                 message={
                   scheduleDate
                     ? `No tasks scheduled for ${scheduleDate.toLocaleDateString()}`
-                    : `No tasks available for ${workspaceTitle}`
+                    : `No tasks available for ${workspaceName}`
                 }
               />
             </EmptyStateWrapper>
@@ -292,7 +292,7 @@ export function MultipleKanbanBoard({
         boardName={getTaskWorkspaceTitle(
           selectedTask,
           boardsWithTasks,
-          workspaceTitle,
+          workspaceName,
         )}
         onClose={handleCloseModal}
         onTaskUpdate={handleTaskUpdate}
@@ -315,16 +315,16 @@ export function MultipleKanbanBoard({
 function getTaskWorkspaceTitle(
   task: Task | null,
   boardsWithTasks: TaskBoardWithTasks[],
-  workspaceTitle: string,
+  workspaceName: string,
 ): string {
-  if (!task) return workspaceTitle;
+  if (!task) return workspaceName;
   const board = boardsWithTasks.find((board) => board.id === task.taskBoardId);
-  return board?.name || workspaceTitle;
+  return board?.name || workspaceName;
 }
 
 interface MultipleKanbanBoardProps {
   scheduleDate?: Date;
-  workspaceTitle: string;
+  workspaceName: string;
   folderId?: string;
   onTaskOpen?: (task: Task) => void;
   onTaskClose?: () => void;

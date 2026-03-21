@@ -1,56 +1,27 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { use } from "react";
 import { notFound } from "next/navigation";
 
 import { SingleKanbanBoard } from "@/components/Boards/KanbanBoard/SingleKanbanBoard";
-import {
-  parseBoardPath,
-  buildBoardUrl,
-} from "../../../../helpers/tasks-routing.helper";
 import { BoardLoadingWrapper, BoardLoadingLabel } from "./page.styles";
 import { Spinner } from "@/components/Boards/KanbanBoard/KanbanBoard.styles";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { useBoardTaskUrlSync } from "@/hooks/useKanbanTaskUrlSync";
+import { useWorkspaceInitialLoadReady } from "@/hooks/useWorkspaceInitialLoadReady";
+import { parseBoardPath } from "@/helpers/tasks-routing.helper";
 
 export default function BoardPage({ params }: BoardPageProps) {
   const { boardPath } = use(params);
-  const { taskBoards, isFoldersLoading, isBoardsLoading } = useWorkspace();
+  const { taskBoards } = useWorkspace();
+  const isBoardReady = useWorkspaceInitialLoadReady();
 
   const parsedBoardPath = parseBoardPath(boardPath);
+  const boardName = parsedBoardPath?.boardName ?? "";
+  const { onTaskOpen, onTaskClose, onSubtaskOpen } =
+    useBoardTaskUrlSync(boardName);
+
   if (!parsedBoardPath) notFound();
-
-  const [isBoardReady, setIsBoardReady] = useState(false);
-  const { boardName } = parsedBoardPath;
-
-  useEffect(() => {
-    if (!isBoardsLoading && !isFoldersLoading) setIsBoardReady(true);
-  }, [isBoardsLoading, isFoldersLoading]);
-
-  const handleTaskOpen = (task: { taskKey?: string }) => {
-    if (task.taskKey)
-      window.history.replaceState(
-        null,
-        "",
-        buildBoardUrl(boardName, task.taskKey),
-      );
-  };
-
-  const handleTaskClose = () => {
-    window.history.replaceState(null, "", buildBoardUrl(boardName));
-  };
-
-  const handleSubtaskOpen = (
-    parentTask: { taskKey?: string },
-    subtask: { taskKey?: string },
-  ) => {
-    if (parentTask.taskKey && subtask.taskKey) {
-      window.history.replaceState(
-        null,
-        "",
-        buildBoardUrl(boardName, parentTask.taskKey, subtask.taskKey),
-      );
-    }
-  };
 
   if (!isBoardReady) {
     return (
@@ -73,12 +44,12 @@ export default function BoardPage({ params }: BoardPageProps) {
 
   return (
     <SingleKanbanBoard
-      workspaceTitle={boardName}
+      boardName={boardName}
       boardId={currentBoard.id}
       boardEmoji={currentBoard.emoji}
-      onTaskOpen={handleTaskOpen}
-      onTaskClose={handleTaskClose}
-      onSubtaskOpen={handleSubtaskOpen}
+      onTaskOpen={onTaskOpen}
+      onTaskClose={onTaskClose}
+      onSubtaskOpen={onSubtaskOpen}
     />
   );
 }

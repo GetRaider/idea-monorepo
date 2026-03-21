@@ -6,12 +6,9 @@ import { Sidebar } from "@/components/Sidebar/Sidebar";
 import { TasksSidebar } from "@/components/TasksSidebar/TasksSidebar";
 import { CreateWorkspaceDialog } from "@/components/TasksSidebar/Workspaces/CreateWorkspace/CreateWorkspaceModal";
 import { PageContainer, Main } from "../page.styles";
-import {
-  buildScheduleUrl,
-  buildBoardUrl,
-  getActiveViewFromPathname,
-} from "@/helpers/tasks-routing.helper";
+import { buildBoardUrl, buildScheduleUrl, getActiveViewFromPathname } from "@/helpers/tasks-routing.helper";
 import { waiterHelper } from "@/helpers/waiter.helper";
+import { useTasksWorkspaceViewNavigation } from "@/hooks/useTasksWorkspaceViewNavigation";
 import { useWorkspaces } from "@/hooks/useWorkspaces";
 import { WorkspaceProvider } from "@/contexts/WorkspaceContext";
 import { apiServices } from "@/services/api";

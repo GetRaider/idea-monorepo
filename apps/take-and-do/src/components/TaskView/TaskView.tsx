@@ -6,12 +6,14 @@ import {
   TaskPriority,
   TaskStatus,
   TaskUpdate,
-} from "../KanbanBoard/types";
+} from "../Boards/KanbanBoard/types";
+import { toast } from "sonner";
 import { apiServices } from "@/services/api";
 import { TextEditor } from "../TextEditor/TextEditor";
 import { tasksHelper } from "@/helpers/task.helper";
 import { TaskViewHeader } from "./TaskViewHeader/TaskViewHeader";
 import { SecondaryButton } from "@/components/Buttons";
+import { ConfirmDialog } from "@/components/Dialogs";
 import {
   TaskViewOverlay,
   TaskViewContainer,
@@ -32,16 +34,19 @@ import {
 } from "./TaskView.styles";
 import { TaskMetadata } from "./TaskMetadata/TaskMetadata";
 import { TaskSubtasks } from "./TaskSubtasks/TaskSubtasks";
+import { useClickOutside } from "@/hooks/useClickOutside";
 
 export function TaskView({
   task: initialTask,
   parentTask,
-  workspaceTitle,
+  boardName,
+  boardOptions,
   onClose,
   onTaskUpdate,
   onSubtaskClick,
   onTaskCreated,
   onTaskDelete,
+  onNavigateToParentTask,
 }: TaskViewProps) {
   const isSubtask = !!parentTask;
   const [task, setTask] = useState<Task | null>(initialTask);
@@ -51,13 +56,11 @@ export function TaskView({
   const [titleValue, setTitleValue] = useState("");
   const [descriptionValue, setDescriptionValue] = useState("");
   const [isPriorityDropdownOpen, setIsPriorityDropdownOpen] = useState(false);
-  const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
   const [isCreatingTask, setIsCreatingTask] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [pendingUpdates, setPendingUpdates] = useState<Partial<Task>>({});
 
   const priorityDropdownRef = useRef<HTMLDivElement>(null);
-  const statusDropdownRef = useRef<HTMLDivElement>(null);
   const shouldCreateTask = useMemo(
     () => isCreating && !task?.id,
     [isCreating, task?.id],
@@ -75,27 +78,15 @@ export function TaskView({
     setPendingUpdates({});
   }, [initialTask]);
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        priorityDropdownRef.current &&
-        !priorityDropdownRef.current.contains(event.target as Node)
-      ) {
-        setIsPriorityDropdownOpen(false);
-      }
-      if (
-        statusDropdownRef.current &&
-        !statusDropdownRef.current.contains(event.target as Node)
-      ) {
-        setIsStatusDropdownOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
+  const closePriorityDropdown = useCallback(
+    () => setIsPriorityDropdownOpen(false),
+    [],
+  );
+  useClickOutside(
+    priorityDropdownRef,
+    isPriorityDropdownOpen,
+    closePriorityDropdown,
+  );
 
   const handleUpdateTask = useCallback(
     async (updates: TaskUpdate) => {
@@ -105,11 +96,12 @@ export function TaskView({
         setTask(updatedTask);
         onTaskUpdate?.(updatedTask);
         setPendingUpdates({});
-        // Reset form values to match updated task
         setTitleValue(updatedTask.summary);
         setDescriptionValue(updatedTask.description || "");
+        toast.success("Task updated");
       } catch (error) {
         console.error("Failed to update task:", error);
+        toast.error("Failed to update task");
       }
     },
     [task, onTaskUpdate],
@@ -229,24 +221,28 @@ export function TaskView({
   const handlePrioritySelect = (priority: TaskPriority) => {
     setIsPriorityDropdownOpen(false);
     if (shouldCreateTask) {
-      task && setTask({ ...task, priority });
+      if (task) setTask({ ...task, priority });
     } else {
       setPendingUpdates((prev) => ({ ...prev, priority }));
       setTask((prev) => (prev ? { ...prev, priority } : null));
     }
   };
 
-  const handleStatusClick = () => {
-    setIsStatusDropdownOpen(!isStatusDropdownOpen);
-  };
-
   const handleStatusSelect = (status: TaskStatus) => {
-    setIsStatusDropdownOpen(false);
     if (shouldCreateTask) {
-      task && setTask({ ...task, status });
+      if (task) setTask({ ...task, status });
     } else {
       setPendingUpdates((prev) => ({ ...prev, status }));
       setTask((prev) => (prev ? { ...prev, status } : null));
+    }
+  };
+
+  const handleBoardSelect = (boardId: string) => {
+    if (shouldCreateTask) {
+      if (task) setTask({ ...task, taskBoardId: boardId });
+    } else {
+      setPendingUpdates((prev) => ({ ...prev, taskBoardId: boardId }));
+      setTask((prev) => (prev ? { ...prev, taskBoardId: boardId } : null));
     }
   };
 
@@ -273,33 +269,45 @@ export function TaskView({
       setTask(createdTask);
       onTaskCreated?.(createdTask);
       setIsEditingTitle(false);
+      toast.success("Task created");
     } catch (error) {
       console.error("Failed to create task:", error);
+      toast.error("Failed to create task");
     } finally {
       setIsCreatingTask(false);
     }
   };
 
-  const handleDelete = useCallback(async () => {
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const handleDeleteConfirm = useCallback(async () => {
     if (!task || !task.id || isCreating) return;
-
-    if (
-      !confirm(
-        "Are you sure you want to delete this task? This action cannot be undone.",
-      )
-    ) {
-      return;
-    }
-
     try {
       await apiServices.tasks.deleteById(task.id);
       onTaskDelete?.(task.id);
       onClose();
+      toast.success("Task deleted");
     } catch (error) {
       console.error("Failed to delete task:", error);
-      alert("Failed to delete task. Please try again.");
+      toast.error("Failed to delete task");
     }
   }, [task, isCreating, onTaskDelete, onClose]);
+
+  const handleDeleteClick = useCallback(() => {
+    if (!task || !task.id || isCreating) return;
+    setShowDeleteConfirm(true);
+  }, [task, isCreating]);
+
+  const boardDisplayName = useMemo(() => {
+    if (!task) return boardName;
+    const fromOptions = boardOptions.find(
+      (b) => b.id === task.taskBoardId,
+    )?.name;
+    return fromOptions ?? boardName;
+  }, [boardOptions, boardName, task]);
+
+  const boardPickerDisabled =
+    boardOptions.length === 0 || (isCreating && !!task && !task.taskBoardId);
 
   // Only render if we have a task (either existing or for creation)
   if (!task) return null;
@@ -308,17 +316,21 @@ export function TaskView({
 
   return (
     <TaskViewOverlay onClick={handleOverlayClick}>
-      <TaskViewContainer onClick={(e) => e.stopPropagation()}>
+      <TaskViewContainer
+        data-task-view-container=""
+        onClick={(e) => e.stopPropagation()}
+      >
         <TaskViewHeader
-          workspaceTitle={workspaceTitle}
+          boardDisplayName={boardDisplayName}
+          boardOptions={boardOptions}
+          onBoardSelect={handleBoardSelect}
+          boardPickerDisabled={boardPickerDisabled}
           task={displayTask}
           parentTask={parentTask}
-          statusDropdownRef={statusDropdownRef}
-          isStatusDropdownOpen={isStatusDropdownOpen}
-          onStatusClick={handleStatusClick}
+          onNavigateToParentTask={onNavigateToParentTask}
           onStatusSelect={handleStatusSelect}
           onClose={onClose}
-          onDelete={handleDelete}
+          onDelete={handleDeleteClick}
           isCreating={isCreating}
         />
         <TaskTitleSection>
@@ -379,64 +391,12 @@ export function TaskView({
         )}
         <TaskMetadata
           task={displayTask}
-          handleUpdateTask={undefined}
+          initialTask={initialTask}
           isCreating={isCreating}
-          onTaskChange={(updatedTask) => {
-            setTask(updatedTask);
-            if (!isCreating && initialTask) {
-              // Helper to safely get timestamp from date (handles Date objects and strings)
-              const getTimestamp = (
-                date: Date | string | undefined | null,
-              ): number | undefined => {
-                if (!date) return undefined;
-                if (date instanceof Date) return date.getTime();
-                const parsed = new Date(date);
-                return isNaN(parsed.getTime()) ? undefined : parsed.getTime();
-              };
-
-              // Track changes for save (compare against initial task)
-              const updates: Partial<Task> = {};
-
-              const initialDueDate = getTimestamp(initialTask.dueDate);
-              const updatedDueDate = getTimestamp(updatedTask.dueDate);
-              if (initialDueDate !== updatedDueDate) {
-                updates.dueDate = updatedTask.dueDate;
-              }
-
-              const initialScheduleDate = getTimestamp(
-                initialTask.scheduleDate,
-              );
-              const updatedScheduleDate = getTimestamp(
-                updatedTask.scheduleDate,
-              );
-              if (initialScheduleDate !== updatedScheduleDate) {
-                updates.scheduleDate = updatedTask.scheduleDate;
-              }
-
-              if (updatedTask.estimation !== initialTask.estimation) {
-                updates.estimation = updatedTask.estimation;
-              }
-
-              const initialLabels = JSON.stringify(initialTask.labels || []);
-              const updatedLabels = JSON.stringify(updatedTask.labels || []);
-              if (updatedLabels !== initialLabels) {
-                updates.labels = updatedTask.labels;
-              }
-
-              if (updatedTask.priority !== initialTask.priority) {
-                updates.priority = updatedTask.priority;
-              }
-
-              if (updatedTask.status !== initialTask.status) {
-                updates.status = updatedTask.status;
-              }
-
-              // Only update if there are actual changes
-              if (Object.keys(updates).length > 0) {
-                setPendingUpdates((prev) => ({ ...prev, ...updates }));
-              }
-            }
-          }}
+          onTaskChange={setTask}
+          onPendingMetadataUpdates={(updates) =>
+            setPendingUpdates((prev) => ({ ...prev, ...updates }))
+          }
         />
         {!isSubtask && displayTask.id && (
           <TaskSubtasks
@@ -458,9 +418,7 @@ export function TaskView({
           </TaskViewFooter>
         ) : (
           <TaskViewFooter>
-            <SecondaryButton onClick={handleCancel}>
-              Cancel
-            </SecondaryButton>
+            <SecondaryButton onClick={handleCancel}>Cancel</SecondaryButton>
             <TaskSaveButton
               onClick={handleSaveChanges}
               disabled={isSaving || !hasUnsavedChanges}
@@ -471,17 +429,33 @@ export function TaskView({
           </TaskViewFooter>
         )}
       </TaskViewContainer>
+      {showDeleteConfirm && (
+        <ConfirmDialog
+          title="Delete task?"
+          description="This will permanently delete this task. This action cannot be undone."
+          confirmLabel="Delete task"
+          onConfirm={handleDeleteConfirm}
+          onClose={() => setShowDeleteConfirm(false)}
+        />
+      )}
     </TaskViewOverlay>
   );
+}
+
+interface TaskBoardOption {
+  id: string;
+  name: string;
 }
 
 interface TaskViewProps {
   task: Task | null;
   parentTask?: Task | null;
-  workspaceTitle: string;
+  boardName: string;
+  boardOptions: TaskBoardOption[];
   onClose: () => void;
   onTaskUpdate?: (updatedTask: Task) => void;
   onSubtaskClick?: (subtask: Task) => void;
   onTaskCreated?: (createdTask: Task) => void;
   onTaskDelete?: (taskId: string) => void;
+  onNavigateToParentTask?: () => void;
 }

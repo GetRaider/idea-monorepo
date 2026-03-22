@@ -3,12 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "prepare": "husky install",
     "clean": "rm -rf .next && rm -rf .turbo",
     "clean:hard": "pnpm run clean && rm -rf node_modules",
     "build": "next build --turbopack",
     "dev": "next dev --turbopack",
-    "start": "next start",
+    "prod": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push"
   },
@@ -22,14 +24,15 @@
     "@radix-ui/react-icons": "catalog:",
     "@radix-ui/react-tooltip": "catalog:",
     "@radix-ui/themes": "catalog:",
-    "@repo/ui": "workspace:*",
     "@repo/api": "workspace:*",
     "@repo/shared": "workspace:*",
+    "@repo/ui": "workspace:*",
     "@tiptap/extension-placeholder": "^3.11.0",
     "@tiptap/react": "^3.11.0",
     "@tiptap/starter-kit": "^3.11.0",
     "axios": "catalog:",
     "drizzle-orm": "^0.36.4",
+    "emoji-picker-react": "^4.18.0",
     "lexical": "^0.38.2",
     "next": "catalog:",
     "openai": "^4.73.0",
@@ -38,6 +41,7 @@
     "react-dom": "catalog:",
     "react-markdown": "^10.1.0",
     "recharts": "^2.12.7",
+    "sonner": "^2.0.7",
     "styled-components": "catalog:",
     "zod": "^3.24.0"
   },
@@ -51,6 +55,13 @@
     "drizzle-kit": "^0.30.0",
     "eslint": "catalog:",
     "eslint-config-next": "catalog:",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
+    "prettier": "catalog:",
+    "pretty-quick": "^4.2.2",
     "typescript": "catalog:"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,mjs,cjs}": "eslint --max-warnings=0"
   }
 }

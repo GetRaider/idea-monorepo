@@ -31,5 +31,6 @@ let providerInstance: AIProvider | null = null;
 
 export function getAIProvider(): AIProvider {
   if (providerInstance) return providerInstance;
-  return new AIProvider();
+  providerInstance = new AIProvider();
+  return providerInstance;
 }

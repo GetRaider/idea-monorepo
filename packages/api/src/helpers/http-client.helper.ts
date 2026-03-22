@@ -79,7 +79,7 @@ export class HttpClient implements IHttpClient {
       };
     } catch (error) {
       // TODO: Think about better error handling on different levels besides here.
-      const errorMessage = `Failed to send request.\nRequest: ${primitiveHelper.jsonStringify(requestConfig)}\nError: ${error}`;
+      const errorMessage = `Failed to send request.\nRequest: ${primitiveHelper.jsonStringify(requestConfig)}\nError: ${error instanceof Error ? error.message : String(error)}`;
       logger.error(errorMessage);
       throw new Error(errorMessage);
     }

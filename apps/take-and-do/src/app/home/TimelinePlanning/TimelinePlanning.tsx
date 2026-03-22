@@ -1,18 +1,18 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
-import { Task, TaskStatus } from "@/components/KanbanBoard/types";
+import { Task } from "@/components/Boards/KanbanBoard/types";
 import { EmptyState } from "@/components/EmptyState";
 import { apiServices } from "@/services/api";
 import { ScheduleType, tasksHelper } from "@/helpers/task.helper";
-import { ScheduleOptimizationModal } from "./AIPlanningOptimizationModal";
-import { OptimizeButton } from "./AIPlanningOptimizationModal.styles";
+import { AIPlanningOptimizationDialog } from "./AIPlanningOptimizationModal/AIPlanningOptimizationModal";
+import { OptimizeButton } from "./AIPlanningOptimizationModal/AIPlanningOptimizationModal.styles";
 import {
   Section,
   SectionHeader,
   SectionTitle,
-  ScheduleSelect,
   DateInput,
   DateInputWrapper,
   TaskList,
@@ -29,11 +29,14 @@ import {
   StatusIcon,
   StatusText,
   ViewAllLink,
-  Loading,
   ScheduleSelectContainer,
 } from "./TimelinePlanning.styles";
 import { useRecentTasks } from "@/hooks/useRecentTasks";
 import { useCustomDateTasks } from "@/hooks/useCustomDate";
+import { LoadingContainer, Spinner } from "../page.styles";
+import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
+import { Dropdown } from "@/components/Dropdown";
+import { toast } from "sonner";
 
 interface TimelinePlanningProps {
   todayTasks: Task[];
@@ -49,9 +52,9 @@ export function TimelinePlanning({
     useCustomDateTasks(customDate);
   const { recentTasks, isLoadingRecent } = useRecentTasks();
   const [isOptimizationModalOpen, setIsOptimizationModalOpen] = useState(false);
-  const [allTasks, setAllTasks] = useState<Task[]>([]);
+  const router = useRouter();
 
-  const currentTasks = tasksHelper.sortScheduledTasksByStatus(
+  const currentTasks = tasksHelper.schedule.sortTasksByStatus(
     schedule,
     recentTasks,
     todayTasks,
@@ -62,12 +65,22 @@ export function TimelinePlanning({
   const isLoading = schedule === "new" ? isLoadingRecent : isLoadingCustomDate;
 
   const handleOpenOptimizationModal = async () => {
+    setIsOptimizationModalOpen(true);
+  };
+
+  const handleTaskClick = async (task: Task) => {
     try {
-      const fetchedTasks = await apiServices.tasks.getAll();
-      setAllTasks(fetchedTasks);
-      setIsOptimizationModalOpen(true);
+      const taskBoard = await apiServices.taskBoards.getById(task.taskBoardId);
+      router.push(
+        tasksUrlHelper.routing.buildTasksUrl({
+          type: "board",
+          boardName: taskBoard.name,
+          taskKey: task.taskKey,
+        }),
+      );
     } catch (error) {
-      console.error("Failed to fetch tasks for optimization:", error);
+      console.error("[TimelinePlanning] Failed to open task:", error);
+      toast.error("Failed to open task board.");
     }
   };
 
@@ -76,19 +89,6 @@ export function TimelinePlanning({
       <SectionHeader>
         <SectionTitle>⏳ Timeline Planning</SectionTitle>
         <ScheduleSelectContainer>
-          <ScheduleSelect
-            value={schedule}
-            onChange={(e) => {
-              const newSchedule = e.target.value as ScheduleType;
-              setSchedule(newSchedule);
-              if (newSchedule !== "custom") setCustomDate("");
-            }}
-          >
-            <option value="new">New</option>
-            <option value="today">Today</option>
-            <option value="tomorrow">Tomorrow</option>
-            <option value="custom">Custom Date</option>
-          </ScheduleSelect>
           {schedule === "custom" && (
             <DateInputWrapper>
               <DateInput
@@ -103,13 +103,25 @@ export function TimelinePlanning({
               />
             </DateInputWrapper>
           )}
+          <Dropdown
+            options={[
+              { label: "New", value: "new" },
+              { label: "Today", value: "today" },
+              { label: "Tomorrow", value: "tomorrow" },
+              { label: "Custom Date", value: "custom" },
+            ]}
+            value={schedule}
+            onChange={(value) => setSchedule(value as ScheduleType)}
+          />
           <OptimizeButton onClick={handleOpenOptimizationModal}>
             ✨ Explore AI Optimization
           </OptimizeButton>
         </ScheduleSelectContainer>
       </SectionHeader>
       {isLoading ? (
-        <Loading>Loading...</Loading>
+        <LoadingContainer>
+          <Spinner />
+        </LoadingContainer>
       ) : firstFiveTasks.length > 0 ? (
         <TaskList>
           <TaskListHeader>
@@ -120,7 +132,7 @@ export function TimelinePlanning({
             <HeaderCell>Status</HeaderCell>
           </TaskListHeader>
           {firstFiveTasks.map((task: Task) => (
-            <TaskItem key={task.id}>
+            <TaskItem key={task.id} onClick={() => handleTaskClick(task)}>
               <TaskContent>
                 <TaskLeft>
                   <PriorityIcon>
@@ -156,15 +168,14 @@ export function TimelinePlanning({
       ) : (
         <EmptyState
           title="You have no tasks"
-          message={`No tasks scheduled for ${tasksHelper.getScheduleLabel(schedule, customDate)}`}
+          message={`No tasks scheduled for ${tasksHelper.schedule.getLabel(schedule, customDate)}`}
         />
       )}
       <ViewAllLink href="/tasks">View all tasks →</ViewAllLink>
 
       {isOptimizationModalOpen && (
-        <ScheduleOptimizationModal
+        <AIPlanningOptimizationDialog
           onClose={() => setIsOptimizationModalOpen(false)}
-          tasks={allTasks}
         />
       )}
     </Section>

@@ -68,3 +68,46 @@ html {
 ::-webkit-scrollbar-thumb:hover {
   background: #3a3a3a;
 }
+
+/* Sonner: app dark theme + close button top-right */
+[data-sonner-toaster][data-sonner-theme="dark"] [data-sonner-toast][data-styled="true"] {
+  background: var(--card-bg) !important;
+  border-color: var(--border-color) !important;
+  color: var(--foreground) !important;
+}
+
+[data-sonner-toaster][data-sonner-theme="dark"] [data-sonner-toast] [data-title],
+[data-sonner-toaster][data-sonner-theme="dark"] [data-sonner-toast] [data-description] {
+  color: var(--foreground) !important;
+}
+
+[data-sonner-toaster][data-sonner-theme="dark"] [data-sonner-toast][data-type="success"] {
+  background: #0f2a16 !important;
+  border-color: #14532d !important;
+  color: #86efac !important;
+}
+
+[data-sonner-toaster][data-sonner-theme="dark"] [data-sonner-toast][data-type="error"] {
+  background: #2a0f0f !important;
+  border-color: #450a0a !important;
+  color: #fca5a5 !important;
+}
+
+[data-sonner-toast][data-styled="true"] [data-close-button] {
+  left: auto !important;
+  right: 8px !important;
+  top: 8px !important;
+  width: 24px !important;
+  height: 24px !important;
+  transform: none !important;
+  background: var(--border-color) !important;
+  border-color: var(--border-color) !important;
+  color: var(--foreground) !important;
+  border-radius: 4px !important;
+}
+
+[data-sonner-toast][data-styled="true"] [data-close-button]:hover {
+  background: #3a3a3a !important;
+  border-color: #3a3a3a !important;
+  color: var(--text-primary) !important;
+}

@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { Task, TaskStatus } from "@/components/KanbanBoard/types";
+import { Task, TaskStatus } from "@/components/Boards/KanbanBoard/types";
 
 interface UseTaskBoardStateReturn {
   selectedTask: Task | null;
@@ -62,18 +62,19 @@ export function updateTaskInColumns(
   if (isTopLevelTask) {
     // Remove from old status, add to new status
     for (const status of Object.values(TaskStatus)) {
-      newTasks[status] = newTasks[status].filter((t) => t.id !== updatedTask.id);
+      newTasks[status] = newTasks[status].filter(
+        (task) => task.id !== updatedTask.id,
+      );
     }
     newTasks[updatedTask.status].push(updatedTask);
   } else {
-    // Update subtask within parent
     for (const status of Object.values(TaskStatus)) {
       newTasks[status] = newTasks[status].map((task) => {
-        if (task.subtasks?.some((st) => st.id === updatedTask.id)) {
+        if (task.subtasks?.some((subtask) => subtask.id === updatedTask.id)) {
           return {
             ...task,
-            subtasks: task.subtasks.map((st) =>
-              st.id === updatedTask.id ? updatedTask : st,
+            subtasks: task.subtasks.map((subtask) =>
+              subtask.id === updatedTask.id ? updatedTask : subtask,
             ),
           };
         }
@@ -85,3 +86,18 @@ export function updateTaskInColumns(
   return newTasks;
 }
 
+export function removeTaskFromColumns(
+  tasks: Record<TaskStatus, Task[]>,
+  taskId: string,
+): Record<TaskStatus, Task[]> {
+  const newTasks = { ...tasks };
+  for (const status of Object.values(TaskStatus)) {
+    newTasks[status] = newTasks[status]
+      .filter((t) => t.id !== taskId)
+      .map((t) => ({
+        ...t,
+        subtasks: t.subtasks?.filter((s) => s.id !== taskId),
+      }));
+  }
+  return newTasks;
+}

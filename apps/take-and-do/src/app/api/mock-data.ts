@@ -1,6 +1,10 @@
-import { Task } from "@/components/KanbanBoard/types";
-import { TaskPriority, TaskStatus } from "@/components/KanbanBoard/types";
+import { Task } from "@/components/Boards/KanbanBoard/types";
+import {
+  TaskPriority,
+  TaskStatus,
+} from "@/components/Boards/KanbanBoard/types";
 import { Folder, TaskBoard } from "@/types/workspace";
+import { tasksHelper } from "@/helpers/task.helper";
 
 // Mock labels
 export const mockLabels: string[] = [
@@ -265,7 +269,8 @@ export function getTasksBySchedule(schedule: "today" | "tomorrow"): Task[] {
 
   return getAllTasks().filter((task) => {
     if (!task.scheduleDate) return false;
-    const taskDate = new Date(task.scheduleDate);
+    const taskDate = tasksHelper.date.parse(task.scheduleDate);
+    if (!taskDate) return false;
     taskDate.setHours(0, 0, 0, 0);
     if (schedule === "today") {
       return taskDate.getTime() === today.getTime();

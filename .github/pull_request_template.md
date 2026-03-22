@@ -13,4 +13,4 @@ _Describe what should be tested, relevant test cases, environments, and any gaps
 ## Pre-Review Checklist
 
 - [ ] PR's changes are tested yourself
-- [ ] E2E & Unit tests passed successfully
+- [ ] Tests passed successfully

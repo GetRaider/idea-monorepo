@@ -18,7 +18,6 @@ import {
   SectionHeader,
   SectionTitle,
   Controls,
-  TimeframeSelect,
   GenerateButton,
   ChartsGrid,
   ChartCard,
@@ -32,14 +31,13 @@ import {
   LoadingContainer,
   Spinner,
 } from "./ProductivityOverview.styles";
-import { ProductivitySummaryModal } from "./ProductivitySummaryModal";
-import { ProductivitySummarySelectionModal } from "./ProductivitySummarySelectionModal";
-import type {
-  Timeframe,
-  AnalyticsData,
-} from "../SummarySection/SummarySection";
+import { ProductivitySummaryDialog } from "./ProductivitySummaryModal/ProductivitySummaryModal";
+import { ProductivitySummarySelectionModal } from "./ProductivitySummarySelectionModal/ProductivitySummarySelectionModal";
 import type { AnalyticsStats } from "@/lib/ai";
 import { EmptyState } from "@/components/EmptyState";
+import { Dropdown } from "@/components/Dropdown";
+import { apiServices } from "@/services/api";
+import { AnalyticsData, Timeframe } from "@/services/api/analytics.api.service";
 
 const CHART_TOOLTIP_STYLE = {
   background: "#2a2a2a",
@@ -64,11 +62,9 @@ export function ProductivityOverview() {
     const fetchStats = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch(`/api/analytics?timeframe=${timeframe}`);
-        if (response.ok) {
-          const data = await response.json();
-          if (data?.stats) setStats(data.stats);
-        }
+        const fetchedStats =
+          await apiServices.analytics.getStatsByTimeframe(timeframe);
+        setStats(fetchedStats);
       } catch (error) {
         console.error("Failed to fetch statistics:", error);
       } finally {
@@ -94,31 +90,16 @@ export function ProductivityOverview() {
     try {
       setIsGeneratingAnalytics(true);
 
-      const statsResponse = await fetch(
-        `/api/analytics?timeframe=${timeframe}`,
-      );
-      if (!statsResponse.ok) {
-        throw new Error("Failed to fetch statistics");
-      }
-      const { stats: fetchedStats } = await statsResponse.json();
+      const fetchedStats =
+        await apiServices.analytics.getStatsByTimeframe(timeframe);
 
-      const analyticsResponse = await fetch("/api/analytics", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          stats: fetchedStats,
-          timeframe,
-          shouldUseAI: selectedOption === "ai",
-        }),
+      const generatedAnalytics = await apiServices.analytics.generateSummary({
+        stats: fetchedStats,
+        timeframe,
+        shouldUseAI: selectedOption === "ai",
       });
-      console.log({ analyticsResponse });
 
-      if (!analyticsResponse.ok) {
-        throw new Error("Failed to generate analytics");
-      }
-
-      const data = await analyticsResponse.json();
-      setAnalytics(data.analytics);
+      setAnalytics(generatedAnalytics);
       setIsSelectionModalOpen(false);
       setIsResultsModalOpen(true);
       setSelectedOption(null);
@@ -135,16 +116,16 @@ export function ProductivityOverview() {
         <SectionHeader>
           <SectionTitle>📊 Productivity Overview</SectionTitle>
           <Controls>
-            <>Time Frame</>
-            <TimeframeSelect
+            <Dropdown
+              options={[
+                { label: "All", value: "all" },
+                { label: "Week", value: "week" },
+                { label: "Month", value: "month" },
+                { label: "Quarter", value: "quarter" },
+              ]}
               value={timeframe}
-              onChange={(e) => setTimeframe(e.target.value as Timeframe)}
-            >
-              <option value="all">All</option>
-              <option value="week">Week</option>
-              <option value="month">Month</option>
-              <option value="quarter">Quarter</option>
-            </TimeframeSelect>
+              onChange={(value: Timeframe) => setTimeframe(value)}
+            />
             <GenerateButton
               onClick={handleOpenSelectionModal}
               $disabled={isGeneratingAnalytics}
@@ -181,7 +162,7 @@ export function ProductivityOverview() {
       )}
 
       {isResultsModalOpen && analytics && (
-        <ProductivitySummaryModal
+        <ProductivitySummaryDialog
           analytics={analytics}
           onClose={() => setIsResultsModalOpen(false)}
         />

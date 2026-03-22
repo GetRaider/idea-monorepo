@@ -1,4 +1,9 @@
-import { Task, TaskPriority, TaskUpdate } from "@/components/KanbanBoard/types";
+import {
+  Task,
+  TaskUpdate,
+  toTaskPriority,
+} from "@/components/Boards/KanbanBoard/types";
+import type { ComposeTaskOutput } from "@/lib/ai/schemas";
 import { BaseApiService } from "./base-api.service";
 import { tasksHelper } from "@/helpers/task.helper";
 
@@ -61,20 +66,22 @@ export class TasksApiService extends BaseApiService {
     const allTasks = await this.getAll();
     return allTasks.filter((task) => {
       if (task.scheduleDate) {
-        const scheduleTime = new Date(task.scheduleDate).getTime();
-        return scheduleTime >= pastDate.getTime();
+        const scheduleTime = tasksHelper.date.getTime(task.scheduleDate);
+        return scheduleTime !== undefined && scheduleTime >= pastDate.getTime();
       }
       if (task.dueDate) {
-        const dueTime = new Date(task.dueDate).getTime();
-        return dueTime >= pastDate.getTime();
+        const dueTime = tasksHelper.date.getTime(task.dueDate);
+        return dueTime !== undefined && dueTime >= pastDate.getTime();
       }
       return true;
     });
   }
 
-  async getByTaskBoard(taskBoardId: string): Promise<Task[]> {
-    const tasks = await super.get<Task[]>({ queries: { taskBoardId } });
-    return tasks.data.map((task: Task) => normalizeTask(task));
+  async getByBoardId(boardId: string): Promise<Task[]> {
+    const response = await super.get<Task[]>({
+      queries: { taskBoardId: boardId },
+    });
+    return response.data.map((task: Task) => normalizeTask(task));
   }
 
   async getById(taskId: string): Promise<Task> {
@@ -103,8 +110,8 @@ export class TasksApiService extends BaseApiService {
     text: string,
     taskBoardId: string,
     additionalData?: Partial<Omit<Task, "id">>,
-  ): Promise<Omit<Task, "id">> {
-    const response = await super.post<Omit<Task, "id">>({
+  ): Promise<ComposeTaskOutput> {
+    const response = await super.post<ComposeTaskOutput>({
       body: {
         shouldUseAI: true,
         text,
@@ -113,7 +120,7 @@ export class TasksApiService extends BaseApiService {
         _composeOnly: true,
       },
     });
-    return response.data as Omit<Task, "id">;
+    return response.data;
   }
 
   async createWithAI(
@@ -133,7 +140,6 @@ export class TasksApiService extends BaseApiService {
   }
 
   async update(taskId: string, updates: TaskUpdate): Promise<Task> {
-    console.dir({ taskId, updates }, { depth: null });
     const response = await super.patch<Task>({
       pathParams: [taskId],
       body: updates,
@@ -143,6 +149,13 @@ export class TasksApiService extends BaseApiService {
 
   async deleteById(taskId: string): Promise<void> {
     await super.delete<void>({ pathParams: [taskId] });
+  }
+
+  async deleteAllForBoard(boardId: string): Promise<number> {
+    const response = await super.delete<{ deleted: number }>({
+      queries: { taskBoardId: boardId },
+    });
+    return response.data.deleted;
   }
 
   async optimizeSchedule(
@@ -179,24 +192,13 @@ interface ScheduleOptimizationResult {
   tasksCount: number;
 }
 
-function normalizePriority(priority: unknown): TaskPriority {
-  if (!priority) return TaskPriority.MEDIUM;
-
-  const priorityString = String(priority).toLowerCase();
-  const validPriorities = Object.values(TaskPriority) as string[];
-
-  return validPriorities.includes(priorityString)
-    ? (priorityString as TaskPriority)
-    : TaskPriority.MEDIUM;
-}
-
 // Helper to normalize a task (including subtasks) from API response
 function normalizeTask(task: Task): Task {
   return {
     ...task,
-    dueDate: task.dueDate ? new Date(task.dueDate) : undefined,
-    scheduleDate: task.scheduleDate ? new Date(task.scheduleDate) : undefined,
-    priority: normalizePriority(task.priority),
+    dueDate: tasksHelper.date.parse(task.dueDate),
+    scheduleDate: tasksHelper.date.parse(task.scheduleDate),
+    priority: toTaskPriority(task.priority),
     subtasks: (task.subtasks || []).map((subtask) => normalizeTask(subtask)),
   };
 }

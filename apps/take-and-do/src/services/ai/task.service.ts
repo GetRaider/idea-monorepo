@@ -21,7 +21,6 @@ export class TaskAIService extends BaseAIService {
     const validatedInput = this.validateInput(input, ComposeTaskInputSchema);
     const prompt = aiPrompts.buildComposeTaskPrompt(validatedInput);
     const result = await this.processPrompt(prompt, ComposeTaskOutputSchema);
-    console.log(result.data);
     return result.data;
   }
 

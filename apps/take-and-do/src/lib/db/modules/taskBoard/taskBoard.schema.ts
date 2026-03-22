@@ -4,6 +4,7 @@ import { foldersTable } from "../folder/folder.schema";
 export const taskBoardsTable = pgTable("task_boards", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
+  emoji: text("emoji"),
   folderId: text("folder_id").references(() => foldersTable.id, {
     onDelete: "set null",
   }),

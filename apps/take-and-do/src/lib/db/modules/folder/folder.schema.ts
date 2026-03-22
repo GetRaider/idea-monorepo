@@ -3,6 +3,7 @@ import { pgTable, text, timestamp } from "drizzle-orm/pg-core";
 export const foldersTable = pgTable("folders", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
+  emoji: text("emoji"),
   createdAt: timestamp("created_at")
     .$defaultFn(() => new Date())
     .notNull(),

@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db/client";
 import { tasks } from "@/lib/db/modules/task/task.schema";
-import { TaskStatus, TaskPriority } from "@/components/KanbanBoard/types";
+import {
+  TaskStatus,
+  TaskPriority,
+} from "@/components/Boards/KanbanBoard/types";
 import { gte, and } from "drizzle-orm";
+import { tasksHelper } from "@/helpers/task.helper";
 
 export async function GET(request: NextRequest) {
   try {
@@ -53,12 +57,12 @@ export async function GET(request: NextRequest) {
       done: taskRows.filter((t) => t.status === TaskStatus.DONE).length,
       highPriority: taskRows.filter((t) => t.priority === TaskPriority.HIGH)
         .length,
-      overdue: taskRows.filter(
-        (t) =>
-          t.dueDate &&
-          new Date(t.dueDate) < now &&
-          t.status !== TaskStatus.DONE,
-      ).length,
+      overdue: taskRows.filter((taskRow) => {
+        const due = tasksHelper.date.parse(taskRow.dueDate);
+        return (
+          due !== undefined && due < now && taskRow.status !== TaskStatus.DONE
+        );
+      }).length,
     };
 
     return NextResponse.json(stats);

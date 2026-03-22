@@ -1,4 +1,4 @@
-import { Task } from "@/components/KanbanBoard/types";
+import { Task } from "@/components/Boards/KanbanBoard/types";
 import { tasksHelper } from "@/helpers/task.helper";
 import { TaskBoard } from "@/types/workspace";
 
@@ -15,8 +15,11 @@ export class TaskBoardsApiService extends BaseApiService {
   }
 
   async getById(id: string): Promise<TaskBoard> {
-    const response = await this.get<TaskBoard>({ pathParams: [id] });
-    return normalizeTaskBoard(response.data);
+    const response = await this.get<TaskBoard[]>({ queries: { id } });
+    if (!response.data || response.data.length === 0) {
+      throw new Error("TaskBoard not found");
+    }
+    return normalizeTaskBoard(response.data[0]);
   }
 
   async getTasks(taskBoardId: string): Promise<Task[]> {
@@ -32,6 +35,21 @@ export class TaskBoardsApiService extends BaseApiService {
     const response = await this.post<TaskBoard>({ body: taskBoard });
     return normalizeTaskBoard(response.data);
   }
+
+  async update(
+    id: string,
+    updates: { name?: string; folderId?: string | null; emoji?: string | null },
+  ): Promise<TaskBoard> {
+    const response = await this.patch<TaskBoard>({
+      queries: { id },
+      body: updates,
+    });
+    return normalizeTaskBoard(response.data);
+  }
+
+  async deleteBoard(id: string): Promise<void> {
+    await this.delete({ queries: { id } });
+  }
 }
 
 function normalizeTaskBoard(board: TaskBoard): TaskBoard {
@@ -45,8 +63,8 @@ function normalizeTaskBoard(board: TaskBoard): TaskBoard {
 function normalizeTask(task: Task): Task {
   return {
     ...task,
-    dueDate: task.dueDate ? new Date(task.dueDate) : undefined,
-    scheduleDate: task.scheduleDate ? new Date(task.scheduleDate) : undefined,
+    dueDate: tasksHelper.date.parse(task.dueDate),
+    scheduleDate: tasksHelper.date.parse(task.scheduleDate),
     priority: tasksHelper.priority.format(task.priority),
     subtasks: (task.subtasks ?? []).map(normalizeTask),
   };

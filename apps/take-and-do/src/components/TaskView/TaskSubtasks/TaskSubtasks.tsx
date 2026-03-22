@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { Task, TaskPriority, TaskStatus } from "../../KanbanBoard/types";
+import { useState, useRef } from "react";
+import { tasksHelper } from "@/helpers/task.helper";
+
+import { Task, TaskPriority, TaskStatus } from "../../Boards/KanbanBoard/types";
 import { apiServices } from "@/services/api";
-import { StatusIcon } from "../../KanbanBoard/Column/Column.styles";
+import { StatusIcon } from "../../Boards/KanbanBoard/Column/Column.styles";
 import {
   SubtasksSection,
   SubtasksHeader,
@@ -18,8 +20,11 @@ import {
   SubtaskInput,
   EmptySubtasksMessage,
 } from "./TaskSubtasks.styles";
-import { tasksHelper } from "@/helpers/task.helper";
-import { PlusIcon } from "@/components/Icons";
+import {
+  ChevronDownIcon,
+  ChevronRightIcon,
+  PlusIcon,
+} from "@/components/Icons";
 
 interface TaskSubtasksProps {
   task: Task;
@@ -32,9 +37,12 @@ export function TaskSubtasks({
   onSubtaskClick,
   onTaskUpdate,
 }: TaskSubtasksProps) {
-  const [isSubtasksExpanded, setIsSubtasksExpanded] = useState(true);
+  const [isSubtasksExpanded, setIsSubtasksExpanded] = useState(
+    !!task.subtasks?.length,
+  );
   const [isCreatingSubtask, setIsCreatingSubtask] = useState(false);
   const [newSubtaskSummary, setNewSubtaskSummary] = useState("");
+  const isSavingSubtaskRef = useRef(false);
 
   const handleSubtaskClick = (subtask: Task) => {
     if (onSubtaskClick) {
@@ -48,6 +56,8 @@ export function TaskSubtasks({
 
   const handleCreateSubtask = async () => {
     if (!task || !newSubtaskSummary.trim()) return;
+    if (isSavingSubtaskRef.current) return;
+    isSavingSubtaskRef.current = true;
 
     try {
       const newSubtask: Partial<Task> = {
@@ -59,13 +69,7 @@ export function TaskSubtasks({
         subtasks: [],
       };
 
-      const existingSubtasks = (task.subtasks || []).map((st) => ({
-        ...st,
-        dueDate:
-          st.dueDate instanceof Date ? st.dueDate.toISOString() : st.dueDate,
-      }));
-
-      const updatedSubtasks = [...existingSubtasks, newSubtask];
+      const updatedSubtasks = [...(task.subtasks || []), newSubtask];
       const updatedTask = await apiServices.tasks.update(task.id, {
         subtasks: updatedSubtasks as Task[],
       });
@@ -78,6 +82,8 @@ export function TaskSubtasks({
       setIsCreatingSubtask(false);
     } catch (error) {
       console.error("Failed to create subtask:", error);
+    } finally {
+      isSavingSubtaskRef.current = false;
     }
   };
 
@@ -96,7 +102,7 @@ export function TaskSubtasks({
             onClick={handleToggleSubtasks}
             title={isSubtasksExpanded ? "Collapse" : "Expand"}
           >
-            {isSubtasksExpanded ? "▼" : "▶"}
+            {isSubtasksExpanded ? <ChevronDownIcon /> : <ChevronRightIcon />}
           </SubtasksHeaderButton>
         </SubtasksHeaderButtons>
       </SubtasksHeader>
@@ -109,7 +115,8 @@ export function TaskSubtasks({
               onChange={(e) => setNewSubtaskSummary(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
-                  handleCreateSubtask();
+                  e.preventDefault();
+                  void handleCreateSubtask();
                 } else if (e.key === "Escape") {
                   setIsCreatingSubtask(false);
                   setNewSubtaskSummary("");

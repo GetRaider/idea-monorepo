@@ -4,10 +4,15 @@ import {
   getTasksByTaskBoardId,
   getTasksByDate,
   createTask,
+  deleteAllTasksForTaskBoard,
 } from "@/lib/db/queries";
-import { Task } from "@/components/KanbanBoard/types";
+import {
+  Task,
+  toTaskPriority,
+  toTaskStatus,
+} from "@/components/Boards/KanbanBoard/types";
 import { aiServices } from "@/services/ai";
-import { plainTextToHtml } from "@/helpers/task.helper";
+import { tasksHelper } from "@/helpers/task.helper";
 
 export async function GET(request: NextRequest) {
   try {
@@ -52,10 +57,42 @@ export async function GET(request: NextRequest) {
   }
 }
 
+export async function DELETE(request: NextRequest) {
+  try {
+    const taskBoardId = new URL(request.url).searchParams.get("taskBoardId");
+    if (!taskBoardId?.trim()) {
+      return NextResponse.json(
+        { error: "taskBoardId query parameter is required" },
+        { status: 400 },
+      );
+    }
+
+    const deleted = await deleteAllTasksForTaskBoard(taskBoardId.trim());
+    return NextResponse.json({ deleted });
+  } catch {
+    return NextResponse.json(
+      { error: "Failed to delete tasks for board" },
+      { status: 500 },
+    );
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { shouldUseAI, text, _composeOnly, ...task } = body;
+    let shouldUseAI: boolean | undefined;
+    let text: string | undefined;
+    let _composeOnly: boolean | undefined;
+    let task: Omit<Task, "id">;
+
+    try {
+      const payload = tasksHelper.fromJson.postPayload(await request.json());
+      shouldUseAI = payload.shouldUseAI;
+      text = payload.text;
+      _composeOnly = payload._composeOnly;
+      task = payload.task;
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    }
 
     let taskData: Omit<Task, "id">;
 
@@ -63,30 +100,37 @@ export async function POST(request: NextRequest) {
     if (shouldUseAI && text) {
       const composedData = await aiServices.task.compose({ text });
 
-      let finalScheduleDate: Date | undefined;
-      if (composedData.scheduleDate) {
-        finalScheduleDate = new Date(composedData.scheduleDate);
-      } else if (task.scheduleDate) {
-        finalScheduleDate = new Date(task.scheduleDate);
+      const taskBoardId =
+        task.taskBoardId?.trim() || composedData.taskBoardId?.trim();
+      if (!taskBoardId) {
+        return NextResponse.json(
+          { error: "taskBoardId is required" },
+          { status: 400 },
+        );
       }
 
+      const scheduleDate =
+        tasksHelper.date.parse(composedData.scheduleDate) ??
+        tasksHelper.date.parse(task.scheduleDate);
+
       taskData = {
-        ...task,
+        taskBoardId,
+        taskKey: task.taskKey ?? composedData.taskKey ?? undefined,
         summary: composedData.summary,
-        description: composedData.description
-          ? plainTextToHtml(composedData.description)
-          : undefined,
-        priority: (composedData.priority as Task["priority"]) || task.priority,
-        status: (composedData.status as Task["status"]) || task.status,
-        labels: composedData.labels || task.labels,
-        dueDate: composedData.dueDate
-          ? new Date(composedData.dueDate)
-          : task.dueDate
-            ? new Date(task.dueDate)
-            : undefined,
-        estimation: composedData.estimation || task.estimation,
-        scheduleDate: finalScheduleDate,
-        subtasks: composedData.subtasks || task.subtasks,
+        description: tasksHelper.description.plainToHtml(
+          composedData.description,
+        ),
+        status: toTaskStatus(composedData.status ?? task.status),
+        priority: toTaskPriority(composedData.priority ?? task.priority),
+        labels: composedData.labels ?? task.labels,
+        dueDate:
+          tasksHelper.date.parse(composedData.dueDate) ??
+          tasksHelper.date.parse(task.dueDate),
+        estimation: composedData.estimation ?? task.estimation,
+        scheduleDate,
+        subtasks:
+          tasksHelper.fromJson.subtasksFromArray(composedData.subtasks) ??
+          task.subtasks,
       };
 
       // If composeOnly flag is set, return the composed data without creating
@@ -94,13 +138,24 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(taskData);
       }
     } else {
-      // Regular task creation
+      if (!task.taskBoardId?.trim()) {
+        return NextResponse.json(
+          { error: "taskBoardId is required" },
+          { status: 400 },
+        );
+      }
       taskData = {
-        ...task,
-        dueDate: task.dueDate ? new Date(task.dueDate) : undefined,
-        scheduleDate: task.scheduleDate
-          ? new Date(task.scheduleDate)
-          : undefined,
+        taskBoardId: task.taskBoardId,
+        taskKey: task.taskKey,
+        summary: task.summary ?? "",
+        description: task.description ?? "",
+        status: toTaskStatus(task.status),
+        priority: toTaskPriority(task.priority),
+        labels: task.labels,
+        dueDate: tasksHelper.date.parse(task.dueDate),
+        scheduleDate: tasksHelper.date.parse(task.scheduleDate),
+        estimation: task.estimation,
+        subtasks: task.subtasks,
       };
     }
 

@@ -16,6 +16,26 @@ export class FoldersApiService extends BaseApiService {
     const response = await this.get<Folder>({ pathParams: [id] });
     return normalizeFolder(response.data);
   }
+
+  async create(name: string): Promise<Folder> {
+    const response = await this.post<Folder>({ body: { name } });
+    return normalizeFolder(response.data);
+  }
+
+  async update(
+    id: string,
+    updates: { name?: string; emoji?: string | null },
+  ): Promise<Folder> {
+    const response = await this.patch<Folder>({
+      pathParams: [id],
+      body: updates,
+    });
+    return normalizeFolder(response.data);
+  }
+
+  async deleteFolder(id: string): Promise<void> {
+    await this.delete({ pathParams: [id] });
+  }
 }
 
 function normalizeFolder(folder: Folder): Folder {

@@ -32,19 +32,19 @@ export async function POST(request: NextRequest) {
 
     const currentDate = tasksHelper.date.formatForAPI(new Date());
 
-    const tasksForAI = tasks.map((task) => ({
-      id: task.id,
-      summary: task.summary,
-      priority: tasksHelper.priority.format(task.priority),
-      dueDate: task.dueDate
-        ? tasksHelper.date.formatForAPI(new Date(task.dueDate))
-        : null,
-      estimation: task.estimation,
-      scheduleDate: task.scheduleDate
-        ? tasksHelper.date.formatForAPI(new Date(task.scheduleDate))
-        : null,
-      status: task.status,
-    }));
+    const tasksForAI = tasks.map((task) => {
+      const due = tasksHelper.date.parse(task.dueDate);
+      const sched = tasksHelper.date.parse(task.scheduleDate);
+      return {
+        id: task.id,
+        summary: task.summary,
+        priority: tasksHelper.priority.format(task.priority),
+        dueDate: due ? tasksHelper.date.formatForAPI(due) : null,
+        estimation: task.estimation,
+        scheduleDate: sched ? tasksHelper.date.formatForAPI(sched) : null,
+        status: task.status,
+      };
+    });
 
     const optimization = await aiServices.schedule.optimize({
       tasks: tasksForAI,

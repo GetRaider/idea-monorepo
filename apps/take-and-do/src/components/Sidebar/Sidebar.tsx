@@ -3,14 +3,15 @@
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { HomeIcon } from "@radix-ui/react-icons";
+import { Dropdown } from "@/components/Dropdown";
 import { SunIcon } from "@/components/Icons";
+import { signOut, useSession } from "@/lib/auth-client";
 import {
   SidebarContainer,
   Logo,
   Nav,
   NavButton,
   BottomActions,
-  UserAvatar,
   Avatar,
 } from "./Sidebar.ui";
 
@@ -18,9 +19,12 @@ interface SidebarProps {
   onNavigationChange: (page: string) => void;
 }
 
+const DEFAULT_AVATAR = "https://i.pravatar.cc/40?img=12";
+
 export function Sidebar({ onNavigationChange }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const { data: session } = useSession();
 
   const handleNavClick = (page: string, path: string) => {
     onNavigationChange(page);
@@ -64,9 +68,24 @@ export function Sidebar({ onNavigationChange }: SidebarProps) {
           <SunIcon size={20} />
         </NavButton>
 
-        <UserAvatar>
-          <Avatar src="https://i.pravatar.cc/40?img=12" alt="User" />
-        </UserAvatar>
+        <Dropdown
+          className="mt-2"
+          menuOpensTo="right"
+          trigger={
+            <Avatar
+              src={session?.user?.image ?? DEFAULT_AVATAR}
+              alt={session?.user?.name ?? "Account"}
+            />
+          }
+          options={[{ label: "Log out", value: "logout", danger: true }]}
+          menuMinWidth={140}
+          onChange={async (value) => {
+            if (value !== "logout") return;
+            await signOut();
+            router.push("/login");
+            router.refresh();
+          }}
+        />
       </BottomActions>
     </SidebarContainer>
   );

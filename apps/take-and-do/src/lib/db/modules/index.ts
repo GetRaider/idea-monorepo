@@ -1,4 +1,5 @@
 // Export all schemas
+export * from "./auth";
 export * from "./folder";
 export * from "./taskBoard";
 export * from "./task";

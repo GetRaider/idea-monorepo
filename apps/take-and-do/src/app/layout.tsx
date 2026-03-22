@@ -4,6 +4,9 @@ import { Toaster } from "sonner";
 import "./globals.css";
 import { Theme } from "@radix-ui/themes";
 
+import { Analytics } from "@/components/Analytics";
+import { GuestBanner } from "@/components/GuestBanner";
+
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
@@ -31,6 +34,8 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={inter.variable} suppressHydrationWarning>
         <Theme>
+          <Analytics />
+          <GuestBanner />
           {children}
           <Toaster
             theme="dark"

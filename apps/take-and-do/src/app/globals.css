@@ -5,7 +5,13 @@
 @tailwind utilities;
 
 @layer base {
+  /* Login / brand — align with app theme; see Radix + shell.ui */
   :root {
+    --brand-primary: #667eea;
+    --brand-secondary: #764ba2;
+    --brand-gradient-from: #1a1035;
+    --brand-gradient-to: #0d2138;
+    --brand-text-on-gradient: #f4f4f5;
     --background: #0f0f0f;
     --foreground: #ededed;
     --sidebar-bg: #1a1a1a;

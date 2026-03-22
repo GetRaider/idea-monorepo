@@ -39,6 +39,12 @@ interface DropdownProps<T extends string = string> {
   onChange: (value: T) => void;
   placeholder?: string;
   trigger?: ReactNode;
+  /**
+   * With a custom `trigger`: `left` keeps the menu’s right edge aligned with the
+   * trigger’s right edge (extends left). `right` places the menu’s left edge at the
+   * trigger’s right edge (extends right) — use for triggers on the viewport’s left edge.
+   */
+  menuOpensTo?: "left" | "right";
   onOpenChange?: (isOpen: boolean) => void;
   className?: string;
   menuMinWidth?: number;
@@ -52,6 +58,7 @@ export function Dropdown<T extends string = string>({
   onChange,
   placeholder = "Select...",
   trigger,
+  menuOpensTo = "left",
   onOpenChange,
   className,
   menuMinWidth,
@@ -60,10 +67,12 @@ export function Dropdown<T extends string = string>({
 }: DropdownProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
   const [menuRect, setMenuRect] = useState<{
-    top: number;
     left: number;
     minWidth: number;
     transform: string;
+    vertical: "below" | "above";
+    top?: number;
+    bottom?: number;
   } | null>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLUListElement>(null);
@@ -88,22 +97,51 @@ export function Dropdown<T extends string = string>({
       menuMinWidth !== undefined
         ? Math.max(rect.width, menuMinWidth)
         : rect.width;
-    if (trigger) {
+    const gap = 4;
+    const estimatedMenuHeight = Math.min(
+      options.length * 44 + 16,
+      window.innerHeight * 0.55,
+    );
+    const spaceBelow = window.innerHeight - rect.bottom - gap;
+    const spaceAbove = rect.top - gap;
+
+    let vertical: "below" | "above";
+    if (spaceBelow >= estimatedMenuHeight) {
+      vertical = "below";
+    } else if (spaceAbove >= estimatedMenuHeight) {
+      vertical = "above";
+    } else {
+      vertical = spaceAbove > spaceBelow ? "above" : "below";
+    }
+
+    const horizontal = (() => {
+      if (!trigger) {
+        return { left: rect.left, transform: "none" as const };
+      }
+      if (menuOpensTo === "right") {
+        return { left: rect.right + gap, transform: "none" as const };
+      }
+      return { left: rect.right, transform: "translateX(-100%)" as const };
+    })();
+
+    if (vertical === "below") {
       setMenuRect({
-        top: rect.bottom + 4,
-        left: rect.right,
+        vertical: "below",
+        top: rect.bottom + gap,
+        left: horizontal.left,
         minWidth,
-        transform: "translateX(-100%)",
+        transform: horizontal.transform,
       });
     } else {
       setMenuRect({
-        top: rect.bottom + 4,
-        left: rect.left,
+        vertical: "above",
+        bottom: window.innerHeight - rect.top + gap,
+        left: horizontal.left,
         minWidth,
-        transform: "none",
+        transform: horizontal.transform,
       });
     }
-  }, [trigger, menuMinWidth]);
+  }, [trigger, menuMinWidth, menuOpensTo, options.length]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -176,7 +214,9 @@ export function Dropdown<T extends string = string>({
             data-dropdown-portal
             className="fixed z-[1100] m-0 flex max-h-[60vh] w-max list-none flex-col gap-0.5 overflow-y-auto rounded-md border border-input-border bg-input-bg p-1 shadow-dropdown [-webkit-overflow-scrolling:touch]"
             style={{
-              top: menuRect.top,
+              ...(menuRect.vertical === "below"
+                ? { top: menuRect.top }
+                : { top: "auto", bottom: menuRect.bottom }),
               left: menuRect.left,
               transform: menuRect.transform,
               minWidth: menuRect.minWidth,

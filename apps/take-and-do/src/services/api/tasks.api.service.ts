@@ -151,6 +151,13 @@ export class TasksApiService extends BaseApiService {
     await super.delete<void>({ pathParams: [taskId] });
   }
 
+  async deleteAllForBoard(boardId: string): Promise<number> {
+    const response = await super.delete<{ deleted: number }>({
+      queries: { taskBoardId: boardId },
+    });
+    return response.data.deleted;
+  }
+
   async optimizeSchedule(
     taskIds: string[],
   ): Promise<ScheduleOptimizationResult> {

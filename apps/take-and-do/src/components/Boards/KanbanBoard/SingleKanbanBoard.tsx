@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import {
   BoardContainer,
   Board,
@@ -19,7 +20,12 @@ import {
 import { useKanbanTaskHandlers } from "../../../hooks/useKanbanTaskHandlers";
 import { useBoardUrlTaskModalSync } from "@/hooks/useBoardUrlTaskModalSync";
 import { TaskView } from "../../TaskView/TaskView";
-import { updateTaskInColumns } from "@/hooks/useTaskBoardState";
+import {
+  removeTaskFromColumns,
+  updateTaskInColumns,
+} from "@/hooks/useTaskBoardState";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
 import { EmptyState } from "../../EmptyState";
 import { AIComposeModal } from "./shared/AIComposeModal";
 import { apiServices } from "@/services/api";
@@ -41,6 +47,13 @@ export function SingleKanbanBoard({
   onTaskClose,
   onSubtaskOpen,
 }: SingleKanbanBoardProps) {
+  const router = useRouter();
+  const { taskBoards } = useWorkspace();
+  const boardOptions = useMemo(
+    () => taskBoards.map((b) => ({ id: b.id, name: b.name })),
+    [taskBoards],
+  );
+
   const [tasksByStatus, setTasksByStatus] =
     useState<Record<TaskStatus, Task[]>>(emptyTaskColumns);
   const [isLoading, setIsLoading] = useState(true);
@@ -126,8 +139,34 @@ export function SingleKanbanBoard({
     [tasksByStatus],
   );
 
+  const handleNavigateToParentTask = useCallback(() => {
+    if (!parentTask?.taskKey) return;
+    tasksUrlHelper.modal.board.open(boardName, parentTask);
+    setSelectedTask(parentTask);
+    setParentTask(null);
+  }, [parentTask, boardName, setSelectedTask, setParentTask]);
+
   const handleTaskUpdate = useCallback(
     (updatedTask: Task) => {
+      if (
+        selectedTask?.id === updatedTask.id &&
+        updatedTask.taskBoardId !== boardId
+      ) {
+        setTasksByStatus((prev) => removeTaskFromColumns(prev, updatedTask.id));
+        const newBoard = taskBoards.find(
+          (b) => b.id === updatedTask.taskBoardId,
+        );
+        if (newBoard?.name && updatedTask.taskKey) {
+          router.push(
+            tasksUrlHelper.routing.buildBoardUrl(
+              newBoard.name,
+              updatedTask.taskKey,
+            ),
+          );
+        }
+        return;
+      }
+
       setTasksByStatus((prevTasksByStatus) =>
         updateTaskInColumns(prevTasksByStatus, updatedTask),
       );
@@ -135,7 +174,7 @@ export function SingleKanbanBoard({
         setSelectedTask(updatedTask);
       }
     },
-    [selectedTask, setSelectedTask],
+    [selectedTask, setSelectedTask, boardId, taskBoards, router],
   );
 
   const handleCreateTask = useCallback(() => {
@@ -218,11 +257,13 @@ export function SingleKanbanBoard({
         task={selectedTask}
         parentTask={parentTask}
         boardName={boardName}
+        boardOptions={boardOptions}
         onClose={handleCloseBoardModal}
         onTaskUpdate={handleTaskUpdate}
         onSubtaskClick={handleSubtaskClick}
         onTaskCreated={handleTaskCreated}
         onTaskDelete={handleTaskDelete}
+        onNavigateToParentTask={handleNavigateToParentTask}
       />
       <AIComposeModal
         isOpen={isAIComposeModalOpen}
@@ -244,7 +285,7 @@ function BoardContent({
     <EmptyStateWrapper>
       <EmptyState
         title="No tasks"
-        message={`No tasks in '${boardName}' board`}
+        message={`No tasks in the '${boardName}' board`}
       />
     </EmptyStateWrapper>
   ) : (

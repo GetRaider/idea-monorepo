@@ -25,7 +25,7 @@ import {
   AddLabelTag,
   CreateLabelSpan,
 } from "./TaskMetadata.styles";
-import { Task, TaskUpdate } from "../../Boards/KanbanBoard/types";
+import { Task } from "../../Boards/KanbanBoard/types";
 import { useState, useRef, useEffect, useLayoutEffect, useMemo } from "react";
 import { apiServices } from "@/services/api";
 import { getLabelAccent } from "@/helpers/label-color.helper";
@@ -36,17 +36,22 @@ const LABEL_MENU_EDGE = 10;
 
 export function TaskMetadata({
   task,
-  handleUpdateTask,
+  initialTask,
+  isCreating = false,
   onTaskChange,
+  onPendingMetadataUpdates,
 }: TaskMetadataProps) {
-  const updateTask = (updates: Partial<Task>) => {
-    if (onTaskChange) {
-      // Update local task state (works for both create and edit modes)
-      onTaskChange({ ...task, ...updates } as Task);
-    } else if (handleUpdateTask) {
-      // Fallback: call update handler directly (shouldn't happen with new flow)
-      handleUpdateTask(updates);
+  const emitTaskUpdate = (next: Task) => {
+    onTaskChange?.(next);
+    if (isCreating || !initialTask?.id) return;
+    const delta = diffTaskMetadataForPending(initialTask, next);
+    if (Object.keys(delta).length > 0) {
+      onPendingMetadataUpdates?.(delta);
     }
+  };
+
+  const updateTask = (updates: Partial<Task>) => {
+    emitTaskUpdate({ ...task, ...updates } as Task);
   };
   // Metadata editing states
   const [isEditingDueDate, setIsEditingDueDate] = useState(false);
@@ -603,9 +608,58 @@ export function TaskMetadata({
   );
 }
 
+function getTimestampForCompare(
+  date: Date | string | undefined | null,
+): number | undefined {
+  if (!date) return undefined;
+  if (date instanceof Date) return date.getTime();
+  const parsed = new Date(date);
+  return isNaN(parsed.getTime()) ? undefined : parsed.getTime();
+}
+
+function diffTaskMetadataForPending(
+  initial: Task,
+  updated: Task,
+): Partial<Task> {
+  const updates: Partial<Task> = {};
+
+  const initialDueDate = getTimestampForCompare(initial.dueDate);
+  const updatedDueDate = getTimestampForCompare(updated.dueDate);
+  if (initialDueDate !== updatedDueDate) {
+    updates.dueDate = updated.dueDate;
+  }
+
+  const initialScheduleDate = getTimestampForCompare(initial.scheduleDate);
+  const updatedScheduleDate = getTimestampForCompare(updated.scheduleDate);
+  if (initialScheduleDate !== updatedScheduleDate) {
+    updates.scheduleDate = updated.scheduleDate;
+  }
+
+  if (updated.estimation !== initial.estimation) {
+    updates.estimation = updated.estimation;
+  }
+
+  const initialLabels = JSON.stringify(initial.labels || []);
+  const updatedLabels = JSON.stringify(updated.labels || []);
+  if (updatedLabels !== initialLabels) {
+    updates.labels = updated.labels;
+  }
+
+  if (updated.priority !== initial.priority) {
+    updates.priority = updated.priority;
+  }
+
+  if (updated.status !== initial.status) {
+    updates.status = updated.status;
+  }
+
+  return updates;
+}
+
 interface TaskMetadataProps {
   task: Task;
-  handleUpdateTask?: (updates: TaskUpdate) => void;
+  initialTask: Task | null;
   isCreating?: boolean;
   onTaskChange?: (task: Task) => void;
+  onPendingMetadataUpdates?: (updates: Partial<Task>) => void;
 }

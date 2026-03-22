@@ -34,16 +34,19 @@ import {
 } from "./TaskView.styles";
 import { TaskMetadata } from "./TaskMetadata/TaskMetadata";
 import { TaskSubtasks } from "./TaskSubtasks/TaskSubtasks";
+import { useClickOutside } from "@/hooks/useClickOutside";
 
 export function TaskView({
   task: initialTask,
   parentTask,
   boardName,
+  boardOptions,
   onClose,
   onTaskUpdate,
   onSubtaskClick,
   onTaskCreated,
   onTaskDelete,
+  onNavigateToParentTask,
 }: TaskViewProps) {
   const isSubtask = !!parentTask;
   const [task, setTask] = useState<Task | null>(initialTask);
@@ -53,13 +56,11 @@ export function TaskView({
   const [titleValue, setTitleValue] = useState("");
   const [descriptionValue, setDescriptionValue] = useState("");
   const [isPriorityDropdownOpen, setIsPriorityDropdownOpen] = useState(false);
-  const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
   const [isCreatingTask, setIsCreatingTask] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [pendingUpdates, setPendingUpdates] = useState<Partial<Task>>({});
 
   const priorityDropdownRef = useRef<HTMLDivElement>(null);
-  const statusDropdownRef = useRef<HTMLDivElement>(null);
   const shouldCreateTask = useMemo(
     () => isCreating && !task?.id,
     [isCreating, task?.id],
@@ -77,27 +78,15 @@ export function TaskView({
     setPendingUpdates({});
   }, [initialTask]);
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        priorityDropdownRef.current &&
-        !priorityDropdownRef.current.contains(event.target as Node)
-      ) {
-        setIsPriorityDropdownOpen(false);
-      }
-      if (
-        statusDropdownRef.current &&
-        !statusDropdownRef.current.contains(event.target as Node)
-      ) {
-        setIsStatusDropdownOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
+  const closePriorityDropdown = useCallback(
+    () => setIsPriorityDropdownOpen(false),
+    [],
+  );
+  useClickOutside(
+    priorityDropdownRef,
+    isPriorityDropdownOpen,
+    closePriorityDropdown,
+  );
 
   const handleUpdateTask = useCallback(
     async (updates: TaskUpdate) => {
@@ -239,17 +228,21 @@ export function TaskView({
     }
   };
 
-  const handleStatusClick = () => {
-    setIsStatusDropdownOpen(!isStatusDropdownOpen);
-  };
-
   const handleStatusSelect = (status: TaskStatus) => {
-    setIsStatusDropdownOpen(false);
     if (shouldCreateTask) {
       if (task) setTask({ ...task, status });
     } else {
       setPendingUpdates((prev) => ({ ...prev, status }));
       setTask((prev) => (prev ? { ...prev, status } : null));
+    }
+  };
+
+  const handleBoardSelect = (boardId: string) => {
+    if (shouldCreateTask) {
+      if (task) setTask({ ...task, taskBoardId: boardId });
+    } else {
+      setPendingUpdates((prev) => ({ ...prev, taskBoardId: boardId }));
+      setTask((prev) => (prev ? { ...prev, taskBoardId: boardId } : null));
     }
   };
 
@@ -305,6 +298,17 @@ export function TaskView({
     setShowDeleteConfirm(true);
   }, [task, isCreating]);
 
+  const boardDisplayName = useMemo(() => {
+    if (!task) return boardName;
+    const fromOptions = boardOptions.find(
+      (b) => b.id === task.taskBoardId,
+    )?.name;
+    return fromOptions ?? boardName;
+  }, [boardOptions, boardName, task]);
+
+  const boardPickerDisabled =
+    boardOptions.length === 0 || (isCreating && !!task && !task.taskBoardId);
+
   // Only render if we have a task (either existing or for creation)
   if (!task) return null;
 
@@ -317,12 +321,13 @@ export function TaskView({
         onClick={(e) => e.stopPropagation()}
       >
         <TaskViewHeader
-          boardName={boardName}
+          boardDisplayName={boardDisplayName}
+          boardOptions={boardOptions}
+          onBoardSelect={handleBoardSelect}
+          boardPickerDisabled={boardPickerDisabled}
           task={displayTask}
           parentTask={parentTask}
-          statusDropdownRef={statusDropdownRef}
-          isStatusDropdownOpen={isStatusDropdownOpen}
-          onStatusClick={handleStatusClick}
+          onNavigateToParentTask={onNavigateToParentTask}
           onStatusSelect={handleStatusSelect}
           onClose={onClose}
           onDelete={handleDeleteClick}
@@ -386,64 +391,12 @@ export function TaskView({
         )}
         <TaskMetadata
           task={displayTask}
-          handleUpdateTask={undefined}
+          initialTask={initialTask}
           isCreating={isCreating}
-          onTaskChange={(updatedTask) => {
-            setTask(updatedTask);
-            if (!isCreating && initialTask) {
-              // Helper to safely get timestamp from date (handles Date objects and strings)
-              const getTimestamp = (
-                date: Date | string | undefined | null,
-              ): number | undefined => {
-                if (!date) return undefined;
-                if (date instanceof Date) return date.getTime();
-                const parsed = new Date(date);
-                return isNaN(parsed.getTime()) ? undefined : parsed.getTime();
-              };
-
-              // Track changes for save (compare against initial task)
-              const updates: Partial<Task> = {};
-
-              const initialDueDate = getTimestamp(initialTask.dueDate);
-              const updatedDueDate = getTimestamp(updatedTask.dueDate);
-              if (initialDueDate !== updatedDueDate) {
-                updates.dueDate = updatedTask.dueDate;
-              }
-
-              const initialScheduleDate = getTimestamp(
-                initialTask.scheduleDate,
-              );
-              const updatedScheduleDate = getTimestamp(
-                updatedTask.scheduleDate,
-              );
-              if (initialScheduleDate !== updatedScheduleDate) {
-                updates.scheduleDate = updatedTask.scheduleDate;
-              }
-
-              if (updatedTask.estimation !== initialTask.estimation) {
-                updates.estimation = updatedTask.estimation;
-              }
-
-              const initialLabels = JSON.stringify(initialTask.labels || []);
-              const updatedLabels = JSON.stringify(updatedTask.labels || []);
-              if (updatedLabels !== initialLabels) {
-                updates.labels = updatedTask.labels;
-              }
-
-              if (updatedTask.priority !== initialTask.priority) {
-                updates.priority = updatedTask.priority;
-              }
-
-              if (updatedTask.status !== initialTask.status) {
-                updates.status = updatedTask.status;
-              }
-
-              // Only update if there are actual changes
-              if (Object.keys(updates).length > 0) {
-                setPendingUpdates((prev) => ({ ...prev, ...updates }));
-              }
-            }
-          }}
+          onTaskChange={setTask}
+          onPendingMetadataUpdates={(updates) =>
+            setPendingUpdates((prev) => ({ ...prev, ...updates }))
+          }
         />
         {!isSubtask && displayTask.id && (
           <TaskSubtasks
@@ -489,13 +442,20 @@ export function TaskView({
   );
 }
 
+interface TaskBoardOption {
+  id: string;
+  name: string;
+}
+
 interface TaskViewProps {
   task: Task | null;
   parentTask?: Task | null;
   boardName: string;
+  boardOptions: TaskBoardOption[];
   onClose: () => void;
   onTaskUpdate?: (updatedTask: Task) => void;
   onSubtaskClick?: (subtask: Task) => void;
   onTaskCreated?: (createdTask: Task) => void;
   onTaskDelete?: (taskId: string) => void;
+  onNavigateToParentTask?: () => void;
 }

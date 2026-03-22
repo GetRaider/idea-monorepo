@@ -85,3 +85,19 @@ export function updateTaskInColumns(
 
   return newTasks;
 }
+
+export function removeTaskFromColumns(
+  tasks: Record<TaskStatus, Task[]>,
+  taskId: string,
+): Record<TaskStatus, Task[]> {
+  const newTasks = { ...tasks };
+  for (const status of Object.values(TaskStatus)) {
+    newTasks[status] = newTasks[status]
+      .filter((t) => t.id !== taskId)
+      .map((t) => ({
+        ...t,
+        subtasks: t.subtasks?.filter((s) => s.id !== taskId),
+      }));
+  }
+  return newTasks;
+}

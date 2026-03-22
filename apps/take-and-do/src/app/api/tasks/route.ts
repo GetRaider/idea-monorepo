@@ -4,6 +4,7 @@ import {
   getTasksByTaskBoardId,
   getTasksByDate,
   createTask,
+  deleteAllTasksForTaskBoard,
 } from "@/lib/db/queries";
 import { Task } from "@/components/Boards/KanbanBoard/types";
 import { aiServices } from "@/services/ai";
@@ -47,6 +48,26 @@ export async function GET(request: NextRequest) {
   } catch {
     return NextResponse.json(
       { error: "Failed to fetch tasks" },
+      { status: 500 },
+    );
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const taskBoardId = new URL(request.url).searchParams.get("taskBoardId");
+    if (!taskBoardId?.trim()) {
+      return NextResponse.json(
+        { error: "taskBoardId query parameter is required" },
+        { status: 400 },
+      );
+    }
+
+    const deleted = await deleteAllTasksForTaskBoard(taskBoardId.trim());
+    return NextResponse.json({ deleted });
+  } catch {
+    return NextResponse.json(
+      { error: "Failed to delete tasks for board" },
       { status: 500 },
     );
   }

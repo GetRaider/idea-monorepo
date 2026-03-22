@@ -19,7 +19,11 @@ import {
   EmptySubtasksMessage,
 } from "./TaskSubtasks.styles";
 import { tasksHelper } from "@/helpers/task.helper";
-import { PlusIcon } from "@/components/Icons";
+import {
+  ChevronDownIcon,
+  ChevronRightIcon,
+  PlusIcon,
+} from "@/components/Icons";
 
 interface TaskSubtasksProps {
   task: Task;
@@ -32,7 +36,9 @@ export function TaskSubtasks({
   onSubtaskClick,
   onTaskUpdate,
 }: TaskSubtasksProps) {
-  const [isSubtasksExpanded, setIsSubtasksExpanded] = useState(false);
+  const [isSubtasksExpanded, setIsSubtasksExpanded] = useState(
+    !!task.subtasks?.length,
+  );
   const [isCreatingSubtask, setIsCreatingSubtask] = useState(false);
   const [newSubtaskSummary, setNewSubtaskSummary] = useState("");
   const isSavingSubtaskRef = useRef(false);
@@ -102,7 +108,7 @@ export function TaskSubtasks({
             onClick={handleToggleSubtasks}
             title={isSubtasksExpanded ? "Collapse" : "Expand"}
           >
-            {isSubtasksExpanded ? "▼" : "▶"}
+            {isSubtasksExpanded ? <ChevronDownIcon /> : <ChevronRightIcon />}
           </SubtasksHeaderButton>
         </SubtasksHeaderButtons>
       </SubtasksHeader>

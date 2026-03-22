@@ -33,22 +33,74 @@ function extractNumericPortion(taskKey?: string | null): number | null {
   return Number.isNaN(numericValue) ? null : numericValue;
 }
 
-function generateSubtaskKey(
-  parentTaskKey: string | null | undefined,
-  existingSubtasks: Array<{ taskKey: string | null }>,
+function boardNameToTaskKeyPrefix(
+  board: { name: string } | null | undefined,
 ): string {
-  const prefix = deriveTaskKeyPrefix(parentTaskKey);
-  const parentNumber = extractNumericPortion(parentTaskKey);
-  const subtaskNumbers = existingSubtasks
-    .map((subtask) => extractNumericPortion(subtask.taskKey))
-    .filter((value): value is number => value !== null);
+  if (!board) return "TASK";
+  const raw = board.name
+    .substring(0, 3)
+    .toUpperCase()
+    .replace(/[^A-Z]/g, "");
+  return raw || "TASK";
+}
 
-  const highestExistingNumber = Math.max(
-    ...(parentNumber !== null ? [parentNumber] : []),
-    ...(subtaskNumbers.length ? subtaskNumbers : [0]),
+async function getMaxNumericSuffixForBoard(
+  taskBoardId: string,
+  boardPrefix: string,
+): Promise<number> {
+  const rows = await db
+    .select({ taskKey: tasks.taskKey })
+    .from(tasks)
+    .where(eq(tasks.taskBoardId, taskBoardId));
+
+  let max = 0;
+  for (const row of rows) {
+    if (!row.taskKey) continue;
+    if (deriveTaskKeyPrefix(row.taskKey) !== boardPrefix) continue;
+    const n = extractNumericPortion(row.taskKey);
+    if (n !== null) max = Math.max(max, n);
+  }
+  return max;
+}
+
+async function generateNextTaskKeyForBoard(
+  taskBoardId: string,
+): Promise<string> {
+  const board = await getTaskBoardById(taskBoardId);
+  const prefix = boardNameToTaskKeyPrefix(board ?? null);
+  const maxNum = await getMaxNumericSuffixForBoard(taskBoardId, prefix);
+  return `${prefix}-${maxNum + 1}`;
+}
+
+async function rekeySubtasksAfterParentBoardMove(
+  parentTaskId: string,
+  newTaskBoardId: string,
+): Promise<void> {
+  const subtaskRows = await db
+    .select()
+    .from(tasks)
+    .where(eq(tasks.parentTaskId, parentTaskId));
+
+  const sorted = [...subtaskRows].sort(
+    (a, b) => a.createdAt.getTime() - b.createdAt.getTime(),
   );
 
-  return `${prefix}-${highestExistingNumber + 1}`;
+  const board = await getTaskBoardById(newTaskBoardId);
+  const prefix = boardNameToTaskKeyPrefix(board ?? null);
+  let nextNum = await getMaxNumericSuffixForBoard(newTaskBoardId, prefix);
+  const now = new Date();
+  for (const row of sorted) {
+    nextNum += 1;
+    const nextKey = `${prefix}-${nextNum}`;
+    await db
+      .update(tasks)
+      .set({
+        taskKey: nextKey,
+        taskBoardId: newTaskBoardId,
+        updatedAt: now,
+      })
+      .where(eq(tasks.id, row.id));
+  }
 }
 
 async function convertTaskRowToTask(
@@ -243,52 +295,45 @@ async function syncTaskLabels(
   }
 }
 
-// Process subtasks: assign id and taskKey to new subtasks
 async function processSubtasks(
+  taskBoardId: string,
   parentTaskId: string,
-  parentTaskKey: string | null | undefined,
+  _parentTaskKey: string | null | undefined,
   subtasks: Task[],
 ): Promise<Array<{ id: string; taskKey: string }>> {
-  const processed: Array<{ id: string; taskKey: string }> = [];
+  const board = await getTaskBoardById(taskBoardId);
+  const prefix = boardNameToTaskKeyPrefix(board ?? null);
 
-  // Get existing subtasks from DB to consider in key generation
   const existingSubtasks = await db
     .select()
     .from(tasks)
     .where(eq(tasks.parentTaskId, parentTaskId));
 
-  // Map existing subtasks by their IDs for quick lookup
   const existingSubtasksMap = new Map(
     existingSubtasks.map((st) => [st.id, st]),
   );
+
+  let nextNum = await getMaxNumericSuffixForBoard(taskBoardId, prefix);
+  const processed: Array<{ id: string; taskKey: string }> = [];
 
   for (const subtask of subtasks) {
     const hasValidId =
       subtask.id && typeof subtask.id === "string" && subtask.id.length > 0;
 
     if (hasValidId) {
-      // Existing subtask - use existing taskKey or generate one
       const existing = existingSubtasksMap.get(subtask.id);
-      processed.push({
-        id: subtask.id,
-        taskKey:
-          subtask.taskKey ||
-          existing?.taskKey ||
-          generateSubtaskKey(parentTaskKey, processed),
-      });
+      const resolvedKey = subtask.taskKey || existing?.taskKey || null;
+      if (resolvedKey) {
+        processed.push({ id: subtask.id, taskKey: resolvedKey });
+        const n = extractNumericPortion(resolvedKey);
+        if (n !== null) nextNum = Math.max(nextNum, n);
+      } else {
+        nextNum += 1;
+        processed.push({ id: subtask.id, taskKey: `${prefix}-${nextNum}` });
+      }
     } else {
-      // New subtask: generate id and taskKey
-      const newId = generateId();
-      // Include existing subtasks in key generation
-      const allSubtasksForKeyGen = [
-        ...processed,
-        ...existingSubtasks.map((st) => ({ taskKey: st.taskKey })),
-      ];
-      const newTaskKey = generateSubtaskKey(
-        parentTaskKey,
-        allSubtasksForKeyGen,
-      );
-      processed.push({ id: newId, taskKey: newTaskKey });
+      nextNum += 1;
+      processed.push({ id: generateId(), taskKey: `${prefix}-${nextNum}` });
     }
   }
 
@@ -442,35 +487,9 @@ export async function createTask(taskData: Omit<Task, "id">): Promise<Task> {
 
   const taskId = generateId();
 
-  // Generate task key if not provided
   let taskKey = taskData.taskKey;
   if (!taskKey) {
-    // Get all tasks from this board to generate next key
-    const boardTasks = await db
-      .select()
-      .from(tasks)
-      .where(
-        and(
-          eq(tasks.taskBoardId, taskData.taskBoardId),
-          isNull(tasks.parentTaskId),
-        ),
-      );
-
-    // Extract task board name prefix (simplified - use first 2-3 chars of board name)
-    const board = await getTaskBoardById(taskData.taskBoardId);
-    const prefix = board
-      ? board.name
-          .substring(0, 3)
-          .toUpperCase()
-          .replace(/[^A-Z]/g, "")
-      : "TASK";
-    const maxNum = Math.max(
-      ...boardTasks
-        .map((t) => extractNumericPortion(t.taskKey))
-        .filter((n): n is number => n !== null),
-      0,
-    );
-    taskKey = `${prefix}-${String(maxNum + 1).padStart(3, "0")}`;
+    taskKey = await generateNextTaskKeyForBoard(taskData.taskBoardId);
   }
 
   // Insert main task
@@ -493,6 +512,7 @@ export async function createTask(taskData: Omit<Task, "id">): Promise<Task> {
   // Handle subtasks
   if (taskData.subtasks && taskData.subtasks.length > 0) {
     const processedSubtasks = await processSubtasks(
+      taskData.taskBoardId,
       taskId,
       taskKey,
       taskData.subtasks,
@@ -560,7 +580,12 @@ export async function updateTask(
 
   const existingTask = existingTaskRows[0];
 
-  // Build update object
+  const boardChanged =
+    updates.taskBoardId !== undefined &&
+    updates.taskBoardId !== existingTask.taskBoardId;
+
+  let parentKeyForSubtaskProcessing = existingTask.taskKey ?? null;
+
   const updateData: Partial<typeof tasks.$inferInsert> = {
     updatedAt: new Date(),
   };
@@ -582,19 +607,35 @@ export async function updateTask(
   if (updates.taskBoardId !== undefined)
     updateData.taskBoardId = updates.taskBoardId;
 
-  // Update task
+  if (boardChanged && existingTask.parentTaskId == null) {
+    const nextKey = await generateNextTaskKeyForBoard(updates.taskBoardId!);
+    updateData.taskKey = nextKey;
+    parentKeyForSubtaskProcessing = nextKey;
+  }
+
+  const resolvedBoardIdForSubtasks =
+    updates.taskBoardId !== undefined
+      ? updates.taskBoardId
+      : existingTask.taskBoardId;
+
   await db.update(tasks).set(updateData).where(eq(tasks.id, taskId));
 
-  // Handle subtasks update
+  if (
+    boardChanged &&
+    existingTask.parentTaskId == null &&
+    updates.subtasks === undefined
+  ) {
+    await rekeySubtasksAfterParentBoardMove(taskId, updates.taskBoardId!);
+  }
+
   if (updates.subtasks !== undefined) {
-    // Delete existing subtasks
     await db.delete(tasks).where(eq(tasks.parentTaskId, taskId));
 
-    // Insert new subtasks
     if (updates.subtasks.length > 0) {
       const processedSubtasks = await processSubtasks(
+        resolvedBoardIdForSubtasks,
         taskId,
-        existingTask.taskKey,
+        parentKeyForSubtaskProcessing,
         updates.subtasks,
       );
 
@@ -604,7 +645,7 @@ export async function updateTask(
 
         await db.insert(tasks).values({
           id: processed.id,
-          taskBoardId: subtask.taskBoardId || existingTask.taskBoardId,
+          taskBoardId: subtask.taskBoardId || resolvedBoardIdForSubtasks,
           taskKey: processed.taskKey,
           summary: subtask.summary,
           description: subtask.description || "",
@@ -637,11 +678,21 @@ export async function updateTask(
 }
 
 export async function deleteTask(taskId: string): Promise<void> {
-  // Delete task labels first (foreign key constraint)
-  await db.delete(taskLabels).where(eq(taskLabels.taskId, taskId));
-
-  // Delete the task (cascade will handle subtasks automatically via parentTaskId foreign key)
   await db.delete(tasks).where(eq(tasks.id, taskId));
+}
+
+export async function deleteAllTasksForTaskBoard(
+  taskBoardId: string,
+): Promise<number> {
+  const rows = await db
+    .select({ id: tasks.id })
+    .from(tasks)
+    .where(eq(tasks.taskBoardId, taskBoardId));
+  const n = rows.length;
+  if (n === 0) return 0;
+
+  await db.delete(tasks).where(eq(tasks.taskBoardId, taskBoardId));
+  return n;
 }
 
 export interface TaskStatistics {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import {
   ChevronRightIcon,
   ClockCircleIcon,
@@ -34,9 +34,11 @@ import { EmptyState } from "../../EmptyState";
 import { AIComposeModal } from "./shared/AIComposeModal";
 import { apiServices } from "@/services/api";
 import type { TaskBoardWithTasks } from "@/types/workspace";
+import { tasksUrlHelper, type ScheduleDate } from "@/helpers/tasks-url.helper";
 
 export function MultipleKanbanBoard({
   scheduleDate,
+  schedule,
   workspaceName,
   folderId,
   onTaskOpen,
@@ -61,10 +63,25 @@ export function MultipleKanbanBoard({
     selectedTask,
     parentTask,
     setSelectedTask,
+    setParentTask,
     handleTaskClick,
     handleCloseModal,
     handleSubtaskClick,
   } = useKanbanTaskHandlers({ onTaskOpen, onTaskClose, onSubtaskOpen });
+
+  const boardOptions = useMemo(
+    () => boardsWithTasks.map((b) => ({ id: b.id, name: b.name })),
+    [boardsWithTasks],
+  );
+
+  const handleNavigateToParentTask = useCallback(() => {
+    if (!parentTask?.taskKey) return;
+    if (schedule) {
+      tasksUrlHelper.modal.schedule.open(schedule, parentTask);
+    }
+    setSelectedTask(parentTask);
+    setParentTask(null);
+  }, [parentTask, schedule, setSelectedTask, setParentTask]);
 
   const handleTaskStatusChange = useCallback(
     async (taskId: string, newStatus: TaskStatus, targetIndex?: number) => {
@@ -81,6 +98,22 @@ export function MultipleKanbanBoard({
 
   const handleTaskUpdate = useCallback(
     async (updatedTask: Task) => {
+      const boardRelocated =
+        selectedTask?.id === updatedTask.id &&
+        selectedTask.taskBoardId !== updatedTask.taskBoardId;
+      if (boardRelocated) {
+        try {
+          setBoardsWithTasks(await fetchBoards());
+        } catch (error) {
+          console.error(
+            "[MultipleKanbanBoard] Failed to refresh tasks after board change:",
+            error,
+          );
+        }
+        setSelectedTask(updatedTask);
+        return;
+      }
+
       if (scheduleDate) {
         if (!updatedTask.scheduleDate) {
           try {
@@ -294,11 +327,13 @@ export function MultipleKanbanBoard({
           boardsWithTasks,
           workspaceName,
         )}
+        boardOptions={boardOptions}
         onClose={handleCloseModal}
         onTaskUpdate={handleTaskUpdate}
         onSubtaskClick={handleSubtaskClick}
         onTaskCreated={handleTaskCreated}
         onTaskDelete={handleTaskDelete}
+        onNavigateToParentTask={handleNavigateToParentTask}
       />
       <AIComposeModal
         isOpen={isAIComposeModalOpen}
@@ -324,6 +359,7 @@ function getTaskWorkspaceTitle(
 
 interface MultipleKanbanBoardProps {
   scheduleDate?: Date;
+  schedule?: ScheduleDate;
   workspaceName: string;
   folderId?: string;
   onTaskOpen?: (task: Task) => void;

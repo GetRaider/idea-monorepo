@@ -29,6 +29,7 @@ export default function SchedulePage({ params }: SchedulePageProps) {
   return (
     <MultipleKanbanBoard
       scheduleDate={getScheduleDate(scheduleDate)}
+      schedule={scheduleDate}
       workspaceName={getScheduleTitle(scheduleDate)}
       onTaskOpen={onTaskOpen}
       onTaskClose={onTaskClose}

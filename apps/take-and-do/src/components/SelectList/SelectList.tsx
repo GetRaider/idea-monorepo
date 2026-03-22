@@ -10,7 +10,7 @@ import {
 } from "@/components/SelectableList";
 import { Task } from "@/components/Boards/KanbanBoard/types";
 
-import { LoadingContainer, Spinner, LoadingState } from "./SelectList.styles";
+import { LoadingContainer, Spinner, LoadingState } from "./SelectList.ui";
 
 export function SelectList({
   tasks,

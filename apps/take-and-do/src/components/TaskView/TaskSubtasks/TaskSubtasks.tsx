@@ -5,7 +5,7 @@ import { tasksHelper } from "@/helpers/task.helper";
 
 import { Task, TaskPriority, TaskStatus } from "../../Boards/KanbanBoard/types";
 import { apiServices } from "@/services/api";
-import { StatusIcon } from "../../Boards/KanbanBoard/Column/Column.styles";
+import { StatusIcon } from "../../Boards/KanbanBoard/Column/Column.ui";
 import {
   SubtasksSection,
   SubtasksHeader,
@@ -19,7 +19,7 @@ import {
   SubtaskContent,
   SubtaskInput,
   EmptySubtasksMessage,
-} from "./TaskSubtasks.styles";
+} from "./TaskSubtasks.ui";
 import {
   ChevronDownIcon,
   ChevronRightIcon,

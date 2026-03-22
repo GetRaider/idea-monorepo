@@ -1,13 +1,14 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import Image from "next/image";
 import {
   EmojiButton,
   EmojiClearButton,
   EmojiPickerHolder,
   EmojiPickerPopover,
   EmojiPreview,
-} from "./TasksSidebar.styles";
+} from "./TasksSidebar.ui";
 
 const EmojiPicker = dynamic(
   () => import("emoji-picker-react").then((m) => m.default),
@@ -39,7 +40,12 @@ export function EmojiPickerField({
         {emoji ? (
           <EmojiPreview>{emoji}</EmojiPreview>
         ) : (
-          <img width={20} height={20} src={fallbackIconSrc} alt={fallbackIconAlt} />
+          <Image
+            width={20}
+            height={20}
+            src={fallbackIconSrc}
+            alt={fallbackIconAlt}
+          />
         )}
       </EmojiButton>
 

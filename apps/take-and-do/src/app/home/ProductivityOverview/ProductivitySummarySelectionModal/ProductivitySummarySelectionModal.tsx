@@ -15,7 +15,7 @@ import {
   ActionsContainer,
   SaveButton,
   ModalDescription,
-} from "./ProductivitySummarySelectionModal.styles";
+} from "./ProductivitySummarySelectionModal.ui";
 
 interface ProductivitySummarySelectionModalProps {
   onClose: () => void;

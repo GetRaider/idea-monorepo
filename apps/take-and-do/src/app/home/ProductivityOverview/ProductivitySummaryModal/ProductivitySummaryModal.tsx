@@ -14,7 +14,7 @@ import {
   AIBadge,
   CardContent,
   CardList,
-} from "./ProductivitySummaryModal.styles";
+} from "./ProductivitySummaryModal.ui";
 import type { AnalyticsData } from "@/services/api/analytics.api.service";
 
 interface ProductivitySummaryModalProps {

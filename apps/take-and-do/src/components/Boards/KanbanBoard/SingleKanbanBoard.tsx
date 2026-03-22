@@ -8,7 +8,7 @@ import {
   LoadingContainer,
   Spinner,
   EmptyStateWrapper,
-} from "./KanbanBoard.styles";
+} from "./KanbanBoard.ui";
 import { Toolbar } from "./shared/Toolbar";
 import { KanbanColumns } from "./shared/KanbanColumns";
 import { TaskStatus, Task, emptyTaskColumns } from "./types";

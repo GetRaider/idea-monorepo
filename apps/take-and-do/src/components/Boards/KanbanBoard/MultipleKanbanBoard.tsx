@@ -17,7 +17,7 @@ import {
   GroupChevronWrapper,
   EmptyStateWrapper,
   BoardTitleEmoji,
-} from "./KanbanBoard.styles";
+} from "./KanbanBoard.ui";
 import { Toolbar } from "./shared/Toolbar";
 import { KanbanColumns } from "./shared/KanbanColumns";
 import { TaskStatus, Task } from "./types";

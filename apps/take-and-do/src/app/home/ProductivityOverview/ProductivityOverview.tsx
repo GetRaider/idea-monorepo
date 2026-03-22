@@ -30,7 +30,7 @@ import {
   ProgressBar,
   LoadingContainer,
   Spinner,
-} from "./ProductivityOverview.styles";
+} from "./ProductivityOverview.ui";
 import { ProductivitySummaryDialog } from "./ProductivitySummaryModal/ProductivitySummaryModal";
 import { ProductivitySummarySelectionModal } from "./ProductivitySummarySelectionModal/ProductivitySummarySelectionModal";
 import type { AnalyticsStats } from "@/lib/ai";

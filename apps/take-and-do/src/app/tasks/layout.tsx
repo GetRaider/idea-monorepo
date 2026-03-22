@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { Sidebar } from "@/components/Sidebar/Sidebar";
 import { TasksSidebar } from "@/components/TasksSidebar/TasksSidebar";
 import { CreateWorkspaceDialog } from "@/components/TasksSidebar/Workspaces/CreateWorkspace/CreateWorkspaceModal";
-import { PageContainer, Main } from "../page.styles";
+import { PageContainer, TasksLayoutMain as Main } from "../shell.ui";
 import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
 import { waiterHelper } from "@/helpers/waiter.helper";
 import { useWorkspaces } from "@/hooks/useWorkspaces";

@@ -5,4 +5,4 @@ export {
   TaskSelectionSection,
   TaskCheckbox,
   TaskLabel,
-} from "./SelectableList.styles";
+} from "./SelectableList";

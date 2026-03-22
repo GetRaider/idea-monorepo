@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import type { DropdownOption } from "@/components/Dropdown";
-import { ChevronIcon } from "@/components/Dropdown/Dropdown.styles";
+import { DropdownChevron } from "@/components/Dropdown/Dropdown";
 import {
   SelectableListTitle,
   SelectAllRow,
@@ -14,13 +14,7 @@ import {
   TaskSelectionSection,
 } from "@/components/SelectableList";
 
-import {
-  EmptyHintText,
-  MultiSelectTrigger,
-  MultiSelectWrapper,
-  PortalPanel,
-  TriggerLabel,
-} from "./DropdownMultiSelect.styles";
+import { cn } from "@/lib/utils";
 
 export function DropdownMultiSelect<T extends string = string>({
   options,
@@ -48,7 +42,7 @@ export function DropdownMultiSelect<T extends string = string>({
   const triggerText = (() => {
     if (value.length === 0) return placeholder;
     if (value.length === 1) {
-      const label = options.find((o) => o.value === value[0])?.label;
+      const label = options.find((option) => option.value === value[0])?.label;
       return label ?? placeholder;
     }
     return `${value.length} selected`;
@@ -64,9 +58,9 @@ export function DropdownMultiSelect<T extends string = string>({
   );
 
   const measurePanel = useCallback(() => {
-    const el = wrapperRef.current;
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
+    const element = wrapperRef.current;
+    if (!element) return;
+    const rect = element.getBoundingClientRect();
     setPanelRect({
       top: rect.bottom + 4,
       left: rect.left,
@@ -88,8 +82,8 @@ export function DropdownMultiSelect<T extends string = string>({
   useEffect(() => {
     if (!isOpen) return;
 
-    const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target as Node;
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
       if (
         wrapperRef.current?.contains(target) ||
         panelRef.current?.contains(target)
@@ -104,8 +98,8 @@ export function DropdownMultiSelect<T extends string = string>({
 
   useEffect(() => {
     if (!isOpen) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") updateOpen(false);
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") updateOpen(false);
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
@@ -113,44 +107,49 @@ export function DropdownMultiSelect<T extends string = string>({
 
   const toggle = (optionValue: T) => {
     if (selectedSet.has(optionValue)) {
-      onChange(value.filter((v) => v !== optionValue));
+      onChange(value.filter((item) => item !== optionValue));
     } else {
       onChange([...value, optionValue]);
     }
   };
 
   const allSelected =
-    options.length > 0 && options.every((o) => selectedSet.has(o.value));
+    options.length > 0 &&
+    options.every((option) => selectedSet.has(option.value));
 
   const toggleAll = () => {
     if (allSelected) {
       onChange([]);
     } else {
-      onChange(options.map((o) => o.value));
+      onChange(options.map((option) => option.value));
     }
   };
 
   return (
     <>
-      <MultiSelectWrapper ref={wrapperRef} className={className}>
-        <MultiSelectTrigger
+      <div ref={wrapperRef} className={cn("relative block w-full", className)}>
+        <button
           type="button"
           id={id}
+          className="flex w-full cursor-pointer items-center justify-between gap-1.5 whitespace-nowrap rounded-md border border-input-border bg-input-bg px-3 py-1.5 text-sm text-white transition-[border-color] duration-200 hover:border-input-border-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
           aria-haspopup="listbox"
           aria-expanded={isOpen}
           onClick={() => updateOpen(!isOpen)}
         >
-          <TriggerLabel>{triggerText}</TriggerLabel>
-          <ChevronIcon $open={isOpen}>▼</ChevronIcon>
-        </MultiSelectTrigger>
-      </MultiSelectWrapper>
+          <span className="min-w-0 flex-1 overflow-hidden text-ellipsis text-left">
+            {triggerText}
+          </span>
+          <DropdownChevron open={isOpen} />
+        </button>
+      </div>
       {isOpen &&
         panelRect &&
         createPortal(
-          <PortalPanel
+          <div
             ref={panelRef}
             role="listbox"
             aria-multiselectable="true"
+            className="fixed z-[1100] box-border rounded-lg border border-input-border bg-input-bg p-3 shadow-dropdown"
             style={{
               top: panelRect.top,
               left: panelRect.left,
@@ -167,7 +166,9 @@ export function DropdownMultiSelect<T extends string = string>({
             </TaskSelectionHeader>
             <TaskSelectionSection>
               {options.length === 0 ? (
-                <EmptyHintText>{emptyMessage}</EmptyHintText>
+                <p className="m-0 px-1 py-2 text-sm text-slate-400">
+                  {emptyMessage}
+                </p>
               ) : (
                 options.map((option) => {
                   const checked = selectedSet.has(option.value);
@@ -184,7 +185,7 @@ export function DropdownMultiSelect<T extends string = string>({
                 })
               )}
             </TaskSelectionSection>
-          </PortalPanel>,
+          </div>,
           document.body,
         )}
     </>

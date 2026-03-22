@@ -3,22 +3,10 @@
 import Image from "next/image";
 import { useRef, useState } from "react";
 import { CalendarIcon, ClockIcon } from "@/components/Icons";
-import { Task } from "../types";
-import {
-  Card,
-  Header,
-  PriorityIcon,
-  Id,
-  Subtasks,
-  Title,
-  Meta,
-  DateTime,
-  Labels,
-  Tag,
-  TagDot,
-} from "./TaskCard.styles";
+import { Task, TaskStatus } from "../types";
 import { tasksHelper } from "@/helpers/task.helper";
 import { getLabelAccent } from "@/helpers/label-color.helper";
+import { cn } from "@/lib/utils";
 
 interface TaskCardProps {
   task: Task;
@@ -40,11 +28,11 @@ export function TaskCard({ task, onTaskClick }: TaskCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
 
-  const handleDragStart = (e: React.DragEvent<HTMLDivElement>) => {
+  const handleDragStart = (event: React.DragEvent<HTMLDivElement>) => {
     setIsDragging(true);
-    e.stopPropagation();
-    e.dataTransfer.effectAllowed = "move";
-    e.dataTransfer.setData("text/plain", JSON.stringify({ taskId: id }));
+    event.stopPropagation();
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", JSON.stringify({ taskId: id }));
     if (cardRef.current) {
       cardRef.current.style.opacity = "0.4";
       cardRef.current.style.transform = "scale(0.98)";
@@ -66,7 +54,6 @@ export function TaskCard({ task, onTaskClick }: TaskCardProps) {
   };
 
   const handleClick = () => {
-    // Don't open modal if user is dragging
     if (isDragging) return;
     if (onTaskClick) {
       onTaskClick(task);
@@ -74,60 +61,77 @@ export function TaskCard({ task, onTaskClick }: TaskCardProps) {
   };
 
   return (
-    <Card
+    <div
       ref={cardRef}
       draggable
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       onClick={handleClick}
+      className="flex cursor-grab flex-col gap-3 rounded-xl border border-border-app bg-card-bg p-4 transition-[border-color] duration-200 ease-out hover:border-[#3a3a3a] active:cursor-grabbing"
     >
-      <Header>
-        <PriorityIcon>
+      <div className="flex items-center gap-2">
+        <span className="flex items-center justify-center text-xl leading-none">
           {tasksHelper.priority.getIconLabel(priority)}
-        </PriorityIcon>
-        <Id>{taskKey || id}</Id>
+        </span>
+        <span className="text-xs font-medium text-[#888]">{taskKey || id}</span>
         {!!subtasks.length && (
-          <Subtasks>
+          <div className="ml-auto flex items-center gap-1 text-sm text-[#666]">
             <Image
               src="/subtask.svg"
               alt="Subtasks"
               width={18}
               height={18}
-              style={{ marginRight: 2 }}
+              className="mr-0.5"
             />
             <span>{subtasks.length}</span>
-          </Subtasks>
+          </div>
         )}
-      </Header>
+      </div>
 
-      <Title $status={status}>{summary}</Title>
+      <h3
+        className={cn(
+          "m-0 text-sm font-medium leading-snug",
+          status === TaskStatus.DONE
+            ? "text-[#888] line-through"
+            : "text-white no-underline",
+        )}
+      >
+        {summary}
+      </h3>
 
-      <Meta>
+      <div className="flex items-center gap-3">
         {!!scheduleDate && (
-          <DateTime>
+          <div className="flex items-center gap-1 text-xs text-[#888]">
             <CalendarIcon size={14} />
             <span>{tasksHelper.date.formatForSchedule(scheduleDate)}</span>
-          </DateTime>
+          </div>
         )}
         {!!estimation && (
-          <DateTime>
+          <div className="flex items-center gap-1 text-xs text-[#888]">
             <ClockIcon size={14} />
             <span>{tasksHelper.estimation.format(estimation)}</span>
-          </DateTime>
+          </div>
         )}
-      </Meta>
+      </div>
 
-      <Labels>
+      <div className="flex flex-wrap gap-1.5">
         {labels.map((label) => {
           const accent = getLabelAccent(label);
           return (
-            <Tag key={label} $tintBg={accent.tintBg}>
-              <TagDot $color={accent.dot} />
+            <span
+              key={label}
+              style={{ background: accent.tintBg }}
+              className="flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-[#888]"
+            >
+              <span
+                style={{ background: accent.dot }}
+                className="h-1 w-1 shrink-0 rounded-full"
+              />
               {label}
-            </Tag>
+            </span>
           );
         })}
-      </Labels>
-    </Card>
+      </div>
+    </div>
   );
 }

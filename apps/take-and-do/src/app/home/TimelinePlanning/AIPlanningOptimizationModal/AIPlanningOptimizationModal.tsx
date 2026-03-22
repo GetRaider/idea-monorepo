@@ -38,7 +38,7 @@ import {
   GenerateOptimizationButton,
   ActionsContainer,
   OptimizeButton,
-} from "./AIPlanningOptimizationModal.styles";
+} from "./AIPlanningOptimizationModal.ui";
 import { useDialogFocusLock } from "@/hooks/useDialogFocusLock";
 import { useTasks } from "@/hooks/useTasks";
 import type { Task } from "@/components/Boards/KanbanBoard/types";

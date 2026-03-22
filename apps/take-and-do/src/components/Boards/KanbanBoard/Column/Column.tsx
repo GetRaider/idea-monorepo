@@ -16,7 +16,7 @@ import {
   DropIndicatorBetween,
   DropIndicatorEnd,
   TaskWrapper,
-} from "./Column.styles";
+} from "./Column.ui";
 import { TaskCard } from "../TaskCard/TaskCard";
 import { columnContentMinHeightForExtraSlot } from "./columnLayout.constants";
 import { tasksHelper } from "@/helpers/task.helper";

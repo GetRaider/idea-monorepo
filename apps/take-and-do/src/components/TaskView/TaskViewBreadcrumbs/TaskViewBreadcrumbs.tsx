@@ -2,13 +2,13 @@
 
 import { useEffect, useRef, useState, type Ref } from "react";
 
-import { StatusIcon } from "../../Boards/KanbanBoard/Column/Column.styles";
+import { StatusIcon } from "../../Boards/KanbanBoard/Column/Column.ui";
 import { Task, TaskStatus } from "../../Boards/KanbanBoard/types";
 import {
   DropdownContainer,
   DropdownItem,
   StatusIconButton,
-} from "../TaskView.styles";
+} from "../TaskView.ui";
 import { tasksHelper } from "@/helpers/task.helper";
 
 import {
@@ -21,7 +21,7 @@ import {
   ParentTaskButton,
   StatusDropdownWrap,
   TaskKeyText,
-} from "./TaskViewBreadcrumbs.styles";
+} from "./TaskViewBreadcrumbs.ui";
 
 export function TaskViewBreadcrumbs({
   boardDisplayName,

@@ -19,7 +19,7 @@ import {
   CardContent,
   CardList,
   EmptyState,
-} from "./ProductivitySummary.styles";
+} from "./ProductivitySummary.ui";
 import { ChevronDownIcon } from "@/components/Icons";
 import type {
   AnalyticsData,

@@ -1,10 +1,10 @@
-export { Dialog } from "./Dialog";
-export { ConfirmDialog } from "./ConfirmDialog";
 export {
+  Dialog,
   DialogOverlay,
   DialogContainer,
   DialogHeader,
   DialogTitle,
   DialogBody,
   DialogActions,
-} from "./Dialog.styles";
+} from "./Dialog";
+export { ConfirmDialog } from "./ConfirmDialog";

@@ -14,7 +14,7 @@ import {
   StatIcon,
   StatValue,
   StatLabel,
-} from "./StatsCards.styles";
+} from "./StatsCards.ui";
 
 export function StatsCards({ stats }: StatsCardsProps) {
   const statMap = {

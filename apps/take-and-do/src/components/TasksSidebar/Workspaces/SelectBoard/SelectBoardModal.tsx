@@ -10,7 +10,7 @@ import {
   Select,
   ButtonGroup,
   Button,
-} from "./SelectBoardModal.styles";
+} from "./SelectBoardModal.ui";
 
 export function SelectBoardModal({ onClose, onSelect }: SelectBoardModalProps) {
   const [boards, setBoards] = useState<TaskBoard[]>([]);

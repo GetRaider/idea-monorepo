@@ -39,7 +39,7 @@ import {
   FolderEditWrap,
   FolderEditInput,
   RootBoardsDropZone,
-} from "./TasksSidebar.styles";
+} from "./TasksSidebar.ui";
 
 const DRAG_BOARD_KEY = "application/x-task-board-id";
 const ROOT_DROP_ID = "__root__";
@@ -48,7 +48,10 @@ import { Folder, TaskBoard } from "@/types/workspace";
 import { toast } from "sonner";
 import { apiServices } from "@/services/api";
 import { ConfirmDialog } from "@/components/Dialogs";
-import { LoadingContainer, Spinner } from "@/app/home/page.styles";
+import {
+  HomeLoadingContainer as LoadingContainer,
+  HomeSpinner as Spinner,
+} from "@/app/shell.ui";
 import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
 import Image from "next/image";
 import { useRouter } from "next/navigation";

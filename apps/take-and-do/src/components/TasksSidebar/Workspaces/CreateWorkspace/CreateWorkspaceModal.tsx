@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 import { Dialog } from "@/components/Dialogs";
 import {
@@ -10,7 +11,7 @@ import {
   TypeButton,
   ButtonGroup,
   Button,
-} from "./CreateWorkspace.styles";
+} from "./CreateWorkspace.ui";
 import { toast } from "sonner";
 import { Dropdown } from "@/components/Dropdown";
 import { DropdownMultiSelect } from "@/components/DropdownMultiSelect";
@@ -70,7 +71,7 @@ export function CreateWorkspaceDialog({
               $selected={type === "folder"}
               onClick={() => setType("folder")}
             >
-              <img src="/folder.svg" alt="Folder" />
+              <Image src="/folder.svg" alt="Folder" width={20} height={20} />
               Folder
             </TypeButton>
             <TypeButton
@@ -78,7 +79,12 @@ export function CreateWorkspaceDialog({
               $selected={type === "board"}
               onClick={() => setType("board")}
             >
-              <img src="/kanban-board.svg" alt="Board" />
+              <Image
+                src="/kanban-board.svg"
+                alt="Board"
+                width={20}
+                height={20}
+              />
               Board
             </TypeButton>
           </TypeSelector>

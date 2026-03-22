@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { HomeIcon } from "@radix-ui/react-icons";
 import { SunIcon } from "@/components/Icons";
@@ -11,7 +12,7 @@ import {
   BottomActions,
   UserAvatar,
   Avatar,
-} from "./Sidebar.styles";
+} from "./Sidebar.ui";
 
 interface SidebarProps {
   onNavigationChange: (page: string) => void;
@@ -46,15 +47,15 @@ export function Sidebar({ onNavigationChange }: SidebarProps) {
           $active={isTasksActive}
           onClick={() => handleNavClick("tasks", "/tasks")}
         >
-          <img width={24} height={24} src="/tasks.svg" alt="Tasks" />
+          <Image width={24} height={24} src="/tasks.svg" alt="Tasks" />
         </NavButton>
 
         <NavButton disabled>
-          <img width={24} height={24} src="/calendar.svg" alt="Calendar" />
+          <Image width={24} height={24} src="/calendar.svg" alt="Calendar" />
         </NavButton>
 
         <NavButton disabled>
-          <img width={24} height={24} src="/docs.svg" alt="Workspace" />
+          <Image width={24} height={24} src="/docs.svg" alt="Workspace" />
         </NavButton>
       </Nav>
 

@@ -8,7 +8,7 @@ import {
   HeaderLeft,
   HeaderRight,
   DeleteButton,
-} from "../TaskView.styles";
+} from "../TaskView.ui";
 import { TaskViewBreadcrumbs } from "../TaskViewBreadcrumbs/TaskViewBreadcrumbs";
 
 export function TaskViewHeader({

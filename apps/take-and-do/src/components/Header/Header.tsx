@@ -1,6 +1,6 @@
 "use client";
 
-import { HeaderContainer, Content, Title } from "./Header.styles";
+import { HeaderContainer, Content, Title } from "./Header.ui";
 
 export function Header({ title }: HeaderProps) {
   return (

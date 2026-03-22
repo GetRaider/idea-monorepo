@@ -4,23 +4,14 @@ import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { CloseIcon } from "@/components/Icons";
 import { SecondaryButton, CloseButton } from "@/components/Buttons";
-import {
-  TextArea,
-  ButtonGroup,
-  CreateButton,
-  DialogBodyFixed,
-  ProgressState,
-  ProgressBarWrapper,
-  ProgressSegment,
-  ProgressLabel,
-} from "./AIComposeModal.styles";
-import { CharCounter } from "@/components/Labels/CharCounter.styles";
+import { CharCounter } from "@/components/Labels/CharCounter";
 import {
   DialogContainer,
   DialogHeader,
   DialogOverlay,
   DialogTitle,
-} from "@/components/Dialogs/Dialog.styles";
+} from "@/components/Dialogs/Dialog";
+import { StepProgressSegments } from "@/components/StepProgressSegments";
 
 interface AIComposeModalProps {
   isOpen: boolean;
@@ -53,7 +44,7 @@ export function AIComposeModal({
       return;
     }
     intervalRef.current = setInterval(() => {
-      setProgressStep((s) => (s < COMPOSE_STEPS - 1 ? s + 1 : s));
+      setProgressStep((step) => (step < COMPOSE_STEPS - 1 ? step + 1 : step));
     }, STEP_INTERVAL_MS);
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
@@ -87,53 +78,56 @@ export function AIComposeModal({
 
   return (
     <DialogOverlay onClick={handleClose}>
-      <DialogContainer $maxWidth={720} onClick={(e) => e.stopPropagation()}>
+      <DialogContainer
+        $maxWidth={720}
+        onClick={(event) => event.stopPropagation()}
+      >
         <DialogHeader>
           <DialogTitle>⚡ Compose Task with AI</DialogTitle>
           <CloseButton onClick={handleClose} disabled={isComposing}>
             <CloseIcon />
           </CloseButton>
         </DialogHeader>
-        <DialogBodyFixed>
+        <div className="min-h-[280px]">
           {isComposing ? (
-            <ProgressState>
-              <ProgressBarWrapper>
-                {Array.from({ length: COMPOSE_STEPS }).map((_, i) => (
-                  <ProgressSegment
-                    key={i}
-                    $filled={i <= progressStep}
-                    $active={i === progressStep}
-                  />
-                ))}
-              </ProgressBarWrapper>
-              <ProgressLabel>
+            <div className="flex min-h-[280px] flex-col items-center justify-center">
+              <StepProgressSegments
+                totalSteps={COMPOSE_STEPS}
+                currentStep={progressStep}
+              />
+              <div className="text-sm font-medium text-[#a0a0a0] transition-opacity duration-200">
                 {STEP_LABELS[Math.min(progressStep, STEP_LABELS.length - 1)]}
-              </ProgressLabel>
-            </ProgressState>
+              </div>
+            </div>
           ) : (
             <>
-              <TextArea
+              <textarea
                 value={text}
                 maxLength={700}
-                onChange={(e) => setText(e.target.value.slice(0, 700))}
-                placeholder="Describe your task in natural language...&#10;&#10;Example:&#10;Buy groceries for New Year celebration, high priority, due tomorrow, estimate 2 hours"
+                onChange={(event) => setText(event.target.value.slice(0, 700))}
+                placeholder={
+                  "Describe your task in natural language...\n\nExample:\nBuy groceries for New Year celebration, high priority, due tomorrow, estimate 2 hours"
+                }
                 autoFocus
+                className="mb-5 min-h-[200px] w-full resize-y rounded-lg border border-input-border bg-input-bg p-3 font-inherit text-sm text-white outline-none transition-[border-color] placeholder:text-text-tertiary placeholder:whitespace-pre-line focus:border-accent-primary disabled:cursor-not-allowed disabled:opacity-60"
               />
               <CharCounter $nearLimit={text.length > 600}>
                 {text.length} / {700}
               </CharCounter>
-              <ButtonGroup>
+              <div className="flex justify-end gap-3">
                 <SecondaryButton onClick={handleClose}>Cancel</SecondaryButton>
-                <CreateButton
+                <button
+                  type="button"
                   onClick={handleCreate}
                   disabled={!text.trim()}
+                  className="cursor-pointer rounded-lg border-0 bg-[#7255c1] px-5 py-2.5 text-sm font-medium text-white transition-all duration-200 hover:-translate-y-px hover:bg-[#5a42a1] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Compose
-                </CreateButton>
-              </ButtonGroup>
+                </button>
+              </div>
             </>
           )}
-        </DialogBodyFixed>
+        </div>
       </DialogContainer>
     </DialogOverlay>
   );

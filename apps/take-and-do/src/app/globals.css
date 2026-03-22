@@ -1,93 +1,115 @@
 @import "@radix-ui/themes/styles.css";
 
-:root {
-  --background: #0f0f0f;
-  --foreground: #ededed;
-  --sidebar-bg: #1a1a1a;
-  --nav-sidebar-bg: #1e1e1e;
-  --card-bg: #1e1e1e;
-  --border-color: #2a2a2a;
-  --text-primary: #ffffff;
-  --text-secondary: #888888;
-  --text-tertiary: #666666;
-  --accent-primary: #667eea;
-  --accent-secondary: #764ba2;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: #0f0f0f;
+    --foreground: #ededed;
+    --sidebar-bg: #1a1a1a;
+    --nav-sidebar-bg: #1e1e1e;
+    --card-bg: #1e1e1e;
+    --border-color: #2a2a2a;
+    --text-primary: #ffffff;
+    --text-secondary: #888888;
+    --text-tertiary: #666666;
+    --accent-primary: #667eea;
+    --accent-secondary: #764ba2;
+    --input-bg: #2a2a2a;
+    --input-border: #3a3a3a;
+    --input-border-hover: #555555;
+    --focus-ring: #7255c1;
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 8px;
+    --radius-xl: 12px;
+    --shadow-dialog: 0 20px 60px rgba(0, 0, 0, 0.5);
+    --shadow-dropdown: 0 8px 24px rgba(0, 0, 0, 0.4);
+    --dialog-max-width: 500px;
+  }
+
+  * {
+    @apply box-border p-0 m-0;
+  }
+
+  html,
+  body {
+    @apply max-w-full overflow-x-hidden h-full;
+  }
+
+  body {
+    @apply text-foreground bg-background antialiased;
+    font-family:
+      var(--font-inter),
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      "Roboto",
+      "Oxygen",
+      "Ubuntu",
+      "Cantarell",
+      "Fira Sans",
+      "Droid Sans",
+      "Helvetica Neue",
+      sans-serif;
+  }
+
+  a {
+    @apply text-inherit no-underline;
+  }
+
+  button {
+    font-family: inherit;
+  }
+
+  html {
+    color-scheme: dark;
+  }
+
+  ::-webkit-scrollbar {
+    @apply w-2 h-2;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply rounded-sm bg-[#2a2a2a];
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-[#3a3a3a];
+  }
 }
 
-* {
-  box-sizing: border-box;
-  padding: 0;
-  margin: 0;
-}
-
-html,
-body {
-  max-width: 100vw;
-  overflow-x: hidden;
-  height: 100%;
-}
-
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu",
-    "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-a {
-  color: inherit;
-  text-decoration: none;
-}
-
-button {
-  font-family: inherit;
-}
-
-html {
-  color-scheme: dark;
-}
-
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #2a2a2a;
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #3a3a3a;
-}
-
-/* Sonner: app dark theme + close button top-right */
-[data-sonner-toaster][data-sonner-theme="dark"] [data-sonner-toast][data-styled="true"] {
+[data-sonner-toaster][data-sonner-theme="dark"]
+  [data-sonner-toast][data-styled="true"] {
   background: var(--card-bg) !important;
   border-color: var(--border-color) !important;
   color: var(--foreground) !important;
 }
 
-[data-sonner-toaster][data-sonner-theme="dark"] [data-sonner-toast] [data-title],
-[data-sonner-toaster][data-sonner-theme="dark"] [data-sonner-toast] [data-description] {
+[data-sonner-toaster][data-sonner-theme="dark"]
+  [data-sonner-toast]
+  [data-title],
+[data-sonner-toaster][data-sonner-theme="dark"]
+  [data-sonner-toast]
+  [data-description] {
   color: var(--foreground) !important;
 }
 
-[data-sonner-toaster][data-sonner-theme="dark"] [data-sonner-toast][data-type="success"] {
+[data-sonner-toaster][data-sonner-theme="dark"]
+  [data-sonner-toast][data-type="success"] {
   background: #0f2a16 !important;
   border-color: #14532d !important;
   color: #86efac !important;
 }
 
-[data-sonner-toaster][data-sonner-theme="dark"] [data-sonner-toast][data-type="error"] {
+[data-sonner-toaster][data-sonner-theme="dark"]
+  [data-sonner-toast][data-type="error"] {
   background: #2a0f0f !important;
   border-color: #450a0a !important;
   color: #fca5a5 !important;
@@ -110,4 +132,124 @@ html {
   background: #3a3a3a !important;
   border-color: #3a3a3a !important;
   color: var(--text-primary) !important;
+}
+
+.task-editor-root {
+  position: relative;
+  z-index: 2;
+  flex-shrink: 0;
+  padding: 12px 24px 24px;
+}
+
+@media (max-width: 600px) {
+  .task-editor-root {
+    padding: 12px 16px 16px;
+  }
+}
+
+.task-editor-root .editor-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 0;
+  border-radius: 4px 4px 0 0;
+  border: 1px solid #3a3a3a;
+  background: #2a2a2a;
+  padding: 8px;
+}
+
+.task-editor-root .editor-toolbar button {
+  cursor: pointer;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  padding: 6px 10px;
+  font-size: 14px;
+  color: #888;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+
+@media (max-width: 480px) {
+  .task-editor-root .editor-toolbar button {
+    padding: 6px 8px;
+    font-size: 12px;
+  }
+}
+
+.task-editor-root .editor-toolbar button:hover {
+  background: #3a3a3a;
+  color: #fff;
+}
+
+.task-editor-root .editor-toolbar button.is-active {
+  background: #667eea;
+  color: #fff;
+}
+
+.task-editor-root .ProseMirror {
+  min-height: 100px;
+  max-height: 300px;
+  overflow-y: auto;
+  border-radius: 0 0 4px 4px;
+  border: 1px solid #3a3a3a;
+  border-top: none;
+  background: transparent;
+  padding: 12px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #888;
+  outline: none;
+}
+
+.task-editor-root .ProseMirror p.is-editor-empty:first-child::before {
+  float: left;
+  height: 0;
+  color: #666;
+  pointer-events: none;
+  content: attr(data-placeholder);
+}
+
+.task-editor-root .ProseMirror h2,
+.task-editor-root .ProseMirror h3,
+.task-editor-root .ProseMirror h4 {
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+  font-weight: 600;
+  color: #fff;
+}
+
+.task-editor-root .ProseMirror h2 {
+  font-size: 20px;
+}
+
+.task-editor-root .ProseMirror h3 {
+  font-size: 18px;
+}
+
+.task-editor-root .ProseMirror h4 {
+  font-size: 16px;
+}
+
+.task-editor-root .ProseMirror p {
+  margin: 0.5em 0;
+}
+
+.task-editor-root .ProseMirror ul,
+.task-editor-root .ProseMirror ol {
+  margin: 0.5em 0;
+  padding-left: 1.5em;
+}
+
+.task-editor-root .ProseMirror li {
+  margin: 0.25em 0;
+}
+
+.task-editor-root .ProseMirror strong {
+  font-weight: 600;
+  color: #fff;
+}
+
+.task-editor-root .ProseMirror em {
+  font-style: italic;
 }

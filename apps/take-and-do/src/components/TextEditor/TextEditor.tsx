@@ -1,12 +1,10 @@
 "use client";
 
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, type ReactNode } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import type { Editor } from "@tiptap/react";
-
-import { EditorWrapper } from "./TextEditor.styles";
 
 export function TextEditor({
   onUpdate,
@@ -84,18 +82,22 @@ export function TextEditor({
 
   if (!editor) {
     return (
-      <EditorWrapper>
+      <TaskEditorRoot>
         <div>Loading editor...</div>
-      </EditorWrapper>
+      </TaskEditorRoot>
     );
   }
 
   return (
-    <EditorWrapper>
+    <TaskEditorRoot>
       <EditorToolbar editor={editor} />
       <EditorContent editor={editor} />
-    </EditorWrapper>
+    </TaskEditorRoot>
   );
+}
+
+function TaskEditorRoot({ children }: { children: ReactNode }) {
+  return <div className="task-editor-root">{children}</div>;
 }
 
 function EditorToolbar({ editor }: { editor: Editor }) {

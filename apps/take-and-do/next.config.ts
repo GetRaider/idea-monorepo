@@ -4,8 +4,14 @@ const isProd = process.env.NODE_ENV === "production";
 const webBaseUrl = "https://take-and-do.com";
 
 const nextConfig: NextConfig = {
-  compiler: {
-    styledComponents: true,
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "i.pravatar.cc",
+        pathname: "/**",
+      },
+    ],
   },
   async headers() {
     return [

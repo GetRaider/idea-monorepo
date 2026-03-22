@@ -8,13 +8,13 @@ import { StatsCards, ProductivityOverview, TimelinePlanning } from ".";
 import type { TaskStats } from ".";
 import {
   PageContainer,
-  MainContent,
+  HomeMainContent,
   WelcomeSection,
-  Title,
-  Subtitle,
-  LoadingContainer,
-  Spinner,
-} from "./page.styles";
+  HomePageTitle,
+  HomePageSubtitle,
+  HomeLoadingContainer,
+  HomeSpinner,
+} from "../shell.ui";
 
 function HomePage() {
   const [, setCurrentPage] = useState("home");
@@ -57,11 +57,11 @@ function HomePage() {
     return (
       <PageContainer>
         <Sidebar onNavigationChange={handleNavigationToTasksPage} />
-        <MainContent $withNavSidebar={isTasksSidebarOpen}>
-          <LoadingContainer>
-            <Spinner />
-          </LoadingContainer>
-        </MainContent>
+        <HomeMainContent $withNavSidebar={isTasksSidebarOpen}>
+          <HomeLoadingContainer>
+            <HomeSpinner />
+          </HomeLoadingContainer>
+        </HomeMainContent>
       </PageContainer>
     );
   }
@@ -69,12 +69,12 @@ function HomePage() {
   return (
     <PageContainer>
       <Sidebar onNavigationChange={handleNavigationToTasksPage} />
-      <MainContent $withNavSidebar={isTasksSidebarOpen}>
+      <HomeMainContent $withNavSidebar={isTasksSidebarOpen}>
         <WelcomeSection>
-          <Title>Home</Title>
-          <Subtitle>
+          <HomePageTitle>Home</HomePageTitle>
+          <HomePageSubtitle>
             Supercharge your workflow with AI insights & modern planning
-          </Subtitle>
+          </HomePageSubtitle>
         </WelcomeSection>
 
         <ProductivityOverview />
@@ -85,7 +85,7 @@ function HomePage() {
         />
 
         {taskStats && <StatsCards stats={taskStats} />}
-      </MainContent>
+      </HomeMainContent>
     </PageContainer>
   );
 }

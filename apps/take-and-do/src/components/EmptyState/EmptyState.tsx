@@ -6,7 +6,7 @@ import {
   EmptyStateImageWrapper,
   EmptyStateTitle,
   EmptyStateText,
-} from "./EmptyState.styles";
+} from "./EmptyState.ui";
 
 interface EmptyStateProps {
   title?: string;

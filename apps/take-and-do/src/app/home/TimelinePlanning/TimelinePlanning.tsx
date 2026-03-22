@@ -8,7 +8,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { apiServices } from "@/services/api";
 import { ScheduleType, tasksHelper } from "@/helpers/task.helper";
 import { AIPlanningOptimizationDialog } from "./AIPlanningOptimizationModal/AIPlanningOptimizationModal";
-import { OptimizeButton } from "./AIPlanningOptimizationModal/AIPlanningOptimizationModal.styles";
+import { OptimizeButton } from "./AIPlanningOptimizationModal/AIPlanningOptimizationModal.ui";
 import {
   Section,
   SectionHeader,
@@ -30,10 +30,13 @@ import {
   StatusText,
   ViewAllLink,
   ScheduleSelectContainer,
-} from "./TimelinePlanning.styles";
+} from "./TimelinePlanning.ui";
 import { useRecentTasks } from "@/hooks/useRecentTasks";
 import { useCustomDateTasks } from "@/hooks/useCustomDate";
-import { LoadingContainer, Spinner } from "../page.styles";
+import {
+  LoadingContainer,
+  Spinner,
+} from "@/components/SelectList/SelectList.ui";
 import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
 import { Dropdown } from "@/components/Dropdown";
 import { toast } from "sonner";

@@ -31,7 +31,7 @@ import {
   TaskViewFooter,
   CreateTaskButton,
   TaskSaveButton,
-} from "./TaskView.styles";
+} from "./TaskView.ui";
 import { TaskMetadata } from "./TaskMetadata/TaskMetadata";
 import { TaskSubtasks } from "./TaskSubtasks/TaskSubtasks";
 import { useClickOutside } from "@/hooks/useClickOutside";

@@ -34,7 +34,7 @@ import {
 import { useRecentTasks } from "@/hooks/useRecentTasks";
 import { useCustomDateTasks } from "@/hooks/useCustomDate";
 import { LoadingContainer, Spinner } from "../page.styles";
-import { buildTasksUrl } from "@/helpers/tasks-routing.helper";
+import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
 import { Dropdown } from "@/components/Dropdown";
 import { toast } from "sonner";
 
@@ -72,7 +72,7 @@ export function TimelinePlanning({
     try {
       const taskBoard = await apiServices.taskBoards.getById(task.taskBoardId);
       router.push(
-        buildTasksUrl({
+        tasksUrlHelper.routing.buildTasksUrl({
           type: "board",
           boardName: taskBoard.name,
           taskKey: task.taskKey,

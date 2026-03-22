@@ -6,9 +6,8 @@ import { Sidebar } from "@/components/Sidebar/Sidebar";
 import { TasksSidebar } from "@/components/TasksSidebar/TasksSidebar";
 import { CreateWorkspaceDialog } from "@/components/TasksSidebar/Workspaces/CreateWorkspace/CreateWorkspaceModal";
 import { PageContainer, Main } from "../page.styles";
-import { buildBoardUrl, buildScheduleUrl, getActiveViewFromPathname } from "@/helpers/tasks-routing.helper";
+import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
 import { waiterHelper } from "@/helpers/waiter.helper";
-import { useTasksWorkspaceViewNavigation } from "@/hooks/useTasksWorkspaceViewNavigation";
 import { useWorkspaces } from "@/hooks/useWorkspaces";
 import { WorkspaceProvider } from "@/contexts/WorkspaceContext";
 import { apiServices } from "@/services/api";
@@ -34,14 +33,16 @@ export default function TasksLayout({
   const [isWorkspaceCreateModalOpen, setIsWorkspaceCreateModalOpen] =
     useState(false);
 
-  const activeView = getActiveViewFromPathname(pathname ?? "");
+  const activeView = tasksUrlHelper.routing.getActiveViewFromPathname(
+    pathname ?? "",
+  );
 
   const handleViewChange = (view: string) => {
     if (view === "today" || view === "tomorrow") {
-      router.push(buildScheduleUrl(view));
+      router.push(tasksUrlHelper.routing.buildScheduleUrl(view));
       return;
     }
-    router.push(buildBoardUrl(view));
+    router.push(tasksUrlHelper.routing.buildBoardUrl(view));
   };
 
   const handleNavigationChange = () => setIsNavSidebarOpen(true);
@@ -99,7 +100,7 @@ export default function TasksLayout({
       });
 
       setIsWorkspaceCreateModalOpen(false);
-      router.push(buildBoardUrl(resolvedBoard.name));
+      router.push(tasksUrlHelper.routing.buildBoardUrl(resolvedBoard.name));
       router.refresh();
     } catch (error) {
       console.error("[TasksLayout] Failed to create task board:", error);

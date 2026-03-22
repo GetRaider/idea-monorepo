@@ -49,10 +49,7 @@ import { toast } from "sonner";
 import { apiServices } from "@/services/api";
 import { ConfirmDialog } from "@/components/Dialogs";
 import { LoadingContainer, Spinner } from "@/app/home/page.styles";
-import {
-  buildBoardUrl,
-  buildScheduleUrl,
-} from "@/helpers/tasks-routing.helper";
+import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { EmojiPickerField } from "./EmojiPickerField";
@@ -157,7 +154,8 @@ export function TasksSidebar({
           prev.map((b: TaskBoard) => (b.id === updated.id ? updated : b)),
         );
 
-        if (nameChanged) router.push(buildBoardUrl(updated.name));
+        if (nameChanged)
+          router.push(tasksUrlHelper.routing.buildBoardUrl(updated.name));
         toast.success(nameChanged ? "Board renamed" : "Board emoji updated");
       } catch (error) {
         console.error("Failed to update task board:", error);
@@ -185,8 +183,8 @@ export function TasksSidebar({
       );
       router.push(
         taskBoards.length > 0
-          ? buildBoardUrl(taskBoards[0].name)
-          : buildScheduleUrl("today"),
+          ? tasksUrlHelper.routing.buildBoardUrl(taskBoards[0].name)
+          : tasksUrlHelper.routing.buildScheduleUrl("today"),
       );
       toast.success(`'${name}' board deleted`);
     } catch (error) {

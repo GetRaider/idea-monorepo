@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Task, TaskPriority, TaskStatus } from "../../Boards/KanbanBoard/types";
 import { apiServices } from "@/services/api";
 import { StatusIcon } from "../../Boards/KanbanBoard/Column/Column.styles";
@@ -35,6 +35,7 @@ export function TaskSubtasks({
   const [isSubtasksExpanded, setIsSubtasksExpanded] = useState(true);
   const [isCreatingSubtask, setIsCreatingSubtask] = useState(false);
   const [newSubtaskSummary, setNewSubtaskSummary] = useState("");
+  const isSavingSubtaskRef = useRef(false);
 
   const handleSubtaskClick = (subtask: Task) => {
     if (onSubtaskClick) {
@@ -48,6 +49,8 @@ export function TaskSubtasks({
 
   const handleCreateSubtask = async () => {
     if (!task || !newSubtaskSummary.trim()) return;
+    if (isSavingSubtaskRef.current) return;
+    isSavingSubtaskRef.current = true;
 
     try {
       const newSubtask: Partial<Task> = {
@@ -59,6 +62,7 @@ export function TaskSubtasks({
         subtasks: [],
       };
 
+      // TODO: Kill this shit
       const existingSubtasks = (task.subtasks || []).map((st) => ({
         ...st,
         dueDate:
@@ -78,6 +82,8 @@ export function TaskSubtasks({
       setIsCreatingSubtask(false);
     } catch (error) {
       console.error("Failed to create subtask:", error);
+    } finally {
+      isSavingSubtaskRef.current = false;
     }
   };
 
@@ -109,7 +115,8 @@ export function TaskSubtasks({
               onChange={(e) => setNewSubtaskSummary(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
-                  handleCreateSubtask();
+                  e.preventDefault();
+                  void handleCreateSubtask();
                 } else if (e.key === "Escape") {
                   setIsCreatingSubtask(false);
                   setNewSubtaskSummary("");

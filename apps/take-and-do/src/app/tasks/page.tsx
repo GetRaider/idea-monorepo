@@ -7,10 +7,7 @@ import {
   LoadingContainer,
   Spinner,
 } from "@/components/Boards/KanbanBoard/KanbanBoard.styles";
-import {
-  buildBoardUrl,
-  buildScheduleUrl,
-} from "../../helpers/tasks-routing.helper";
+import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
 
 export default function TasksPage() {
   const router = useRouter();
@@ -18,16 +15,13 @@ export default function TasksPage() {
   useEffect(() => {
     const redirect = async () => {
       try {
-        const [boards] = await Promise.all([
-          apiServices.taskBoards.getAll(),
-          apiServices.folders.getAll(),
-        ]);
+        const boards = await apiServices.taskBoards.getAll();
         boards.length > 0
-          ? router.replace(buildBoardUrl(boards[0].name))
-          : router.replace(buildScheduleUrl("today"));
+          ? router.replace(tasksUrlHelper.routing.buildBoardUrl(boards[0].name))
+          : router.replace(tasksUrlHelper.routing.buildScheduleUrl("today"));
       } catch (error) {
         console.error("[TasksPage] Failed to fetch boards:", error);
-        router.replace(buildScheduleUrl("today"));
+        router.replace(tasksUrlHelper.routing.buildScheduleUrl("today"));
       }
     };
 

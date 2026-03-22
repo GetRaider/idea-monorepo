@@ -9,14 +9,14 @@ import { Spinner } from "@/components/Boards/KanbanBoard/KanbanBoard.styles";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useBoardTaskUrlSync } from "@/hooks/useKanbanTaskUrlSync";
 import { useWorkspaceInitialLoadReady } from "@/hooks/useWorkspaceInitialLoadReady";
-import { parseBoardPath } from "@/helpers/tasks-routing.helper";
+import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
 
 export default function BoardPage({ params }: BoardPageProps) {
   const { boardPath } = use(params);
   const { taskBoards } = useWorkspace();
   const isBoardReady = useWorkspaceInitialLoadReady();
 
-  const parsedBoardPath = parseBoardPath(boardPath);
+  const parsedBoardPath = tasksUrlHelper.routing.parseBoardPath(boardPath);
   const boardName = parsedBoardPath?.boardName ?? "";
   const { onTaskOpen, onTaskClose, onSubtaskOpen } =
     useBoardTaskUrlSync(boardName);

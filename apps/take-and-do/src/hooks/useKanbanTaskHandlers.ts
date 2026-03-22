@@ -9,6 +9,7 @@ export function useKanbanTaskHandlers(
     selectedTask,
     parentTask,
     setSelectedTask,
+    setParentTask,
     handleTaskClick: baseHandleTaskClick,
     handleCloseModal: baseHandleCloseModal,
     handleSubtaskClick: baseHandleSubtaskClick,
@@ -25,8 +26,8 @@ export function useKanbanTaskHandlers(
   );
 
   const handleCloseModal = useCallback(() => {
-    baseHandleCloseModal();
     onTaskClose?.();
+    baseHandleCloseModal();
   }, [baseHandleCloseModal, onTaskClose]);
 
   const handleSubtaskClick = useCallback(
@@ -41,6 +42,7 @@ export function useKanbanTaskHandlers(
     selectedTask,
     parentTask,
     setSelectedTask,
+    setParentTask,
     handleTaskClick,
     handleCloseModal,
     handleSubtaskClick,

@@ -5,10 +5,7 @@ import { notFound } from "next/navigation";
 
 import { MultipleKanbanBoard } from "@/components/Boards/KanbanBoard/MultipleKanbanBoard";
 import { useScheduleTaskUrlSync } from "@/hooks/useKanbanTaskUrlSync";
-import {
-  isValidScheduleDate,
-  type ScheduleDate,
-} from "@/helpers/tasks-routing.helper";
+import { tasksUrlHelper, type ScheduleDate } from "@/helpers/tasks-url.helper";
 
 interface SchedulePageProps {
   params: Promise<{ date: string }>;
@@ -16,14 +13,16 @@ interface SchedulePageProps {
 
 export default function SchedulePage({ params }: SchedulePageProps) {
   const { date } = use(params);
-  const scheduleDate: ScheduleDate = isValidScheduleDate(date)
+  const scheduleDate: ScheduleDate = tasksUrlHelper.routing.isValidScheduleDate(
+    date,
+  )
     ? date
     : "today";
 
   const { onTaskOpen, onTaskClose, onSubtaskOpen } =
     useScheduleTaskUrlSync(scheduleDate);
 
-  if (!isValidScheduleDate(date)) {
+  if (!tasksUrlHelper.routing.isValidScheduleDate(date)) {
     notFound();
   }
 

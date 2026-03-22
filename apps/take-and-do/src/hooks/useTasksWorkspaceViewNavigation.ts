@@ -3,7 +3,7 @@
 import { useCallback } from "react";
 import { useRouter } from "next/navigation";
 
-import { buildBoardUrl, buildScheduleUrl } from "@/helpers/tasks-routing.helper";
+import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
 
 export function useTasksWorkspaceViewNavigation() {
   const router = useRouter();
@@ -11,10 +11,10 @@ export function useTasksWorkspaceViewNavigation() {
   const navigateToWorkspaceView = useCallback(
     (view: string) => {
       if (view === "today" || view === "tomorrow") {
-        router.push(buildScheduleUrl(view));
+        router.push(tasksUrlHelper.routing.buildScheduleUrl(view));
         return;
       }
-      router.push(buildBoardUrl(view));
+      router.push(tasksUrlHelper.routing.buildBoardUrl(view));
     },
     [router],
   );

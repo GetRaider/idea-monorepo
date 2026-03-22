@@ -17,6 +17,7 @@ import {
   createNewTaskTemplate,
 } from "./shared/taskComposeHelpers";
 import { useKanbanTaskHandlers } from "../../../hooks/useKanbanTaskHandlers";
+import { useBoardUrlTaskModalSync } from "@/hooks/useBoardUrlTaskModalSync";
 import { TaskView } from "../../TaskView/TaskView";
 import { updateTaskInColumns } from "@/hooks/useTaskBoardState";
 import { EmptyState } from "../../EmptyState";
@@ -51,10 +52,23 @@ export function SingleKanbanBoard({
     selectedTask,
     parentTask,
     setSelectedTask,
+    setParentTask,
     handleTaskClick,
     handleCloseModal,
     handleSubtaskClick,
   } = useKanbanTaskHandlers({ onTaskOpen, onTaskClose, onSubtaskOpen });
+
+  const { handleCloseBoardModal } = useBoardUrlTaskModalSync({
+    boardName,
+    tasksByStatus,
+    isLoading,
+    selectedTask,
+    parentTask,
+    setSelectedTask,
+    setParentTask,
+    handleCloseModal,
+    onTaskOpen,
+  });
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -161,13 +175,13 @@ export function SingleKanbanBoard({
       fetchTasks();
       setSelectedTask(createdTask);
     },
-    [fetchTasks],
+    [fetchTasks, setSelectedTask],
   );
 
   const handleTaskDelete = useCallback(() => {
     fetchTasks();
     setSelectedTask(null);
-  }, [fetchTasks]);
+  }, [fetchTasks, setSelectedTask]);
 
   const totalTasksLength =
     tasksByStatus[TaskStatus.TODO].length +
@@ -204,7 +218,7 @@ export function SingleKanbanBoard({
         task={selectedTask}
         parentTask={parentTask}
         boardName={boardName}
-        onClose={handleCloseModal}
+        onClose={handleCloseBoardModal}
         onTaskUpdate={handleTaskUpdate}
         onSubtaskClick={handleSubtaskClick}
         onTaskCreated={handleTaskCreated}

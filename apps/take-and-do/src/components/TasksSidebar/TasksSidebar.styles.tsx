@@ -3,7 +3,7 @@ import styled, { css } from "styled-components";
 import { Input } from "../Input";
 
 export const TasksSidebarContainer = styled.aside<{ $isOpen: boolean }>`
-  width: 280px;
+  width: 220px;
   height: 100vh;
   background: #1e1e1e;
   border-right: 1px solid #2a2a2a;

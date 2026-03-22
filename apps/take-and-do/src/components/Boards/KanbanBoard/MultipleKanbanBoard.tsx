@@ -35,6 +35,7 @@ import { AIComposeModal } from "./shared/AIComposeModal";
 import { apiServices } from "@/services/api";
 import type { TaskBoardWithTasks } from "@/types/workspace";
 import { tasksUrlHelper, type ScheduleDate } from "@/helpers/tasks-url.helper";
+import { tasksHelper } from "@/helpers/task.helper";
 
 export function MultipleKanbanBoard({
   scheduleDate,
@@ -130,7 +131,21 @@ export function MultipleKanbanBoard({
           return;
         }
 
-        const taskDate = new Date(updatedTask.scheduleDate);
+        const taskDate = tasksHelper.date.parse(updatedTask.scheduleDate);
+        if (!taskDate) {
+          try {
+            setBoardsWithTasks(await fetchBoards());
+          } catch (error) {
+            console.error(
+              "Failed to refresh tasks after schedule update:",
+              error,
+            );
+          }
+          if (selectedTask?.id === updatedTask.id) {
+            setSelectedTask(updatedTask);
+          }
+          return;
+        }
         taskDate.setHours(0, 0, 0, 0);
         const currentDate = new Date(scheduleDate);
         currentDate.setHours(0, 0, 0, 0);

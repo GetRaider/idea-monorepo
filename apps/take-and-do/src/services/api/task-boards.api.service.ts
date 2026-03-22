@@ -63,8 +63,8 @@ function normalizeTaskBoard(board: TaskBoard): TaskBoard {
 function normalizeTask(task: Task): Task {
   return {
     ...task,
-    dueDate: task.dueDate ? new Date(task.dueDate) : undefined,
-    scheduleDate: task.scheduleDate ? new Date(task.scheduleDate) : undefined,
+    dueDate: tasksHelper.date.parse(task.dueDate),
+    scheduleDate: tasksHelper.date.parse(task.scheduleDate),
     priority: tasksHelper.priority.format(task.priority),
     subtasks: (task.subtasks ?? []).map(normalizeTask),
   };

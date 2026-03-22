@@ -190,8 +190,8 @@ export function TaskMetadata({
   const handleDueDateBlur = () => {
     setIsEditingDueDate(false);
     if (dueDateValue) {
-      const newDate = new Date(dueDateValue);
-      if (!isNaN(newDate.getTime())) {
+      const newDate = tasksHelper.date.parseCalendarDay(dueDateValue);
+      if (newDate) {
         updateTask({ dueDate: newDate });
       }
     } else {
@@ -207,23 +207,12 @@ export function TaskMetadata({
   const handleScheduleDateBlur = () => {
     setIsEditingScheduleDate(false);
     if (scheduleDateValue) {
-      // Parse YYYY-MM-DD as local date, not UTC
-      const dateParts = scheduleDateValue.split("-");
-      if (dateParts.length === 3) {
-        const year = parseInt(dateParts[0], 10);
-        const month = parseInt(dateParts[1], 10) - 1; // Month is 0-indexed
-        const day = parseInt(dateParts[2], 10);
-        const newDate = new Date(year, month, day);
-        if (!isNaN(newDate.getTime())) {
-          updateTask({
-            scheduleDate: newDate,
-          });
-        }
+      const newDate = tasksHelper.date.parseCalendarDay(scheduleDateValue);
+      if (newDate) {
+        updateTask({ scheduleDate: newDate });
       }
     } else {
-      updateTask({
-        scheduleDate: undefined,
-      });
+      updateTask({ scheduleDate: undefined });
     }
   };
   const handleEstimationClick = () => {
@@ -629,8 +618,8 @@ function diffTaskMetadataForPending(
     updates.dueDate = updated.dueDate;
   }
 
-  const initialScheduleDate = getTimestampForCompare(initial.scheduleDate);
-  const updatedScheduleDate = getTimestampForCompare(updated.scheduleDate);
+  const initialScheduleDate = tasksHelper.date.getTime(initial.scheduleDate);
+  const updatedScheduleDate = tasksHelper.date.getTime(updated.scheduleDate);
   if (initialScheduleDate !== updatedScheduleDate) {
     updates.scheduleDate = updated.scheduleDate;
   }

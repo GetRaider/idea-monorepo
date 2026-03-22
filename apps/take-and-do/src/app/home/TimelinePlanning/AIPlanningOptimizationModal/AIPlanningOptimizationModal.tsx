@@ -107,12 +107,11 @@ export function AIPlanningOptimizationDialog({
     setError(null);
 
     try {
-      const updates = exploration.recommendations
-        .filter((rec) => rec.suggestedSchedule !== null)
-        .map((rec) => ({
-          taskId: rec.taskId,
-          scheduleDate: new Date(rec.suggestedSchedule as string),
-        }));
+      const updates = exploration.recommendations.flatMap((rec) => {
+        const scheduleDate = tasksHelper.date.parse(rec.suggestedSchedule);
+        if (!scheduleDate) return [];
+        return [{ taskId: rec.taskId, scheduleDate }];
+      });
 
       const results = await Promise.allSettled(
         updates.map((update) =>

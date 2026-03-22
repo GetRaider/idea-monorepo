@@ -36,9 +36,23 @@ export const emptyTaskColumns: Record<TaskStatus, Task[]> = {
 };
 
 export function toTaskStatus(status: unknown): TaskStatus {
-  return Object.values(TaskStatus).includes(status as TaskStatus)
-    ? (status as TaskStatus)
-    : TaskStatus.TODO;
+  if (typeof status !== "string") return TaskStatus.TODO;
+  for (const value of Object.values(TaskStatus)) {
+    if (status === value) return value;
+  }
+  return TaskStatus.TODO;
+}
+
+export function toTaskPriority(priority: unknown): TaskPriority {
+  if (priority === TaskPriority.LOW || priority === "low")
+    return TaskPriority.LOW;
+  if (priority === TaskPriority.MEDIUM || priority === "medium")
+    return TaskPriority.MEDIUM;
+  if (priority === TaskPriority.HIGH || priority === "high")
+    return TaskPriority.HIGH;
+  if (priority === TaskPriority.CRITICAL || priority === "critical")
+    return TaskPriority.CRITICAL;
+  return TaskPriority.MEDIUM;
 }
 
 export function createEmptyStatusBuckets(): Record<TaskStatus, Task[]> {

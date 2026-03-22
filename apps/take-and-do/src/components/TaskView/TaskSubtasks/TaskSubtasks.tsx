@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { tasksHelper } from "@/helpers/task.helper";
+
 import { Task, TaskPriority, TaskStatus } from "../../Boards/KanbanBoard/types";
 import { apiServices } from "@/services/api";
 import { StatusIcon } from "../../Boards/KanbanBoard/Column/Column.styles";
@@ -18,7 +20,6 @@ import {
   SubtaskInput,
   EmptySubtasksMessage,
 } from "./TaskSubtasks.styles";
-import { tasksHelper } from "@/helpers/task.helper";
 import {
   ChevronDownIcon,
   ChevronRightIcon,
@@ -68,14 +69,7 @@ export function TaskSubtasks({
         subtasks: [],
       };
 
-      // TODO: Kill this shit
-      const existingSubtasks = (task.subtasks || []).map((st) => ({
-        ...st,
-        dueDate:
-          st.dueDate instanceof Date ? st.dueDate.toISOString() : st.dueDate,
-      }));
-
-      const updatedSubtasks = [...existingSubtasks, newSubtask];
+      const updatedSubtasks = [...(task.subtasks || []), newSubtask];
       const updatedTask = await apiServices.tasks.update(task.id, {
         subtasks: updatedSubtasks as Task[],
       });

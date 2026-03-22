@@ -7,9 +7,11 @@ import {
   Task,
   TaskPriority,
   TaskStatus,
+  TaskUpdate,
 } from "@/components/Boards/KanbanBoard/types";
 import { generateId } from "../utils";
 import { getTaskBoardById } from "../taskBoard/taskBoard.queries";
+import { tasksHelper } from "@/helpers/task.helper";
 
 // Helper functions
 function deriveTaskKeyPrefix(taskKey?: string | null): string {
@@ -125,12 +127,10 @@ async function convertTaskRowToTask(
     status: taskRow.status as TaskStatus,
     priority: taskRow.priority as TaskPriority,
     labels: taskLabelNames.length > 0 ? taskLabelNames : undefined,
-    dueDate: taskRow.dueDate ? new Date(taskRow.dueDate) : undefined,
+    dueDate: tasksHelper.date.parse(taskRow.dueDate),
     estimation: taskRow.estimation || undefined,
     subtasks: subtasks.length > 0 ? subtasks : undefined,
-    scheduleDate: taskRow.scheduleDate
-      ? new Date(taskRow.scheduleDate)
-      : undefined,
+    scheduleDate: tasksHelper.date.parse(taskRow.scheduleDate),
   };
 }
 
@@ -560,7 +560,7 @@ export async function createTask(taskData: Omit<Task, "id">): Promise<Task> {
 
 export async function updateTask(
   taskId: string,
-  updates: Partial<Task>,
+  updates: TaskUpdate,
 ): Promise<Task | null> {
   // Check if task exists
   const existingTaskRows = await db
@@ -802,8 +802,8 @@ export async function getTaskStatistics(
   const tasksWithDueDate = allTasks.filter((t) => t.dueDate !== null);
   const overdueTasks = tasksWithDueDate.filter((t) => {
     if (t.status === "Done") return false;
-    const dueDate = new Date(t.dueDate!);
-    return dueDate < now;
+    const dueDate = tasksHelper.date.parse(t.dueDate);
+    return dueDate !== undefined && dueDate < now;
   });
 
   const overdueRate =

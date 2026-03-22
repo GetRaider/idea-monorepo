@@ -12,8 +12,9 @@ export function tasksIntoStatusColumns(
 ): Record<TaskStatus, Task[]> {
   const buckets = createEmptyStatusBuckets();
   for (const task of tasks) {
-    if (task.dueDate) {
-      task.dueDate = new Date(task.dueDate);
+    const due = tasksHelper.date.parse(task.dueDate);
+    if (due) {
+      task.dueDate = due;
     }
     task.status = toTaskStatus(task.status);
     task.priority = tasksHelper.priority.format(task.priority);

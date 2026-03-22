@@ -31,6 +31,7 @@ DO NOT GIVE ME HIGH LEVEL STUFF, IF I ASK FOR FIX OR EXPLANATION, I WANT ACTUAL 
 - Don't write obvious inline comments
 - Prioritize clean, efficient, maintainable code
 - Don't over-engineer or add features beyond what's asked
+- Use full, descriptive variable names—no abbreviations or shortened names; same in loops (`task` not `t`, `index` not `i`, `user` not `u`). Exception only for established conventions (e.g. `x`/`y` coordinates)
 
 # Monorepo Context
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getTaskById, updateTask, deleteTask } from "@/lib/db/queries";
 import { Task } from "@/components/Boards/KanbanBoard/types";
+import { tasksHelper } from "@/helpers/task.helper";
 
 // Serialized task type for JSON response
 interface SerializedTask {
@@ -29,10 +30,10 @@ function serializeTask(task: Task): SerializedTask {
     status: task.status,
     priority: task.priority,
     labels: task.labels || [],
-    dueDate: task.dueDate?.toISOString(),
+    dueDate: tasksHelper.date.toISOString(task.dueDate),
     estimation: task.estimation,
     subtasks: (task.subtasks || []).map((subtask) => serializeTask(subtask)),
-    scheduleDate: task.scheduleDate?.toISOString(),
+    scheduleDate: tasksHelper.date.toISOString(task.scheduleDate),
   };
 }
 
@@ -64,40 +65,7 @@ export async function PATCH(
 ) {
   try {
     const { id: taskId } = await params;
-    const updates = await request.json();
-
-    // Process fields only if explicitly included in updates
-    const updateData = { ...updates };
-    if ("dueDate" in updates) {
-      updateData.dueDate = updates.dueDate
-        ? new Date(updates.dueDate)
-        : undefined;
-    }
-    if ("scheduleDate" in updates) {
-      updateData.scheduleDate = updates.scheduleDate
-        ? new Date(updates.scheduleDate)
-        : undefined;
-    }
-    if ("estimation" in updates) {
-      // null means "clear", 0 is valid, undefined means "not set"
-      updateData.estimation =
-        updates.estimation === null ? undefined : updates.estimation;
-    }
-    // Process subtask dates if subtasks are being updated
-    if (updates.subtasks && Array.isArray(updates.subtasks)) {
-      updateData.subtasks = updates.subtasks.map(
-        (subtask: Record<string, unknown>) => ({
-          ...subtask,
-          dueDate: subtask.dueDate
-            ? new Date(subtask.dueDate as string)
-            : undefined,
-          scheduleDate: subtask.scheduleDate
-            ? new Date(subtask.scheduleDate as string)
-            : undefined,
-        }),
-      );
-    }
-
+    const updateData = tasksHelper.fromJson.patch(await request.json());
     const updatedTask = await updateTask(taskId, updateData);
 
     if (!updatedTask) {

@@ -12,13 +12,10 @@ import {
   ClockNavIcon,
   DotsVerticalIcon,
   PlusIcon,
-  SearchIcon,
 } from "@/components/Icons";
 import { Dropdown } from "@/components/Dropdown";
 import {
   TasksSidebarContainer,
-  Search,
-  SearchInput,
   NavItem,
   WorkspaceContainer,
   SideBarSectionHeader,
@@ -39,7 +36,7 @@ import {
   FolderEditWrap,
   FolderEditInput,
   RootBoardsDropZone,
-} from "./TasksSidebar.styles";
+} from "./TasksSidebar.ui";
 
 const DRAG_BOARD_KEY = "application/x-task-board-id";
 const ROOT_DROP_ID = "__root__";
@@ -48,7 +45,7 @@ import { Folder, TaskBoard } from "@/types/workspace";
 import { toast } from "sonner";
 import { apiServices } from "@/services/api";
 import { ConfirmDialog } from "@/components/Dialogs";
-import { LoadingContainer, Spinner } from "@/app/home/page.styles";
+import { Spinner } from "@/components/Spinner/Spinner";
 import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -316,8 +313,8 @@ export function TasksSidebar({
     return (
       <WorkspaceItem key={taskBoard.id}>
         <BoardRow
-          $active={isMenuOpen}
-          $selected={isSelected}
+          isActive={isMenuOpen}
+          isSelected={isSelected}
           data-selected={isSelected || undefined}
           draggable
           onDragStart={(e) => handleBoardDragStart(e, taskBoard.id)}
@@ -411,17 +408,18 @@ export function TasksSidebar({
 
   return (
     <>
-      <TasksSidebarContainer $isOpen={isOpen}>
-        <Search>
+      <TasksSidebarContainer isOpen={isOpen}>
+        {/* TODO: Implement search and uncomment this */}
+        {/* <Search>
           <SearchIcon size={16} />
           <SearchInput type="text" placeholder="Search..." />
-        </Search>
+        </Search> */}
 
         <WorkspaceContainer>
           <SideBarSectionHeader>Schedules</SideBarSectionHeader>
 
           <NavItem
-            $active={activeView === "today"}
+            isActive={activeView === "today"}
             onClick={() => activeView !== "today" && handleViewChange("today")}
           >
             <ClockNavIcon size={20} />
@@ -429,7 +427,7 @@ export function TasksSidebar({
           </NavItem>
 
           <NavItem
-            $active={activeView === "tomorrow"}
+            isActive={activeView === "tomorrow"}
             onClick={() =>
               activeView !== "tomorrow" && handleViewChange("tomorrow")
             }
@@ -439,7 +437,7 @@ export function TasksSidebar({
           </NavItem>
         </WorkspaceContainer>
 
-        <WorkspaceContainer $grow>
+        <WorkspaceContainer grow>
           <SideBarSectionHeader>
             <span>Workspaces</span>
             <AddButton
@@ -451,12 +449,10 @@ export function TasksSidebar({
           </SideBarSectionHeader>
 
           {isFoldersLoading || isBoardsLoading ? (
-            <LoadingContainer>
-              <Spinner />
-            </LoadingContainer>
+            <Spinner className="min-h-[280px] flex-1" />
           ) : (
             <WorkspaceList
-              $isDragOver={dragOverTarget === ROOT_DROP_ID}
+              isDragOver={dragOverTarget === ROOT_DROP_ID}
               onDragOver={(e) => {
                 e.preventDefault();
                 e.dataTransfer.dropEffect = "move";
@@ -471,7 +467,7 @@ export function TasksSidebar({
               {folders.map((folder) => (
                 <WorkspaceItem key={folder.id}>
                   <FolderDropTarget
-                    $isDragOver={dragOverTarget === folder.id}
+                    isDragOver={dragOverTarget === folder.id}
                     onDragOver={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
@@ -487,7 +483,7 @@ export function TasksSidebar({
                       handleDropOn(folder.id)(e);
                     }}
                   >
-                    <FolderRow $active={openMenuFolderId === folder.id}>
+                    <FolderRow isActive={openMenuFolderId === folder.id}>
                       {editingFolderId === folder.id ? (
                         <FolderEditWrap onClick={(e) => e.stopPropagation()}>
                           <EmojiPickerField
@@ -546,7 +542,7 @@ export function TasksSidebar({
                           }}
                         >
                           <FolderChevron
-                            $expanded={expandedFolder === folder.id}
+                            isExpanded={expandedFolder === folder.id}
                             aria-hidden
                           >
                             <ChevronRightIcon size={14} />

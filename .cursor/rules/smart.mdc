@@ -51,9 +51,10 @@ Import shared packages via `@repo/api`, `@repo/ui`, etc.
 # General
 
 - Place all interfaces, types, and enums at the end of each file
+- **React / TS module order:** Start with the primary exported component or function (the file’s main entry). Put supporting components and other `function` declarations **below** that main export, still above types. If a helper grows large, split it into a sibling file (e.g. `ComponentName.ui.tsx` in the same folder) or a dedicated module—same pattern as existing `*.ui.tsx` usage.
 - Never prefix interfaces or types with 'I'
 - Put a blank line between external imports and internal ones
-- Each folder that needs exports should have an `intex.ts` file gathering all imports/exports for that folder
+- Each folder that needs exports should have an `index.ts` file gathering all imports/exports for that folder
 - If a callback passed into a function has only one statement, omit the curly braces
 
 # FE

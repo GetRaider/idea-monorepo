@@ -2,12 +2,11 @@
 
 import { useState, type ReactNode } from "react";
 import {
-  Toolbar as ToolbarStyled,
+  Toolbar as ToolbarBar,
   WorkspacePath,
   BoardTitleEmoji,
   WorkspacePathLeading,
   Actions,
-  SettingsButton,
   PopoverContainer,
   Popover,
   Row,
@@ -15,7 +14,7 @@ import {
   SegmentBtn,
   Divider,
   Footer,
-} from "../KanbanBoard.styles";
+} from "../KanbanBoard.ui";
 import { CreateTaskButton } from "./CreateTaskButton";
 
 interface ToolbarProps {
@@ -32,11 +31,11 @@ export function Toolbar({
   onCreateTask,
   onCreateTaskWithAI,
 }: ToolbarProps) {
-  const [open, setOpen] = useState(false);
+  const [open] = useState(false);
   const [viewMode, setViewMode] = useState<"list" | "board">("board");
 
   return (
-    <ToolbarStyled>
+    <ToolbarBar>
       <WorkspacePath>
         {workspaceEmoji != null && workspaceEmoji !== "" ? (
           <WorkspacePathLeading aria-hidden>
@@ -58,7 +57,7 @@ export function Toolbar({
           {/* TODO: Enable board settings once buttons are working */}
           {/* <SettingsButton
             title="Board settings"
-            onClick={() => setOpen((s) => !s)}
+            onClick={() => setOpen((previous) => !previous)}
           >
             <Image
               src="/board-preference.svg"
@@ -67,19 +66,19 @@ export function Toolbar({
               height={20}
             />
           </SettingsButton> */}
-          {open && (
+          {open ? (
             <Popover>
               <Row>
                 <Segmented>
                   <SegmentBtn
-                    $active={viewMode === "list"}
+                    isActive={viewMode === "list"}
                     onClick={() => setViewMode("list")}
                   >
                     <span>≡</span>
                     <span>List</span>
                   </SegmentBtn>
                   <SegmentBtn
-                    $active={viewMode === "board"}
+                    isActive={viewMode === "board"}
                     onClick={() => setViewMode("board")}
                   >
                     <span
@@ -114,9 +113,9 @@ export function Toolbar({
                 </button>
               </Footer>
             </Popover>
-          )}
+          ) : null}
         </PopoverContainer>
       </Actions>
-    </ToolbarStyled>
+    </ToolbarBar>
   );
 }

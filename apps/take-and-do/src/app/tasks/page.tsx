@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { apiServices } from "@/services/api";
 import {
   LoadingContainer,
-  Spinner,
-} from "@/components/Boards/KanbanBoard/KanbanBoard.styles";
+  KanbanSpinner,
+} from "@/components/Boards/KanbanBoard/KanbanBoard.ui";
 import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
 
 export default function TasksPage() {
@@ -30,7 +30,7 @@ export default function TasksPage() {
 
   return (
     <LoadingContainer>
-      <Spinner />
+      <KanbanSpinner />
     </LoadingContainer>
   );
 }

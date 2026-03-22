@@ -16,7 +16,7 @@ import {
   DropIndicatorBetween,
   DropIndicatorEnd,
   TaskWrapper,
-} from "./Column.styles";
+} from "./Column.ui";
 import { TaskCard } from "../TaskCard/TaskCard";
 import { columnContentMinHeightForExtraSlot } from "./columnLayout.constants";
 import { tasksHelper } from "@/helpers/task.helper";
@@ -261,10 +261,10 @@ export const Column = ({
     };
   }, []);
   return (
-    <ColumnStyles $bodyScrolls={bodyScrolls}>
+    <ColumnStyles bodyScrolls={bodyScrolls}>
       <ColumnHeader>
         <ColumnTitle>
-          <StatusIcon $status={status}>
+          <StatusIcon status={status}>
             {tasksHelper.status.getIcon(status)}
           </StatusIcon>
           <span>{status}</span>
@@ -275,10 +275,10 @@ export const Column = ({
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        $isDragOver={isDragOver}
-        $isEmpty={tasks.length === 0}
-        $bodyScrolls={bodyScrolls}
-        $contentMinHeightPx={contentMinHeightPx}
+        isDragOver={isDragOver}
+        isEmpty={tasks.length === 0}
+        bodyScrolls={bodyScrolls}
+        contentMinHeightPx={contentMinHeightPx}
       >
         {/* Placeholder at the top when dragging over empty column or before first task */}
         {isDragging && tasks.length === 0 && isDragOver && (
@@ -287,7 +287,7 @@ export const Column = ({
 
         {/* Empty column placeholder - only show when dragging */}
         {tasks.length === 0 && isDragging && (
-          <EmptyColumnPlaceholder $isDragOver={isDragOver} />
+          <EmptyColumnPlaceholder isDragOver={isDragOver} />
         )}
 
         {/* Indicator at the top when inserting as first item */}
@@ -307,7 +307,7 @@ export const Column = ({
             <TaskWrapper
               data-task-index={index}
               onDragOver={handleTaskDragOver}
-              $isDropped={droppedTaskId === task.id}
+              isDropped={droppedTaskId === task.id}
             >
               <TaskCard task={task} onTaskClick={onTaskClick} />
               {/* Don't show indicator below task - we show it after all tasks instead */}

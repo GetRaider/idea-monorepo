@@ -7,8 +7,8 @@ import { Task } from "@/components/Boards/KanbanBoard/types";
 import { EmptyState } from "@/components/EmptyState";
 import { apiServices } from "@/services/api";
 import { ScheduleType, tasksHelper } from "@/helpers/task.helper";
-import { AIPlanningOptimizationDialog } from "./AIPlanningOptimizationModal/AIPlanningOptimizationModal";
-import { OptimizeButton } from "./AIPlanningOptimizationModal/AIPlanningOptimizationModal.styles";
+import { AIPlanningOptimizationDialog } from "./AIPlanningOptimizationDialog/AIPlanningOptimizationDialog";
+import { OptimizeButton } from "./AIPlanningOptimizationDialog/AIPlanningOptimizationDialog.ui";
 import {
   Section,
   SectionHeader,
@@ -30,10 +30,11 @@ import {
   StatusText,
   ViewAllLink,
   ScheduleSelectContainer,
-} from "./TimelinePlanning.styles";
+} from "./TimelinePlanning.ui";
 import { useRecentTasks } from "@/hooks/useRecentTasks";
 import { useCustomDateTasks } from "@/hooks/useCustomDate";
-import { LoadingContainer, Spinner } from "../page.styles";
+import { SpinnerRing } from "@/components/Spinner/Spinner";
+import { LoadingStackContainer } from "@/components/LoadingStack/LoadingStack";
 import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
 import { Dropdown } from "@/components/Dropdown";
 import { toast } from "sonner";
@@ -51,7 +52,8 @@ export function TimelinePlanning({
   const { customDateTasks, isLoadingCustomDate, setSchedule, schedule } =
     useCustomDateTasks(customDate);
   const { recentTasks, isLoadingRecent } = useRecentTasks();
-  const [isOptimizationModalOpen, setIsOptimizationModalOpen] = useState(false);
+  const [isOptimizationDialogOpen, setIsOptimizationDialogOpen] =
+    useState(false);
   const router = useRouter();
 
   const currentTasks = tasksHelper.schedule.sortTasksByStatus(
@@ -64,8 +66,8 @@ export function TimelinePlanning({
   const firstFiveTasks = currentTasks.slice(0, 5);
   const isLoading = schedule === "new" ? isLoadingRecent : isLoadingCustomDate;
 
-  const handleOpenOptimizationModal = async () => {
-    setIsOptimizationModalOpen(true);
+  const handleOpenOptimizationDialog = async () => {
+    setIsOptimizationDialogOpen(true);
   };
 
   const handleTaskClick = async (task: Task) => {
@@ -113,15 +115,15 @@ export function TimelinePlanning({
             value={schedule}
             onChange={(value) => setSchedule(value as ScheduleType)}
           />
-          <OptimizeButton onClick={handleOpenOptimizationModal}>
+          <OptimizeButton onClick={handleOpenOptimizationDialog}>
             ✨ Explore AI Optimization
           </OptimizeButton>
         </ScheduleSelectContainer>
       </SectionHeader>
       {isLoading ? (
-        <LoadingContainer>
-          <Spinner />
-        </LoadingContainer>
+        <LoadingStackContainer>
+          <SpinnerRing />
+        </LoadingStackContainer>
       ) : firstFiveTasks.length > 0 ? (
         <TaskList>
           <TaskListHeader>
@@ -157,10 +159,10 @@ export function TimelinePlanning({
                   : "—"}
               </TaskCellMuted>
               <StatusContainer>
-                <StatusIcon $status={task.status}>
+                <StatusIcon status={task.status}>
                   {tasksHelper.status.getIcon(task.status)}
                 </StatusIcon>
-                <StatusText $status={task.status}>{task.status}</StatusText>
+                <StatusText status={task.status}>{task.status}</StatusText>
               </StatusContainer>
             </TaskItem>
           ))}
@@ -173,9 +175,9 @@ export function TimelinePlanning({
       )}
       <ViewAllLink href="/tasks">View all tasks →</ViewAllLink>
 
-      {isOptimizationModalOpen && (
+      {isOptimizationDialogOpen && (
         <AIPlanningOptimizationDialog
-          onClose={() => setIsOptimizationModalOpen(false)}
+          onClose={() => setIsOptimizationDialogOpen(false)}
         />
       )}
     </Section>

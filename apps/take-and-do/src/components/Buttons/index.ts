@@ -1,1 +1,1 @@
-export { Button as SecondaryButton, CloseButton } from "./Button.styles";
+export { Button as SecondaryButton, CloseButton } from "./Button";

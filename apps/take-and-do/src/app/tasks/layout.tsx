@@ -4,8 +4,8 @@ import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Sidebar } from "@/components/Sidebar/Sidebar";
 import { TasksSidebar } from "@/components/TasksSidebar/TasksSidebar";
-import { CreateWorkspaceDialog } from "@/components/TasksSidebar/Workspaces/CreateWorkspace/CreateWorkspaceModal";
-import { PageContainer, Main } from "../page.styles";
+import { CreateWorkspaceDialog } from "@/components/TasksSidebar/Workspaces/CreateWorkspace/CreateWorkspaceDialog";
+import { PageContainer, TasksLayoutMain as Main } from "../shell.ui";
 import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
 import { waiterHelper } from "@/helpers/waiter.helper";
 import { useWorkspaces } from "@/hooks/useWorkspaces";
@@ -30,7 +30,7 @@ export default function TasksLayout({
   } = useWorkspaces();
 
   const [isNavSidebarOpen, setIsNavSidebarOpen] = useState(true);
-  const [isWorkspaceCreateModalOpen, setIsWorkspaceCreateModalOpen] =
+  const [isWorkspaceCreateDialogOpen, setIsWorkspaceCreateDialogOpen] =
     useState(false);
 
   const activeView = tasksUrlHelper.routing.getActiveViewFromPathname(
@@ -71,7 +71,7 @@ export default function TasksLayout({
         });
       }
 
-      setIsWorkspaceCreateModalOpen(false);
+      setIsWorkspaceCreateDialogOpen(false);
     } catch (error) {
       console.error("[TasksLayout] Failed to create folder:", error);
       toast.error("Failed to create folder.");
@@ -99,7 +99,7 @@ export default function TasksLayout({
         return [...prev, resolvedBoard];
       });
 
-      setIsWorkspaceCreateModalOpen(false);
+      setIsWorkspaceCreateDialogOpen(false);
       router.push(tasksUrlHelper.routing.buildBoardUrl(resolvedBoard.name));
       router.refresh();
     } catch (error) {
@@ -125,7 +125,7 @@ export default function TasksLayout({
           isOpen={isNavSidebarOpen}
           activeView={activeView}
           onViewChange={handleViewChange}
-          onCreateTaskBoard={() => setIsWorkspaceCreateModalOpen(true)}
+          onCreateTaskBoard={() => setIsWorkspaceCreateDialogOpen(true)}
           folders={folders}
           taskBoards={taskBoards}
           setTaskBoards={setTaskBoards}
@@ -133,11 +133,11 @@ export default function TasksLayout({
           isFoldersLoading={isFoldersLoading}
           isBoardsLoading={isBoardsLoading}
         />
-        <Main $withNavSidebar={isNavSidebarOpen}>{children}</Main>
+        <Main withNavSidebar={isNavSidebarOpen}>{children}</Main>
 
-        {isWorkspaceCreateModalOpen && (
+        {isWorkspaceCreateDialogOpen && (
           <CreateWorkspaceDialog
-            onClose={() => setIsWorkspaceCreateModalOpen(false)}
+            onClose={() => setIsWorkspaceCreateDialogOpen(false)}
             onCreateFolder={handleCreateFolder}
             onCreateBoard={handleCreateTaskBoard}
             taskBoards={taskBoards}

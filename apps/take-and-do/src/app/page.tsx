@@ -1,15 +1,21 @@
 "use client";
 
-import { Button, Container, Content, Subtitle, Title } from "./page.styles";
+import {
+  GetStartedLink,
+  LandingContent,
+  LandingPageRoot,
+  LandingSubtitle,
+  LandingTitle,
+} from "./shell.ui";
 
 export default function App() {
   return (
-    <Container>
-      <Content>
-        <Title>Take & Do</Title>
-        <Subtitle>As simple as possible</Subtitle>
-        <Button href="/home">Get Started</Button>
-      </Content>
-    </Container>
+    <LandingPageRoot>
+      <LandingContent>
+        <LandingTitle>Take & Do</LandingTitle>
+        <LandingSubtitle>As simple as possible</LandingSubtitle>
+        <GetStartedLink href="/home">Get Started</GetStartedLink>
+      </LandingContent>
+    </LandingPageRoot>
   );
 }

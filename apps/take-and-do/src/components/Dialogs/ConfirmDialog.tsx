@@ -1,12 +1,12 @@
 "use client";
 
-import { Dialog } from "./Dialog";
 import {
-  ConfirmBody,
   ConfirmActions,
+  ConfirmBody,
   ConfirmCancelBtn,
   ConfirmDangerBtn,
-} from "./Dialog.styles";
+  Dialog,
+} from "./Dialog";
 
 interface ConfirmDialogProps {
   title: string;

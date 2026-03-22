@@ -9,8 +9,11 @@ import {
   TaskLabel,
 } from "@/components/SelectableList";
 import { Task } from "@/components/Boards/KanbanBoard/types";
-
-import { LoadingContainer, Spinner, LoadingState } from "./SelectList.styles";
+import { SpinnerRing } from "@/components/Spinner/Spinner";
+import {
+  LoadingStackCaption,
+  LoadingStackContainer,
+} from "@/components/LoadingStack/LoadingStack";
 
 export function SelectList({
   tasks,
@@ -45,10 +48,10 @@ export function SelectList({
       </TaskSelectionHeader>
       <TaskSelectionSection>
         {isLoading ? (
-          <LoadingContainer>
-            <Spinner />
-            <LoadingState>{loadingLabel}</LoadingState>
-          </LoadingContainer>
+          <LoadingStackContainer>
+            <SpinnerRing />
+            <LoadingStackCaption>{loadingLabel}</LoadingStackCaption>
+          </LoadingStackContainer>
         ) : (
           tasks.map((task) => (
             <TaskLabel key={task.id}>

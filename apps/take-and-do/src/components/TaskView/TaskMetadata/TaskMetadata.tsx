@@ -1,38 +1,380 @@
+"use client";
+
+import {
+  useState,
+  useRef,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  type ButtonHTMLAttributes,
+  type ComponentProps,
+  type HTMLAttributes,
+  type InputHTMLAttributes,
+} from "react";
 import { tasksHelper } from "@/helpers/task.helper";
 import { CalendarIcon, ClockIcon, DotsVerticalIcon } from "@/components/Icons";
 import { Dropdown } from "@/components/Dropdown";
 import { ConfirmDialog } from "@/components/Dialogs";
-import {
-  MetadataInput,
-  MetadataItem,
-  MetadataContainer,
-  MetadataIcon,
-  EstimationInput,
-  EstimationInputGroup,
-  EstimationLabel,
-  LabelSelectorContainer,
-  LabelDropdownItem,
-  LabelDropdown,
-  LabelDropdownInput,
-  LabelDropdownRow,
-  LabelDropdownRowToggle,
-  LabelDropdownRowLabelText,
-  LabelRowActions,
-  LabelDropdownEditInput,
-  Tag,
-  TagText,
-  TagDot,
-  AddLabelTag,
-  CreateLabelSpan,
-} from "./TaskMetadata.styles";
+import { Input } from "@/components/Input";
 import { Task } from "../../Boards/KanbanBoard/types";
-import { useState, useRef, useEffect, useLayoutEffect, useMemo } from "react";
 import { apiServices } from "@/services/api";
 import { getLabelAccent } from "@/helpers/label-color.helper";
 import { toast } from "sonner";
 
 const LABEL_MENU_WIDTH = 200;
 const LABEL_MENU_EDGE = 10;
+
+function joinClassNames(
+  ...parts: Array<string | undefined | false | null>
+): string {
+  return parts.filter(Boolean).join(" ");
+}
+
+function MetadataContainer({
+  className,
+  ...props
+}: HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div
+      className={joinClassNames(
+        "flex w-full min-w-0 shrink-0 flex-row flex-wrap items-center gap-x-3 gap-y-2 px-6 py-3 max-[600px]:gap-2 max-[600px]:px-4",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+function MetadataItem({
+  className,
+  type = "button",
+  ...props
+}: ButtonHTMLAttributes<HTMLButtonElement>) {
+  return (
+    <button
+      type={type}
+      className={joinClassNames(
+        "flex cursor-pointer items-center gap-1.5 rounded-md border border-transparent bg-transparent px-2 py-1 text-sm text-[#888] transition-all duration-200 hover:border-input-border hover:bg-[#2a2a2a]",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+type MetadataInputProps = ComponentProps<typeof Input> & { width?: string };
+
+function MetadataInput({
+  className,
+  style,
+  width,
+  ...props
+}: MetadataInputProps) {
+  return (
+    <Input
+      style={{ ...style, width: width ?? "80px" }}
+      className={joinClassNames("px-2 py-1", className)}
+      {...props}
+    />
+  );
+}
+
+function MetadataIcon({
+  className,
+  ...props
+}: HTMLAttributes<HTMLSpanElement>) {
+  return (
+    <span
+      className={joinClassNames("flex items-center text-[#888]", className)}
+      {...props}
+    />
+  );
+}
+
+function EstimationInput({
+  className,
+  type = "number",
+  ...props
+}: InputHTMLAttributes<HTMLInputElement>) {
+  return (
+    <input
+      type={type}
+      className={joinClassNames(
+        "w-10 border-0 bg-transparent px-1.5 py-1 text-center text-[13px] text-white outline-none [-moz-appearance:textfield] focus:rounded focus:bg-white/5 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+function EstimationLabel({
+  className,
+  ...props
+}: HTMLAttributes<HTMLSpanElement>) {
+  return (
+    <span
+      className={joinClassNames(
+        "min-w-[10px] text-[11px] text-[#666]",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+type LabelDropdownProps = HTMLAttributes<HTMLDivElement> & { isOpen: boolean };
+
+function LabelDropdown({ className, isOpen, ...props }: LabelDropdownProps) {
+  return (
+    <div
+      className={joinClassNames(
+        "absolute left-[var(--label-menu-left,0px)] right-auto top-full z-[1001] mt-1 box-border max-h-60 w-[200px] max-w-[min(200px,calc(100vw-48px))] overflow-y-auto rounded-lg border border-input-border bg-input-bg shadow-[0_4px_12px_rgba(0,0,0,0.3)]",
+        isOpen ? "block" : "hidden",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+type LabelDropdownRowProps = HTMLAttributes<HTMLDivElement> & {
+  activeMenu?: boolean;
+};
+
+function LabelDropdownRow({
+  className,
+  activeMenu,
+  ...props
+}: LabelDropdownRowProps) {
+  return (
+    <div
+      className={joinClassNames(
+        "group flex items-center justify-between gap-2 pl-3 [&+&]:border-t [&+&]:border-input-border",
+        activeMenu ? "bg-white/[0.04]" : "bg-transparent",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+type LabelDropdownRowToggleProps = ButtonHTMLAttributes<HTMLButtonElement> & {
+  onTask?: boolean;
+};
+
+function LabelDropdownRowToggle({
+  className,
+  type = "button",
+  onTask,
+  ...props
+}: LabelDropdownRowToggleProps) {
+  return (
+    <button
+      type={type}
+      className={joinClassNames(
+        "flex min-w-0 flex-1 cursor-pointer items-center gap-2 border-0 bg-transparent py-2.5 pl-0 pr-2 text-left text-[13px] transition-colors duration-150 hover:text-white",
+        onTask ? "text-gray-200" : "text-[#aaa]",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+function LabelDropdownRowLabelText({
+  className,
+  ...props
+}: HTMLAttributes<HTMLSpanElement>) {
+  return (
+    <span
+      className={joinClassNames(
+        "min-w-0 overflow-hidden text-ellipsis whitespace-nowrap",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+function LabelRowActions({
+  className,
+  ...props
+}: HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div
+      className={joinClassNames(
+        "inline-flex shrink-0 items-center justify-center py-0 pl-1 pr-2 text-[#888] opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-data-[menu-open=true]:opacity-100 [&_[data-label-actions-trigger]]:inline-flex [&_[data-label-actions-trigger]]:items-center [&_[data-label-actions-trigger]]:justify-center [&_[data-label-actions-trigger]]:rounded [&_[data-label-actions-trigger]]:p-1",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+function LabelDropdownEditInput({
+  className,
+  ...props
+}: ComponentProps<typeof Input>) {
+  return (
+    <Input
+      className={joinClassNames(
+        "my-1.5 mr-2 flex-1 px-2.5 py-2 text-[13px]",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+type LabelDropdownItemProps = ButtonHTMLAttributes<HTMLButtonElement> & {
+  isSelected?: boolean;
+};
+
+function LabelDropdownItem({
+  className,
+  type = "button",
+  isSelected,
+  ...props
+}: LabelDropdownItemProps) {
+  return (
+    <button
+      type={type}
+      className={joinClassNames(
+        "flex w-full cursor-pointer items-center gap-2 border-0 px-3 py-2.5 text-left text-[13px] text-white transition-all duration-200 first:rounded-t-lg last:rounded-b-lg hover:bg-[#3a3a3a]",
+        isSelected ? "bg-[#3a3a3a]" : "bg-transparent",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+function LabelDropdownInput({
+  className,
+  ...props
+}: ComponentProps<typeof Input>) {
+  return (
+    <Input
+      className={joinClassNames(
+        "w-full border-0 border-b border-input-border bg-transparent px-3 py-2.5 text-[13px] text-white outline-none placeholder:text-[#666]",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+type TagProps = ButtonHTMLAttributes<HTMLButtonElement> & {
+  tintBg?: string;
+  tintHoverBg?: string;
+  tintBorder?: string;
+};
+
+function Tag({
+  className,
+  type = "button",
+  style,
+  tintBg,
+  tintHoverBg,
+  tintBorder,
+  onMouseEnter,
+  onMouseLeave,
+  ...props
+}: TagProps) {
+  const defaultBg = tintBg ?? "rgba(102, 126, 234, 0.1)";
+  return (
+    <button
+      type={type}
+      style={{
+        ...style,
+        background: defaultBg,
+      }}
+      className={joinClassNames(
+        "flex min-w-0 max-w-[min(220px,100%)] cursor-pointer items-center gap-1.5 rounded-md border border-transparent px-2.5 py-1 text-xs font-medium text-[#888] transition-all duration-200 hover:border-[rgba(102,126,234,0.3)]",
+        className,
+      )}
+      onMouseEnter={(event) => {
+        onMouseEnter?.(event);
+        if (tintHoverBg) {
+          event.currentTarget.style.background = tintHoverBg;
+        } else {
+          event.currentTarget.style.background = "rgba(102, 126, 234, 0.2)";
+        }
+        if (tintBorder) {
+          event.currentTarget.style.borderColor = tintBorder;
+        }
+      }}
+      onMouseLeave={(event) => {
+        onMouseLeave?.(event);
+        event.currentTarget.style.background = defaultBg;
+        event.currentTarget.style.borderColor = "transparent";
+      }}
+      {...props}
+    />
+  );
+}
+
+function TagText({ className, ...props }: HTMLAttributes<HTMLSpanElement>) {
+  return (
+    <span
+      className={joinClassNames(
+        "min-w-0 overflow-hidden text-ellipsis whitespace-nowrap",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+type TagDotProps = HTMLAttributes<HTMLSpanElement> & { color?: string };
+
+function TagDot({ className, style, color, ...props }: TagDotProps) {
+  return (
+    <span
+      style={{ ...style, background: color ?? "#667eea" }}
+      className={joinClassNames("h-1.5 w-1.5 shrink-0 rounded-full", className)}
+      {...props}
+    />
+  );
+}
+
+function AddLabelTag({
+  className,
+  ...props
+}: ButtonHTMLAttributes<HTMLButtonElement> & TagProps) {
+  return (
+    <Tag
+      tintBg="transparent"
+      tintHoverBg="#2a2a2a"
+      tintBorder="#4a4a4a"
+      className={joinClassNames(
+        "border border-dashed border-input-border text-[#666]",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+type CreateLabelSpanProps = HTMLAttributes<HTMLSpanElement> & {
+  accentColor?: string;
+};
+
+function CreateLabelSpan({
+  className,
+  style,
+  accentColor,
+  ...props
+}: CreateLabelSpanProps) {
+  return (
+    <span
+      style={{ ...style, color: accentColor ?? "#667eea" }}
+      className={className}
+      {...props}
+    />
+  );
+}
 
 export function TaskMetadata({
   task,
@@ -53,7 +395,6 @@ export function TaskMetadata({
   const updateTask = (updates: Partial<Task>) => {
     emitTaskUpdate({ ...task, ...updates } as Task);
   };
-  // Metadata editing states
   const [isEditingDueDate, setIsEditingDueDate] = useState(false);
   const [dueDateValue, setDueDateValue] = useState("");
   const [isEditingScheduleDate, setIsEditingScheduleDate] = useState(false);
@@ -62,7 +403,6 @@ export function TaskMetadata({
   const [estimationDays, setEstimationDays] = useState(0);
   const [estimationHours, setEstimationHours] = useState(0);
   const [estimationMinutes, setEstimationMinutes] = useState(0);
-  // Label selector states
   const [isLabelDropdownOpen, setIsLabelDropdownOpen] = useState(false);
   const [availableLabels, setAvailableLabels] = useState<string[]>([]);
   const [labelSearchValue, setLabelSearchValue] = useState("");
@@ -80,13 +420,12 @@ export function TaskMetadata({
   const estimationGroupRef = useRef<HTMLDivElement>(null);
 
   const filteredCatalogLabels = useMemo(() => {
-    const q = labelSearchValue.toLowerCase();
+    const query = labelSearchValue.toLowerCase();
     return [...availableLabels]
-      .filter((label) => label.toLowerCase().includes(q))
+      .filter((label) => label.toLowerCase().includes(query))
       .sort((a, b) => a.localeCompare(b));
   }, [availableLabels, labelSearchValue]);
 
-  // Set data
   useEffect(() => {
     if (task?.estimation) {
       const parsed = tasksHelper.estimation.parse(task.estimation);
@@ -131,19 +470,22 @@ export function TaskMetadata({
     if (!wrap) return;
 
     const run = () => {
-      const el = labelDropdownRef.current;
-      if (!el) return;
-      const shell = el.closest(
+      const element = labelDropdownRef.current;
+      if (!element) return;
+      const shell = element.closest(
         "[data-task-view-container]",
       ) as HTMLElement | null;
-      const tr = el.getBoundingClientRect();
+      const tr = element.getBoundingClientRect();
       const sr = shell?.getBoundingClientRect();
       const lo = sr ? sr.left + LABEL_MENU_EDGE : LABEL_MENU_EDGE;
       const hi = sr
         ? sr.right - LABEL_MENU_EDGE - LABEL_MENU_WIDTH
         : window.innerWidth - LABEL_MENU_EDGE - LABEL_MENU_WIDTH;
       const desiredLeft = Math.max(lo, Math.min(tr.left, Math.max(lo, hi)));
-      el.style.setProperty("--label-menu-left", `${desiredLeft - tr.left}px`);
+      element.style.setProperty(
+        "--label-menu-left",
+        `${desiredLeft - tr.left}px`,
+      );
     };
 
     run();
@@ -228,17 +570,14 @@ export function TaskMetadata({
     updateTask({ estimation: totalHours > 0 ? totalHours : undefined });
   };
   const handleEstimationBlur = (e: React.FocusEvent) => {
-    // Check if the new focus target is still within the estimation group
     const relatedTarget = e.relatedTarget as HTMLElement;
     if (
       estimationGroupRef.current &&
       relatedTarget &&
       estimationGroupRef.current.contains(relatedTarget)
     ) {
-      // Focus is moving within the group, don't save yet
       return;
     }
-    // Focus is leaving the group, save
     handleEstimationSave();
   };
   const handleLabelDropdownToggle = () => {
@@ -335,7 +674,6 @@ export function TaskMetadata({
 
   return (
     <MetadataContainer>
-      {/* Schedule Date */}
       {isEditingScheduleDate ? (
         <MetadataInput
           type="date"
@@ -346,7 +684,7 @@ export function TaskMetadata({
             e.key === "Enter" && e.currentTarget.blur()
           }
           autoFocus
-          $width="130px"
+          width="130px"
         />
       ) : (
         <MetadataItem
@@ -364,7 +702,6 @@ export function TaskMetadata({
         </MetadataItem>
       )}
 
-      {/* Due Date */}
       {isEditingDueDate ? (
         <MetadataInput
           type="date"
@@ -375,7 +712,7 @@ export function TaskMetadata({
             e.key === "Enter" && e.currentTarget.blur()
           }
           autoFocus
-          $width="130px"
+          width="130px"
         />
       ) : (
         <MetadataItem
@@ -393,9 +730,11 @@ export function TaskMetadata({
         </MetadataItem>
       )}
 
-      {/* Estimation */}
       {isEditingEstimation ? (
-        <EstimationInputGroup ref={estimationGroupRef}>
+        <div
+          ref={estimationGroupRef}
+          className="flex shrink-0 items-center gap-0.5 rounded-md border border-input-border bg-input-bg px-2 py-1 focus-within:border-accent-primary"
+        >
           <EstimationInput
             type="number"
             value={estimationDays || ""}
@@ -431,7 +770,7 @@ export function TaskMetadata({
             max="59"
           />
           <EstimationLabel>m</EstimationLabel>
-        </EstimationInputGroup>
+        </div>
       ) : (
         <MetadataItem
           onClick={handleEstimationClick}
@@ -453,23 +792,23 @@ export function TaskMetadata({
         return (
           <Tag
             key={label}
-            $tintBg={accent.tintBg}
-            $tintHoverBg={accent.tintHoverBg}
-            $tintBorder={accent.tintBorder}
+            tintBg={accent.tintBg}
+            tintHoverBg={accent.tintHoverBg}
+            tintBorder={accent.tintBorder}
             onClick={() => handleRemoveLabel(label)}
             title="Click to remove"
           >
-            <TagDot $color={accent.dot} />
+            <TagDot color={accent.dot} />
             <TagText>{label}</TagText>
           </Tag>
         );
       })}
 
-      <LabelSelectorContainer ref={labelDropdownRef}>
+      <div ref={labelDropdownRef} className="relative shrink-0">
         <AddLabelTag onClick={handleLabelDropdownToggle} title="Add label">
           + Label
         </AddLabelTag>
-        <LabelDropdown $isOpen={isLabelDropdownOpen}>
+        <LabelDropdown isOpen={isLabelDropdownOpen}>
           <LabelDropdownInput
             type="text"
             value={labelSearchValue}
@@ -497,7 +836,7 @@ export function TaskMetadata({
             return (
               <LabelDropdownRow
                 key={label}
-                $activeMenu={isMenuOpen}
+                activeMenu={isMenuOpen}
                 data-menu-open={isMenuOpen ? "true" : undefined}
               >
                 {isEditingRow ? (
@@ -534,11 +873,11 @@ export function TaskMetadata({
                   <>
                     <LabelDropdownRowToggle
                       type="button"
-                      $onTask={onTask}
+                      onTask={onTask}
                       onClick={() => handleToggleLabelOnTask(label)}
                       title={onTask ? "Remove from task" : "Add to task"}
                     >
-                      <TagDot $color={accent.dot} />
+                      <TagDot color={accent.dot} />
                       <LabelDropdownRowLabelText>
                         {label}
                       </LabelDropdownRowLabelText>
@@ -573,7 +912,7 @@ export function TaskMetadata({
             ) && (
               <LabelDropdownItem onClick={handleCreateAndSelectLabel}>
                 <CreateLabelSpan
-                  $accentColor={getLabelAccent(labelSearchValue.trim()).dot}
+                  accentColor={getLabelAccent(labelSearchValue.trim()).dot}
                 >
                   +
                 </CreateLabelSpan>
@@ -581,7 +920,7 @@ export function TaskMetadata({
               </LabelDropdownItem>
             )}
         </LabelDropdown>
-      </LabelSelectorContainer>
+      </div>
 
       {labelPendingDelete && (
         <ConfirmDialog

@@ -7,7 +7,7 @@ interface UseTaskBoardStateReturn {
   setSelectedTask: (task: Task | null) => void;
   setParentTask: (task: Task | null) => void;
   handleTaskClick: (task: Task) => void;
-  handleCloseModal: () => void;
+  handleCloseDialog: () => void;
   handleSubtaskClick: (subtask: Task) => void;
 }
 
@@ -20,7 +20,7 @@ export function useTaskBoardState(): UseTaskBoardStateReturn {
     setParentTask(null);
   }, []);
 
-  const handleCloseModal = useCallback(() => {
+  const handleCloseDialog = useCallback(() => {
     setSelectedTask(null);
     setParentTask(null);
   }, []);
@@ -39,7 +39,7 @@ export function useTaskBoardState(): UseTaskBoardStateReturn {
     setSelectedTask,
     setParentTask,
     handleTaskClick,
-    handleCloseModal,
+    handleCloseDialog,
     handleSubtaskClick,
   };
 }

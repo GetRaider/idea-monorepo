@@ -4,8 +4,10 @@ import { use } from "react";
 import { notFound } from "next/navigation";
 
 import { SingleKanbanBoard } from "@/components/Boards/KanbanBoard/SingleKanbanBoard";
-import { BoardLoadingWrapper, BoardLoadingLabel } from "./page.styles";
-import { Spinner } from "@/components/Boards/KanbanBoard/KanbanBoard.styles";
+import {
+  LoadingContainer,
+  KanbanSpinner,
+} from "@/components/Boards/KanbanBoard/KanbanBoard.ui";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useBoardTaskUrlSync } from "@/hooks/useKanbanTaskUrlSync";
 import { useWorkspaceInitialLoadReady } from "@/hooks/useWorkspaceInitialLoadReady";
@@ -25,10 +27,10 @@ export default function BoardPage({ params }: BoardPageProps) {
 
   if (!isBoardReady) {
     return (
-      <BoardLoadingWrapper>
-        <Spinner />
-        <BoardLoadingLabel>Loading board...</BoardLoadingLabel>
-      </BoardLoadingWrapper>
+      <LoadingContainer className="flex flex-col gap-3">
+        <KanbanSpinner />
+        <span className="text-sm text-[#888]">Loading board...</span>
+      </LoadingContainer>
     );
   }
 
@@ -36,7 +38,7 @@ export default function BoardPage({ params }: BoardPageProps) {
 
   if (!currentBoard) {
     return (
-      <div style={{ padding: "40px", color: "#888" }}>
+      <div className="p-10 text-[#888]">
         Board &quot;{boardName}&quot; not found.
       </div>
     );

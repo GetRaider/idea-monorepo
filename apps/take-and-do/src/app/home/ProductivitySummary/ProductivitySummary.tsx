@@ -19,7 +19,7 @@ import {
   CardContent,
   CardList,
   EmptyState,
-} from "./ProductivitySummary.styles";
+} from "./ProductivitySummary.ui";
 import { ChevronDownIcon } from "@/components/Icons";
 import type {
   AnalyticsData,
@@ -72,7 +72,7 @@ export function ProductivitySummary({
             <GenerateButton
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
               onMouseEnter={() => setIsDropdownOpen(true)}
-              $disabled={isGenerating}
+              inactive={isGenerating}
               disabled={isGenerating}
             >
               {isGenerating ? "Generating..." : "Generate"}
@@ -89,7 +89,7 @@ export function ProductivitySummary({
                 <DropdownItem onClick={() => handleGenerate(false)}>
                   Basic Summary
                 </DropdownItem>
-                <DropdownItem $hasBorder onClick={() => handleGenerate(true)}>
+                <DropdownItem hasBorder onClick={() => handleGenerate(true)}>
                   AI Summary
                 </DropdownItem>
               </DropdownMenu>
@@ -119,7 +119,7 @@ export function ProductivitySummary({
 
           {analytics.risks.length > 0 && (
             <AICard>
-              <CardTitle $color="#f59e0b">Risks</CardTitle>
+              <CardTitle accentColor="#f59e0b">Risks</CardTitle>
               <CardList>
                 {analytics.risks.map((risk, idx) => (
                   <li key={idx}>{risk}</li>
@@ -129,7 +129,7 @@ export function ProductivitySummary({
           )}
 
           <AICard>
-            <CardTitle $color="#10b981">Recommendations</CardTitle>
+            <CardTitle accentColor="#10b981">Recommendations</CardTitle>
             <CardList>
               {analytics.recommendations.map((rec, idx) => (
                 <li key={idx}>{rec}</li>

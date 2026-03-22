@@ -1,18 +1,28 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { TaskBoard } from "@/types/workspace";
-import { apiServices } from "@/services/api";
+
 import { Dialog } from "@/components/Dialogs";
 import {
-  FormGroup,
-  Label,
-  Select,
-  ButtonGroup,
-  Button,
-} from "./SelectBoardModal.ui";
+  DialogFormActions,
+  DialogFormButton,
+  DialogFormGroup,
+  DialogFormLabel,
+} from "@/components/Dialogs/DialogForm";
+import { TaskBoard } from "@/types/workspace";
+import { apiServices } from "@/services/api";
+import { cn } from "@/lib/utils";
+import type { UiProps } from "@/lib/ui-props";
 
-export function SelectBoardModal({ onClose, onSelect }: SelectBoardModalProps) {
+const FormGroup = DialogFormGroup;
+const Label = DialogFormLabel;
+const ButtonGroup = DialogFormActions;
+const Button = DialogFormButton;
+
+export function SelectBoardDialog({
+  onClose,
+  onSelect,
+}: SelectBoardDialogProps) {
   const [boards, setBoards] = useState<TaskBoard[]>([]);
   const [selectedBoardId, setSelectedBoardId] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -76,7 +86,7 @@ export function SelectBoardModal({ onClose, onSelect }: SelectBoardModalProps) {
           </Button>
           <Button
             type="submit"
-            $primary
+            primary
             disabled={!selectedBoardId || isLoading || boards.length === 0}
           >
             Save
@@ -87,7 +97,20 @@ export function SelectBoardModal({ onClose, onSelect }: SelectBoardModalProps) {
   );
 }
 
-interface SelectBoardModalProps {
+function Select({ className, ref, ...props }: UiProps<"select">) {
+  return (
+    <select
+      ref={ref}
+      className={cn(
+        "w-full cursor-pointer rounded-lg border border-input-border bg-input-bg px-3 py-2.5 text-sm text-white outline-none transition-all duration-200 focus:border-[#7255c1] focus:bg-[#252525] [&_option]:bg-input-bg [&_option]:text-white",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+interface SelectBoardDialogProps {
   onClose: () => void;
   onSelect: (boardId: string) => void;
 }

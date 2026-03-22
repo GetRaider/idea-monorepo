@@ -38,13 +38,13 @@ export function Sidebar({ onNavigationChange }: SidebarProps) {
 
       <Nav>
         <NavButton
-          $active={isHomeActive}
+          isActive={isHomeActive}
           onClick={() => handleNavClick("home", "/home")}
         >
           <HomeIcon width={24} height={24} />
         </NavButton>
         <NavButton
-          $active={isTasksActive}
+          isActive={isTasksActive}
           onClick={() => handleNavClick("tasks", "/tasks")}
         >
           <Image width={24} height={24} src="/tasks.svg" alt="Tasks" />

@@ -6,7 +6,7 @@ import {
   BoardContainer,
   Board,
   LoadingContainer,
-  Spinner,
+  KanbanSpinner,
   EmptyStateWrapper,
 } from "./KanbanBoard.ui";
 import { Toolbar } from "./shared/Toolbar";
@@ -18,7 +18,7 @@ import {
   createNewTaskTemplate,
 } from "./shared/taskComposeHelpers";
 import { useKanbanTaskHandlers } from "../../../hooks/useKanbanTaskHandlers";
-import { useBoardUrlTaskModalSync } from "@/hooks/useBoardUrlTaskModalSync";
+import { useBoardUrlTaskDialogSync } from "@/hooks/useBoardUrlTaskDialogSync";
 import { TaskView } from "../../TaskView/TaskView";
 import {
   removeTaskFromColumns,
@@ -27,7 +27,7 @@ import {
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
 import { EmptyState } from "../../EmptyState";
-import { AIComposeModal } from "./shared/AIComposeModal";
+import { AIComposeDialog } from "./shared/AIComposeDialog";
 import { apiServices } from "@/services/api";
 
 interface SingleKanbanBoardProps {
@@ -57,7 +57,7 @@ export function SingleKanbanBoard({
   const [tasksByStatus, setTasksByStatus] =
     useState<Record<TaskStatus, Task[]>>(emptyTaskColumns);
   const [isLoading, setIsLoading] = useState(true);
-  const [isAIComposeModalOpen, setIsAIComposeModalOpen] = useState(false);
+  const [isAIComposeDialogOpen, setIsAIComposeDialogOpen] = useState(false);
   const fetchSeqRef = useRef(0);
   const isMountedRef = useRef(true);
 
@@ -67,11 +67,11 @@ export function SingleKanbanBoard({
     setSelectedTask,
     setParentTask,
     handleTaskClick,
-    handleCloseModal,
+    handleCloseDialog,
     handleSubtaskClick,
   } = useKanbanTaskHandlers({ onTaskOpen, onTaskClose, onSubtaskOpen });
 
-  const { handleCloseBoardModal } = useBoardUrlTaskModalSync({
+  const { handleCloseBoardDialog } = useBoardUrlTaskDialogSync({
     boardName,
     tasksByStatus,
     isLoading,
@@ -79,7 +79,7 @@ export function SingleKanbanBoard({
     parentTask,
     setSelectedTask,
     setParentTask,
-    handleCloseModal,
+    handleCloseDialog,
     onTaskOpen,
   });
 
@@ -186,7 +186,7 @@ export function SingleKanbanBoard({
   }, [boardId, setSelectedTask]);
 
   const handleCreateTaskWithAI = useCallback(() => {
-    setIsAIComposeModalOpen(true);
+    setIsAIComposeDialogOpen(true);
   }, []);
 
   const handleAICompose = useCallback(
@@ -237,10 +237,10 @@ export function SingleKanbanBoard({
           onCreateTaskWithAI={handleCreateTaskWithAI}
         />
 
-        <Board $fillHeight>
+        <Board fillHeight>
           {isLoading ? (
             <LoadingContainer>
-              <Spinner />
+              <KanbanSpinner />
             </LoadingContainer>
           ) : (
             <BoardContent
@@ -258,16 +258,16 @@ export function SingleKanbanBoard({
         parentTask={parentTask}
         boardName={boardName}
         boardOptions={boardOptions}
-        onClose={handleCloseBoardModal}
+        onClose={handleCloseBoardDialog}
         onTaskUpdate={handleTaskUpdate}
         onSubtaskClick={handleSubtaskClick}
         onTaskCreated={handleTaskCreated}
         onTaskDelete={handleTaskDelete}
         onNavigateToParentTask={handleNavigateToParentTask}
       />
-      <AIComposeModal
-        isOpen={isAIComposeModalOpen}
-        onClose={() => setIsAIComposeModalOpen(false)}
+      <AIComposeDialog
+        isOpen={isAIComposeDialogOpen}
+        onClose={() => setIsAIComposeDialogOpen(false)}
         onCompose={handleAICompose}
       />
     </>

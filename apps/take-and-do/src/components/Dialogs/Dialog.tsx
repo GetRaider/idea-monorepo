@@ -1,19 +1,13 @@
 "use client";
 
-import type { ComponentProps } from "react";
 import { ReactNode, useEffect, useId, useMemo, useRef } from "react";
 
 import { CloseIcon } from "@/components/Icons";
 import { CloseButton } from "@/components/Buttons";
 import { cn } from "@/lib/utils";
+import type { UiProps } from "@/lib/ui-props";
 
-type DialogOverlayProps = ComponentProps<"div">;
-
-export function DialogOverlay({
-  className,
-  ref,
-  ...props
-}: DialogOverlayProps) {
+export function DialogOverlay({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -26,17 +20,17 @@ export function DialogOverlay({
   );
 }
 
-type DialogContainerProps = ComponentProps<"div"> & {
-  $maxWidth?: number;
-  $minHeight?: number;
+type DialogContainerProps = UiProps<"div"> & {
+  maxWidth?: number;
+  minHeight?: number;
 };
 
 export function DialogContainer({
   className,
   style,
   ref,
-  $maxWidth = 500,
-  $minHeight,
+  maxWidth = 500,
+  minHeight,
   ...props
 }: DialogContainerProps) {
   return (
@@ -44,8 +38,8 @@ export function DialogContainer({
       ref={ref}
       style={{
         ...style,
-        maxWidth: $maxWidth,
-        ...($minHeight !== undefined ? { minHeight: $minHeight } : {}),
+        maxWidth,
+        ...(minHeight !== undefined ? { minHeight } : {}),
       }}
       className={cn(
         "flex max-h-[90vh] w-full flex-col overflow-y-auto rounded-xl border border-border-app bg-card-bg p-6 shadow-dialog max-[600px]:max-h-[95vh] max-[600px]:rounded-lg",
@@ -56,9 +50,7 @@ export function DialogContainer({
   );
 }
 
-type DialogHeaderProps = ComponentProps<"div">;
-
-export function DialogHeader({ className, ref, ...props }: DialogHeaderProps) {
+export function DialogHeader({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -68,9 +60,7 @@ export function DialogHeader({ className, ref, ...props }: DialogHeaderProps) {
   );
 }
 
-type DialogTitleProps = ComponentProps<"h2">;
-
-export function DialogTitle({ className, ref, ...props }: DialogTitleProps) {
+export function DialogTitle({ className, ref, ...props }: UiProps<"h2">) {
   return (
     <h2
       ref={ref}
@@ -80,9 +70,7 @@ export function DialogTitle({ className, ref, ...props }: DialogTitleProps) {
   );
 }
 
-type DialogBodyProps = ComponentProps<"div">;
-
-export function DialogBody({ className, ref, ...props }: DialogBodyProps) {
+export function DialogBody({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -92,13 +80,7 @@ export function DialogBody({ className, ref, ...props }: DialogBodyProps) {
   );
 }
 
-type DialogActionsProps = ComponentProps<"div">;
-
-export function DialogActions({
-  className,
-  ref,
-  ...props
-}: DialogActionsProps) {
+export function DialogActions({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -108,9 +90,7 @@ export function DialogActions({
   );
 }
 
-type ConfirmBodyProps = ComponentProps<"p">;
-
-export function ConfirmBody({ className, ref, ...props }: ConfirmBodyProps) {
+export function ConfirmBody({ className, ref, ...props }: UiProps<"p">) {
   return (
     <p
       ref={ref}
@@ -123,13 +103,7 @@ export function ConfirmBody({ className, ref, ...props }: ConfirmBodyProps) {
   );
 }
 
-type ConfirmActionsProps = ComponentProps<"div">;
-
-export function ConfirmActions({
-  className,
-  ref,
-  ...props
-}: ConfirmActionsProps) {
+export function ConfirmActions({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -139,14 +113,12 @@ export function ConfirmActions({
   );
 }
 
-type ConfirmCancelBtnProps = ComponentProps<"button">;
-
 export function ConfirmCancelBtn({
   className,
   type = "button",
   ref,
   ...props
-}: ConfirmCancelBtnProps) {
+}: UiProps<"button">) {
   return (
     <button
       ref={ref}
@@ -160,14 +132,12 @@ export function ConfirmCancelBtn({
   );
 }
 
-type ConfirmDangerBtnProps = ComponentProps<"button">;
-
 export function ConfirmDangerBtn({
   className,
   type = "button",
   ref,
   ...props
-}: ConfirmDangerBtnProps) {
+}: UiProps<"button">) {
   return (
     <button
       ref={ref}
@@ -287,8 +257,8 @@ export function Dialog({
       <DialogContainer
         ref={dialogRef}
         onClick={(e) => e.stopPropagation()}
-        $maxWidth={maxWidth}
-        $minHeight={minHeight}
+        maxWidth={maxWidth}
+        minHeight={minHeight}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}

@@ -338,7 +338,7 @@ export function TaskView({
             <PriorityIcon onClick={handlePriorityClick}>
               {tasksHelper.priority.getIconLabel(displayTask.priority)}
             </PriorityIcon>
-            <DropdownContainer $isOpen={isPriorityDropdownOpen}>
+            <DropdownContainer isOpen={isPriorityDropdownOpen}>
               {Object.values(TaskPriority).map((priority) => (
                 <DropdownItem
                   key={priority}
@@ -411,7 +411,7 @@ export function TaskView({
             <CreateTaskButton
               onClick={handleCreateTask}
               disabled={!titleValue.trim() || isCreatingTask}
-              $disabled={!titleValue.trim() || isCreatingTask}
+              inactive={!titleValue.trim() || isCreatingTask}
             >
               {isCreatingTask ? "Creating..." : "Create"}
             </CreateTaskButton>
@@ -422,7 +422,7 @@ export function TaskView({
             <TaskSaveButton
               onClick={handleSaveChanges}
               disabled={isSaving || !hasUnsavedChanges}
-              $disabled={isSaving || !hasUnsavedChanges}
+              inactive={isSaving || !hasUnsavedChanges}
             >
               {isSaving ? "Saving..." : "Save"}
             </TaskSaveButton>

@@ -6,14 +6,13 @@ import { apiServices } from "@/services/api";
 import { Task } from "@/components/Boards/KanbanBoard/types";
 import { StatsCards, ProductivityOverview, TimelinePlanning } from ".";
 import type { TaskStats } from ".";
+import { Spinner } from "@/components/Spinner/Spinner";
 import {
   PageContainer,
   HomeMainContent,
   WelcomeSection,
   HomePageTitle,
   HomePageSubtitle,
-  HomeLoadingContainer,
-  HomeSpinner,
 } from "../shell.ui";
 
 function HomePage() {
@@ -57,10 +56,8 @@ function HomePage() {
     return (
       <PageContainer>
         <Sidebar onNavigationChange={handleNavigationToTasksPage} />
-        <HomeMainContent $withNavSidebar={isTasksSidebarOpen}>
-          <HomeLoadingContainer>
-            <HomeSpinner />
-          </HomeLoadingContainer>
+        <HomeMainContent withNavSidebar={isTasksSidebarOpen}>
+          <Spinner className="h-full min-h-[240px] flex-1" />
         </HomeMainContent>
       </PageContainer>
     );
@@ -69,7 +66,7 @@ function HomePage() {
   return (
     <PageContainer>
       <Sidebar onNavigationChange={handleNavigationToTasksPage} />
-      <HomeMainContent $withNavSidebar={isTasksSidebarOpen}>
+      <HomeMainContent withNavSidebar={isTasksSidebarOpen}>
         <WelcomeSection>
           <HomePageTitle>Home</HomePageTitle>
           <HomePageSubtitle>

@@ -8,7 +8,7 @@ import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
 
 import { useTaskUrlPathname } from "./useKanbanTaskUrlSync";
 
-export function useBoardUrlTaskModalSync({
+export function useBoardUrlTaskDialogSync({
   boardName,
   tasksByStatus,
   isLoading,
@@ -16,13 +16,13 @@ export function useBoardUrlTaskModalSync({
   parentTask,
   setSelectedTask,
   setParentTask,
-  handleCloseModal,
+  handleCloseDialog,
   onTaskOpen,
-}: BoardUrlTaskModalSyncParams) {
+}: BoardUrlTaskDialogSyncParams) {
   const pathname = useTaskUrlPathname();
   const suppressOpenForSig = useRef<string | null>(null);
 
-  const handleCloseBoardModal = useCallback(() => {
+  const handleCloseBoardDialog = useCallback(() => {
     const { taskKey, subtaskKey } = tasksUrlHelper.boardRoute.keysFromPathname(
       pathname,
       boardName,
@@ -33,8 +33,8 @@ export function useBoardUrlTaskModalSync({
         subtaskKey,
       );
     }
-    handleCloseModal();
-  }, [pathname, boardName, handleCloseModal]);
+    handleCloseDialog();
+  }, [pathname, boardName, handleCloseDialog]);
 
   useEffect(() => {
     const { taskKey, subtaskKey } = tasksUrlHelper.boardRoute.keysFromPathname(
@@ -83,10 +83,10 @@ export function useBoardUrlTaskModalSync({
     onTaskOpen,
   ]);
 
-  return { handleCloseBoardModal };
+  return { handleCloseBoardDialog };
 }
 
-interface BoardUrlTaskModalSyncParams {
+interface BoardUrlTaskDialogSyncParams {
   boardName: string;
   tasksByStatus: Record<TaskStatus, Task[]>;
   isLoading: boolean;
@@ -94,6 +94,6 @@ interface BoardUrlTaskModalSyncParams {
   parentTask: Task | null;
   setSelectedTask: (task: Task | null) => void;
   setParentTask: (task: Task | null) => void;
-  handleCloseModal: () => void;
+  handleCloseDialog: () => void;
   onTaskOpen?: (task: Task) => void;
 }

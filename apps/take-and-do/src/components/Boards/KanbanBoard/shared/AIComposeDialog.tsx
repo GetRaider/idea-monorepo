@@ -13,7 +13,7 @@ import {
 } from "@/components/Dialogs/Dialog";
 import { StepProgressSegments } from "@/components/StepProgressSegments";
 
-interface AIComposeModalProps {
+interface AIComposeDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onCompose: (text: string) => Promise<void>;
@@ -28,11 +28,11 @@ const STEP_LABELS = [
   "Almost there...",
 ];
 
-export function AIComposeModal({
+export function AIComposeDialog({
   isOpen,
   onClose,
   onCompose,
-}: AIComposeModalProps) {
+}: AIComposeDialogProps) {
   const [text, setText] = useState("");
   const [isComposing, setIsComposing] = useState(false);
   const [progressStep, setProgressStep] = useState(0);
@@ -79,7 +79,7 @@ export function AIComposeModal({
   return (
     <DialogOverlay onClick={handleClose}>
       <DialogContainer
-        $maxWidth={720}
+        maxWidth={720}
         onClick={(event) => event.stopPropagation()}
       >
         <DialogHeader>
@@ -111,7 +111,7 @@ export function AIComposeModal({
                 autoFocus
                 className="mb-5 min-h-[200px] w-full resize-y rounded-lg border border-input-border bg-input-bg p-3 font-inherit text-sm text-white outline-none transition-[border-color] placeholder:text-text-tertiary placeholder:whitespace-pre-line focus:border-accent-primary disabled:cursor-not-allowed disabled:opacity-60"
               />
-              <CharCounter $nearLimit={text.length > 600}>
+              <CharCounter isNearLimit={text.length > 600}>
                 {text.length} / {700}
               </CharCounter>
               <div className="flex justify-end gap-3">

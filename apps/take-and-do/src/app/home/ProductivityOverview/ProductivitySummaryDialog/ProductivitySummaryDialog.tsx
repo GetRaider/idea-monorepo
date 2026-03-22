@@ -2,11 +2,10 @@
 
 import { CloseIcon } from "@/components/Icons";
 import { CloseButton } from "@/components/Buttons";
+import { DialogHeading, DialogScrim } from "@/components/Dialogs";
 import {
-  ModalOverlay,
-  ModalContent,
-  ModalHeader,
-  ModalTitle,
+  DialogContent,
+  DialogHeader,
   AISection,
   AICard,
   CardHeader,
@@ -14,10 +13,10 @@ import {
   AIBadge,
   CardContent,
   CardList,
-} from "./ProductivitySummaryModal.ui";
+} from "./ProductivitySummaryDialog.ui";
 import type { AnalyticsData } from "@/services/api/analytics.api.service";
 
-interface ProductivitySummaryModalProps {
+interface ProductivitySummaryDialogProps {
   analytics: AnalyticsData;
   onClose: () => void;
 }
@@ -25,7 +24,7 @@ interface ProductivitySummaryModalProps {
 export function ProductivitySummaryDialog({
   analytics,
   onClose,
-}: ProductivitySummaryModalProps) {
+}: ProductivitySummaryDialogProps) {
   const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) {
       onClose();
@@ -38,14 +37,14 @@ export function ProductivitySummaryDialog({
     : [];
 
   return (
-    <ModalOverlay onClick={handleOverlayClick}>
-      <ModalContent>
-        <ModalHeader>
-          <ModalTitle>⚡ Productivity Summary</ModalTitle>
+    <DialogScrim onClick={handleOverlayClick}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogHeading>⚡ Productivity Summary</DialogHeading>
           <CloseButton onClick={onClose}>
             <CloseIcon />
           </CloseButton>
-        </ModalHeader>
+        </DialogHeader>
 
         <AISection>
           <AICard>
@@ -66,7 +65,7 @@ export function ProductivitySummaryDialog({
           </AICard>
 
           <AICard>
-            <CardTitle $color="#f59e0b" style={{ marginBottom: "12px" }}>
+            <CardTitle accentColor="#f59e0b" style={{ marginBottom: "12px" }}>
               Risks
             </CardTitle>
             <CardList>
@@ -79,7 +78,7 @@ export function ProductivitySummaryDialog({
           </AICard>
 
           <AICard>
-            <CardTitle $color="#10b981" style={{ marginBottom: "12px" }}>
+            <CardTitle accentColor="#10b981" style={{ marginBottom: "12px" }}>
               Recommendations
             </CardTitle>
             <CardList>
@@ -89,7 +88,7 @@ export function ProductivitySummaryDialog({
             </CardList>
           </AICard>
         </AISection>
-      </ModalContent>
-    </ModalOverlay>
+      </DialogContent>
+    </DialogScrim>
   );
 }

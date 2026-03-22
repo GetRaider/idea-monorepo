@@ -4,7 +4,7 @@ import { TrashIcon, CloseIcon } from "@/components/Icons";
 import { Task, TaskStatus } from "../../Boards/KanbanBoard/types";
 import { CloseButton } from "@/components/Buttons";
 import {
-  ModalHeader,
+  TaskViewDialogHeader,
   HeaderLeft,
   HeaderRight,
   DeleteButton,
@@ -25,7 +25,7 @@ export function TaskViewHeader({
   isCreating = false,
 }: TaskViewHeaderProps) {
   return (
-    <ModalHeader>
+    <TaskViewDialogHeader>
       <HeaderLeft>
         <TaskViewBreadcrumbs
           boardDisplayName={boardDisplayName}
@@ -48,7 +48,7 @@ export function TaskViewHeader({
           <CloseIcon />
         </CloseButton>
       </HeaderRight>
-    </ModalHeader>
+    </TaskViewDialogHeader>
   );
 }
 

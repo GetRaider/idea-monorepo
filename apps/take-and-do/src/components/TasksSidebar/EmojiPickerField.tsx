@@ -28,7 +28,7 @@ export function EmojiPickerField({
     <EmojiPickerHolder>
       <EmojiButton
         type="button"
-        $hasEmoji={emoji !== null}
+        hasEmoji={emoji !== null}
         data-emoji-trigger
         onMouseDown={(e) => e.preventDefault()}
         onClick={(e) => {

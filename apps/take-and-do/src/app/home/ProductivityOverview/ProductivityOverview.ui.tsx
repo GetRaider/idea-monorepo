@@ -1,97 +1,42 @@
 "use client";
 
-import type { ComponentProps } from "react";
-
+import {
+  Section as ProductivitySection,
+  SectionHeader,
+  SectionTitle,
+  Controls,
+  TimeframeSelect,
+} from "../productivity-blocks";
 import { gradientActionButtonClass } from "@/lib/animated-gradient";
 import { cn } from "@/lib/utils";
+import type { UiProps } from "@/lib/ui-props";
 
-type SectionProps = ComponentProps<"div">;
-
-export function Section({ className, ref, ...props }: SectionProps) {
+export function Section({ className, ref, ...props }: UiProps<"div">) {
   return (
-    <div
+    <ProductivitySection
       ref={ref}
-      className={cn(
-        "mb-6 rounded-xl border border-border-app bg-[#1a1a1a] p-6",
-        className,
-      )}
+      withBottomMargin
+      className={className}
       {...props}
     />
   );
 }
 
-type SectionHeaderProps = ComponentProps<"div">;
+export { SectionHeader, SectionTitle, Controls, TimeframeSelect };
 
-export function SectionHeader({
-  className,
-  ref,
-  ...props
-}: SectionHeaderProps) {
-  return (
-    <div
-      ref={ref}
-      className={cn("mb-4 flex items-center justify-between", className)}
-      {...props}
-    />
-  );
-}
-
-type SectionTitleProps = ComponentProps<"h2">;
-
-export function SectionTitle({ className, ref, ...props }: SectionTitleProps) {
-  return (
-    <h2
-      ref={ref}
-      className={cn("m-0 text-xl font-semibold text-white", className)}
-      {...props}
-    />
-  );
-}
-
-type ControlsProps = ComponentProps<"div">;
-
-export function Controls({ className, ref, ...props }: ControlsProps) {
-  return (
-    <div
-      ref={ref}
-      className={cn("flex items-center gap-3", className)}
-      {...props}
-    />
-  );
-}
-
-type TimeframeSelectProps = ComponentProps<"select">;
-
-export function TimeframeSelect({
-  className,
-  ref,
-  ...props
-}: TimeframeSelectProps) {
-  return (
-    <select
-      ref={ref}
-      className={cn(
-        "cursor-pointer rounded-md border border-input-border bg-input-bg px-3 py-1.5 text-sm text-white",
-        className,
-      )}
-      {...props}
-    />
-  );
-}
-
-type GenerateButtonProps = ComponentProps<"button"> & {
-  $disabled?: boolean;
+type GenerateButtonProps = UiProps<"button"> & {
+  inactive?: boolean;
 };
 
 export function GenerateButton({
   className,
   type = "button",
-  $disabled,
+  inactive,
   disabled,
   ref,
   ...props
 }: GenerateButtonProps) {
-  const isDisabled = disabled ?? $disabled;
+  const isDisabled = disabled ?? inactive;
   return (
     <button
       ref={ref}
@@ -109,9 +54,7 @@ export function GenerateButton({
   );
 }
 
-type ChartsGridProps = ComponentProps<"div">;
-
-export function ChartsGrid({ className, ref, ...props }: ChartsGridProps) {
+export function ChartsGrid({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -124,9 +67,7 @@ export function ChartsGrid({ className, ref, ...props }: ChartsGridProps) {
   );
 }
 
-type ChartCardProps = ComponentProps<"div">;
-
-export function ChartCard({ className, ref, ...props }: ChartCardProps) {
+export function ChartCard({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -139,9 +80,7 @@ export function ChartCard({ className, ref, ...props }: ChartCardProps) {
   );
 }
 
-type ChartTitleProps = ComponentProps<"h4">;
-
-export function ChartTitle({ className, ref, ...props }: ChartTitleProps) {
+export function ChartTitle({ className, ref, ...props }: UiProps<"h4">) {
   return (
     <h4
       ref={ref}
@@ -151,13 +90,7 @@ export function ChartTitle({ className, ref, ...props }: ChartTitleProps) {
   );
 }
 
-type MetricsContainerProps = ComponentProps<"div">;
-
-export function MetricsContainer({
-  className,
-  ref,
-  ...props
-}: MetricsContainerProps) {
+export function MetricsContainer({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -167,9 +100,7 @@ export function MetricsContainer({
   );
 }
 
-type MetricRowProps = ComponentProps<"div">;
-
-export function MetricRow({ className, ref, ...props }: MetricRowProps) {
+export function MetricRow({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -179,9 +110,7 @@ export function MetricRow({ className, ref, ...props }: MetricRowProps) {
   );
 }
 
-type MetricLabelProps = ComponentProps<"span">;
-
-export function MetricLabel({ className, ref, ...props }: MetricLabelProps) {
+export function MetricLabel({ className, ref, ...props }: UiProps<"span">) {
   return (
     <span
       ref={ref}
@@ -191,11 +120,11 @@ export function MetricLabel({ className, ref, ...props }: MetricLabelProps) {
   );
 }
 
-type MetricValueProps = ComponentProps<"span"> & { $warning?: boolean };
+type MetricValueProps = UiProps<"span"> & { isWarning?: boolean };
 
 export function MetricValue({
   className,
-  $warning,
+  isWarning,
   ref,
   ...props
 }: MetricValueProps) {
@@ -204,7 +133,7 @@ export function MetricValue({
       ref={ref}
       className={cn(
         "text-sm font-semibold",
-        $warning ? "text-amber-500" : "text-white",
+        isWarning ? "text-amber-500" : "text-white",
         className,
       )}
       {...props}
@@ -212,13 +141,11 @@ export function MetricValue({
   );
 }
 
-type ProgressBarContainerProps = ComponentProps<"div">;
-
 export function ProgressBarContainer({
   className,
   ref,
   ...props
-}: ProgressBarContainerProps) {
+}: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -228,57 +155,26 @@ export function ProgressBarContainer({
   );
 }
 
-type ProgressBarProps = ComponentProps<"div"> & {
-  $progress: number;
-  $warning?: boolean;
+type ProgressBarProps = UiProps<"div"> & {
+  progress: number;
+  isWarning?: boolean;
 };
 
 export function ProgressBar({
   className,
   style,
-  $progress,
-  $warning,
+  progress,
+  isWarning,
   ref,
   ...props
 }: ProgressBarProps) {
   return (
     <div
       ref={ref}
-      style={{ ...style, width: `${$progress}%` }}
+      style={{ ...style, width: `${progress}%` }}
       className={cn(
         "h-full transition-[width] duration-300",
-        $warning ? "bg-amber-500" : "bg-indigo-500",
-        className,
-      )}
-      {...props}
-    />
-  );
-}
-
-type LoadingContainerProps = ComponentProps<"div">;
-
-export function LoadingContainer({
-  className,
-  ref,
-  ...props
-}: LoadingContainerProps) {
-  return (
-    <div
-      ref={ref}
-      className={cn("flex items-center justify-center p-10", className)}
-      {...props}
-    />
-  );
-}
-
-type SpinnerProps = ComponentProps<"div">;
-
-export function Spinner({ className, ref, ...props }: SpinnerProps) {
-  return (
-    <div
-      ref={ref}
-      className={cn(
-        "h-10 w-10 animate-spin rounded-full border-4 border-[#2a2a2a] border-t-indigo-500",
+        isWarning ? "bg-amber-500" : "bg-indigo-500",
         className,
       )}
       {...props}

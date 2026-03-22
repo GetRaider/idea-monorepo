@@ -1,28 +1,10 @@
 "use client";
 
-import type { ComponentProps } from "react";
-
 import { gradientActionButtonClass } from "@/lib/animated-gradient";
 import { cn } from "@/lib/utils";
+import type { UiProps } from "@/lib/ui-props";
 
-type ModalOverlayProps = ComponentProps<"div">;
-
-export function ModalOverlay({ className, ref, ...props }: ModalOverlayProps) {
-  return (
-    <div
-      ref={ref}
-      className={cn(
-        "fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 p-5",
-        className,
-      )}
-      {...props}
-    />
-  );
-}
-
-type ModalContentProps = ComponentProps<"div">;
-
-export function ModalContent({ className, ref, ...props }: ModalContentProps) {
+export function DialogContent({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -35,9 +17,7 @@ export function ModalContent({ className, ref, ...props }: ModalContentProps) {
   );
 }
 
-type ModalHeaderProps = ComponentProps<"div">;
-
-export function ModalHeader({ className, ref, ...props }: ModalHeaderProps) {
+export function DialogHeader({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -47,13 +27,7 @@ export function ModalHeader({ className, ref, ...props }: ModalHeaderProps) {
   );
 }
 
-type HeaderContentProps = ComponentProps<"div">;
-
-export function HeaderContent({
-  className,
-  ref,
-  ...props
-}: HeaderContentProps) {
+export function HeaderContent({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -63,25 +37,7 @@ export function HeaderContent({
   );
 }
 
-type ModalTitleProps = ComponentProps<"h2">;
-
-export function ModalTitle({ className, ref, ...props }: ModalTitleProps) {
-  return (
-    <h2
-      ref={ref}
-      className={cn("m-0 text-2xl font-semibold text-white", className)}
-      {...props}
-    />
-  );
-}
-
-type ModalDescriptionProps = ComponentProps<"p">;
-
-export function ModalDescription({
-  className,
-  ref,
-  ...props
-}: ModalDescriptionProps) {
+export function DialogDescription({ className, ref, ...props }: UiProps<"p">) {
   return (
     <p
       ref={ref}
@@ -91,13 +47,11 @@ export function ModalDescription({
   );
 }
 
-type OptimizationContentProps = ComponentProps<"div">;
-
 export function OptimizationContent({
   className,
   ref,
   ...props
-}: OptimizationContentProps) {
+}: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -107,13 +61,7 @@ export function OptimizationContent({
   );
 }
 
-type SummarySectionProps = ComponentProps<"div">;
-
-export function SummarySection({
-  className,
-  ref,
-  ...props
-}: SummarySectionProps) {
+export function SummarySection({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -123,9 +71,7 @@ export function SummarySection({
   );
 }
 
-type SummaryTextProps = ComponentProps<"p">;
-
-export function SummaryText({ className, ref, ...props }: SummaryTextProps) {
+export function SummaryText({ className, ref, ...props }: UiProps<"p">) {
   return (
     <p
       ref={ref}
@@ -135,9 +81,7 @@ export function SummaryText({ className, ref, ...props }: SummaryTextProps) {
   );
 }
 
-type WorkloadGridProps = ComponentProps<"div">;
-
-export function WorkloadGrid({ className, ref, ...props }: WorkloadGridProps) {
+export function WorkloadGrid({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -150,9 +94,7 @@ export function WorkloadGrid({ className, ref, ...props }: WorkloadGridProps) {
   );
 }
 
-type WorkloadCardProps = ComponentProps<"div">;
-
-export function WorkloadCard({ className, ref, ...props }: WorkloadCardProps) {
+export function WorkloadCard({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -165,13 +107,7 @@ export function WorkloadCard({ className, ref, ...props }: WorkloadCardProps) {
   );
 }
 
-type WorkloadLabelProps = ComponentProps<"div">;
-
-export function WorkloadLabel({
-  className,
-  ref,
-  ...props
-}: WorkloadLabelProps) {
+export function WorkloadLabel({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -181,13 +117,7 @@ export function WorkloadLabel({
   );
 }
 
-type WorkloadValueProps = ComponentProps<"div">;
-
-export function WorkloadValue({
-  className,
-  ref,
-  ...props
-}: WorkloadValueProps) {
+export function WorkloadValue({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -197,13 +127,11 @@ export function WorkloadValue({
   );
 }
 
-type RecommendationsSectionProps = ComponentProps<"div">;
-
 export function RecommendationsSection({
   className,
   ref,
   ...props
-}: RecommendationsSectionProps) {
+}: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -213,9 +141,7 @@ export function RecommendationsSection({
   );
 }
 
-type SectionTitleProps = ComponentProps<"h3">;
-
-export function SectionTitle({ className, ref, ...props }: SectionTitleProps) {
+export function SectionTitle({ className, ref, ...props }: UiProps<"h3">) {
   return (
     <h3
       ref={ref}
@@ -225,13 +151,11 @@ export function SectionTitle({ className, ref, ...props }: SectionTitleProps) {
   );
 }
 
-type RecommendationCardProps = ComponentProps<"div">;
-
 export function RecommendationCard({
   className,
   ref,
   ...props
-}: RecommendationCardProps) {
+}: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -244,9 +168,7 @@ export function RecommendationCard({
   );
 }
 
-type TaskNameProps = ComponentProps<"div">;
-
-export function TaskName({ className, ref, ...props }: TaskNameProps) {
+export function TaskName({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -256,13 +178,7 @@ export function TaskName({ className, ref, ...props }: TaskNameProps) {
   );
 }
 
-type ScheduleChangeProps = ComponentProps<"div">;
-
-export function ScheduleChange({
-  className,
-  ref,
-  ...props
-}: ScheduleChangeProps) {
+export function ScheduleChange({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -275,17 +191,13 @@ export function ScheduleChange({
   );
 }
 
-type ArrowIconProps = ComponentProps<"span">;
-
-export function ArrowIcon({ className, ref, ...props }: ArrowIconProps) {
+export function ArrowIcon({ className, ref, ...props }: UiProps<"span">) {
   return (
     <span ref={ref} className={cn("text-indigo-500", className)} {...props} />
   );
 }
 
-type ReasonTextProps = ComponentProps<"div">;
-
-export function ReasonText({ className, ref, ...props }: ReasonTextProps) {
+export function ReasonText({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -295,15 +207,11 @@ export function ReasonText({ className, ref, ...props }: ReasonTextProps) {
   );
 }
 
-type RisksListProps = ComponentProps<"ul">;
-
-export function RisksList({ className, ref, ...props }: RisksListProps) {
+export function RisksList({ className, ref, ...props }: UiProps<"ul">) {
   return <ul ref={ref} className={cn("m-0 pl-5", className)} {...props} />;
 }
 
-type RiskItemProps = ComponentProps<"li">;
-
-export function RiskItem({ className, ref, ...props }: RiskItemProps) {
+export function RiskItem({ className, ref, ...props }: UiProps<"li">) {
   return (
     <li
       ref={ref}
@@ -316,15 +224,11 @@ export function RiskItem({ className, ref, ...props }: RiskItemProps) {
   );
 }
 
-type InsightsListProps = ComponentProps<"ul">;
-
-export function InsightsList({ className, ref, ...props }: InsightsListProps) {
+export function InsightsList({ className, ref, ...props }: UiProps<"ul">) {
   return <ul ref={ref} className={cn("m-0 pl-5", className)} {...props} />;
 }
 
-type InsightItemProps = ComponentProps<"li">;
-
-export function InsightItem({ className, ref, ...props }: InsightItemProps) {
+export function InsightItem({ className, ref, ...props }: UiProps<"li">) {
   return (
     <li
       ref={ref}
@@ -334,55 +238,7 @@ export function InsightItem({ className, ref, ...props }: InsightItemProps) {
   );
 }
 
-type LoadingContainerProps = ComponentProps<"div">;
-
-export function LoadingContainer({
-  className,
-  ref,
-  ...props
-}: LoadingContainerProps) {
-  return (
-    <div
-      ref={ref}
-      className={cn(
-        "flex flex-col items-center justify-center gap-4 p-10",
-        className,
-      )}
-      {...props}
-    />
-  );
-}
-
-type SpinnerProps = ComponentProps<"div">;
-
-export function Spinner({ className, ref, ...props }: SpinnerProps) {
-  return (
-    <div
-      ref={ref}
-      className={cn(
-        "h-10 w-10 animate-spin rounded-full border-4 border-[#2a2a2a] border-t-indigo-500",
-        className,
-      )}
-      {...props}
-    />
-  );
-}
-
-type LoadingStateProps = ComponentProps<"div">;
-
-export function LoadingState({ className, ref, ...props }: LoadingStateProps) {
-  return (
-    <div
-      ref={ref}
-      className={cn("text-center text-sm text-slate-400", className)}
-      {...props}
-    />
-  );
-}
-
-type ErrorStateProps = ComponentProps<"div">;
-
-export function ErrorState({ className, ref, ...props }: ErrorStateProps) {
+export function ErrorState({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -395,13 +251,7 @@ export function ErrorState({ className, ref, ...props }: ErrorStateProps) {
   );
 }
 
-type ActionsContainerProps = ComponentProps<"div">;
-
-export function ActionsContainer({
-  className,
-  ref,
-  ...props
-}: ActionsContainerProps) {
+export function ActionsContainer({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -417,14 +267,12 @@ export function ActionsContainer({
 const gradientButtonBase =
   "rounded-md border-0 px-5 py-2.5 text-sm font-semibold text-white transition-all disabled:!animate-none disabled:!cursor-not-allowed disabled:!bg-[#7255c1] disabled:!opacity-60 motion-reduce:!animate-none motion-reduce:!bg-[#7255c1]";
 
-type GenerateOptimizationButtonProps = ComponentProps<"button">;
-
 export function GenerateOptimizationButton({
   className,
   type = "button",
   ref,
   ...props
-}: GenerateOptimizationButtonProps) {
+}: UiProps<"button">) {
   return (
     <button
       ref={ref}

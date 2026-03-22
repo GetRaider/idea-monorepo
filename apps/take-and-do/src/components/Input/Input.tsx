@@ -1,17 +1,14 @@
 "use client";
 
-import type { ComponentProps } from "react";
-
 import { cn } from "@/lib/utils";
-
-type InputProps = ComponentProps<"input">;
+import type { UiProps } from "@/lib/ui-props";
 
 export function Input({
   className,
   maxLength = 64,
   ref,
   ...props
-}: InputProps) {
+}: UiProps<"input">) {
   return (
     <input
       ref={ref}

@@ -1,16 +1,13 @@
 "use client";
 
-import type { ComponentProps } from "react";
-
 import { cn } from "@/lib/utils";
-
-type SelectableListTitleProps = ComponentProps<"h3">;
+import type { UiProps } from "@/lib/ui-props";
 
 export function SelectableListTitle({
   className,
   ref,
   ...props
-}: SelectableListTitleProps) {
+}: UiProps<"h3">) {
   return (
     <h3
       ref={ref}
@@ -20,13 +17,11 @@ export function SelectableListTitle({
   );
 }
 
-type TaskSelectionHeaderProps = ComponentProps<"div">;
-
 export function TaskSelectionHeader({
   className,
   ref,
   ...props
-}: TaskSelectionHeaderProps) {
+}: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -36,14 +31,12 @@ export function TaskSelectionHeader({
   );
 }
 
-type SelectAllRowProps = ComponentProps<"button">;
-
 export function SelectAllRow({
   className,
   type = "button",
   ref,
   ...props
-}: SelectAllRowProps) {
+}: UiProps<"button">) {
   return (
     <button
       ref={ref}
@@ -57,13 +50,11 @@ export function SelectAllRow({
   );
 }
 
-type TaskSelectionSectionProps = ComponentProps<"div">;
-
 export function TaskSelectionSection({
   className,
   ref,
   ...props
-}: TaskSelectionSectionProps) {
+}: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -76,14 +67,12 @@ export function TaskSelectionSection({
   );
 }
 
-type TaskCheckboxProps = ComponentProps<"input">;
-
 export function TaskCheckbox({
   className,
   type = "checkbox",
   ref,
   ...props
-}: TaskCheckboxProps) {
+}: UiProps<"input">) {
   return (
     <input
       ref={ref}
@@ -97,9 +86,7 @@ export function TaskCheckbox({
   );
 }
 
-type TaskLabelProps = ComponentProps<"label">;
-
-export function TaskLabel({ className, ref, ...props }: TaskLabelProps) {
+export function TaskLabel({ className, ref, ...props }: UiProps<"label">) {
   return (
     <label
       ref={ref}

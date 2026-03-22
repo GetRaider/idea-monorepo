@@ -71,14 +71,14 @@ export function Toolbar({
               <Row>
                 <Segmented>
                   <SegmentBtn
-                    $active={viewMode === "list"}
+                    isActive={viewMode === "list"}
                     onClick={() => setViewMode("list")}
                   >
                     <span>≡</span>
                     <span>List</span>
                   </SegmentBtn>
                   <SegmentBtn
-                    $active={viewMode === "board"}
+                    isActive={viewMode === "board"}
                     onClick={() => setViewMode("board")}
                   >
                     <span

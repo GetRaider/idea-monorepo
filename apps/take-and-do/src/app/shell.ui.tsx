@@ -4,14 +4,9 @@ import Link from "next/link";
 import type { ComponentProps } from "react";
 
 import { cn } from "@/lib/utils";
+import type { UiProps } from "@/lib/ui-props";
 
-type PageContainerProps = ComponentProps<"div">;
-
-export function PageContainer({
-  className,
-  ref,
-  ...props
-}: PageContainerProps) {
+export function PageContainer({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -24,13 +19,13 @@ export function PageContainer({
   );
 }
 
-type WithNavSidebarProps = ComponentProps<"main"> & {
-  $withNavSidebar: boolean;
+type WithNavSidebarProps = UiProps<"main"> & {
+  withNavSidebar: boolean;
 };
 
 export function TasksLayoutMain({
   className,
-  $withNavSidebar,
+  withNavSidebar,
   ref,
   ...props
 }: WithNavSidebarProps) {
@@ -39,7 +34,7 @@ export function TasksLayoutMain({
       ref={ref}
       className={cn(
         "flex flex-1 flex-col overflow-hidden bg-gradient-to-br from-[#1a1a1a] to-[#3c2856] transition-[margin-left] duration-300 ease-out",
-        $withNavSidebar ? "ml-[280px]" : "ml-[60px]",
+        withNavSidebar ? "ml-[280px]" : "ml-[60px]",
         className,
       )}
       {...props}
@@ -49,7 +44,7 @@ export function TasksLayoutMain({
 
 export function HomeMainContent({
   className,
-  $withNavSidebar,
+  withNavSidebar,
   ref,
   ...props
 }: WithNavSidebarProps) {
@@ -58,7 +53,7 @@ export function HomeMainContent({
       ref={ref}
       className={cn(
         "flex flex-1 flex-col overflow-y-auto bg-gradient-to-br from-[#1a1a1a] to-[#3c2856] p-8 text-white transition-[margin-left] duration-300 ease-out",
-        $withNavSidebar ? "ml-[280px]" : "ml-[60px]",
+        withNavSidebar ? "ml-[280px]" : "ml-[60px]",
         className,
       )}
       {...props}
@@ -66,13 +61,7 @@ export function HomeMainContent({
   );
 }
 
-type LandingPageRootProps = ComponentProps<"div">;
-
-export function LandingPageRoot({
-  className,
-  ref,
-  ...props
-}: LandingPageRootProps) {
+export function LandingPageRoot({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -85,13 +74,7 @@ export function LandingPageRoot({
   );
 }
 
-type LandingContentProps = ComponentProps<"div">;
-
-export function LandingContent({
-  className,
-  ref,
-  ...props
-}: LandingContentProps) {
+export function LandingContent({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -101,9 +84,7 @@ export function LandingContent({
   );
 }
 
-type LandingTitleProps = ComponentProps<"h1">;
-
-export function LandingTitle({ className, ref, ...props }: LandingTitleProps) {
+export function LandingTitle({ className, ref, ...props }: UiProps<"h1">) {
   return (
     <h1
       ref={ref}
@@ -116,13 +97,7 @@ export function LandingTitle({ className, ref, ...props }: LandingTitleProps) {
   );
 }
 
-type LandingSubtitleProps = ComponentProps<"p">;
-
-export function LandingSubtitle({
-  className,
-  ref,
-  ...props
-}: LandingSubtitleProps) {
+export function LandingSubtitle({ className, ref, ...props }: UiProps<"p">) {
   return (
     <p
       ref={ref}
@@ -153,23 +128,11 @@ export function GetStartedLink({
   );
 }
 
-type WelcomeSectionProps = ComponentProps<"div">;
-
-export function WelcomeSection({
-  className,
-  ref,
-  ...props
-}: WelcomeSectionProps) {
+export function WelcomeSection({ className, ref, ...props }: UiProps<"div">) {
   return <div ref={ref} className={cn("mb-8", className)} {...props} />;
 }
 
-type HomePageTitleProps = ComponentProps<"h1">;
-
-export function HomePageTitle({
-  className,
-  ref,
-  ...props
-}: HomePageTitleProps) {
+export function HomePageTitle({ className, ref, ...props }: UiProps<"h1">) {
   return (
     <h1
       ref={ref}
@@ -182,13 +145,7 @@ export function HomePageTitle({
   );
 }
 
-type HomePageSubtitleProps = ComponentProps<"p">;
-
-export function HomePageSubtitle({
-  className,
-  ref,
-  ...props
-}: HomePageSubtitleProps) {
+export function HomePageSubtitle({ className, ref, ...props }: UiProps<"p">) {
   return (
     <p
       ref={ref}
@@ -198,13 +155,11 @@ export function HomePageSubtitle({
   );
 }
 
-type HomeLoadingContainerProps = ComponentProps<"div">;
-
 export function HomeLoadingContainer({
   className,
   ref,
   ...props
-}: HomeLoadingContainerProps) {
+}: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -214,28 +169,7 @@ export function HomeLoadingContainer({
   );
 }
 
-type HomeSpinnerProps = ComponentProps<"div">;
-
-export function HomeSpinner({ className, ref, ...props }: HomeSpinnerProps) {
-  return (
-    <div
-      ref={ref}
-      className={cn(
-        "h-10 w-10 animate-spin rounded-full border-4 border-[#2a2a2a] border-t-indigo-500",
-        className,
-      )}
-      {...props}
-    />
-  );
-}
-
-type TwoColumnGridProps = ComponentProps<"div">;
-
-export function TwoColumnGrid({
-  className,
-  ref,
-  ...props
-}: TwoColumnGridProps) {
+export function TwoColumnGrid({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}

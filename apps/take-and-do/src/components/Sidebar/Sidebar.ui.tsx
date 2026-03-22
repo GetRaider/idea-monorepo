@@ -4,14 +4,13 @@ import Image from "next/image";
 import type { ComponentProps } from "react";
 
 import { cn } from "@/lib/utils";
-
-type SidebarContainerProps = ComponentProps<"aside">;
+import type { UiProps } from "@/lib/ui-props";
 
 export function SidebarContainer({
   className,
   ref,
   ...props
-}: SidebarContainerProps) {
+}: UiProps<"aside">) {
   return (
     <aside
       ref={ref}
@@ -44,9 +43,7 @@ export function Logo({
   );
 }
 
-type NavProps = ComponentProps<"nav">;
-
-export function Nav({ className, ref, ...props }: NavProps) {
+export function Nav({ className, ref, ...props }: UiProps<"nav">) {
   return (
     <nav
       ref={ref}
@@ -56,14 +53,14 @@ export function Nav({ className, ref, ...props }: NavProps) {
   );
 }
 
-type NavButtonProps = ComponentProps<"button"> & {
-  $active?: boolean;
+type NavButtonProps = UiProps<"button"> & {
+  isActive?: boolean;
 };
 
 export function NavButton({
   className,
   type = "button",
-  $active,
+  isActive,
   disabled,
   ref,
   ...props
@@ -78,8 +75,8 @@ export function NavButton({
         disabled
           ? "cursor-not-allowed opacity-30"
           : "cursor-pointer opacity-100",
-        $active ? "bg-[#2a2a2a] text-indigo-500" : "text-[#888]",
-        $active &&
+        isActive ? "bg-[#2a2a2a] text-indigo-500" : "text-[#888]",
+        isActive &&
           "before:absolute before:left-[-8px] before:top-1/2 before:h-5 before:w-[3px] before:-translate-y-1/2 before:rounded-sm before:bg-indigo-500 before:content-['']",
         !disabled && "hover:bg-[#2a2a2a] hover:text-white",
         className,
@@ -89,13 +86,7 @@ export function NavButton({
   );
 }
 
-type BottomActionsProps = ComponentProps<"div">;
-
-export function BottomActions({
-  className,
-  ref,
-  ...props
-}: BottomActionsProps) {
+export function BottomActions({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -105,9 +96,7 @@ export function BottomActions({
   );
 }
 
-type UserAvatarProps = ComponentProps<"div">;
-
-export function UserAvatar({ className, ref, ...props }: UserAvatarProps) {
+export function UserAvatar({ className, ref, ...props }: UiProps<"div">) {
   return <div ref={ref} className={cn("mt-2", className)} {...props} />;
 }
 

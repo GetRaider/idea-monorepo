@@ -1,18 +1,17 @@
 "use client";
 
-import type { ComponentProps } from "react";
-
 import { cn } from "@/lib/utils";
+import type { UiProps } from "@/lib/ui-props";
 
 import { TaskStatus } from "../types";
 
-type ColumnRootProps = ComponentProps<"div"> & {
-  $bodyScrolls?: boolean;
+type ColumnRootProps = UiProps<"div"> & {
+  bodyScrolls?: boolean;
 };
 
 export function Column({
   className,
-  $bodyScrolls = true,
+  bodyScrolls = true,
   ref,
   ...props
 }: ColumnRootProps) {
@@ -21,7 +20,7 @@ export function Column({
       ref={ref}
       className={cn(
         "m-0 flex min-w-[320px] flex-col gap-4",
-        $bodyScrolls ? "min-h-0" : "min-h-auto",
+        bodyScrolls ? "min-h-0" : "min-h-auto",
         className,
       )}
       {...props}
@@ -29,9 +28,7 @@ export function Column({
   );
 }
 
-type ColumnHeaderProps = ComponentProps<"div">;
-
-export function ColumnHeader({ className, ref, ...props }: ColumnHeaderProps) {
+export function ColumnHeader({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -41,9 +38,7 @@ export function ColumnHeader({ className, ref, ...props }: ColumnHeaderProps) {
   );
 }
 
-type ColumnTitleProps = ComponentProps<"div">;
-
-export function ColumnTitle({ className, ref, ...props }: ColumnTitleProps) {
+export function ColumnTitle({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -56,20 +51,20 @@ export function ColumnTitle({ className, ref, ...props }: ColumnTitleProps) {
   );
 }
 
-type StatusIconProps = ComponentProps<"span"> & {
-  $status?: TaskStatus;
+type StatusIconProps = UiProps<"span"> & {
+  status?: TaskStatus;
 };
 
 export function StatusIcon({
   className,
-  $status,
+  status,
   ref,
   ...props
 }: StatusIconProps) {
   const colorClass =
-    $status === TaskStatus.IN_PROGRESS
+    status === TaskStatus.IN_PROGRESS
       ? "text-amber-500"
-      : $status === TaskStatus.DONE
+      : status === TaskStatus.DONE
         ? "text-emerald-500"
         : "text-[#888]";
 
@@ -82,9 +77,7 @@ export function StatusIcon({
   );
 }
 
-type CountProps = ComponentProps<"span">;
-
-export function Count({ className, ref, ...props }: CountProps) {
+export function Count({ className, ref, ...props }: UiProps<"span">) {
   return (
     <span
       ref={ref}
@@ -97,27 +90,27 @@ export function Count({ className, ref, ...props }: CountProps) {
   );
 }
 
-type ColumnContentProps = ComponentProps<"div"> & {
-  $isDragOver?: boolean;
-  $isEmpty?: boolean;
-  $bodyScrolls?: boolean;
-  $contentMinHeightPx?: number;
+type ColumnContentProps = UiProps<"div"> & {
+  isDragOver?: boolean;
+  isEmpty?: boolean;
+  bodyScrolls?: boolean;
+  contentMinHeightPx?: number;
 };
 
 export function ColumnContent({
   className,
   style,
-  $isDragOver,
-  $isEmpty,
-  $bodyScrolls = true,
-  $contentMinHeightPx,
+  isDragOver,
+  isEmpty,
+  bodyScrolls = true,
+  contentMinHeightPx,
   ref,
   ...props
 }: ColumnContentProps) {
   const minHeight =
-    $contentMinHeightPx != null
-      ? `${$contentMinHeightPx}px`
-      : $isEmpty
+    contentMinHeightPx != null
+      ? `${contentMinHeightPx}px`
+      : isEmpty
         ? "100px"
         : undefined;
 
@@ -130,10 +123,10 @@ export function ColumnContent({
       }}
       className={cn(
         "relative flex flex-col gap-3 pr-1 transition-colors duration-200 [&>*]:transition-[transform,opacity,height,margin] [&>*]:duration-300 [&>*]:[transition-timing-function:cubic-bezier(0.4,0,0.2,1)]",
-        $bodyScrolls !== false
+        bodyScrolls !== false
           ? "flex-1 overflow-y-auto"
           : "flex-[0_0_auto] overflow-y-visible",
-        $isDragOver
+        isDragOver
           ? "rounded-lg bg-[rgba(114,85,193,0.15)]"
           : "rounded-none bg-transparent",
         "[&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-sm [&::-webkit-scrollbar-thumb]:bg-[#2a2a2a] hover:[&::-webkit-scrollbar-thumb]:bg-[#3a3a3a]",
@@ -144,13 +137,11 @@ export function ColumnContent({
   );
 }
 
-type EmptyColumnTopIndicatorProps = ComponentProps<"div">;
-
 export function EmptyColumnTopIndicator({
   className,
   ref,
   ...props
-}: EmptyColumnTopIndicatorProps) {
+}: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -163,13 +154,13 @@ export function EmptyColumnTopIndicator({
   );
 }
 
-type EmptyColumnPlaceholderProps = ComponentProps<"div"> & {
-  $isDragOver?: boolean;
+type EmptyColumnPlaceholderProps = UiProps<"div"> & {
+  isDragOver?: boolean;
 };
 
 export function EmptyColumnPlaceholder({
   className,
-  $isDragOver,
+  isDragOver,
   ref,
   ...props
 }: EmptyColumnPlaceholderProps) {
@@ -178,7 +169,7 @@ export function EmptyColumnPlaceholder({
       ref={ref}
       className={cn(
         "flex min-h-[120px] flex-col items-center justify-center gap-3 rounded-xl border p-4 text-sm transition-all duration-200",
-        $isDragOver
+        isDragOver
           ? "border-2 border-dashed border-[#7255c1] text-[#7255c1] opacity-100"
           : "border border-dashed border-[rgba(42,42,42,0.5)] text-[rgba(102,102,102,0.5)] opacity-30",
         className,
@@ -188,13 +179,7 @@ export function EmptyColumnPlaceholder({
   );
 }
 
-type DropIndicatorProps = ComponentProps<"div">;
-
-export function DropIndicator({
-  className,
-  ref,
-  ...props
-}: DropIndicatorProps) {
+export function DropIndicator({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -207,13 +192,11 @@ export function DropIndicator({
   );
 }
 
-type DropIndicatorBetweenProps = ComponentProps<"div">;
-
 export function DropIndicatorBetween({
   className,
   ref,
   ...props
-}: DropIndicatorBetweenProps) {
+}: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -226,13 +209,7 @@ export function DropIndicatorBetween({
   );
 }
 
-type DropIndicatorEndProps = ComponentProps<"div">;
-
-export function DropIndicatorEnd({
-  className,
-  ref,
-  ...props
-}: DropIndicatorEndProps) {
+export function DropIndicatorEnd({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -245,13 +222,13 @@ export function DropIndicatorEnd({
   );
 }
 
-type TaskWrapperProps = ComponentProps<"div"> & {
-  $isDropped?: boolean;
+type TaskWrapperProps = UiProps<"div"> & {
+  isDropped?: boolean;
 };
 
 export function TaskWrapper({
   className,
-  $isDropped,
+  isDropped,
   ref,
   ...props
 }: TaskWrapperProps) {
@@ -260,7 +237,7 @@ export function TaskWrapper({
       ref={ref}
       className={cn(
         "relative will-change-[transform,opacity] transition-[transform,opacity,margin] duration-300 [transition-timing-function:cubic-bezier(0.4,0,0.2,1)]",
-        $isDropped && "animate-task-drop-in",
+        isDropped && "animate-task-drop-in",
         className,
       )}
       {...props}

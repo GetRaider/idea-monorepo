@@ -4,12 +4,13 @@ import type { ComponentProps } from "react";
 
 import { Input } from "@/components/Input";
 import { cn } from "@/lib/utils";
+import type { UiProps } from "@/lib/ui-props";
 
-type AsideOpenProps = ComponentProps<"aside"> & { $isOpen: boolean };
+type AsideOpenProps = UiProps<"aside"> & { isOpen: boolean };
 
 export function TasksSidebarContainer({
   className,
-  $isOpen,
+  isOpen,
   ref,
   ...props
 }: AsideOpenProps) {
@@ -18,7 +19,7 @@ export function TasksSidebarContainer({
       ref={ref}
       className={cn(
         "fixed left-[60px] top-0 z-[90] flex h-screen w-[220px] flex-col gap-6 border-r border-border-app bg-card-bg p-4 transition-transform duration-300 ease-out",
-        $isOpen ? "translate-x-0" : "-translate-x-full",
+        isOpen ? "translate-x-0" : "-translate-x-full",
         className,
       )}
       {...props}
@@ -26,9 +27,7 @@ export function TasksSidebarContainer({
   );
 }
 
-type SearchProps = ComponentProps<"div">;
-
-export function Search({ className, ref, ...props }: SearchProps) {
+export function Search({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -62,14 +61,14 @@ export function SearchInput({
   );
 }
 
-type NavItemProps = ComponentProps<"button"> & {
-  $active?: boolean;
+type NavItemProps = UiProps<"button"> & {
+  isActive?: boolean;
 };
 
 export function NavItem({
   className,
   type = "button",
-  $active,
+  isActive,
   ref,
   ...props
 }: NavItemProps) {
@@ -79,7 +78,7 @@ export function NavItem({
       type={type}
       className={cn(
         "flex w-full items-center gap-3 rounded-lg border-0 px-3 py-2 text-left text-sm transition-all duration-200 hover:bg-[#2a2a2a] hover:text-white",
-        $active
+        isActive
           ? "cursor-default bg-[#2a2a2a] text-white"
           : "cursor-pointer bg-transparent text-[#888]",
         className,
@@ -89,36 +88,30 @@ export function NavItem({
   );
 }
 
-type WorkspaceContainerProps = ComponentProps<"div"> & {
-  $grow?: boolean;
+type WorkspaceContainerProps = UiProps<"div"> & {
+  grow?: boolean;
 };
 
 export function WorkspaceContainer({
   className,
-  $grow,
+  grow,
   ref,
   ...props
 }: WorkspaceContainerProps) {
   return (
     <div
       ref={ref}
-      className={cn(
-        "flex flex-col gap-2",
-        $grow && "min-h-0 flex-1",
-        className,
-      )}
+      className={cn("flex flex-col gap-2", grow && "min-h-0 flex-1", className)}
       {...props}
     />
   );
 }
 
-type SideBarSectionHeaderProps = ComponentProps<"div">;
-
 export function SideBarSectionHeader({
   className,
   ref,
   ...props
-}: SideBarSectionHeaderProps) {
+}: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -131,14 +124,12 @@ export function SideBarSectionHeader({
   );
 }
 
-type AddButtonProps = ComponentProps<"button">;
-
 export function AddButton({
   className,
   type = "button",
   ref,
   ...props
-}: AddButtonProps) {
+}: UiProps<"button">) {
   return (
     <button
       ref={ref}
@@ -152,13 +143,13 @@ export function AddButton({
   );
 }
 
-type WorkspaceListProps = ComponentProps<"div"> & {
-  $isDragOver?: boolean;
+type WorkspaceListProps = UiProps<"div"> & {
+  isDragOver?: boolean;
 };
 
 export function WorkspaceList({
   className,
-  $isDragOver,
+  isDragOver,
   ref,
   ...props
 }: WorkspaceListProps) {
@@ -167,7 +158,7 @@ export function WorkspaceList({
       ref={ref}
       className={cn(
         "flex min-h-[120px] flex-1 flex-col gap-1 rounded-lg border border-dashed py-0.5 transition-[border-color,background] duration-150",
-        $isDragOver
+        isDragOver
           ? "border-[#7255c1] bg-[rgba(114,85,193,0.12)]"
           : "border-transparent bg-transparent",
         className,
@@ -177,26 +168,18 @@ export function WorkspaceList({
   );
 }
 
-type WorkspaceItemProps = ComponentProps<"div">;
-
-export function WorkspaceItem({
-  className,
-  ref,
-  ...props
-}: WorkspaceItemProps) {
+export function WorkspaceItem({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div ref={ref} className={cn("flex flex-col", className)} {...props} />
   );
 }
-
-type WorkspaceToggleProps = ComponentProps<"button">;
 
 export function WorkspaceToggle({
   className,
   type = "button",
   ref,
   ...props
-}: WorkspaceToggleProps) {
+}: UiProps<"button">) {
   return (
     <button
       ref={ref}
@@ -211,14 +194,12 @@ export function WorkspaceToggle({
   );
 }
 
-type BoardToggleProps = ComponentProps<"button">;
-
 export function BoardToggle({
   className,
   type = "button",
   ref,
   ...props
-}: BoardToggleProps) {
+}: UiProps<"button">) {
   return (
     <button
       ref={ref}
@@ -232,13 +213,11 @@ export function BoardToggle({
   );
 }
 
-type WorkspaceRowActionsProps = ComponentProps<"div">;
-
 export function WorkspaceRowActions({
   className,
   ref,
   ...props
-}: WorkspaceRowActionsProps) {
+}: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -252,19 +231,19 @@ export function WorkspaceRowActions({
   );
 }
 
-type BoardRowProps = ComponentProps<"div"> & {
-  $active?: boolean;
-  $selected?: boolean;
+type BoardRowProps = UiProps<"div"> & {
+  isActive?: boolean;
+  isSelected?: boolean;
 };
 
 export function BoardRow({
   className,
-  $active,
-  $selected,
+  isActive,
+  isSelected,
   ref,
   ...props
 }: BoardRowProps) {
-  const highlighted = $active || $selected;
+  const highlighted = isActive || isSelected;
   return (
     <div
       ref={ref}
@@ -282,32 +261,7 @@ export function BoardRow({
   );
 }
 
-type BoardNameInputProps = ComponentProps<typeof Input>;
-
-export function BoardNameInput({
-  className,
-  ref,
-  ...props
-}: BoardNameInputProps) {
-  return (
-    <Input
-      ref={ref}
-      className={cn(
-        "h-auto min-w-0 flex-1 rounded-lg border border-transparent bg-transparent px-3 py-2 text-sm leading-snug focus:border-input-border focus:bg-input-bg",
-        className,
-      )}
-      {...props}
-    />
-  );
-}
-
-type BoardEditWrapProps = ComponentProps<"div">;
-
-export function BoardEditWrap({
-  className,
-  ref,
-  ...props
-}: BoardEditWrapProps) {
+export function BoardEditWrap({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -339,13 +293,11 @@ export function BoardEditInput({
   );
 }
 
-type EmojiPickerHolderProps = ComponentProps<"div">;
-
 export function EmojiPickerHolder({
   className,
   ref,
   ...props
-}: EmojiPickerHolderProps) {
+}: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -355,14 +307,14 @@ export function EmojiPickerHolder({
   );
 }
 
-type EmojiButtonProps = ComponentProps<"button"> & {
-  $hasEmoji?: boolean;
+type EmojiButtonProps = UiProps<"button"> & {
+  hasEmoji?: boolean;
 };
 
 export function EmojiButton({
   className,
   type = "button",
-  $hasEmoji,
+  hasEmoji,
   ref,
   ...props
 }: EmojiButtonProps) {
@@ -372,7 +324,7 @@ export function EmojiButton({
       type={type}
       className={cn(
         "flex h-7 w-7 cursor-pointer items-center justify-center rounded-lg border border-input-border bg-input-bg transition-[background,border-color,color] duration-150 hover:border-[#4a4a4a] hover:bg-[#2f2f2f] hover:text-white",
-        $hasEmoji ? "text-white" : "text-[#888]",
+        hasEmoji ? "text-white" : "text-[#888]",
         className,
       )}
       {...props}
@@ -380,9 +332,7 @@ export function EmojiButton({
   );
 }
 
-type EmojiPreviewProps = ComponentProps<"span">;
-
-export function EmojiPreview({ className, ref, ...props }: EmojiPreviewProps) {
+export function EmojiPreview({ className, ref, ...props }: UiProps<"span">) {
   return (
     <span
       ref={ref}
@@ -395,13 +345,11 @@ export function EmojiPreview({ className, ref, ...props }: EmojiPreviewProps) {
   );
 }
 
-type EmojiPickerPopoverProps = ComponentProps<"div">;
-
 export function EmojiPickerPopover({
   className,
   ref,
   ...props
-}: EmojiPickerPopoverProps) {
+}: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -414,14 +362,12 @@ export function EmojiPickerPopover({
   );
 }
 
-type EmojiClearButtonProps = ComponentProps<"button">;
-
 export function EmojiClearButton({
   className,
   type = "button",
   ref,
   ...props
-}: EmojiClearButtonProps) {
+}: UiProps<"button">) {
   return (
     <button
       ref={ref}
@@ -435,32 +381,13 @@ export function EmojiClearButton({
   );
 }
 
-type ChevronExpandedProps = ComponentProps<"span"> & {
-  $expanded?: boolean;
+type ChevronExpandedProps = UiProps<"span"> & {
+  isExpanded?: boolean;
 };
-
-export function ChevronWrapper({
-  className,
-  $expanded,
-  ref,
-  ...props
-}: ChevronExpandedProps) {
-  return (
-    <span
-      ref={ref}
-      className={cn(
-        "ml-auto inline-flex transition-transform duration-200",
-        $expanded ? "rotate-90" : "rotate-0",
-        className,
-      )}
-      {...props}
-    />
-  );
-}
 
 export function FolderChevron({
   className,
-  $expanded,
+  isExpanded,
   ref,
   ...props
 }: ChevronExpandedProps) {
@@ -469,7 +396,7 @@ export function FolderChevron({
       ref={ref}
       className={cn(
         "inline-flex h-[18px] w-[18px] shrink-0 items-center justify-center text-inherit opacity-70 transition-transform duration-200 ease-out",
-        $expanded ? "rotate-90" : "rotate-0",
+        isExpanded ? "rotate-90" : "rotate-0",
         className,
       )}
       {...props}
@@ -477,9 +404,7 @@ export function FolderChevron({
   );
 }
 
-type SubItemsProps = ComponentProps<"div">;
-
-export function SubItems({ className, ref, ...props }: SubItemsProps) {
+export function SubItems({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -489,48 +414,7 @@ export function SubItems({ className, ref, ...props }: SubItemsProps) {
   );
 }
 
-type SubItemProps = ComponentProps<"div">;
-
-export function SubItem({ className, ref, ...props }: SubItemProps) {
-  return (
-    <div
-      ref={ref}
-      className={cn(
-        "flex cursor-pointer items-center gap-2 rounded-md px-3 py-1.5 text-sm text-[#888] transition-all duration-200 hover:bg-[#2a2a2a] hover:text-white",
-        className,
-      )}
-      {...props}
-    />
-  );
-}
-
-type FolderNameInputProps = ComponentProps<typeof Input>;
-
-export function FolderNameInput({
-  className,
-  ref,
-  ...props
-}: FolderNameInputProps) {
-  return (
-    <Input
-      ref={ref}
-      data-folder-name-input
-      className={cn(
-        "h-auto min-w-0 flex-1 rounded-lg border border-transparent bg-transparent px-3 py-2 text-sm leading-snug focus:border-input-border focus:bg-input-bg",
-        className,
-      )}
-      {...props}
-    />
-  );
-}
-
-type FolderEditWrapProps = ComponentProps<"div">;
-
-export function FolderEditWrap({
-  className,
-  ref,
-  ...props
-}: FolderEditWrapProps) {
+export function FolderEditWrap({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -563,11 +447,11 @@ export function FolderEditInput({
   );
 }
 
-type FolderRowProps = ComponentProps<"div"> & { $active?: boolean };
+type FolderRowProps = UiProps<"div"> & { isActive?: boolean };
 
 export function FolderRow({
   className,
-  $active,
+  isActive,
   ref,
   ...props
 }: FolderRowProps) {
@@ -576,7 +460,7 @@ export function FolderRow({
       ref={ref}
       className={cn(
         "group/folder-row flex w-full items-center rounded-lg transition-colors duration-150 hover:bg-[#2a2a2a] [&:hover_[data-workspace-toggle]]:text-white",
-        $active && "[&_[data-workspace-row-actions]]:opacity-100",
+        isActive && "[&_[data-workspace-row-actions]]:opacity-100",
         "[&_[data-folder-edit-wrap]]:min-w-0 [&_[data-folder-edit-wrap]]:flex-1",
         "[&_[data-folder-name-input]]:min-w-0 [&_[data-folder-name-input]]:flex-1",
         "[&_[data-workspace-toggle]]:flex-1",
@@ -587,13 +471,13 @@ export function FolderRow({
   );
 }
 
-type FolderDropTargetProps = ComponentProps<"div"> & {
-  $isDragOver?: boolean;
+type FolderDropTargetProps = UiProps<"div"> & {
+  isDragOver?: boolean;
 };
 
 export function FolderDropTarget({
   className,
-  $isDragOver,
+  isDragOver,
   ref,
   ...props
 }: FolderDropTargetProps) {
@@ -602,7 +486,7 @@ export function FolderDropTarget({
       ref={ref}
       className={cn(
         "rounded-lg border transition-[border-color,background] duration-150 hover:[&_[data-workspace-toggle]]:bg-[#2a2a2a] hover:[&_[data-workspace-toggle]]:text-white",
-        $isDragOver
+        isDragOver
           ? "border-[#7255c1] bg-[rgba(114,85,193,0.15)]"
           : "border-transparent bg-transparent",
         className,
@@ -612,13 +496,11 @@ export function FolderDropTarget({
   );
 }
 
-type RootBoardsDropZoneProps = ComponentProps<"div">;
-
 export function RootBoardsDropZone({
   className,
   ref,
   ...props
-}: RootBoardsDropZoneProps) {
+}: UiProps<"div">) {
   return (
     <div
       ref={ref}

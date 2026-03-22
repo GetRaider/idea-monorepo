@@ -6,13 +6,17 @@ import { tasksHelper } from "@/helpers/task.helper";
 import { CloseIcon } from "@/components/Icons";
 import { SelectList } from "@/components/SelectList";
 import { SecondaryButton, CloseButton } from "@/components/Buttons";
+import { DialogHeading, DialogScrim } from "@/components/Dialogs";
+import { SpinnerRing } from "@/components/Spinner/Spinner";
 import {
-  ModalOverlay,
-  ModalContent,
-  ModalHeader,
-  ModalTitle,
+  LoadingStackCaption,
+  LoadingStackContainer,
+} from "@/components/LoadingStack/LoadingStack";
+import {
+  DialogContent,
+  DialogHeader,
   HeaderContent,
-  ModalDescription,
+  DialogDescription,
   OptimizationContent,
   SummarySection,
   SummaryText,
@@ -31,23 +35,20 @@ import {
   RiskItem,
   InsightsList,
   InsightItem,
-  LoadingContainer,
-  Spinner,
-  LoadingState,
   ErrorState,
   GenerateOptimizationButton,
   ActionsContainer,
   OptimizeButton,
-} from "./AIPlanningOptimizationModal.ui";
+} from "./AIPlanningOptimizationDialog.ui";
 import { useDialogFocusLock } from "@/hooks/useDialogFocusLock";
 import { useTasks } from "@/hooks/useTasks";
 import type { Task } from "@/components/Boards/KanbanBoard/types";
 
 export function AIPlanningOptimizationDialog({
   onClose,
-}: AIPlanningOptimizationModalProps) {
-  const modalTitleId = useId();
-  const modalContentRef = useRef<HTMLDivElement>(null);
+}: AIPlanningOptimizationDialogProps) {
+  const dialogTitleId = useId();
+  const dialogContentRef = useRef<HTMLDivElement>(null);
 
   const [isExploring, setIsExploring] = useState(false);
   const [isOptimizing, setIsOptimizing] = useState(false);
@@ -60,7 +61,7 @@ export function AIPlanningOptimizationDialog({
   );
   const { tasks, isLoading: isTasksLoading } = useTasks();
 
-  useDialogFocusLock(modalContentRef, onClose);
+  useDialogFocusLock(dialogContentRef, onClose);
 
   const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) onClose();
@@ -133,7 +134,7 @@ export function AIPlanningOptimizationDialog({
           .slice(0, 5)
           .map(({ idx }) => updates[idx].taskId);
         console.error(
-          "[AIPlanningOptimizationModal] Failed task updates:",
+          "[AIPlanningOptimizationDialog] Failed task updates:",
           rejected,
         );
         setError(
@@ -151,27 +152,27 @@ export function AIPlanningOptimizationDialog({
   };
 
   return (
-    <ModalOverlay
+    <DialogScrim
       role="dialog"
       aria-modal="true"
-      aria-labelledby={modalTitleId}
+      aria-labelledby={dialogTitleId}
       onClick={handleOverlayClick}
     >
-      <ModalContent ref={modalContentRef} tabIndex={-1}>
-        <ModalHeader>
+      <DialogContent ref={dialogContentRef} tabIndex={-1}>
+        <DialogHeader>
           <HeaderContent>
-            <ModalTitle id={modalTitleId}>
+            <DialogHeading id={dialogTitleId}>
               ⏳ AI Planning Optimization
-            </ModalTitle>
-            <ModalDescription>
+            </DialogHeading>
+            <DialogDescription>
               Explore Planning Optimization with AI-powered analysis based on
               priorities, schedules, due dates, and estimations.
-            </ModalDescription>
+            </DialogDescription>
           </HeaderContent>
           <CloseButton onClick={onClose}>
             <CloseIcon />
           </CloseButton>
-        </ModalHeader>
+        </DialogHeader>
         {!exploration && !isExploring && (
           <>
             <SelectList
@@ -193,10 +194,12 @@ export function AIPlanningOptimizationDialog({
           </>
         )}
         {isExploring && (
-          <LoadingContainer>
-            <Spinner />
-            <LoadingState>Exploring planning optimization...</LoadingState>
-          </LoadingContainer>
+          <LoadingStackContainer>
+            <SpinnerRing />
+            <LoadingStackCaption>
+              Exploring planning optimization...
+            </LoadingStackCaption>
+          </LoadingStackContainer>
         )}
         {error && <ErrorState>{error}</ErrorState>}
 
@@ -273,8 +276,8 @@ export function AIPlanningOptimizationDialog({
             </ActionsContainer>
           </OptimizationContent>
         )}
-      </ModalContent>
-    </ModalOverlay>
+      </DialogContent>
+    </DialogScrim>
   );
 }
 
@@ -296,7 +299,7 @@ function formatSchedule(schedule: string | null): string {
   return schedule;
 }
 
-interface AIPlanningOptimizationModalProps {
+interface AIPlanningOptimizationDialogProps {
   onClose: () => void;
 }
 

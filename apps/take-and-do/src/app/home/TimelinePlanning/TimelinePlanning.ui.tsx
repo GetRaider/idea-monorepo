@@ -4,58 +4,28 @@ import Link from "next/link";
 import type { ComponentProps } from "react";
 
 import { Input } from "@/components/Input";
+import {
+  Section as ProductivitySection,
+  SectionHeader,
+  SectionTitle,
+} from "../productivity-blocks";
 import { cn } from "@/lib/utils";
+import type { UiProps } from "@/lib/ui-props";
 
-type SectionProps = ComponentProps<"div">;
-
-export function Section({ className, ref, ...props }: SectionProps) {
+export function Section({ className, ref, ...props }: UiProps<"div">) {
   return (
-    <div
+    <ProductivitySection
       ref={ref}
-      className={cn(
-        "mb-6 rounded-xl border border-border-app bg-[#1a1a1a] p-6",
-        className,
-      )}
+      withBottomMargin
+      className={className}
       {...props}
     />
   );
 }
 
-type SectionHeaderProps = ComponentProps<"div">;
+export { SectionHeader, SectionTitle };
 
-export function SectionHeader({
-  className,
-  ref,
-  ...props
-}: SectionHeaderProps) {
-  return (
-    <div
-      ref={ref}
-      className={cn("mb-4 flex items-center justify-between", className)}
-      {...props}
-    />
-  );
-}
-
-type SectionTitleProps = ComponentProps<"h2">;
-
-export function SectionTitle({ className, ref, ...props }: SectionTitleProps) {
-  return (
-    <h2
-      ref={ref}
-      className={cn("m-0 text-xl font-semibold text-white", className)}
-      {...props}
-    />
-  );
-}
-
-type DateInputWrapperProps = ComponentProps<"div">;
-
-export function DateInputWrapper({
-  className,
-  ref,
-  ...props
-}: DateInputWrapperProps) {
+export function DateInputWrapper({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div ref={ref} className={cn("flex items-center", className)} {...props} />
   );
@@ -82,21 +52,13 @@ export function DateInput({
   );
 }
 
-type TaskListProps = ComponentProps<"div">;
-
-export function TaskList({ className, ref, ...props }: TaskListProps) {
+export function TaskList({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div ref={ref} className={cn("flex flex-col", className)} {...props} />
   );
 }
 
-type TaskListHeaderProps = ComponentProps<"div">;
-
-export function TaskListHeader({
-  className,
-  ref,
-  ...props
-}: TaskListHeaderProps) {
+export function TaskListHeader({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -109,9 +71,7 @@ export function TaskListHeader({
   );
 }
 
-type HeaderCellProps = ComponentProps<"span">;
-
-export function HeaderCell({ className, ref, ...props }: HeaderCellProps) {
+export function HeaderCell({ className, ref, ...props }: UiProps<"span">) {
   return (
     <span
       ref={ref}
@@ -124,9 +84,7 @@ export function HeaderCell({ className, ref, ...props }: HeaderCellProps) {
   );
 }
 
-type TaskItemProps = ComponentProps<"div">;
-
-export function TaskItem({ className, ref, ...props }: TaskItemProps) {
+export function TaskItem({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -139,9 +97,7 @@ export function TaskItem({ className, ref, ...props }: TaskItemProps) {
   );
 }
 
-type TaskContentProps = ComponentProps<"div">;
-
-export function TaskContent({ className, ref, ...props }: TaskContentProps) {
+export function TaskContent({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -151,9 +107,7 @@ export function TaskContent({ className, ref, ...props }: TaskContentProps) {
   );
 }
 
-type TaskLeftProps = ComponentProps<"div">;
-
-export function TaskLeft({ className, ref, ...props }: TaskLeftProps) {
+export function TaskLeft({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -163,9 +117,7 @@ export function TaskLeft({ className, ref, ...props }: TaskLeftProps) {
   );
 }
 
-type TaskCellProps = ComponentProps<"div">;
-
-export function TaskCell({ className, ref, ...props }: TaskCellProps) {
+export function TaskCell({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -178,13 +130,7 @@ export function TaskCell({ className, ref, ...props }: TaskCellProps) {
   );
 }
 
-type TaskCellMutedProps = ComponentProps<"div">;
-
-export function TaskCellMuted({
-  className,
-  ref,
-  ...props
-}: TaskCellMutedProps) {
+export function TaskCellMuted({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -197,9 +143,7 @@ export function TaskCellMuted({
   );
 }
 
-type PriorityIconProps = ComponentProps<"span">;
-
-export function PriorityIcon({ className, ref, ...props }: PriorityIconProps) {
+export function PriorityIcon({ className, ref, ...props }: UiProps<"span">) {
   return (
     <span
       ref={ref}
@@ -209,13 +153,7 @@ export function PriorityIcon({ className, ref, ...props }: PriorityIconProps) {
   );
 }
 
-type TaskSummaryTextProps = ComponentProps<"span">;
-
-export function TaskSummaryText({
-  className,
-  ref,
-  ...props
-}: TaskSummaryTextProps) {
+export function TaskSummaryText({ className, ref, ...props }: UiProps<"span">) {
   return (
     <span
       ref={ref}
@@ -228,13 +166,7 @@ export function TaskSummaryText({
   );
 }
 
-type StatusContainerProps = ComponentProps<"div">;
-
-export function StatusContainer({
-  className,
-  ref,
-  ...props
-}: StatusContainerProps) {
+export function StatusContainer({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -250,25 +182,25 @@ function statusTone(status: string) {
   return "text-[#888]";
 }
 
-type StatusProps = ComponentProps<"span"> & { $status: string };
+type StatusProps = UiProps<"span"> & { status: string };
 
-export function StatusIcon({ className, $status, ref, ...props }: StatusProps) {
+export function StatusIcon({ className, status, ref, ...props }: StatusProps) {
   return (
     <span
       ref={ref}
-      className={cn("text-sm", statusTone($status), className)}
+      className={cn("text-sm", statusTone(status), className)}
       {...props}
     />
   );
 }
 
-export function StatusText({ className, $status, ref, ...props }: StatusProps) {
+export function StatusText({ className, status, ref, ...props }: StatusProps) {
   return (
     <span
       ref={ref}
       className={cn(
         "whitespace-nowrap text-[11px] font-medium uppercase",
-        statusTone($status),
+        statusTone(status),
         className,
       )}
       {...props}
@@ -291,13 +223,11 @@ export function ViewAllLink({ className, href, ...props }: ViewAllLinkProps) {
   );
 }
 
-type ScheduleSelectContainerProps = ComponentProps<"div">;
-
 export function ScheduleSelectContainer({
   className,
   ref,
   ...props
-}: ScheduleSelectContainerProps) {
+}: UiProps<"div">) {
   return (
     <div
       ref={ref}

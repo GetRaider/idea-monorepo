@@ -1,36 +1,20 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { tasksHelper } from "@/helpers/task.helper";
+import { useState, useRef, type ComponentProps } from "react";
 
-import { Task, TaskPriority, TaskStatus } from "../../Boards/KanbanBoard/types";
-import { apiServices } from "@/services/api";
-import { StatusIcon } from "../../Boards/KanbanBoard/Column/Column.ui";
-import {
-  SubtasksSection,
-  SubtasksHeader,
-  SubtasksHeaderButtons,
-  SubtasksHeaderButton,
-  SubtasksContainer,
-  SubtaskItem,
-  SubtaskHeader,
-  SubtaskKey,
-  SubtaskIcon,
-  SubtaskContent,
-  SubtaskInput,
-  EmptySubtasksMessage,
-} from "./TaskSubtasks.ui";
+import { Input } from "@/components/Input";
 import {
   ChevronDownIcon,
   ChevronRightIcon,
   PlusIcon,
 } from "@/components/Icons";
+import { tasksHelper } from "@/helpers/task.helper";
+import { apiServices } from "@/services/api";
 
-interface TaskSubtasksProps {
-  task: Task;
-  onSubtaskClick?: (subtask: Task) => void;
-  onTaskUpdate?: (updatedTask: Task) => void;
-}
+import { Task, TaskPriority, TaskStatus } from "../../Boards/KanbanBoard/types";
+import { StatusIcon } from "../../Boards/KanbanBoard/Column/Column.ui";
+import { cn } from "@/lib/utils";
+import type { UiProps } from "@/lib/ui-props";
 
 export function TaskSubtasks({
   task,
@@ -106,7 +90,7 @@ export function TaskSubtasks({
           </SubtasksHeaderButton>
         </SubtasksHeaderButtons>
       </SubtasksHeader>
-      <SubtasksContainer $isExpanded={isSubtasksExpanded}>
+      <SubtasksContainer isExpanded={isSubtasksExpanded}>
         {isCreatingSubtask && (
           <div style={{ marginBottom: "8px" }}>
             <SubtaskInput
@@ -140,7 +124,7 @@ export function TaskSubtasks({
                 onClick={() => handleSubtaskClick(subtask)}
               >
                 <SubtaskHeader>
-                  <StatusIcon $status={subtask.status}>
+                  <StatusIcon status={subtask.status}>
                     {tasksHelper.status.getIcon(subtask.status)}
                   </StatusIcon>
                   <SubtaskIcon>
@@ -160,4 +144,165 @@ export function TaskSubtasks({
       </SubtasksContainer>
     </SubtasksSection>
   );
+}
+
+function SubtasksSection({ className, ref, ...props }: UiProps<"div">) {
+  return (
+    <div
+      ref={ref}
+      className={cn(
+        "mx-6 mb-8 rounded-xl border border-border-app bg-[#1a1a1a]",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+function SubtasksHeader({ className, ref, ...props }: UiProps<"div">) {
+  return (
+    <div
+      ref={ref}
+      className={cn(
+        "flex items-center justify-between px-5 py-4 text-[15px] font-semibold text-white",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+function SubtasksHeaderButtons({ className, ref, ...props }: UiProps<"div">) {
+  return (
+    <div
+      ref={ref}
+      className={cn("flex items-center gap-2", className)}
+      {...props}
+    />
+  );
+}
+
+function SubtasksHeaderButton({
+  className,
+  type = "button",
+  ref,
+  ...props
+}: UiProps<"button">) {
+  return (
+    <button
+      ref={ref}
+      type={type}
+      className={cn(
+        "flex h-7 w-7 cursor-pointer items-center justify-center rounded border-0 bg-transparent p-1 text-lg text-[#666] transition-all duration-200 hover:bg-[#2a2a2a] hover:text-white",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+type SubtasksContainerProps = UiProps<"div"> & {
+  isExpanded: boolean;
+};
+
+function SubtasksContainer({
+  className,
+  isExpanded,
+  ref,
+  ...props
+}: SubtasksContainerProps) {
+  return (
+    <div
+      ref={ref}
+      className={cn("px-3 pb-3", isExpanded ? "block" : "hidden", className)}
+      {...props}
+    />
+  );
+}
+
+function SubtaskItem({
+  className,
+  type = "button",
+  ref,
+  ...props
+}: UiProps<"button">) {
+  return (
+    <button
+      ref={ref}
+      type={type}
+      className={cn(
+        "mb-2 flex w-full cursor-pointer flex-col items-start gap-2 rounded-lg border border-input-border bg-input-bg px-3.5 py-3 text-left transition-all duration-200 last:mb-0 hover:border-[#4a4a4a] hover:bg-[#333]",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+function SubtaskHeader({ className, ref, ...props }: UiProps<"div">) {
+  return (
+    <div
+      ref={ref}
+      className={cn("flex w-full items-center gap-2", className)}
+      {...props}
+    />
+  );
+}
+
+function SubtaskKey({ className, ref, ...props }: UiProps<"span">) {
+  return (
+    <span
+      ref={ref}
+      className={cn("text-[13px] font-medium text-[#888]", className)}
+      {...props}
+    />
+  );
+}
+
+function SubtaskIcon({ className, ref, ...props }: UiProps<"span">) {
+  return (
+    <span
+      ref={ref}
+      className={cn(
+        "flex shrink-0 items-center justify-center text-sm leading-none",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+function SubtaskContent({ className, ref, ...props }: UiProps<"div">) {
+  return (
+    <div
+      ref={ref}
+      className={cn(
+        "line-clamp-2 overflow-hidden text-ellipsis text-sm leading-snug text-white [-webkit-box-orient:vertical] [-webkit-line-clamp:2] [display:-webkit-box]",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+type SubtaskInputProps = ComponentProps<typeof Input>;
+
+function SubtaskInput({ className, ref, ...props }: SubtaskInputProps) {
+  return <Input ref={ref} className={className} {...props} />;
+}
+
+function EmptySubtasksMessage({ className, ref, ...props }: UiProps<"div">) {
+  return (
+    <div
+      ref={ref}
+      className={cn("p-2 text-sm text-[#666]", className)}
+      {...props}
+    />
+  );
+}
+
+interface TaskSubtasksProps {
+  task: Task;
+  onSubtaskClick?: (subtask: Task) => void;
+  onTaskUpdate?: (updatedTask: Task) => void;
 }

@@ -5,25 +5,9 @@ import type { ComponentProps } from "react";
 import { SecondaryButton } from "@/components/Buttons";
 import { gradientOptionSurfaceClass } from "@/lib/animated-gradient";
 import { cn } from "@/lib/utils";
+import type { UiProps } from "@/lib/ui-props";
 
-type ModalOverlayProps = ComponentProps<"div">;
-
-export function ModalOverlay({ className, ref, ...props }: ModalOverlayProps) {
-  return (
-    <div
-      ref={ref}
-      className={cn(
-        "fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 p-5",
-        className,
-      )}
-      {...props}
-    />
-  );
-}
-
-type ModalContentProps = ComponentProps<"div">;
-
-export function ModalContent({ className, ref, ...props }: ModalContentProps) {
+export function DialogContent({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -36,9 +20,7 @@ export function ModalContent({ className, ref, ...props }: ModalContentProps) {
   );
 }
 
-type ModalHeaderProps = ComponentProps<"div">;
-
-export function ModalHeader({ className, ref, ...props }: ModalHeaderProps) {
+export function DialogHeader({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -51,13 +33,7 @@ export function ModalHeader({ className, ref, ...props }: ModalHeaderProps) {
   );
 }
 
-type HeaderContentProps = ComponentProps<"div">;
-
-export function HeaderContent({
-  className,
-  ref,
-  ...props
-}: HeaderContentProps) {
+export function HeaderContent({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -67,25 +43,7 @@ export function HeaderContent({
   );
 }
 
-type ModalTitleProps = ComponentProps<"h2">;
-
-export function ModalTitle({ className, ref, ...props }: ModalTitleProps) {
-  return (
-    <h2
-      ref={ref}
-      className={cn("m-0 text-2xl font-semibold text-white", className)}
-      {...props}
-    />
-  );
-}
-
-type ModalDescriptionProps = ComponentProps<"h3">;
-
-export function ModalDescription({
-  className,
-  ref,
-  ...props
-}: ModalDescriptionProps) {
+export function DialogDescription({ className, ref, ...props }: UiProps<"h3">) {
   return (
     <h3
       ref={ref}
@@ -98,13 +56,7 @@ export function ModalDescription({
   );
 }
 
-type OptionsContainerProps = ComponentProps<"div">;
-
-export function OptionsContainer({
-  className,
-  ref,
-  ...props
-}: OptionsContainerProps) {
+export function OptionsContainer({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -114,15 +66,15 @@ export function OptionsContainer({
   );
 }
 
-type OptionBlockProps = ComponentProps<"div"> & {
-  $selected: boolean;
-  $isAI?: boolean;
+type OptionBlockProps = UiProps<"div"> & {
+  isSelected: boolean;
+  isAi?: boolean;
 };
 
 export function OptionBlock({
   className,
-  $selected,
-  $isAI,
+  isSelected,
+  isAi,
   ref,
   ...props
 }: OptionBlockProps) {
@@ -131,15 +83,15 @@ export function OptionBlock({
       ref={ref}
       className={cn(
         "relative cursor-pointer overflow-hidden rounded-lg border-2 p-6 transition-all duration-200 motion-reduce:!animate-none motion-reduce:!bg-[#7255c1]",
-        $isAI
+        isAi
           ? cn(
               gradientOptionSurfaceClass,
               "hover:animate-gradient-shift-fast",
-              $selected ? "border-[#7255c1]" : "border-input-border",
+              isSelected ? "border-[#7255c1]" : "border-input-border",
             )
           : cn(
               "bg-input-bg",
-              $selected
+              isSelected
                 ? "border-[#7255c1] hover:border-[#7255c1] hover:bg-input-bg"
                 : "border-input-border hover:border-[#4a4a4a] hover:bg-[#2f2f2f]",
             ),
@@ -150,9 +102,7 @@ export function OptionBlock({
   );
 }
 
-type OptionTitleProps = ComponentProps<"h3">;
-
-export function OptionTitle({ className, ref, ...props }: OptionTitleProps) {
+export function OptionTitle({ className, ref, ...props }: UiProps<"h3">) {
   return (
     <h3
       ref={ref}
@@ -162,13 +112,7 @@ export function OptionTitle({ className, ref, ...props }: OptionTitleProps) {
   );
 }
 
-type OptionDescriptionProps = ComponentProps<"p">;
-
-export function OptionDescription({
-  className,
-  ref,
-  ...props
-}: OptionDescriptionProps) {
+export function OptionDescription({ className, ref, ...props }: UiProps<"p">) {
   return (
     <p
       ref={ref}
@@ -178,13 +122,7 @@ export function OptionDescription({
   );
 }
 
-type ActionsContainerProps = ComponentProps<"div">;
-
-export function ActionsContainer({
-  className,
-  ref,
-  ...props
-}: ActionsContainerProps) {
+export function ActionsContainer({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}

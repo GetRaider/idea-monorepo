@@ -2,22 +2,21 @@
 
 import { CloseIcon } from "@/components/Icons";
 import { SecondaryButton, CloseButton } from "@/components/Buttons";
+import { DialogHeading, DialogScrim } from "@/components/Dialogs";
 import {
-  ModalOverlay,
-  ModalContent,
-  ModalHeader,
+  DialogContent,
+  DialogHeader,
   HeaderContent,
-  ModalTitle,
   OptionsContainer,
   OptionBlock,
   OptionTitle,
   OptionDescription,
   ActionsContainer,
   SaveButton,
-  ModalDescription,
-} from "./ProductivitySummarySelectionModal.ui";
+  DialogDescription,
+} from "./ProductivitySummarySelectionDialog.ui";
 
-interface ProductivitySummarySelectionModalProps {
+interface ProductivitySummarySelectionDialogProps {
   onClose: () => void;
   onSelect: (useAI: boolean) => void;
   selectedOption: "basic" | "ai" | null;
@@ -25,13 +24,13 @@ interface ProductivitySummarySelectionModalProps {
   isGenerating: boolean;
 }
 
-export function ProductivitySummarySelectionModal({
+export function ProductivitySummarySelectionDialog({
   onClose,
   onSelect,
   selectedOption,
   onSave,
   isGenerating,
-}: ProductivitySummarySelectionModalProps) {
+}: ProductivitySummarySelectionDialogProps) {
   const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) {
       onClose();
@@ -39,26 +38,26 @@ export function ProductivitySummarySelectionModal({
   };
 
   return (
-    <ModalOverlay onClick={handleOverlayClick}>
-      <ModalContent>
-        <ModalHeader>
+    <DialogScrim onClick={handleOverlayClick}>
+      <DialogContent>
+        <DialogHeader>
           <HeaderContent>
-            <ModalTitle>⚡ Productivity Summary</ModalTitle>
-            <ModalDescription>
+            <DialogHeading>⚡ Productivity Summary</DialogHeading>
+            <DialogDescription>
               Explore your productivity by generating an AI personalized or
               basic summary, calculated based on your task statistics and
               completion rates.
-            </ModalDescription>
+            </DialogDescription>
           </HeaderContent>
           <CloseButton onClick={onClose}>
             <CloseIcon />
           </CloseButton>
-        </ModalHeader>
+        </DialogHeader>
 
         <OptionsContainer>
           <OptionBlock
-            $selected={selectedOption === "ai"}
-            $isAI={true}
+            isSelected={selectedOption === "ai"}
+            isAi={true}
             onClick={() => onSelect(true)}
           >
             <OptionTitle>AI Summary</OptionTitle>
@@ -69,7 +68,7 @@ export function ProductivitySummarySelectionModal({
           </OptionBlock>
 
           <OptionBlock
-            $selected={selectedOption === "basic"}
+            isSelected={selectedOption === "basic"}
             onClick={() => onSelect(false)}
           >
             <OptionTitle>Basic Summary</OptionTitle>
@@ -89,7 +88,7 @@ export function ProductivitySummarySelectionModal({
             {isGenerating ? "Generating..." : "Generate"}
           </SaveButton>
         </ActionsContainer>
-      </ModalContent>
-    </ModalOverlay>
+      </DialogContent>
+    </DialogScrim>
   );
 }

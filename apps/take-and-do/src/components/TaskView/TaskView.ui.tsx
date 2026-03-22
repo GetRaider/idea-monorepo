@@ -4,15 +4,11 @@ import type { ComponentProps } from "react";
 
 import { Input } from "@/components/Input";
 import { SecondaryButton } from "@/components/Buttons";
+import { MenuRowButton } from "@/components/MenuRowButton/MenuRowButton";
 import { cn } from "@/lib/utils";
+import type { UiProps } from "@/lib/ui-props";
 
-type TaskViewOverlayProps = ComponentProps<"div">;
-
-export function TaskViewOverlay({
-  className,
-  ref,
-  ...props
-}: TaskViewOverlayProps) {
+export function TaskViewOverlay({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -25,13 +21,11 @@ export function TaskViewOverlay({
   );
 }
 
-type TaskViewContainerProps = ComponentProps<"div">;
-
 export function TaskViewContainer({
   className,
   ref,
   ...props
-}: TaskViewContainerProps) {
+}: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -44,9 +38,11 @@ export function TaskViewContainer({
   );
 }
 
-type ModalHeaderProps = ComponentProps<"div">;
-
-export function ModalHeader({ className, ref, ...props }: ModalHeaderProps) {
+export function TaskViewDialogHeader({
+  className,
+  ref,
+  ...props
+}: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -59,9 +55,7 @@ export function ModalHeader({ className, ref, ...props }: ModalHeaderProps) {
   );
 }
 
-type HeaderLeftProps = ComponentProps<"div">;
-
-export function HeaderLeft({ className, ref, ...props }: HeaderLeftProps) {
+export function HeaderLeft({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -71,14 +65,12 @@ export function HeaderLeft({ className, ref, ...props }: HeaderLeftProps) {
   );
 }
 
-type StatusIconButtonProps = ComponentProps<"button">;
-
 export function StatusIconButton({
   className,
   type = "button",
   ref,
   ...props
-}: StatusIconButtonProps) {
+}: UiProps<"button">) {
   return (
     <button
       ref={ref}
@@ -92,9 +84,7 @@ export function StatusIconButton({
   );
 }
 
-type HeaderRightProps = ComponentProps<"div">;
-
-export function HeaderRight({ className, ref, ...props }: HeaderRightProps) {
+export function HeaderRight({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -104,14 +94,12 @@ export function HeaderRight({ className, ref, ...props }: HeaderRightProps) {
   );
 }
 
-type DeleteButtonProps = ComponentProps<"button">;
-
 export function DeleteButton({
   className,
   type = "button",
   ref,
   ...props
-}: DeleteButtonProps) {
+}: UiProps<"button">) {
   return (
     <button
       ref={ref}
@@ -125,13 +113,7 @@ export function DeleteButton({
   );
 }
 
-type TaskTitleSectionProps = ComponentProps<"div">;
-
-export function TaskTitleSection({
-  className,
-  ref,
-  ...props
-}: TaskTitleSectionProps) {
+export function TaskTitleSection({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -144,14 +126,12 @@ export function TaskTitleSection({
   );
 }
 
-type PriorityIconProps = ComponentProps<"button">;
-
 export function PriorityIcon({
   className,
   type = "button",
   ref,
   ...props
-}: PriorityIconProps) {
+}: UiProps<"button">) {
   return (
     <button
       ref={ref}
@@ -165,9 +145,7 @@ export function PriorityIcon({
   );
 }
 
-type TaskTitleProps = ComponentProps<"h2">;
-
-export function TaskTitle({ className, ref, ...props }: TaskTitleProps) {
+export function TaskTitle({ className, ref, ...props }: UiProps<"h2">) {
   return (
     <h2
       ref={ref}
@@ -199,13 +177,7 @@ export function TaskTitleInput({
   );
 }
 
-type TaskDescriptionProps = ComponentProps<"p">;
-
-export function TaskDescription({
-  className,
-  ref,
-  ...props
-}: TaskDescriptionProps) {
+export function TaskDescription({ className, ref, ...props }: UiProps<"p">) {
   return (
     <p
       ref={ref}
@@ -218,13 +190,11 @@ export function TaskDescription({
   );
 }
 
-type DescriptionActionsProps = ComponentProps<"div">;
-
 export function DescriptionActions({
   className,
   ref,
   ...props
-}: DescriptionActionsProps) {
+}: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -249,13 +219,11 @@ export function SaveButton({ className, ref, ...props }: SaveButtonProps) {
   );
 }
 
-type TaskDescriptionMarkdownProps = ComponentProps<"div">;
-
 export function TaskDescriptionMarkdown({
   className,
   ref,
   ...props
-}: TaskDescriptionMarkdownProps) {
+}: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -272,13 +240,7 @@ export function TaskDescriptionMarkdown({
   );
 }
 
-type StatusSelectorProps = ComponentProps<"div">;
-
-export function StatusSelector({
-  className,
-  ref,
-  ...props
-}: StatusSelectorProps) {
+export function StatusSelector({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -288,14 +250,12 @@ export function StatusSelector({
   );
 }
 
-type StatusButtonProps = ComponentProps<"button">;
-
 export function StatusButton({
   className,
   type = "button",
   ref,
   ...props
-}: StatusButtonProps) {
+}: UiProps<"button">) {
   return (
     <button
       ref={ref}
@@ -309,13 +269,13 @@ export function StatusButton({
   );
 }
 
-type DropdownContainerProps = ComponentProps<"div"> & {
-  $isOpen: boolean;
+type DropdownContainerProps = UiProps<"div"> & {
+  isOpen: boolean;
 };
 
 export function DropdownContainer({
   className,
-  $isOpen,
+  isOpen,
   ref,
   ...props
 }: DropdownContainerProps) {
@@ -324,42 +284,36 @@ export function DropdownContainer({
       ref={ref}
       className={cn(
         "absolute left-0 top-full z-[1001] mt-1 min-w-[150px] rounded-lg border border-input-border bg-input-bg shadow-[0_4px_12px_rgba(0,0,0,0.3)]",
-        $isOpen ? "block" : "hidden",
+        isOpen ? "block" : "hidden",
         className,
       )}
       {...props}
     />
   );
 }
-
-type DropdownItemProps = ComponentProps<"button">;
 
 export function DropdownItem({
   className,
   type = "button",
   ref,
   ...props
-}: DropdownItemProps) {
+}: UiProps<"button">) {
   return (
-    <button
+    <MenuRowButton
       ref={ref}
       type={type}
-      className={cn(
-        "flex w-full cursor-pointer items-center gap-2 border-0 bg-transparent px-3 py-2.5 text-left text-sm text-white transition-all duration-200 first:rounded-t-lg last:rounded-b-lg hover:bg-[#3a3a3a]",
-        className,
-      )}
+      rowTransition="all"
+      className={className}
       {...props}
     />
   );
 }
 
-type AttachmentsHeaderProps = ComponentProps<"div">;
-
 export function AttachmentsHeader({
   className,
   ref,
   ...props
-}: AttachmentsHeaderProps) {
+}: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -369,14 +323,12 @@ export function AttachmentsHeader({
   );
 }
 
-type AttachButtonProps = ComponentProps<"button">;
-
 export function AttachButton({
   className,
   type = "button",
   ref,
   ...props
-}: AttachButtonProps) {
+}: UiProps<"button">) {
   return (
     <button
       ref={ref}
@@ -390,14 +342,12 @@ export function AttachButton({
   );
 }
 
-type AttachmentItemProps = ComponentProps<"button">;
-
 export function AttachmentItem({
   className,
   type = "button",
   ref,
   ...props
-}: AttachmentItemProps) {
+}: UiProps<"button">) {
   return (
     <button
       ref={ref}
@@ -411,13 +361,7 @@ export function AttachmentItem({
   );
 }
 
-type AttachmentIconProps = ComponentProps<"span">;
-
-export function AttachmentIcon({
-  className,
-  ref,
-  ...props
-}: AttachmentIconProps) {
+export function AttachmentIcon({ className, ref, ...props }: UiProps<"span">) {
   return (
     <span
       ref={ref}
@@ -427,13 +371,13 @@ export function AttachmentIcon({
   );
 }
 
-type SubtaskCheckboxProps = ComponentProps<"div"> & {
-  $completed: boolean;
+type SubtaskCheckboxProps = UiProps<"div"> & {
+  isCompleted: boolean;
 };
 
 export function SubtaskCheckbox({
   className,
-  $completed,
+  isCompleted,
   ref,
   ...props
 }: SubtaskCheckboxProps) {
@@ -442,7 +386,7 @@ export function SubtaskCheckbox({
       ref={ref}
       className={cn(
         "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 text-xs text-white",
-        $completed
+        isCompleted
           ? "border-green-400 bg-green-400"
           : "border-[#666] bg-transparent",
         className,
@@ -452,23 +396,11 @@ export function SubtaskCheckbox({
   );
 }
 
-type HistorySectionProps = ComponentProps<"div">;
-
-export function HistorySection({
-  className,
-  ref,
-  ...props
-}: HistorySectionProps) {
+export function HistorySection({ className, ref, ...props }: UiProps<"div">) {
   return <div ref={ref} className={cn("px-6 pb-6", className)} {...props} />;
 }
 
-type HistoryHeaderProps = ComponentProps<"div">;
-
-export function HistoryHeader({
-  className,
-  ref,
-  ...props
-}: HistoryHeaderProps) {
+export function HistoryHeader({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -478,13 +410,11 @@ export function HistoryHeader({
   );
 }
 
-type CommentInputWrapperProps = ComponentProps<"div">;
-
 export function CommentInputWrapper({
   className,
   ref,
   ...props
-}: CommentInputWrapperProps) {
+}: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -497,14 +427,12 @@ export function CommentInputWrapper({
   );
 }
 
-type AttachIconButtonProps = ComponentProps<"button">;
-
 export function AttachIconButton({
   className,
   type = "button",
   ref,
   ...props
-}: AttachIconButtonProps) {
+}: UiProps<"button">) {
   return (
     <button
       ref={ref}
@@ -518,35 +446,29 @@ export function AttachIconButton({
   );
 }
 
-type PriorityDropdownWrapperProps = ComponentProps<"div">;
-
 export function PriorityDropdownWrapper({
   className,
   ref,
   ...props
-}: PriorityDropdownWrapperProps) {
+}: UiProps<"div">) {
   return (
     <div ref={ref} className={cn("relative flex", className)} {...props} />
   );
 }
 
-type PriorityIconSpanProps = ComponentProps<"span">;
-
 export function PriorityIconSpan({
   className,
   ref,
   ...props
-}: PriorityIconSpanProps) {
+}: UiProps<"span">) {
   return <span ref={ref} className={cn("mr-2", className)} {...props} />;
 }
-
-type DescriptionContentProps = ComponentProps<"div">;
 
 export function DescriptionContent({
   className,
   ref,
   ...props
-}: DescriptionContentProps) {
+}: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -556,23 +478,15 @@ export function DescriptionContent({
   );
 }
 
-type NoDescriptionTextProps = ComponentProps<"span">;
-
 export function NoDescriptionText({
   className,
   ref,
   ...props
-}: NoDescriptionTextProps) {
+}: UiProps<"span">) {
   return <span ref={ref} className={cn("text-[#666]", className)} {...props} />;
 }
 
-type TaskViewFooterProps = ComponentProps<"div">;
-
-export function TaskViewFooter({
-  className,
-  ref,
-  ...props
-}: TaskViewFooterProps) {
+export function TaskViewFooter({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -585,19 +499,19 @@ export function TaskViewFooter({
   );
 }
 
-type CreateTaskButtonProps = ComponentProps<"button"> & {
-  $disabled: boolean;
+type CreateTaskButtonProps = UiProps<"button"> & {
+  inactive: boolean;
 };
 
 export function CreateTaskButton({
   className,
   type = "button",
-  $disabled,
+  inactive,
   disabled,
   ref,
   ...props
 }: CreateTaskButtonProps) {
-  const isDisabled = disabled ?? $disabled;
+  const isDisabled = disabled ?? inactive;
   return (
     <button
       ref={ref}
@@ -615,19 +529,19 @@ export function CreateTaskButton({
   );
 }
 
-type TaskSaveButtonProps = ComponentProps<"button"> & {
-  $disabled: boolean;
+type TaskSaveButtonProps = UiProps<"button"> & {
+  inactive: boolean;
 };
 
 export function TaskSaveButton({
   className,
   type = "button",
-  $disabled,
+  inactive,
   disabled,
   ref,
   ...props
 }: TaskSaveButtonProps) {
-  const isDisabled = disabled ?? $disabled;
+  const isDisabled = disabled ?? inactive;
   return (
     <button
       ref={ref}

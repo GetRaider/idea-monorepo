@@ -13,6 +13,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import { Spinner } from "@/components/Spinner/Spinner";
 import {
   Section,
   SectionHeader,
@@ -28,11 +29,9 @@ import {
   MetricValue,
   ProgressBarContainer,
   ProgressBar,
-  LoadingContainer,
-  Spinner,
 } from "./ProductivityOverview.ui";
-import { ProductivitySummaryDialog } from "./ProductivitySummaryModal/ProductivitySummaryModal";
-import { ProductivitySummarySelectionModal } from "./ProductivitySummarySelectionModal/ProductivitySummarySelectionModal";
+import { ProductivitySummaryDialog } from "./ProductivitySummaryDialog/ProductivitySummaryDialog";
+import { ProductivitySummarySelectionDialog } from "./ProductivitySummarySelectionDialog/ProductivitySummarySelectionDialog";
 import type { AnalyticsStats } from "@/lib/ai";
 import { EmptyState } from "@/components/EmptyState";
 import { Dropdown } from "@/components/Dropdown";
@@ -52,8 +51,8 @@ export function ProductivityOverview() {
   const [isLoading, setIsLoading] = useState(true);
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [isGeneratingAnalytics, setIsGeneratingAnalytics] = useState(false);
-  const [isSelectionModalOpen, setIsSelectionModalOpen] = useState(false);
-  const [isResultsModalOpen, setIsResultsModalOpen] = useState(false);
+  const [isSelectionDialogOpen, setIsSelectionDialogOpen] = useState(false);
+  const [isResultsDialogOpen, setIsResultsDialogOpen] = useState(false);
   const [selectedOption, setSelectedOption] = useState<"basic" | "ai" | null>(
     null,
   );
@@ -75,8 +74,8 @@ export function ProductivityOverview() {
     fetchStats();
   }, [timeframe]);
 
-  const handleOpenSelectionModal = () => {
-    setIsSelectionModalOpen(true);
+  const handleOpenSelectionDialog = () => {
+    setIsSelectionDialogOpen(true);
     setSelectedOption(null);
   };
 
@@ -100,8 +99,8 @@ export function ProductivityOverview() {
       });
 
       setAnalytics(generatedAnalytics);
-      setIsSelectionModalOpen(false);
-      setIsResultsModalOpen(true);
+      setIsSelectionDialogOpen(false);
+      setIsResultsDialogOpen(true);
       setSelectedOption(null);
     } catch (error) {
       console.error("Failed to generate analytics:", error);
@@ -127,17 +126,15 @@ export function ProductivityOverview() {
               onChange={(value: Timeframe) => setTimeframe(value)}
             />
             <GenerateButton
-              onClick={handleOpenSelectionModal}
-              $disabled={isGeneratingAnalytics}
+              onClick={handleOpenSelectionDialog}
+              inactive={isGeneratingAnalytics}
             >
               ⚡ Explore AI Summary
             </GenerateButton>
           </Controls>
         </SectionHeader>
         {isLoading ? (
-          <LoadingContainer>
-            <Spinner />
-          </LoadingContainer>
+          <Spinner />
         ) : stats ? (
           <Charts stats={stats} />
         ) : (
@@ -148,10 +145,10 @@ export function ProductivityOverview() {
         )}
       </Section>
 
-      {isSelectionModalOpen && (
-        <ProductivitySummarySelectionModal
+      {isSelectionDialogOpen && (
+        <ProductivitySummarySelectionDialog
           onClose={() => {
-            setIsSelectionModalOpen(false);
+            setIsSelectionDialogOpen(false);
             setSelectedOption(null);
           }}
           onSelect={handleSelectOption}
@@ -161,10 +158,10 @@ export function ProductivityOverview() {
         />
       )}
 
-      {isResultsModalOpen && analytics && (
+      {isResultsDialogOpen && analytics && (
         <ProductivitySummaryDialog
           analytics={analytics}
-          onClose={() => setIsResultsModalOpen(false)}
+          onClose={() => setIsResultsDialogOpen(false)}
         />
       )}
     </>
@@ -234,7 +231,7 @@ function Charts({ stats }: { stats: AnalyticsStats }) {
             </MetricRow>
             <ProgressBarContainer>
               <ProgressBar
-                $progress={Math.min(
+                progress={Math.min(
                   (stats.avgCompletionTimeDays / 7) * 100,
                   100,
                 )}
@@ -244,14 +241,14 @@ function Charts({ stats }: { stats: AnalyticsStats }) {
           <div>
             <MetricRow>
               <MetricLabel>Overdue Rate</MetricLabel>
-              <MetricValue $warning={isOverdueWarning}>
+              <MetricValue isWarning={isOverdueWarning}>
                 {(stats.overdueRate * 100).toFixed(1)}%
               </MetricValue>
             </MetricRow>
             <ProgressBarContainer>
               <ProgressBar
-                $progress={stats.overdueRate * 100}
-                $warning={isOverdueWarning}
+                progress={stats.overdueRate * 100}
+                isWarning={isOverdueWarning}
               />
             </ProgressBarContainer>
           </div>

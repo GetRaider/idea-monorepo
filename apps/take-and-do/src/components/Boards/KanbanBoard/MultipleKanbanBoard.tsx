@@ -11,7 +11,7 @@ import {
   BoardMultiLayout,
   WorkspaceSeparator,
   LoadingContainer,
-  Spinner,
+  KanbanSpinner,
   MultiBoardSection,
   MultiBoardColumnsGrid,
   GroupChevronWrapper,
@@ -31,7 +31,7 @@ import { useMultipleKanbanBoardData } from "../../../hooks/useMultipleKanbanBoar
 import { TaskView } from "../../TaskView/TaskView";
 import { updateTaskInColumns } from "@/hooks/useTaskBoardState";
 import { EmptyState } from "../../EmptyState";
-import { AIComposeModal } from "./shared/AIComposeModal";
+import { AIComposeDialog } from "./shared/AIComposeDialog";
 import { apiServices } from "@/services/api";
 import type { TaskBoardWithTasks } from "@/types/workspace";
 import { tasksUrlHelper, type ScheduleDate } from "@/helpers/tasks-url.helper";
@@ -55,7 +55,7 @@ export function MultipleKanbanBoard({
     toggleBoardExpanded,
   } = useMultipleKanbanBoardData(scheduleDate, folderId);
 
-  const [isAIComposeModalOpen, setIsAIComposeModalOpen] = useState(false);
+  const [isAIComposeDialogOpen, setIsAIComposeDialogOpen] = useState(false);
   const [selectedBoardIdForAI, setSelectedBoardIdForAI] = useState<
     string | null
   >(null);
@@ -66,7 +66,7 @@ export function MultipleKanbanBoard({
     setSelectedTask,
     setParentTask,
     handleTaskClick,
-    handleCloseModal,
+    handleCloseDialog,
     handleSubtaskClick,
   } = useKanbanTaskHandlers({ onTaskOpen, onTaskClose, onSubtaskOpen });
 
@@ -208,7 +208,7 @@ export function MultipleKanbanBoard({
       return;
     }
     setSelectedBoardIdForAI(boardsWithTasks[0].id);
-    setIsAIComposeModalOpen(true);
+    setIsAIComposeDialogOpen(true);
   }, [boardsWithTasks]);
 
   const handleAICompose = useCallback(
@@ -283,7 +283,7 @@ export function MultipleKanbanBoard({
         <BoardMultiLayout>
           {isLoading ? (
             <LoadingContainer>
-              <Spinner />
+              <KanbanSpinner />
             </LoadingContainer>
           ) : boardsWithTasks.length > 0 ? (
             <>
@@ -295,7 +295,7 @@ export function MultipleKanbanBoard({
                       type="button"
                       onClick={() => toggleBoardExpanded(board.id)}
                     >
-                      <GroupChevronWrapper $expanded={isExpanded}>
+                      <GroupChevronWrapper isExpanded={isExpanded}>
                         <ChevronRightIcon size={16} />
                       </GroupChevronWrapper>
                       {board.emoji ? (
@@ -343,17 +343,17 @@ export function MultipleKanbanBoard({
           workspaceName,
         )}
         boardOptions={boardOptions}
-        onClose={handleCloseModal}
+        onClose={handleCloseDialog}
         onTaskUpdate={handleTaskUpdate}
         onSubtaskClick={handleSubtaskClick}
         onTaskCreated={handleTaskCreated}
         onTaskDelete={handleTaskDelete}
         onNavigateToParentTask={handleNavigateToParentTask}
       />
-      <AIComposeModal
-        isOpen={isAIComposeModalOpen}
+      <AIComposeDialog
+        isOpen={isAIComposeDialogOpen}
         onClose={() => {
-          setIsAIComposeModalOpen(false);
+          setIsAIComposeDialogOpen(false);
           setSelectedBoardIdForAI(null);
         }}
         onCompose={handleAICompose}

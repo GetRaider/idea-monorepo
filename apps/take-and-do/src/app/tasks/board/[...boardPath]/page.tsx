@@ -6,7 +6,7 @@ import { notFound } from "next/navigation";
 import { SingleKanbanBoard } from "@/components/Boards/KanbanBoard/SingleKanbanBoard";
 import {
   LoadingContainer,
-  Spinner,
+  KanbanSpinner,
 } from "@/components/Boards/KanbanBoard/KanbanBoard.ui";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useBoardTaskUrlSync } from "@/hooks/useKanbanTaskUrlSync";
@@ -28,7 +28,7 @@ export default function BoardPage({ params }: BoardPageProps) {
   if (!isBoardReady) {
     return (
       <LoadingContainer className="flex flex-col gap-3">
-        <Spinner />
+        <KanbanSpinner />
         <span className="text-sm text-[#888]">Loading board...</span>
       </LoadingContainer>
     );

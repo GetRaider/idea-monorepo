@@ -1,17 +1,14 @@
 "use client";
 
-import type { ComponentProps } from "react";
-
 import { cn } from "@/lib/utils";
-
-type CloseButtonProps = ComponentProps<"button">;
+import type { UiProps } from "@/lib/ui-props";
 
 export function CloseButton({
   className,
   type = "button",
   ref,
   ...props
-}: CloseButtonProps) {
+}: UiProps<"button">) {
   return (
     <button
       ref={ref}
@@ -25,22 +22,22 @@ export function CloseButton({
   );
 }
 
-type SecondaryButtonProps = ComponentProps<"button"> & {
-  $disabled?: boolean;
-  $background?: string;
+type SecondaryButtonProps = UiProps<"button"> & {
+  inactive?: boolean;
+  backgroundStyle?: string;
 };
 
 export function Button({
   className,
   type = "button",
-  $disabled,
-  $background,
+  inactive,
+  backgroundStyle,
   style,
   disabled,
   ref,
   ...props
 }: SecondaryButtonProps) {
-  const isDisabled = disabled ?? $disabled;
+  const isDisabled = disabled ?? inactive;
   return (
     <button
       ref={ref}
@@ -48,7 +45,7 @@ export function Button({
       disabled={isDisabled}
       style={{
         ...style,
-        ...($background ? { background: $background } : {}),
+        ...(backgroundStyle ? { background: backgroundStyle } : {}),
       }}
       className={cn(
         "cursor-pointer rounded-md border border-[#3a3a3a] bg-transparent px-5 py-2.5 text-sm font-semibold text-white transition-all duration-200 hover:border-[#4a4a4a] hover:bg-[#2a2a2a]",

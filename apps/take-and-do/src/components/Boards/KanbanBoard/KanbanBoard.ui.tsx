@@ -1,16 +1,11 @@
 "use client";
 
-import type { ComponentProps, ReactNode } from "react";
+import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
+import type { UiProps } from "@/lib/ui-props";
 
-type BoardContainerProps = ComponentProps<"div">;
-
-export function BoardContainer({
-  className,
-  ref,
-  ...props
-}: BoardContainerProps) {
+export function BoardContainer({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -23,9 +18,7 @@ export function BoardContainer({
   );
 }
 
-type ToolbarProps = ComponentProps<"div">;
-
-export function Toolbar({ className, ref, ...props }: ToolbarProps) {
+export function Toolbar({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -38,13 +31,7 @@ export function Toolbar({ className, ref, ...props }: ToolbarProps) {
   );
 }
 
-type WorkspacePathProps = ComponentProps<"h1">;
-
-export function WorkspacePath({
-  className,
-  ref,
-  ...props
-}: WorkspacePathProps) {
+export function WorkspacePath({ className, ref, ...props }: UiProps<"h1">) {
   return (
     <h1
       ref={ref}
@@ -57,13 +44,7 @@ export function WorkspacePath({
   );
 }
 
-type BoardTitleEmojiProps = ComponentProps<"span">;
-
-export function BoardTitleEmoji({
-  className,
-  ref,
-  ...props
-}: BoardTitleEmojiProps) {
+export function BoardTitleEmoji({ className, ref, ...props }: UiProps<"span">) {
   return (
     <span
       ref={ref}
@@ -73,13 +54,11 @@ export function BoardTitleEmoji({
   );
 }
 
-type WorkspacePathLeadingProps = ComponentProps<"span">;
-
 export function WorkspacePathLeading({
   className,
   ref,
   ...props
-}: WorkspacePathLeadingProps) {
+}: UiProps<"span">) {
   return (
     <span
       ref={ref}
@@ -92,9 +71,7 @@ export function WorkspacePathLeading({
   );
 }
 
-type ActionsProps = ComponentProps<"div">;
-
-export function Actions({ className, ref, ...props }: ActionsProps) {
+export function Actions({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -104,14 +81,12 @@ export function Actions({ className, ref, ...props }: ActionsProps) {
   );
 }
 
-type SettingsButtonProps = ComponentProps<"button">;
-
 export function SettingsButton({
   className,
   type = "button",
   ref,
   ...props
-}: SettingsButtonProps) {
+}: UiProps<"button">) {
   return (
     <button
       ref={ref}
@@ -125,19 +100,11 @@ export function SettingsButton({
   );
 }
 
-type PopoverContainerProps = ComponentProps<"div">;
-
-export function PopoverContainer({
-  className,
-  ref,
-  ...props
-}: PopoverContainerProps) {
+export function PopoverContainer({ className, ref, ...props }: UiProps<"div">) {
   return <div ref={ref} className={cn("relative", className)} {...props} />;
 }
 
-type PopoverProps = ComponentProps<"div">;
-
-export function Popover({ className, ref, ...props }: PopoverProps) {
+export function Popover({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -150,9 +117,7 @@ export function Popover({ className, ref, ...props }: PopoverProps) {
   );
 }
 
-type RowProps = ComponentProps<"div">;
-
-export function Row({ className, ref, ...props }: RowProps) {
+export function Row({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -162,9 +127,7 @@ export function Row({ className, ref, ...props }: RowProps) {
   );
 }
 
-type SegmentedProps = ComponentProps<"div">;
-
-export function Segmented({ className, ref, ...props }: SegmentedProps) {
+export function Segmented({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -174,14 +137,14 @@ export function Segmented({ className, ref, ...props }: SegmentedProps) {
   );
 }
 
-type SegmentBtnProps = ComponentProps<"button"> & {
-  $active?: boolean;
+type SegmentBtnProps = UiProps<"button"> & {
+  isActive?: boolean;
 };
 
 export function SegmentBtn({
   className,
   type = "button",
-  $active,
+  isActive,
   ref,
   ...props
 }: SegmentBtnProps) {
@@ -191,7 +154,7 @@ export function SegmentBtn({
       type={type}
       className={cn(
         "flex cursor-pointer items-center gap-2.5 rounded-xl border border-[#333] px-[18px] py-3.5 text-gray-200 transition-colors duration-200 hover:bg-[#2a2a2a]",
-        $active ? "bg-[#2a2a2a]" : "bg-transparent",
+        isActive ? "bg-[#2a2a2a]" : "bg-transparent",
         className,
       )}
       {...props}
@@ -199,9 +162,7 @@ export function SegmentBtn({
   );
 }
 
-type DividerProps = ComponentProps<"hr">;
-
-export function Divider({ className, ref, ...props }: DividerProps) {
+export function Divider({ className, ref, ...props }: UiProps<"hr">) {
   return (
     <hr
       ref={ref}
@@ -211,9 +172,7 @@ export function Divider({ className, ref, ...props }: DividerProps) {
   );
 }
 
-type LabelProps = ComponentProps<"span">;
-
-export function Label({ className, ref, ...props }: LabelProps) {
+export function Label({ className, ref, ...props }: UiProps<"span">) {
   return (
     <span
       ref={ref}
@@ -226,9 +185,7 @@ export function Label({ className, ref, ...props }: LabelProps) {
   );
 }
 
-type SelectProps = ComponentProps<"select">;
-
-export function Select({ className, ref, ...props }: SelectProps) {
+export function Select({ className, ref, ...props }: UiProps<"select">) {
   return (
     <select
       ref={ref}
@@ -241,14 +198,12 @@ export function Select({ className, ref, ...props }: SelectProps) {
   );
 }
 
-type IconBtnProps = ComponentProps<"button">;
-
 export function IconBtn({
   className,
   type = "button",
   ref,
   ...props
-}: IconBtnProps) {
+}: UiProps<"button">) {
   return (
     <button
       ref={ref}
@@ -262,9 +217,7 @@ export function IconBtn({
   );
 }
 
-type FooterProps = ComponentProps<"div">;
-
-export function Footer({ className, ref, ...props }: FooterProps) {
+export function Footer({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -277,15 +230,15 @@ export function Footer({ className, ref, ...props }: FooterProps) {
   );
 }
 
-type BoardProps = ComponentProps<"div"> & { $fillHeight?: boolean };
+type BoardProps = UiProps<"div"> & { fillHeight?: boolean };
 
-export function Board({ className, $fillHeight, ref, ...props }: BoardProps) {
+export function Board({ className, fillHeight, ref, ...props }: BoardProps) {
   return (
     <div
       ref={ref}
       className={cn(
         "grid min-h-0 flex-1 grid-cols-3 gap-x-6 gap-y-4 overflow-auto p-6",
-        $fillHeight ? "auto-rows-[minmax(0,1fr)]" : "auto-rows-min",
+        fillHeight ? "auto-rows-[minmax(0,1fr)]" : "auto-rows-min",
         className,
       )}
       {...props}
@@ -293,13 +246,7 @@ export function Board({ className, $fillHeight, ref, ...props }: BoardProps) {
   );
 }
 
-type BoardMultiLayoutProps = ComponentProps<"div">;
-
-export function BoardMultiLayout({
-  className,
-  ref,
-  ...props
-}: BoardMultiLayoutProps) {
+export function BoardMultiLayout({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -312,13 +259,11 @@ export function BoardMultiLayout({
   );
 }
 
-type MultiBoardSectionProps = ComponentProps<"div">;
-
 export function MultiBoardSection({
   className,
   ref,
   ...props
-}: MultiBoardSectionProps) {
+}: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -328,13 +273,11 @@ export function MultiBoardSection({
   );
 }
 
-type MultiBoardColumnsGridProps = ComponentProps<"div">;
-
 export function MultiBoardColumnsGrid({
   className,
   ref,
   ...props
-}: MultiBoardColumnsGridProps) {
+}: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -347,7 +290,7 @@ export function MultiBoardColumnsGrid({
   );
 }
 
-type WorkspaceSeparatorProps = ComponentProps<"button"> & {
+type WorkspaceSeparatorProps = UiProps<"button"> & {
   children?: ReactNode;
 };
 
@@ -370,13 +313,13 @@ export function WorkspaceSeparator({
   );
 }
 
-type GroupChevronWrapperProps = ComponentProps<"span"> & {
-  $expanded?: boolean;
+type GroupChevronWrapperProps = UiProps<"span"> & {
+  isExpanded?: boolean;
 };
 
 export function GroupChevronWrapper({
   className,
-  $expanded,
+  isExpanded,
   ref,
   ...props
 }: GroupChevronWrapperProps) {
@@ -385,7 +328,7 @@ export function GroupChevronWrapper({
       ref={ref}
       className={cn(
         "inline-flex transition-transform duration-200 ease-out",
-        $expanded ? "rotate-90" : "rotate-0",
+        isExpanded ? "rotate-90" : "rotate-0",
         className,
       )}
       {...props}
@@ -393,13 +336,11 @@ export function GroupChevronWrapper({
   );
 }
 
-type EmptyStateMessageProps = ComponentProps<"div">;
-
 export function EmptyStateMessage({
   className,
   ref,
   ...props
-}: EmptyStateMessageProps) {
+}: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -409,13 +350,11 @@ export function EmptyStateMessage({
   );
 }
 
-type EmptyStateWrapperProps = ComponentProps<"div">;
-
 export function EmptyStateWrapper({
   className,
   ref,
   ...props
-}: EmptyStateWrapperProps) {
+}: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -428,13 +367,7 @@ export function EmptyStateWrapper({
   );
 }
 
-type WorkspaceIconProps = ComponentProps<"div">;
-
-export function WorkspaceIcon({
-  className,
-  ref,
-  ...props
-}: WorkspaceIconProps) {
+export function WorkspaceIcon({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -444,14 +377,12 @@ export function WorkspaceIcon({
   );
 }
 
-type AddButtonProps = ComponentProps<"button">;
-
 export function AddButton({
   className,
   type = "button",
   ref,
   ...props
-}: AddButtonProps) {
+}: UiProps<"button">) {
   return (
     <button
       ref={ref}
@@ -465,13 +396,7 @@ export function AddButton({
   );
 }
 
-type LoadingContainerProps = ComponentProps<"div">;
-
-export function LoadingContainer({
-  className,
-  ref,
-  ...props
-}: LoadingContainerProps) {
+export function LoadingContainer({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
@@ -484,9 +409,7 @@ export function LoadingContainer({
   );
 }
 
-type SpinnerProps = ComponentProps<"div">;
-
-export function Spinner({ className, ref, ...props }: SpinnerProps) {
+export function KanbanSpinner({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}

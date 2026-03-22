@@ -32,7 +32,7 @@ export function TaskSubtasks({
   onSubtaskClick,
   onTaskUpdate,
 }: TaskSubtasksProps) {
-  const [isSubtasksExpanded, setIsSubtasksExpanded] = useState(true);
+  const [isSubtasksExpanded, setIsSubtasksExpanded] = useState(false);
   const [isCreatingSubtask, setIsCreatingSubtask] = useState(false);
   const [newSubtaskSummary, setNewSubtaskSummary] = useState("");
   const isSavingSubtaskRef = useRef(false);

@@ -33,9 +33,9 @@ export function TaskCard({ task, onTaskClick }: TaskCardProps) {
     status,
     priority,
     labels = [],
-    dueDate,
     estimation = 0,
     subtasks = [],
+    scheduleDate,
   } = task;
   const cardRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -103,10 +103,10 @@ export function TaskCard({ task, onTaskClick }: TaskCardProps) {
       <Title $status={status}>{summary}</Title>
 
       <Meta>
-        {!!dueDate && (
+        {!!scheduleDate && (
           <DateTime>
             <CalendarIcon size={14} />
-            <span>{dueDate?.toLocaleDateString()}</span>
+            <span>{tasksHelper.date.formatForSchedule(scheduleDate)}</span>
           </DateTime>
         )}
         {!!estimation && (

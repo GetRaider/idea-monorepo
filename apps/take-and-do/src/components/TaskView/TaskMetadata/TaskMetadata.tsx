@@ -105,7 +105,6 @@ export function TaskMetadata({
     }
   }, [task]);
 
-  // Fetch available labels
   useEffect(() => {
     const fetchLabels = async () => {
       try {

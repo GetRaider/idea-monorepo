@@ -14,7 +14,7 @@ export default function App() {
       <LandingContent>
         <LandingTitle>Take & Do</LandingTitle>
         <LandingSubtitle>As simple as possible</LandingSubtitle>
-        <GetStartedLink href="/home">Get Started</GetStartedLink>
+        <GetStartedLink href="/login">Get Started</GetStartedLink>
       </LandingContent>
     </LandingPageRoot>
   );

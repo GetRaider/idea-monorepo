@@ -87,11 +87,8 @@ export default function LoginPage() {
   }
 
   return (
-    <div
-      className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-[var(--brand-gradient-from)] to-[var(--brand-gradient-to)] p-4"
-      style={{ color: "var(--brand-text-on-gradient)" }}
-    >
-      <div className="w-full max-w-[420px] rounded-2xl border border-white/20 bg-white/90 p-8 shadow-[var(--shadow-dialog)] backdrop-blur-md dark:bg-[#1a1a1a]/90">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-[#1a1a1a] to-[#3c2856] p-4">
+      <div className="w-full max-w-[420px] rounded-2xl border border-white/20 bg-[#12131a]/95 p-8 shadow-[var(--shadow-dialog)] backdrop-blur-md">
         <div className="mb-8 text-center">
           <div className="flex items-center justify-center gap-3">
             <Image
@@ -127,7 +124,7 @@ export default function LoginPage() {
                 <div className="w-full border-t border-[var(--border-color)]" />
               </div>
               <div className="relative flex justify-center text-xs uppercase tracking-wide text-[var(--text-tertiary)]">
-                <span className="bg-white px-2 dark:bg-[#1a1a1a]">or</span>
+                <span className="bg-[#12131a] px-2">or</span>
               </div>
             </div>
           </>
@@ -178,8 +175,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={isBusy}
-            className="flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-medium text-white transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-secondary)] disabled:opacity-50"
-            style={{ backgroundColor: "var(--brand-primary)" }}
+            className="flex w-full size-11 items-center justify-center gap-2 rounded-lg border-0 bg-[#7255c1] px-7 py-3.5 text-base font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#5a42a1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-secondary)] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading === "email" ? (
               <SpinnerRing className="h-5 w-5 border-t-white" />
@@ -220,7 +216,7 @@ export default function LoginPage() {
             {loading === "anonymous" ? (
               <SpinnerRing className="h-5 w-5 border-t-[var(--brand-secondary)]" />
             ) : null}
-            Continue without account
+            Continue as Guest
           </button>
         </div>
       </div>

@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { env } from "@/env";
 import {
+  dataAccessFromAuth,
+  requireAuth,
+  requireNonAnonymous,
+} from "@/lib/api-auth";
+import {
   getAllTaskBoards,
   createTaskBoard,
   getTaskBoardById,
@@ -11,12 +16,16 @@ import {
 import { TaskBoard } from "@/types/workspace";
 
 export async function GET(request: NextRequest) {
+  const authResult = await requireAuth();
+  if (authResult instanceof NextResponse) return authResult;
+
+  const access = dataAccessFromAuth(authResult);
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
 
   try {
     if (id) {
-      const board = await getTaskBoardById(id);
+      const board = await getTaskBoardById(id, access);
       if (!board) {
         return NextResponse.json(
           { error: "Task board not found" },
@@ -26,7 +35,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json([board]);
     }
 
-    const taskBoards = await getAllTaskBoards();
+    const taskBoards = await getAllTaskBoards(access);
     return NextResponse.json(taskBoards);
   } catch {
     return NextResponse.json(
@@ -37,6 +46,10 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
+  const authResult = await requireNonAnonymous();
+  if (authResult instanceof NextResponse) return authResult;
+
+  const access = dataAccessFromAuth(authResult);
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
 
@@ -46,16 +59,25 @@ export async function PATCH(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { name, folderId, emoji } = body as {
+    const { name, folderId, emoji, isPublic } = body as {
       name?: unknown;
       folderId?: unknown;
       emoji?: unknown;
+      isPublic?: unknown;
     };
 
-    const updates: { name?: string; folderId?: string | null; emoji?: string | null } = {};
+    const updates: {
+      name?: string;
+      folderId?: string | null;
+      emoji?: string | null;
+      isPublic?: boolean;
+    } = {};
     if (name !== undefined) {
       if (typeof name !== "string" || !name.trim()) {
-        return NextResponse.json({ error: "Name must be a non-empty string" }, { status: 400 });
+        return NextResponse.json(
+          { error: "Name must be a non-empty string" },
+          { status: 400 },
+        );
       }
       updates.name = name.trim();
     }
@@ -90,11 +112,23 @@ export async function PATCH(request: NextRequest) {
         );
       }
     }
+    if (isPublic !== undefined) {
+      if (typeof isPublic !== "boolean") {
+        return NextResponse.json(
+          { error: "isPublic must be a boolean" },
+          { status: 400 },
+        );
+      }
+      updates.isPublic = isPublic;
+    }
     if (Object.keys(updates).length === 0) {
-      return NextResponse.json({ error: "No updates provided" }, { status: 400 });
+      return NextResponse.json(
+        { error: "No updates provided" },
+        { status: 400 },
+      );
     }
 
-    const updated = await updateTaskBoard(id, updates);
+    const updated = await updateTaskBoard(id, updates, access);
     return NextResponse.json(updated);
   } catch {
     return NextResponse.json(
@@ -105,6 +139,10 @@ export async function PATCH(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  const authResult = await requireNonAnonymous();
+  if (authResult instanceof NextResponse) return authResult;
+
+  const access = dataAccessFromAuth(authResult);
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
 
@@ -113,7 +151,7 @@ export async function DELETE(request: NextRequest) {
   }
 
   try {
-    await deleteTaskBoard(id);
+    await deleteTaskBoard(id, access);
     return new NextResponse(null, { status: 204 });
   } catch {
     return NextResponse.json(
@@ -124,6 +162,10 @@ export async function DELETE(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const authResult = await requireNonAnonymous();
+  if (authResult instanceof NextResponse) return authResult;
+
+  const access = dataAccessFromAuth(authResult);
   try {
     const body = await request.json();
     const { name, folderId } = body;
@@ -135,9 +177,10 @@ export async function POST(request: NextRequest) {
     const taskBoardData: Omit<TaskBoard, "id" | "createdAt" | "updatedAt"> = {
       name: name.trim(),
       folderId: folderId || undefined,
+      isPublic: false,
     };
 
-    const newTaskBoard = await createTaskBoard(taskBoardData);
+    const newTaskBoard = await createTaskBoard(taskBoardData, access);
     return NextResponse.json(newTaskBoard, { status: 201 });
   } catch (error) {
     console.error("Failed to create task board:", error);

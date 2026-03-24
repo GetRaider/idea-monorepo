@@ -9,6 +9,7 @@ function taskBoardFallback(id: string): TaskBoard {
   const t = new Date(0);
   return {
     id,
+    isPublic: false,
     name: id,
     emoji: null,
     folderId: null,

@@ -1,4 +1,6 @@
 import { eq, and, isNull, inArray, gte, lt } from "drizzle-orm";
+
+import { type DataAccess, dataAccessFilter } from "../../data-access";
 import { db } from "../../client";
 import { tasks } from "./task.schema";
 import { taskLabels } from "../taskLabel/taskLabel.schema";
@@ -49,11 +51,17 @@ function boardNameToTaskKeyPrefix(
 async function getMaxNumericSuffixForBoard(
   taskBoardId: string,
   boardPrefix: string,
+  access: DataAccess,
 ): Promise<number> {
   const rows = await db
     .select({ taskKey: tasks.taskKey })
     .from(tasks)
-    .where(eq(tasks.taskBoardId, taskBoardId));
+    .where(
+      and(
+        eq(tasks.taskBoardId, taskBoardId),
+        dataAccessFilter(tasks, access.userId, access.isAnonymous),
+      ),
+    );
 
   let max = 0;
   for (const row of rows) {
@@ -67,29 +75,40 @@ async function getMaxNumericSuffixForBoard(
 
 async function generateNextTaskKeyForBoard(
   taskBoardId: string,
+  access: DataAccess,
 ): Promise<string> {
-  const board = await getTaskBoardById(taskBoardId);
+  const board = await getTaskBoardById(taskBoardId, access);
   const prefix = boardNameToTaskKeyPrefix(board ?? null);
-  const maxNum = await getMaxNumericSuffixForBoard(taskBoardId, prefix);
+  const maxNum = await getMaxNumericSuffixForBoard(taskBoardId, prefix, access);
   return `${prefix}-${maxNum + 1}`;
 }
 
 async function rekeySubtasksAfterParentBoardMove(
   parentTaskId: string,
   newTaskBoardId: string,
+  access: DataAccess,
 ): Promise<void> {
   const subtaskRows = await db
     .select()
     .from(tasks)
-    .where(eq(tasks.parentTaskId, parentTaskId));
+    .where(
+      and(
+        eq(tasks.parentTaskId, parentTaskId),
+        dataAccessFilter(tasks, access.userId, access.isAnonymous),
+      ),
+    );
 
   const sorted = [...subtaskRows].sort(
     (a, b) => a.createdAt.getTime() - b.createdAt.getTime(),
   );
 
-  const board = await getTaskBoardById(newTaskBoardId);
+  const board = await getTaskBoardById(newTaskBoardId, access);
   const prefix = boardNameToTaskKeyPrefix(board ?? null);
-  let nextNum = await getMaxNumericSuffixForBoard(newTaskBoardId, prefix);
+  let nextNum = await getMaxNumericSuffixForBoard(
+    newTaskBoardId,
+    prefix,
+    access,
+  );
   const now = new Date();
   for (const row of sorted) {
     nextNum += 1;
@@ -134,11 +153,15 @@ async function convertTaskRowToTask(
   };
 }
 
-async function loadAllTasksWithRelations(filter?: {
-  taskBoardId?: string;
-  date?: Date;
-  parentTaskId?: string | null;
-}): Promise<Task[]> {
+async function loadAllTasksWithRelations(
+  access: DataAccess,
+  filter?: {
+    taskBoardId?: string;
+    date?: Date;
+    parentTaskId?: string | null;
+  },
+): Promise<Task[]> {
+  const accessCond = dataAccessFilter(tasks, access.userId, access.isAnonymous);
   let allTaskRows: Array<typeof tasks.$inferSelect> = [];
 
   if (filter?.date) {
@@ -155,6 +178,7 @@ async function loadAllTasksWithRelations(filter?: {
       .from(tasks)
       .where(
         and(
+          accessCond,
           isNull(tasks.parentTaskId),
           gte(tasks.scheduleDate, targetDate),
           lt(tasks.scheduleDate, nextDay),
@@ -171,7 +195,10 @@ async function loadAllTasksWithRelations(filter?: {
     ];
 
     // Fetch ALL tasks from those boards (including subtasks regardless of scheduleDate)
-    const boardConditions = [inArray(tasks.taskBoardId, taskBoardIds)];
+    const boardConditions = [
+      accessCond,
+      inArray(tasks.taskBoardId, taskBoardIds),
+    ];
     if (filter?.taskBoardId) {
       boardConditions.push(eq(tasks.taskBoardId, filter.taskBoardId));
     }
@@ -209,7 +236,7 @@ async function loadAllTasksWithRelations(filter?: {
     allTaskRows = allBoardTasks.filter((task) => taskIdsToInclude.has(task.id));
   } else {
     // Regular filtering (not schedule-based)
-    const conditions = [];
+    const conditions = [accessCond];
     if (filter?.taskBoardId) {
       conditions.push(eq(tasks.taskBoardId, filter.taskBoardId));
     }
@@ -224,7 +251,7 @@ async function loadAllTasksWithRelations(filter?: {
     allTaskRows = await db
       .select()
       .from(tasks)
-      .where(conditions.length > 0 ? and(...conditions) : undefined);
+      .where(and(...conditions));
   }
 
   const allTaskLabelRows = await db.select().from(taskLabels);
@@ -300,20 +327,22 @@ async function processSubtasks(
   parentTaskId: string,
   _parentTaskKey: string | null | undefined,
   subtasks: Task[],
+  access: DataAccess,
 ): Promise<Array<{ id: string; taskKey: string }>> {
-  const board = await getTaskBoardById(taskBoardId);
+  const board = await getTaskBoardById(taskBoardId, access);
   const prefix = boardNameToTaskKeyPrefix(board ?? null);
+  const accessCond = dataAccessFilter(tasks, access.userId, access.isAnonymous);
 
   const existingSubtasks = await db
     .select()
     .from(tasks)
-    .where(eq(tasks.parentTaskId, parentTaskId));
+    .where(and(eq(tasks.parentTaskId, parentTaskId), accessCond));
 
   const existingSubtasksMap = new Map(
     existingSubtasks.map((st) => [st.id, st]),
   );
 
-  let nextNum = await getMaxNumericSuffixForBoard(taskBoardId, prefix);
+  let nextNum = await getMaxNumericSuffixForBoard(taskBoardId, prefix, access);
   const processed: Array<{ id: string; taskKey: string }> = [];
 
   for (const subtask of subtasks) {
@@ -341,33 +370,42 @@ async function processSubtasks(
 }
 
 // Public query functions
-export async function getAllTasks(): Promise<Task[]> {
-  return loadAllTasksWithRelations();
+export async function getAllTasks(access: DataAccess): Promise<Task[]> {
+  return loadAllTasksWithRelations(access);
 }
 
 export async function getTasksByTaskBoardId(
   taskBoardId: string,
+  access: DataAccess,
 ): Promise<Task[]> {
-  return loadAllTasksWithRelations({ taskBoardId });
+  return loadAllTasksWithRelations(access, { taskBoardId });
 }
 
-export async function getTasksByDate(date: Date): Promise<Task[]> {
-  return loadAllTasksWithRelations({ date });
+export async function getTasksByDate(
+  date: Date,
+  access: DataAccess,
+): Promise<Task[]> {
+  return loadAllTasksWithRelations(access, { date });
 }
 
-export async function getTaskById(taskId: string): Promise<Task | null> {
-  // Fetch the task
-  const taskRows = await db.select().from(tasks).where(eq(tasks.id, taskId));
+export async function getTaskById(
+  taskId: string,
+  access: DataAccess,
+): Promise<Task | null> {
+  const accessCond = dataAccessFilter(tasks, access.userId, access.isAnonymous);
+  const taskRows = await db
+    .select()
+    .from(tasks)
+    .where(and(eq(tasks.id, taskId), accessCond));
 
   if (taskRows.length === 0) return null;
 
   const taskRow = taskRows[0];
 
-  // Fetch all tasks from the same task board to get subtasks
   const allTaskRows = await db
     .select()
     .from(tasks)
-    .where(eq(tasks.taskBoardId, taskRow.taskBoardId));
+    .where(and(eq(tasks.taskBoardId, taskRow.taskBoardId), accessCond));
 
   // Fetch labels
   const taskLabelRows = await db
@@ -402,30 +440,29 @@ export async function getTaskById(taskId: string): Promise<Task | null> {
 
 export async function getTaskByKey(
   taskKey: string,
+  access: DataAccess,
 ): Promise<{ task: Task; parent: Task | null } | null> {
-  // Find task by key
+  const accessCond = dataAccessFilter(tasks, access.userId, access.isAnonymous);
   const taskRows = await db
     .select()
     .from(tasks)
-    .where(eq(tasks.taskKey, taskKey));
+    .where(and(eq(tasks.taskKey, taskKey), accessCond));
 
   if (taskRows.length === 0) return null;
 
   const taskRow = taskRows[0];
 
-  // If it's a subtask, find parent
   let parent: Task | null = null;
   if (taskRow.parentTaskId) {
     const parentRows = await db
       .select()
       .from(tasks)
-      .where(eq(tasks.id, taskRow.parentTaskId));
+      .where(and(eq(tasks.id, taskRow.parentTaskId), accessCond));
     if (parentRows.length > 0) {
-      // Load all tasks from same board for subtask conversion
       const allTaskRows = await db
         .select()
         .from(tasks)
-        .where(eq(tasks.taskBoardId, taskRow.taskBoardId));
+        .where(and(eq(tasks.taskBoardId, taskRow.taskBoardId), accessCond));
 
       // Load labels
       const allTaskLabelRows = await db.select().from(taskLabels);
@@ -452,13 +489,11 @@ export async function getTaskByKey(
     }
   }
 
-  // Load all tasks from same board for conversion
   const allTaskRows = await db
     .select()
     .from(tasks)
-    .where(eq(tasks.taskBoardId, taskRow.taskBoardId));
+    .where(and(eq(tasks.taskBoardId, taskRow.taskBoardId), accessCond));
 
-  // Load labels
   const allTaskLabelRows = await db.select().from(taskLabels);
   const allLabelRows = await db.select().from(labelsTable);
   const labelMap = new Map<string, string>();
@@ -480,21 +515,30 @@ export async function getTaskByKey(
   return { task, parent };
 }
 
-export async function createTask(taskData: Omit<Task, "id">): Promise<Task> {
+export async function createTask(
+  taskData: Omit<Task, "id">,
+  access: DataAccess,
+): Promise<Task> {
   if (!taskData.taskBoardId) {
     throw new Error("Task must have a taskBoardId");
+  }
+
+  const board = await getTaskBoardById(taskData.taskBoardId, access);
+  if (!board) {
+    throw new Error("Task board not found");
   }
 
   const taskId = generateId();
 
   let taskKey = taskData.taskKey;
   if (!taskKey) {
-    taskKey = await generateNextTaskKeyForBoard(taskData.taskBoardId);
+    taskKey = await generateNextTaskKeyForBoard(taskData.taskBoardId, access);
   }
 
-  // Insert main task
   await db.insert(tasks).values({
     id: taskId,
+    userId: access.userId,
+    isPublic: false,
     taskBoardId: taskData.taskBoardId,
     taskKey,
     summary: taskData.summary,
@@ -509,13 +553,13 @@ export async function createTask(taskData: Omit<Task, "id">): Promise<Task> {
     updatedAt: new Date(),
   });
 
-  // Handle subtasks
   if (taskData.subtasks && taskData.subtasks.length > 0) {
     const processedSubtasks = await processSubtasks(
       taskData.taskBoardId,
       taskId,
       taskKey,
       taskData.subtasks,
+      access,
     );
 
     for (let i = 0; i < taskData.subtasks.length; i++) {
@@ -524,6 +568,8 @@ export async function createTask(taskData: Omit<Task, "id">): Promise<Task> {
 
       await db.insert(tasks).values({
         id: processed.id,
+        userId: access.userId,
+        isPublic: false,
         taskBoardId: subtask.taskBoardId || taskData.taskBoardId,
         taskKey: processed.taskKey,
         summary: subtask.summary,
@@ -550,8 +596,7 @@ export async function createTask(taskData: Omit<Task, "id">): Promise<Task> {
     await syncTaskLabels(taskId, taskData.labels);
   }
 
-  // Return the created task
-  const created = await getTaskById(taskId);
+  const created = await getTaskById(taskId, access);
   if (!created) {
     throw new Error("Failed to retrieve created task");
   }
@@ -561,21 +606,16 @@ export async function createTask(taskData: Omit<Task, "id">): Promise<Task> {
 export async function updateTask(
   taskId: string,
   updates: TaskUpdate,
+  access: DataAccess,
 ): Promise<Task | null> {
-  // Check if task exists
+  const accessCond = dataAccessFilter(tasks, access.userId, access.isAnonymous);
   const existingTaskRows = await db
     .select()
     .from(tasks)
-    .where(eq(tasks.id, taskId));
+    .where(and(eq(tasks.id, taskId), accessCond));
 
   if (existingTaskRows.length === 0) {
-    // Check if it's a subtask
-    const subtaskRows = await db
-      .select()
-      .from(tasks)
-      .where(eq(tasks.id, taskId));
-
-    if (subtaskRows.length === 0) return null;
+    return null;
   }
 
   const existingTask = existingTaskRows[0];
@@ -583,6 +623,11 @@ export async function updateTask(
   const boardChanged =
     updates.taskBoardId !== undefined &&
     updates.taskBoardId !== existingTask.taskBoardId;
+
+  if (boardChanged && updates.taskBoardId) {
+    const newBoard = await getTaskBoardById(updates.taskBoardId, access);
+    if (!newBoard) return null;
+  }
 
   let parentKeyForSubtaskProcessing = existingTask.taskKey ?? null;
 
@@ -608,7 +653,10 @@ export async function updateTask(
     updateData.taskBoardId = updates.taskBoardId;
 
   if (boardChanged && existingTask.parentTaskId == null) {
-    const nextKey = await generateNextTaskKeyForBoard(updates.taskBoardId!);
+    const nextKey = await generateNextTaskKeyForBoard(
+      updates.taskBoardId!,
+      access,
+    );
     updateData.taskKey = nextKey;
     parentKeyForSubtaskProcessing = nextKey;
   }
@@ -625,7 +673,11 @@ export async function updateTask(
     existingTask.parentTaskId == null &&
     updates.subtasks === undefined
   ) {
-    await rekeySubtasksAfterParentBoardMove(taskId, updates.taskBoardId!);
+    await rekeySubtasksAfterParentBoardMove(
+      taskId,
+      updates.taskBoardId!,
+      access,
+    );
   }
 
   if (updates.subtasks !== undefined) {
@@ -637,6 +689,7 @@ export async function updateTask(
         taskId,
         parentKeyForSubtaskProcessing,
         updates.subtasks,
+        access,
       );
 
       for (let i = 0; i < updates.subtasks.length; i++) {
@@ -645,6 +698,8 @@ export async function updateTask(
 
         await db.insert(tasks).values({
           id: processed.id,
+          userId: access.userId,
+          isPublic: false,
           taskBoardId: subtask.taskBoardId || resolvedBoardIdForSubtasks,
           taskKey: processed.taskKey,
           summary: subtask.summary,
@@ -672,26 +727,36 @@ export async function updateTask(
     await syncTaskLabels(taskId, updates.labels);
   }
 
-  // Return updated task
-  const updated = await getTaskById(taskId);
+  const updated = await getTaskById(taskId, access);
   return updated;
 }
 
-export async function deleteTask(taskId: string): Promise<void> {
+export async function deleteTask(
+  taskId: string,
+  access: DataAccess,
+): Promise<void> {
+  const existing = await getTaskById(taskId, access);
+  if (!existing) {
+    return;
+  }
   await db.delete(tasks).where(eq(tasks.id, taskId));
 }
 
 export async function deleteAllTasksForTaskBoard(
   taskBoardId: string,
+  access: DataAccess,
 ): Promise<number> {
+  const accessCond = dataAccessFilter(tasks, access.userId, access.isAnonymous);
   const rows = await db
     .select({ id: tasks.id })
     .from(tasks)
-    .where(eq(tasks.taskBoardId, taskBoardId));
+    .where(and(eq(tasks.taskBoardId, taskBoardId), accessCond));
   const n = rows.length;
   if (n === 0) return 0;
 
-  await db.delete(tasks).where(eq(tasks.taskBoardId, taskBoardId));
+  await db
+    .delete(tasks)
+    .where(and(eq(tasks.taskBoardId, taskBoardId), accessCond));
   return n;
 }
 
@@ -714,9 +779,11 @@ export interface TaskForOptimization {
 
 export async function getTasksForOptimization(
   taskIds: string[],
+  access: DataAccess,
 ): Promise<TaskForOptimization[]> {
   if (taskIds.length === 0) return [];
 
+  const accessCond = dataAccessFilter(tasks, access.userId, access.isAnonymous);
   const taskRows = await db
     .select({
       id: tasks.id,
@@ -728,7 +795,7 @@ export async function getTasksForOptimization(
       status: tasks.status,
     })
     .from(tasks)
-    .where(inArray(tasks.id, taskIds));
+    .where(and(inArray(tasks.id, taskIds), accessCond));
 
   return taskRows.map((row) => ({
     id: row.id,
@@ -743,6 +810,7 @@ export async function getTasksForOptimization(
 
 export async function getTaskStatistics(
   timeframe: "week" | "month" | "quarter" | "all" = "month",
+  access: DataAccess,
 ): Promise<TaskStatistics> {
   const now = new Date();
 
@@ -763,6 +831,7 @@ export async function getTaskStatistics(
       break;
   }
 
+  const accessCond = dataAccessFilter(tasks, access.userId, access.isAnonymous);
   const query = db
     .select({
       id: tasks.id,
@@ -774,8 +843,8 @@ export async function getTaskStatistics(
     .from(tasks);
 
   const allTasks = startDate
-    ? await query.where(gte(tasks.createdAt, startDate))
-    : await query;
+    ? await query.where(and(gte(tasks.createdAt, startDate), accessCond))
+    : await query.where(accessCond);
 
   const tasksCreated = allTasks.length;
   const completedTasks = allTasks.filter((t) => t.status === "Done");

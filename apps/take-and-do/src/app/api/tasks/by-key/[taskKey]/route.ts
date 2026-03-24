@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+
+import { dataAccessFromAuth, requireAuth } from "@/lib/api-auth";
 import { getTaskByKey } from "@/lib/db/queries";
 import { Task } from "@/components/Boards/KanbanBoard/types";
 
@@ -38,9 +40,13 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ taskKey: string }> },
 ) {
+  const authResult = await requireAuth();
+  if (authResult instanceof NextResponse) return authResult;
+
+  const access = dataAccessFromAuth(authResult);
   try {
     const { taskKey } = await params;
-    const result = await getTaskByKey(taskKey);
+    const result = await getTaskByKey(taskKey, access);
 
     if (!result) {
       return NextResponse.json({ error: "Task not found" }, { status: 404 });

@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+
+import { dataAccessFromAuth, requireAuth } from "@/lib/api-auth";
 import { getTaskStatistics } from "@/lib/db/queries";
 import { aiServices } from "@/services/ai";
 
@@ -109,6 +111,10 @@ function generateBasicAnalytics(
 }
 
 export async function GET(request: NextRequest) {
+  const authResult = await requireAuth();
+  if (authResult instanceof NextResponse) return authResult;
+
+  const access = dataAccessFromAuth(authResult);
   try {
     const { searchParams } = new URL(request.url);
     const timeframe = (searchParams.get("timeframe") || "month") as
@@ -127,7 +133,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const stats = await getTaskStatistics(timeframe);
+    const stats = await getTaskStatistics(timeframe, access);
 
     return NextResponse.json({
       timeframe,
@@ -143,6 +149,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const authResult = await requireAuth();
+  if (authResult instanceof NextResponse) return authResult;
+
   try {
     const body = await request.json();
     const { stats, timeframe, shouldUseAI } = body as {
@@ -168,6 +177,17 @@ export async function POST(request: NextRequest) {
             "Invalid timeframe. Must be 'week', 'month', 'quarter', or 'all'",
         },
         { status: 400 },
+      );
+    }
+
+    if (shouldUseAI === true && authResult.isAnonymous) {
+      return NextResponse.json(
+        {
+          error: "Forbidden",
+          message:
+            "AI features are not available for guest users. Please sign in to use them.",
+        },
+        { status: 403 },
       );
     }
 

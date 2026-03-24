@@ -7,6 +7,7 @@ import { Task } from "@/components/Boards/KanbanBoard/types";
 import { EmptyState } from "@/components/EmptyState";
 import { apiServices } from "@/services/api";
 import { ScheduleType, tasksHelper } from "@/helpers/task.helper";
+import { AiGate } from "@/components/ai-gate";
 import { AIPlanningOptimizationDialog } from "./AIPlanningOptimizationDialog/AIPlanningOptimizationDialog";
 import { OptimizeButton } from "./AIPlanningOptimizationDialog/AIPlanningOptimizationDialog.ui";
 import {
@@ -115,9 +116,11 @@ export function TimelinePlanning({
             value={schedule}
             onChange={(value) => setSchedule(value as ScheduleType)}
           />
-          <OptimizeButton onClick={handleOpenOptimizationDialog}>
-            ✨ Explore AI Optimization
-          </OptimizeButton>
+          <AiGate>
+            <OptimizeButton onClick={handleOpenOptimizationDialog}>
+              ✨ Explore AI Optimization
+            </OptimizeButton>
+          </AiGate>
         </ScheduleSelectContainer>
       </SectionHeader>
       {isLoading ? (

@@ -3,7 +3,7 @@ import { Pool } from "pg";
 
 import { env } from "@/env";
 
-const { connectionString } = env.db;
+const connectionString = env.db.connectionString;
 
 export const pool = new Pool({
   connectionString,

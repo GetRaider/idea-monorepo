@@ -38,7 +38,12 @@ export class TaskBoardsApiService extends BaseApiService {
 
   async update(
     id: string,
-    updates: { name?: string; folderId?: string | null; emoji?: string | null },
+    updates: {
+      name?: string;
+      folderId?: string | null;
+      emoji?: string | null;
+      isPublic?: boolean;
+    },
   ): Promise<TaskBoard> {
     const response = await this.patch<TaskBoard>({
       queries: { id },
@@ -55,6 +60,7 @@ export class TaskBoardsApiService extends BaseApiService {
 function normalizeTaskBoard(board: TaskBoard): TaskBoard {
   return {
     ...board,
+    isPublic: board.isPublic ?? false,
     createdAt: new Date(board.createdAt),
     updatedAt: new Date(board.updatedAt),
   };

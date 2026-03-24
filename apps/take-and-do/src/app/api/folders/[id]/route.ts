@@ -1,17 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
+
 import {
-  getFolderById,
-  updateFolder,
-  deleteFolder,
-} from "@/lib/db/queries";
+  dataAccessFromAuth,
+  requireAuth,
+  requireNonAnonymous,
+} from "@/lib/api-auth";
+import { getFolderById, updateFolder, deleteFolder } from "@/lib/db/queries";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const authResult = await requireAuth();
+  if (authResult instanceof NextResponse) return authResult;
+
+  const access = dataAccessFromAuth(authResult);
   try {
     const { id: folderId } = await params;
-    const folder = await getFolderById(folderId);
+    const folder = await getFolderById(folderId, access);
 
     if (!folder) {
       return NextResponse.json({ error: "Folder not found" }, { status: 404 });
@@ -30,9 +36,13 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const authResult = await requireNonAnonymous();
+  if (authResult instanceof NextResponse) return authResult;
+
+  const access = dataAccessFromAuth(authResult);
   try {
     const { id: folderId } = await params;
-    const folder = await getFolderById(folderId);
+    const folder = await getFolderById(folderId, access);
     if (!folder) {
       return NextResponse.json({ error: "Folder not found" }, { status: 404 });
     }
@@ -86,7 +96,7 @@ export async function PATCH(
       );
     }
 
-    const updated = await updateFolder(folderId, updates);
+    const updated = await updateFolder(folderId, updates, access);
     return NextResponse.json(updated);
   } catch {
     return NextResponse.json(
@@ -100,13 +110,17 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const authResult = await requireNonAnonymous();
+  if (authResult instanceof NextResponse) return authResult;
+
+  const access = dataAccessFromAuth(authResult);
   try {
     const { id: folderId } = await params;
-    const folder = await getFolderById(folderId);
+    const folder = await getFolderById(folderId, access);
     if (!folder) {
       return NextResponse.json({ error: "Folder not found" }, { status: 404 });
     }
-    await deleteFolder(folderId);
+    await deleteFolder(folderId, access);
     return new NextResponse(null, { status: 204 });
   } catch {
     return NextResponse.json(

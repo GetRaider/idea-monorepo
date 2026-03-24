@@ -1,4 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+
+import {
+  dataAccessFromAuth,
+  requireAuth,
+  requireNonAnonymous,
+} from "@/lib/api-auth";
 import {
   getAllTasks,
   getTasksByTaskBoardId,
@@ -15,6 +21,10 @@ import { aiServices } from "@/services/ai";
 import { tasksHelper } from "@/helpers/task.helper";
 
 export async function GET(request: NextRequest) {
+  const authResult = await requireAuth();
+  if (authResult instanceof NextResponse) return authResult;
+
+  const access = dataAccessFromAuth(authResult);
   try {
     const { searchParams } = new URL(request.url);
     const taskBoardId = searchParams.get("taskBoardId");
@@ -23,7 +33,7 @@ export async function GET(request: NextRequest) {
     let tasks: Task[] = [];
 
     if (taskBoardId) {
-      tasks = await getTasksByTaskBoardId(taskBoardId);
+      tasks = await getTasksByTaskBoardId(taskBoardId, access);
     } else if (date) {
       // Date filtering - parse YYYY-MM-DD as local date, not UTC
       const dateParts = date.split("-");
@@ -43,9 +53,9 @@ export async function GET(request: NextRequest) {
           { status: 400 },
         );
       }
-      tasks = await getTasksByDate(targetDate);
+      tasks = await getTasksByDate(targetDate, access);
     } else {
-      tasks = await getAllTasks();
+      tasks = await getAllTasks(access);
     }
 
     return NextResponse.json(tasks);
@@ -58,6 +68,10 @@ export async function GET(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  const authResult = await requireNonAnonymous();
+  if (authResult instanceof NextResponse) return authResult;
+
+  const access = dataAccessFromAuth(authResult);
   try {
     const taskBoardId = new URL(request.url).searchParams.get("taskBoardId");
     if (!taskBoardId?.trim()) {
@@ -67,7 +81,10 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const deleted = await deleteAllTasksForTaskBoard(taskBoardId.trim());
+    const deleted = await deleteAllTasksForTaskBoard(
+      taskBoardId.trim(),
+      access,
+    );
     return NextResponse.json({ deleted });
   } catch {
     return NextResponse.json(
@@ -78,6 +95,10 @@ export async function DELETE(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const authResult = await requireNonAnonymous();
+  if (authResult instanceof NextResponse) return authResult;
+
+  const access = dataAccessFromAuth(authResult);
   try {
     let shouldUseAI: boolean | undefined;
     let text: string | undefined;
@@ -159,7 +180,7 @@ export async function POST(request: NextRequest) {
       };
     }
 
-    const newTask = await createTask(taskData);
+    const newTask = await createTask(taskData, access);
 
     return NextResponse.json(newTask, { status: 201 });
   } catch (error) {

@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
+
+import { dataAccessFromAuth, requireAiAccess } from "@/lib/api-auth";
 import { aiServices } from "@/services/ai";
 import { getTasksForOptimization } from "@/lib/db/queries";
 import { tasksHelper } from "@/helpers/task.helper";
 
 export async function POST(request: NextRequest) {
+  const authResult = await requireAiAccess();
+  if (authResult instanceof NextResponse) return authResult;
+
+  const access = dataAccessFromAuth(authResult);
   try {
     const body = await request.json();
     const { taskIds } = body;
@@ -18,7 +24,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const tasks = await getTasksForOptimization(taskIds);
+    const tasks = await getTasksForOptimization(taskIds, access);
 
     if (tasks.length === 0) {
       return NextResponse.json(

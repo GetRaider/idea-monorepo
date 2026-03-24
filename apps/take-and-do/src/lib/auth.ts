@@ -39,6 +39,12 @@ export const auth = betterAuth({
         required: false,
         input: false,
       },
+      isAnonymous: {
+        type: "boolean",
+        required: false,
+        defaultValue: false,
+        input: false,
+      },
     },
   },
   plugins: [anonymous(), nextCookies()],

@@ -9,9 +9,7 @@ const envSchema = z.object({
   AI_MODEL: z.string().optional().default("llama3.1:8b"),
   AI_API_KEY: z.string().optional(),
   AI_BASE_URL: z.string().optional(),
-  DATABASE_URL: z.string().optional(),
-  DIRECT_URL: z.string().optional(),
-  DB_CONNECTION_STRING: z.string().optional(),
+  DB_CONNECTION_STRING: z.string().min(1),
   BETTER_AUTH_SECRET: z.string().min(1).optional(),
   BETTER_AUTH_URL: z.string().url().optional(),
   NEXT_PUBLIC_APP_URL: z.string().url().optional(),
@@ -24,14 +22,6 @@ const envSchema = z.object({
 
 const parsedEnv = envSchema.parse(process.env);
 
-const databaseUrl =
-  parsedEnv.DATABASE_URL ?? parsedEnv.DB_CONNECTION_STRING ?? "";
-const directUrl = parsedEnv.DIRECT_URL ?? databaseUrl;
-
-if (!databaseUrl) {
-  throw new Error("Set DATABASE_URL or DB_CONNECTION_STRING");
-}
-
 export const env = {
   nodeEnv: parsedEnv.NODE_ENV,
   ai: {
@@ -41,8 +31,7 @@ export const env = {
     baseUrl: parsedEnv.AI_BASE_URL,
   },
   db: {
-    connectionString: databaseUrl,
-    directUrl,
+    connectionString: parsedEnv.DB_CONNECTION_STRING,
   },
   auth: {
     secret: parsedEnv.BETTER_AUTH_SECRET,

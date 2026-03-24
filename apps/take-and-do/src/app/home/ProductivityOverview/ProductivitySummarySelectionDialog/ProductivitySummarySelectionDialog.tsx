@@ -1,5 +1,6 @@
 "use client";
 
+import { AiGate } from "@/components/ai-gate";
 import { CloseIcon } from "@/components/Icons";
 import { SecondaryButton, CloseButton } from "@/components/Buttons";
 import { DialogHeading, DialogScrim } from "@/components/Dialogs";
@@ -55,17 +56,19 @@ export function ProductivitySummarySelectionDialog({
         </DialogHeader>
 
         <OptionsContainer>
-          <OptionBlock
-            isSelected={selectedOption === "ai"}
-            isAi={true}
-            onClick={() => onSelect(true)}
-          >
-            <OptionTitle>AI Summary</OptionTitle>
-            <OptionDescription>
-              A personalized AI-powered analytics with insights, risks, and
-              recommendations.
-            </OptionDescription>
-          </OptionBlock>
+          <AiGate>
+            <OptionBlock
+              isSelected={selectedOption === "ai"}
+              isAi={true}
+              onClick={() => onSelect(true)}
+            >
+              <OptionTitle>AI Summary</OptionTitle>
+              <OptionDescription>
+                A personalized AI-powered analytics with insights, risks, and
+                recommendations.
+              </OptionDescription>
+            </OptionBlock>
+          </AiGate>
 
           <OptionBlock
             isSelected={selectedOption === "basic"}

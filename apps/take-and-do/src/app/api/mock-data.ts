@@ -51,6 +51,7 @@ export const mockFolders: Folder[] = [
 export const mockTaskBoards: TaskBoard[] = [
   {
     id: TASKBOARD_PERSONAL_ID,
+    isPublic: false,
     name: "Personal",
     folderId: FOLDER_PERSONAL_ID,
     createdAt: new Date("2025-01-01"),
@@ -58,6 +59,7 @@ export const mockTaskBoards: TaskBoard[] = [
   },
   {
     id: TASKBOARD_WORK_ID,
+    isPublic: false,
     name: "Work",
     folderId: null,
     createdAt: new Date("2025-01-01"),
@@ -65,6 +67,7 @@ export const mockTaskBoards: TaskBoard[] = [
   },
   {
     id: TASKBOARD_SPORT_ID,
+    isPublic: false,
     name: "Sport",
     folderId: null,
     createdAt: new Date("2025-01-01"),

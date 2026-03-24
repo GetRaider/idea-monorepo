@@ -83,6 +83,7 @@ export default function TasksLayoutClient({
       const createdBoard = await apiServices.taskBoards.create({
         name,
         folderId: folderId || undefined,
+        isPublic: false,
       });
       const resolvedBoard = await waiterHelper.retry(
         () => apiServices.taskBoards.getById(createdBoard.id),

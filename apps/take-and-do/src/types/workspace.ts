@@ -10,6 +10,7 @@ export interface Folder {
 
 export interface TaskBoard {
   id: string;
+  isPublic: boolean;
   name: string;
   emoji?: string | null;
   folderId?: string | null; // nullable if board not in a folder

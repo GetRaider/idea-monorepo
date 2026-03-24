@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
+import { FcGoogle } from "react-icons/fc";
 import { SpinnerRing } from "@/components/Spinner/Spinner";
 import { trackEvent } from "@/lib/analytics";
 import { authClient } from "@/lib/auth-client";
@@ -117,7 +118,7 @@ export default function LoginPage() {
               {loading === "google" ? (
                 <SpinnerRing className="h-5 w-5 border-t-[var(--brand-primary)]" />
               ) : null}
-              Continue with Google
+              <FcGoogle className="size-5" /> Continue with Google
             </button>
             <div className="relative my-8">
               <div className="absolute inset-0 flex items-center">

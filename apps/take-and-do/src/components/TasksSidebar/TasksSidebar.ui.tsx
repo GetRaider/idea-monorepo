@@ -3,22 +3,37 @@
 import type { ComponentProps } from "react";
 
 import { Input } from "@/components/Input";
+import {
+  TASKS_SIDEBAR_MAX_WIDTH_PX,
+  TASKS_SIDEBAR_MIN_WIDTH_PX,
+} from "@/helpers/tasks-sidebar-layout";
 import { cn } from "@/lib/utils";
 import type { UiProps } from "@/lib/ui-props";
 
-type AsideOpenProps = UiProps<"aside"> & { isOpen: boolean };
+type AsideOpenProps = UiProps<"aside"> & {
+  isOpen: boolean;
+  widthPx: number;
+};
 
 export function TasksSidebarContainer({
   className,
   isOpen,
+  widthPx,
   ref,
+  style,
   ...props
 }: AsideOpenProps) {
   return (
     <aside
       ref={ref}
+      style={{
+        width: widthPx,
+        minWidth: TASKS_SIDEBAR_MIN_WIDTH_PX,
+        maxWidth: TASKS_SIDEBAR_MAX_WIDTH_PX,
+        ...style,
+      }}
       className={cn(
-        "fixed left-[60px] top-0 z-[90] flex h-screen w-[220px] flex-col gap-6 border-r border-border-app bg-card-bg p-4 transition-transform duration-300 ease-out",
+        "fixed left-[60px] top-0 z-[90] flex h-screen flex-col gap-6 overflow-visible border-r border-border-app bg-card-bg p-4 transition-transform duration-300 ease-out",
         isOpen ? "translate-x-0" : "-translate-x-full",
         className,
       )}

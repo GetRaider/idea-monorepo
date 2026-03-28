@@ -32,6 +32,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <link rel="preload" href="/logo.svg" as="image" type="image/svg+xml" />
+      </head>
       <body
         className={`${inter.variable} flex h-full min-h-0 flex-col`}
         suppressHydrationWarning

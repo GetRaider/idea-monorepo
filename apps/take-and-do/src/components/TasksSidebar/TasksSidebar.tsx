@@ -40,6 +40,7 @@ import {
   Search,
   SearchInput,
 } from "./TasksSidebar.ui";
+import { TasksSidebarResizeHandle } from "./TasksSidebarResizeHandle";
 
 const DRAG_BOARD_KEY = "application/x-task-board-id";
 const ROOT_DROP_ID = "__root__";
@@ -57,21 +58,10 @@ import { useEmojiPickerState } from "./useEmojiPickerState";
 import { useSidebarEditingState } from "./useSidebarEditingState";
 import { useSidebarDeleteState } from "./useSidebarDeleteState";
 
-interface TasksSidebarProps {
-  isOpen: boolean;
-  activeView?: string;
-  onViewChange?: (view: string) => void;
-  onCreateTaskBoard?: () => void;
-  folders: Folder[];
-  taskBoards: TaskBoard[];
-  setTaskBoards: Dispatch<SetStateAction<TaskBoard[]>>;
-  setFolders: Dispatch<SetStateAction<Folder[]>>;
-  isFoldersLoading: boolean;
-  isBoardsLoading: boolean;
-}
-
 export function TasksSidebar({
   isOpen,
+  widthPx,
+  onWidthPxChange,
   activeView = "today",
   onViewChange,
   onCreateTaskBoard,
@@ -411,7 +401,7 @@ export function TasksSidebar({
 
   return (
     <>
-      <TasksSidebarContainer isOpen={isOpen}>
+      <TasksSidebarContainer isOpen={isOpen} widthPx={widthPx}>
         {/* TODO: Implement search and uncomment this */}
         <Search>
           <SearchIcon size={16} />
@@ -606,6 +596,12 @@ export function TasksSidebar({
             </WorkspaceList>
           )}
         </WorkspaceContainer>
+        {isOpen ? (
+          <TasksSidebarResizeHandle
+            widthPx={widthPx}
+            onWidthPxChange={onWidthPxChange}
+          />
+        ) : null}
       </TasksSidebarContainer>
 
       {deletingBoard && (
@@ -629,4 +625,19 @@ export function TasksSidebar({
       )}
     </>
   );
+}
+
+interface TasksSidebarProps {
+  isOpen: boolean;
+  widthPx: number;
+  onWidthPxChange: (width: number) => void;
+  activeView?: string;
+  onViewChange?: (view: string) => void;
+  onCreateTaskBoard?: () => void;
+  folders: Folder[];
+  taskBoards: TaskBoard[];
+  setTaskBoards: Dispatch<SetStateAction<TaskBoard[]>>;
+  setFolders: Dispatch<SetStateAction<Folder[]>>;
+  isFoldersLoading: boolean;
+  isBoardsLoading: boolean;
 }

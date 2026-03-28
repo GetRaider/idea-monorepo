@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { ComponentProps } from "react";
 
+import { TASKS_SIDEBAR_DEFAULT_WIDTH_PX } from "@/helpers/tasks-sidebar-layout";
 import { cn } from "@/lib/utils";
 import type { UiProps } from "@/lib/ui-props";
 
@@ -21,20 +22,25 @@ export function PageContainer({ className, ref, ...props }: UiProps<"div">) {
 
 type WithNavSidebarProps = UiProps<"main"> & {
   withNavSidebar: boolean;
+  /** Tasks sidebar width when open; used with nav rail (60px). */
+  tasksSidebarWidthPx?: number;
 };
 
 export function TasksLayoutMain({
   className,
   withNavSidebar,
+  tasksSidebarWidthPx = TASKS_SIDEBAR_DEFAULT_WIDTH_PX,
   ref,
+  style,
   ...props
 }: WithNavSidebarProps) {
+  const marginLeftPx = withNavSidebar ? 60 + tasksSidebarWidthPx : 60;
   return (
     <main
       ref={ref}
+      style={{ marginLeft: marginLeftPx, ...style }}
       className={cn(
-        "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-gradient-to-br from-[#1a1a1a] to-[#3c2856] transition-[margin-left] duration-300 ease-out",
-        withNavSidebar ? "ml-[280px]" : "ml-[60px]",
+        "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-gradient-to-br from-[#1a1a1a] to-[#3c2856]",
         className,
       )}
       {...props}
@@ -45,15 +51,18 @@ export function TasksLayoutMain({
 export function HomeMainContent({
   className,
   withNavSidebar,
+  tasksSidebarWidthPx = TASKS_SIDEBAR_DEFAULT_WIDTH_PX,
   ref,
+  style,
   ...props
 }: WithNavSidebarProps) {
+  const marginLeftPx = withNavSidebar ? 60 + tasksSidebarWidthPx : 60;
   return (
     <main
       ref={ref}
+      style={{ marginLeft: marginLeftPx, ...style }}
       className={cn(
-        "flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto bg-gradient-to-br from-[#1a1a1a] to-[#3c2856] p-8 text-white transition-[margin-left] duration-300 ease-out",
-        withNavSidebar ? "ml-[280px]" : "ml-[60px]",
+        "flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto bg-gradient-to-br from-[#1a1a1a] to-[#3c2856] p-8 text-white",
         className,
       )}
       {...props}

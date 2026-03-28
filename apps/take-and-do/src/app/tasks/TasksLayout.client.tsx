@@ -10,6 +10,7 @@ import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
 import { waiterHelper } from "@/helpers/waiter.helper";
 import { useWorkspaces } from "@/hooks/useWorkspaces";
 import { WorkspaceProvider } from "@/contexts/WorkspaceContext";
+import { useTasksSidebarWidthPx } from "@/hooks/useTasksSidebarWidthPx";
 import { apiServices } from "@/services/api";
 import { toast } from "sonner";
 
@@ -30,6 +31,8 @@ export default function TasksLayoutClient({
   } = useWorkspaces();
 
   const [isNavSidebarOpen, setIsNavSidebarOpen] = useState(true);
+  const [tasksSidebarWidthPx, setTasksSidebarWidthPx] =
+    useTasksSidebarWidthPx();
   const [isWorkspaceCreateDialogOpen, setIsWorkspaceCreateDialogOpen] =
     useState(false);
 
@@ -124,6 +127,8 @@ export default function TasksLayoutClient({
         <Sidebar onNavigationChange={handleNavigationChange} />
         <TasksSidebar
           isOpen={isNavSidebarOpen}
+          widthPx={tasksSidebarWidthPx}
+          onWidthPxChange={setTasksSidebarWidthPx}
           activeView={activeView}
           onViewChange={handleViewChange}
           onCreateTaskBoard={() => setIsWorkspaceCreateDialogOpen(true)}
@@ -134,7 +139,12 @@ export default function TasksLayoutClient({
           isFoldersLoading={isFoldersLoading}
           isBoardsLoading={isBoardsLoading}
         />
-        <Main withNavSidebar={isNavSidebarOpen}>{children}</Main>
+        <Main
+          withNavSidebar={isNavSidebarOpen}
+          tasksSidebarWidthPx={tasksSidebarWidthPx}
+        >
+          {children}
+        </Main>
 
         {isWorkspaceCreateDialogOpen && (
           <CreateWorkspaceDialog

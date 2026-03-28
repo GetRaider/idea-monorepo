@@ -2,11 +2,13 @@
 
 import { useState, useEffect } from "react";
 import { Sidebar } from "@/components/Sidebar/Sidebar";
-import { apiServices } from "@/services/api";
 import { Task } from "@/components/Boards/KanbanBoard/types";
 import { StatsCards, ProductivityOverview, TimelinePlanning } from ".";
 import type { TaskStats } from ".";
 import { Spinner } from "@/components/Spinner/Spinner";
+import { useTasksSidebarWidthPx } from "@/hooks/useTasksSidebarWidthPx";
+import { apiServices } from "@/services/api";
+
 import {
   PageContainer,
   HomeMainContent,
@@ -18,6 +20,7 @@ import {
 function HomePage() {
   const [, setCurrentPage] = useState("home");
   const [isTasksSidebarOpen, setIsTasksSidebarOpen] = useState(false);
+  const [tasksSidebarWidthPx] = useTasksSidebarWidthPx();
   const [isLoading, setIsLoading] = useState(true);
   const [todayTasks, setTodayTasks] = useState<Task[]>([]);
   const [tomorrowTasks, setTomorrowTasks] = useState<Task[]>([]);
@@ -56,7 +59,10 @@ function HomePage() {
     return (
       <PageContainer>
         <Sidebar onNavigationChange={handleNavigationToTasksPage} />
-        <HomeMainContent withNavSidebar={isTasksSidebarOpen}>
+        <HomeMainContent
+          withNavSidebar={isTasksSidebarOpen}
+          tasksSidebarWidthPx={tasksSidebarWidthPx}
+        >
           <Spinner className="h-full min-h-[240px] flex-1" />
         </HomeMainContent>
       </PageContainer>
@@ -66,7 +72,10 @@ function HomePage() {
   return (
     <PageContainer>
       <Sidebar onNavigationChange={handleNavigationToTasksPage} />
-      <HomeMainContent withNavSidebar={isTasksSidebarOpen}>
+      <HomeMainContent
+        withNavSidebar={isTasksSidebarOpen}
+        tasksSidebarWidthPx={tasksSidebarWidthPx}
+      >
         <WelcomeSection>
           <HomePageTitle>Home</HomePageTitle>
           <HomePageSubtitle>

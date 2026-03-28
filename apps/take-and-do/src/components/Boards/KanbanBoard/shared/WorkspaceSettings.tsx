@@ -35,13 +35,14 @@ export function WorkspaceSettings({ boardId }: WorkspaceSettingsProps) {
   }, [settingsOpen]);
 
   const handlePublicToggle = useCallback(
-    async (next: boolean) => {
+    async (toPublic: boolean) => {
       if (isSavingPublic) return;
       setIsSavingPublic(true);
       try {
-        const updated = next
-          ? await apiServices.taskBoards.makePublic(boardId)
-          : await apiServices.taskBoards.update(boardId, { isPublic: false });
+        const updated = await apiServices.taskBoards.changeVisibility({
+          id: boardId,
+          toPublic: toPublic,
+        });
         setTaskBoards((previous) =>
           previous.map((entry) => (entry.id === boardId ? updated : entry)),
         );
@@ -57,7 +58,7 @@ export function WorkspaceSettings({ boardId }: WorkspaceSettingsProps) {
       label: "Public Workspace",
       icon: <PublicWorkspaceIcon size={20} className="text-text-primary" />,
       checked: isPublic,
-      onChange: (next: boolean) => void handlePublicToggle(next),
+      onChange: (toPublic: boolean) => void handlePublicToggle(toPublic),
       tooltip:
         "When enabled, guest users can interact with this board without signing in.",
     },
@@ -97,42 +98,43 @@ export function WorkspaceSettings({ boardId }: WorkspaceSettingsProps) {
           </header>
 
           <ul className="m-0 list-none divide-y divide-border-app p-0">
-            <li className="flex items-center gap-4 py-4">
-              {options.map((option) => (
-                <>
-                  <div
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-input-bg"
-                    aria-hidden
+            {options.map((option, index) => (
+              <li key={index} className="flex items-center gap-4 py-4">
+                <div
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-input-bg"
+                  aria-hidden
+                >
+                  {option.icon}
+                </div>
+                <div className="min-w-0 flex flex-1 flex-wrap items-center gap-1.5">
+                  <span
+                    id="workspace-public-label"
+                    className="text-sm font-semibold text-text-primary"
                   >
-                    {option.icon}
-                  </div>
-                  <div className="min-w-0 flex flex-1 flex-wrap items-center gap-1.5">
-                    <span
-                      id="workspace-public-label"
-                      className="text-sm font-semibold text-text-primary"
+                    {option.label}
+                  </span>
+                  <AppTooltip content={option.tooltip}>
+                    <button
+                      type="button"
+                      className="inline-flex shrink-0 cursor-help items-center justify-center rounded text-text-secondary transition-colors hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+                      aria-label="About public workspace"
                     >
-                      {option.label}
-                    </span>
-                    <AppTooltip content={option.tooltip}>
-                      <button
-                        type="button"
-                        className="inline-flex shrink-0 cursor-help items-center justify-center rounded text-text-secondary transition-colors hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
-                        aria-label="About public workspace"
-                      >
-                        <InfoCircleIcon size={14} />
-                      </button>
-                    </AppTooltip>
-                  </div>
-                  <Switch
-                    checked={option.checked}
-                    onCheckedChange={(next) => void option.onChange(next)}
-                    disabled={isAnonymous || isSavingPublic}
-                    size="sm"
-                    aria-labelledby="workspace-public-label"
-                  />
-                </>
-              ))}
-            </li>
+                      <InfoCircleIcon size={14} />
+                    </button>
+                  </AppTooltip>
+                </div>
+                <Switch
+                  checked={option.checked}
+                  onCheckedChange={(toPublic) => {
+                    console.log("toPublic", toPublic);
+                    void option.onChange(toPublic);
+                  }}
+                  disabled={isAnonymous || isSavingPublic}
+                  size="sm"
+                  aria-labelledby="workspace-public-label"
+                />
+              </li>
+            ))}
           </ul>
         </Popover>
       ) : null}

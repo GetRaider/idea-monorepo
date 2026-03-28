@@ -45,21 +45,25 @@ export class TaskBoardsApiService extends BaseApiService {
     return normalizeTaskBoard(response.data);
   }
 
-  async makePublic(id: string): Promise<TaskBoard> {
-    const updated = await this.update(id, { isPublic: true });
+  async changeVisibility({
+    id,
+    toPublic,
+  }: {
+    id: string;
+    toPublic: boolean;
+  }): Promise<TaskBoard> {
+    // Optimize query
+    const board = await this.getById(id);
+    const updatedBoard = await this.update(id, { isPublic: toPublic });
     const tasks = await apiServices.tasks.getByBoardId(id);
     // TODO: Optimize query to update all tasks at once
     for (const task of tasks) {
-      await apiServices.tasks.update(task.id, {
-        isPublic: true,
-      });
+      await apiServices.tasks.update(task.id, { isPublic: toPublic });
     }
-    if (updated?.folderId) {
-      await apiServices.folders.update(updated.folderId, {
-        isPublic: true,
-      });
+    if (board?.folderId) {
+      await apiServices.folders.update(board.folderId, { isPublic: toPublic });
     }
-    return updated;
+    return updatedBoard;
   }
 
   async deleteBoard(id: string): Promise<void> {

@@ -11,7 +11,7 @@ export function PageContainer({ className, ref, ...props }: UiProps<"div">) {
     <div
       ref={ref}
       className={cn(
-        "flex h-screen overflow-hidden bg-gradient-to-br from-[#1a1a1a] to-[#3c2856]",
+        "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-gradient-to-br from-[#1a1a1a] to-[#3c2856]",
         className,
       )}
       {...props}
@@ -33,7 +33,7 @@ export function TasksLayoutMain({
     <main
       ref={ref}
       className={cn(
-        "flex flex-1 flex-col overflow-hidden bg-gradient-to-br from-[#1a1a1a] to-[#3c2856] transition-[margin-left] duration-300 ease-out",
+        "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-gradient-to-br from-[#1a1a1a] to-[#3c2856] transition-[margin-left] duration-300 ease-out",
         withNavSidebar ? "ml-[280px]" : "ml-[60px]",
         className,
       )}
@@ -52,7 +52,7 @@ export function HomeMainContent({
     <main
       ref={ref}
       className={cn(
-        "flex flex-1 flex-col overflow-y-auto bg-gradient-to-br from-[#1a1a1a] to-[#3c2856] p-8 text-white transition-[margin-left] duration-300 ease-out",
+        "flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto bg-gradient-to-br from-[#1a1a1a] to-[#3c2856] p-8 text-white transition-[margin-left] duration-300 ease-out",
         withNavSidebar ? "ml-[280px]" : "ml-[60px]",
         className,
       )}

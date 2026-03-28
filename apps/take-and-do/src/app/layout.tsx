@@ -32,11 +32,20 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={inter.variable} suppressHydrationWarning>
-        <Theme>
+      <body
+        className={`${inter.variable} flex h-full min-h-0 flex-col`}
+        suppressHydrationWarning
+      >
+        <Theme
+          appearance="dark"
+          className="flex min-h-0 w-full min-w-0 flex-1 flex-col bg-transparent"
+          hasBackground={false}
+        >
           <Analytics />
           <GuestBanner />
-          {children}
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            {children}
+          </div>
           <Toaster
             theme="dark"
             position="bottom-right"

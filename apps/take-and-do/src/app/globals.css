@@ -40,13 +40,22 @@
     @apply box-border p-0 m-0;
   }
 
-  html,
+  html {
+    @apply max-w-full overflow-x-hidden h-full;
+    min-height: 100%;
+    background-color: #1a1a1a;
+    background-image: linear-gradient(to bottom right, #1a1a1a, #3c2856);
+    background-attachment: fixed;
+    background-size: cover;
+  }
+
   body {
     @apply max-w-full overflow-x-hidden h-full;
   }
 
   body {
-    @apply text-foreground bg-background antialiased;
+    @apply text-foreground antialiased;
+    background: transparent;
     font-family:
       var(--font-inter),
       -apple-system,

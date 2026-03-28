@@ -55,10 +55,27 @@ export async function PATCH(
       }
       throw error;
     }
-    const { name, emoji } = body as { name?: unknown; emoji?: unknown };
+    const { name, emoji, isPublic } = body as {
+      name?: unknown;
+      emoji?: unknown;
+      isPublic?: unknown;
+    };
 
-    const updates: { name?: string; emoji?: string | null } = {};
+    const updates: {
+      name?: string;
+      emoji?: string | null;
+      isPublic?: boolean;
+    } = {};
 
+    if (isPublic !== undefined) {
+      if (typeof isPublic !== "boolean") {
+        return NextResponse.json(
+          { error: "isPublic must be a boolean" },
+          { status: 400 },
+        );
+      }
+      updates.isPublic = isPublic;
+    }
     if (name !== undefined) {
       if (typeof name !== "string" || !name.trim()) {
         return NextResponse.json(

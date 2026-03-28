@@ -12,6 +12,7 @@ import {
   ClockNavIcon,
   DotsVerticalIcon,
   PlusIcon,
+  SearchIcon,
 } from "@/components/Icons";
 import { Dropdown } from "@/components/Dropdown";
 import {
@@ -36,6 +37,8 @@ import {
   FolderEditWrap,
   FolderEditInput,
   RootBoardsDropZone,
+  Search,
+  SearchInput,
 } from "./TasksSidebar.ui";
 
 const DRAG_BOARD_KEY = "application/x-task-board-id";
@@ -410,10 +413,10 @@ export function TasksSidebar({
     <>
       <TasksSidebarContainer isOpen={isOpen}>
         {/* TODO: Implement search and uncomment this */}
-        {/* <Search>
+        <Search>
           <SearchIcon size={16} />
           <SearchInput type="text" placeholder="Search..." />
-        </Search> */}
+        </Search>
 
         <WorkspaceContainer>
           <SideBarSectionHeader>Schedules</SideBarSectionHeader>

@@ -22,10 +22,7 @@ export class FoldersApiService extends BaseApiService {
     return normalizeFolder(response.data);
   }
 
-  async update(
-    id: string,
-    updates: { name?: string; emoji?: string | null },
-  ): Promise<Folder> {
+  async update(id: string, updates: FolderUpdate): Promise<Folder> {
     const response = await this.patch<Folder>({
       pathParams: [id],
       body: updates,
@@ -44,4 +41,10 @@ function normalizeFolder(folder: Folder): Folder {
     createdAt: new Date(folder.createdAt),
     updatedAt: new Date(folder.updatedAt),
   };
+}
+
+interface FolderUpdate {
+  name?: string;
+  emoji?: string | null;
+  isPublic?: boolean;
 }

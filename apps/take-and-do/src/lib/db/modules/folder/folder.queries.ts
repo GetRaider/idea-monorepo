@@ -34,6 +34,7 @@ export async function getAllFolders(access: DataAccess): Promise<Folder[]> {
     id: row.id,
     name: row.name,
     emoji: row.emoji,
+    isPublic: row.isPublic,
     createdAt: new Date(row.createdAt),
     updatedAt: new Date(row.updatedAt),
   }));
@@ -58,6 +59,7 @@ export async function getFolderById(
     id: row.id,
     name: row.name,
     emoji: row.emoji,
+    isPublic: row.isPublic,
     createdAt: new Date(row.createdAt),
     updatedAt: new Date(row.updatedAt),
   };
@@ -65,7 +67,7 @@ export async function getFolderById(
 
 export async function updateFolder(
   id: string,
-  data: { name?: string; emoji?: string | null },
+  data: { name?: string; emoji?: string | null; isPublic?: boolean },
   access: DataAccess,
 ): Promise<Folder> {
   const existing = await getFolderById(id, access);
@@ -78,6 +80,7 @@ export async function updateFolder(
     .set({
       ...(data.name !== undefined && { name: data.name }),
       ...(data.emoji !== undefined && { emoji: data.emoji }),
+      ...(data.isPublic !== undefined && { isPublic: data.isPublic }),
       updatedAt: new Date(),
     })
     .where(eq(foldersTable.id, id));

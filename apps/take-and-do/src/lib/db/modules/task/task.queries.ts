@@ -651,6 +651,7 @@ export async function updateTask(
       : null;
   if (updates.taskBoardId !== undefined)
     updateData.taskBoardId = updates.taskBoardId;
+  if (updates.isPublic !== undefined) updateData.isPublic = updates.isPublic;
 
   if (boardChanged && existingTask.parentTaskId == null) {
     const nextKey = await generateNextTaskKeyForBoard(

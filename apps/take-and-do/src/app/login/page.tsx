@@ -285,7 +285,7 @@ function GuestIntentModal({
           />
           <IntentOption
             label="Other"
-            description="Something else"
+            description="Describe any other reason you're here"
             selected={guestIntent === "other"}
             onSelect={() => onIntentChange("other")}
             disabled={isBusy}
@@ -298,7 +298,7 @@ function GuestIntentModal({
               htmlFor="guest-intent-other"
               className="mb-1 block text-xs text-[var(--text-secondary)]"
             >
-              Tell us a bit more (optional)
+              Tell us a bit more details
             </label>
             <input
               id="guest-intent-other"
@@ -323,11 +323,11 @@ function GuestIntentModal({
           <button
             type="button"
             onClick={onConfirm}
-            disabled={isBusy || !canConfirm}
+            disabled={!guestOtherText?.trim()?.length || isBusy || !canConfirm}
             className="rounded-lg px-4 py-2 text-sm font-medium text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-secondary)] disabled:opacity-50"
             style={{ backgroundColor: "var(--brand-primary)" }}
           >
-            Let&apos;s go →
+            Continue
           </button>
         </div>
       </div>

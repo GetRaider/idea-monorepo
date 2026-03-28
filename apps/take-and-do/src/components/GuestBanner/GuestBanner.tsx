@@ -1,36 +1,25 @@
 "use client";
 
-import { usePathname } from "next/navigation";
-
 import { authClient } from "@/lib/auth-client";
-
-const isAnonymousUser = (user: unknown): user is { isAnonymous: boolean } =>
-  typeof user === "object" &&
-  user !== null &&
-  "isAnonymous" in user &&
-  typeof (user as { isAnonymous: unknown }).isAnonymous === "boolean";
+import { cn } from "@/lib/utils";
 
 export function GuestBanner() {
-  const pathname = usePathname();
   const { data: session } = authClient.useSession();
 
-  if (
-    pathname === "/login" ||
-    pathname === "/signup" ||
-    !session?.user ||
-    !isAnonymousUser(session.user) ||
-    !session.user.isAnonymous
-  ) {
-    return null;
-  }
+  if (!session?.user?.isAnonymous) return null;
 
   return (
-    <div
-      className="box-border border-b border-[var(--border-color)] bg-[var(--nav-sidebar-bg)] px-3 py-1.5 pl-4 pr-8 text-center text-xs leading-snug text-[var(--text-secondary)] sm:px-4 sm:py-2 sm:pr-12 sm:text-sm"
-      role="status"
-    >
-      You&apos;re signed in anonymously 👀 — this session is temporary. Sign in
-      with Google or email to keep your work.
+    <div className="pointer-events-none fixed left-1/2 top-2 z-[300] w-max max-w-[calc(100vw-2rem)] -translate-x-1/2 max-[640px]:top-3 max-[640px]:max-w-[calc(100vw-1rem)]">
+      <div
+        className={cn(
+          "pointer-events-auto max-w-full max-h-13 overflow-x-auto rounded-xl border border-border-app bg-[#1f1f1f] px-[18px] py-[18px] text-sm leading-relaxed text-gray-200 shadow-[0_10px_30px_rgba(0,0,0,0.4)]",
+          "whitespace-nowrap",
+        )}
+        role="status"
+      >
+        You&apos;re signed in anonymously 👀 — this session is temporary. Sign
+        in with Google or email to keep your work.
+      </div>
     </div>
   );
 }

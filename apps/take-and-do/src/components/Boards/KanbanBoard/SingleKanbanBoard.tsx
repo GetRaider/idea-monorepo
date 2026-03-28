@@ -48,27 +48,10 @@ export function SingleKanbanBoard({
   onSubtaskOpen,
 }: SingleKanbanBoardProps) {
   const router = useRouter();
-  const { taskBoards, setTaskBoards } = useWorkspace();
+  const { taskBoards } = useWorkspace();
   const boardOptions = useMemo(
     () => taskBoards.map((b) => ({ id: b.id, name: b.name })),
     [taskBoards],
-  );
-
-  const boardIsPublic = useMemo(
-    () => taskBoards.find((entry) => entry.id === boardId)?.isPublic ?? false,
-    [taskBoards, boardId],
-  );
-
-  const handleBoardIsPublicChange = useCallback(
-    async (next: boolean) => {
-      const updated = await apiServices.taskBoards.update(boardId, {
-        isPublic: next,
-      });
-      setTaskBoards((previous) =>
-        previous.map((entry) => (entry.id === boardId ? updated : entry)),
-      );
-    },
-    [boardId, setTaskBoards],
   );
 
   const [tasksByStatus, setTasksByStatus] =
@@ -252,10 +235,7 @@ export function SingleKanbanBoard({
           workspaceEmoji={boardEmoji}
           onCreateTask={handleCreateTask}
           onCreateTaskWithAI={handleCreateTaskWithAI}
-          boardSettings={{
-            isPublic: boardIsPublic,
-            onIsPublicChange: handleBoardIsPublicChange,
-          }}
+          boardId={boardId}
         />
 
         <Board fillHeight>

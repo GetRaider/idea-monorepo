@@ -42,6 +42,7 @@ export const mockFolders: Folder[] = [
   {
     id: FOLDER_PERSONAL_ID,
     name: "Personal",
+    isPublic: false,
     createdAt: new Date("2025-01-01"),
     updatedAt: new Date("2025-01-01"),
   },

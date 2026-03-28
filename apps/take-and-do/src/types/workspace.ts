@@ -4,6 +4,7 @@ export interface Folder {
   id: string;
   name: string;
   emoji?: string | null;
+  isPublic: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

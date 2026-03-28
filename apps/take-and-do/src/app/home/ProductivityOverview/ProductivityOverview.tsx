@@ -190,7 +190,11 @@ function Charts({ stats }: { stats: AnalyticsStats }) {
             <XAxis dataKey="name" stroke="#888" />
             <YAxis stroke="#888" />
             <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
-            <Bar dataKey="value" fill="#667eea" radius={[6, 6, 0, 0]} />
+            <Bar
+              dataKey="value"
+              fill="var(--brand-primary)"
+              radius={[6, 6, 0, 0]}
+            />
           </BarChart>
         </ResponsiveContainer>
       </ChartCard>

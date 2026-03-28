@@ -3,6 +3,7 @@ import { tasksHelper } from "@/helpers/task.helper";
 import { TaskBoard } from "@/types/workspace";
 
 import { BaseApiService } from "./base-api.service";
+import { apiServices } from ".";
 
 export class TaskBoardsApiService extends BaseApiService {
   constructor() {
@@ -36,20 +37,29 @@ export class TaskBoardsApiService extends BaseApiService {
     return normalizeTaskBoard(response.data);
   }
 
-  async update(
-    id: string,
-    updates: {
-      name?: string;
-      folderId?: string | null;
-      emoji?: string | null;
-      isPublic?: boolean;
-    },
-  ): Promise<TaskBoard> {
+  async update(id: string, updates: TaskBoardUpdate): Promise<TaskBoard> {
     const response = await this.patch<TaskBoard>({
       queries: { id },
       body: updates,
     });
     return normalizeTaskBoard(response.data);
+  }
+
+  async makePublic(id: string): Promise<TaskBoard> {
+    const updated = await this.update(id, { isPublic: true });
+    const tasks = await apiServices.tasks.getByBoardId(id);
+    // TODO: Optimize query to update all tasks at once
+    for (const task of tasks) {
+      await apiServices.tasks.update(task.id, {
+        isPublic: true,
+      });
+    }
+    if (updated?.folderId) {
+      await apiServices.folders.update(updated.folderId, {
+        isPublic: true,
+      });
+    }
+    return updated;
   }
 
   async deleteBoard(id: string): Promise<void> {
@@ -74,4 +84,11 @@ function normalizeTask(task: Task): Task {
     priority: tasksHelper.priority.format(task.priority),
     subtasks: (task.subtasks ?? []).map(normalizeTask),
   };
+}
+
+interface TaskBoardUpdate {
+  name?: string;
+  folderId?: string | null;
+  emoji?: string | null;
+  isPublic?: boolean;
 }

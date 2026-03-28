@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { HomeIcon } from "@radix-ui/react-icons";
 import { Dropdown } from "@/components/Dropdown";
 import { SunIcon } from "@/components/Icons";
 import { signOut, useSession } from "@/lib/auth-client";
@@ -14,12 +13,36 @@ import {
   BottomActions,
   Avatar,
 } from "./Sidebar.ui";
+import { GuestAvatarIcon } from "../Icons/GuestAvatarIcon";
+import { DefaultAvatarIcon } from "../Icons/DefaulAvatarIcon";
+import { UserWithAnonymous } from "better-auth/plugins";
 
 interface SidebarProps {
   onNavigationChange: (page: string) => void;
 }
 
-const DEFAULT_AVATAR = "https://i.pravatar.cc/40?img=12";
+const iconsSet = [
+  {
+    label: "Home",
+    icon: "/home.svg",
+    path: "/home",
+  },
+  {
+    label: "Tasks",
+    icon: "/tasks.svg",
+    path: "/tasks",
+  },
+  {
+    label: "Calendar",
+    icon: "/calendar.svg",
+    path: undefined,
+  },
+  {
+    label: "Docs",
+    icon: "/docs.svg",
+    path: undefined,
+  },
+];
 
 export function Sidebar({ onNavigationChange }: SidebarProps) {
   const pathname = usePathname();
@@ -28,39 +51,24 @@ export function Sidebar({ onNavigationChange }: SidebarProps) {
 
   const handleNavClick = (page: string, path: string) => {
     onNavigationChange(page);
-    if (!pathname.startsWith(path)) {
-      router.push(path);
-    }
+    if (!pathname.startsWith(path)) router.push(path);
   };
-
-  const isHomeActive = pathname === "/home" || pathname === "/";
-  const isTasksActive = pathname.startsWith("/tasks");
 
   return (
     <SidebarContainer>
       <Logo src="/logo.svg" alt="Logo" />
 
       <Nav>
-        <NavButton
-          isActive={isHomeActive}
-          onClick={() => handleNavClick("home", "/home")}
-        >
-          <HomeIcon width={24} height={24} />
-        </NavButton>
-        <NavButton
-          isActive={isTasksActive}
-          onClick={() => handleNavClick("tasks", "/tasks")}
-        >
-          <Image width={24} height={24} src="/tasks.svg" alt="Tasks" />
-        </NavButton>
-
-        <NavButton disabled>
-          <Image width={24} height={24} src="/calendar.svg" alt="Calendar" />
-        </NavButton>
-
-        <NavButton disabled>
-          <Image width={24} height={24} src="/docs.svg" alt="Workspace" />
-        </NavButton>
+        {iconsSet.map((icon) => (
+          <NavButton
+            disabled={!icon.path}
+            key={icon.label}
+            isActive={icon.path ? pathname.startsWith(icon.path) : false}
+            onClick={() => handleNavClick(icon.label, icon?.path ?? "")}
+          >
+            <Image width={24} height={24} src={icon.icon} alt={icon.label} />
+          </NavButton>
+        ))}
       </Nav>
 
       <BottomActions>
@@ -71,12 +79,7 @@ export function Sidebar({ onNavigationChange }: SidebarProps) {
         <Dropdown
           className="mt-2"
           menuOpensTo="right"
-          trigger={
-            <Avatar
-              src={session?.user?.image ?? DEFAULT_AVATAR}
-              alt={session?.user?.name ?? "Account"}
-            />
-          }
+          trigger={getAvatarIcon(session?.user as UserWithAnonymous)}
           options={[{ label: "Log out", value: "logout", danger: true }]}
           menuMinWidth={140}
           onChange={async (value) => {
@@ -89,4 +92,12 @@ export function Sidebar({ onNavigationChange }: SidebarProps) {
       </BottomActions>
     </SidebarContainer>
   );
+}
+
+function getAvatarIcon(user: UserWithAnonymous | undefined): React.ReactNode {
+  if (user?.isAnonymous) return <GuestAvatarIcon size={36} />;
+  if (user?.image) {
+    return <Avatar src={user.image} alt={user.name ?? "Account"} />;
+  }
+  if (!user) return <DefaultAvatarIcon size={36} />;
 }

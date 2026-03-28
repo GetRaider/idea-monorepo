@@ -3,7 +3,6 @@ import { eq, and, isNull, inArray, gte, lt } from "drizzle-orm";
 import { type DataAccess, dataAccessFilter } from "../../data-access";
 import { db } from "../../client";
 import { tasks } from "./task.schema";
-import { taskLabels } from "../taskLabel/taskLabel.schema";
 import { labelsTable } from "../label/label.schema";
 import {
   Task,
@@ -127,14 +126,10 @@ async function rekeySubtasksAfterParentBoardMove(
 async function convertTaskRowToTask(
   taskRow: typeof tasks.$inferSelect,
   allTasks: Array<typeof tasks.$inferSelect>,
-  taskLabelsMap: Map<string, string[]>,
 ): Promise<Task> {
-  const taskLabelNames = taskLabelsMap.get(taskRow.id) || [];
   const subtaskRows = allTasks.filter((t) => t.parentTaskId === taskRow.id);
   const subtasks = await Promise.all(
-    subtaskRows.map((subtaskRow) =>
-      convertTaskRowToTask(subtaskRow, allTasks, taskLabelsMap),
-    ),
+    subtaskRows.map((subtaskRow) => convertTaskRowToTask(subtaskRow, allTasks)),
   );
 
   return {
@@ -145,7 +140,6 @@ async function convertTaskRowToTask(
     description: taskRow.description,
     status: taskRow.status as TaskStatus,
     priority: taskRow.priority as TaskPriority,
-    labels: taskLabelNames.length > 0 ? taskLabelNames : undefined,
     dueDate: tasksHelper.date.parse(taskRow.dueDate),
     estimation: taskRow.estimation || undefined,
     subtasks: subtasks.length > 0 ? subtasks : undefined,
@@ -254,71 +248,35 @@ async function loadAllTasksWithRelations(
       .where(and(...conditions));
   }
 
-  const allTaskLabelRows = await db.select().from(taskLabels);
-  const allLabelRows = await db.select().from(labelsTable);
-  const labelMap = new Map<string, string>();
-  allLabelRows.forEach((label) => {
-    labelMap.set(label.id, label.name);
-  });
-  const taskLabelsMap = new Map<string, string[]>();
-  allTaskLabelRows.forEach((taskLabel) => {
-    const labelName = labelMap.get(taskLabel.labelId);
-    if (labelName) {
-      const existing = taskLabelsMap.get(taskLabel.taskId) || [];
-      existing.push(labelName);
-      taskLabelsMap.set(taskLabel.taskId, existing);
-    }
-  });
-
   const topLevelTasks = allTaskRows.filter((t) => !t.parentTaskId);
 
   const result = await Promise.all(
-    topLevelTasks.map((taskRow) =>
-      convertTaskRowToTask(taskRow, allTaskRows, taskLabelsMap),
-    ),
+    topLevelTasks.map((taskRow) => convertTaskRowToTask(taskRow, allTaskRows)),
   );
 
   return result;
 }
 
-// Sync task labels (create labels if they don't exist, then link them)
 async function syncTaskLabels(
-  taskId: string,
+  _taskId: string,
   labelNames: string[],
 ): Promise<void> {
-  // Get or create labels
-  const labelIds: string[] = [];
-  for (const labelName of labelNames) {
-    const existingLabels = await db
+  for (const rawName of labelNames) {
+    const name = rawName.trim();
+    if (!name) continue;
+
+    const existing = await db
       .select()
       .from(labelsTable)
-      .where(eq(labelsTable.name, labelName));
+      .where(eq(labelsTable.name, name));
 
-    let labelId: string;
-    if (existingLabels.length > 0) {
-      labelId = existingLabels[0].id;
-    } else {
-      labelId = generateId();
-      await db.insert(labelsTable).values({
-        id: labelId,
-        name: labelName,
-        createdAt: new Date(),
-      });
-    }
-    labelIds.push(labelId);
-  }
+    if (existing.length > 0) continue;
 
-  // Remove existing task labels
-  await db.delete(taskLabels).where(eq(taskLabels.taskId, taskId));
-
-  // Insert new task labels
-  if (labelIds.length > 0) {
-    await db.insert(taskLabels).values(
-      labelIds.map((labelId) => ({
-        taskId,
-        labelId,
-      })),
-    );
+    await db.insert(labelsTable).values({
+      id: generateId(),
+      name,
+      createdAt: new Date(),
+    });
   }
 }
 
@@ -407,35 +365,7 @@ export async function getTaskById(
     .from(tasks)
     .where(and(eq(tasks.taskBoardId, taskRow.taskBoardId), accessCond));
 
-  // Fetch labels
-  const taskLabelRows = await db
-    .select()
-    .from(taskLabels)
-    .where(eq(taskLabels.taskId, taskId));
-  const labelIds = taskLabelRows.map((tl) => tl.labelId);
-  const labelRows =
-    labelIds.length > 0
-      ? await db
-          .select()
-          .from(labelsTable)
-          .where(inArray(labelsTable.id, labelIds))
-      : [];
-
-  const taskLabelsMap = new Map<string, string[]>();
-  const labelMap = new Map<string, string>();
-  labelRows.forEach((label) => {
-    labelMap.set(label.id, label.name);
-  });
-  taskLabelRows.forEach((taskLabel) => {
-    const labelName = labelMap.get(taskLabel.labelId);
-    if (labelName) {
-      const existing = taskLabelsMap.get(taskLabel.taskId) || [];
-      existing.push(labelName);
-      taskLabelsMap.set(taskLabel.taskId, existing);
-    }
-  });
-
-  return convertTaskRowToTask(taskRow, allTaskRows, taskLabelsMap);
+  return convertTaskRowToTask(taskRow, allTaskRows);
 }
 
 export async function getTaskByKey(
@@ -459,33 +389,12 @@ export async function getTaskByKey(
       .from(tasks)
       .where(and(eq(tasks.id, taskRow.parentTaskId), accessCond));
     if (parentRows.length > 0) {
-      const allTaskRows = await db
+      const allTaskRowsForParent = await db
         .select()
         .from(tasks)
         .where(and(eq(tasks.taskBoardId, taskRow.taskBoardId), accessCond));
 
-      // Load labels
-      const allTaskLabelRows = await db.select().from(taskLabels);
-      const allLabelRows = await db.select().from(labelsTable);
-      const labelMap = new Map<string, string>();
-      allLabelRows.forEach((label) => {
-        labelMap.set(label.id, label.name);
-      });
-      const taskLabelsMap = new Map<string, string[]>();
-      allTaskLabelRows.forEach((taskLabel) => {
-        const labelName = labelMap.get(taskLabel.labelId);
-        if (labelName) {
-          const existing = taskLabelsMap.get(taskLabel.taskId) || [];
-          existing.push(labelName);
-          taskLabelsMap.set(taskLabel.taskId, existing);
-        }
-      });
-
-      parent = await convertTaskRowToTask(
-        parentRows[0],
-        allTaskRows,
-        taskLabelsMap,
-      );
+      parent = await convertTaskRowToTask(parentRows[0], allTaskRowsForParent);
     }
   }
 
@@ -494,23 +403,7 @@ export async function getTaskByKey(
     .from(tasks)
     .where(and(eq(tasks.taskBoardId, taskRow.taskBoardId), accessCond));
 
-  const allTaskLabelRows = await db.select().from(taskLabels);
-  const allLabelRows = await db.select().from(labelsTable);
-  const labelMap = new Map<string, string>();
-  allLabelRows.forEach((label) => {
-    labelMap.set(label.id, label.name);
-  });
-  const taskLabelsMap = new Map<string, string[]>();
-  allTaskLabelRows.forEach((taskLabel) => {
-    const labelName = labelMap.get(taskLabel.labelId);
-    if (labelName) {
-      const existing = taskLabelsMap.get(taskLabel.taskId) || [];
-      existing.push(labelName);
-      taskLabelsMap.set(taskLabel.taskId, existing);
-    }
-  });
-
-  const task = await convertTaskRowToTask(taskRow, allTaskRows, taskLabelsMap);
+  const task = await convertTaskRowToTask(taskRow, allTaskRows);
 
   return { task, parent };
 }

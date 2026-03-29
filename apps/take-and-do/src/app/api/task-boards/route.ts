@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { env } from "@/env";
+import { dataAccessFromAuth, requireAuth } from "@/lib/api-auth";
 import {
   getAllTaskBoards,
   createTaskBoard,
@@ -11,12 +12,16 @@ import {
 import { TaskBoard } from "@/types/workspace";
 
 export async function GET(request: NextRequest) {
+  const authResult = await requireAuth();
+  if (authResult instanceof NextResponse) return authResult;
+
+  const access = dataAccessFromAuth(authResult);
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
 
   try {
     if (id) {
-      const board = await getTaskBoardById(id);
+      const board = await getTaskBoardById(id, access);
       if (!board) {
         return NextResponse.json(
           { error: "Task board not found" },
@@ -26,7 +31,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json([board]);
     }
 
-    const taskBoards = await getAllTaskBoards();
+    const taskBoards = await getAllTaskBoards(access);
     return NextResponse.json(taskBoards);
   } catch {
     return NextResponse.json(
@@ -37,6 +42,10 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
+  const authResult = await requireAuth();
+  if (authResult instanceof NextResponse) return authResult;
+
+  const access = dataAccessFromAuth(authResult);
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
 
@@ -46,16 +55,27 @@ export async function PATCH(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { name, folderId, emoji } = body as {
+    const { name, folderId, emoji, isPublic, createdAt } = body as {
       name?: unknown;
       folderId?: unknown;
       emoji?: unknown;
+      isPublic?: unknown;
+      createdAt?: unknown;
     };
 
-    const updates: { name?: string; folderId?: string | null; emoji?: string | null } = {};
+    const updates: {
+      name?: string;
+      folderId?: string | null;
+      emoji?: string | null;
+      isPublic?: boolean;
+      createdAt?: Date | string;
+    } = {};
     if (name !== undefined) {
       if (typeof name !== "string" || !name.trim()) {
-        return NextResponse.json({ error: "Name must be a non-empty string" }, { status: 400 });
+        return NextResponse.json(
+          { error: "Name must be a non-empty string" },
+          { status: 400 },
+        );
       }
       updates.name = name.trim();
     }
@@ -90,12 +110,46 @@ export async function PATCH(request: NextRequest) {
         );
       }
     }
-    if (Object.keys(updates).length === 0) {
-      return NextResponse.json({ error: "No updates provided" }, { status: 400 });
+    if (isPublic !== undefined) {
+      if (typeof isPublic !== "boolean") {
+        return NextResponse.json(
+          { error: "isPublic must be a boolean" },
+          { status: 400 },
+        );
+      }
+      updates.isPublic = isPublic;
+    }
+    if (createdAt !== undefined) {
+      if (typeof createdAt !== "string" || !createdAt.trim()) {
+        return NextResponse.json(
+          { error: "createdAt must be a non-empty ISO string when provided" },
+          { status: 400 },
+        );
+      }
+      updates.createdAt = createdAt.trim();
     }
 
-    const updated = await updateTaskBoard(id, updates);
-    return NextResponse.json(updated);
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json(
+        { error: "No updates provided" },
+        { status: 400 },
+      );
+    }
+
+    if (!access.isAnonymous) {
+      const existingBoard = await getTaskBoardById(id, access);
+      if (!existingBoard) {
+        return NextResponse.json(
+          { error: "Task board not found" },
+          { status: 404 },
+        );
+      }
+    }
+
+    const updated = await updateTaskBoard(id, updates, access);
+    return NextResponse.json(
+      access.isAnonymous ? { ...updated, guest: true } : updated,
+    );
   } catch {
     return NextResponse.json(
       { error: "Failed to update task board" },
@@ -105,6 +159,10 @@ export async function PATCH(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  const authResult = await requireAuth();
+  if (authResult instanceof NextResponse) return authResult;
+
+  const access = dataAccessFromAuth(authResult);
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
 
@@ -113,7 +171,19 @@ export async function DELETE(request: NextRequest) {
   }
 
   try {
-    await deleteTaskBoard(id);
+    if (!access.isAnonymous) {
+      const existing = await getTaskBoardById(id, access);
+      if (!existing) {
+        return NextResponse.json(
+          { error: "Task board not found" },
+          { status: 404 },
+        );
+      }
+    }
+    await deleteTaskBoard(id, access);
+    if (access.isAnonymous) {
+      return NextResponse.json({ id, deleted: true, guest: true });
+    }
     return new NextResponse(null, { status: 204 });
   } catch {
     return NextResponse.json(
@@ -124,21 +194,61 @@ export async function DELETE(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const authResult = await requireAuth();
+  if (authResult instanceof NextResponse) return authResult;
+
+  const access = dataAccessFromAuth(authResult);
   try {
     const body = await request.json();
-    const { name, folderId } = body;
+    const { name, folderId, emoji } = body as {
+      name?: unknown;
+      folderId?: unknown;
+      emoji?: unknown;
+    };
 
     if (!name || typeof name !== "string" || !name.trim()) {
       return NextResponse.json({ error: "Name is required" }, { status: 400 });
     }
 
+    let emojiValue: string | null | undefined;
+    if (emoji !== undefined) {
+      if (emoji === null) emojiValue = null;
+      else if (typeof emoji === "string") {
+        const t = emoji.trim();
+        emojiValue = t || null;
+      } else {
+        return NextResponse.json(
+          { error: "emoji must be a string or null" },
+          { status: 400 },
+        );
+      }
+    }
+
+    let folderIdValue: string | undefined;
+    if (folderId !== undefined && folderId !== null && folderId !== "") {
+      if (typeof folderId !== "string") {
+        return NextResponse.json(
+          { error: "folderId must be a string" },
+          { status: 400 },
+        );
+      }
+      folderIdValue = folderId;
+    }
+
     const taskBoardData: Omit<TaskBoard, "id" | "createdAt" | "updatedAt"> = {
       name: name.trim(),
-      folderId: folderId || undefined,
+      folderId: folderIdValue,
+      isPublic: false,
     };
+    if (emojiValue !== undefined) {
+      taskBoardData.emoji = emojiValue;
+    }
 
-    const newTaskBoard = await createTaskBoard(taskBoardData);
-    return NextResponse.json(newTaskBoard, { status: 201 });
+    const newTaskBoard = await createTaskBoard(taskBoardData, access);
+    return NextResponse.json(
+      access.isAnonymous ? { ...newTaskBoard, guest: true } : newTaskBoard,
+      { status: 201 },
+    );
   } catch (error) {
     console.error("Failed to create task board:", error);
     const errorMessage =

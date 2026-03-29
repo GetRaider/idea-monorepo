@@ -1,14 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db/client";
-import { tasks } from "@/lib/db/modules/task/task.schema";
+
+import { dataAccessFromAuth, requireAuth } from "@/lib/api-auth";
 import {
   TaskStatus,
   TaskPriority,
 } from "@/components/Boards/KanbanBoard/types";
+import { db } from "@/lib/db/client";
+import { dataAccessFilter } from "@/lib/db/queries";
+import { tasks } from "@/lib/db/modules/task/task.schema";
 import { gte, and } from "drizzle-orm";
 import { tasksHelper } from "@/helpers/task.helper";
 
 export async function GET(request: NextRequest) {
+  const authResult = await requireAuth();
+  if (authResult instanceof NextResponse) return authResult;
+
+  const access = dataAccessFromAuth(authResult);
+  const accessCond = dataAccessFilter(tasks, access.userId, access.isAnonymous);
+
   try {
     const { searchParams } = new URL(request.url);
     const timeframe = (searchParams.get("timeframe") || "all") as
@@ -18,7 +27,7 @@ export async function GET(request: NextRequest) {
       | "quarter";
 
     const now = new Date();
-    const whereConditions = [];
+    const whereConditions = [accessCond];
 
     if (timeframe !== "all") {
       const startDate = new Date(now);
@@ -44,10 +53,7 @@ export async function GET(request: NextRequest) {
       })
       .from(tasks);
 
-    const taskRows =
-      whereConditions.length > 0
-        ? await query.where(and(...whereConditions))
-        : await query;
+    const taskRows = await query.where(and(...whereConditions));
 
     const stats = {
       total: taskRows.length,

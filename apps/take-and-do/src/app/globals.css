@@ -5,7 +5,13 @@
 @tailwind utilities;
 
 @layer base {
+  /* Login / brand — align with app theme; see Radix + shell.ui */
   :root {
+    --brand-primary: #764ba2;
+    --brand-secondary: #a784d8;
+    --brand-gradient-from: #1a1035;
+    --brand-gradient-to: #0d2138;
+    --brand-text-on-gradient: #f4f4f5;
     --background: #0f0f0f;
     --foreground: #ededed;
     --sidebar-bg: #1a1a1a;
@@ -34,13 +40,22 @@
     @apply box-border p-0 m-0;
   }
 
-  html,
+  html {
+    @apply max-w-full overflow-x-hidden h-full;
+    min-height: 100%;
+    background-color: #1a1a1a;
+    background-image: linear-gradient(to bottom right, #1a1a1a, #3c2856);
+    background-attachment: fixed;
+    background-size: cover;
+  }
+
   body {
     @apply max-w-full overflow-x-hidden h-full;
   }
 
   body {
-    @apply text-foreground bg-background antialiased;
+    @apply text-foreground antialiased;
+    background: transparent;
     font-family:
       var(--font-inter),
       -apple-system,

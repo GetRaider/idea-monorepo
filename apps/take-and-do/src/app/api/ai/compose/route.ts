@@ -1,7 +1,12 @@
-import { aiServices } from "@/services/ai";
 import { NextRequest, NextResponse } from "next/server";
 
+import { requireAiAccess } from "@/lib/api-auth";
+import { aiServices } from "@/services/ai";
+
 export async function POST(request: NextRequest) {
+  const authResult = await requireAiAccess();
+  if (authResult instanceof NextResponse) return authResult;
+
   try {
     const body = await request.json();
     const result = await aiServices.task.compose(body);

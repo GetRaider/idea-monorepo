@@ -4,6 +4,7 @@ import {
   toTaskPriority,
 } from "@/components/Boards/KanbanBoard/types";
 import type { ComposeTaskOutput } from "@/lib/ai/schemas";
+import { guestStoreHelper } from "@/lib/guest-store";
 import { BaseApiService } from "./base-api.service";
 import { tasksHelper } from "@/helpers/task.helper";
 
@@ -101,9 +102,19 @@ export class TasksApiService extends BaseApiService {
     };
   }
 
-  async create(task: Omit<Task, "id">): Promise<Task> {
-    const response = await super.post<Task>({ body: task });
-    return normalizeTask(response.data);
+  async create(
+    task: Omit<Task, "id"> & { taskBoardName?: string },
+  ): Promise<Task> {
+    const response = await super.post<Task & { guest?: boolean }>({
+      body: task,
+    });
+    const raw = response.data;
+    const { guest, ...rest } = raw as Task & { guest?: boolean };
+    const normalized = normalizeTask(rest as Task);
+    if (guest) {
+      guestStoreHelper.addTask(normalized);
+    }
+    return normalized;
   }
 
   async composeWithAI(

@@ -1,45 +1,82 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
+
+import { type DataAccess, dataAccessFilter } from "../../data-access";
 import { db } from "../../client";
 import { foldersTable } from "./folder.schema";
 import { Folder } from "@/types/workspace";
 import { generateId } from "../utils";
 
-export async function createFolder(name: string): Promise<Folder> {
+export async function createFolder(
+  name: string,
+  access: DataAccess,
+  emoji?: string | null,
+): Promise<Folder> {
+  const trimmedEmoji =
+    emoji === undefined || emoji === null ? null : emoji.trim() || null;
+
+  if (access.isAnonymous) {
+    const id = generateId();
+    const now = new Date();
+    return {
+      id,
+      name,
+      emoji: trimmedEmoji,
+      isPublic: false,
+      createdAt: now,
+      updatedAt: now,
+    };
+  }
+
   const id = generateId();
   await db.insert(foldersTable).values({
     id,
+    userId: access.userId,
+    isPublic: false,
     name,
-    emoji: null,
+    emoji: trimmedEmoji,
     createdAt: new Date(),
     updatedAt: new Date(),
   });
-  const created = await getFolderById(id);
+  const created = await getFolderById(id, access);
   if (!created) throw new Error("Failed to retrieve created folder");
   return created;
 }
 
-export async function getAllFolders(): Promise<Folder[]> {
-  const rows = await db.select().from(foldersTable);
+export async function getAllFolders(access: DataAccess): Promise<Folder[]> {
+  const rows = await db
+    .select()
+    .from(foldersTable)
+    .where(dataAccessFilter(foldersTable, access.userId, access.isAnonymous));
   return rows.map((row) => ({
     id: row.id,
     name: row.name,
     emoji: row.emoji,
+    isPublic: row.isPublic,
     createdAt: new Date(row.createdAt),
     updatedAt: new Date(row.updatedAt),
   }));
 }
 
-export async function getFolderById(id: string): Promise<Folder | undefined> {
+export async function getFolderById(
+  id: string,
+  access: DataAccess,
+): Promise<Folder | undefined> {
   const rows = await db
     .select()
     .from(foldersTable)
-    .where(eq(foldersTable.id, id));
+    .where(
+      and(
+        eq(foldersTable.id, id),
+        dataAccessFilter(foldersTable, access.userId, access.isAnonymous),
+      ),
+    );
   if (rows.length === 0) return undefined;
   const row = rows[0];
   return {
     id: row.id,
     name: row.name,
     emoji: row.emoji,
+    isPublic: row.isPublic,
     createdAt: new Date(row.createdAt),
     updatedAt: new Date(row.updatedAt),
   };
@@ -47,9 +84,37 @@ export async function getFolderById(id: string): Promise<Folder | undefined> {
 
 export async function updateFolder(
   id: string,
-  data: { name?: string; emoji?: string | null },
+  data: {
+    name?: string;
+    emoji?: string | null;
+    isPublic?: boolean;
+    createdAt?: Date | string;
+  },
+  access: DataAccess,
 ): Promise<Folder> {
-  const existing = await getFolderById(id);
+  if (access.isAnonymous) {
+    if (
+      data.name === undefined ||
+      typeof data.name !== "string" ||
+      !data.name.trim()
+    ) {
+      throw new Error("Folder name is required");
+    }
+    const now = new Date();
+    const createdAt = data.createdAt
+      ? new Date(data.createdAt as string | Date)
+      : now;
+    return {
+      id,
+      name: data.name.trim(),
+      emoji: data.emoji !== undefined ? data.emoji : null,
+      isPublic: data.isPublic ?? false,
+      createdAt,
+      updatedAt: now,
+    };
+  }
+
+  const existing = await getFolderById(id, access);
   if (!existing) {
     throw new Error("Folder not found");
   }
@@ -59,15 +124,27 @@ export async function updateFolder(
     .set({
       ...(data.name !== undefined && { name: data.name }),
       ...(data.emoji !== undefined && { emoji: data.emoji }),
+      ...(data.isPublic !== undefined && { isPublic: data.isPublic }),
       updatedAt: new Date(),
     })
     .where(eq(foldersTable.id, id));
 
-  const updated = await getFolderById(id);
+  const updated = await getFolderById(id, access);
   if (!updated) throw new Error("Failed to retrieve updated folder");
   return updated;
 }
 
-export async function deleteFolder(id: string): Promise<void> {
+export async function deleteFolder(
+  id: string,
+  access: DataAccess,
+): Promise<void> {
+  if (access.isAnonymous) {
+    return;
+  }
+
+  const existing = await getFolderById(id, access);
+  if (!existing) {
+    throw new Error("Folder not found");
+  }
   await db.delete(foldersTable).where(eq(foldersTable.id, id));
 }

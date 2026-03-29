@@ -332,7 +332,7 @@ type TagDotProps = HTMLAttributes<HTMLSpanElement> & { color?: string };
 function TagDot({ className, style, color, ...props }: TagDotProps) {
   return (
     <span
-      style={{ ...style, background: color ?? "#667eea" }}
+      style={{ ...style, background: color ?? "var(--brand-primary)" }}
       className={joinClassNames("h-1.5 w-1.5 shrink-0 rounded-full", className)}
       {...props}
     />
@@ -369,7 +369,7 @@ function CreateLabelSpan({
 }: CreateLabelSpanProps) {
   return (
     <span
-      style={{ ...style, color: accentColor ?? "#667eea" }}
+      style={{ ...style, color: accentColor ?? "var(--brand-primary)" }}
       className={className}
       {...props}
     />

@@ -4,12 +4,14 @@ export interface Folder {
   id: string;
   name: string;
   emoji?: string | null;
+  isPublic: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
 
 export interface TaskBoard {
   id: string;
+  isPublic: boolean;
   name: string;
   emoji?: string | null;
   folderId?: string | null; // nullable if board not in a folder

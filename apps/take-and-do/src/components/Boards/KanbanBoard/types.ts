@@ -27,6 +27,7 @@ export type TaskUpdate = Partial<
   dueDate?: Date | null;
   estimation?: number | null;
   scheduleDate?: Date | null;
+  isPublic?: boolean;
 };
 
 export const emptyTaskColumns: Record<TaskStatus, Task[]> = {

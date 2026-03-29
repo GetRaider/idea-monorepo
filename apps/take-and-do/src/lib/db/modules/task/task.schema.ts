@@ -1,4 +1,5 @@
 import {
+  boolean,
   pgTable,
   text,
   timestamp,
@@ -6,6 +7,8 @@ import {
   pgEnum,
   foreignKey,
 } from "drizzle-orm/pg-core";
+
+import { user } from "../auth/auth.schema";
 import { taskBoardsTable } from "../taskBoard/taskBoard.schema";
 
 export const taskStatusEnum = pgEnum("task_status", [
@@ -25,6 +28,10 @@ export const tasks = pgTable(
   "tasks",
   {
     id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    isPublic: boolean("is_public").notNull().default(false),
     taskBoardId: text("task_board_id")
       .notNull()
       .references(() => taskBoardsTable.id, { onDelete: "cascade" }),

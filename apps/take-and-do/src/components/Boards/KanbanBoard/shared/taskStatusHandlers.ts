@@ -253,7 +253,14 @@ export async function handleSingleBoardTaskStatusChange(
   taskId: string,
   newStatus: TaskStatus,
   targetIndex?: number,
+  updateTaskStatus?: (taskId: string, newStatus: TaskStatus) => Promise<void>,
 ): Promise<void> {
+  const persistStatus =
+    updateTaskStatus ??
+    (async (id: string, status: TaskStatus) => {
+      await apiServices.tasks.update(id, { status });
+    });
+
   try {
     const { task: currentTask } = findTaskInTasks(tasks, taskId);
 
@@ -283,8 +290,7 @@ export async function handleSingleBoardTaskStatusChange(
     );
     setTasks(optimisticTasks);
 
-    // Update task status via API (after optimistic update for smooth UX)
-    await apiServices.tasks.update(taskId, { status: newStatus });
+    await persistStatus(taskId, newStatus);
 
     // Update state after API call (in case of any server-side changes)
     const finalTasks = moveTaskToNewStatus(
@@ -310,7 +316,14 @@ export async function handleMultipleBoardsTaskStatusChange(
   taskId: string,
   newStatus: TaskStatus,
   targetIndex?: number,
+  updateTaskStatus?: (taskId: string, newStatus: TaskStatus) => Promise<void>,
 ): Promise<void> {
+  const persistStatus =
+    updateTaskStatus ??
+    (async (id: string, status: TaskStatus) => {
+      await apiServices.tasks.update(id, { status });
+    });
+
   try {
     const { task: currentTask, boardIndex: currentBoardIndex } =
       findTaskInBoards(boardsWithTasks, taskId);
@@ -345,7 +358,7 @@ export async function handleMultipleBoardsTaskStatusChange(
     );
     setBoardsWithTasks(optimistic);
 
-    await apiServices.tasks.update(taskId, { status: newStatus });
+    await persistStatus(taskId, newStatus);
 
     const finalBoards = moveTaskToNewStatusInBoard(
       optimistic,

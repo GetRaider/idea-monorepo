@@ -23,21 +23,27 @@ export function SidebarContainer({
   );
 }
 
-type LogoProps = ComponentProps<typeof Image>;
+type LogoProps = ComponentProps<"img">;
 
 export function Logo({
   className,
   width = 40,
   height = 40,
   alt = "",
+  src = "/logo.svg",
   ...props
 }: LogoProps) {
   return (
-    <Image
+    // Purposely using img element instead of next/image to avoid visible flash on navigation
+    // eslint-disable-next-line @next/next/no-img-element -- static /logo.svg; next/image caused visible flash on navigation
+    <img
       alt={alt}
       width={width}
       height={height}
-      className={cn("mb-6 h-10 w-10", className)}
+      src={src}
+      decoding="sync"
+      fetchPriority="high"
+      className={cn("mb-6 h-10 w-10 shrink-0 object-contain", className)}
       {...props}
     />
   );

@@ -6,6 +6,9 @@ const VALID_SCHEDULE_DATES = ["today", "tomorrow"] as const;
 
 export type ScheduleDate = (typeof VALID_SCHEDULE_DATES)[number];
 
+/** Sidebar `activeView` token for `/tasks` (all workspaces root). */
+export const TASKS_ROOT_VIEW_ID = "__tasks_root__";
+
 export const tasksUrlHelper = {
   shallow: {
     replace(href: string): void {
@@ -32,6 +35,10 @@ export const tasksUrlHelper = {
   routing: {
     isValidScheduleDate(value: string): value is ScheduleDate {
       return VALID_SCHEDULE_DATES.includes(value as ScheduleDate);
+    },
+
+    buildRootUrl(): string {
+      return "/tasks/root";
     },
 
     buildScheduleUrl(date: ScheduleDate): string {
@@ -98,6 +105,10 @@ export const tasksUrlHelper = {
     },
 
     getActiveViewFromPathname(pathname: string): string {
+      const normalized = pathname.replace(/\/+$/, "") || "/";
+      if (normalized === "/tasks" || normalized === "/tasks/root") {
+        return TASKS_ROOT_VIEW_ID;
+      }
       if (/^\/tasks\/schedule\/today(?:\/|$)/.test(pathname)) return "today";
       if (/^\/tasks\/schedule\/tomorrow(?:\/|$)/.test(pathname))
         return "tomorrow";

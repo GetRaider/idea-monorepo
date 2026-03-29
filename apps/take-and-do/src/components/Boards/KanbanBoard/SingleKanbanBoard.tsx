@@ -19,6 +19,11 @@ import {
 } from "./shared/taskComposeHelpers";
 import { useKanbanTaskHandlers } from "../../../hooks/useKanbanTaskHandlers";
 import { useBoardUrlTaskDialogSync } from "@/hooks/useBoardUrlTaskDialogSync";
+import { useIsAnonymous } from "@/hooks/use-is-anonymous";
+import { useGuestTasks } from "@/hooks/use-guest-store";
+import { useTaskActions } from "@/hooks/useTasks";
+import { guestStoreHelper } from "@/lib/guest-store";
+import { guestTasksForBoard } from "@/lib/guest-store/guest-task-filters";
 import { TaskView } from "../../TaskView/TaskView";
 import {
   removeTaskFromColumns,
@@ -48,6 +53,9 @@ export function SingleKanbanBoard({
   onSubtaskOpen,
 }: SingleKanbanBoardProps) {
   const router = useRouter();
+  const isAnonymous = useIsAnonymous();
+  const { tasks: guestTasks } = useGuestTasks();
+  const { updateTask } = useTaskActions();
   const { taskBoards } = useWorkspace();
   const boardOptions = useMemo(
     () => taskBoards.map((b) => ({ id: b.id, name: b.name })),
@@ -90,13 +98,22 @@ export function SingleKanbanBoard({
     };
   }, []);
 
+  const persistTaskStatus = useCallback(
+    async (taskId: string, newStatus: TaskStatus) => {
+      await updateTask(taskId, { status: newStatus });
+    },
+    [updateTask],
+  );
+
   const fetchTasks = useCallback(async () => {
     if (!boardId) return;
 
     const seq = ++fetchSeqRef.current;
     setIsLoading(true);
     try {
-      const tasks = await apiServices.tasks.getByBoardId(boardId);
+      const tasks = isAnonymous
+        ? guestTasksForBoard(guestStoreHelper.getTasks(), boardId)
+        : await apiServices.tasks.getByBoardId(boardId);
       const tasksByStatusMap: Record<TaskStatus, Task[]> = {
         [TaskStatus.TODO]: [],
         [TaskStatus.IN_PROGRESS]: [],
@@ -120,11 +137,11 @@ export function SingleKanbanBoard({
       if (!isMountedRef.current || seq !== fetchSeqRef.current) return;
       setIsLoading(false);
     }
-  }, [boardId]);
+  }, [boardId, isAnonymous]);
 
   useEffect(() => {
-    fetchTasks();
-  }, [fetchTasks]);
+    void fetchTasks();
+  }, [fetchTasks, guestTasks]);
 
   const handleTaskStatusChange = useCallback(
     async (taskId: string, newStatus: TaskStatus, targetIndex?: number) => {
@@ -134,9 +151,10 @@ export function SingleKanbanBoard({
         taskId,
         newStatus,
         targetIndex,
+        persistTaskStatus,
       );
     },
-    [tasksByStatus],
+    [tasksByStatus, persistTaskStatus],
   );
 
   const handleNavigateToParentTask = useCallback(() => {
@@ -235,6 +253,7 @@ export function SingleKanbanBoard({
           workspaceEmoji={boardEmoji}
           onCreateTask={handleCreateTask}
           onCreateTaskWithAI={handleCreateTaskWithAI}
+          boardId={boardId}
         />
 
         <Board fillHeight>

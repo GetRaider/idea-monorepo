@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+
+import { requireAuth, requireNonAnonymous } from "@/lib/api-auth";
 import {
   getAllLabels,
   addLabel,
@@ -7,6 +9,9 @@ import {
 } from "@/lib/db/queries";
 
 export async function GET() {
+  const authResult = await requireAuth();
+  if (authResult instanceof NextResponse) return authResult;
+
   try {
     const labels = await getAllLabels();
     return NextResponse.json(labels);
@@ -19,6 +24,9 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const authResult = await requireNonAnonymous();
+  if (authResult instanceof NextResponse) return authResult;
+
   try {
     const { label } = await request.json();
 
@@ -37,6 +45,9 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
+  const authResult = await requireNonAnonymous();
+  if (authResult instanceof NextResponse) return authResult;
+
   try {
     const body = await request.json();
     const oldName = body?.oldName;
@@ -71,6 +82,9 @@ export async function PATCH(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  const authResult = await requireNonAnonymous();
+  if (authResult instanceof NextResponse) return authResult;
+
   try {
     const body = await request.json();
     const name = body?.name;

@@ -1,0 +1,38 @@
+import { getSessionCookie } from "better-auth/cookies";
+import { NextRequest, NextResponse } from "next/server";
+
+const PUBLIC_PATHS = ["/", "/login", "/signup", "/api/auth"];
+
+export function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  if (pathname.startsWith("/api/auth")) {
+    return NextResponse.next();
+  }
+
+  if (pathname.startsWith("/api/")) {
+    const sessionCookie = getSessionCookie(request);
+    if (!sessionCookie) {
+      return NextResponse.json(
+        { error: "Unauthorized", message: "Authentication required." },
+        { status: 401 },
+      );
+    }
+  }
+
+  const isPublic = PUBLIC_PATHS.some((path) => pathname.startsWith(path));
+  if (!isPublic) {
+    const sessionCookie = getSessionCookie(request);
+    if (!sessionCookie) {
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
+  }
+
+  return NextResponse.next();
+}
+
+export const config = {
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+  ],
+};

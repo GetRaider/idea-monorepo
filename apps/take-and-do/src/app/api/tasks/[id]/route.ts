@@ -1,4 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+
+import {
+  dataAccessFromAuth,
+  requireAuth,
+  requireNonAnonymous,
+} from "@/lib/api-auth";
 import { getTaskById, updateTask, deleteTask } from "@/lib/db/queries";
 import { Task } from "@/components/Boards/KanbanBoard/types";
 import { tasksHelper } from "@/helpers/task.helper";
@@ -41,9 +47,13 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const authResult = await requireAuth();
+  if (authResult instanceof NextResponse) return authResult;
+
+  const access = dataAccessFromAuth(authResult);
   try {
     const { id: taskId } = await params;
-    const task = await getTaskById(taskId);
+    const task = await getTaskById(taskId, access);
 
     if (!task) {
       return NextResponse.json({ error: "Task not found" }, { status: 404 });
@@ -63,10 +73,14 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const authResult = await requireNonAnonymous();
+  if (authResult instanceof NextResponse) return authResult;
+
+  const access = dataAccessFromAuth(authResult);
   try {
     const { id: taskId } = await params;
     const updateData = tasksHelper.fromJson.patch(await request.json());
-    const updatedTask = await updateTask(taskId, updateData);
+    const updatedTask = await updateTask(taskId, updateData, access);
 
     if (!updatedTask) {
       return NextResponse.json({ error: "Task not found" }, { status: 404 });
@@ -86,9 +100,13 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const authResult = await requireNonAnonymous();
+  if (authResult instanceof NextResponse) return authResult;
+
+  const access = dataAccessFromAuth(authResult);
   try {
     const { id: taskId } = await params;
-    await deleteTask(taskId);
+    await deleteTask(taskId, access);
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";

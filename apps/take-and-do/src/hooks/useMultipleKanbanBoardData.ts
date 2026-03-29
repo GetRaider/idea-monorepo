@@ -1,26 +1,26 @@
+"use client";
+
 import { useCallback, useEffect, useState } from "react";
 
 import { Task } from "@/components/Boards/KanbanBoard/types";
 import { tasksIntoStatusColumns } from "@/components/Boards/KanbanBoard/shared/tasksIntoStatusColumns";
+import { useIsAnonymous } from "@/hooks/use-is-anonymous";
+import { useGuestTasks } from "@/hooks/use-guest-store";
+import { guestStoreHelper } from "@/lib/guest-store";
+import {
+  guestTasksForBoard,
+  guestTasksForScheduleDate,
+} from "@/lib/guest-store/guest-task-filters";
 import { apiServices } from "@/services/api";
-import type { TaskBoard, TaskBoardWithTasks } from "@/types/workspace";
-
-function taskBoardFallback(id: string): TaskBoard {
-  const t = new Date(0);
-  return {
-    id,
-    name: id,
-    emoji: null,
-    folderId: null,
-    createdAt: t,
-    updatedAt: t,
-  };
-}
+import type { TaskBoardWithTasks } from "@/types/workspace";
 
 export function useMultipleKanbanBoardData(
   scheduleDate: Date | undefined,
   folderId: string | undefined,
 ) {
+  const isAnonymous = useIsAnonymous();
+  const { tasks: guestTasks } = useGuestTasks();
+
   const [boardsWithTasks, setBoardsWithTasks] = useState<TaskBoardWithTasks[]>(
     [],
   );
@@ -30,11 +30,14 @@ export function useMultipleKanbanBoardData(
   );
 
   const fetchBoards = useCallback(async (): Promise<TaskBoardWithTasks[]> => {
-    const taskBoards = await apiServices.taskBoards.getAll();
-    const boardById = new Map(taskBoards.map((b) => [b.id, b]));
+    const taskBoards = isAnonymous
+      ? guestStoreHelper.getTaskBoards()
+      : await apiServices.taskBoards.getAll();
 
     if (scheduleDate) {
-      const scheduledTasks = await apiServices.tasks.getByDate(scheduleDate);
+      const scheduledTasks = isAnonymous
+        ? guestTasksForScheduleDate(guestStoreHelper.getTasks(), scheduleDate)
+        : await apiServices.tasks.getByDate(scheduleDate);
       const tasksByBoardId = new Map<string, Task[]>();
       for (const task of scheduledTasks) {
         if (!task.taskBoardId) continue;
@@ -42,16 +45,18 @@ export function useMultipleKanbanBoardData(
         list.push(task);
         tasksByBoardId.set(task.taskBoardId, list);
       }
-      return [...tasksByBoardId.entries()].map(([boardId, boardTasks]) => ({
-        ...(boardById.get(boardId) ?? taskBoardFallback(boardId)),
-        tasks: tasksIntoStatusColumns(boardTasks),
+      return taskBoards.map((board) => ({
+        ...board,
+        tasks: tasksIntoStatusColumns(tasksByBoardId.get(board.id) ?? []),
       }));
     }
 
     if (folderId) {
       const boards: TaskBoardWithTasks[] = [];
       for (const board of taskBoards.filter((tb) => tb.folderId === folderId)) {
-        const boardTasks = await apiServices.taskBoards.getTasks(board.id);
+        const boardTasks = isAnonymous
+          ? guestTasksForBoard(guestStoreHelper.getTasks(), board.id)
+          : await apiServices.taskBoards.getTasks(board.id);
         if (boardTasks.length === 0) continue;
         boards.push({
           ...board,
@@ -62,7 +67,7 @@ export function useMultipleKanbanBoardData(
     }
 
     return [];
-  }, [scheduleDate, folderId]);
+  }, [scheduleDate, folderId, isAnonymous]);
 
   useEffect(() => {
     let cancelled = false;
@@ -88,7 +93,7 @@ export function useMultipleKanbanBoardData(
     return () => {
       cancelled = true;
     };
-  }, [fetchBoards]);
+  }, [fetchBoards, guestTasks]);
 
   const toggleBoardExpanded = useCallback((taskBoardId: string) => {
     setExpandedBoardIds((prev) => {

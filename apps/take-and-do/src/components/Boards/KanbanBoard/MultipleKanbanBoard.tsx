@@ -28,9 +28,12 @@ import {
 } from "./shared/taskComposeHelpers";
 import { useKanbanTaskHandlers } from "../../../hooks/useKanbanTaskHandlers";
 import { useMultipleKanbanBoardData } from "../../../hooks/useMultipleKanbanBoardData";
+import { useTaskActions } from "@/hooks/useTasks";
 import { TaskView } from "../../TaskView/TaskView";
+import { useWorkspace } from "@/contexts";
 import { updateTaskInColumns } from "@/hooks/useTaskBoardState";
 import { EmptyState } from "../../EmptyState";
+import { TasksWorkspaceEmptyState } from "../../TasksWorkspaceEmptyState";
 import { AIComposeDialog } from "./shared/AIComposeDialog";
 import { apiServices } from "@/services/api";
 import type { TaskBoardWithTasks } from "@/types/workspace";
@@ -46,6 +49,8 @@ export function MultipleKanbanBoard({
   onTaskClose,
   onSubtaskOpen,
 }: MultipleKanbanBoardProps) {
+  const { updateTask } = useTaskActions();
+  const { taskBoards, isBoardsLoading, openCreateWorkspace } = useWorkspace();
   const {
     boardsWithTasks,
     setBoardsWithTasks,
@@ -84,6 +89,13 @@ export function MultipleKanbanBoard({
     setParentTask(null);
   }, [parentTask, schedule, setSelectedTask, setParentTask]);
 
+  const persistTaskStatus = useCallback(
+    async (taskId: string, newStatus: TaskStatus) => {
+      await updateTask(taskId, { status: newStatus });
+    },
+    [updateTask],
+  );
+
   const handleTaskStatusChange = useCallback(
     async (taskId: string, newStatus: TaskStatus, targetIndex?: number) => {
       await handleMultipleBoardsTaskStatusChange(
@@ -92,9 +104,10 @@ export function MultipleKanbanBoard({
         taskId,
         newStatus,
         targetIndex,
+        persistTaskStatus,
       );
     },
-    [boardsWithTasks, setBoardsWithTasks],
+    [boardsWithTasks, setBoardsWithTasks, persistTaskStatus],
   );
 
   const handleTaskUpdate = useCallback(
@@ -281,7 +294,13 @@ export function MultipleKanbanBoard({
         />
 
         <BoardMultiLayout>
-          {isLoading ? (
+          {!isBoardsLoading && taskBoards.length === 0 ? (
+            <EmptyStateWrapper>
+              <TasksWorkspaceEmptyState
+                onCreateWorkspace={openCreateWorkspace}
+              />
+            </EmptyStateWrapper>
+          ) : isLoading ? (
             <LoadingContainer>
               <KanbanSpinner />
             </LoadingContainer>

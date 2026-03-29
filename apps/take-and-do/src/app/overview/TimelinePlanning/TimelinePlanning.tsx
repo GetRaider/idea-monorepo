@@ -172,11 +172,11 @@ export function TimelinePlanning({
         </TaskList>
       ) : (
         <EmptyState
-          title="You have no tasks"
-          message={`No tasks scheduled for ${tasksHelper.schedule.getLabel(schedule, customDate)}`}
+          title="You have no recent tasks to analyze"
+          message="Try adding some tasks to your workspace and come back later to analyze them."
         />
       )}
-      <ViewAllLink href="/tasks">View all tasks →</ViewAllLink>
+      <ViewAllLink href="/tasks/root">View all tasks →</ViewAllLink>
 
       {isOptimizationDialogOpen && (
         <AIPlanningOptimizationDialog

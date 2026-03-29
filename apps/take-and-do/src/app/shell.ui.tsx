@@ -141,12 +141,12 @@ export function WelcomeSection({ className, ref, ...props }: UiProps<"div">) {
   return <div ref={ref} className={cn("mb-8", className)} {...props} />;
 }
 
-export function HomePageTitle({ className, ref, ...props }: UiProps<"h1">) {
+export function AppPageTitle({ className, ref, ...props }: UiProps<"h1">) {
   return (
     <h1
       ref={ref}
       className={cn(
-        "m-0 mb-2 bg-gradient-to-br from-white to-purple-400 bg-clip-text text-4xl font-bold text-transparent",
+        "m-0 mb-2 bg-gradient-to-br from-white to-purple-400 bg-clip-text text-2xl font-bold text-transparent",
         className,
       )}
       {...props}
@@ -154,11 +154,11 @@ export function HomePageTitle({ className, ref, ...props }: UiProps<"h1">) {
   );
 }
 
-export function HomePageSubtitle({ className, ref, ...props }: UiProps<"p">) {
+export function AppPageSubtitle({ className, ref, ...props }: UiProps<"p">) {
   return (
     <p
       ref={ref}
-      className={cn("m-0 text-lg text-slate-300", className)}
+      className={cn("m-0 text-l text-slate-300", className)}
       {...props}
     />
   );

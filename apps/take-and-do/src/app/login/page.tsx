@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { FcGoogle } from "react-icons/fc";
+import { Dialog } from "@/components/Dialogs";
 import { SpinnerRing } from "@/components/Spinner/Spinner";
 import { trackEvent } from "@/lib/analytics";
 import { authClient } from "@/lib/auth-client";
@@ -33,7 +34,7 @@ export default function LoginPage() {
     try {
       await authClient.signIn.social({
         provider: "google",
-        callbackURL: "/home",
+        callbackURL: "/overview",
       });
     } catch (cause) {
       setError(getErrorMessage(cause));
@@ -49,7 +50,7 @@ export default function LoginPage() {
       await authClient.signIn.email({
         email,
         password,
-        callbackURL: "/home",
+        callbackURL: "/overview",
       });
     } catch (cause) {
       setError(getErrorMessage(cause));
@@ -67,6 +68,7 @@ export default function LoginPage() {
 
   async function confirmAnonymous() {
     if (!guestIntent) return;
+    if (guestIntent === "other" && guestOtherText.trim().length === 0) return;
     setLoading("anonymous");
     setError(null);
     try {
@@ -78,7 +80,7 @@ export default function LoginPage() {
       });
       await authClient.signIn.anonymous();
       setGuestModalOpen(false);
-      router.push("/home");
+      router.push("/overview");
       router.refresh();
     } catch (cause) {
       setError(getErrorMessage(cause));
@@ -246,92 +248,80 @@ function GuestIntentModal({
   onIntentChange,
   onOtherTextChange,
 }: GuestIntentModalProps) {
-  const canConfirm = guestIntent !== null;
+  const canConfirm =
+    guestIntent === "exploring" ||
+    guestIntent === "portfolio" ||
+    (guestIntent === "other" && guestOtherText.trim().length > 0);
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
-      role="presentation"
-      onClick={onCancel}
-    >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="guest-intent-title"
-        className="w-full max-w-md rounded-2xl border border-[var(--border-color)] bg-[var(--card-bg)] p-6 text-[var(--foreground)] shadow-[var(--shadow-dialog)]"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <h2 id="guest-intent-title" className="text-lg font-semibold">
-          Before you explore…
-        </h2>
-        <p className="mt-1 text-sm text-[var(--text-secondary)]">
-          What brings you here today?
-        </p>
+    <Dialog title="Before you explore…" onClose={onCancel} maxWidth={448}>
+      <p className="m-0 text-sm text-[var(--text-secondary)]">
+        What brings you here today?
+      </p>
 
-        <div className="mt-4 space-y-2">
-          <IntentOption
-            label="Exploring for potential use"
-            description="Considering using the platform for my own needs"
-            selected={guestIntent === "exploring"}
-            onSelect={() => onIntentChange("exploring")}
-            disabled={isBusy}
-          />
-          <IntentOption
-            label="Reviewing a portfolio"
-            description={"Checking this out as part of someone's work"}
-            selected={guestIntent === "portfolio"}
-            onSelect={() => onIntentChange("portfolio")}
-            disabled={isBusy}
-          />
-          <IntentOption
-            label="Other"
-            description="Describe any other reason you're here"
-            selected={guestIntent === "other"}
-            onSelect={() => onIntentChange("other")}
-            disabled={isBusy}
-          />
-        </div>
-
-        {guestIntent === "other" ? (
-          <div className="mt-3">
-            <label
-              htmlFor="guest-intent-other"
-              className="mb-1 block text-xs text-[var(--text-secondary)]"
-            >
-              Tell us a bit more details
-            </label>
-            <input
-              id="guest-intent-other"
-              type="text"
-              value={guestOtherText}
-              onChange={(event) => onOtherTextChange(event.target.value)}
-              disabled={isBusy}
-              className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-primary)]"
-            />
-          </div>
-        ) : null}
-
-        <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
-          <button
-            type="button"
-            onClick={onCancel}
-            disabled={isBusy}
-            className="text-sm text-[var(--text-secondary)] underline-offset-2 hover:underline"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={onConfirm}
-            disabled={!guestOtherText?.trim()?.length || isBusy || !canConfirm}
-            className="rounded-lg px-4 py-2 text-sm font-medium text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-secondary)] disabled:opacity-50"
-            style={{ backgroundColor: "var(--brand-primary)" }}
-          >
-            Continue
-          </button>
-        </div>
+      <div className="mt-4 space-y-2">
+        <IntentOption
+          label="Exploring for potential use"
+          description="Considering using the platform for my own needs"
+          selected={guestIntent === "exploring"}
+          onSelect={() => onIntentChange("exploring")}
+          disabled={isBusy}
+        />
+        <IntentOption
+          label="Reviewing a portfolio"
+          description={"Checking this out as part of someone's work"}
+          selected={guestIntent === "portfolio"}
+          onSelect={() => onIntentChange("portfolio")}
+          disabled={isBusy}
+        />
+        <IntentOption
+          label="Other"
+          description="Describe any other reason you're here"
+          selected={guestIntent === "other"}
+          onSelect={() => onIntentChange("other")}
+          disabled={isBusy}
+        />
       </div>
-    </div>
+
+      {guestIntent === "other" ? (
+        <div className="mt-3">
+          <label
+            htmlFor="guest-intent-other"
+            className="mb-1 block text-xs text-[var(--text-secondary)]"
+          >
+            Reason
+          </label>
+          <input
+            id="guest-intent-other"
+            type="text"
+            value={guestOtherText}
+            onChange={(event) => onOtherTextChange(event.target.value)}
+            disabled={isBusy}
+            className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-sm text-[var(--foreground)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-primary)]"
+          />
+        </div>
+      ) : null}
+
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={isBusy}
+          className="text-sm text-[var(--text-secondary)] underline-offset-2 hover:underline disabled:opacity-50"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={onConfirm}
+          disabled={isBusy || !canConfirm}
+          className="rounded-lg px-4 py-2 text-sm font-medium text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-secondary)] disabled:cursor-not-allowed disabled:opacity-50"
+          style={{ backgroundColor: "var(--brand-primary)" }}
+        >
+          Continue
+        </button>
+      </div>
+    </Dialog>
   );
 }
 

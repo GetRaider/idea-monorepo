@@ -168,17 +168,49 @@ export async function POST(request: NextRequest) {
   const access = dataAccessFromAuth(authResult);
   try {
     const body = await request.json();
-    const { name, folderId } = body;
+    const { name, folderId, emoji } = body as {
+      name?: unknown;
+      folderId?: unknown;
+      emoji?: unknown;
+    };
 
     if (!name || typeof name !== "string" || !name.trim()) {
       return NextResponse.json({ error: "Name is required" }, { status: 400 });
     }
 
+    let emojiValue: string | null | undefined;
+    if (emoji !== undefined) {
+      if (emoji === null) emojiValue = null;
+      else if (typeof emoji === "string") {
+        const t = emoji.trim();
+        emojiValue = t || null;
+      } else {
+        return NextResponse.json(
+          { error: "emoji must be a string or null" },
+          { status: 400 },
+        );
+      }
+    }
+
+    let folderIdValue: string | undefined;
+    if (folderId !== undefined && folderId !== null && folderId !== "") {
+      if (typeof folderId !== "string") {
+        return NextResponse.json(
+          { error: "folderId must be a string" },
+          { status: 400 },
+        );
+      }
+      folderIdValue = folderId;
+    }
+
     const taskBoardData: Omit<TaskBoard, "id" | "createdAt" | "updatedAt"> = {
       name: name.trim(),
-      folderId: folderId || undefined,
+      folderId: folderIdValue,
       isPublic: false,
     };
+    if (emojiValue !== undefined) {
+      taskBoardData.emoji = emojiValue;
+    }
 
     const newTaskBoard = await createTaskBoard(taskBoardData, access);
     return NextResponse.json(newTaskBoard, { status: 201 });

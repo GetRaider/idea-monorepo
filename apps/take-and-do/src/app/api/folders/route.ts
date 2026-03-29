@@ -41,11 +41,27 @@ export async function POST(request: NextRequest) {
       }
       throw error;
     }
-    const { name } = body as { name?: unknown };
+    const { name, emoji } = body as {
+      name?: unknown;
+      emoji?: unknown;
+    };
     if (!name || typeof name !== "string" || !name.trim()) {
       return NextResponse.json({ error: "Name is required" }, { status: 400 });
     }
-    const folder = await createFolder(name.trim(), access);
+    let emojiValue: string | null | undefined;
+    if (emoji !== undefined) {
+      if (emoji === null) emojiValue = null;
+      else if (typeof emoji === "string") {
+        const t = emoji.trim();
+        emojiValue = t || null;
+      } else {
+        return NextResponse.json(
+          { error: "emoji must be a string or null" },
+          { status: 400 },
+        );
+      }
+    }
+    const folder = await createFolder(name.trim(), access, emojiValue);
     return NextResponse.json(folder, { status: 201 });
   } catch {
     return NextResponse.json(

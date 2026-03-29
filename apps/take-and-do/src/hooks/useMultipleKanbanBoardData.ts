@@ -3,20 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Task } from "@/components/Boards/KanbanBoard/types";
 import { tasksIntoStatusColumns } from "@/components/Boards/KanbanBoard/shared/tasksIntoStatusColumns";
 import { apiServices } from "@/services/api";
-import type { TaskBoard, TaskBoardWithTasks } from "@/types/workspace";
-
-function taskBoardFallback(id: string): TaskBoard {
-  const t = new Date(0);
-  return {
-    id,
-    isPublic: false,
-    name: id,
-    emoji: null,
-    folderId: null,
-    createdAt: t,
-    updatedAt: t,
-  };
-}
+import type { TaskBoardWithTasks } from "@/types/workspace";
 
 export function useMultipleKanbanBoardData(
   scheduleDate: Date | undefined,
@@ -32,7 +19,6 @@ export function useMultipleKanbanBoardData(
 
   const fetchBoards = useCallback(async (): Promise<TaskBoardWithTasks[]> => {
     const taskBoards = await apiServices.taskBoards.getAll();
-    const boardById = new Map(taskBoards.map((b) => [b.id, b]));
 
     if (scheduleDate) {
       const scheduledTasks = await apiServices.tasks.getByDate(scheduleDate);
@@ -43,9 +29,9 @@ export function useMultipleKanbanBoardData(
         list.push(task);
         tasksByBoardId.set(task.taskBoardId, list);
       }
-      return [...tasksByBoardId.entries()].map(([boardId, boardTasks]) => ({
-        ...(boardById.get(boardId) ?? taskBoardFallback(boardId)),
-        tasks: tasksIntoStatusColumns(boardTasks),
+      return taskBoards.map((board) => ({
+        ...board,
+        tasks: tasksIntoStatusColumns(tasksByBoardId.get(board.id) ?? []),
       }));
     }
 

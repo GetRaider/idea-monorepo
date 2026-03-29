@@ -92,7 +92,7 @@ export function NavItem({
       ref={ref}
       type={type}
       className={cn(
-        "flex w-full items-center gap-3 rounded-lg border-0 px-3 py-2 text-left text-sm transition-all duration-200 hover:bg-[#2a2a2a] hover:text-white",
+        "flex w-full min-w-0 items-center gap-3 rounded-lg border-0 px-3 py-2 text-left text-sm transition-all duration-200 hover:bg-[#2a2a2a] hover:text-white",
         isActive
           ? "cursor-default bg-[#2a2a2a] text-white"
           : "cursor-pointer bg-transparent text-[#888]",
@@ -172,7 +172,7 @@ export function WorkspaceList({
     <div
       ref={ref}
       className={cn(
-        "flex min-h-[120px] flex-1 flex-col gap-1 rounded-lg border border-dashed py-0.5 transition-[border-color,background] duration-150",
+        "flex flex-1 flex-col gap-2 rounded-lg border border-dashed transition-[border-color,background] duration-150",
         isDragOver
           ? "border-[#7255c1] bg-[rgba(114,85,193,0.12)]"
           : "border-transparent bg-transparent",
@@ -201,7 +201,7 @@ export function WorkspaceToggle({
       type={type}
       data-workspace-toggle
       className={cn(
-        "flex w-full cursor-pointer items-center gap-2 rounded-lg border-0 bg-transparent px-3 py-2 text-left text-sm text-[#888] transition-[background,color] duration-150 hover:bg-[#2a2a2a] hover:text-white",
+        "flex w-full min-w-0 cursor-pointer items-center gap-0 rounded-lg border-0 bg-transparent py-1.5 pl-1 pr-3 text-left text-sm leading-5 text-[#888] transition-[background,color] duration-150 hover:bg-[#2a2a2a] hover:text-white",
         className,
       )}
       {...props}
@@ -220,7 +220,7 @@ export function BoardToggle({
       ref={ref}
       type={type}
       className={cn(
-        "flex flex-1 cursor-pointer items-center gap-2 rounded-lg border-0 bg-transparent px-3 py-2 text-left text-sm text-[#888] transition-colors duration-200",
+        "flex min-w-0 flex-1 cursor-pointer items-center gap-0 rounded-lg border-0 bg-transparent py-1.5 pl-1 pr-3 text-left text-sm leading-5 text-[#888] transition-colors duration-200",
         className,
       )}
       {...props}
@@ -238,7 +238,7 @@ export function WorkspaceRowActions({
       ref={ref}
       data-workspace-row-actions
       className={cn(
-        "inline-flex shrink-0 items-center justify-center self-center py-0 pl-0 pr-2 text-[#888] opacity-0 transition-opacity duration-150 group-hover/board-row:opacity-100 group-hover/folder-row:opacity-100 [&_[data-board-actions-trigger]]:inline-flex [&_[data-board-actions-trigger]]:items-center [&_[data-board-actions-trigger]]:justify-center [&_[data-board-actions-trigger]]:rounded [&_[data-board-actions-trigger]]:p-1 [&_[data-folder-actions-trigger]]:inline-flex [&_[data-folder-actions-trigger]]:items-center [&_[data-folder-actions-trigger]]:justify-center [&_[data-folder-actions-trigger]]:rounded [&_[data-folder-actions-trigger]]:p-1",
+        "inline-flex shrink-0 items-center justify-center py-0 pl-0 pr-2 text-[#888] opacity-0 transition-opacity duration-150 group-hover/board-row:opacity-100 group-hover/folder-row:opacity-100 [&_[data-board-actions-trigger]]:inline-flex [&_[data-board-actions-trigger]]:items-center [&_[data-board-actions-trigger]]:justify-center [&_[data-board-actions-trigger]]:rounded [&_[data-board-actions-trigger]]:p-1 [&_[data-folder-actions-trigger]]:inline-flex [&_[data-folder-actions-trigger]]:items-center [&_[data-folder-actions-trigger]]:justify-center [&_[data-folder-actions-trigger]]:rounded [&_[data-folder-actions-trigger]]:p-1",
         className,
       )}
       {...props}
@@ -281,7 +281,7 @@ export function BoardEditWrap({ className, ref, ...props }: UiProps<"div">) {
     <div
       ref={ref}
       className={cn(
-        "flex min-w-0 flex-1 items-center gap-2 px-3 py-2",
+        "flex min-w-0 flex-1 items-center gap-0 py-1.5 pl-1 pr-3",
         className,
       )}
       {...props}
@@ -352,7 +352,7 @@ export function EmojiPreview({ className, ref, ...props }: UiProps<"span">) {
     <span
       ref={ref}
       className={cn(
-        "inline-flex h-5 w-5 items-center justify-center text-base leading-none",
+        "inline-flex h-5 w-5 shrink-0 items-center justify-center text-[15px] leading-none",
         className,
       )}
       {...props}
@@ -400,6 +400,29 @@ type ChevronExpandedProps = UiProps<"span"> & {
   isExpanded?: boolean;
 };
 
+/** Same width as FolderChevron so icons align with folder rows (narrower than w-5 = icon closer to chevron). */
+const SIDEBAR_TREE_LEADING_SLOT_CLASS = "h-5 w-3.5 shrink-0";
+
+/** Fixed-width slot so folder/board emoji columns line up when only folders use a chevron. */
+export function SidebarChevronGutter({
+  className,
+  ref,
+  ...props
+}: UiProps<"span">) {
+  return (
+    <span
+      ref={ref}
+      aria-hidden
+      className={cn(
+        "inline-flex items-center justify-center",
+        SIDEBAR_TREE_LEADING_SLOT_CLASS,
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
 export function FolderChevron({
   className,
   isExpanded,
@@ -410,7 +433,8 @@ export function FolderChevron({
     <span
       ref={ref}
       className={cn(
-        "inline-flex h-[18px] w-[18px] shrink-0 items-center justify-center text-inherit opacity-70 transition-transform duration-200 ease-out",
+        "inline-flex items-center justify-start text-[#888] transition-transform duration-200 ease-out",
+        SIDEBAR_TREE_LEADING_SLOT_CLASS,
         isExpanded ? "rotate-90" : "rotate-0",
         className,
       )}
@@ -423,7 +447,7 @@ export function SubItems({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
-      className={cn("ml-6 mt-1 flex flex-col gap-0.5", className)}
+      className={cn("mt-0.5 flex flex-col gap-0 pl-2.5", className)}
       {...props}
     />
   );
@@ -435,7 +459,7 @@ export function FolderEditWrap({ className, ref, ...props }: UiProps<"div">) {
       ref={ref}
       data-folder-edit-wrap
       className={cn(
-        "flex min-w-0 flex-1 items-center gap-2 px-3 py-2",
+        "flex min-w-0 flex-1 items-center gap-0 py-1.5 pl-1 pr-3",
         className,
       )}
       {...props}

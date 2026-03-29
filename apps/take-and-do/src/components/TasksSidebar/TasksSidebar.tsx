@@ -4,21 +4,20 @@ import {
   useState,
   useCallback,
   type Dispatch,
+  type ReactNode,
   type SetStateAction,
 } from "react";
 import {
   ChevronRightIcon,
   ClockCircleIcon,
   ClockNavIcon,
+  DashboardIcon,
   DotsVerticalIcon,
   PlusIcon,
-  SearchIcon,
 } from "@/components/Icons";
 import { Dropdown } from "@/components/Dropdown";
 import {
   TasksSidebarContainer,
-  NavItem,
-  WorkspaceContainer,
   SideBarSectionHeader,
   WorkspaceList,
   WorkspaceItem,
@@ -37,12 +36,14 @@ import {
   FolderEditWrap,
   FolderEditInput,
   RootBoardsDropZone,
-  Search,
-  SearchInput,
+  SidebarChevronGutter,
+  WorkspaceContainer,
 } from "./TasksSidebar.ui";
 import { TasksSidebarResizeHandle } from "./TasksSidebarResizeHandle";
 
 const DRAG_BOARD_KEY = "application/x-task-board-id";
+const DRAG_REORDER_FOLDER_KEY = "application/x-tasks-sidebar-folder-reorder";
+const DRAG_REORDER_BOARD_KEY = "application/x-tasks-sidebar-board-reorder";
 const ROOT_DROP_ID = "__root__";
 const isRootDrop = (id: string) => id === ROOT_DROP_ID;
 import { Folder, TaskBoard } from "@/types/workspace";
@@ -50,13 +51,17 @@ import { toast } from "sonner";
 import { apiServices } from "@/services/api";
 import { ConfirmDialog } from "@/components/Dialogs";
 import { Spinner } from "@/components/Spinner/Spinner";
-import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
+import { TASKS_ROOT_VIEW_ID, tasksUrlHelper } from "@/helpers/tasks-url.helper";
+import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { EmojiPickerField } from "./EmojiPickerField";
 import { useEmojiPickerState } from "./useEmojiPickerState";
 import { useSidebarEditingState } from "./useSidebarEditingState";
 import { useSidebarDeleteState } from "./useSidebarDeleteState";
+import { useTasksSidebarOrder } from "@/hooks/useTasksSidebarOrder";
+
+import { TasksSidebarTaskSearch } from "./TasksSidebarTaskSearch";
 
 export function TasksSidebar({
   isOpen,
@@ -101,6 +106,15 @@ export function TasksSidebar({
     openFolderEmojiPickerId,
     setOpenFolderEmojiPickerId,
   } = useEmojiPickerState();
+
+  const {
+    sortedFolders,
+    rootBoardsSorted,
+    boardsInFolderSorted,
+    reorderFolder,
+    reorderRootBoard,
+    reorderBoardInFolder,
+  } = useTasksSidebarOrder(folders, taskBoards);
 
   const handleViewChange = (view: string) => onViewChange?.(view);
 
@@ -168,13 +182,14 @@ export function TasksSidebar({
     setDeletingBoard(null);
     try {
       await apiServices.taskBoards.deleteBoard(id);
-      setTaskBoards((prev: TaskBoard[]) =>
-        prev.filter((board: TaskBoard) => board.id !== id),
+      const remaining = taskBoards.filter(
+        (board: TaskBoard) => board.id !== id,
       );
+      setTaskBoards(remaining);
       router.push(
-        taskBoards.length > 0
-          ? tasksUrlHelper.routing.buildBoardUrl(taskBoards[0].name)
-          : tasksUrlHelper.routing.buildScheduleUrl("today"),
+        remaining.length > 0
+          ? tasksUrlHelper.routing.buildBoardUrl(remaining[0].name)
+          : tasksUrlHelper.routing.buildRootUrl(),
       );
       toast.success(`'${name}' board deleted`);
     } catch (error) {
@@ -264,10 +279,17 @@ export function TasksSidebar({
     }
   };
 
-  const handleBoardDragStart = (e: React.DragEvent, boardId: string) => {
+  const handleBoardDragStart = (e: React.DragEvent, taskBoard: TaskBoard) => {
     if ((e.target as HTMLElement).closest("[data-board-actions-trigger]"))
       return;
-    e.dataTransfer.setData(DRAG_BOARD_KEY, boardId);
+    e.dataTransfer.setData(DRAG_BOARD_KEY, taskBoard.id);
+    e.dataTransfer.setData(
+      DRAG_REORDER_BOARD_KEY,
+      JSON.stringify({
+        boardId: taskBoard.id,
+        folderId: taskBoard.folderId ?? null,
+      }),
+    );
     e.dataTransfer.effectAllowed = "move";
   };
 
@@ -298,7 +320,38 @@ export function TasksSidebar({
     [expandedFolder, setTaskBoards, taskBoards],
   );
 
-  const renderBoardItem = (taskBoard: TaskBoard) => {
+  const handleBoardReorderDragOver = (event: React.DragEvent) => {
+    if (!event.dataTransfer.types.includes(DRAG_REORDER_BOARD_KEY)) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+  };
+
+  const handleBoardReorderDrop = (
+    event: React.DragEvent,
+    targetBoard: TaskBoard,
+    folderScope: string | null,
+  ) => {
+    const raw = event.dataTransfer.getData(DRAG_REORDER_BOARD_KEY);
+    if (!raw) return;
+    event.preventDefault();
+    event.stopPropagation();
+    let payload: { boardId: string; folderId: string | null };
+    try {
+      payload = JSON.parse(raw) as { boardId: string; folderId: string | null };
+    } catch {
+      return;
+    }
+    const targetFolderId = targetBoard.folderId ?? null;
+    if (payload.folderId !== targetFolderId) return;
+    if (payload.boardId === targetBoard.id) return;
+    if (folderScope === null) reorderRootBoard(payload.boardId, targetBoard.id);
+    else reorderBoardInFolder(folderScope, payload.boardId, targetBoard.id);
+  };
+
+  const renderBoardItem = (
+    taskBoard: TaskBoard,
+    folderScope: string | null,
+  ) => {
     const isEditing = editingBoardId === taskBoard.id;
     const isMenuOpen = openMenuBoardId === taskBoard.id;
     const isSelected = activeView === taskBoard.name;
@@ -309,71 +362,90 @@ export function TasksSidebar({
           isActive={isMenuOpen}
           isSelected={isSelected}
           data-selected={isSelected || undefined}
-          draggable
-          onDragStart={(e) => handleBoardDragStart(e, taskBoard.id)}
+          onDragOver={handleBoardReorderDragOver}
+          onDrop={(event) =>
+            handleBoardReorderDrop(event, taskBoard, folderScope)
+          }
         >
           {isEditing ? (
             <BoardEditWrap>
-              <EmojiPickerField
-                emoji={editingBoardEmoji}
-                isOpen={openBoardEmojiPickerId === taskBoard.id}
-                fallbackIconSrc="/kanban-board.svg"
-                fallbackIconAlt="Task Board"
-                onToggle={() =>
-                  setOpenBoardEmojiPickerId((prev) =>
-                    prev === taskBoard.id ? null : taskBoard.id,
-                  )
-                }
-                onSelect={(emoji) => {
-                  setEditingBoardEmoji(emoji);
-                  void handleEditBoard(taskBoard, { emoji });
-                }}
-                onClear={() => {
-                  setEditingBoardEmoji(null);
-                  void handleEditBoard(taskBoard, { emoji: null });
-                }}
-              />
-              <BoardEditInput
-                value={editingName}
-                onChange={(e) => setEditingName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleEditBoard(taskBoard);
-                  if (e.key === "Escape") {
-                    setEditingBoardId(null);
-                    setOpenBoardEmojiPickerId(null);
+              <SidebarChevronGutter />
+              <span className="flex min-w-0 flex-1 items-center gap-1.5">
+                <EmojiPickerField
+                  emoji={editingBoardEmoji}
+                  isOpen={openBoardEmojiPickerId === taskBoard.id}
+                  fallbackIconSrc="/kanban-board.svg"
+                  fallbackIconAlt="Task Board"
+                  onToggle={() =>
+                    setOpenBoardEmojiPickerId((prev) =>
+                      prev === taskBoard.id ? null : taskBoard.id,
+                    )
                   }
-                }}
-                onBlur={(e) => {
-                  const next = e.relatedTarget as HTMLElement | null;
-                  if (
-                    next?.closest("[data-emoji-picker-popover]") ||
-                    next?.closest("[data-emoji-trigger]")
-                  )
-                    return;
-                  handleEditBoard(taskBoard);
-                }}
-                autoFocus
-                maxLength={64}
-              />
+                  onSelect={(emoji) => {
+                    setEditingBoardEmoji(emoji);
+                    void handleEditBoard(taskBoard, { emoji });
+                  }}
+                  onClear={() => {
+                    setEditingBoardEmoji(null);
+                    void handleEditBoard(taskBoard, { emoji: null });
+                  }}
+                />
+                <BoardEditInput
+                  value={editingName}
+                  onChange={(e) => setEditingName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleEditBoard(taskBoard);
+                    if (e.key === "Escape") {
+                      setEditingBoardId(null);
+                      setOpenBoardEmojiPickerId(null);
+                    }
+                  }}
+                  onBlur={(e) => {
+                    const next = e.relatedTarget as HTMLElement | null;
+                    if (
+                      next?.closest("[data-emoji-picker-popover]") ||
+                      next?.closest("[data-emoji-trigger]")
+                    )
+                      return;
+                    handleEditBoard(taskBoard);
+                  }}
+                  autoFocus
+                  maxLength={64}
+                />
+              </span>
             </BoardEditWrap>
           ) : (
-            <BoardToggle
-              onClick={() => {
-                if (!isSelected) handleViewChange(taskBoard.name);
-              }}
+            <div
+              className="flex min-w-0 flex-1 items-center"
+              draggable
+              onDragStart={(event) => handleBoardDragStart(event, taskBoard)}
             >
-              {taskBoard.emoji ? (
-                <EmojiPreview>{taskBoard.emoji}</EmojiPreview>
-              ) : (
-                <Image
-                  width={20}
-                  height={20}
-                  src="/kanban-board.svg"
-                  alt="Task Board"
-                />
-              )}
-              <span>{taskBoard.name}</span>
-            </BoardToggle>
+              <BoardToggle
+                onClick={() => {
+                  if (!isSelected) handleViewChange(taskBoard.name);
+                }}
+              >
+                <SidebarChevronGutter />
+                <span className="flex min-w-0 flex-1 items-center gap-1.5">
+                  <SidebarTreeIconSlot>
+                    {taskBoard.emoji ? (
+                      <EmojiPreview>{taskBoard.emoji}</EmojiPreview>
+                    ) : (
+                      <Image
+                        width={20}
+                        height={20}
+                        className="h-5 w-5 object-contain"
+                        src="/kanban-board.svg"
+                        alt="Task Board"
+                      />
+                    )}
+                  </SidebarTreeIconSlot>
+                  <span className="min-w-0 truncate leading-5">
+                    {taskBoard.name}
+                  </span>
+                </span>
+              </BoardToggle>
+            </div>
           )}
           {!isEditing && (
             <WorkspaceRowActions>
@@ -402,32 +474,54 @@ export function TasksSidebar({
   return (
     <>
       <TasksSidebarContainer isOpen={isOpen} widthPx={widthPx}>
-        {/* TODO: Implement search and uncomment this */}
-        <Search>
-          <SearchIcon size={16} />
-          <SearchInput type="text" placeholder="Search..." />
-        </Search>
+        <TasksSidebarTaskSearch taskBoards={taskBoards} />
 
         <WorkspaceContainer>
           <SideBarSectionHeader>Schedules</SideBarSectionHeader>
 
-          <NavItem
-            isActive={activeView === "today"}
-            onClick={() => activeView !== "today" && handleViewChange("today")}
-          >
-            <ClockNavIcon size={20} />
-            <span>Today</span>
-          </NavItem>
+          <WorkspaceList className="min-h-0 flex-none">
+            <WorkspaceItem>
+              <WorkspaceToggle
+                type="button"
+                className={cn(
+                  activeView === "today" &&
+                    "cursor-default bg-[#2a2a2a] text-white hover:bg-[#2a2a2a] hover:text-white",
+                )}
+                onClick={() =>
+                  activeView !== "today" && handleViewChange("today")
+                }
+              >
+                <SidebarChevronGutter />
+                <span className="flex min-w-0 flex-1 items-center gap-1.5">
+                  <SidebarTreeIconSlot>
+                    <ClockNavIcon size={20} />
+                  </SidebarTreeIconSlot>
+                  <span className="min-w-0 truncate leading-5">Today</span>
+                </span>
+              </WorkspaceToggle>
+            </WorkspaceItem>
 
-          <NavItem
-            isActive={activeView === "tomorrow"}
-            onClick={() =>
-              activeView !== "tomorrow" && handleViewChange("tomorrow")
-            }
-          >
-            <ClockCircleIcon size={20} />
-            <span>Tomorrow</span>
-          </NavItem>
+            <WorkspaceItem>
+              <WorkspaceToggle
+                type="button"
+                className={cn(
+                  activeView === "tomorrow" &&
+                    "cursor-default bg-[#2a2a2a] text-white hover:bg-[#2a2a2a] hover:text-white",
+                )}
+                onClick={() =>
+                  activeView !== "tomorrow" && handleViewChange("tomorrow")
+                }
+              >
+                <SidebarChevronGutter />
+                <span className="flex min-w-0 flex-1 items-center gap-1.5">
+                  <SidebarTreeIconSlot>
+                    <ClockCircleIcon size={20} />
+                  </SidebarTreeIconSlot>
+                  <span className="min-w-0 truncate leading-5">Tomorrow</span>
+                </span>
+              </WorkspaceToggle>
+            </WorkspaceItem>
+          </WorkspaceList>
         </WorkspaceContainer>
 
         <WorkspaceContainer grow>
@@ -441,161 +535,236 @@ export function TasksSidebar({
             </AddButton>
           </SideBarSectionHeader>
 
-          {isFoldersLoading || isBoardsLoading ? (
-            <Spinner className="min-h-[280px] flex-1" />
-          ) : (
-            <WorkspaceList
-              isDragOver={dragOverTarget === ROOT_DROP_ID}
-              onDragOver={(e) => {
+          <WorkspaceList
+            isDragOver={dragOverTarget === ROOT_DROP_ID}
+            onDragOver={(e) => {
+              if (e.dataTransfer.types.includes(DRAG_REORDER_FOLDER_KEY)) {
                 e.preventDefault();
                 e.dataTransfer.dropEffect = "move";
-                setDragOverTarget(ROOT_DROP_ID);
-              }}
-              onDragLeave={(e) => {
-                if (!e.currentTarget.contains(e.relatedTarget as Node))
-                  setDragOverTarget(null);
-              }}
-              onDrop={handleDropOn(ROOT_DROP_ID)}
-            >
-              {folders.map((folder) => (
-                <WorkspaceItem key={folder.id}>
-                  <FolderDropTarget
-                    isDragOver={dragOverTarget === folder.id}
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      e.dataTransfer.dropEffect = "move";
-                      setDragOverTarget(folder.id);
-                    }}
-                    onDragLeave={(e) => {
-                      if (!e.currentTarget.contains(e.relatedTarget as Node))
-                        setDragOverTarget(null);
-                    }}
-                    onDrop={(e) => {
-                      e.stopPropagation();
-                      handleDropOn(folder.id)(e);
-                    }}
-                  >
-                    <FolderRow isActive={openMenuFolderId === folder.id}>
-                      {editingFolderId === folder.id ? (
-                        <FolderEditWrap onClick={(e) => e.stopPropagation()}>
-                          <EmojiPickerField
-                            emoji={editingFolderEmoji}
-                            isOpen={openFolderEmojiPickerId === folder.id}
-                            fallbackIconSrc="/folder.svg"
-                            fallbackIconAlt="Folder"
-                            onToggle={() =>
-                              setOpenFolderEmojiPickerId((prev) =>
-                                prev === folder.id ? null : folder.id,
-                              )
-                            }
-                            onSelect={(emoji) => {
-                              setEditingFolderEmoji(emoji);
-                              void handleEditFolder(folder, { emoji });
-                            }}
-                            onClear={() => {
-                              setEditingFolderEmoji(null);
-                              void handleEditFolder(folder, { emoji: null });
-                            }}
-                          />
-                          <FolderEditInput
-                            value={editingFolderName}
-                            onChange={(e) =>
-                              setEditingFolderName(e.target.value)
-                            }
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") handleEditFolder(folder);
-                              if (e.key === "Escape") {
-                                setEditingFolderId(null);
-                                setOpenFolderEmojiPickerId(null);
-                              }
-                            }}
-                            onBlur={(e) => {
-                              const next =
-                                e.relatedTarget as HTMLElement | null;
-                              if (
-                                next?.closest("[data-emoji-picker-popover]") ||
-                                next?.closest("[data-emoji-trigger]")
-                              )
-                                return;
-                              handleEditFolder(folder);
-                            }}
-                            autoFocus
-                            maxLength={64}
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                        </FolderEditWrap>
-                      ) : (
-                        <WorkspaceToggle
-                          type="button"
-                          aria-expanded={expandedFolder === folder.id}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleFolder(folder.id);
-                          }}
-                        >
-                          <FolderChevron
-                            isExpanded={expandedFolder === folder.id}
-                            aria-hidden
-                          >
-                            <ChevronRightIcon size={14} />
-                          </FolderChevron>
-                          {folder.emoji ? (
-                            <EmojiPreview>{folder.emoji}</EmojiPreview>
-                          ) : (
-                            <Image
-                              width={20}
-                              height={20}
-                              src="/folder.svg"
-                              alt="Folder"
-                            />
-                          )}
-                          <span>{folder.name}</span>
-                        </WorkspaceToggle>
-                      )}
-                      {editingFolderId !== folder.id && (
-                        <WorkspaceRowActions>
-                          <Dropdown
-                            options={[
-                              { label: "Edit", value: "edit" },
-                              {
-                                label: "Delete",
-                                value: "delete",
-                                danger: true,
-                              },
-                            ]}
-                            onChange={(value) =>
-                              handleFolderAction(folder, value)
-                            }
-                            trigger={
-                              <span data-folder-actions-trigger>
-                                <DotsVerticalIcon size={14} />
-                              </span>
-                            }
-                            onOpenChange={(open) =>
-                              setOpenMenuFolderId(open ? folder.id : null)
-                            }
-                          />
-                        </WorkspaceRowActions>
-                      )}
-                    </FolderRow>
-                  </FolderDropTarget>
-                  {expandedFolder === folder.id && (
-                    <SubItems>
-                      {taskBoards
-                        .filter((board) => board.folderId === folder.id)
-                        .map((taskBoard) => renderBoardItem(taskBoard))}
-                    </SubItems>
-                  )}
-                </WorkspaceItem>
-              ))}
+                return;
+              }
+              e.preventDefault();
+              e.dataTransfer.dropEffect = "move";
+              setDragOverTarget(ROOT_DROP_ID);
+            }}
+            onDragLeave={(e) => {
+              if (!e.currentTarget.contains(e.relatedTarget as Node))
+                setDragOverTarget(null);
+            }}
+            onDrop={handleDropOn(ROOT_DROP_ID)}
+          >
+            <WorkspaceItem>
+              <WorkspaceToggle
+                type="button"
+                className={cn(
+                  activeView === TASKS_ROOT_VIEW_ID &&
+                    "cursor-default bg-[#2a2a2a] text-white hover:bg-[#2a2a2a] hover:text-white",
+                )}
+                onClick={() =>
+                  activeView !== TASKS_ROOT_VIEW_ID &&
+                  handleViewChange(TASKS_ROOT_VIEW_ID)
+                }
+              >
+                <SidebarChevronGutter />
+                <span className="flex min-w-0 flex-1 items-center gap-1.5">
+                  <SidebarTreeIconSlot>
+                    <DashboardIcon size={20} className="text-current" />
+                  </SidebarTreeIconSlot>
+                  <span className="min-w-0 truncate leading-5">Root</span>
+                </span>
+              </WorkspaceToggle>
+            </WorkspaceItem>
 
-              <RootBoardsDropZone>
-                {taskBoards.filter((tb) => !tb.folderId).map(renderBoardItem)}
-              </RootBoardsDropZone>
-            </WorkspaceList>
-          )}
+            {isFoldersLoading || isBoardsLoading ? (
+              <Spinner className="min-h-[280px] flex-1" />
+            ) : (
+              <>
+                {sortedFolders.map((folder) => (
+                  <WorkspaceItem key={folder.id}>
+                    <FolderDropTarget
+                      isDragOver={dragOverTarget === folder.id}
+                      onDragOver={(e) => {
+                        if (
+                          e.dataTransfer.types.includes(DRAG_REORDER_FOLDER_KEY)
+                        ) {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          e.dataTransfer.dropEffect = "move";
+                          return;
+                        }
+                        e.preventDefault();
+                        e.stopPropagation();
+                        e.dataTransfer.dropEffect = "move";
+                        setDragOverTarget(folder.id);
+                      }}
+                      onDragLeave={(e) => {
+                        if (!e.currentTarget.contains(e.relatedTarget as Node))
+                          setDragOverTarget(null);
+                      }}
+                      onDrop={(e) => {
+                        const reorderDragged = e.dataTransfer.getData(
+                          DRAG_REORDER_FOLDER_KEY,
+                        );
+                        if (reorderDragged && reorderDragged !== folder.id) {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setDragOverTarget(null);
+                          reorderFolder(reorderDragged, folder.id);
+                          return;
+                        }
+                        e.stopPropagation();
+                        handleDropOn(folder.id)(e);
+                      }}
+                    >
+                      <FolderRow isActive={openMenuFolderId === folder.id}>
+                        {editingFolderId === folder.id ? (
+                          <FolderEditWrap onClick={(e) => e.stopPropagation()}>
+                            <SidebarChevronGutter />
+                            <span className="flex min-w-0 flex-1 items-center gap-1.5">
+                              <EmojiPickerField
+                                emoji={editingFolderEmoji}
+                                isOpen={openFolderEmojiPickerId === folder.id}
+                                fallbackIconSrc="/folder.svg"
+                                fallbackIconAlt="Folder"
+                                onToggle={() =>
+                                  setOpenFolderEmojiPickerId((prev) =>
+                                    prev === folder.id ? null : folder.id,
+                                  )
+                                }
+                                onSelect={(emoji) => {
+                                  setEditingFolderEmoji(emoji);
+                                  void handleEditFolder(folder, { emoji });
+                                }}
+                                onClear={() => {
+                                  setEditingFolderEmoji(null);
+                                  void handleEditFolder(folder, {
+                                    emoji: null,
+                                  });
+                                }}
+                              />
+                              <FolderEditInput
+                                value={editingFolderName}
+                                onChange={(e) =>
+                                  setEditingFolderName(e.target.value)
+                                }
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter")
+                                    handleEditFolder(folder);
+                                  if (e.key === "Escape") {
+                                    setEditingFolderId(null);
+                                    setOpenFolderEmojiPickerId(null);
+                                  }
+                                }}
+                                onBlur={(e) => {
+                                  const next =
+                                    e.relatedTarget as HTMLElement | null;
+                                  if (
+                                    next?.closest(
+                                      "[data-emoji-picker-popover]",
+                                    ) ||
+                                    next?.closest("[data-emoji-trigger]")
+                                  )
+                                    return;
+                                  handleEditFolder(folder);
+                                }}
+                                autoFocus
+                                maxLength={64}
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                            </span>
+                          </FolderEditWrap>
+                        ) : (
+                          <WorkspaceToggle
+                            type="button"
+                            className="min-w-0 flex-1"
+                            draggable
+                            aria-expanded={expandedFolder === folder.id}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleFolder(folder.id);
+                            }}
+                            onDragStart={(event) => {
+                              event.stopPropagation();
+                              event.dataTransfer.setData(
+                                DRAG_REORDER_FOLDER_KEY,
+                                folder.id,
+                              );
+                              event.dataTransfer.effectAllowed = "move";
+                            }}
+                          >
+                            <FolderChevron
+                              isExpanded={expandedFolder === folder.id}
+                              aria-hidden
+                            >
+                              <ChevronRightIcon size={11} />
+                            </FolderChevron>
+                            <span className="flex min-w-0 flex-1 items-center gap-1.5">
+                              <SidebarTreeIconSlot>
+                                {folder.emoji ? (
+                                  <EmojiPreview>{folder.emoji}</EmojiPreview>
+                                ) : (
+                                  <Image
+                                    width={20}
+                                    height={20}
+                                    className="h-5 w-5 object-contain"
+                                    src="/folder.svg"
+                                    alt="Folder"
+                                  />
+                                )}
+                              </SidebarTreeIconSlot>
+                              <span className="min-w-0 truncate leading-5">
+                                {folder.name}
+                              </span>
+                            </span>
+                          </WorkspaceToggle>
+                        )}
+                        {editingFolderId !== folder.id && (
+                          <WorkspaceRowActions>
+                            <Dropdown
+                              options={[
+                                { label: "Edit", value: "edit" },
+                                {
+                                  label: "Delete",
+                                  value: "delete",
+                                  danger: true,
+                                },
+                              ]}
+                              onChange={(value) =>
+                                handleFolderAction(folder, value)
+                              }
+                              trigger={
+                                <span data-folder-actions-trigger>
+                                  <DotsVerticalIcon size={14} />
+                                </span>
+                              }
+                              onOpenChange={(open) =>
+                                setOpenMenuFolderId(open ? folder.id : null)
+                              }
+                            />
+                          </WorkspaceRowActions>
+                        )}
+                      </FolderRow>
+                    </FolderDropTarget>
+                    {expandedFolder === folder.id && (
+                      <SubItems>
+                        {boardsInFolderSorted(folder.id).map((taskBoard) =>
+                          renderBoardItem(taskBoard, folder.id),
+                        )}
+                      </SubItems>
+                    )}
+                  </WorkspaceItem>
+                ))}
+
+                <RootBoardsDropZone>
+                  {rootBoardsSorted.map((taskBoard) =>
+                    renderBoardItem(taskBoard, null),
+                  )}
+                </RootBoardsDropZone>
+              </>
+            )}
+          </WorkspaceList>
         </WorkspaceContainer>
+
         {isOpen ? (
           <TasksSidebarResizeHandle
             widthPx={widthPx}
@@ -624,6 +793,14 @@ export function TasksSidebar({
         />
       )}
     </>
+  );
+}
+
+function SidebarTreeIconSlot({ children }: { children: ReactNode }) {
+  return (
+    <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden text-current [&_img]:h-5 [&_img]:w-5 [&_img]:max-h-none [&_img]:max-w-none [&_img]:object-contain [&_svg]:block [&_svg]:h-5 [&_svg]:w-5 [&_svg]:max-h-full [&_svg]:max-w-full [&_svg]:shrink-0">
+      {children}
+    </span>
   );
 }
 

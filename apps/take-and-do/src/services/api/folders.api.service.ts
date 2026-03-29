@@ -17,8 +17,10 @@ export class FoldersApiService extends BaseApiService {
     return normalizeFolder(response.data);
   }
 
-  async create(name: string): Promise<Folder> {
-    const response = await this.post<Folder>({ body: { name } });
+  async create(name: string, emoji?: string | null): Promise<Folder> {
+    const response = await this.post<Folder>({
+      body: { name, ...(emoji !== undefined ? { emoji } : {}) },
+    });
     return normalizeFolder(response.data);
   }
 

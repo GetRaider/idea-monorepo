@@ -1,4 +1,5 @@
 export { CalendarIcon } from "./CalendarIcon";
+export { DashboardIcon } from "./DashboardIcon";
 export { DotsVerticalIcon } from "./DotsVerticalIcon";
 export { CalendarMonthIcon } from "./CalendarMonthIcon";
 export { CheckListIcon } from "./CheckListIcon";
@@ -13,8 +14,11 @@ export { ClockNavIcon } from "./ClockNavIcon";
 export { InfoCircleIcon } from "./InfoCircleIcon";
 export { LightningIcon } from "./LightningIcon";
 export { OverdueIcon } from "./OverdueIcon";
+export { OverviewIcon } from "./OverviewIcon";
 export { PlusIcon } from "./PlusIcon";
+export { PrivateWorkspaceIcon } from "./PrivateWorkspaceIcon";
 export { PublicWorkspaceIcon } from "./PublicWorkspaceIcon";
+export { ListsIcon as RootPageIcon } from "./RootPageIcon";
 export { SearchIcon } from "./SearchIcon";
 export { ShieldCheckIcon } from "./ShieldCheckIcon";
 export { SunIcon } from "./SunIcon";

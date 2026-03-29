@@ -16,6 +16,7 @@ interface WorkspaceContextValue {
   setTaskBoards: Dispatch<SetStateAction<TaskBoard[]>>;
   isFoldersLoading: boolean;
   isBoardsLoading: boolean;
+  openCreateWorkspace: () => void;
 }
 
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);

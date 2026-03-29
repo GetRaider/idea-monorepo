@@ -6,7 +6,7 @@ import { Sidebar } from "@/components/Sidebar/Sidebar";
 import { TasksSidebar } from "@/components/TasksSidebar/TasksSidebar";
 import { CreateWorkspaceDialog } from "@/components/TasksSidebar/Workspaces/CreateWorkspace/CreateWorkspaceDialog";
 import { PageContainer, TasksLayoutMain as Main } from "../shell.ui";
-import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
+import { TASKS_ROOT_VIEW_ID, tasksUrlHelper } from "@/helpers/tasks-url.helper";
 import { waiterHelper } from "@/helpers/waiter.helper";
 import { useWorkspaces } from "@/hooks/useWorkspaces";
 import { WorkspaceProvider } from "@/contexts/WorkspaceContext";
@@ -45,6 +45,10 @@ export default function TasksLayoutClient({
       router.push(tasksUrlHelper.routing.buildScheduleUrl(view));
       return;
     }
+    if (view === TASKS_ROOT_VIEW_ID) {
+      router.push(tasksUrlHelper.routing.buildRootUrl());
+      return;
+    }
     router.push(tasksUrlHelper.routing.buildBoardUrl(view));
   };
 
@@ -53,9 +57,10 @@ export default function TasksLayoutClient({
   const handleCreateFolder = async (
     name: string,
     boardIdsToMove: string[] = [],
+    emoji?: string | null,
   ) => {
     try {
-      const folder = await apiServices.folders.create(name);
+      const folder = await apiServices.folders.create(name, emoji);
       setFolders((prev) => [...prev, folder]);
 
       if (boardIdsToMove.length > 0) {
@@ -81,12 +86,17 @@ export default function TasksLayoutClient({
     }
   };
 
-  const handleCreateTaskBoard = async (name: string, folderId: string) => {
+  const handleCreateTaskBoard = async (
+    name: string,
+    folderId: string,
+    emoji?: string | null,
+  ) => {
     try {
       const createdBoard = await apiServices.taskBoards.create({
         name,
         folderId: folderId || undefined,
         isPublic: false,
+        ...(emoji ? { emoji } : {}),
       });
       const resolvedBoard = await waiterHelper.retry(
         () => apiServices.taskBoards.getById(createdBoard.id),
@@ -119,6 +129,7 @@ export default function TasksLayoutClient({
     setTaskBoards,
     isFoldersLoading,
     isBoardsLoading,
+    openCreateWorkspace: () => setIsWorkspaceCreateDialogOpen(true),
   };
 
   return (

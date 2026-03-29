@@ -9,14 +9,17 @@ import { generateId } from "../utils";
 export async function createFolder(
   name: string,
   access: DataAccess,
+  emoji?: string | null,
 ): Promise<Folder> {
   const id = generateId();
+  const trimmedEmoji =
+    emoji === undefined || emoji === null ? null : emoji.trim() || null;
   await db.insert(foldersTable).values({
     id,
     userId: access.userId,
     isPublic: false,
     name,
-    emoji: null,
+    emoji: trimmedEmoji,
     createdAt: new Date(),
     updatedAt: new Date(),
   });

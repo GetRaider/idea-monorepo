@@ -104,6 +104,7 @@ export async function POST(request: NextRequest) {
     let shouldUseAI: boolean | undefined;
     let text: string | undefined;
     let _composeOnly: boolean | undefined;
+    let taskBoardName: string | undefined;
     let task: Omit<Task, "id">;
 
     try {
@@ -111,6 +112,7 @@ export async function POST(request: NextRequest) {
       shouldUseAI = payload.shouldUseAI;
       text = payload.text;
       _composeOnly = payload._composeOnly;
+      taskBoardName = payload.taskBoardName;
       task = payload.task;
     } catch {
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
@@ -186,7 +188,7 @@ export async function POST(request: NextRequest) {
       };
     }
 
-    const newTask = await createTask(taskData, access);
+    const newTask = await createTask(taskData, access, { taskBoardName });
 
     return NextResponse.json(
       access.isAnonymous ? { ...newTask, guest: true } : newTask,

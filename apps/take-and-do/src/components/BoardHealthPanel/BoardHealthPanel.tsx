@@ -166,9 +166,27 @@ export function BoardHealthPanel({ boards }: { boards: TaskBoard[] }) {
                   />
                 </div>
                 <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] text-[var(--text-tertiary)]">
-                  <span>To do {todo}</span>
-                  <span>In progress {progress}</span>
-                  <span>Done {done}</span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <span
+                      className="inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--text-tertiary)] opacity-80"
+                      aria-hidden
+                    />
+                    To do {todo}
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <span
+                      className="inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-[#7255c1]"
+                      aria-hidden
+                    />
+                    In progress {progress}
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <span
+                      className="inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500/90"
+                      aria-hidden
+                    />
+                    Done {done}
+                  </span>
                 </div>
               </li>
             );

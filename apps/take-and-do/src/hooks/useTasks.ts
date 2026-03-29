@@ -95,9 +95,12 @@ export function useTaskActions() {
   const isAnonymous = useIsAnonymous();
   const { update, remove } = useGuestTasks();
 
-  const createTask = useCallback(async (payload: Omit<Task, "id">) => {
-    return apiServices.tasks.create(payload);
-  }, []);
+  const createTask = useCallback(
+    async (payload: Omit<Task, "id"> & { taskBoardName?: string }) => {
+      return apiServices.tasks.create(payload);
+    },
+    [],
+  );
 
   const updateTask = useCallback(
     async (taskId: string, patch: TaskUpdate) => {

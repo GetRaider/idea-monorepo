@@ -36,7 +36,7 @@ export function useMultipleKanbanBoardData(
 
     if (scheduleDate) {
       const scheduledTasks = isAnonymous
-        ? guestTasksForScheduleDate(guestTasks, scheduleDate)
+        ? guestTasksForScheduleDate(guestStoreHelper.getTasks(), scheduleDate)
         : await apiServices.tasks.getByDate(scheduleDate);
       const tasksByBoardId = new Map<string, Task[]>();
       for (const task of scheduledTasks) {
@@ -55,7 +55,7 @@ export function useMultipleKanbanBoardData(
       const boards: TaskBoardWithTasks[] = [];
       for (const board of taskBoards.filter((tb) => tb.folderId === folderId)) {
         const boardTasks = isAnonymous
-          ? guestTasksForBoard(guestTasks, board.id)
+          ? guestTasksForBoard(guestStoreHelper.getTasks(), board.id)
           : await apiServices.taskBoards.getTasks(board.id);
         if (boardTasks.length === 0) continue;
         boards.push({
@@ -67,7 +67,7 @@ export function useMultipleKanbanBoardData(
     }
 
     return [];
-  }, [scheduleDate, folderId, isAnonymous, guestTasks]);
+  }, [scheduleDate, folderId, isAnonymous]);
 
   useEffect(() => {
     let cancelled = false;
@@ -93,7 +93,7 @@ export function useMultipleKanbanBoardData(
     return () => {
       cancelled = true;
     };
-  }, [fetchBoards]);
+  }, [fetchBoards, guestTasks]);
 
   const toggleBoardExpanded = useCallback((taskBoardId: string) => {
     setExpandedBoardIds((prev) => {

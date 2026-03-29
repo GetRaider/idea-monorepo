@@ -13,71 +13,30 @@ import {
 import { generateId } from "../utils";
 import { getTaskBoardById } from "../taskBoard/taskBoard.queries";
 import { tasksHelper } from "@/helpers/task.helper";
+import {
+  assignSubtaskIdsAndKeys,
+  boardNameToTaskKeyPrefix,
+  deriveTaskKeyPrefix,
+  extractNumericPortion,
+} from "@/lib/task-key.helpers";
 
-// Helper functions
-function deriveTaskKeyPrefix(taskKey?: string | null): string {
-  if (!taskKey) return "TASK";
-  const segments = taskKey.split("-").filter(Boolean);
-  if (!segments.length) return "TASK";
+async function getMaxNumericAmongDirectSubtasks(
+  parentTaskId: string,
+  access: DataAccess,
+): Promise<number> {
+  const accessCond = dataAccessFilter(tasks, access.userId, access.isAnonymous);
+  const rows = await db
+    .select({ taskKey: tasks.taskKey })
+    .from(tasks)
+    .where(and(eq(tasks.parentTaskId, parentTaskId), accessCond));
 
-  const numericIndex = segments.findIndex((segment) => /^\d+$/.test(segment));
-  if (numericIndex > 0) {
-    return segments.slice(0, numericIndex).join("-");
+  let max = 0;
+  for (const row of rows) {
+    if (!row.taskKey) continue;
+    const n = extractNumericPortion(row.taskKey);
+    if (n !== null) max = Math.max(max, n);
   }
-
-  return segments[0] || "TASK";
-}
-
-function extractNumericPortion(taskKey?: string | null): number | null {
-  if (!taskKey) return null;
-  const matches = taskKey.match(/\d+/g);
-  if (!matches?.length) return null;
-  const numericValue = parseInt(matches[matches.length - 1], 10);
-  return Number.isNaN(numericValue) ? null : numericValue;
-}
-
-function assignSubtaskIdsAndKeys(
-  subtasks: Task[],
-  prefix: string,
-  initialNextNum: number,
-  resolveExistingKey: (subtaskId: string) => string | null | undefined,
-): Array<{ id: string; taskKey: string }> {
-  let nextNum = initialNextNum;
-  const processed: Array<{ id: string; taskKey: string }> = [];
-
-  for (const subtask of subtasks) {
-    const hasValidId =
-      subtask.id && typeof subtask.id === "string" && subtask.id.length > 0;
-
-    if (hasValidId) {
-      const resolvedKey =
-        subtask.taskKey || resolveExistingKey(subtask.id) || null;
-      if (resolvedKey) {
-        processed.push({ id: subtask.id, taskKey: resolvedKey });
-        const n = extractNumericPortion(resolvedKey);
-        if (n !== null) nextNum = Math.max(nextNum, n);
-      } else {
-        nextNum += 1;
-        processed.push({ id: subtask.id, taskKey: `${prefix}-${nextNum}` });
-      }
-    } else {
-      nextNum += 1;
-      processed.push({ id: generateId(), taskKey: `${prefix}-${nextNum}` });
-    }
-  }
-
-  return processed;
-}
-
-function boardNameToTaskKeyPrefix(
-  board: { name: string } | null | undefined,
-): string {
-  if (!board) return "TASK";
-  const raw = board.name
-    .substring(0, 3)
-    .toUpperCase()
-    .replace(/[^A-Z]/g, "");
-  return raw || "TASK";
+  return max;
 }
 
 async function getMaxNumericSuffixForBoard(
@@ -316,12 +275,11 @@ async function syncTaskLabels(
 async function processSubtasks(
   taskBoardId: string,
   parentTaskId: string,
-  _parentTaskKey: string | null | undefined,
+  parentTaskKey: string | null | undefined,
   subtasks: Task[],
   access: DataAccess,
 ): Promise<Array<{ id: string; taskKey: string }>> {
   const board = await getTaskBoardById(taskBoardId, access);
-  const prefix = boardNameToTaskKeyPrefix(board ?? null);
   const accessCond = dataAccessFilter(tasks, access.userId, access.isAnonymous);
 
   const existingSubtasks = await db
@@ -333,11 +291,24 @@ async function processSubtasks(
     existingSubtasks.map((st) => [st.id, st]),
   );
 
-  const initialNextNum = await getMaxNumericSuffixForBoard(
-    taskBoardId,
-    prefix,
-    access,
-  );
+  const trimmedParentKey = parentTaskKey?.trim();
+  let prefix: string;
+  let initialNextNum: number;
+
+  if (trimmedParentKey) {
+    prefix = deriveTaskKeyPrefix(trimmedParentKey);
+    initialNextNum = Math.max(
+      extractNumericPortion(trimmedParentKey) ?? 0,
+      await getMaxNumericAmongDirectSubtasks(parentTaskId, access),
+    );
+  } else {
+    prefix = boardNameToTaskKeyPrefix(board ?? null);
+    initialNextNum = await getMaxNumericSuffixForBoard(
+      taskBoardId,
+      prefix,
+      access,
+    );
+  }
 
   return assignSubtaskIdsAndKeys(
     subtasks,
@@ -350,6 +321,7 @@ async function processSubtasks(
 function createTaskInMemoryWithoutDatabase(
   taskData: Omit<Task, "id">,
   access: DataAccess,
+  options?: { taskBoardName?: string },
 ): Task {
   if (!access.isAnonymous) {
     throw new Error("createTaskInMemoryWithoutDatabase: anonymous only");
@@ -359,10 +331,13 @@ function createTaskInMemoryWithoutDatabase(
   }
 
   const taskId = generateId();
-  const prefix = boardNameToTaskKeyPrefix(null);
+  const boardForPrefix = options?.taskBoardName?.trim()
+    ? { name: options.taskBoardName.trim() }
+    : null;
+  const boardPrefix = boardNameToTaskKeyPrefix(boardForPrefix);
   let taskKey = taskData.taskKey?.trim();
   if (!taskKey) {
-    taskKey = `${prefix}-${generateId().slice(0, 10)}`;
+    taskKey = `${boardPrefix}-${generateId().slice(0, 10)}`;
   }
 
   const baseTask: Task = {
@@ -383,10 +358,12 @@ function createTaskInMemoryWithoutDatabase(
     return baseTask;
   }
 
+  const subtaskPrefix = deriveTaskKeyPrefix(taskKey);
+  const parentNumeric = extractNumericPortion(taskKey) ?? 0;
   const processedSubtasks = assignSubtaskIdsAndKeys(
     taskData.subtasks,
-    prefix,
-    0,
+    subtaskPrefix,
+    parentNumeric,
     () => undefined,
   );
 
@@ -494,13 +471,14 @@ export async function getTaskByKey(
 export async function createTask(
   taskData: Omit<Task, "id">,
   access: DataAccess,
+  options?: { taskBoardName?: string },
 ): Promise<Task> {
   if (!taskData.taskBoardId) {
     throw new Error("Task must have a taskBoardId");
   }
 
   if (access.isAnonymous) {
-    return createTaskInMemoryWithoutDatabase(taskData, access);
+    return createTaskInMemoryWithoutDatabase(taskData, access, options);
   }
 
   const board = await getTaskBoardById(taskData.taskBoardId, access);

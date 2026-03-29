@@ -1,13 +1,10 @@
-import "dotenv/config";
 import type { Config } from "drizzle-kit";
 
-if (!process.env.DB_CONNECTION_STRING) {
-  throw new Error("Set DB_CONNECTION_STRING for Drizzle");
-}
+import { env } from "./src/env";
 
 export default {
   schema: "./src/db/schema.ts",
   dialect: "postgresql",
-  dbCredentials: { url: process.env.DB_CONNECTION_STRING },
+  dbCredentials: { url: env.db.connectionString },
   out: "./drizzle",
 } satisfies Config;

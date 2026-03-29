@@ -8,6 +8,8 @@ import { tasksHelper } from "@/helpers/task.helper";
 import { generateId } from "@/lib/id";
 import type { Folder, TaskBoard } from "@/types/workspace";
 
+import { recomposeGuestTaskTreeForBoard } from "@/lib/task-key.helpers";
+
 import { GUEST_STORE_UPDATED_EVENT } from "./constants";
 import type { GuestStore } from "./types";
 
@@ -88,14 +90,15 @@ function notifyGuestStoreChanged() {
   if (typeof window === "undefined") return;
   window.dispatchEvent(new Event(GUEST_STORE_UPDATED_EVENT));
 }
-const TTL_HOURS = 24;
-
 function parseStore(raw: string): GuestStore | null {
   try {
     const parsed: unknown = JSON.parse(raw);
     if (!parsed || typeof parsed !== "object") return null;
     const record = parsed as Record<string, unknown>;
-    if (typeof record.expiresAt !== "string") return null;
+    const expiresAt =
+      typeof record.expiresAt === "string"
+        ? record.expiresAt
+        : new Date("2099-12-31T23:59:59.000Z").toISOString();
     const tasks = Array.isArray(record.tasks)
       ? record.tasks.map((item) => normalizeStoredTask(item))
       : [];
@@ -105,7 +108,7 @@ function parseStore(raw: string): GuestStore | null {
     const taskBoards = Array.isArray(record.taskBoards)
       ? record.taskBoards.map((item) => normalizeStoredTaskBoard(item))
       : [];
-    return { tasks, folders, taskBoards, expiresAt: record.expiresAt };
+    return { tasks, folders, taskBoards, expiresAt };
   } catch {
     return null;
   }
@@ -187,13 +190,7 @@ export const guestStoreHelper = {
   },
 
   _expiresAt(): string {
-    const date = new Date();
-    date.setHours(date.getHours() + TTL_HOURS);
-    return date.toISOString();
-  },
-
-  _isExpired(store: GuestStore): boolean {
-    return new Date(store.expiresAt) < new Date();
+    return new Date("2099-12-31T23:59:59.000Z").toISOString();
   },
 
   _empty(): GuestStore {
@@ -208,10 +205,14 @@ export const guestStoreHelper = {
   _write(updater: (current: GuestStore) => GuestStore): GuestStore {
     const current = this.read() ?? this._empty();
     const updated = updater(current);
-    if (typeof window === "undefined") return updated;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    const persisted: GuestStore = {
+      ...updated,
+      expiresAt: this._expiresAt(),
+    };
+    if (typeof window === "undefined") return persisted;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(persisted));
     notifyGuestStoreChanged();
-    return updated;
+    return persisted;
   },
 
   read(): GuestStore | null {
@@ -221,10 +222,6 @@ export const guestStoreHelper = {
       if (!raw) return null;
       const store = parseStore(raw);
       if (!store) {
-        this.clear();
-        return null;
-      }
-      if (this._isExpired(store)) {
         this.clear();
         return null;
       }
@@ -387,20 +384,35 @@ export const guestStoreHelper = {
       "id" in task &&
       typeof (task as Task).id === "string" &&
       (task as Task).id.length > 0;
+
+    const existingTopLevel = this.getTasks();
+
     if (hasId) {
       const newTask = task as Task;
-      this._write((store) => ({ ...store, tasks: [...store.tasks, newTask] }));
-      return newTask;
+      const board = this.getTaskBoardById(newTask.taskBoardId);
+      const toStore = board
+        ? recomposeGuestTaskTreeForBoard(newTask, board, existingTopLevel)
+        : newTask;
+      this._write((store) => ({ ...store, tasks: [...store.tasks, toStore] }));
+      return toStore;
     }
+
     const payload = task as Omit<Task, "id">;
     const id = generateId();
-    const newTask: Task = {
+    const draft: Task = {
       ...payload,
       id,
-      taskKey: payload.taskKey ?? `guest-${id.slice(0, 10)}`,
+      taskKey: payload.taskKey,
     };
-    this._write((store) => ({ ...store, tasks: [...store.tasks, newTask] }));
-    return newTask;
+    const board = this.getTaskBoardById(payload.taskBoardId);
+    const toStore = board
+      ? recomposeGuestTaskTreeForBoard(draft, board, existingTopLevel)
+      : {
+          ...draft,
+          taskKey: draft.taskKey ?? `guest-${id.slice(0, 10)}`,
+        };
+    this._write((store) => ({ ...store, tasks: [...store.tasks, toStore] }));
+    return toStore;
   },
 
   updateTask(id: string, patch: TaskUpdate): Task | null {

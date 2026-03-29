@@ -4,8 +4,10 @@ import {
   useEffect,
   useLayoutEffect,
   useMemo,
+  useRef,
   useState,
   type ChangeEventHandler,
+  type KeyboardEventHandler,
   type ReactNode,
 } from "react";
 import Image from "next/image";
@@ -22,7 +24,6 @@ import {
 import { Spinner } from "@/components/Spinner/Spinner";
 import {
   FolderChevron,
-  Search,
   SearchInput,
   SidebarChevronGutter,
 } from "@/components/TasksSidebar/TasksSidebar.ui";
@@ -351,6 +352,26 @@ function WorkspacesRootLayout({
   variant = "default",
   sidePanel,
 }: WorkspacesRootLayoutProps) {
+  const [searchExpanded, setSearchExpanded] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!searchExpanded) return;
+    const frameId = requestAnimationFrame(() =>
+      searchInputRef.current?.focus(),
+    );
+    return () => cancelAnimationFrame(frameId);
+  }, [searchExpanded]);
+
+  const handleSearchKeyDown: KeyboardEventHandler<HTMLInputElement> = (
+    event,
+  ) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      setSearchExpanded(false);
+    }
+  };
+
   return (
     <div className="box-border flex w-full min-h-0 flex-1 flex-col px-6 pt-[18px] pb-6">
       <div className="grid w-full grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:gap-x-8 md:gap-y-4">
@@ -361,16 +382,44 @@ function WorkspacesRootLayout({
           </AppPageSubtitle>
         </div>
         <div className="flex w-full min-w-0 flex-row flex-wrap items-center justify-end gap-3 md:w-auto md:shrink-0">
-          <Search className="min-w-0 flex-1 md:w-64 md:flex-none lg:w-72">
-            <SearchIcon size={16} className="shrink-0 opacity-80" />
-            <SearchInput
-              type="search"
-              value={query}
-              onChange={onQueryChange}
-              placeholder="Search workspaces by name"
-              autoComplete="off"
-            />
-          </Search>
+          <div
+            className={cn(
+              "flex min-h-10 shrink-0 items-center overflow-hidden rounded-lg border border-input-border bg-input-bg text-[#888] transition-[width,max-width,opacity] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] will-change-[width,max-width]",
+              searchExpanded
+                ? "min-w-0 flex-1 gap-2 px-2 py-px opacity-100 md:w-64 md:max-w-[18rem] md:flex-none lg:w-72 lg:max-w-[20rem]"
+                : "h-10 w-10 max-w-[2.5rem] justify-center px-0 py-0 opacity-95",
+            )}
+          >
+            {searchExpanded ? (
+              <>
+                <SearchIcon size={16} className="shrink-0 opacity-80" />
+                <SearchInput
+                  ref={searchInputRef}
+                  type="search"
+                  value={query}
+                  onChange={onQueryChange}
+                  onKeyDown={handleSearchKeyDown}
+                  onBlur={() => {
+                    window.setTimeout(() => {
+                      if (!query.trim()) setSearchExpanded(false);
+                    }, 120);
+                  }}
+                  placeholder="Search workspaces by name"
+                  autoComplete="off"
+                  className="min-w-0 flex-1"
+                />
+              </>
+            ) : (
+              <button
+                type="button"
+                aria-label="Search workspaces"
+                className="flex h-full w-full min-h-10 items-center justify-center rounded-lg border-0 bg-transparent p-0 text-inherit transition-colors hover:text-[var(--text-secondary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
+                onClick={() => setSearchExpanded(true)}
+              >
+                <SearchIcon size={18} className="opacity-90" />
+              </button>
+            )}
+          </div>
           <CreateWorkspacePrimaryButton
             onClick={onCreateWorkspace}
             className="shrink-0 px-[22px] py-3 text-sm font-medium hover:translate-y-0 hover:bg-[#6346b0]"

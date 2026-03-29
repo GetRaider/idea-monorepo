@@ -102,7 +102,9 @@ export class TasksApiService extends BaseApiService {
     };
   }
 
-  async create(task: Omit<Task, "id">): Promise<Task> {
+  async create(
+    task: Omit<Task, "id"> & { taskBoardName?: string },
+  ): Promise<Task> {
     const response = await super.post<Task & { guest?: boolean }>({
       body: task,
     });

@@ -253,7 +253,10 @@ export function TaskView({
 
     setIsCreatingTask(true);
     try {
-      const taskData: Omit<Task, "id"> = {
+      const taskBoardName =
+        boardOptions.find((board) => board.id === task.taskBoardId)?.name ??
+        boardName;
+      const taskData: Omit<Task, "id"> & { taskBoardName?: string } = {
         taskBoardId: task.taskBoardId,
         summary: titleValue.trim(),
         description: descriptionValue || "",
@@ -264,6 +267,7 @@ export function TaskView({
         estimation: task.estimation,
         scheduleDate: task.scheduleDate,
         subtasks: task.subtasks,
+        taskBoardName: taskBoardName.trim() || undefined,
       };
 
       const createdTask = await createTask(taskData);

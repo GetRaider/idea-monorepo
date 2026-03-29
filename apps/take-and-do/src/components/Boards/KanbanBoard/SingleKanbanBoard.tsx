@@ -22,6 +22,7 @@ import { useBoardUrlTaskDialogSync } from "@/hooks/useBoardUrlTaskDialogSync";
 import { useIsAnonymous } from "@/hooks/use-is-anonymous";
 import { useGuestTasks } from "@/hooks/use-guest-store";
 import { useTaskActions } from "@/hooks/useTasks";
+import { guestStoreHelper } from "@/lib/guest-store";
 import { guestTasksForBoard } from "@/lib/guest-store/guest-task-filters";
 import { TaskView } from "../../TaskView/TaskView";
 import {
@@ -111,7 +112,7 @@ export function SingleKanbanBoard({
     setIsLoading(true);
     try {
       const tasks = isAnonymous
-        ? guestTasksForBoard(guestTasks, boardId)
+        ? guestTasksForBoard(guestStoreHelper.getTasks(), boardId)
         : await apiServices.tasks.getByBoardId(boardId);
       const tasksByStatusMap: Record<TaskStatus, Task[]> = {
         [TaskStatus.TODO]: [],
@@ -136,11 +137,11 @@ export function SingleKanbanBoard({
       if (!isMountedRef.current || seq !== fetchSeqRef.current) return;
       setIsLoading(false);
     }
-  }, [boardId, isAnonymous, guestTasks]);
+  }, [boardId, isAnonymous]);
 
   useEffect(() => {
-    fetchTasks();
-  }, [fetchTasks]);
+    void fetchTasks();
+  }, [fetchTasks, guestTasks]);
 
   const handleTaskStatusChange = useCallback(
     async (taskId: string, newStatus: TaskStatus, targetIndex?: number) => {

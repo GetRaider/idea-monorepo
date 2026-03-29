@@ -36,6 +36,39 @@ function extractNumericPortion(taskKey?: string | null): number | null {
   return Number.isNaN(numericValue) ? null : numericValue;
 }
 
+function assignSubtaskIdsAndKeys(
+  subtasks: Task[],
+  prefix: string,
+  initialNextNum: number,
+  resolveExistingKey: (subtaskId: string) => string | null | undefined,
+): Array<{ id: string; taskKey: string }> {
+  let nextNum = initialNextNum;
+  const processed: Array<{ id: string; taskKey: string }> = [];
+
+  for (const subtask of subtasks) {
+    const hasValidId =
+      subtask.id && typeof subtask.id === "string" && subtask.id.length > 0;
+
+    if (hasValidId) {
+      const resolvedKey =
+        subtask.taskKey || resolveExistingKey(subtask.id) || null;
+      if (resolvedKey) {
+        processed.push({ id: subtask.id, taskKey: resolvedKey });
+        const n = extractNumericPortion(resolvedKey);
+        if (n !== null) nextNum = Math.max(nextNum, n);
+      } else {
+        nextNum += 1;
+        processed.push({ id: subtask.id, taskKey: `${prefix}-${nextNum}` });
+      }
+    } else {
+      nextNum += 1;
+      processed.push({ id: generateId(), taskKey: `${prefix}-${nextNum}` });
+    }
+  }
+
+  return processed;
+}
+
 function boardNameToTaskKeyPrefix(
   board: { name: string } | null | undefined,
 ): string {
@@ -300,31 +333,81 @@ async function processSubtasks(
     existingSubtasks.map((st) => [st.id, st]),
   );
 
-  let nextNum = await getMaxNumericSuffixForBoard(taskBoardId, prefix, access);
-  const processed: Array<{ id: string; taskKey: string }> = [];
+  const initialNextNum = await getMaxNumericSuffixForBoard(
+    taskBoardId,
+    prefix,
+    access,
+  );
 
-  for (const subtask of subtasks) {
-    const hasValidId =
-      subtask.id && typeof subtask.id === "string" && subtask.id.length > 0;
+  return assignSubtaskIdsAndKeys(
+    subtasks,
+    prefix,
+    initialNextNum,
+    (subtaskId) => existingSubtasksMap.get(subtaskId)?.taskKey,
+  );
+}
 
-    if (hasValidId) {
-      const existing = existingSubtasksMap.get(subtask.id);
-      const resolvedKey = subtask.taskKey || existing?.taskKey || null;
-      if (resolvedKey) {
-        processed.push({ id: subtask.id, taskKey: resolvedKey });
-        const n = extractNumericPortion(resolvedKey);
-        if (n !== null) nextNum = Math.max(nextNum, n);
-      } else {
-        nextNum += 1;
-        processed.push({ id: subtask.id, taskKey: `${prefix}-${nextNum}` });
-      }
-    } else {
-      nextNum += 1;
-      processed.push({ id: generateId(), taskKey: `${prefix}-${nextNum}` });
-    }
+function createTaskInMemoryWithoutDatabase(
+  taskData: Omit<Task, "id">,
+  access: DataAccess,
+): Task {
+  if (!access.isAnonymous) {
+    throw new Error("createTaskInMemoryWithoutDatabase: anonymous only");
+  }
+  if (!taskData.taskBoardId?.trim()) {
+    throw new Error("Task must have a taskBoardId");
   }
 
-  return processed;
+  const taskId = generateId();
+  const prefix = boardNameToTaskKeyPrefix(null);
+  let taskKey = taskData.taskKey?.trim();
+  if (!taskKey) {
+    taskKey = `${prefix}-${generateId().slice(0, 10)}`;
+  }
+
+  const baseTask: Task = {
+    id: taskId,
+    taskBoardId: taskData.taskBoardId,
+    taskKey,
+    summary: taskData.summary,
+    description: taskData.description || "",
+    status: taskData.status,
+    priority: taskData.priority,
+    dueDate: taskData.dueDate,
+    estimation: taskData.estimation,
+    scheduleDate: taskData.scheduleDate,
+    labels: taskData.labels,
+  };
+
+  if (!taskData.subtasks?.length) {
+    return baseTask;
+  }
+
+  const processedSubtasks = assignSubtaskIdsAndKeys(
+    taskData.subtasks,
+    prefix,
+    0,
+    () => undefined,
+  );
+
+  const subtasks: Task[] = taskData.subtasks.map((subtask, index) => {
+    const processed = processedSubtasks[index];
+    return {
+      id: processed.id,
+      taskBoardId: subtask.taskBoardId || taskData.taskBoardId,
+      taskKey: processed.taskKey,
+      summary: subtask.summary,
+      description: subtask.description || "",
+      status: subtask.status,
+      priority: subtask.priority,
+      dueDate: subtask.dueDate,
+      estimation: subtask.estimation,
+      scheduleDate: subtask.scheduleDate,
+      labels: subtask.labels,
+    };
+  });
+
+  return { ...baseTask, subtasks };
 }
 
 // Public query functions
@@ -414,6 +497,10 @@ export async function createTask(
 ): Promise<Task> {
   if (!taskData.taskBoardId) {
     throw new Error("Task must have a taskBoardId");
+  }
+
+  if (access.isAnonymous) {
+    return createTaskInMemoryWithoutDatabase(taskData, access);
   }
 
   const board = await getTaskBoardById(taskData.taskBoardId, access);

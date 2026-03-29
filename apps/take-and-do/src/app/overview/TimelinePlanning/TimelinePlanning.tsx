@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 
 import { Task } from "@/components/Boards/KanbanBoard/types";
 import { EmptyState } from "@/components/EmptyState";
+import { useIsAnonymous } from "@/hooks/use-is-anonymous";
+import { guestStoreHelper } from "@/lib/guest-store";
 import { apiServices } from "@/services/api";
 import { ScheduleType, tasksHelper } from "@/helpers/task.helper";
 import { AiGate } from "@/components/ai-gate";
@@ -49,6 +51,7 @@ export function TimelinePlanning({
   todayTasks,
   tomorrowTasks,
 }: TimelinePlanningProps) {
+  const isAnonymous = useIsAnonymous();
   const [customDate, setCustomDate] = useState<string>("");
   const { customDateTasks, isLoadingCustomDate, setSchedule, schedule } =
     useCustomDateTasks(customDate);
@@ -73,7 +76,13 @@ export function TimelinePlanning({
 
   const handleTaskClick = async (task: Task) => {
     try {
-      const taskBoard = await apiServices.taskBoards.getById(task.taskBoardId);
+      const taskBoard = isAnonymous
+        ? guestStoreHelper.getTaskBoardById(task.taskBoardId)
+        : await apiServices.taskBoards.getById(task.taskBoardId);
+      if (!taskBoard) {
+        toast.error("Task board not found.");
+        return;
+      }
       router.push(
         tasksUrlHelper.routing.buildTasksUrl({
           type: "board",

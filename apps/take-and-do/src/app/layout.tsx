@@ -6,6 +6,7 @@ import { Theme } from "@radix-ui/themes";
 
 import { Analytics } from "@/components/Analytics";
 import { GuestBanner } from "@/components/GuestBanner";
+import { GuestStoreGuard } from "@/components/GuestStoreGuard";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -45,6 +46,7 @@ export default function RootLayout({
           hasBackground={false}
         >
           <Analytics />
+          <GuestStoreGuard />
           <GuestBanner />
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
             {children}

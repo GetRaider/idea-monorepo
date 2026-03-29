@@ -78,9 +78,43 @@ export async function getTaskBoardsByFolder(
 
 export async function updateTaskBoard(
   id: string,
-  data: Partial<Pick<TaskBoard, "name" | "folderId" | "emoji" | "isPublic">>,
+  data: Partial<
+    Pick<TaskBoard, "name" | "folderId" | "emoji" | "isPublic"> & {
+      createdAt?: Date | string;
+    }
+  >,
   access: DataAccess,
 ): Promise<TaskBoard> {
+  if (access.isAnonymous) {
+    if (
+      data.name === undefined ||
+      typeof data.name !== "string" ||
+      !data.name.trim()
+    ) {
+      throw new Error("Task board name is required");
+    }
+    const now = new Date();
+    const createdAt = data.createdAt
+      ? new Date(data.createdAt as string | Date)
+      : now;
+    const folderId =
+      data.folderId === undefined ||
+      data.folderId === "" ||
+      data.folderId === null
+        ? null
+        : data.folderId;
+
+    return {
+      id,
+      name: data.name.trim(),
+      emoji: data.emoji !== undefined ? data.emoji : null,
+      folderId,
+      isPublic: data.isPublic ?? false,
+      createdAt,
+      updatedAt: now,
+    };
+  }
+
   const existing = await getTaskBoardById(id, access);
   if (!existing) {
     throw new Error("Task board not found");
@@ -106,6 +140,10 @@ export async function deleteTaskBoard(
   id: string,
   access: DataAccess,
 ): Promise<void> {
+  if (access.isAnonymous) {
+    return;
+  }
+
   const existing = await getTaskBoardById(id, access);
   if (!existing) {
     throw new Error("Task board not found");
@@ -117,6 +155,20 @@ export async function createTaskBoard(
   taskBoardData: Omit<TaskBoard, "id" | "createdAt" | "updatedAt">,
   access: DataAccess,
 ): Promise<TaskBoard> {
+  if (access.isAnonymous) {
+    const taskBoardId = generateId();
+    const now = new Date();
+    return {
+      id: taskBoardId,
+      name: taskBoardData.name,
+      emoji: taskBoardData.emoji ?? null,
+      folderId: taskBoardData.folderId ?? null,
+      isPublic: taskBoardData.isPublic ?? false,
+      createdAt: now,
+      updatedAt: now,
+    };
+  }
+
   const taskBoardId = generateId();
 
   await db.insert(taskBoardsTable).values({

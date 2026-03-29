@@ -1,6 +1,8 @@
 import { anonymousClient } from "better-auth/client/plugins";
 import { createAuthClient } from "better-auth/react";
 
+import { guestStoreHelper } from "@/lib/guest-store";
+
 export const authClient = createAuthClient({
   baseURL:
     process.env.NEXT_PUBLIC_APP_URL ??
@@ -10,3 +12,8 @@ export const authClient = createAuthClient({
 });
 
 export const { signIn, signOut, signUp, useSession } = authClient;
+
+export async function signOutAndClear() {
+  guestStoreHelper.clear();
+  await authClient.signOut();
+}

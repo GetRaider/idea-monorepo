@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { env } from "@/env";
-import {
-  dataAccessFromAuth,
-  requireAuth,
-  requireNonAnonymous,
-} from "@/lib/api-auth";
+import { dataAccessFromAuth, requireAuth } from "@/lib/api-auth";
 import {
   getAllTaskBoards,
   createTaskBoard,
@@ -46,7 +42,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
-  const authResult = await requireNonAnonymous();
+  const authResult = await requireAuth();
   if (authResult instanceof NextResponse) return authResult;
 
   const access = dataAccessFromAuth(authResult);
@@ -59,11 +55,12 @@ export async function PATCH(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { name, folderId, emoji, isPublic } = body as {
+    const { name, folderId, emoji, isPublic, createdAt } = body as {
       name?: unknown;
       folderId?: unknown;
       emoji?: unknown;
       isPublic?: unknown;
+      createdAt?: unknown;
     };
 
     const updates: {
@@ -71,6 +68,7 @@ export async function PATCH(request: NextRequest) {
       folderId?: string | null;
       emoji?: string | null;
       isPublic?: boolean;
+      createdAt?: Date | string;
     } = {};
     if (name !== undefined) {
       if (typeof name !== "string" || !name.trim()) {
@@ -121,6 +119,16 @@ export async function PATCH(request: NextRequest) {
       }
       updates.isPublic = isPublic;
     }
+    if (createdAt !== undefined) {
+      if (typeof createdAt !== "string" || !createdAt.trim()) {
+        return NextResponse.json(
+          { error: "createdAt must be a non-empty ISO string when provided" },
+          { status: 400 },
+        );
+      }
+      updates.createdAt = createdAt.trim();
+    }
+
     if (Object.keys(updates).length === 0) {
       return NextResponse.json(
         { error: "No updates provided" },
@@ -128,8 +136,20 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
+    if (!access.isAnonymous) {
+      const existingBoard = await getTaskBoardById(id, access);
+      if (!existingBoard) {
+        return NextResponse.json(
+          { error: "Task board not found" },
+          { status: 404 },
+        );
+      }
+    }
+
     const updated = await updateTaskBoard(id, updates, access);
-    return NextResponse.json(updated);
+    return NextResponse.json(
+      access.isAnonymous ? { ...updated, guest: true } : updated,
+    );
   } catch {
     return NextResponse.json(
       { error: "Failed to update task board" },
@@ -139,7 +159,7 @@ export async function PATCH(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  const authResult = await requireNonAnonymous();
+  const authResult = await requireAuth();
   if (authResult instanceof NextResponse) return authResult;
 
   const access = dataAccessFromAuth(authResult);
@@ -151,7 +171,19 @@ export async function DELETE(request: NextRequest) {
   }
 
   try {
+    if (!access.isAnonymous) {
+      const existing = await getTaskBoardById(id, access);
+      if (!existing) {
+        return NextResponse.json(
+          { error: "Task board not found" },
+          { status: 404 },
+        );
+      }
+    }
     await deleteTaskBoard(id, access);
+    if (access.isAnonymous) {
+      return NextResponse.json({ id, deleted: true, guest: true });
+    }
     return new NextResponse(null, { status: 204 });
   } catch {
     return NextResponse.json(
@@ -162,7 +194,7 @@ export async function DELETE(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const authResult = await requireNonAnonymous();
+  const authResult = await requireAuth();
   if (authResult instanceof NextResponse) return authResult;
 
   const access = dataAccessFromAuth(authResult);
@@ -213,7 +245,10 @@ export async function POST(request: NextRequest) {
     }
 
     const newTaskBoard = await createTaskBoard(taskBoardData, access);
-    return NextResponse.json(newTaskBoard, { status: 201 });
+    return NextResponse.json(
+      access.isAnonymous ? { ...newTaskBoard, guest: true } : newTaskBoard,
+      { status: 201 },
+    );
   } catch (error) {
     console.error("Failed to create task board:", error);
     const errorMessage =

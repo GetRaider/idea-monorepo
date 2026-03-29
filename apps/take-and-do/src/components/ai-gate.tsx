@@ -11,7 +11,7 @@ interface AiGateProps {
 
 export function AiGate({
   children,
-  message = "AI features are not available for guest users. Sign in to use them.",
+  message = "AI features are not available for guest users",
 }: AiGateProps) {
   const isAnonymous = useIsAnonymous();
 

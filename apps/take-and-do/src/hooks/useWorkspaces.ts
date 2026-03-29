@@ -1,10 +1,10 @@
-import {
-  useEffect,
-  useState,
-  type Dispatch,
-  type SetStateAction,
-} from "react";
+"use client";
 
+import { useEffect, useState, type Dispatch, type SetStateAction } from "react";
+
+import { useIsAnonymous } from "@/hooks/use-is-anonymous";
+import { GUEST_STORE_UPDATED_EVENT } from "@/lib/guest-store/constants";
+import { guestStoreHelper } from "@/lib/guest-store";
 import { apiServices } from "@/services/api";
 import { Folder, TaskBoard } from "@/types/workspace";
 
@@ -18,12 +18,25 @@ interface UseWorkspacesReturn {
 }
 
 export function useWorkspaces(): UseWorkspacesReturn {
+  const isAnonymous = useIsAnonymous();
   const [folders, setFolders] = useState<Folder[]>([]);
   const [isFoldersLoading, setIsFoldersLoading] = useState(true);
   const [taskBoards, setTaskBoards] = useState<TaskBoard[]>([]);
   const [isBoardsLoading, setIsBoardsLoading] = useState(true);
 
   useEffect(() => {
+    if (isAnonymous) {
+      const sync = () => {
+        setFolders(guestStoreHelper.getFolders());
+        setTaskBoards(guestStoreHelper.getTaskBoards());
+      };
+      sync();
+      setIsFoldersLoading(false);
+      setIsBoardsLoading(false);
+      window.addEventListener(GUEST_STORE_UPDATED_EVENT, sync);
+      return () => window.removeEventListener(GUEST_STORE_UPDATED_EVENT, sync);
+    }
+
     let isMounted = true;
 
     const fetchWorkspaces = async () => {
@@ -47,11 +60,11 @@ export function useWorkspaces(): UseWorkspacesReturn {
       }
     };
 
-    fetchWorkspaces();
+    void fetchWorkspaces();
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [isAnonymous]);
 
   return {
     folders,

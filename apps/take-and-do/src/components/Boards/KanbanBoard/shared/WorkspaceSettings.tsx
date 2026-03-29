@@ -9,6 +9,7 @@ import { AppTooltip } from "@/components/Tooltip/AppTooltip";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useIsAnonymous } from "@/hooks/use-is-anonymous";
 import { apiServices } from "@/services/api";
+import { toast } from "sonner";
 
 import { PopoverContainer, Popover, SettingsButton } from "../KanbanBoard.ui";
 
@@ -39,9 +40,16 @@ export function WorkspaceSettings({ boardId }: WorkspaceSettingsProps) {
       if (isSavingPublic) return;
       setIsSavingPublic(true);
       try {
+        const board = taskBoards.find((entry) => entry.id === boardId);
+        if (isAnonymous && !board) {
+          toast.error("Board not loaded");
+          return;
+        }
         const updated = await apiServices.taskBoards.changeVisibility({
           id: boardId,
           toPublic: toPublic,
+          boardSnapshot: board,
+          skipCascade: isAnonymous,
         });
         setTaskBoards((previous) =>
           previous.map((entry) => (entry.id === boardId ? updated : entry)),
@@ -50,7 +58,7 @@ export function WorkspaceSettings({ boardId }: WorkspaceSettingsProps) {
         setIsSavingPublic(false);
       }
     },
-    [boardId, isSavingPublic, setTaskBoards],
+    [boardId, isSavingPublic, setTaskBoards, taskBoards, isAnonymous],
   );
 
   const options = [

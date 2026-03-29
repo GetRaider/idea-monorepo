@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import {
-  dataAccessFromAuth,
-  requireAuth,
-  requireNonAnonymous,
-} from "@/lib/api-auth";
+import { dataAccessFromAuth, requireAuth } from "@/lib/api-auth";
 import { getAllFolders, createFolder } from "@/lib/db/queries";
 
 export async function GET() {
@@ -24,7 +20,7 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const authResult = await requireNonAnonymous();
+  const authResult = await requireAuth();
   if (authResult instanceof NextResponse) return authResult;
 
   const access = dataAccessFromAuth(authResult);
@@ -62,7 +58,10 @@ export async function POST(request: NextRequest) {
       }
     }
     const folder = await createFolder(name.trim(), access, emojiValue);
-    return NextResponse.json(folder, { status: 201 });
+    return NextResponse.json(
+      access.isAnonymous ? { ...folder, guest: true } : folder,
+      { status: 201 },
+    );
   } catch {
     return NextResponse.json(
       { error: "Failed to create folder" },

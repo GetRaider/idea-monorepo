@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Dropdown } from "@/components/Dropdown";
 import { OverviewIcon, SunIcon } from "@/components/Icons";
-import { signOut, useSession } from "@/lib/auth-client";
+import { signOutAndClear, useSession } from "@/lib/auth-client";
 import {
   SidebarContainer,
   Logo,
@@ -106,7 +106,7 @@ export function Sidebar({ onNavigationChange }: SidebarProps) {
           menuMinWidth={140}
           onChange={async (value) => {
             if (value !== "logout") return;
-            await signOut();
+            await signOutAndClear();
             router.push("/login");
             router.refresh();
           }}

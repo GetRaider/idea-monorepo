@@ -1,5 +1,6 @@
 import { Task } from "@/components/Boards/KanbanBoard/types";
 import { tasksHelper } from "@/helpers/task.helper";
+import { guestStoreHelper } from "@/lib/guest-store";
 import { TaskBoard } from "@/types/workspace";
 
 import { BaseApiService } from "./base-api.service";
@@ -33,41 +34,72 @@ export class TaskBoardsApiService extends BaseApiService {
   async create(
     taskBoard: Omit<TaskBoard, "id" | "createdAt" | "updatedAt">,
   ): Promise<TaskBoard> {
-    const response = await this.post<TaskBoard>({ body: taskBoard });
-    return normalizeTaskBoard(response.data);
+    const response = await this.post<TaskBoard & { guest?: boolean }>({
+      body: taskBoard,
+    });
+    const raw = response.data as TaskBoard & { guest?: boolean };
+    const { guest, ...rest } = raw;
+    const normalized = normalizeTaskBoard(rest as TaskBoard);
+    if (guest) {
+      guestStoreHelper.upsertTaskBoard(normalized);
+    }
+    return normalized;
   }
 
   async update(id: string, updates: TaskBoardUpdate): Promise<TaskBoard> {
-    const response = await this.patch<TaskBoard>({
+    const response = await this.patch<TaskBoard & { guest?: boolean }>({
       queries: { id },
       body: updates,
     });
-    return normalizeTaskBoard(response.data);
+    const raw = response.data as TaskBoard & { guest?: boolean };
+    const { guest, ...rest } = raw;
+    const normalized = normalizeTaskBoard(rest as TaskBoard);
+    if (guest) {
+      guestStoreHelper.upsertTaskBoard(normalized);
+    }
+    return normalized;
   }
 
   async changeVisibility({
     id,
     toPublic,
+    boardSnapshot,
+    skipCascade,
   }: {
     id: string;
     toPublic: boolean;
+    boardSnapshot?: TaskBoard;
+    skipCascade?: boolean;
   }): Promise<TaskBoard> {
-    // Optimize query
-    const board = await this.getById(id);
-    const updatedBoard = await this.update(id, { isPublic: toPublic });
+    const board = boardSnapshot ?? (await this.getById(id));
+    const updatedBoard = await this.update(id, {
+      name: board.name,
+      emoji: board.emoji,
+      folderId: board.folderId ?? null,
+      isPublic: toPublic,
+      createdAt: board.createdAt,
+    });
+    if (skipCascade) {
+      return updatedBoard;
+    }
     const tasks = await apiServices.tasks.getByBoardId(id);
-    // TODO: Optimize query to update all tasks at once
     for (const task of tasks) {
       await apiServices.tasks.update(task.id, { isPublic: toPublic });
     }
-    if (board?.folderId) {
+    if (board.folderId) {
       await apiServices.folders.update(board.folderId, { isPublic: toPublic });
     }
     return updatedBoard;
   }
 
   async deleteBoard(id: string): Promise<void> {
-    await this.delete({ queries: { id } });
+    const response = await this.delete<{ guest?: boolean; deleted?: boolean }>({
+      queries: { id },
+    });
+    const data = response.data as { guest?: boolean } | undefined;
+    if (data?.guest) {
+      guestStoreHelper.deleteTaskBoard(id);
+    }
   }
 }
 
@@ -95,4 +127,5 @@ interface TaskBoardUpdate {
   folderId?: string | null;
   emoji?: string | null;
   isPublic?: boolean;
+  createdAt?: Date | string;
 }

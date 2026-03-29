@@ -11,9 +11,23 @@ export async function createFolder(
   access: DataAccess,
   emoji?: string | null,
 ): Promise<Folder> {
-  const id = generateId();
   const trimmedEmoji =
     emoji === undefined || emoji === null ? null : emoji.trim() || null;
+
+  if (access.isAnonymous) {
+    const id = generateId();
+    const now = new Date();
+    return {
+      id,
+      name,
+      emoji: trimmedEmoji,
+      isPublic: false,
+      createdAt: now,
+      updatedAt: now,
+    };
+  }
+
+  const id = generateId();
   await db.insert(foldersTable).values({
     id,
     userId: access.userId,
@@ -70,9 +84,36 @@ export async function getFolderById(
 
 export async function updateFolder(
   id: string,
-  data: { name?: string; emoji?: string | null; isPublic?: boolean },
+  data: {
+    name?: string;
+    emoji?: string | null;
+    isPublic?: boolean;
+    createdAt?: Date | string;
+  },
   access: DataAccess,
 ): Promise<Folder> {
+  if (access.isAnonymous) {
+    if (
+      data.name === undefined ||
+      typeof data.name !== "string" ||
+      !data.name.trim()
+    ) {
+      throw new Error("Folder name is required");
+    }
+    const now = new Date();
+    const createdAt = data.createdAt
+      ? new Date(data.createdAt as string | Date)
+      : now;
+    return {
+      id,
+      name: data.name.trim(),
+      emoji: data.emoji !== undefined ? data.emoji : null,
+      isPublic: data.isPublic ?? false,
+      createdAt,
+      updatedAt: now,
+    };
+  }
+
   const existing = await getFolderById(id, access);
   if (!existing) {
     throw new Error("Folder not found");
@@ -97,6 +138,10 @@ export async function deleteFolder(
   id: string,
   access: DataAccess,
 ): Promise<void> {
+  if (access.isAnonymous) {
+    return;
+  }
+
   const existing = await getFolderById(id, access);
   if (!existing) {
     throw new Error("Folder not found");

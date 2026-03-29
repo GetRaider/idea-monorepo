@@ -41,7 +41,7 @@ import {
   OptimizeButton,
 } from "./AIPlanningOptimizationDialog.ui";
 import { useDialogFocusLock } from "@/hooks/useDialogFocusLock";
-import { useTasks } from "@/hooks/useTasks";
+import { useTaskActions, useTasks } from "@/hooks/useTasks";
 import type { Task } from "@/components/Boards/KanbanBoard/types";
 
 export function AIPlanningOptimizationDialog({
@@ -60,6 +60,7 @@ export function AIPlanningOptimizationDialog({
     null,
   );
   const { tasks, isLoading: isTasksLoading } = useTasks();
+  const { updateTask } = useTaskActions();
 
   useDialogFocusLock(dialogContentRef, onClose);
 
@@ -116,7 +117,7 @@ export function AIPlanningOptimizationDialog({
 
       const results = await Promise.allSettled(
         updates.map((update) =>
-          apiServices.tasks.update(update.taskId, {
+          updateTask(update.taskId, {
             scheduleDate: update.scheduleDate,
           }),
         ),

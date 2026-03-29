@@ -13,7 +13,7 @@ export function DefaultAvatarIcon({ size = 160 }: { size?: number }) {
         </clipPath>
       </defs>
       <rect x="0" y="0" width="160" height="160" rx="36" fill="#9aa5b1" />
-      <g clip-path="url(#clip)">
+      <g clipPath="url(#clip)">
         <circle cx="80" cy="68" r="44" fill="#e8eaed" />
         <ellipse cx="80" cy="184" rx="70" ry="56" fill="#e8eaed" />
       </g>

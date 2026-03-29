@@ -7,12 +7,12 @@ import { TasksSidebar } from "@/components/TasksSidebar/TasksSidebar";
 import { CreateWorkspaceDialog } from "@/components/TasksSidebar/Workspaces/CreateWorkspace/CreateWorkspaceDialog";
 import { PageContainer, TasksLayoutMain as Main } from "../shell.ui";
 import { TASKS_ROOT_VIEW_ID, tasksUrlHelper } from "@/helpers/tasks-url.helper";
+import { useIsAnonymous } from "@/hooks/use-is-anonymous";
 import { waiterHelper } from "@/helpers/waiter.helper";
 import { useWorkspaces } from "@/hooks/useWorkspaces";
 import { WorkspaceProvider } from "@/contexts/WorkspaceContext";
 import { useTasksSidebarWidthPx } from "@/hooks/useTasksSidebarWidthPx";
 import { apiServices } from "@/services/api";
-import { toast } from "sonner";
 
 export default function TasksLayoutClient({
   children,
@@ -21,6 +21,7 @@ export default function TasksLayoutClient({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const isAnonymous = useIsAnonymous();
   const {
     folders,
     taskBoards,
@@ -61,28 +62,42 @@ export default function TasksLayoutClient({
   ) => {
     try {
       const folder = await apiServices.folders.create(name, emoji);
-      setFolders((prev) => [...prev, folder]);
+      if (!isAnonymous) {
+        setFolders((previous) => [...previous, folder]);
+      }
 
       if (boardIdsToMove.length > 0) {
         const uniqueBoardIds = Array.from(new Set(boardIdsToMove));
         const updatedBoards = await Promise.all(
-          uniqueBoardIds.map((boardId) =>
-            apiServices.taskBoards.update(boardId, { folderId: folder.id }),
-          ),
+          uniqueBoardIds.map(async (boardId) => {
+            const board = taskBoards.find((item) => item.id === boardId);
+            if (!board) {
+              throw new Error(`Task board not found: ${boardId}`);
+            }
+            return apiServices.taskBoards.update(boardId, {
+              name: board.name,
+              emoji: board.emoji,
+              folderId: folder.id,
+              isPublic: board.isPublic,
+              createdAt: board.createdAt,
+            });
+          }),
         );
 
-        setTaskBoards((prev) => {
-          const updatedById = new Map(
-            updatedBoards.map((board) => [board.id, board]),
-          );
-          return prev.map((board) => updatedById.get(board.id) ?? board);
-        });
+        if (!isAnonymous) {
+          setTaskBoards((previous) => {
+            const updatedById = new Map(
+              updatedBoards.map((board) => [board.id, board]),
+            );
+            return previous.map((board) => updatedById.get(board.id) ?? board);
+          });
+        }
       }
 
       setIsWorkspaceCreateDialogOpen(false);
     } catch (error) {
       console.error("[TasksLayout] Failed to create folder:", error);
-      toast.error("Failed to create folder.");
+      throw error;
     }
   };
 
@@ -98,27 +113,33 @@ export default function TasksLayoutClient({
         isPublic: false,
         ...(emoji ? { emoji } : {}),
       });
-      const resolvedBoard = await waiterHelper.retry(
-        () => apiServices.taskBoards.getById(createdBoard.id),
-        { retries: 5, timeout: 150 },
-      );
-
-      setTaskBoards((prev) => {
-        const existing = prev.find((board) => board.id === resolvedBoard.id);
-        if (existing) {
-          return prev.map((board) =>
-            board.id === resolvedBoard.id ? resolvedBoard : board,
+      const resolvedBoard = isAnonymous
+        ? createdBoard
+        : await waiterHelper.retry(
+            () => apiServices.taskBoards.getById(createdBoard.id),
+            { retries: 5, timeout: 150 },
           );
-        }
-        return [...prev, resolvedBoard];
-      });
+
+      if (!isAnonymous) {
+        setTaskBoards((previous) => {
+          const existing = previous.find(
+            (board) => board.id === resolvedBoard.id,
+          );
+          if (existing) {
+            return previous.map((board) =>
+              board.id === resolvedBoard.id ? resolvedBoard : board,
+            );
+          }
+          return [...previous, resolvedBoard];
+        });
+      }
 
       setIsWorkspaceCreateDialogOpen(false);
       router.push(tasksUrlHelper.routing.buildBoardUrl(resolvedBoard.name));
       router.refresh();
     } catch (error) {
       console.error("[TasksLayout] Failed to create task board:", error);
-      toast.error("Failed to create task board.");
+      throw error;
     }
   };
 

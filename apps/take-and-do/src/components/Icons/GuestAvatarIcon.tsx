@@ -13,17 +13,17 @@ export function GuestAvatarIcon({ size = 160 }: { size?: number }) {
         </clipPath>
       </defs>
       <rect x="0" y="0" width="160" height="160" rx="36" fill="#9aa5b1" />
-      <g clip-path="url(#clip)">
+      <g clipPath="url(#clip)">
         <circle cx="80" cy="68" r="44" fill="#e8eaed" />
         <ellipse cx="80" cy="184" rx="70" ry="56" fill="#e8eaed" />
         <text
           x="80"
           y="80"
-          font-family="sans-serif"
-          font-size="42"
-          font-weight="700"
+          fontFamily="sans-serif"
+          fontSize="42"
+          fontWeight="700"
           fill="#7a8899"
-          text-anchor="middle"
+          textAnchor="middle"
         >
           ?
         </text>

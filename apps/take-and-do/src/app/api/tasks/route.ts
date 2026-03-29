@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import {
   dataAccessFromAuth,
+  requireAiAccess,
   requireAuth,
   requireNonAnonymous,
 } from "@/lib/api-auth";
@@ -95,7 +96,7 @@ export async function DELETE(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const authResult = await requireNonAnonymous();
+  const authResult = await requireAuth();
   if (authResult instanceof NextResponse) return authResult;
 
   const access = dataAccessFromAuth(authResult);
@@ -113,6 +114,11 @@ export async function POST(request: NextRequest) {
       task = payload.task;
     } catch {
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    }
+
+    if (shouldUseAI && text) {
+      const aiGate = await requireAiAccess();
+      if (aiGate instanceof NextResponse) return aiGate;
     }
 
     let taskData: Omit<Task, "id">;
@@ -182,7 +188,10 @@ export async function POST(request: NextRequest) {
 
     const newTask = await createTask(taskData, access);
 
-    return NextResponse.json(newTask, { status: 201 });
+    return NextResponse.json(
+      access.isAnonymous ? { ...newTask, guest: true } : newTask,
+      { status: 201 },
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(

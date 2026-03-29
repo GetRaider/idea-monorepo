@@ -8,7 +8,7 @@ import {
   TaskUpdate,
 } from "../Boards/KanbanBoard/types";
 import { toast } from "sonner";
-import { apiServices } from "@/services/api";
+import { useTaskActions } from "@/hooks/useTasks";
 import { TextEditor } from "../TextEditor/TextEditor";
 import { tasksHelper } from "@/helpers/task.helper";
 import { TaskViewHeader } from "./TaskViewHeader/TaskViewHeader";
@@ -48,6 +48,7 @@ export function TaskView({
   onTaskDelete,
   onNavigateToParentTask,
 }: TaskViewProps) {
+  const { createTask, updateTask, deleteTask } = useTaskActions();
   const isSubtask = !!parentTask;
   const [task, setTask] = useState<Task | null>(initialTask);
   const isCreating = !initialTask || !initialTask.id;
@@ -92,7 +93,7 @@ export function TaskView({
     async (updates: TaskUpdate) => {
       if (!task || !task.id) return;
       try {
-        const updatedTask = await apiServices.tasks.update(task.id, updates);
+        const updatedTask = await updateTask(task.id, updates);
         setTask(updatedTask);
         onTaskUpdate?.(updatedTask);
         setPendingUpdates({});
@@ -104,7 +105,7 @@ export function TaskView({
         toast.error("Failed to update task");
       }
     },
-    [task, onTaskUpdate],
+    [task, onTaskUpdate, updateTask],
   );
 
   const hasUnsavedChanges = useMemo(() => {
@@ -265,7 +266,7 @@ export function TaskView({
         subtasks: task.subtasks,
       };
 
-      const createdTask = await apiServices.tasks.create(taskData);
+      const createdTask = await createTask(taskData);
       setTask(createdTask);
       onTaskCreated?.(createdTask);
       setIsEditingTitle(false);
@@ -283,7 +284,7 @@ export function TaskView({
   const handleDeleteConfirm = useCallback(async () => {
     if (!task || !task.id || isCreating) return;
     try {
-      await apiServices.tasks.deleteById(task.id);
+      await deleteTask(task.id);
       onTaskDelete?.(task.id);
       onClose();
       toast.success("Task deleted");
@@ -291,7 +292,7 @@ export function TaskView({
       console.error("Failed to delete task:", error);
       toast.error("Failed to delete task");
     }
-  }, [task, isCreating, onTaskDelete, onClose]);
+  }, [task, isCreating, onTaskDelete, onClose, deleteTask]);
 
   const handleDeleteClick = useCallback(() => {
     if (!task || !task.id || isCreating) return;

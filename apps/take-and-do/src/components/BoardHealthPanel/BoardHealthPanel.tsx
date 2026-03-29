@@ -3,6 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { TaskStatus } from "@/constants/tasks.constants";
+import { useIsAnonymous } from "@/hooks/use-is-anonymous";
+import { useGuestTasks } from "@/hooks/use-guest-store";
+import { guestTasksForBoard } from "@/lib/guest-store/guest-task-filters";
 import { apiServices } from "@/services/api";
 import { cn } from "@/lib/utils";
 import type { Task } from "@/components/Boards/KanbanBoard/types";
@@ -27,6 +30,8 @@ function countStatusesRecursive(tasks: Task[]): StatusCounts {
 }
 
 export function BoardHealthPanel({ boards }: { boards: TaskBoard[] }) {
+  const isAnonymous = useIsAnonymous();
+  const { tasks: guestTasks } = useGuestTasks();
   const [countsByBoardId, setCountsByBoardId] = useState<
     Record<string, StatusCounts | undefined>
   >({});
@@ -45,6 +50,16 @@ export function BoardHealthPanel({ boards }: { boards: TaskBoard[] }) {
       setIsLoading(true);
       setLoadError(false);
       try {
+        if (isAnonymous) {
+          const results = boards.map((board) => {
+            const tasks = guestTasksForBoard(guestTasks, board.id);
+            return [board.id, countStatusesRecursive(tasks)] as const;
+          });
+          if (cancelled) return;
+          setCountsByBoardId(Object.fromEntries(results));
+          return;
+        }
+
         const results = await Promise.all(
           boards.map(async (board) => {
             const tasks = await apiServices.tasks.getByBoardId(board.id);
@@ -65,7 +80,7 @@ export function BoardHealthPanel({ boards }: { boards: TaskBoard[] }) {
     return () => {
       cancelled = true;
     };
-  }, [boards]);
+  }, [boards, isAnonymous, guestTasks]);
 
   const sortedBoards = useMemo(
     () => [...boards].sort((a, b) => a.name.localeCompare(b.name)),
@@ -94,10 +109,10 @@ export function BoardHealthPanel({ boards }: { boards: TaskBoard[] }) {
       )}
     >
       <h2 className="m-0 text-sm font-semibold text-[var(--text-primary)]">
-        Board health
+        Board Health
       </h2>
       <p className="mt-1 text-xs text-[var(--text-tertiary)]">
-        Task mix by workspace (to-do / in progress / done).
+        Analyzes the distribution of tasks.
       </p>
 
       {isLoading ? (

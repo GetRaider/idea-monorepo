@@ -6,7 +6,10 @@ import { Task } from "@/components/Boards/KanbanBoard/types";
 import { StatsCards, ProductivityOverview, TimelinePlanning } from ".";
 import type { TaskStats } from ".";
 import { Spinner } from "@/components/Spinner/Spinner";
+import { useIsAnonymous } from "@/hooks/use-is-anonymous";
+import { useGuestTasks } from "@/hooks/use-guest-store";
 import { useTasksSidebarWidthPx } from "@/hooks/useTasksSidebarWidthPx";
+import { guestTasksBySchedule } from "@/lib/guest-store/guest-task-filters";
 import { apiServices } from "@/services/api";
 
 import {
@@ -18,6 +21,8 @@ import {
 } from "../shell.ui";
 
 function OverviewPage() {
+  const isAnonymous = useIsAnonymous();
+  const { tasks: guestTasks } = useGuestTasks();
   const [, setCurrentPage] = useState("overview");
   const [isTasksSidebarOpen, setIsTasksSidebarOpen] = useState(false);
   const [tasksSidebarWidthPx] = useTasksSidebarWidthPx();
@@ -35,8 +40,15 @@ function OverviewPage() {
           apiServices.stats.getByTimeframe("month"),
         ]);
 
-        setTodayTasks(scheduledTasks.today);
-        setTomorrowTasks(scheduledTasks.tomorrow);
+        const guestSchedule = isAnonymous
+          ? guestTasksBySchedule(guestTasks)
+          : { today: [] as Task[], tomorrow: [] as Task[] };
+
+        setTodayTasks([...scheduledTasks.today, ...guestSchedule.today]);
+        setTomorrowTasks([
+          ...scheduledTasks.tomorrow,
+          ...guestSchedule.tomorrow,
+        ]);
         setTaskStats(dashboardStatsResponse);
       } catch (error) {
         console.error("Failed to fetch data:", error);
@@ -45,8 +57,8 @@ function OverviewPage() {
       }
     };
 
-    fetchData();
-  }, []);
+    void fetchData();
+  }, [isAnonymous, guestTasks]);
 
   const handleNavigationToTasksPage = (page: string) => {
     setCurrentPage(page);

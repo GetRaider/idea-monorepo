@@ -9,6 +9,9 @@ import {
   DialogFormGroup,
   DialogFormLabel,
 } from "@/components/Dialogs/DialogForm";
+import { useIsAnonymous } from "@/hooks/use-is-anonymous";
+import { GUEST_STORE_UPDATED_EVENT } from "@/lib/guest-store/constants";
+import { guestStoreHelper } from "@/lib/guest-store";
 import { TaskBoard } from "@/types/workspace";
 import { apiServices } from "@/services/api";
 import { cn } from "@/lib/utils";
@@ -23,11 +26,30 @@ export function SelectBoardDialog({
   onClose,
   onSelect,
 }: SelectBoardDialogProps) {
+  const isAnonymous = useIsAnonymous();
   const [boards, setBoards] = useState<TaskBoard[]>([]);
   const [selectedBoardId, setSelectedBoardId] = useState("");
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    if (isAnonymous) {
+      const sync = () => {
+        const allBoards = guestStoreHelper.getTaskBoards();
+        setBoards(allBoards);
+        setSelectedBoardId((previous) => {
+          if (allBoards.length === 0) return "";
+          if (allBoards.some((board) => board.id === previous)) {
+            return previous;
+          }
+          return allBoards[0].id;
+        });
+      };
+      sync();
+      setIsLoading(false);
+      window.addEventListener(GUEST_STORE_UPDATED_EVENT, sync);
+      return () => window.removeEventListener(GUEST_STORE_UPDATED_EVENT, sync);
+    }
+
     const fetchBoards = async () => {
       try {
         const allBoards = await apiServices.taskBoards.getAll();
@@ -42,8 +64,8 @@ export function SelectBoardDialog({
       }
     };
 
-    fetchBoards();
-  }, []);
+    void fetchBoards();
+  }, [isAnonymous]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

@@ -8,6 +8,8 @@ import { Search, SearchInput } from "@/components/TasksSidebar/TasksSidebar.ui";
 import { SearchIcon } from "@/components/Icons";
 import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
 import { tasksHelper } from "@/helpers/task.helper";
+import { useIsAnonymous } from "@/hooks/use-is-anonymous";
+import { useGuestTasks } from "@/hooks/use-guest-store";
 import { cn } from "@/lib/utils";
 import { apiServices } from "@/services/api";
 import type { TaskBoard } from "@/types/workspace";
@@ -20,12 +22,22 @@ export function TasksSidebarTaskSearch({
   taskBoards,
 }: TasksSidebarTaskSearchProps) {
   const router = useRouter();
+  const isAnonymous = useIsAnonymous();
+  const { tasks: guestTasks } = useGuestTasks();
   const [query, setQuery] = useState("");
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
+    if (isAnonymous) {
+      setTasks(guestTasks);
+      setLoaded(true);
+      return () => {
+        cancelled = true;
+      };
+    }
+
     apiServices.tasks
       .getAll()
       .then((data) => {
@@ -40,7 +52,7 @@ export function TasksSidebarTaskSearch({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [isAnonymous, guestTasks]);
 
   const normalizedQuery = query.trim().toLowerCase();
 

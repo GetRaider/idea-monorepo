@@ -1,7 +1,16 @@
+"use client";
+
 import { useCallback, useEffect, useState } from "react";
 
 import { Task } from "@/components/Boards/KanbanBoard/types";
 import { tasksIntoStatusColumns } from "@/components/Boards/KanbanBoard/shared/tasksIntoStatusColumns";
+import { useIsAnonymous } from "@/hooks/use-is-anonymous";
+import { useGuestTasks } from "@/hooks/use-guest-store";
+import { guestStoreHelper } from "@/lib/guest-store";
+import {
+  guestTasksForBoard,
+  guestTasksForScheduleDate,
+} from "@/lib/guest-store/guest-task-filters";
 import { apiServices } from "@/services/api";
 import type { TaskBoardWithTasks } from "@/types/workspace";
 
@@ -9,6 +18,9 @@ export function useMultipleKanbanBoardData(
   scheduleDate: Date | undefined,
   folderId: string | undefined,
 ) {
+  const isAnonymous = useIsAnonymous();
+  const { tasks: guestTasks } = useGuestTasks();
+
   const [boardsWithTasks, setBoardsWithTasks] = useState<TaskBoardWithTasks[]>(
     [],
   );
@@ -18,10 +30,14 @@ export function useMultipleKanbanBoardData(
   );
 
   const fetchBoards = useCallback(async (): Promise<TaskBoardWithTasks[]> => {
-    const taskBoards = await apiServices.taskBoards.getAll();
+    const taskBoards = isAnonymous
+      ? guestStoreHelper.getTaskBoards()
+      : await apiServices.taskBoards.getAll();
 
     if (scheduleDate) {
-      const scheduledTasks = await apiServices.tasks.getByDate(scheduleDate);
+      const scheduledTasks = isAnonymous
+        ? guestTasksForScheduleDate(guestTasks, scheduleDate)
+        : await apiServices.tasks.getByDate(scheduleDate);
       const tasksByBoardId = new Map<string, Task[]>();
       for (const task of scheduledTasks) {
         if (!task.taskBoardId) continue;
@@ -38,7 +54,9 @@ export function useMultipleKanbanBoardData(
     if (folderId) {
       const boards: TaskBoardWithTasks[] = [];
       for (const board of taskBoards.filter((tb) => tb.folderId === folderId)) {
-        const boardTasks = await apiServices.taskBoards.getTasks(board.id);
+        const boardTasks = isAnonymous
+          ? guestTasksForBoard(guestTasks, board.id)
+          : await apiServices.taskBoards.getTasks(board.id);
         if (boardTasks.length === 0) continue;
         boards.push({
           ...board,
@@ -49,7 +67,7 @@ export function useMultipleKanbanBoardData(
     }
 
     return [];
-  }, [scheduleDate, folderId]);
+  }, [scheduleDate, folderId, isAnonymous, guestTasks]);
 
   useEffect(() => {
     let cancelled = false;

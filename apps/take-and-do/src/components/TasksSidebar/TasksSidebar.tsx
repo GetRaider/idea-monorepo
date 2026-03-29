@@ -148,14 +148,18 @@ export function TasksSidebar({
 
       if (!nameChanged && !emojiChanged) return;
 
-      const updates: { name?: string; emoji?: string | null } = {};
-      if (nameChanged) updates.name = trimmedName;
-      if (emojiChanged) updates.emoji = desiredEmoji;
-
       try {
-        const updated = await apiServices.taskBoards.update(board.id, updates);
-        setTaskBoards((prev: TaskBoard[]) =>
-          prev.map((b: TaskBoard) => (b.id === updated.id ? updated : b)),
+        const updated = await apiServices.taskBoards.update(board.id, {
+          name: nameChanged ? trimmedName : board.name,
+          emoji: emojiChanged ? desiredEmoji : board.emoji,
+          folderId: board.folderId ?? null,
+          isPublic: board.isPublic,
+          createdAt: board.createdAt,
+        });
+        setTaskBoards((previous: TaskBoard[]) =>
+          previous.map((item: TaskBoard) =>
+            item.id === updated.id ? updated : item,
+          ),
         );
 
         if (nameChanged)
@@ -232,12 +236,14 @@ export function TasksSidebar({
 
       try {
         const updated = await apiServices.folders.update(folder.id, {
-          ...(nameChanged ? { name: trimmedName } : {}),
-          ...(emojiChanged ? { emoji: desiredEmoji } : {}),
+          name: nameChanged ? trimmedName : folder.name,
+          emoji: emojiChanged ? desiredEmoji : folder.emoji,
+          isPublic: folder.isPublic,
+          createdAt: folder.createdAt,
         });
 
-        setFolders((prev) =>
-          prev.map((f) => (f.id === updated.id ? updated : f)),
+        setFolders((previous) =>
+          previous.map((item) => (item.id === updated.id ? updated : item)),
         );
 
         toast.success(nameChanged ? "Folder renamed" : "Folder emoji updated");
@@ -301,12 +307,20 @@ export function TasksSidebar({
       if (!boardId) return;
       const folderId = isRootDrop(targetFolderId) ? null : targetFolderId;
       const board = taskBoards.find((b) => b.id === boardId);
-      if (board && (board.folderId ?? null) === folderId) return;
+      if (!board) return;
+      if ((board.folderId ?? null) === folderId) return;
+
       apiServices.taskBoards
-        .update(boardId, { folderId })
+        .update(boardId, {
+          name: board.name,
+          emoji: board.emoji,
+          folderId,
+          isPublic: board.isPublic,
+          createdAt: board.createdAt,
+        })
         .then((updated) => {
-          setTaskBoards((prev) =>
-            prev.map((b) => (b.id === updated.id ? updated : b)),
+          setTaskBoards((previous) =>
+            previous.map((item) => (item.id === updated.id ? updated : item)),
           );
           if (folderId && expandedFolder !== folderId)
             setExpandedFolder(folderId);

@@ -9,7 +9,8 @@ import {
   PlusIcon,
 } from "@/components/Icons";
 import { tasksHelper } from "@/helpers/task.helper";
-import { apiServices } from "@/services/api";
+import { useTaskActions } from "@/hooks/useTasks";
+import { generateId } from "@/lib/id";
 
 import { Task, TaskPriority, TaskStatus } from "../../Boards/KanbanBoard/types";
 import { StatusIcon } from "../../Boards/KanbanBoard/Column/Column.ui";
@@ -21,6 +22,7 @@ export function TaskSubtasks({
   onSubtaskClick,
   onTaskUpdate,
 }: TaskSubtasksProps) {
+  const { updateTask } = useTaskActions();
   const [isSubtasksExpanded, setIsSubtasksExpanded] = useState(
     !!task.subtasks?.length,
   );
@@ -44,7 +46,8 @@ export function TaskSubtasks({
     isSavingSubtaskRef.current = true;
 
     try {
-      const newSubtask: Partial<Task> = {
+      const newSubtask: Task = {
+        id: generateId(),
         taskBoardId: task.taskBoardId,
         summary: newSubtaskSummary.trim(),
         description: "",
@@ -54,8 +57,8 @@ export function TaskSubtasks({
       };
 
       const updatedSubtasks = [...(task.subtasks || []), newSubtask];
-      const updatedTask = await apiServices.tasks.update(task.id, {
-        subtasks: updatedSubtasks as Task[],
+      const updatedTask = await updateTask(task.id, {
+        subtasks: updatedSubtasks,
       });
 
       if (onTaskUpdate) {

@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import {
-  dataAccessFromAuth,
-  requireAuth,
-  requireNonAnonymous,
-} from "@/lib/api-auth";
+import { dataAccessFromAuth, requireAuth } from "@/lib/api-auth";
 import { getFolderById, updateFolder, deleteFolder } from "@/lib/db/queries";
 
 export async function GET(
@@ -36,15 +32,20 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const authResult = await requireNonAnonymous();
+  const authResult = await requireAuth();
   if (authResult instanceof NextResponse) return authResult;
 
   const access = dataAccessFromAuth(authResult);
   try {
     const { id: folderId } = await params;
-    const folder = await getFolderById(folderId, access);
-    if (!folder) {
-      return NextResponse.json({ error: "Folder not found" }, { status: 404 });
+    if (!access.isAnonymous) {
+      const folder = await getFolderById(folderId, access);
+      if (!folder) {
+        return NextResponse.json(
+          { error: "Folder not found" },
+          { status: 404 },
+        );
+      }
     }
     let body: unknown;
     try {
@@ -55,16 +56,18 @@ export async function PATCH(
       }
       throw error;
     }
-    const { name, emoji, isPublic } = body as {
+    const { name, emoji, isPublic, createdAt } = body as {
       name?: unknown;
       emoji?: unknown;
       isPublic?: unknown;
+      createdAt?: unknown;
     };
 
     const updates: {
       name?: string;
       emoji?: string | null;
       isPublic?: boolean;
+      createdAt?: Date | string;
     } = {};
 
     if (isPublic !== undefined) {
@@ -106,6 +109,16 @@ export async function PATCH(
       }
     }
 
+    if (createdAt !== undefined) {
+      if (typeof createdAt !== "string" || !createdAt.trim()) {
+        return NextResponse.json(
+          { error: "createdAt must be a non-empty ISO string when provided" },
+          { status: 400 },
+        );
+      }
+      updates.createdAt = createdAt.trim();
+    }
+
     if (Object.keys(updates).length === 0) {
       return NextResponse.json(
         { error: "No updates provided" },
@@ -114,7 +127,9 @@ export async function PATCH(
     }
 
     const updated = await updateFolder(folderId, updates, access);
-    return NextResponse.json(updated);
+    return NextResponse.json(
+      access.isAnonymous ? { ...updated, guest: true } : updated,
+    );
   } catch {
     return NextResponse.json(
       { error: "Failed to update folder" },
@@ -127,17 +142,29 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const authResult = await requireNonAnonymous();
+  const authResult = await requireAuth();
   if (authResult instanceof NextResponse) return authResult;
 
   const access = dataAccessFromAuth(authResult);
   try {
     const { id: folderId } = await params;
-    const folder = await getFolderById(folderId, access);
-    if (!folder) {
-      return NextResponse.json({ error: "Folder not found" }, { status: 404 });
+    if (!access.isAnonymous) {
+      const folder = await getFolderById(folderId, access);
+      if (!folder) {
+        return NextResponse.json(
+          { error: "Folder not found" },
+          { status: 404 },
+        );
+      }
     }
     await deleteFolder(folderId, access);
+    if (access.isAnonymous) {
+      return NextResponse.json({
+        id: folderId,
+        deleted: true,
+        guest: true,
+      });
+    }
     return new NextResponse(null, { status: 204 });
   } catch {
     return NextResponse.json(

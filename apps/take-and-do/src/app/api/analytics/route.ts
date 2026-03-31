@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { getAccessByAuth, requireAuth } from "@/auth/guards";
-import { analyticsApiService } from "@/services/api";
 import { defineRoute } from "@/lib/api/defineRoute";
 import { GenerateAnalyticsDto, timeframeEnum } from "@/db/dtos";
+import { apiServices } from "@/services/api";
 
 export const GET = defineRoute(async (request: NextRequest) => {
   const auth = await requireAuth();
@@ -12,7 +12,7 @@ export const GET = defineRoute(async (request: NextRequest) => {
   const timeframe = timeframeEnum.parse(
     searchParams.get("timeframe") || "month",
   );
-  const stats = await analyticsApiService.getStatistics(timeframe, access);
+  const stats = await apiServices.analytics.getStatistics(timeframe, access);
   return NextResponse.json({ timeframe, stats });
 });
 
@@ -21,7 +21,7 @@ export const POST = defineRoute(async (request: NextRequest) => {
   const { stats, timeframe, shouldUseAI } = GenerateAnalyticsDto.parse(
     await request.json(),
   );
-  const analytics = await analyticsApiService.generate(
+  const analytics = await apiServices.analytics.generate(
     stats,
     timeframe,
     shouldUseAI ?? false,

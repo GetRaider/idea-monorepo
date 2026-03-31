@@ -13,23 +13,12 @@ import { TasksApiService } from "./tasks.api.service";
 
 const taskBoardsRepository = new TaskBoardsRepository(db);
 const tasksRepository = new TasksRepository(db, taskBoardsRepository);
-const foldersRepository = new FoldersRepository(db);
-const labelsRepository = new LabelsRepository(db);
-
-export const tasksApiService = new TasksApiService(tasksRepository);
-export const foldersApiService = new FoldersApiService(foldersRepository);
-export const labelsApiService = new LabelsApiService(labelsRepository);
-export const taskBoardsApiService = new TaskBoardsApiService(
-  taskBoardsRepository,
-);
-export const analyticsApiService = new AnalyticsApiService(tasksRepository);
-export const statsApiService = new StatsApiService(tasksRepository);
 
 export const apiServices = {
-  tasks: tasksApiService,
-  folders: foldersApiService,
-  labels: labelsApiService,
-  taskBoards: taskBoardsApiService,
-  analytics: analyticsApiService,
-  stats: statsApiService,
+  tasks: new TasksApiService(tasksRepository),
+  folders: new FoldersApiService(new FoldersRepository(db)),
+  labels: new LabelsApiService(new LabelsRepository(db)),
+  taskBoards: new TaskBoardsApiService(taskBoardsRepository),
+  analytics: new AnalyticsApiService(tasksRepository),
+  stats: new StatsApiService(tasksRepository),
 };

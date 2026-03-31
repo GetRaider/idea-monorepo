@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { getAccessByAuth, requireAuth } from "@/auth/guards";
-import { statsApiService } from "@/services/api";
 import { defineRoute } from "@/lib/api/defineRoute";
+import { apiServices } from "@/services/api";
 
 export const GET = defineRoute(async (request: NextRequest) => {
   const auth = await requireAuth();
@@ -13,5 +13,7 @@ export const GET = defineRoute(async (request: NextRequest) => {
     | "week"
     | "month"
     | "quarter";
-  return NextResponse.json(await statsApiService.getCounts(timeframe, access));
+  return NextResponse.json(
+    await apiServices.stats.getCounts(timeframe, access),
+  );
 });

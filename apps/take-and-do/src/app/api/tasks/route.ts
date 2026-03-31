@@ -6,7 +6,7 @@ import {
   requireAuth,
   requireNonAnonymous,
 } from "@/auth/guards";
-import { tasksApiService } from "@/services/api";
+import { apiServices } from "@/services/api";
 import { tasksHelper } from "@/helpers/task.helper";
 import { defineRoute } from "@/lib/api";
 import { BadRequestError } from "@/lib/api/errors";
@@ -20,7 +20,7 @@ export const GET = defineRoute(async (request: NextRequest) => {
 
   if (taskBoardId)
     return NextResponse.json(
-      await tasksApiService.getByBoardId(taskBoardId, access),
+      await apiServices.tasks.getByBoardId(taskBoardId, access),
     );
 
   if (date) {
@@ -34,10 +34,10 @@ export const GET = defineRoute(async (request: NextRequest) => {
     );
     if (isNaN(parsed.getTime()))
       throw new BadRequestError("Invalid date format");
-    return NextResponse.json(await tasksApiService.getByDate(parsed, access));
+    return NextResponse.json(await apiServices.tasks.getByDate(parsed, access));
   }
 
-  return NextResponse.json(await tasksApiService.getAll(access));
+  return NextResponse.json(await apiServices.tasks.getAll(access));
 });
 
 export const POST = defineRoute(async (request: NextRequest) => {
@@ -47,7 +47,7 @@ export const POST = defineRoute(async (request: NextRequest) => {
 
   if (payload.shouldUseAI) await requireAiAccess();
 
-  const result = await tasksApiService.create(payload, access);
+  const result = await apiServices.tasks.create(payload, access);
 
   if (result.composed) return NextResponse.json(result.composed);
 
@@ -63,7 +63,7 @@ export const DELETE = defineRoute(async (request: NextRequest) => {
   const taskBoardId = new URL(request.url).searchParams.get("taskBoardId");
   if (!taskBoardId?.trim())
     throw new BadRequestError("taskBoardId query parameter is required");
-  const deleted = await tasksApiService.deleteAllForBoard(
+  const deleted = await apiServices.tasks.deleteAllForBoard(
     taskBoardId.trim(),
     access,
   );

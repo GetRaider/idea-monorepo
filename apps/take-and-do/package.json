@@ -12,7 +12,9 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
-    "db:push": "drizzle-kit push"
+    "db:push": "drizzle-kit push",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
     "@lexical/headless": "^0.38.2",
@@ -33,24 +35,30 @@
     "@tiptap/starter-kit": "^3.11.0",
     "autoprefixer": "^10.4.27",
     "axios": "catalog:",
+    "better-auth": "catalog:",
     "clsx": "^2.1.1",
+    "dotenv": "catalog:",
     "drizzle-orm": "^0.36.4",
     "emoji-picker-react": "^4.18.0",
     "lexical": "^0.38.2",
+    "mixpanel-browser": "^2.76.0",
     "next": "catalog:",
     "openai": "^4.73.0",
     "pg": "^8.13.1",
     "postcss": "^8.5.8",
     "react": "catalog:",
     "react-dom": "catalog:",
+    "react-icons": "^5.6.0",
     "react-markdown": "^10.1.0",
     "recharts": "^2.12.7",
     "sonner": "^2.0.7",
+    "tailwind-merge": "^3.5.0",
     "tailwindcss": "^3.4.17",
     "zod": "^3.24.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "catalog:",
+    "@types/mixpanel-browser": "^2.66.0",
     "@types/node": "catalog:",
     "@types/pg": "^8.11.10",
     "@types/react": "catalog:",
@@ -62,6 +70,7 @@
     "lint-staged": "^16.4.0",
     "prettier": "catalog:",
     "pretty-quick": "^4.2.2",
+    "tsx": "^4.21.0",
     "typescript": "catalog:"
   },
   "lint-staged": {

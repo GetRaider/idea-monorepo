@@ -56,6 +56,7 @@ Import shared packages via `@repo/api`, `@repo/ui`, etc.
 - Put a blank line between external imports and internal ones
 - Each folder that needs exports should have an `index.ts` file gathering all imports/exports for that folder
 - If a callback passed into a function has only one statement, omit the curly braces
+- Avoid backward-compatibility re-exports — use only real imports
 
 # FE
 

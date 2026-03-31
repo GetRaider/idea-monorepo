@@ -161,6 +161,24 @@ const handleDrop = (e: React.DragEvent) => {
 };
 ```
 
+## `lib/` Folder — Framework Plumbing Only
+`lib/` is strictly for thin wrappers around third-party libraries and framework primitives. Zero business logic, zero domain knowledge.
+
+### What belongs in `lib/`
+- Route infrastructure: `lib/api/defineRoute.ts`, `lib/api/errors.ts`
+- Style utilities: `lib/styles/` (animated-gradient, ui-props, CSS helpers)
+- Third-party SDK wrappers (e.g. analytics provider init)
+
+### What does NOT belong in `lib/`
+- Auth config or guards → `auth/`
+- AI prompts, schemas, providers → `services/ai/`
+- Client-side state stores → `stores/`
+- Domain helpers or business logic → `helpers/` or `services/`
+- Database schemas, repositories, client → `db/`
+
+### Rule of thumb
+If a file imports domain types (`Task`, `Workspace`, etc.) or calls a repository/service, it does not belong in `lib/`. Move it to the appropriate domain folder.
+
 ## Best Practices
 - Handle loading and error states
 - Use proper TypeScript types throughout

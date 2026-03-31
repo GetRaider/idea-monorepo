@@ -1,7 +1,7 @@
 "use client";
 
-import { cn } from "@/lib/utils";
-import type { UiProps } from "@/lib/ui-props";
+import { cn } from "@/lib/styles/utils";
+import type { UiProps } from "@/lib/styles/ui-props";
 
 export function DialogFormGroup({ className, ref, ...props }: UiProps<"div">) {
   return <div ref={ref} className={cn("mb-5", className)} {...props} />;

@@ -9,9 +9,14 @@ const envSchema = z.object({
   AI_MODEL: z.string().optional().default("llama3.1:8b"),
   AI_API_KEY: z.string().optional(),
   AI_BASE_URL: z.string().optional(),
-  DB_CONNECTION_STRING: z
-    .string()
-    .min(1, "Set DB_CONNECTION_STRING or DATABASE_URL"),
+  DB_CONNECTION_STRING: z.string().min(1),
+  BETTER_AUTH_SECRET: z.string().min(1).optional(),
+  BETTER_AUTH_URL: z.string().url().optional(),
+  NEXT_PUBLIC_APP_URL: z.string().url().optional(),
+  GOOGLE_CLIENT_ID: z.string().optional(),
+  GOOGLE_CLIENT_SECRET: z.string().optional(),
+  NEXT_PUBLIC_GOOGLE_CLIENT_ID: z.string().optional(),
+  NEXT_PUBLIC_MIXPANEL_TOKEN: z.string().optional(),
   LOG_LEVEL: z.string().optional(),
 });
 
@@ -25,6 +30,28 @@ export const env = {
     provider: parsedEnv.AI_PROVIDER,
     baseUrl: parsedEnv.AI_BASE_URL,
   },
-  db: { connectionString: parsedEnv.DB_CONNECTION_STRING },
+  db: {
+    connectionString: parsedEnv.DB_CONNECTION_STRING,
+  },
+  auth: {
+    secret: parsedEnv.BETTER_AUTH_SECRET,
+    baseURL:
+      parsedEnv.BETTER_AUTH_URL ??
+      parsedEnv.NEXT_PUBLIC_APP_URL ??
+      "http://localhost:3000",
+    google:
+      parsedEnv.GOOGLE_CLIENT_ID && parsedEnv.GOOGLE_CLIENT_SECRET
+        ? {
+            clientId: parsedEnv.GOOGLE_CLIENT_ID,
+            clientSecret: parsedEnv.GOOGLE_CLIENT_SECRET,
+          }
+        : undefined,
+  },
+  public: {
+    appUrl: parsedEnv.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
+    mixpanelToken: parsedEnv.NEXT_PUBLIC_MIXPANEL_TOKEN,
+    googleClientId:
+      parsedEnv.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? parsedEnv.GOOGLE_CLIENT_ID,
+  },
   logLevel: parsedEnv.LOG_LEVEL,
 };

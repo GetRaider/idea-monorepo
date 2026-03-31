@@ -1,25 +1,13 @@
-import { BaseApiService } from "./base-api.service";
+import type { DataAccess } from "@/db/data-access";
+import type { TasksRepository } from "@/db/repositories/tasks.repository";
 
-export class StatsApiService extends BaseApiService {
-  constructor() {
-    super("/stats");
+export class StatsApiService {
+  constructor(private readonly repository: TasksRepository) {}
+
+  async getCounts(
+    timeframe: "all" | "week" | "month" | "quarter",
+    access: DataAccess,
+  ) {
+    return this.repository.getTaskCounts(timeframe, access);
   }
-
-  async getByTimeframe(timeframe: Timeframe): Promise<TaskStats> {
-    const response = await this.get<TaskStats>({
-      queries: { timeframe },
-    });
-    return response.data;
-  }
-}
-
-type Timeframe = "all" | "week" | "month" | "quarter";
-
-interface TaskStats {
-  total: number;
-  todo: number;
-  inProgress: number;
-  done: number;
-  highPriority: number;
-  overdue: number;
 }

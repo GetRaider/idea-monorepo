@@ -1,18 +1,15 @@
 import { NextResponse } from "next/server";
-import { getAllFolders, getAllTaskBoards } from "@/lib/db/queries";
 
-export async function GET() {
-  try {
-    const [folders, taskBoards] = await Promise.all([
-      getAllFolders(),
-      getAllTaskBoards(),
-    ]);
+import { getAccessByAuth, requireAuth } from "@/auth/guards";
+import { foldersApiService, taskBoardsApiService } from "@/services/api";
+import { defineRoute } from "@/lib/api/defineRoute";
 
-    return NextResponse.json({ folders, taskBoards });
-  } catch {
-    return NextResponse.json(
-      { error: "Failed to fetch workspaces" },
-      { status: 500 },
-    );
-  }
-}
+export const GET = defineRoute(async () => {
+  const auth = await requireAuth();
+  const access = getAccessByAuth(auth);
+  const [folders, taskBoards] = await Promise.all([
+    foldersApiService.getAll(access),
+    taskBoardsApiService.getAll(access),
+  ]);
+  return NextResponse.json({ folders, taskBoards });
+});

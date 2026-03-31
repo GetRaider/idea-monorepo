@@ -1,21 +1,11 @@
-"use client";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 
-import {
-  GetStartedLink,
-  LandingContent,
-  LandingPageRoot,
-  LandingSubtitle,
-  LandingTitle,
-} from "./shell.ui";
+import { auth } from "@/auth/server";
+import { LandingPage } from "./landing-page";
 
-export default function App() {
-  return (
-    <LandingPageRoot>
-      <LandingContent>
-        <LandingTitle>Take & Do</LandingTitle>
-        <LandingSubtitle>As simple as possible</LandingSubtitle>
-        <GetStartedLink href="/home">Get Started</GetStartedLink>
-      </LandingContent>
-    </LandingPageRoot>
-  );
+export default async function StartPage() {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (session?.session) redirect("/overview");
+  return <LandingPage />;
 }

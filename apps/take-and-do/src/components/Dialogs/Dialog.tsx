@@ -4,8 +4,8 @@ import { ReactNode, useEffect, useId, useMemo, useRef } from "react";
 
 import { CloseIcon } from "@/components/Icons";
 import { CloseButton } from "@/components/Buttons";
-import { cn } from "@/lib/utils";
-import type { UiProps } from "@/lib/ui-props";
+import { cn } from "@/lib/styles/utils";
+import type { UiProps } from "@/lib/styles/ui-props";
 
 export function DialogOverlay({ className, ref, ...props }: UiProps<"div">) {
   return (
@@ -170,6 +170,9 @@ export function Dialog({
 }: DialogProps) {
   const titleId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
   const focusSelectors = useMemo(
     () =>
       'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
@@ -205,7 +208,7 @@ export function Dialog({
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.preventDefault();
-        onClose();
+        onCloseRef.current();
         return;
       }
 
@@ -250,7 +253,7 @@ export function Dialog({
       document.body.style.overflow = prevOverflow;
       prevFocused?.focus?.();
     };
-  }, [focusSelectors, onClose]);
+  }, [focusSelectors]);
 
   return (
     <DialogOverlay onClick={handleOverlayClick}>

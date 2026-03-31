@@ -1,47 +1,35 @@
-import { Folder } from "@/types/workspace";
+import type { DataAccess } from "@/db/data-access";
+import type { FoldersRepository } from "@/db/repositories/folders.repository";
 
-import { BaseApiService } from "./base-api.service";
+export class FoldersApiService {
+  constructor(private readonly repository: FoldersRepository) {}
 
-export class FoldersApiService extends BaseApiService {
-  constructor() {
-    super("/folders");
+  async getAll(access: DataAccess) {
+    return this.repository.getAllFolders(access);
   }
 
-  async getAll(): Promise<Folder[]> {
-    const response = await this.get<Folder[]>();
-    return response.data.map(normalizeFolder);
+  async getById(id: string, access: DataAccess) {
+    return this.repository.getFolderById(id, access);
   }
 
-  async getById(id: string): Promise<Folder> {
-    const response = await this.get<Folder>({ pathParams: [id] });
-    return normalizeFolder(response.data);
-  }
-
-  async create(name: string): Promise<Folder> {
-    const response = await this.post<Folder>({ body: { name } });
-    return normalizeFolder(response.data);
+  async create(name: string, access: DataAccess, emoji?: string | null) {
+    return this.repository.createFolder(name, access, emoji);
   }
 
   async update(
     id: string,
-    updates: { name?: string; emoji?: string | null },
-  ): Promise<Folder> {
-    const response = await this.patch<Folder>({
-      pathParams: [id],
-      body: updates,
-    });
-    return normalizeFolder(response.data);
+    data: {
+      name?: string;
+      emoji?: string | null;
+      isPublic?: boolean;
+      createdAt?: Date | string;
+    },
+    access: DataAccess,
+  ) {
+    return this.repository.updateFolder(id, data, access);
   }
 
-  async deleteFolder(id: string): Promise<void> {
-    await this.delete({ pathParams: [id] });
+  async delete(id: string, access: DataAccess) {
+    return this.repository.deleteFolder(id, access);
   }
-}
-
-function normalizeFolder(folder: Folder): Folder {
-  return {
-    ...folder,
-    createdAt: new Date(folder.createdAt),
-    updatedAt: new Date(folder.updatedAt),
-  };
 }

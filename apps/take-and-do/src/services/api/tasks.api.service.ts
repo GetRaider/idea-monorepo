@@ -1,204 +1,138 @@
-import {
-  Task,
-  TaskUpdate,
-  toTaskPriority,
-} from "@/components/Boards/KanbanBoard/types";
-import type { ComposeTaskOutput } from "@/lib/ai/schemas";
-import { BaseApiService } from "./base-api.service";
+import { aiServices } from "@/services/ai";
 import { tasksHelper } from "@/helpers/task.helper";
 
-export class TasksApiService extends BaseApiService {
-  constructor() {
-    super("/tasks");
+import type { TaskPostPayload } from "@/helpers/task.helper";
+import type { ComposeTaskOutput } from "@/services/ai";
+import type { Task, TaskUpdate } from "@/types/task";
+import type { DataAccess } from "@/db/data-access";
+import type { TasksRepository } from "@/db/repositories/tasks.repository";
+
+export class TasksApiService {
+  constructor(private readonly repository: TasksRepository) {}
+
+  async getAll(access: DataAccess) {
+    return this.repository.getAllTasks(access);
   }
 
-  async getAll(): Promise<Task[]> {
-    const response = await this.get<Task[]>();
-    return response.data.map((task: Task) => normalizeTask(task));
+  async getByBoardId(taskBoardId: string, access: DataAccess) {
+    return this.repository.getTasksByTaskBoardId(taskBoardId, access);
   }
 
-  async getBySchedule(): Promise<{
-    today: Task[];
-    tomorrow: Task[];
-  }> {
-    // Fetch both today and tomorrow
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+  async getByDate(date: Date, access: DataAccess) {
+    return this.repository.getTasksByDate(date, access);
+  }
 
-    const [todayResponse, tomorrowResponse] = await Promise.all([
-      this.get<Task[]>({
-        queries: { date: tasksHelper.date.formatForAPI(today) },
-      }),
-      this.get<Task[]>({
-        queries: { date: tasksHelper.date.formatForAPI(tomorrow) },
-      }),
-    ]);
+  async getById(taskId: string, access: DataAccess) {
+    const task = await this.repository.getTaskById(taskId, access);
+    if (!task) return null;
+    return serializeTask(task);
+  }
 
-    if (todayResponse.status !== 200 || tomorrowResponse.status !== 200) {
-      console.error("Failed to fetch scheduled tasks");
-      return { today: [], tomorrow: [] };
+  async getByKey(taskKey: string, access: DataAccess) {
+    const result = await this.repository.getTaskByKey(taskKey, access);
+    if (!result) return null;
+    return {
+      task: serializeTask(result.task),
+      parent: result.parent ? serializeTask(result.parent) : null,
+    };
+  }
+
+  async create(
+    payload: TaskPostPayload,
+    access: DataAccess,
+  ): Promise<{ task?: Task; composed?: ComposeTaskOutput }> {
+    if (payload.shouldUseAI && payload.text) {
+      const composed = await aiServices.task.compose({ text: payload.text });
+
+      if (payload._composeOnly) return { composed };
+
+      const taskData = tasksHelper.fromJson.createTask({
+        ...payload.task,
+        summary: composed.summary,
+        description: composed.description ?? payload.task.description,
+        subtasks: composed.subtasks ?? payload.task.subtasks,
+        priority: composed.priority ?? payload.task.priority,
+        estimation: composed.estimation ?? payload.task.estimation,
+        labels: composed.labels ?? payload.task.labels,
+      });
+
+      const task = await this.repository.createTask(taskData, access, {
+        taskBoardName: payload.taskBoardName,
+      });
+      return { task };
     }
 
-    const todayTasks = todayResponse.data;
-    const tomorrowTasks = tomorrowResponse.data;
-
-    return {
-      today: todayTasks.map((task: Task) => normalizeTask(task)),
-      tomorrow: tomorrowTasks.map((task: Task) => normalizeTask(task)),
-    };
-  }
-
-  async getByDate(date: Date): Promise<Task[]> {
-    // Format date in local timezone, not UTC
-    const dateString = tasksHelper.date.formatForAPI(date);
-    const response = await this.get<Task[]>({ queries: { date: dateString } });
-    return response.data.map((task: Task) => normalizeTask(task));
-  }
-
-  async getRecent(days: number = 7): Promise<Task[]> {
-    const now = new Date();
-    now.setHours(0, 0, 0, 0);
-    const pastDate = new Date(now);
-    pastDate.setDate(pastDate.getDate() - days);
-
-    const allTasks = await this.getAll();
-    return allTasks.filter((task) => {
-      if (task.scheduleDate) {
-        const scheduleTime = tasksHelper.date.getTime(task.scheduleDate);
-        return scheduleTime !== undefined && scheduleTime >= pastDate.getTime();
-      }
-      if (task.dueDate) {
-        const dueTime = tasksHelper.date.getTime(task.dueDate);
-        return dueTime !== undefined && dueTime >= pastDate.getTime();
-      }
-      return true;
+    const task = await this.repository.createTask(payload.task, access, {
+      taskBoardName: payload.taskBoardName,
     });
+    return { task };
   }
 
-  async getByBoardId(boardId: string): Promise<Task[]> {
-    const response = await super.get<Task[]>({
-      queries: { taskBoardId: boardId },
+  async update(taskId: string, updates: TaskUpdate, access: DataAccess) {
+    const task = await this.repository.updateTask(taskId, updates, access);
+    if (!task) return null;
+    return serializeTask(task);
+  }
+
+  async delete(taskId: string, access: DataAccess) {
+    return this.repository.deleteTask(taskId, access);
+  }
+
+  async deleteAllForBoard(taskBoardId: string, access: DataAccess) {
+    return this.repository.deleteAllTasksForTaskBoard(taskBoardId, access);
+  }
+
+  async optimize(taskIds: string[], access: DataAccess) {
+    const taskRows = await this.repository.getTasksForOptimization(
+      taskIds,
+      access,
+    );
+
+    const optimization = await aiServices.schedule.optimize({
+      tasks: taskRows.map((row) => ({
+        id: row.id,
+        summary: row.summary,
+        priority: row.priority as "low" | "medium" | "high" | "critical",
+        dueDate: row.dueDate ? row.dueDate.toISOString() : null,
+        estimation: row.estimation,
+        scheduleDate: row.scheduleDate ? row.scheduleDate.toISOString() : null,
+        status: row.status,
+      })),
+      currentDate: new Date().toISOString(),
     });
-    return response.data.map((task: Task) => normalizeTask(task));
-  }
 
-  async getById(taskId: string): Promise<Task> {
-    const response = await super.get<Task>({ pathParams: [taskId] });
-    return normalizeTask(response.data);
-  }
-
-  async getByKey(
-    taskKey: string,
-  ): Promise<{ task: Task; parent: Task | null }> {
-    const response = await super.get<{ task: Task; parent: Task | null }>({
-      pathParams: ["by-key", taskKey],
-    });
-    return {
-      task: normalizeTask(response.data.task),
-      parent: response.data.parent ? normalizeTask(response.data.parent) : null,
-    };
-  }
-
-  async create(task: Omit<Task, "id">): Promise<Task> {
-    const response = await super.post<Task>({ body: task });
-    return normalizeTask(response.data);
-  }
-
-  async composeWithAI(
-    text: string,
-    taskBoardId: string,
-    additionalData?: Partial<Omit<Task, "id">>,
-  ): Promise<ComposeTaskOutput> {
-    const response = await super.post<ComposeTaskOutput>({
-      body: {
-        shouldUseAI: true,
-        text,
-        taskBoardId,
-        ...additionalData,
-        _composeOnly: true,
-      },
-    });
-    return response.data;
-  }
-
-  async createWithAI(
-    text: string,
-    taskBoardId: string,
-    additionalData?: Partial<Omit<Task, "id">>,
-  ): Promise<Task> {
-    const response = await super.post<Task>({
-      body: {
-        shouldUseAI: true,
-        text,
-        taskBoardId,
-        ...additionalData,
-      },
-    });
-    return normalizeTask(response.data);
-  }
-
-  async update(taskId: string, updates: TaskUpdate): Promise<Task> {
-    const response = await super.patch<Task>({
-      pathParams: [taskId],
-      body: updates,
-    });
-    return normalizeTask(response.data);
-  }
-
-  async deleteById(taskId: string): Promise<void> {
-    await super.delete<void>({ pathParams: [taskId] });
-  }
-
-  async deleteAllForBoard(boardId: string): Promise<number> {
-    const response = await super.delete<{ deleted: number }>({
-      queries: { taskBoardId: boardId },
-    });
-    return response.data.deleted;
-  }
-
-  async optimizeSchedule(
-    taskIds: string[],
-  ): Promise<ScheduleOptimizationResult> {
-    const response = await super.post<ScheduleOptimizationResult>({
-      body: { taskIds },
-      pathParams: ["optimization"],
-    });
-    return response.data;
+    return { optimization, tasksCount: taskRows.length };
   }
 }
 
-interface ScheduleRecommendation {
-  taskId: string;
-  taskSummary: string;
-  currentSchedule: string | null;
-  suggestedSchedule: string | null;
-  reason: string;
-}
-
-interface ScheduleOptimizationResult {
-  optimization: {
-    summary: string;
-    currentWorkload: {
-      today: number;
-      tomorrow: number;
-      unscheduled: number;
-    };
-    recommendations: ScheduleRecommendation[];
-    risks: string[];
-    insights: string[];
-  };
-  tasksCount: number;
-}
-
-// Helper to normalize a task (including subtasks) from API response
-function normalizeTask(task: Task): Task {
+function serializeTask(task: Task): SerializedTask {
   return {
-    ...task,
-    dueDate: tasksHelper.date.parse(task.dueDate),
-    scheduleDate: tasksHelper.date.parse(task.scheduleDate),
-    priority: toTaskPriority(task.priority),
-    subtasks: (task.subtasks || []).map((subtask) => normalizeTask(subtask)),
+    id: task.id,
+    taskBoardId: task.taskBoardId,
+    taskKey: task.taskKey,
+    summary: task.summary,
+    description: task.description,
+    status: task.status,
+    priority: task.priority,
+    labels: task.labels || [],
+    dueDate: tasksHelper.date.toISOString(task.dueDate),
+    estimation: task.estimation,
+    subtasks: (task.subtasks || []).map((subtask) => serializeTask(subtask)),
+    scheduleDate: tasksHelper.date.toISOString(task.scheduleDate),
   };
+}
+
+interface SerializedTask {
+  id: string;
+  taskBoardId: string;
+  taskKey?: string;
+  summary: string;
+  description: string;
+  status: string;
+  priority: string;
+  labels: string[];
+  dueDate?: string;
+  estimation?: number;
+  subtasks: SerializedTask[];
+  scheduleDate?: string;
 }

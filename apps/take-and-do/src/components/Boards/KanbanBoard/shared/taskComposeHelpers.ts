@@ -1,4 +1,4 @@
-import type { ComposeTaskOutput } from "@/lib/ai/schemas";
+import type { ComposeTaskOutput } from "@/services/ai/schemas";
 import { tasksHelper } from "@/helpers/task.helper";
 
 import {

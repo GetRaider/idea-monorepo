@@ -1,71 +1,42 @@
-import { Task } from "@/components/Boards/KanbanBoard/types";
-import { tasksHelper } from "@/helpers/task.helper";
-import { TaskBoard } from "@/types/workspace";
+import type { TaskBoardsRepository } from "@/db/repositories/task-boards.repository";
+import type { TaskBoard } from "@/types/workspace";
+import type { DataAccess } from "@/db/data-access";
 
-import { BaseApiService } from "./base-api.service";
+export class TaskBoardsApiService {
+  constructor(private readonly repository: TaskBoardsRepository) {}
 
-export class TaskBoardsApiService extends BaseApiService {
-  constructor() {
-    super("/task-boards");
+  async getAll(access: DataAccess) {
+    return this.repository.getAllTaskBoards(access);
   }
 
-  async getAll(): Promise<TaskBoard[]> {
-    const response = await this.get<TaskBoard[]>();
-    return response.data.map(normalizeTaskBoard);
+  async getById(id: string, access: DataAccess) {
+    return this.repository.getTaskBoardById(id, access);
   }
 
-  async getById(id: string): Promise<TaskBoard> {
-    const response = await this.get<TaskBoard[]>({ queries: { id } });
-    if (!response.data || response.data.length === 0) {
-      throw new Error("TaskBoard not found");
-    }
-    return normalizeTaskBoard(response.data[0]);
-  }
-
-  async getTasks(taskBoardId: string): Promise<Task[]> {
-    const response = await this.getAtPath<Task[]>(["tasks"], {
-      taskBoardId,
-    });
-    return response.data.map(normalizeTask);
+  async getByFolder(folderId: string, access: DataAccess) {
+    return this.repository.getTaskBoardsByFolder(folderId, access);
   }
 
   async create(
-    taskBoard: Omit<TaskBoard, "id" | "createdAt" | "updatedAt">,
-  ): Promise<TaskBoard> {
-    const response = await this.post<TaskBoard>({ body: taskBoard });
-    return normalizeTaskBoard(response.data);
+    data: Omit<TaskBoard, "id" | "createdAt" | "updatedAt">,
+    access: DataAccess,
+  ) {
+    return this.repository.createTaskBoard(data, access);
   }
 
   async update(
     id: string,
-    updates: { name?: string; folderId?: string | null; emoji?: string | null },
-  ): Promise<TaskBoard> {
-    const response = await this.patch<TaskBoard>({
-      queries: { id },
-      body: updates,
-    });
-    return normalizeTaskBoard(response.data);
+    data: Partial<
+      Pick<TaskBoard, "name" | "folderId" | "emoji" | "isPublic"> & {
+        createdAt?: Date | string;
+      }
+    >,
+    access: DataAccess,
+  ) {
+    return this.repository.updateTaskBoard(id, data, access);
   }
 
-  async deleteBoard(id: string): Promise<void> {
-    await this.delete({ queries: { id } });
+  async delete(id: string, access: DataAccess) {
+    return this.repository.deleteTaskBoard(id, access);
   }
-}
-
-function normalizeTaskBoard(board: TaskBoard): TaskBoard {
-  return {
-    ...board,
-    createdAt: new Date(board.createdAt),
-    updatedAt: new Date(board.updatedAt),
-  };
-}
-
-function normalizeTask(task: Task): Task {
-  return {
-    ...task,
-    dueDate: tasksHelper.date.parse(task.dueDate),
-    scheduleDate: tasksHelper.date.parse(task.scheduleDate),
-    priority: tasksHelper.priority.format(task.priority),
-    subtasks: (task.subtasks ?? []).map(normalizeTask),
-  };
 }

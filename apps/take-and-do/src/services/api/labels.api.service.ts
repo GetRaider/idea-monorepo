@@ -1,30 +1,21 @@
-import { BaseApiService } from "./base-api.service";
+import type { LabelsRepository } from "@/db/repositories/labels.repository";
 
-export class LabelsApiService extends BaseApiService {
-  constructor() {
-    super("/labels");
+export class LabelsApiService {
+  constructor(private readonly repository: LabelsRepository) {}
+
+  async getAll() {
+    return this.repository.getAllLabels();
   }
 
-  async getAll(): Promise<string[]> {
-    const response = await this.get<string[]>();
-    return response.data;
+  async add(label: string) {
+    return this.repository.addLabel(label);
   }
 
-  async create(label: string): Promise<string> {
-    const response = await this.post<{ label: string }>({
-      body: { label },
-    });
-    return response.data.label;
+  async rename(oldName: string, newName: string) {
+    return this.repository.renameLabel(oldName, newName);
   }
 
-  async rename(oldName: string, newName: string): Promise<string> {
-    const response = await this.patch<{ label: string }>({
-      body: { oldName, newName },
-    });
-    return response.data.label;
-  }
-
-  async remove(name: string): Promise<void> {
-    await this.delete<{ ok: boolean }>({ body: { name } });
+  async delete(name: string) {
+    return this.repository.deleteLabelByName(name);
   }
 }

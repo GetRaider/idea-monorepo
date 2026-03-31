@@ -1,172 +1,71 @@
 import { NextRequest, NextResponse } from "next/server";
+
 import {
-  getAllTasks,
-  getTasksByTaskBoardId,
-  getTasksByDate,
-  createTask,
-  deleteAllTasksForTaskBoard,
-} from "@/lib/db/queries";
-import {
-  Task,
-  toTaskPriority,
-  toTaskStatus,
-} from "@/components/Boards/KanbanBoard/types";
-import { aiServices } from "@/services/ai";
+  getAccessByAuth,
+  requireAiAccess,
+  requireAuth,
+  requireNonAnonymous,
+} from "@/auth/guards";
+import { tasksApiService } from "@/services/api";
 import { tasksHelper } from "@/helpers/task.helper";
+import { defineRoute } from "@/lib/api";
+import { BadRequestError } from "@/lib/api/errors";
 
-export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const taskBoardId = searchParams.get("taskBoardId");
-    const date = searchParams.get("date");
+export const GET = defineRoute(async (request: NextRequest) => {
+  const auth = await requireAuth();
+  const access = getAccessByAuth(auth);
+  const { searchParams } = new URL(request.url);
+  const taskBoardId = searchParams.get("taskBoardId");
+  const date = searchParams.get("date");
 
-    let tasks: Task[] = [];
-
-    if (taskBoardId) {
-      tasks = await getTasksByTaskBoardId(taskBoardId);
-    } else if (date) {
-      // Date filtering - parse YYYY-MM-DD as local date, not UTC
-      const dateParts = date.split("-");
-      if (dateParts.length !== 3) {
-        return NextResponse.json(
-          { error: "Invalid date format. Expected YYYY-MM-DD" },
-          { status: 400 },
-        );
-      }
-      const year = parseInt(dateParts[0], 10);
-      const month = parseInt(dateParts[1], 10) - 1; // Month is 0-indexed
-      const day = parseInt(dateParts[2], 10);
-      const targetDate = new Date(year, month, day);
-      if (isNaN(targetDate.getTime())) {
-        return NextResponse.json(
-          { error: "Invalid date format" },
-          { status: 400 },
-        );
-      }
-      tasks = await getTasksByDate(targetDate);
-    } else {
-      tasks = await getAllTasks();
-    }
-
-    return NextResponse.json(tasks);
-  } catch {
+  if (taskBoardId)
     return NextResponse.json(
-      { error: "Failed to fetch tasks" },
-      { status: 500 },
+      await tasksApiService.getByBoardId(taskBoardId, access),
     );
-  }
-}
 
-export async function DELETE(request: NextRequest) {
-  try {
-    const taskBoardId = new URL(request.url).searchParams.get("taskBoardId");
-    if (!taskBoardId?.trim()) {
-      return NextResponse.json(
-        { error: "taskBoardId query parameter is required" },
-        { status: 400 },
-      );
-    }
-
-    const deleted = await deleteAllTasksForTaskBoard(taskBoardId.trim());
-    return NextResponse.json({ deleted });
-  } catch {
-    return NextResponse.json(
-      { error: "Failed to delete tasks for board" },
-      { status: 500 },
+  if (date) {
+    const parts = date.split("-");
+    if (parts.length !== 3)
+      throw new BadRequestError("Invalid date format. Expected YYYY-MM-DD");
+    const parsed = new Date(
+      parseInt(parts[0], 10),
+      parseInt(parts[1], 10) - 1,
+      parseInt(parts[2], 10),
     );
+    if (isNaN(parsed.getTime()))
+      throw new BadRequestError("Invalid date format");
+    return NextResponse.json(await tasksApiService.getByDate(parsed, access));
   }
-}
 
-export async function POST(request: NextRequest) {
-  try {
-    let shouldUseAI: boolean | undefined;
-    let text: string | undefined;
-    let _composeOnly: boolean | undefined;
-    let task: Omit<Task, "id">;
+  return NextResponse.json(await tasksApiService.getAll(access));
+});
 
-    try {
-      const payload = tasksHelper.fromJson.postPayload(await request.json());
-      shouldUseAI = payload.shouldUseAI;
-      text = payload.text;
-      _composeOnly = payload._composeOnly;
-      task = payload.task;
-    } catch {
-      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
-    }
+export const POST = defineRoute(async (request: NextRequest) => {
+  const auth = await requireAuth();
+  const access = getAccessByAuth(auth);
+  const payload = tasksHelper.fromJson.postPayload(await request.json());
 
-    let taskData: Omit<Task, "id">;
+  if (payload.shouldUseAI) await requireAiAccess();
 
-    // If AI composition is requested, compose the task first
-    if (shouldUseAI && text) {
-      const composedData = await aiServices.task.compose({ text });
+  const result = await tasksApiService.create(payload, access);
 
-      const taskBoardId =
-        task.taskBoardId?.trim() || composedData.taskBoardId?.trim();
-      if (!taskBoardId) {
-        return NextResponse.json(
-          { error: "taskBoardId is required" },
-          { status: 400 },
-        );
-      }
+  if (result.composed) return NextResponse.json(result.composed);
 
-      const scheduleDate =
-        tasksHelper.date.parse(composedData.scheduleDate) ??
-        tasksHelper.date.parse(task.scheduleDate);
+  return NextResponse.json(
+    access.isAnonymous ? { ...result.task, guest: true } : result.task,
+    { status: 201 },
+  );
+});
 
-      taskData = {
-        taskBoardId,
-        taskKey: task.taskKey ?? composedData.taskKey ?? undefined,
-        summary: composedData.summary,
-        description: tasksHelper.description.plainToHtml(
-          composedData.description,
-        ),
-        status: toTaskStatus(composedData.status ?? task.status),
-        priority: toTaskPriority(composedData.priority ?? task.priority),
-        labels: composedData.labels ?? task.labels,
-        dueDate:
-          tasksHelper.date.parse(composedData.dueDate) ??
-          tasksHelper.date.parse(task.dueDate),
-        estimation: composedData.estimation ?? task.estimation,
-        scheduleDate,
-        subtasks:
-          tasksHelper.fromJson.subtasksFromArray(composedData.subtasks) ??
-          task.subtasks,
-      };
-
-      // If composeOnly flag is set, return the composed data without creating
-      if (_composeOnly) {
-        return NextResponse.json(taskData);
-      }
-    } else {
-      if (!task.taskBoardId?.trim()) {
-        return NextResponse.json(
-          { error: "taskBoardId is required" },
-          { status: 400 },
-        );
-      }
-      taskData = {
-        taskBoardId: task.taskBoardId,
-        taskKey: task.taskKey,
-        summary: task.summary ?? "",
-        description: task.description ?? "",
-        status: toTaskStatus(task.status),
-        priority: toTaskPriority(task.priority),
-        labels: task.labels,
-        dueDate: tasksHelper.date.parse(task.dueDate),
-        scheduleDate: tasksHelper.date.parse(task.scheduleDate),
-        estimation: task.estimation,
-        subtasks: task.subtasks,
-      };
-    }
-
-    const newTask = await createTask(taskData);
-
-    return NextResponse.json(newTask, { status: 201 });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
-    return NextResponse.json(
-      { error: "Failed to create task", details: message },
-      { status: 500 },
-    );
-  }
-}
+export const DELETE = defineRoute(async (request: NextRequest) => {
+  const auth = await requireNonAnonymous();
+  const access = getAccessByAuth(auth);
+  const taskBoardId = new URL(request.url).searchParams.get("taskBoardId");
+  if (!taskBoardId?.trim())
+    throw new BadRequestError("taskBoardId query parameter is required");
+  const deleted = await tasksApiService.deleteAllForBoard(
+    taskBoardId.trim(),
+    access,
+  );
+  return NextResponse.json({ deleted });
+});

@@ -1,45 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAllFolders, createFolder } from "@/lib/db/queries";
 
-export async function GET() {
-  try {
-    const folders = await getAllFolders();
-    return NextResponse.json(folders);
-  } catch {
-    return NextResponse.json(
-      { error: "Failed to fetch folders" },
-      { status: 500 },
-    );
-  }
-}
+import { getAccessByAuth, requireAuth } from "@/auth/guards";
+import { foldersApiService } from "@/services/api";
+import { defineRoute } from "@/lib/api/defineRoute";
+import { CreateFolderDto } from "@/db/dtos";
 
-export async function POST(request: NextRequest) {
-  try {
-    let body: unknown;
-    try {
-      body = await request.json();
-    } catch (error) {
-      if (error instanceof SyntaxError) {
-        return NextResponse.json(
-          { error: "Invalid JSON body" },
-          { status: 400 },
-        );
-      }
-      throw error;
-    }
-    const { name } = body as { name?: unknown };
-    if (!name || typeof name !== "string" || !name.trim()) {
-      return NextResponse.json(
-        { error: "Name is required" },
-        { status: 400 },
-      );
-    }
-    const folder = await createFolder(name.trim());
-    return NextResponse.json(folder, { status: 201 });
-  } catch {
-    return NextResponse.json(
-      { error: "Failed to create folder" },
-      { status: 500 },
-    );
-  }
-}
+export const GET = defineRoute(async () => {
+  const auth = await requireAuth();
+  const access = getAccessByAuth(auth);
+  const folders = await foldersApiService.getAll(access);
+  return NextResponse.json(folders);
+});
+
+export const POST = defineRoute(async (request: NextRequest) => {
+  const auth = await requireAuth();
+  const access = getAccessByAuth(auth);
+  const { name, emoji } = CreateFolderDto.parse(await request.json());
+  const folder = await foldersApiService.create(name.trim(), access, emoji);
+  return NextResponse.json(
+    access.isAnonymous ? { ...folder, guest: true } : folder,
+    { status: 201 },
+  );
+});

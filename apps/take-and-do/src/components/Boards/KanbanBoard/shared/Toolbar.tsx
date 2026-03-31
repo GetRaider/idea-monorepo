@@ -1,21 +1,16 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
+
 import {
   Toolbar as ToolbarBar,
   WorkspacePath,
   BoardTitleEmoji,
   WorkspacePathLeading,
   Actions,
-  PopoverContainer,
-  Popover,
-  Row,
-  Segmented,
-  SegmentBtn,
-  Divider,
-  Footer,
 } from "../KanbanBoard.ui";
 import { CreateTaskButton } from "./CreateTaskButton";
+import { WorkspaceSettings } from "./WorkspaceSettings";
 
 interface ToolbarProps {
   workspaceTitle: string;
@@ -23,6 +18,8 @@ interface ToolbarProps {
   workspaceEmoji?: ReactNode;
   onCreateTask?: () => void;
   onCreateTaskWithAI?: () => void;
+  /** Single-board view: board id for workspace visibility settings (omitted for schedule / multi-board toolbars). */
+  boardId?: string;
 }
 
 export function Toolbar({
@@ -30,10 +27,8 @@ export function Toolbar({
   workspaceEmoji,
   onCreateTask,
   onCreateTaskWithAI,
+  boardId,
 }: ToolbarProps) {
-  const [open] = useState(false);
-  const [viewMode, setViewMode] = useState<"list" | "board">("board");
-
   return (
     <ToolbarBar>
       <WorkspacePath>
@@ -53,68 +48,7 @@ export function Toolbar({
           onManualCreate={onCreateTask}
           onAICreate={onCreateTaskWithAI}
         />
-        <PopoverContainer>
-          {/* TODO: Enable board settings once buttons are working */}
-          {/* <SettingsButton
-            title="Board settings"
-            onClick={() => setOpen((previous) => !previous)}
-          >
-            <Image
-              src="/board-preference.svg"
-              alt="Settings"
-              width={20}
-              height={20}
-            />
-          </SettingsButton> */}
-          {open ? (
-            <Popover>
-              <Row>
-                <Segmented>
-                  <SegmentBtn
-                    isActive={viewMode === "list"}
-                    onClick={() => setViewMode("list")}
-                  >
-                    <span>≡</span>
-                    <span>List</span>
-                  </SegmentBtn>
-                  <SegmentBtn
-                    isActive={viewMode === "board"}
-                    onClick={() => setViewMode("board")}
-                  >
-                    <span
-                      style={{
-                        border: "2px solid currentColor",
-                        width: 14,
-                        height: 14,
-                        display: "inline-block",
-                        borderRadius: 3,
-                      }}
-                    />
-                    <span>Board</span>
-                  </SegmentBtn>
-                </Segmented>
-              </Row>
-
-              <Divider />
-
-              <Footer>
-                <button
-                  style={{
-                    background: "transparent",
-                    border: 0,
-                    color: "#cbd5e1",
-                    cursor: "pointer",
-                  }}
-                  onClick={() => {
-                    setViewMode("board");
-                  }}
-                >
-                  Reset
-                </button>
-              </Footer>
-            </Popover>
-          ) : null}
-        </PopoverContainer>
+        {boardId ? <WorkspaceSettings boardId={boardId} /> : null}
       </Actions>
     </ToolbarBar>
   );

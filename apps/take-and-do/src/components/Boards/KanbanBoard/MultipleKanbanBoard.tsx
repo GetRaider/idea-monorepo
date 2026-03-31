@@ -28,11 +28,14 @@ import {
 } from "./shared/taskComposeHelpers";
 import { useKanbanTaskHandlers } from "../../../hooks/useKanbanTaskHandlers";
 import { useMultipleKanbanBoardData } from "../../../hooks/useMultipleKanbanBoardData";
+import { useTaskActions } from "@/hooks/useTasks";
 import { TaskView } from "../../TaskView/TaskView";
+import { useWorkspace } from "@/contexts";
 import { updateTaskInColumns } from "@/hooks/useTaskBoardState";
 import { EmptyState } from "../../EmptyState";
+import { TasksWorkspaceEmptyState } from "../../TasksWorkspaceEmptyState";
 import { AIComposeDialog } from "./shared/AIComposeDialog";
-import { apiServices } from "@/services/api";
+import { clientServices } from "@/services/client";
 import type { TaskBoardWithTasks } from "@/types/workspace";
 import { tasksUrlHelper, type ScheduleDate } from "@/helpers/tasks-url.helper";
 import { tasksHelper } from "@/helpers/task.helper";
@@ -46,6 +49,8 @@ export function MultipleKanbanBoard({
   onTaskClose,
   onSubtaskOpen,
 }: MultipleKanbanBoardProps) {
+  const { updateTask } = useTaskActions();
+  const { taskBoards, isBoardsLoading, openCreateWorkspace } = useWorkspace();
   const {
     boardsWithTasks,
     setBoardsWithTasks,
@@ -84,6 +89,13 @@ export function MultipleKanbanBoard({
     setParentTask(null);
   }, [parentTask, schedule, setSelectedTask, setParentTask]);
 
+  const persistTaskStatus = useCallback(
+    async (taskId: string, newStatus: TaskStatus) => {
+      await updateTask(taskId, { status: newStatus });
+    },
+    [updateTask],
+  );
+
   const handleTaskStatusChange = useCallback(
     async (taskId: string, newStatus: TaskStatus, targetIndex?: number) => {
       await handleMultipleBoardsTaskStatusChange(
@@ -92,9 +104,10 @@ export function MultipleKanbanBoard({
         taskId,
         newStatus,
         targetIndex,
+        persistTaskStatus,
       );
     },
-    [boardsWithTasks, setBoardsWithTasks],
+    [boardsWithTasks, setBoardsWithTasks, persistTaskStatus],
   );
 
   const handleTaskUpdate = useCallback(
@@ -225,11 +238,11 @@ export function MultipleKanbanBoard({
         const additionalData: Partial<Omit<Task, "id">> = scheduleDate
           ? { scheduleDate }
           : {};
-        const composedData = await apiServices.tasks.composeWithAI(
+        const composedData = await clientServices.tasks.composeWithAI({
           text,
           taskBoardId,
           additionalData,
-        );
+        });
         const overrideScheduleDate = scheduleDate ?? undefined;
         setSelectedTask(composedDataToTask(composedData, overrideScheduleDate));
         setSelectedBoardIdForAI(null);
@@ -281,7 +294,13 @@ export function MultipleKanbanBoard({
         />
 
         <BoardMultiLayout>
-          {isLoading ? (
+          {!isBoardsLoading && taskBoards.length === 0 ? (
+            <EmptyStateWrapper>
+              <TasksWorkspaceEmptyState
+                onCreateWorkspace={openCreateWorkspace}
+              />
+            </EmptyStateWrapper>
+          ) : isLoading ? (
             <LoadingContainer>
               <KanbanSpinner />
             </LoadingContainer>

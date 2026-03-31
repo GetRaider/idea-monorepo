@@ -5,8 +5,8 @@ import type { ComponentProps } from "react";
 import { Input } from "@/components/Input";
 import { SecondaryButton } from "@/components/Buttons";
 import { MenuRowButton } from "@/components/MenuRowButton/MenuRowButton";
-import { cn } from "@/lib/utils";
-import type { UiProps } from "@/lib/ui-props";
+import { cn } from "@/lib/styles/utils";
+import type { UiProps } from "@/lib/styles/ui-props";
 
 export function TaskViewOverlay({ className, ref, ...props }: UiProps<"div">) {
   return (

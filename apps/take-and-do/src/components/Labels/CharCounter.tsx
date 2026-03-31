@@ -2,7 +2,7 @@
 
 import { HTMLAttributes } from "react";
 
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/styles/utils";
 
 type CharCounterProps = HTMLAttributes<HTMLDivElement> & {
   isNearLimit: boolean;

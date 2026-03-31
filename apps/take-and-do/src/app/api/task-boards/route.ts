@@ -1,175 +1,111 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { env } from "@/env";
-import {
-  getAllTaskBoards,
-  createTaskBoard,
-  getTaskBoardById,
-  updateTaskBoard,
-  deleteTaskBoard,
-} from "@/lib/db/queries";
-import { TaskBoard } from "@/types/workspace";
+import { getAccessByAuth, requireAuth } from "@/auth/guards";
+import { taskBoardsApiService } from "@/services/api";
+import { defineRoute } from "@/lib/api/defineRoute";
+import { BadRequestError, NotFoundError } from "@/lib/api/errors";
+import { CreateTaskBoardDto, UpdateTaskBoardDto } from "@/db/dtos";
 
-export async function GET(request: NextRequest) {
+import type { TaskBoard } from "@/types/workspace";
+
+export const GET = defineRoute(async (request: NextRequest) => {
+  const auth = await requireAuth();
+  const access = getAccessByAuth(auth);
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
 
-  try {
-    if (id) {
-      const board = await getTaskBoardById(id);
-      if (!board) {
-        return NextResponse.json(
-          { error: "Task board not found" },
-          { status: 404 },
-        );
-      }
-      return NextResponse.json([board]);
-    }
+  if (id) {
+    const board = await taskBoardsApiService.getById(id, access);
+    if (!board) throw new NotFoundError("Task board");
+    return NextResponse.json([board]);
+  }
 
-    const taskBoards = await getAllTaskBoards();
-    return NextResponse.json(taskBoards);
-  } catch {
-    return NextResponse.json(
-      { error: "Failed to fetch task boards" },
-      { status: 500 },
+  const taskBoards = await taskBoardsApiService.getAll(access);
+  return NextResponse.json(taskBoards);
+});
+
+export const POST = defineRoute(async (request: NextRequest) => {
+  const auth = await requireAuth();
+  const access = getAccessByAuth(auth);
+  const { name, folderId, emoji } = CreateTaskBoardDto.parse(
+    await request.json(),
+  );
+
+  const taskBoardData: Omit<TaskBoard, "id" | "createdAt" | "updatedAt"> = {
+    name: name.trim(),
+    folderId: folderId ?? undefined,
+    isPublic: false,
+    ...(emoji !== undefined && { emoji }),
+  };
+
+  try {
+    const newTaskBoard = await taskBoardsApiService.create(
+      taskBoardData,
+      access,
     );
-  }
-}
-
-export async function PATCH(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
-  const id = searchParams.get("id");
-
-  if (!id) {
-    return NextResponse.json({ error: "id is required" }, { status: 400 });
-  }
-
-  try {
-    const body = await request.json();
-    const { name, folderId, emoji } = body as {
-      name?: unknown;
-      folderId?: unknown;
-      emoji?: unknown;
-    };
-
-    const updates: { name?: string; folderId?: string | null; emoji?: string | null } = {};
-    if (name !== undefined) {
-      if (typeof name !== "string" || !name.trim()) {
-        return NextResponse.json({ error: "Name must be a non-empty string" }, { status: 400 });
-      }
-      updates.name = name.trim();
-    }
-    if (folderId !== undefined) {
-      if (folderId === null || folderId === "") {
-        updates.folderId = null;
-      } else if (typeof folderId === "string") {
-        updates.folderId = folderId;
-      } else {
-        return NextResponse.json(
-          { error: "folderId must be a string or null" },
-          { status: 400 },
-        );
-      }
-    }
-    if (emoji !== undefined) {
-      if (emoji === null) {
-        updates.emoji = null;
-      } else if (typeof emoji === "string") {
-        const trimmed = emoji.trim();
-        if (!trimmed) {
-          return NextResponse.json(
-            { error: "Emoji must be a non-empty string or null" },
-            { status: 400 },
-          );
-        }
-        updates.emoji = trimmed;
-      } else {
-        return NextResponse.json(
-          { error: "Emoji must be a string or null" },
-          { status: 400 },
-        );
-      }
-    }
-    if (Object.keys(updates).length === 0) {
-      return NextResponse.json({ error: "No updates provided" }, { status: 400 });
-    }
-
-    const updated = await updateTaskBoard(id, updates);
-    return NextResponse.json(updated);
-  } catch {
     return NextResponse.json(
-      { error: "Failed to update task board" },
-      { status: 500 },
+      access.isAnonymous ? { ...newTaskBoard, guest: true } : newTaskBoard,
+      { status: 201 },
     );
-  }
-}
-
-export async function DELETE(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
-  const id = searchParams.get("id");
-
-  if (!id) {
-    return NextResponse.json({ error: "id is required" }, { status: 400 });
-  }
-
-  try {
-    await deleteTaskBoard(id);
-    return new NextResponse(null, { status: 204 });
-  } catch {
-    return NextResponse.json(
-      { error: "Failed to delete task board" },
-      { status: 500 },
-    );
-  }
-}
-
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { name, folderId } = body;
-
-    if (!name || typeof name !== "string" || !name.trim()) {
-      return NextResponse.json({ error: "Name is required" }, { status: 400 });
-    }
-
-    const taskBoardData: Omit<TaskBoard, "id" | "createdAt" | "updatedAt"> = {
-      name: name.trim(),
-      folderId: folderId || undefined,
-    };
-
-    const newTaskBoard = await createTaskBoard(taskBoardData);
-    return NextResponse.json(newTaskBoard, { status: 201 });
   } catch (error) {
-    console.error("Failed to create task board:", error);
-    const errorMessage =
+    const message =
       error instanceof Error ? error.message : "Failed to create task board";
-
-    // Check for specific connection errors
-    if (
-      errorMessage.includes("ENOTFOUND") ||
-      errorMessage.includes("getaddrinfo")
-    ) {
+    if (message.includes("ENOTFOUND") || message.includes("getaddrinfo")) {
       return NextResponse.json(
         {
           error:
-            "Database connection failed. Please check your DB_CONNECTION_STRING environment variable and ensure the database hostname is correct.",
-          details: env.nodeEnv === "development" ? errorMessage : undefined,
+            "Database connection failed. Please check your DB_CONNECTION_STRING environment variable.",
+          details: env.nodeEnv === "development" ? message : undefined,
         },
         { status: 500 },
       );
     }
-
-    return NextResponse.json(
-      {
-        error: errorMessage,
-        details:
-          env.nodeEnv === "development"
-            ? error instanceof Error
-              ? error.stack
-              : undefined
-            : undefined,
-      },
-      { status: 500 },
-    );
+    throw error;
   }
-}
+});
+
+export const PATCH = defineRoute(async (request: NextRequest) => {
+  const auth = await requireAuth();
+  const access = getAccessByAuth(auth);
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get("id");
+
+  if (!id) throw new BadRequestError("id is required");
+
+  const body = UpdateTaskBoardDto.parse(await request.json());
+
+  if (Object.keys(body).length === 0)
+    throw new BadRequestError("No updates provided");
+
+  if (!access.isAnonymous) {
+    const existing = await taskBoardsApiService.getById(id, access);
+    if (!existing) throw new NotFoundError("Task board");
+  }
+
+  const updated = await taskBoardsApiService.update(id, body, access);
+  return NextResponse.json(
+    access.isAnonymous ? { ...updated, guest: true } : updated,
+  );
+});
+
+export const DELETE = defineRoute(async (request: NextRequest) => {
+  const auth = await requireAuth();
+  const access = getAccessByAuth(auth);
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get("id");
+
+  if (!id) throw new BadRequestError("id is required");
+
+  if (!access.isAnonymous) {
+    const existing = await taskBoardsApiService.getById(id, access);
+    if (!existing) throw new NotFoundError("Task board");
+  }
+
+  await taskBoardsApiService.delete(id, access);
+
+  if (access.isAnonymous) {
+    return NextResponse.json({ id, deleted: true, guest: true });
+  }
+  return new NextResponse(null, { status: 204 });
+});

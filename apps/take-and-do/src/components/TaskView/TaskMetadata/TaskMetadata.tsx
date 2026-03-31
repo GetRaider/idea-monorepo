@@ -17,7 +17,7 @@ import { Dropdown } from "@/components/Dropdown";
 import { ConfirmDialog } from "@/components/Dialogs";
 import { Input } from "@/components/Input";
 import { Task } from "../../Boards/KanbanBoard/types";
-import { apiServices } from "@/services/api";
+import { clientServices } from "@/services/client";
 import { getLabelAccent } from "@/helpers/label-color.helper";
 import { toast } from "sonner";
 
@@ -332,7 +332,7 @@ type TagDotProps = HTMLAttributes<HTMLSpanElement> & { color?: string };
 function TagDot({ className, style, color, ...props }: TagDotProps) {
   return (
     <span
-      style={{ ...style, background: color ?? "#667eea" }}
+      style={{ ...style, background: color ?? "var(--brand-primary)" }}
       className={joinClassNames("h-1.5 w-1.5 shrink-0 rounded-full", className)}
       {...props}
     />
@@ -369,7 +369,7 @@ function CreateLabelSpan({
 }: CreateLabelSpanProps) {
   return (
     <span
-      style={{ ...style, color: accentColor ?? "#667eea" }}
+      style={{ ...style, color: accentColor ?? "var(--brand-primary)" }}
       className={className}
       {...props}
     />
@@ -452,7 +452,7 @@ export function TaskMetadata({
   useEffect(() => {
     const fetchLabels = async () => {
       try {
-        const labels = await apiServices.labels.getAll();
+        const labels = await clientServices.labels.getAll();
         setAvailableLabels(labels);
       } catch (error) {
         console.error("Failed to fetch labels:", error);
@@ -617,7 +617,10 @@ export function TaskMetadata({
       return;
     }
     try {
-      const newName = await apiServices.labels.rename(oldName, trimmed);
+      const newName = await clientServices.labels.rename({
+        oldName,
+        newName: trimmed,
+      });
       setAvailableLabels((prev) =>
         [...prev.map((l) => (l === oldName ? newName : l))].sort((a, b) =>
           a.localeCompare(b),
@@ -641,7 +644,7 @@ export function TaskMetadata({
     const name = labelPendingDelete;
     setLabelPendingDelete(null);
     try {
-      await apiServices.labels.remove(name);
+      await clientServices.labels.remove(name);
       setAvailableLabels((prev) => prev.filter((l) => l !== name));
       if (task.labels?.includes(name)) {
         updateTask({ labels: task.labels.filter((l) => l !== name) });
@@ -656,7 +659,7 @@ export function TaskMetadata({
     if (labelSearchValue.trim()) {
       const newLabel = labelSearchValue.trim();
       try {
-        await apiServices.labels.create(newLabel);
+        await clientServices.labels.create(newLabel);
         setAvailableLabels((prev) => [...prev, newLabel]);
         const newLabels = [...(task?.labels || []), newLabel];
         updateTask({ labels: newLabels });

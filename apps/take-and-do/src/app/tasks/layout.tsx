@@ -1,6 +1,6 @@
 import { RequireSession } from "@/components/auth/RequireSession";
 
-import TasksLayoutClient from "./TasksLayout.client";
+import TasksLayoutClient from "./TasksLayout";
 
 export default async function TasksLayout({
   children,

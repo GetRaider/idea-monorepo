@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+
 import { Sidebar } from "@/components/Sidebar/Sidebar";
 import { TasksSidebar } from "@/components/TasksSidebar/TasksSidebar";
 import { CreateWorkspaceDialog } from "@/components/TasksSidebar/Workspaces/CreateWorkspace/CreateWorkspaceDialog";
@@ -14,7 +15,7 @@ import { WorkspaceProvider } from "@/contexts/WorkspaceContext";
 import { useTasksSidebarWidthPx } from "@/hooks/useTasksSidebarWidthPx";
 import { clientServices } from "@/services/client";
 
-export default function TasksLayoutClient({
+export default function TasksLayout({
   children,
 }: {
   children: React.ReactNode;

@@ -47,12 +47,13 @@ export function CreateWorkspaceDialog({
 
     setIsCreating(true);
     try {
-      if (type === "folder") {
-        await onCreateFolder(name.trim(), selectedBoardIds, emoji);
-      } else {
-        await onCreateBoard(name.trim(), folderId, emoji);
+      const ok =
+        type === "folder"
+          ? await onCreateFolder(name.trim(), selectedBoardIds, emoji)
+          : await onCreateBoard(name.trim(), folderId, emoji);
+      if (ok) {
+        toast.success(type === "folder" ? "Folder created" : "Board created");
       }
-      toast.success(type === "folder" ? "Folder created" : "Board created");
     } finally {
       setIsCreating(false);
     }
@@ -238,12 +239,12 @@ interface CreateWorkspaceDialogProps {
     name: string,
     boardIdsToMove: string[],
     emoji?: string | null,
-  ) => Promise<void>;
+  ) => Promise<boolean>;
   onCreateBoard: (
     name: string,
     folderId: string,
     emoji?: string | null,
-  ) => Promise<void>;
+  ) => Promise<boolean>;
   taskBoards: TaskBoard[];
   folders: Folder[];
 }

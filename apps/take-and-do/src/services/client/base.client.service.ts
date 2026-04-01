@@ -7,7 +7,6 @@ import {
 } from "@repo/api/client";
 
 import { urlHelper } from "@repo/shared";
-import { toast } from "sonner";
 import type { ApiOk, ApiResult } from "./api-result.types";
 import { getAuthRedirectHandlers } from "./auth-redirect.registry";
 
@@ -189,8 +188,7 @@ export class BaseClientService {
     }
 
     const { message, details } = parseApiError(response.data);
-    const safeMessage = httpErrorToastMessage(message, response.status);
-    toast.error(safeMessage);
+    const summary = formatHttpErrorSummary(message, response.status);
     console.error("[API request failed]", {
       method,
       url,
@@ -200,6 +198,7 @@ export class BaseClientService {
       body,
       responseData: response.data,
       response,
+      summary,
     });
   }
 
@@ -215,7 +214,6 @@ export class BaseClientService {
     error: unknown;
   }) {
     const message = error instanceof Error ? error.message : String(error);
-    toast.error("Network error");
     console.error("[API transport failure — no HTTP response]", {
       method,
       url,
@@ -241,7 +239,7 @@ function parseApiError(data: unknown): { message?: string; details?: string } {
   };
 }
 
-function httpErrorToastMessage(
+function formatHttpErrorSummary(
   message: string | undefined,
   status: number,
 ): string {

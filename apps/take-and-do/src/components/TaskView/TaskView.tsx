@@ -93,7 +93,10 @@ export function TaskView({
     async (updates: TaskUpdate) => {
       if (!task || !task.id) return;
       const updatedTask = await updateTask(task.id, updates);
-      if (!updatedTask) return;
+      if (!updatedTask) {
+        toast.error("Can't update task");
+        return;
+      }
       setTask(updatedTask);
       onTaskUpdate?.(updatedTask);
       setPendingUpdates({});
@@ -267,7 +270,10 @@ export function TaskView({
       };
 
       const createdTask = await createTask(taskData);
-      if (!createdTask) return;
+      if (!createdTask) {
+        toast.error("Can't create task");
+        return;
+      }
       setTask(createdTask);
       onTaskCreated?.(createdTask);
       setIsEditingTitle(false);

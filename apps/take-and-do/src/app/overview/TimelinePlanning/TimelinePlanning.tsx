@@ -79,7 +79,7 @@ export function TimelinePlanning({
       ? guestStoreHelper.getTaskBoardById(task.taskBoardId)
       : await clientServices.taskBoards.getById(task.taskBoardId);
     if (!taskBoard) {
-      if (isAnonymous) toast.error("Task board not found.");
+      toast.error(isAnonymous ? "Task board not found" : "Can't load board");
       return;
     }
     router.push(
@@ -180,7 +180,7 @@ export function TimelinePlanning({
           message="Try adding some tasks to your workspace and come back later to analyze them."
         />
       )}
-      <ViewAllLink href="/tasks/root">View all tasks →</ViewAllLink>
+      <ViewAllLink href="/tasks">View all tasks →</ViewAllLink>
 
       {isOptimizationDialogOpen && (
         <AIPlanningOptimizationDialog

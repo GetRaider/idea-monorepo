@@ -36,6 +36,7 @@ import type { AnalyticsStats } from "@/services/ai";
 import { EmptyState } from "@/components/EmptyState";
 import { Dropdown } from "@/components/Dropdown";
 import { clientServices } from "@/services/client";
+import { toast } from "sonner";
 import type { AnalyticsData, Timeframe } from "@/services/client";
 
 const CHART_TOOLTIP_STYLE = {
@@ -64,6 +65,9 @@ export function ProductivityOverview() {
         const fetchedStats =
           await clientServices.analytics.getStatsByTimeframe(timeframe);
         setStats(fetchedStats);
+        if (fetchedStats === null) {
+          toast.error("Can't load productivity stats");
+        }
       } finally {
         setIsLoading(false);
       }
@@ -88,7 +92,10 @@ export function ProductivityOverview() {
     try {
       const fetchedStats =
         await clientServices.analytics.getStatsByTimeframe(timeframe);
-      if (!fetchedStats) return;
+      if (!fetchedStats) {
+        toast.error("Can't load stats for summary");
+        return;
+      }
 
       const generatedAnalytics = await clientServices.analytics.generateSummary(
         {
@@ -97,7 +104,10 @@ export function ProductivityOverview() {
           shouldUseAI: selectedOption === "ai",
         },
       );
-      if (!generatedAnalytics) return;
+      if (!generatedAnalytics) {
+        toast.error("Can't generate productivity summary");
+        return;
+      }
 
       setAnalytics(generatedAnalytics);
       setIsSelectionDialogOpen(false);

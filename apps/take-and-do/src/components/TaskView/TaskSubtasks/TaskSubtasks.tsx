@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, type ComponentProps } from "react";
+import { toast } from "sonner";
 
 import { Input } from "@/components/Input";
 import {
@@ -61,7 +62,11 @@ export function TaskSubtasks({
         subtasks: updatedSubtasks,
       });
 
-      if (updatedTask && onTaskUpdate) onTaskUpdate(updatedTask);
+      if (!updatedTask) {
+        toast.error("Can't add subtask");
+        return;
+      }
+      onTaskUpdate?.(updatedTask);
 
       setNewSubtaskSummary("");
       setIsCreatingSubtask(false);

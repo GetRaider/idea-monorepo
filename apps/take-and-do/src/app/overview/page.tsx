@@ -11,6 +11,7 @@ import { useGuestTasks } from "@/hooks/use-guest-store";
 import { useTasksSidebarWidthPx } from "@/hooks/useTasksSidebarWidthPx";
 import { guestTasksBySchedule } from "@/stores/guest/guest-task-filters";
 import { clientServices } from "@/services/client";
+import { toast } from "sonner";
 
 import {
   PageContainer,
@@ -50,6 +51,9 @@ function OverviewPage() {
           ...guestSchedule.tomorrow,
         ]);
         setTaskStats(dashboardStatsResponse);
+        if (!isAnonymous && dashboardStatsResponse === null) {
+          toast.error("Can't load dashboard stats");
+        }
       } finally {
         setIsLoading(false);
       }

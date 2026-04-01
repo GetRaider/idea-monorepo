@@ -165,7 +165,10 @@ export function TasksSidebar({
           createdAt: board.createdAt,
         },
       });
-      if (!updated) return;
+      if (!updated) {
+        toast.error("Can't update board");
+        return;
+      }
       setTaskBoards((previous: TaskBoard[]) =>
         previous.map((item: TaskBoard) =>
           item.id === updated.id ? updated : item,
@@ -243,7 +246,10 @@ export function TasksSidebar({
           createdAt: folder.createdAt,
         },
       });
-      if (!updated) return;
+      if (!updated) {
+        toast.error("Can't update folder");
+        return;
+      }
 
       setFolders((previous) =>
         previous.map((item) => (item.id === updated.id ? updated : item)),
@@ -318,7 +324,10 @@ export function TasksSidebar({
           },
         })
         .then((updated) => {
-          if (!updated) return;
+          if (!updated) {
+            toast.error("Can't move board");
+            return;
+          }
           setTaskBoards((previous) =>
             previous.map((item) => (item.id === updated.id ? updated : item)),
           );

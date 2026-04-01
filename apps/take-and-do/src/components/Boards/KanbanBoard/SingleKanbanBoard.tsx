@@ -34,6 +34,7 @@ import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
 import { EmptyState } from "../../EmptyState";
 import { AIComposeDialog } from "./shared/AIComposeDialog";
 import { clientServices } from "@/services/client";
+import { toast } from "sonner";
 
 interface SingleKanbanBoardProps {
   boardId: string;
@@ -99,7 +100,8 @@ export function SingleKanbanBoard({
 
   const persistTaskStatus = useCallback(
     async (taskId: string, newStatus: TaskStatus) => {
-      await updateTask(taskId, { status: newStatus });
+      const updated = await updateTask(taskId, { status: newStatus });
+      if (!updated) toast.error("Can't update task status");
     },
     [updateTask],
   );
@@ -225,7 +227,10 @@ export function SingleKanbanBoard({
         text,
         taskBoardId: boardId,
       });
-      if (!composedData) return;
+      if (!composedData) {
+        toast.error("Can't compose task with AI");
+        return;
+      }
       setSelectedTask(composedDataToTask(composedData));
     },
     [boardId, setSelectedTask],

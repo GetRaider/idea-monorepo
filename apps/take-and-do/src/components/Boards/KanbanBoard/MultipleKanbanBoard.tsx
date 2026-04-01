@@ -36,6 +36,7 @@ import { EmptyState } from "../../EmptyState";
 import { TasksWorkspaceEmptyState } from "../../TasksWorkspaceEmptyState";
 import { AIComposeDialog } from "./shared/AIComposeDialog";
 import { clientServices } from "@/services/client";
+import { toast } from "sonner";
 import type { TaskBoardWithTasks } from "@/types/workspace";
 import { tasksUrlHelper, type ScheduleDate } from "@/helpers/tasks-url.helper";
 import { tasksHelper } from "@/helpers/task.helper";
@@ -91,7 +92,8 @@ export function MultipleKanbanBoard({
 
   const persistTaskStatus = useCallback(
     async (taskId: string, newStatus: TaskStatus) => {
-      await updateTask(taskId, { status: newStatus });
+      const updated = await updateTask(taskId, { status: newStatus });
+      if (!updated) toast.error("Can't update task status");
     },
     [updateTask],
   );
@@ -214,7 +216,10 @@ export function MultipleKanbanBoard({
         taskBoardId,
         additionalData,
       });
-      if (!composedData) return;
+      if (!composedData) {
+        toast.error("Can't compose task with AI");
+        return;
+      }
       const overrideScheduleDate = scheduleDate ?? undefined;
       setSelectedTask(composedDataToTask(composedData, overrideScheduleDate));
       setSelectedBoardIdForAI(null);

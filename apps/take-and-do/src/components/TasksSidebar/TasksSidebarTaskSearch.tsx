@@ -43,9 +43,6 @@ export function TasksSidebarTaskSearch({
       .then((data) => {
         if (!cancelled) setTasks(data);
       })
-      .catch(() => {
-        if (!cancelled) setTasks([]);
-      })
       .finally(() => {
         if (!cancelled) setLoaded(true);
       });

@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useRef, useState } from "react";
+import { toast } from "sonner";
 import { clientServices } from "@/services/client";
 import { tasksHelper } from "@/helpers/task.helper";
 import { CloseIcon } from "@/components/Icons";
@@ -78,7 +79,10 @@ export function AIPlanningOptimizationDialog({
       const result = await clientServices.tasks.optimizeSchedule(
         Array.from(selectedTaskIds),
       );
-      if (!result) return;
+      if (!result) {
+        toast.error("Can't run schedule optimization");
+        return;
+      }
 
       const sanitized = {
         ...result.optimization,

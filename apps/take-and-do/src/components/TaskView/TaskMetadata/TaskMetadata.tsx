@@ -616,7 +616,10 @@ export function TaskMetadata({
       oldName,
       newName: trimmed,
     });
-    if (!newName) return;
+    if (!newName) {
+      toast.error("Can't rename label");
+      return;
+    }
     setAvailableLabels((prev) =>
       [...prev.map((l) => (l === oldName ? newName : l))].sort((a, b) =>
         a.localeCompare(b),
@@ -635,20 +638,24 @@ export function TaskMetadata({
     if (!labelPendingDelete) return;
     const name = labelPendingDelete;
     setLabelPendingDelete(null);
-    const result = await clientServices.labels.remove(name);
-    if (result === null) {
-      setAvailableLabels((prev) => prev.filter((l) => l !== name));
-      if (task.labels?.includes(name)) {
-        updateTask({ labels: task.labels.filter((l) => l !== name) });
-      }
-      toast.success("Label deleted");
+    const ok = await clientServices.labels.remove(name);
+    if (!ok) {
+      toast.error("Can't delete label");
+      return;
     }
+    setAvailableLabels((prev) => prev.filter((l) => l !== name));
+    if (task.labels?.includes(name)) {
+      updateTask({ labels: task.labels.filter((l) => l !== name) });
+    }
+    toast.success("Label deleted");
   };
   const handleCreateAndSelectLabel = async () => {
     if (labelSearchValue.trim()) {
       const newLabel = labelSearchValue.trim();
       const created = await clientServices.labels.create(newLabel);
-      if (created !== null) {
+      if (created === null) {
+        toast.error("Can't create label");
+      } else {
         setAvailableLabels((prev) => [...prev, newLabel]);
         const newLabels = [...(task?.labels || []), newLabel];
         updateTask({ labels: newLabels });

@@ -14,6 +14,7 @@ import { useWorkspaces } from "@/hooks/useWorkspaces";
 import { WorkspaceProvider } from "@/contexts/WorkspaceContext";
 import { useTasksSidebarWidthPx } from "@/hooks/useTasksSidebarWidthPx";
 import { clientServices } from "@/services/client";
+import { toast } from "sonner";
 
 export default function TasksLayout({
   children,
@@ -60,9 +61,12 @@ export default function TasksLayout({
     name: string,
     boardIdsToMove: string[] = [],
     emoji?: string | null,
-  ) => {
+  ): Promise<boolean> => {
     const folder = await clientServices.folders.create({ name, emoji });
-    if (!folder) return;
+    if (!folder) {
+      toast.error("Can't create folder");
+      return false;
+    }
     if (!isAnonymous) {
       setFolders((previous) => [...previous, folder]);
     }
@@ -101,20 +105,24 @@ export default function TasksLayout({
     }
 
     setIsWorkspaceCreateDialogOpen(false);
+    return true;
   };
 
   const handleCreateTaskBoard = async (
     name: string,
     folderId: string,
     emoji?: string | null,
-  ) => {
+  ): Promise<boolean> => {
     const createdBoard = await clientServices.taskBoards.create({
       name,
       folderId: folderId || undefined,
       isPublic: false,
       ...(emoji ? { emoji } : {}),
     });
-    if (!createdBoard) return;
+    if (!createdBoard) {
+      toast.error("Can't create board");
+      return false;
+    }
     const resolvedBoard = isAnonymous
       ? createdBoard
       : await waiterHelper.retry(
@@ -145,6 +153,7 @@ export default function TasksLayout({
     setIsWorkspaceCreateDialogOpen(false);
     router.push(tasksUrlHelper.routing.buildBoardUrl(resolvedBoard.name));
     router.refresh();
+    return true;
   };
 
   const workspaceValue = {

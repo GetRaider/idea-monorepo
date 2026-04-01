@@ -38,7 +38,7 @@ export const tasksUrlHelper = {
     },
 
     buildRootUrl(): string {
-      return "/tasks/root";
+      return "/tasks";
     },
 
     buildScheduleUrl(date: ScheduleDate): string {
@@ -106,7 +106,7 @@ export const tasksUrlHelper = {
 
     getActiveViewFromPathname(pathname: string): string {
       const normalized = pathname.replace(/\/+$/, "") || "/";
-      if (normalized === "/tasks" || normalized === "/tasks/root") {
+      if (normalized === "/tasks") {
         return TASKS_ROOT_VIEW_ID;
       }
       if (/^\/tasks\/schedule\/today(?:\/|$)/.test(pathname)) return "today";

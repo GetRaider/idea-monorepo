@@ -25,7 +25,8 @@ export class LabelsClientService extends BaseClientService {
     return result.data.label;
   }
 
-  async remove(name: string): Promise<void> {
-    await this.delete<{ ok: boolean }>({ body: { name } });
+  async remove(name: string): Promise<boolean> {
+    const result = await this.delete<{ ok: boolean }>({ body: { name } });
+    return this.isResultOk(result);
   }
 }

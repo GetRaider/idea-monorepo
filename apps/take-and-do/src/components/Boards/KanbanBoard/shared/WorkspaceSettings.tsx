@@ -51,7 +51,10 @@ export function WorkspaceSettings({ boardId }: WorkspaceSettingsProps) {
           boardSnapshot: board,
           skipCascade: isAnonymous,
         });
-        if (!updated) return;
+        if (!updated) {
+          toast.error("Can't update workspace visibility");
+          return;
+        }
         setTaskBoards((previous) =>
           previous.map((entry) => (entry.id === boardId ? updated : entry)),
         );

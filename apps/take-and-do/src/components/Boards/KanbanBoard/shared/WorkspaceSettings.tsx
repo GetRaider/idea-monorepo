@@ -51,6 +51,7 @@ export function WorkspaceSettings({ boardId }: WorkspaceSettingsProps) {
           boardSnapshot: board,
           skipCascade: isAnonymous,
         });
+        if (!updated) return;
         setTaskBoards((previous) =>
           previous.map((entry) => (entry.id === boardId ? updated : entry)),
         );

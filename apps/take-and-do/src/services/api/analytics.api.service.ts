@@ -1,16 +1,21 @@
 import { aiServices } from "@/services/ai";
 import { ForbiddenError } from "@/lib/api/errors";
+import { BaseApiService } from "@/services/api/base.api.service";
 
 import type { AnalyticsInput, AnalyticsOutput } from "@/services/ai";
 import type { TaskStatsInput, Timeframe } from "@/db/dtos";
-import type { DataAccess } from "@/db/data-access";
+import type { DataAccess } from "@/db/repositories/base.repository";
 import type { TasksRepository } from "@/db/repositories/tasks.repository";
 
-export class AnalyticsApiService {
-  constructor(private readonly repository: TasksRepository) {}
+export class AnalyticsApiService extends BaseApiService {
+  constructor(private readonly repository: TasksRepository) {
+    super();
+  }
 
   async getStatistics(timeframe: Timeframe, access: DataAccess) {
-    return this.repository.getTaskStatistics(timeframe, access);
+    return this.handleOperation(() =>
+      this.repository.getTaskStatistics(timeframe, access),
+    );
   }
 
   async generate(
@@ -19,20 +24,22 @@ export class AnalyticsApiService {
     shouldUseAI: boolean,
     isAnonymous: boolean,
   ): Promise<AnalyticsOutput> {
-    if (shouldUseAI) {
-      if (isAnonymous) {
-        throw new ForbiddenError(
-          "AI features are not available for guest users. Please sign in to use them.",
-        );
+    return this.handleOperation(async () => {
+      if (shouldUseAI) {
+        if (isAnonymous) {
+          throw new ForbiddenError(
+            "AI features are not available for guest users. Please sign in to use them.",
+          );
+        }
+        return this.generateAI({ stats, timeframe });
       }
-      return this.generateAI({ stats, timeframe });
-    }
 
-    return this.generateBasic(stats, timeframe);
+      return this.generateBasic(stats, timeframe);
+    });
   }
 
   async generateAI(input: AnalyticsInput): Promise<AnalyticsOutput> {
-    return aiServices.analytics.generate(input);
+    return this.handleOperation(() => aiServices.analytics.generate(input));
   }
 
   generateBasic(stats: TaskStatsInput, timeframe: Timeframe): AnalyticsOutput {
@@ -127,5 +134,9 @@ export class AnalyticsApiService {
     }
 
     return { summary, insights, risks, recommendations };
+  }
+
+  protected override mapError(error: unknown): never {
+    throw error;
   }
 }

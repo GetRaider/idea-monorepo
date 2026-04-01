@@ -61,48 +61,46 @@ export default function TasksLayout({
     boardIdsToMove: string[] = [],
     emoji?: string | null,
   ) => {
-    try {
-      const folder = await clientServices.folders.create({ name, emoji });
-      if (!isAnonymous) {
-        setFolders((previous) => [...previous, folder]);
-      }
-
-      if (boardIdsToMove.length > 0) {
-        const uniqueBoardIds = Array.from(new Set(boardIdsToMove));
-        const updatedBoards = await Promise.all(
-          uniqueBoardIds.map(async (boardId) => {
-            const board = taskBoards.find((item) => item.id === boardId);
-            if (!board) {
-              throw new Error(`Task board not found: ${boardId}`);
-            }
-            return clientServices.taskBoards.update({
-              id: boardId,
-              updates: {
-                name: board.name,
-                emoji: board.emoji,
-                folderId: folder.id,
-                isPublic: board.isPublic,
-                createdAt: board.createdAt,
-              },
-            });
-          }),
-        );
-
-        if (!isAnonymous) {
-          setTaskBoards((previous) => {
-            const updatedById = new Map(
-              updatedBoards.map((board) => [board.id, board]),
-            );
-            return previous.map((board) => updatedById.get(board.id) ?? board);
-          });
-        }
-      }
-
-      setIsWorkspaceCreateDialogOpen(false);
-    } catch (error) {
-      console.error("[TasksLayout] Failed to create folder:", error);
-      throw error;
+    const folder = await clientServices.folders.create({ name, emoji });
+    if (!folder) return;
+    if (!isAnonymous) {
+      setFolders((previous) => [...previous, folder]);
     }
+
+    if (boardIdsToMove.length > 0) {
+      const uniqueBoardIds = Array.from(new Set(boardIdsToMove));
+      const updatedBoards = await Promise.all(
+        uniqueBoardIds.map(async (boardId) => {
+          const board = taskBoards.find((item) => item.id === boardId);
+          if (!board) return null;
+          const updated = await clientServices.taskBoards.update({
+            id: boardId,
+            updates: {
+              name: board.name,
+              emoji: board.emoji,
+              folderId: folder.id,
+              isPublic: board.isPublic,
+              createdAt: board.createdAt,
+            },
+          });
+          if (!updated) return null;
+          return updated;
+        }),
+      );
+
+      if (!isAnonymous) {
+        setTaskBoards((previous) => {
+          const updatedById = new Map(
+            updatedBoards
+              .filter((board): board is NonNullable<typeof board> => !!board)
+              .map((board) => [board.id, board]),
+          );
+          return previous.map((board) => updatedById.get(board.id) ?? board);
+        });
+      }
+    }
+
+    setIsWorkspaceCreateDialogOpen(false);
   };
 
   const handleCreateTaskBoard = async (
@@ -110,41 +108,43 @@ export default function TasksLayout({
     folderId: string,
     emoji?: string | null,
   ) => {
-    try {
-      const createdBoard = await clientServices.taskBoards.create({
-        name,
-        folderId: folderId || undefined,
-        isPublic: false,
-        ...(emoji ? { emoji } : {}),
-      });
-      const resolvedBoard = isAnonymous
-        ? createdBoard
-        : await waiterHelper.retry(
-            () => clientServices.taskBoards.getById(createdBoard.id),
-            { retries: 5, timeout: 150 },
-          );
-
-      if (!isAnonymous) {
-        setTaskBoards((previous) => {
-          const existing = previous.find(
-            (board) => board.id === resolvedBoard.id,
-          );
-          if (existing) {
-            return previous.map((board) =>
-              board.id === resolvedBoard.id ? resolvedBoard : board,
+    const createdBoard = await clientServices.taskBoards.create({
+      name,
+      folderId: folderId || undefined,
+      isPublic: false,
+      ...(emoji ? { emoji } : {}),
+    });
+    if (!createdBoard) return;
+    const resolvedBoard = isAnonymous
+      ? createdBoard
+      : await waiterHelper.retry(
+          async () => {
+            const board = await clientServices.taskBoards.getById(
+              createdBoard.id,
             );
-          }
-          return [...previous, resolvedBoard];
-        });
-      }
+            if (!board) throw new Error("Task board not found");
+            return board;
+          },
+          { retries: 5, timeout: 150 },
+        );
 
-      setIsWorkspaceCreateDialogOpen(false);
-      router.push(tasksUrlHelper.routing.buildBoardUrl(resolvedBoard.name));
-      router.refresh();
-    } catch (error) {
-      console.error("[TasksLayout] Failed to create task board:", error);
-      throw error;
+    if (!isAnonymous) {
+      setTaskBoards((previous) => {
+        const existing = previous.find(
+          (board) => board.id === resolvedBoard.id,
+        );
+        if (existing) {
+          return previous.map((board) =>
+            board.id === resolvedBoard.id ? resolvedBoard : board,
+          );
+        }
+        return [...previous, resolvedBoard];
+      });
     }
+
+    setIsWorkspaceCreateDialogOpen(false);
+    router.push(tasksUrlHelper.routing.buildBoardUrl(resolvedBoard.name));
+    router.refresh();
   };
 
   const workspaceValue = {

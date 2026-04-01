@@ -2,6 +2,7 @@ import { Task } from "@/types/task";
 import { tasksHelper } from "@/helpers/task.helper";
 import { guestStoreHelper } from "@/stores/guest";
 import { TaskBoard } from "@/types/workspace";
+
 import { BaseClientService } from "./base.client.service";
 import { TasksClientService } from "./tasks.client.service";
 import { FoldersClientService } from "./folders.client.service";
@@ -15,32 +16,35 @@ export class TaskBoardsClientService extends BaseClientService {
   }
 
   async getAll(): Promise<TaskBoard[]> {
-    const response = await this.get<TaskBoard[]>();
-    return response.data.map(normalizeTaskBoard);
+    const result = await this.get<TaskBoard[]>({});
+    if (!this.isResultOk(result)) return [];
+    return result.data.map(normalizeTaskBoard);
   }
 
-  async getById(id: string): Promise<TaskBoard> {
-    const response = await this.get<TaskBoard[]>({ queries: { id } });
-    if (!response.data || response.data.length === 0)
-      throw new Error("TaskBoard not found");
-    return normalizeTaskBoard(response.data[0]);
+  async getById(id: string): Promise<TaskBoard | null> {
+    const result = await this.get<TaskBoard[]>({ queries: { id } });
+    if (!this.isResultOk(result) || result.data.length === 0) return null;
+    return normalizeTaskBoard(result.data[0]);
   }
 
   async getTasks(taskBoardId: string): Promise<Task[]> {
-    const response = await this.get<Task[]>({
+    const result = await this.get<Task[]>({
       pathParams: ["tasks"],
       queries: { taskBoardId },
     });
-    return response.data.map(normalizeTask);
+    if (!this.isResultOk(result)) return [];
+    return result.data.map(normalizeTask);
   }
 
   async create(
     taskBoard: Omit<TaskBoard, "id" | "createdAt" | "updatedAt">,
-  ): Promise<TaskBoard> {
-    const response = await this.post<TaskBoard & { guest?: boolean }>({
+  ): Promise<TaskBoard | null> {
+    const result = await this.post<TaskBoard & { guest?: boolean }>({
       body: taskBoard,
     });
-    const { guest, ...rest } = response.data as TaskBoard & { guest?: boolean };
+    if (!this.isResultOk(result)) return null;
+    const payload = result.data;
+    const { guest, ...rest } = payload as TaskBoard & { guest?: boolean };
     const normalized = normalizeTaskBoard(rest as TaskBoard);
     if (guest) guestStoreHelper.upsertTaskBoard(normalized);
     return normalized;
@@ -52,12 +56,14 @@ export class TaskBoardsClientService extends BaseClientService {
   }: {
     id: string;
     updates: TaskBoardUpdate;
-  }): Promise<TaskBoard> {
-    const response = await this.patch<TaskBoard & { guest?: boolean }>({
+  }): Promise<TaskBoard | null> {
+    const result = await this.patch<TaskBoard & { guest?: boolean }>({
       queries: { id },
       body: updates,
     });
-    const { guest, ...rest } = response.data as TaskBoard & { guest?: boolean };
+    if (!this.isResultOk(result)) return null;
+    const payload = result.data;
+    const { guest, ...rest } = payload as TaskBoard & { guest?: boolean };
     const normalized = normalizeTaskBoard(rest as TaskBoard);
     if (guest) guestStoreHelper.upsertTaskBoard(normalized);
     return normalized;
@@ -73,8 +79,9 @@ export class TaskBoardsClientService extends BaseClientService {
     toPublic: boolean;
     boardSnapshot?: TaskBoard;
     skipCascade?: boolean;
-  }): Promise<TaskBoard> {
+  }): Promise<TaskBoard | null> {
     const board = boardSnapshot ?? (await this.getById(id));
+    if (!board) return null;
     const updatedBoard = await this.update({
       id,
       updates: {
@@ -85,6 +92,7 @@ export class TaskBoardsClientService extends BaseClientService {
         createdAt: board.createdAt,
       },
     });
+    if (!updatedBoard) return null;
     if (skipCascade) return updatedBoard;
     const tasks = await this.tasksClientService.getByBoardId(id);
     for (const task of tasks) {
@@ -102,12 +110,14 @@ export class TaskBoardsClientService extends BaseClientService {
     return updatedBoard;
   }
 
-  async deleteBoard(id: string): Promise<void> {
-    const response = await this.delete<{ guest?: boolean; deleted?: boolean }>({
-      queries: { id },
-    });
-    const data = response.data as { guest?: boolean } | undefined;
-    if (data?.guest) guestStoreHelper.deleteTaskBoard(id);
+  async deleteBoard(id: string): Promise<null> {
+    const result = await this.delete<{
+      guest?: boolean;
+      deleted?: boolean;
+    }>({ queries: { id } });
+    if (this.isResultOk(result) && result.data?.guest)
+      guestStoreHelper.deleteTaskBoard(id);
+    return null;
   }
 }
 

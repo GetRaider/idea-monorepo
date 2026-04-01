@@ -57,8 +57,6 @@ export function SelectBoardDialog({
         if (allBoards.length > 0) {
           setSelectedBoardId(allBoards[0].id);
         }
-      } catch (error) {
-        console.error("Failed to fetch task boards:", error);
       } finally {
         setIsLoading(false);
       }

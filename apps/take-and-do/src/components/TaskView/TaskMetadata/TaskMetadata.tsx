@@ -451,14 +451,10 @@ export function TaskMetadata({
 
   useEffect(() => {
     const fetchLabels = async () => {
-      try {
-        const labels = await clientServices.labels.getAll();
-        setAvailableLabels(labels);
-      } catch (error) {
-        console.error("Failed to fetch labels:", error);
-      }
+      const labels = await clientServices.labels.getAll();
+      setAvailableLabels(labels);
     };
-    fetchLabels();
+    void fetchLabels();
   }, []);
 
   useLayoutEffect(() => {
@@ -616,55 +612,46 @@ export function TaskMetadata({
       setEditingCatalogLabel(null);
       return;
     }
-    try {
-      const newName = await clientServices.labels.rename({
-        oldName,
-        newName: trimmed,
+    const newName = await clientServices.labels.rename({
+      oldName,
+      newName: trimmed,
+    });
+    if (!newName) return;
+    setAvailableLabels((prev) =>
+      [...prev.map((l) => (l === oldName ? newName : l))].sort((a, b) =>
+        a.localeCompare(b),
+      ),
+    );
+    if (task.labels?.includes(oldName)) {
+      updateTask({
+        labels: task.labels.map((l) => (l === oldName ? newName : l)),
       });
-      setAvailableLabels((prev) =>
-        [...prev.map((l) => (l === oldName ? newName : l))].sort((a, b) =>
-          a.localeCompare(b),
-        ),
-      );
-      if (task.labels?.includes(oldName)) {
-        updateTask({
-          labels: task.labels.map((l) => (l === oldName ? newName : l)),
-        });
-      }
-      setEditingCatalogLabel(null);
-      toast.success("Label renamed");
-    } catch (error) {
-      console.error("Failed to rename label:", error);
-      toast.error("Failed to rename label");
     }
+    setEditingCatalogLabel(null);
+    toast.success("Label renamed");
   };
 
   const handleConfirmDeleteLabel = async () => {
     if (!labelPendingDelete) return;
     const name = labelPendingDelete;
     setLabelPendingDelete(null);
-    try {
-      await clientServices.labels.remove(name);
+    const result = await clientServices.labels.remove(name);
+    if (result === null) {
       setAvailableLabels((prev) => prev.filter((l) => l !== name));
       if (task.labels?.includes(name)) {
         updateTask({ labels: task.labels.filter((l) => l !== name) });
       }
       toast.success("Label deleted");
-    } catch (error) {
-      console.error("Failed to delete label:", error);
-      toast.error("Failed to delete label");
     }
   };
   const handleCreateAndSelectLabel = async () => {
     if (labelSearchValue.trim()) {
       const newLabel = labelSearchValue.trim();
-      try {
-        await clientServices.labels.create(newLabel);
+      const created = await clientServices.labels.create(newLabel);
+      if (created !== null) {
         setAvailableLabels((prev) => [...prev, newLabel]);
         const newLabels = [...(task?.labels || []), newLabel];
         updateTask({ labels: newLabels });
-      } catch (error) {
-        console.error("Failed to create label:", error);
       }
       setIsLabelDropdownOpen(false);
       setLabelSearchValue("");

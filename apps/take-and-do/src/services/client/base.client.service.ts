@@ -1,3 +1,5 @@
+"use client";
+
 import {
   HttpClient,
   type IBaseRequest,
@@ -5,17 +7,15 @@ import {
 } from "@repo/api/client";
 
 import { urlHelper } from "@repo/shared";
+import { toast } from "sonner";
+import type { ApiOk, ApiResult } from "./api-result.types";
+import { getAuthRedirectHandlers } from "./auth-redirect.registry";
 
 export class BaseClientService {
   protected readonly httpClient = new HttpClient();
   protected readonly baseUrl = "/api";
   protected readonly defaultHeaders = {
     // TODO: Define default headers
-    // Accept: "*/*",
-    // "Accept-Encoding": "gzip, deflate, br",
-    // "Accept-Language": "en-US,en;q=0.9",
-    // "User-Agent": "Mozilla/5.0",
-    // Connection: "keep-alive",
   };
 
   protected constructor(protected readonly relativeUrl: string) {}
@@ -24,39 +24,34 @@ export class BaseClientService {
     pathParams,
     queries,
     token,
-  }: IBaseRequest = {}): Promise<IHttpResponse<T>> {
-    return this.httpClient.get({
-      url: this.getUrl(pathParams, queries),
-      headers: this.getDefaultHeaders(token),
-    });
+  }: IBaseRequest = {}): Promise<ApiResult<T>> {
+    const url = this.getUrl(pathParams, queries);
+    return this.executeRequest(
+      () =>
+        this.httpClient.get<T>({
+          url,
+          headers: this.getDefaultHeaders(token),
+        }),
+      { method: "GET", url, body: undefined },
+    );
   }
-
-  // protected async getAtPath<T>(
-  //   pathSegments: string[],
-  //   queries: Record<string, string> = {},
-  // ): Promise<IHttpResponse<T>> {
-  //   const url = urlHelper.construct({
-  //     base: this.baseUrl,
-  //     params: pathSegments,
-  //     queries,
-  //   });
-  //   return this.httpClient.get({
-  //     url,
-  //     headers: this.getDefaultHeaders(),
-  //   });
-  // }
 
   protected async post<T>({
     body,
     pathParams,
     queries,
     token,
-  }: IBaseRequest = {}): Promise<IHttpResponse<T>> {
-    return this.httpClient.post({
-      url: this.getUrl(pathParams, queries),
-      headers: this.getDefaultHeaders(token),
-      body,
-    });
+  }: IBaseRequest = {}): Promise<ApiResult<T>> {
+    const url = this.getUrl(pathParams, queries);
+    return this.executeRequest(
+      () =>
+        this.httpClient.post<T>({
+          url,
+          headers: this.getDefaultHeaders(token),
+          body,
+        }),
+      { method: "POST", url, body },
+    );
   }
 
   protected async put<T>({
@@ -64,12 +59,17 @@ export class BaseClientService {
     queries,
     body,
     token,
-  }: IBaseRequest = {}): Promise<IHttpResponse<T>> {
-    return this.httpClient.put({
-      url: this.getUrl(pathParams, queries),
-      headers: this.getDefaultHeaders(token),
-      body,
-    });
+  }: IBaseRequest = {}): Promise<ApiResult<T>> {
+    const url = this.getUrl(pathParams, queries);
+    return this.executeRequest(
+      () =>
+        this.httpClient.put<T>({
+          url,
+          headers: this.getDefaultHeaders(token),
+          body,
+        }),
+      { method: "PUT", url, body },
+    );
   }
 
   protected async patch<T>({
@@ -77,12 +77,17 @@ export class BaseClientService {
     queries,
     body,
     token,
-  }: IBaseRequest = {}): Promise<IHttpResponse<T>> {
-    return this.httpClient.patch({
-      url: this.getUrl(pathParams, queries),
-      headers: this.getDefaultHeaders(token),
-      body,
-    });
+  }: IBaseRequest = {}): Promise<ApiResult<T>> {
+    const url = this.getUrl(pathParams, queries);
+    return this.executeRequest(
+      () =>
+        this.httpClient.patch<T>({
+          url,
+          headers: this.getDefaultHeaders(token),
+          body,
+        }),
+      { method: "PATCH", url, body },
+    );
   }
 
   protected async delete<T>({
@@ -90,12 +95,47 @@ export class BaseClientService {
     queries,
     token,
     body,
-  }: IBaseRequest = {}): Promise<IHttpResponse<T>> {
-    return this.httpClient.delete({
-      url: this.getUrl(pathParams, queries),
-      headers: this.getDefaultHeaders(token),
-      body,
-    });
+  }: IBaseRequest = {}): Promise<ApiResult<T>> {
+    const url = this.getUrl(pathParams, queries);
+    return this.executeRequest(
+      () =>
+        this.httpClient.delete<T>({
+          url,
+          headers: this.getDefaultHeaders(token),
+          body,
+        }),
+      { method: "DELETE", url, body },
+    );
+  }
+
+  private async executeRequest<T>(
+    operation: () => Promise<IHttpResponse<T>>,
+    context: {
+      method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+      url: string;
+      body?: unknown;
+    },
+  ): Promise<ApiResult<T>> {
+    try {
+      const response = await operation();
+      if (response.status >= 200 && response.status < 300) {
+        return { ok: true, data: response.data };
+      }
+      this.reportIfError({ ...context, response });
+      return {
+        ok: false,
+        kind: "http",
+        status: response.status,
+        body: response.data,
+      };
+    } catch (error) {
+      this.reportTransportFailure({ ...context, error });
+      return { ok: false, kind: "transport", cause: error };
+    }
+  }
+
+  protected isResultOk<T>(result: ApiResult<T>): result is ApiOk<T> {
+    return result.ok === true;
   }
 
   private getUrl(
@@ -124,4 +164,95 @@ export class BaseClientService {
       ...customHeaders,
     };
   }
+
+  private reportIfError({
+    method,
+    url,
+    body,
+    response,
+  }: {
+    method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+    url: string;
+    body?: unknown;
+    response: IHttpResponse<unknown>;
+  }) {
+    if (response.status >= 200 && response.status < 300) return;
+
+    if (response.status === 401) {
+      getAuthRedirectHandlers().onUnauthorized();
+      return;
+    }
+
+    if (response.status === 403) {
+      getAuthRedirectHandlers().onForbidden();
+      return;
+    }
+
+    const { message, details } = parseApiError(response.data);
+    const safeMessage = httpErrorToastMessage(message, response.status);
+    toast.error(safeMessage);
+    console.error("[API request failed]", {
+      method,
+      url,
+      status: response.status,
+      message,
+      details,
+      body,
+      responseData: response.data,
+      response,
+    });
+  }
+
+  private reportTransportFailure({
+    method,
+    url,
+    body,
+    error,
+  }: {
+    method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+    url: string;
+    body?: unknown;
+    error: unknown;
+  }) {
+    const message = error instanceof Error ? error.message : String(error);
+    toast.error("Network error");
+    console.error("[API transport failure — no HTTP response]", {
+      method,
+      url,
+      body,
+      message,
+      error,
+    });
+  }
+}
+
+function parseApiError(data: unknown): { message?: string; details?: string } {
+  if (typeof data === "string") {
+    const trimmed = data.trim();
+    return trimmed ? { message: trimmed } : {};
+  }
+  if (!data || typeof data !== "object") return {};
+  const record = data as Record<string, unknown>;
+  const error = record.error;
+  const details = record.details;
+  return {
+    message: typeof error === "string" ? error : undefined,
+    details: typeof details === "string" ? details : undefined,
+  };
+}
+
+function httpErrorToastMessage(
+  message: string | undefined,
+  status: number,
+): string {
+  const trimmed = message?.trim();
+  if (
+    trimmed &&
+    trimmed !== "undefined" &&
+    trimmed !== "null" &&
+    trimmed !== "[object Object]"
+  ) {
+    return trimmed;
+  }
+  return `Request failed (${status})`;
 }

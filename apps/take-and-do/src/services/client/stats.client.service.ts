@@ -5,9 +5,9 @@ export class StatsClientService extends BaseClientService {
     super("/stats");
   }
 
-  async getByTimeframe(timeframe: Timeframe): Promise<TaskStats> {
-    const response = await this.get<TaskStats>({ queries: { timeframe } });
-    return response.data;
+  async getByTimeframe(timeframe: Timeframe): Promise<TaskStats | null> {
+    const result = await this.get<TaskStats>({ queries: { timeframe } });
+    return this.isResultOk(result) ? result.data : null;
   }
 }
 

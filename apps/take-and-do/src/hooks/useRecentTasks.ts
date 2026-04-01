@@ -32,9 +32,6 @@ export function useRecentTasks(tasksNumber: number = 7): UseRecentTasksReturn {
       try {
         const tasks = await clientServices.tasks.getRecent(tasksNumber);
         if (isMounted) setRecentTasks(tasks);
-      } catch (error) {
-        console.error("Failed to fetch recent tasks:", error);
-        if (isMounted) setRecentTasks([]);
       } finally {
         if (isMounted) setIsLoadingRecent(false);
       }

@@ -1,7 +1,10 @@
 import { headers } from "next/headers";
 
 import { ForbiddenError, UnauthorizedError } from "@/lib/api/errors";
-import { type DataAccess, isAnonymousUser } from "@/db/data-access";
+import {
+  isAnonymousUser,
+  type DataAccess,
+} from "@/db/repositories/base.repository";
 import { auth } from "./server";
 
 export function getAccessByAuth(authContext: AuthenticatedContext): DataAccess {

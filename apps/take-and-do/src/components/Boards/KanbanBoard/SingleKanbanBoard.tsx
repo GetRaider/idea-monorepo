@@ -128,10 +128,6 @@ export function SingleKanbanBoard({
       });
       if (!isMountedRef.current || seq !== fetchSeqRef.current) return;
       setTasksByStatus(tasksByStatusMap);
-    } catch (error) {
-      if (!isMountedRef.current || seq !== fetchSeqRef.current) return;
-      console.error("Failed to fetch tasks:", error);
-      setTasksByStatus(emptyTaskColumns);
     } finally {
       if (!isMountedRef.current || seq !== fetchSeqRef.current) return;
       setIsLoading(false);
@@ -225,16 +221,12 @@ export function SingleKanbanBoard({
         console.error("Cannot compose task: taskBoardId not found");
         return;
       }
-      try {
-        const composedData = await clientServices.tasks.composeWithAI({
-          text,
-          taskBoardId: boardId,
-        });
-        setSelectedTask(composedDataToTask(composedData));
-      } catch (error) {
-        console.error("Failed to compose task with AI:", error);
-        throw error;
-      }
+      const composedData = await clientServices.tasks.composeWithAI({
+        text,
+        taskBoardId: boardId,
+      });
+      if (!composedData) return;
+      setSelectedTask(composedDataToTask(composedData));
     },
     [boardId, setSelectedTask],
   );

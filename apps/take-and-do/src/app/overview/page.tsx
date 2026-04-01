@@ -33,8 +33,8 @@ function OverviewPage() {
 
   useEffect(() => {
     const fetchData = async () => {
+      setIsLoading(true);
       try {
-        setIsLoading(true);
         const [scheduledTasks, dashboardStatsResponse] = await Promise.all([
           clientServices.tasks.getBySchedule(),
           clientServices.stats.getByTimeframe("month"),
@@ -50,8 +50,6 @@ function OverviewPage() {
           ...guestSchedule.tomorrow,
         ]);
         setTaskStats(dashboardStatsResponse);
-      } catch (error) {
-        console.error("Failed to fetch data:", error);
       } finally {
         setIsLoading(false);
       }

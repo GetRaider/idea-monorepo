@@ -3,11 +3,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, requireNonAnonymous } from "@/auth/guards";
 import { apiServices } from "@/services/api";
 import { handleRoute } from "@/lib/api/handleRoute";
-import {
-  BadRequestError,
-  ConflictError,
-  NotFoundError,
-} from "@/lib/api/errors";
 import { CreateLabelDto, DeleteLabelDto, RenameLabelDto } from "@/db/dtos";
 
 export const GET = handleRoute(async () => {
@@ -26,18 +21,8 @@ export const POST = handleRoute(async (request: NextRequest) => {
 export const PATCH = handleRoute(async (request: NextRequest) => {
   await requireNonAnonymous();
   const { oldName, newName } = RenameLabelDto.parse(await request.json());
-  try {
-    const label = await apiServices.labels.rename(oldName.trim(), newName);
-    return NextResponse.json({ label });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "";
-    if (message === "Label not found") throw new NotFoundError("Label");
-    if (message === "A label with that name already exists")
-      throw new ConflictError(message);
-    if (message === "Label name is required")
-      throw new BadRequestError(message);
-    throw error;
-  }
+  const label = await apiServices.labels.rename(oldName.trim(), newName);
+  return NextResponse.json({ label });
 });
 
 export const DELETE = handleRoute(async (request: NextRequest) => {

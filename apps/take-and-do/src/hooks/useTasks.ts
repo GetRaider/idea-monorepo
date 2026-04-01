@@ -64,10 +64,6 @@ export function useTasks({
         });
         if (localRequestId !== requestIdRef.current) return;
         setDbTasks(tasksResult);
-      } catch (error) {
-        if (localRequestId !== requestIdRef.current) return;
-        console.error("[useTasks] Failed to fetch tasks:", error);
-        setDbTasks([]);
       } finally {
         if (localRequestId !== requestIdRef.current) return;
         setIsLoading(false);
@@ -106,8 +102,7 @@ export function useTaskActions() {
     async (taskId: string, patch: TaskUpdate) => {
       if (isAnonymous) {
         const result = update(taskId, patch);
-        if (!result) throw new Error("Task not found");
-        return result;
+        return result ?? null;
       }
       return clientServices.tasks.update({ taskId, updates: patch });
     },
@@ -118,9 +113,9 @@ export function useTaskActions() {
     async (taskId: string) => {
       if (isAnonymous) {
         remove(taskId);
-        return;
+        return null;
       }
-      await clientServices.tasks.deleteById(taskId);
+      return clientServices.tasks.deleteById(taskId);
     },
     [isAnonymous, remove],
   );

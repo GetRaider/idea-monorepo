@@ -7,6 +7,7 @@ import { Theme } from "@radix-ui/themes";
 import { Analytics } from "@/components/Analytics";
 import { GuestBanner } from "@/components/GuestBanner";
 import { GuestStoreGuard } from "@/components/GuestStoreGuard";
+import { AuthRedirectRegistrar } from "@/services/client/auth-redirect.registrar";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -46,6 +47,7 @@ export default function RootLayout({
           hasBackground={false}
         >
           <Analytics />
+          <AuthRedirectRegistrar />
           <GuestStoreGuard />
           <GuestBanner />
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">

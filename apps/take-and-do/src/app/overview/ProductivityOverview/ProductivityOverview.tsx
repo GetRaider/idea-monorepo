@@ -59,13 +59,11 @@ export function ProductivityOverview() {
 
   useEffect(() => {
     const fetchStats = async () => {
+      setIsLoading(true);
       try {
-        setIsLoading(true);
         const fetchedStats =
           await clientServices.analytics.getStatsByTimeframe(timeframe);
         setStats(fetchedStats);
-      } catch (error) {
-        console.error("Failed to fetch statistics:", error);
       } finally {
         setIsLoading(false);
       }
@@ -86,11 +84,11 @@ export function ProductivityOverview() {
   const handleSave = async () => {
     if (selectedOption === null) return;
 
+    setIsGeneratingAnalytics(true);
     try {
-      setIsGeneratingAnalytics(true);
-
       const fetchedStats =
         await clientServices.analytics.getStatsByTimeframe(timeframe);
+      if (!fetchedStats) return;
 
       const generatedAnalytics = await clientServices.analytics.generateSummary(
         {
@@ -99,13 +97,12 @@ export function ProductivityOverview() {
           shouldUseAI: selectedOption === "ai",
         },
       );
+      if (!generatedAnalytics) return;
 
       setAnalytics(generatedAnalytics);
       setIsSelectionDialogOpen(false);
       setIsResultsDialogOpen(true);
       setSelectedOption(null);
-    } catch (error) {
-      console.error("Failed to generate analytics:", error);
     } finally {
       setIsGeneratingAnalytics(false);
     }

@@ -48,11 +48,6 @@ export function useWorkspaces(): UseWorkspacesReturn {
         if (!isMounted) return;
         setFolders(fetchedFolders);
         setTaskBoards(fetchedBoards);
-      } catch (error) {
-        if (!isMounted) return;
-        console.error("[useWorkspaces] Failed to fetch workspaces:", error);
-        setFolders([]);
-        setTaskBoards([]);
       } finally {
         if (!isMounted) return;
         setIsFoldersLoading(false);

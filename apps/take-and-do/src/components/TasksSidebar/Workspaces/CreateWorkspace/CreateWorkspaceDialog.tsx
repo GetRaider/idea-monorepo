@@ -53,12 +53,6 @@ export function CreateWorkspaceDialog({
         await onCreateBoard(name.trim(), folderId, emoji);
       }
       toast.success(type === "folder" ? "Folder created" : "Board created");
-    } catch {
-      toast.error(
-        type === "folder"
-          ? "Failed to create folder"
-          : "Failed to create board",
-      );
     } finally {
       setIsCreating(false);
     }

@@ -1,8 +1,9 @@
 import { Task, TaskUpdate, toTaskPriority } from "@/types/task";
 import type { ComposeTaskOutput } from "@/services/ai/schemas";
 import { guestStoreHelper } from "@/stores/guest";
-import { BaseClientService } from "./base.client.service";
 import { tasksHelper } from "@/helpers/task.helper";
+
+import { BaseClientService } from "./base.client.service";
 
 export class TasksClientService extends BaseClientService {
   constructor() {
@@ -10,8 +11,9 @@ export class TasksClientService extends BaseClientService {
   }
 
   async getAll(): Promise<Task[]> {
-    const response = await this.get<Task[]>();
-    return response.data.map((task: Task) => normalizeTask(task));
+    const result = await this.get<Task[]>({});
+    if (!this.isResultOk(result)) return [];
+    return result.data.map((task: Task) => normalizeTask(task));
   }
 
   async getBySchedule(): Promise<{
@@ -23,7 +25,7 @@ export class TasksClientService extends BaseClientService {
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    const [todayResponse, tomorrowResponse] = await Promise.all([
+    const [todayResult, tomorrowResult] = await Promise.all([
       this.get<Task[]>({
         queries: { date: tasksHelper.date.formatForAPI(today) },
       }),
@@ -32,13 +34,10 @@ export class TasksClientService extends BaseClientService {
       }),
     ]);
 
-    if (todayResponse.status !== 200 || tomorrowResponse.status !== 200) {
-      console.error("Failed to fetch scheduled tasks");
-      return { today: [], tomorrow: [] };
-    }
-
-    const todayTasks = todayResponse.data;
-    const tomorrowTasks = tomorrowResponse.data;
+    const todayTasks = this.isResultOk(todayResult) ? todayResult.data : [];
+    const tomorrowTasks = this.isResultOk(tomorrowResult)
+      ? tomorrowResult.data
+      : [];
 
     return {
       today: todayTasks.map((task: Task) => normalizeTask(task)),
@@ -47,10 +46,12 @@ export class TasksClientService extends BaseClientService {
   }
 
   async getByDate(date: Date): Promise<Task[]> {
-    // Format date in local timezone, not UTC
     const dateString = tasksHelper.date.formatForAPI(date);
-    const response = await this.get<Task[]>({ queries: { date: dateString } });
-    return response.data.map((task: Task) => normalizeTask(task));
+    const result = await this.get<Task[]>({
+      queries: { date: dateString },
+    });
+    if (!this.isResultOk(result)) return [];
+    return result.data.map((task: Task) => normalizeTask(task));
   }
 
   async getRecent(days: number = 7): Promise<Task[]> {
@@ -74,36 +75,41 @@ export class TasksClientService extends BaseClientService {
   }
 
   async getByBoardId(boardId: string): Promise<Task[]> {
-    const response = await super.get<Task[]>({
+    const result = await this.get<Task[]>({
       queries: { taskBoardId: boardId },
     });
-    return response.data.map((task: Task) => normalizeTask(task));
+    if (!this.isResultOk(result)) return [];
+    return result.data.map((task: Task) => normalizeTask(task));
   }
 
-  async getById(taskId: string): Promise<Task> {
-    const response = await super.get<Task>({ pathParams: [taskId] });
-    return normalizeTask(response.data);
+  async getById(taskId: string): Promise<Task | null> {
+    const result = await this.get<Task>({ pathParams: [taskId] });
+    if (!this.isResultOk(result)) return null;
+    return normalizeTask(result.data);
   }
 
   async getByKey(
     taskKey: string,
-  ): Promise<{ task: Task; parent: Task | null }> {
-    const response = await super.get<{ task: Task; parent: Task | null }>({
+  ): Promise<{ task: Task; parent: Task | null } | null> {
+    const result = await this.get<{ task: Task; parent: Task | null }>({
       pathParams: ["by-key", taskKey],
     });
+    if (!this.isResultOk(result)) return null;
+    const data = result.data;
     return {
-      task: normalizeTask(response.data.task),
-      parent: response.data.parent ? normalizeTask(response.data.parent) : null,
+      task: normalizeTask(data.task),
+      parent: data.parent ? normalizeTask(data.parent) : null,
     };
   }
 
   async create(
     task: Omit<Task, "id"> & { taskBoardName?: string },
-  ): Promise<Task> {
-    const response = await super.post<Task & { guest?: boolean }>({
+  ): Promise<Task | null> {
+    const result = await this.post<Task & { guest?: boolean }>({
       body: task,
     });
-    const raw = response.data;
+    if (!this.isResultOk(result)) return null;
+    const raw = result.data;
     const { guest, ...rest } = raw as Task & { guest?: boolean };
     const normalized = normalizeTask(rest as Task);
     if (guest) {
@@ -120,8 +126,8 @@ export class TasksClientService extends BaseClientService {
     text: string;
     taskBoardId: string;
     additionalData?: Partial<Omit<Task, "id">>;
-  }): Promise<ComposeTaskOutput> {
-    const response = await super.post<ComposeTaskOutput>({
+  }): Promise<ComposeTaskOutput | null> {
+    const result = await this.post<ComposeTaskOutput>({
       body: {
         shouldUseAI: true,
         text,
@@ -130,7 +136,7 @@ export class TasksClientService extends BaseClientService {
         _composeOnly: true,
       },
     });
-    return response.data;
+    return this.isResultOk(result) ? result.data : null;
   }
 
   async createWithAI({
@@ -141,8 +147,8 @@ export class TasksClientService extends BaseClientService {
     text: string;
     taskBoardId: string;
     additionalData?: Partial<Omit<Task, "id">>;
-  }): Promise<Task> {
-    const response = await super.post<Task>({
+  }): Promise<Task | null> {
+    const result = await this.post<Task>({
       body: {
         shouldUseAI: true,
         text,
@@ -150,7 +156,8 @@ export class TasksClientService extends BaseClientService {
         ...additionalData,
       },
     });
-    return normalizeTask(response.data);
+    if (!this.isResultOk(result)) return null;
+    return normalizeTask(result.data);
   }
 
   async update({
@@ -159,33 +166,36 @@ export class TasksClientService extends BaseClientService {
   }: {
     taskId: string;
     updates: TaskUpdate;
-  }): Promise<Task> {
-    const response = await super.patch<Task>({
+  }): Promise<Task | null> {
+    const result = await this.patch<Task>({
       pathParams: [taskId],
       body: updates,
     });
-    return normalizeTask(response.data);
+    if (!this.isResultOk(result)) return null;
+    return normalizeTask(result.data);
   }
 
-  async deleteById(taskId: string): Promise<void> {
-    await super.delete<void>({ pathParams: [taskId] });
+  async deleteById(taskId: string): Promise<null> {
+    await this.delete<void>({ pathParams: [taskId] });
+    return null;
   }
 
-  async deleteAllForBoard(boardId: string): Promise<number> {
-    const response = await super.delete<{ deleted: number }>({
+  async deleteAllForBoard(boardId: string): Promise<number | null> {
+    const result = await this.delete<{ deleted: number }>({
       queries: { taskBoardId: boardId },
     });
-    return response.data.deleted;
+    if (!this.isResultOk(result)) return null;
+    return result.data?.deleted ?? null;
   }
 
   async optimizeSchedule(
     taskIds: string[],
-  ): Promise<ScheduleOptimizationResult> {
-    const response = await super.post<ScheduleOptimizationResult>({
+  ): Promise<ScheduleOptimizationResult | null> {
+    const result = await this.post<ScheduleOptimizationResult>({
       body: { taskIds },
       pathParams: ["optimization"],
     });
-    return response.data;
+    return this.isResultOk(result) ? result.data : null;
   }
 }
 
@@ -212,7 +222,6 @@ interface ScheduleOptimizationResult {
   tasksCount: number;
 }
 
-// Helper to normalize a task (including subtasks) from API response
 function normalizeTask(task: Task): Task {
   return {
     ...task,

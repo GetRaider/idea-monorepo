@@ -36,7 +36,6 @@ export function BoardHealthPanel({ boards }: { boards: TaskBoard[] }) {
     Record<string, StatusCounts | undefined>
   >({});
   const [isLoading, setIsLoading] = useState(true);
-  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
     if (boards.length === 0) {
@@ -48,7 +47,6 @@ export function BoardHealthPanel({ boards }: { boards: TaskBoard[] }) {
 
     const run = async () => {
       setIsLoading(true);
-      setLoadError(false);
       try {
         if (isAnonymous) {
           const results = boards.map((board) => {
@@ -68,8 +66,6 @@ export function BoardHealthPanel({ boards }: { boards: TaskBoard[] }) {
         );
         if (cancelled) return;
         setCountsByBoardId(Object.fromEntries(results));
-      } catch {
-        if (!cancelled) setLoadError(true);
       } finally {
         if (!cancelled) setIsLoading(false);
       }
@@ -117,10 +113,6 @@ export function BoardHealthPanel({ boards }: { boards: TaskBoard[] }) {
 
       {isLoading ? (
         <p className="mt-4 text-sm text-[var(--text-secondary)]">Loading…</p>
-      ) : loadError ? (
-        <p className="mt-4 text-sm text-[var(--text-secondary)]">
-          Could not load task stats.
-        </p>
       ) : totalTasks === 0 ? (
         <p className="mt-4 text-sm leading-relaxed text-[var(--text-secondary)]">
           You haven&apos;t made any progress yet — give it a shot.

@@ -1,7 +1,11 @@
+import { BaseApiService } from "@/services/api/base.api.service";
+
 import type { LabelsRepository } from "@/db/repositories/labels.repository";
 
-export class LabelsApiService {
-  constructor(private readonly repository: LabelsRepository) {}
+export class LabelsApiService extends BaseApiService {
+  constructor(private readonly repository: LabelsRepository) {
+    super();
+  }
 
   async getAll() {
     return this.repository.getAllLabels();
@@ -12,10 +16,21 @@ export class LabelsApiService {
   }
 
   async rename(oldName: string, newName: string) {
-    return this.repository.renameLabel(oldName, newName);
+    return this.handleOperation(() =>
+      this.repository.renameLabel(oldName, newName),
+    );
   }
 
   async delete(name: string) {
     return this.repository.deleteLabelByName(name);
+  }
+
+  protected override mapError(error: unknown): never {
+    const message = error instanceof Error ? error.message : "";
+    if (message === "Label not found") this.notFound("Label");
+    if (message === "Label name is required") this.badRequest(message);
+    if (message === "Label name is already taken") this.conflict(message);
+    if (message === "Label name is required") this.badRequest(message);
+    throw error;
   }
 }

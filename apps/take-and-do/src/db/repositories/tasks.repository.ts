@@ -1,11 +1,12 @@
 import { eq, and, isNull, inArray, gte, lt } from "drizzle-orm";
 
-import { type DataAccess, dataAccessFilter } from "@/db/data-access";
+import type { DataAccess } from "@/db/repositories/base.repository";
 import { DB } from "@/db/client";
 import { tasks } from "@/db/schemas/task.schema";
 import { labelsTable } from "@/db/schemas/label.schema";
 import { TaskPriority, TaskStatus } from "@/types/task";
 import { TaskBoardsRepository } from "./task-boards.repository";
+import { BaseRepository } from "@/db/repositories/base.repository";
 import { tasksHelper } from "@/helpers/task.helper";
 import {
   assignSubtaskIdsAndKeys,
@@ -16,11 +17,13 @@ import {
 import { genericHelper } from "@/helpers/generic.helper";
 import type { Task, TaskUpdate } from "@/types/task";
 
-export class TasksRepository {
+export class TasksRepository extends BaseRepository {
   constructor(
-    private readonly db: DB,
+    db: DB,
     private readonly taskBoardsRepository: TaskBoardsRepository,
-  ) {}
+  ) {
+    super(db);
+  }
 
   async getAllTasks(access: DataAccess): Promise<Task[]> {
     return this.loadAllTasksWithRelations(access);
@@ -38,11 +41,7 @@ export class TasksRepository {
   }
 
   async getTaskById(taskId: string, access: DataAccess): Promise<Task | null> {
-    const accessCond = dataAccessFilter(
-      tasks,
-      access.userId,
-      access.isAnonymous,
-    );
+    const accessCond = this.accessWhere(tasks, access);
     const taskRows = await this.db
       .select()
       .from(tasks)
@@ -63,11 +62,7 @@ export class TasksRepository {
     taskKey: string,
     access: DataAccess,
   ): Promise<{ task: Task; parent: Task | null } | null> {
-    const accessCond = dataAccessFilter(
-      tasks,
-      access.userId,
-      access.isAnonymous,
-    );
+    const accessCond = this.accessWhere(tasks, access);
     const taskRows = await this.db
       .select()
       .from(tasks)
@@ -200,11 +195,7 @@ export class TasksRepository {
     updates: TaskUpdate,
     access: DataAccess,
   ): Promise<Task | null> {
-    const accessCond = dataAccessFilter(
-      tasks,
-      access.userId,
-      access.isAnonymous,
-    );
+    const accessCond = this.accessWhere(tasks, access);
     const existingRows = await this.db
       .select()
       .from(tasks)
@@ -331,11 +322,7 @@ export class TasksRepository {
     taskBoardId: string,
     access: DataAccess,
   ): Promise<number> {
-    const accessCond = dataAccessFilter(
-      tasks,
-      access.userId,
-      access.isAnonymous,
-    );
+    const accessCond = this.accessWhere(tasks, access);
     const rows = await this.db
       .select({ id: tasks.id })
       .from(tasks)
@@ -352,11 +339,7 @@ export class TasksRepository {
     access: DataAccess,
   ): Promise<TaskForOptimization[]> {
     if (taskIds.length === 0) return [];
-    const accessCond = dataAccessFilter(
-      tasks,
-      access.userId,
-      access.isAnonymous,
-    );
+    const accessCond = this.accessWhere(tasks, access);
     const rows = await this.db
       .select({
         id: tasks.id,
@@ -403,11 +386,7 @@ export class TasksRepository {
         break;
     }
 
-    const accessCond = dataAccessFilter(
-      tasks,
-      access.userId,
-      access.isAnonymous,
-    );
+    const accessCond = this.accessWhere(tasks, access);
     const query = this.db
       .select({
         id: tasks.id,
@@ -464,11 +443,7 @@ export class TasksRepository {
     timeframe: "all" | "week" | "month" | "quarter",
     access: DataAccess,
   ): Promise<TaskCounts> {
-    const accessCond = dataAccessFilter(
-      tasks,
-      access.userId,
-      access.isAnonymous,
-    );
+    const accessCond = this.accessWhere(tasks, access);
     const conditions = [accessCond];
 
     if (timeframe !== "all") {
@@ -516,11 +491,7 @@ export class TasksRepository {
     parentTaskId: string,
     access: DataAccess,
   ): Promise<number> {
-    const accessCond = dataAccessFilter(
-      tasks,
-      access.userId,
-      access.isAnonymous,
-    );
+    const accessCond = this.accessWhere(tasks, access);
     const rows = await this.db
       .select({ taskKey: tasks.taskKey })
       .from(tasks)
@@ -546,7 +517,7 @@ export class TasksRepository {
       .where(
         and(
           eq(tasks.taskBoardId, taskBoardId),
-          dataAccessFilter(tasks, access.userId, access.isAnonymous),
+          this.accessWhere(tasks, access),
         ),
       );
 
@@ -588,7 +559,7 @@ export class TasksRepository {
       .where(
         and(
           eq(tasks.parentTaskId, parentTaskId),
-          dataAccessFilter(tasks, access.userId, access.isAnonymous),
+          this.accessWhere(tasks, access),
         ),
       );
 
@@ -651,11 +622,7 @@ export class TasksRepository {
       parentTaskId?: string | null;
     },
   ): Promise<Task[]> {
-    const accessCond = dataAccessFilter(
-      tasks,
-      access.userId,
-      access.isAnonymous,
-    );
+    const accessCond = this.accessWhere(tasks, access);
     let allTaskRows: Array<typeof tasks.$inferSelect> = [];
 
     if (filter?.date) {
@@ -772,11 +739,7 @@ export class TasksRepository {
       taskBoardId,
       access,
     );
-    const accessCond = dataAccessFilter(
-      tasks,
-      access.userId,
-      access.isAnonymous,
-    );
+    const accessCond = this.accessWhere(tasks, access);
 
     const existingSubtasks = await this.db
       .select()

@@ -75,25 +75,20 @@ export function TimelinePlanning({
   };
 
   const handleTaskClick = async (task: Task) => {
-    try {
-      const taskBoard = isAnonymous
-        ? guestStoreHelper.getTaskBoardById(task.taskBoardId)
-        : await clientServices.taskBoards.getById(task.taskBoardId);
-      if (!taskBoard) {
-        toast.error("Task board not found.");
-        return;
-      }
-      router.push(
-        tasksUrlHelper.routing.buildTasksUrl({
-          type: "board",
-          boardName: taskBoard.name,
-          taskKey: task.taskKey,
-        }),
-      );
-    } catch (error) {
-      console.error("[TimelinePlanning] Failed to open task:", error);
-      toast.error("Failed to open task board.");
+    const taskBoard = isAnonymous
+      ? guestStoreHelper.getTaskBoardById(task.taskBoardId)
+      : await clientServices.taskBoards.getById(task.taskBoardId);
+    if (!taskBoard) {
+      if (isAnonymous) toast.error("Task board not found.");
+      return;
     }
+    router.push(
+      tasksUrlHelper.routing.buildTasksUrl({
+        type: "board",
+        boardName: taskBoard.name,
+        taskKey: task.taskKey,
+      }),
+    );
   };
 
   return (

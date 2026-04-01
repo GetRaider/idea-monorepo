@@ -78,6 +78,7 @@ export function AIPlanningOptimizationDialog({
       const result = await clientServices.tasks.optimizeSchedule(
         Array.from(selectedTaskIds),
       );
+      if (!result) return;
 
       const sanitized = {
         ...result.optimization,
@@ -95,8 +96,6 @@ export function AIPlanningOptimizationDialog({
       };
 
       setExploration(sanitized);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to explore");
     } finally {
       setIsExploring(false);
     }
@@ -145,8 +144,6 @@ export function AIPlanningOptimizationDialog({
       }
 
       onClose();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to optimize");
     } finally {
       setIsOptimizing(false);
     }

@@ -1,12 +1,10 @@
 import { eq } from "drizzle-orm";
 
-import { DB } from "@/db/client";
 import { labelsTable } from "@/db/schemas/label.schema";
 import { genericHelper } from "@/helpers/generic.helper";
+import { BaseRepository } from "@/db/repositories/base.repository";
 
-export class LabelsRepository {
-  constructor(private readonly db: DB) {}
-
+export class LabelsRepository extends BaseRepository {
   async getAllLabels(): Promise<string[]> {
     const rows = await this.db.select().from(labelsTable);
     return rows.map((row) => row.name);

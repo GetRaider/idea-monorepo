@@ -1,5 +1,6 @@
 import { guestStoreHelper } from "@/stores/guest";
 import { Folder } from "@/types/workspace";
+
 import { BaseClientService } from "./base.client.service";
 
 export class FoldersClientService extends BaseClientService {
@@ -8,29 +9,24 @@ export class FoldersClientService extends BaseClientService {
   }
 
   async getAll(): Promise<Folder[]> {
-    const response = await this.get<Folder[]>();
-    return response.data.map(normalizeFolder);
+    const result = await this.get<Folder[]>({});
+    if (!this.isResultOk(result)) return [];
+    return result.data.map(normalizeFolder);
   }
 
-  async getById(id: string): Promise<Folder> {
-    const response = await this.get<Folder>({ pathParams: [id] });
-    return normalizeFolder(response.data);
+  async getById(id: string): Promise<Folder | null> {
+    const result = await this.get<Folder>({ pathParams: [id] });
+    if (!this.isResultOk(result)) return null;
+    return normalizeFolder(result.data);
   }
 
-  async create({
-    name,
-    emoji,
-  }: {
+  async create(params: {
     name: string;
     emoji?: string | null;
-  }): Promise<Folder> {
-    const response = await this.post<Folder & { guest?: boolean }>({
-      body: { name, ...(emoji !== undefined ? { emoji } : {}) },
-    });
-    const { guest, ...rest } = response.data as Folder & { guest?: boolean };
-    const normalized = normalizeFolder(rest as Folder);
-    if (guest) guestStoreHelper.upsertFolder(normalized);
-    return normalized;
+  }): Promise<Folder | null> {
+    const result = await this.post<Folder>({ body: params });
+    if (!this.isResultOk(result)) return null;
+    return normalizeFolder(result.data);
   }
 
   async update({
@@ -39,23 +35,25 @@ export class FoldersClientService extends BaseClientService {
   }: {
     id: string;
     updates: FolderUpdate;
-  }): Promise<Folder> {
-    const response = await this.patch<Folder & { guest?: boolean }>({
+  }): Promise<Folder | null> {
+    const result = await this.patch<Folder & { guest?: boolean }>({
       pathParams: [id],
       body: updates,
     });
-    const { guest, ...rest } = response.data as Folder & { guest?: boolean };
+    if (!this.isResultOk(result)) return null;
+    const payload = result.data;
+    const { guest, ...rest } = payload as Folder & { guest?: boolean };
     const normalized = normalizeFolder(rest as Folder);
     if (guest) guestStoreHelper.upsertFolder(normalized);
     return normalized;
   }
 
   async deleteFolder(id: string): Promise<void> {
-    const response = await this.delete<{ guest?: boolean; deleted?: boolean }>({
+    const result = await this.delete<{ guest?: boolean; deleted?: boolean }>({
       pathParams: [id],
     });
-    const data = response.data as { guest?: boolean } | undefined;
-    if (data?.guest) guestStoreHelper.deleteFolder(id);
+    if (this.isResultOk(result) && result.data?.guest)
+      guestStoreHelper.deleteFolder(id);
   }
 }
 

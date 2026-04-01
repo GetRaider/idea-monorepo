@@ -6,26 +6,23 @@ export class LabelsClientService extends BaseClientService {
   }
 
   async getAll(): Promise<string[]> {
-    const response = await this.get<string[]>();
-    return response.data;
+    const result = await this.get<string[]>({});
+    return this.isResultOk(result) ? result.data : [];
   }
 
-  async create(label: string): Promise<string> {
-    const response = await this.post<{ label: string }>({ body: { label } });
-    return response.data.label;
+  async create(label: string): Promise<string | null> {
+    const result = await this.post<{ label: string }>({ body: { label } });
+    if (!this.isResultOk(result)) return null;
+    return result.data.label ?? null;
   }
 
-  async rename({
-    oldName,
-    newName,
-  }: {
+  async rename(params: {
     oldName: string;
     newName: string;
-  }): Promise<string> {
-    const response = await this.patch<{ label: string }>({
-      body: { oldName, newName },
-    });
-    return response.data.label;
+  }): Promise<string | null> {
+    const result = await this.patch<{ label: string }>({ body: params });
+    if (!this.isResultOk(result)) return null;
+    return result.data.label;
   }
 
   async remove(name: string): Promise<void> {

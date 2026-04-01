@@ -155,30 +155,27 @@ export function TasksSidebar({
 
       if (!nameChanged && !emojiChanged) return;
 
-      try {
-        const updated = await clientServices.taskBoards.update({
-          id: board.id,
-          updates: {
-            name: nameChanged ? trimmedName : board.name,
-            emoji: emojiChanged ? desiredEmoji : board.emoji,
-            folderId: board.folderId ?? null,
-            isPublic: board.isPublic,
-            createdAt: board.createdAt,
-          },
-        });
-        setTaskBoards((previous: TaskBoard[]) =>
-          previous.map((item: TaskBoard) =>
-            item.id === updated.id ? updated : item,
-          ),
-        );
+      const updated = await clientServices.taskBoards.update({
+        id: board.id,
+        updates: {
+          name: nameChanged ? trimmedName : board.name,
+          emoji: emojiChanged ? desiredEmoji : board.emoji,
+          folderId: board.folderId ?? null,
+          isPublic: board.isPublic,
+          createdAt: board.createdAt,
+        },
+      });
+      if (!updated) return;
+      setTaskBoards((previous: TaskBoard[]) =>
+        previous.map((item: TaskBoard) =>
+          item.id === updated.id ? updated : item,
+        ),
+      );
 
-        if (nameChanged)
-          router.push(tasksUrlHelper.routing.buildBoardUrl(updated.name));
-        toast.success(nameChanged ? "Board renamed" : "Board emoji updated");
-      } catch (error) {
-        console.error("Failed to update task board:", error);
-        toast.error("Failed to update board");
+      if (nameChanged) {
+        router.push(tasksUrlHelper.routing.buildBoardUrl(updated.name));
       }
+      toast.success(nameChanged ? "Board renamed" : "Board emoji updated");
     },
     [
       editingName,
@@ -194,22 +191,15 @@ export function TasksSidebar({
     if (!deletingBoard) return;
     const { id, name } = deletingBoard;
     setDeletingBoard(null);
-    try {
-      await clientServices.taskBoards.deleteBoard(id);
-      const remaining = taskBoards.filter(
-        (board: TaskBoard) => board.id !== id,
-      );
-      setTaskBoards(remaining);
-      router.push(
-        remaining.length > 0
-          ? tasksUrlHelper.routing.buildBoardUrl(remaining[0].name)
-          : tasksUrlHelper.routing.buildRootUrl(),
-      );
-      toast.success(`'${name}' board deleted`);
-    } catch (error) {
-      console.error("Failed to delete board:", error);
-      toast.error(`Failed to delete '${deletingBoard.name}' board`);
-    }
+    await clientServices.taskBoards.deleteBoard(id);
+    const remaining = taskBoards.filter((board: TaskBoard) => board.id !== id);
+    setTaskBoards(remaining);
+    router.push(
+      remaining.length > 0
+        ? tasksUrlHelper.routing.buildBoardUrl(remaining[0].name)
+        : tasksUrlHelper.routing.buildRootUrl(),
+    );
+    toast.success(`'${name}' board deleted`);
   };
 
   const handleBoardAction = (taskBoard: TaskBoard, action: string) => {
@@ -244,26 +234,22 @@ export function TasksSidebar({
 
       if (!nameChanged && !emojiChanged) return;
 
-      try {
-        const updated = await clientServices.folders.update({
-          id: folder.id,
-          updates: {
-            name: nameChanged ? trimmedName : folder.name,
-            emoji: emojiChanged ? desiredEmoji : folder.emoji,
-            isPublic: folder.isPublic,
-            createdAt: folder.createdAt,
-          },
-        });
+      const updated = await clientServices.folders.update({
+        id: folder.id,
+        updates: {
+          name: nameChanged ? trimmedName : folder.name,
+          emoji: emojiChanged ? desiredEmoji : folder.emoji,
+          isPublic: folder.isPublic,
+          createdAt: folder.createdAt,
+        },
+      });
+      if (!updated) return;
 
-        setFolders((previous) =>
-          previous.map((item) => (item.id === updated.id ? updated : item)),
-        );
+      setFolders((previous) =>
+        previous.map((item) => (item.id === updated.id ? updated : item)),
+      );
 
-        toast.success(nameChanged ? "Folder renamed" : "Folder emoji updated");
-      } catch (error) {
-        console.error("Failed to update folder:", error);
-        toast.error("Failed to update folder");
-      }
+      toast.success(nameChanged ? "Folder renamed" : "Folder emoji updated");
     },
     [
       editingFolderEmoji,
@@ -283,19 +269,14 @@ export function TasksSidebar({
     if (!deletingFolder) return;
     const folder = deletingFolder;
     setDeletingFolder(null);
-    try {
-      await clientServices.folders.deleteFolder(folder.id);
-      setFolders((prev) => prev.filter((f) => f.id !== folder.id));
-      setTaskBoards((prev) =>
-        prev.map((b) =>
-          b.folderId === folder.id ? { ...b, folderId: undefined } : b,
-        ),
-      );
-      toast.success("Folder deleted");
-    } catch (err) {
-      console.error("Failed to delete folder:", err);
-      toast.error("Failed to delete folder");
-    }
+    await clientServices.folders.deleteFolder(folder.id);
+    setFolders((prev) => prev.filter((f) => f.id !== folder.id));
+    setTaskBoards((prev) =>
+      prev.map((b) =>
+        b.folderId === folder.id ? { ...b, folderId: undefined } : b,
+      ),
+    );
+    toast.success("Folder deleted");
   };
 
   const handleBoardDragStart = (e: React.DragEvent, taskBoard: TaskBoard) => {
@@ -325,7 +306,7 @@ export function TasksSidebar({
       if (!board) return;
       if ((board.folderId ?? null) === folderId) return;
 
-      clientServices.taskBoards
+      void clientServices.taskBoards
         .update({
           id: boardId,
           updates: {
@@ -337,16 +318,13 @@ export function TasksSidebar({
           },
         })
         .then((updated) => {
+          if (!updated) return;
           setTaskBoards((previous) =>
             previous.map((item) => (item.id === updated.id ? updated : item)),
           );
           if (folderId && expandedFolder !== folderId)
             setExpandedFolder(folderId);
           toast.success("Board moved");
-        })
-        .catch((err) => {
-          console.error("Failed to move board:", err);
-          toast.error("Failed to move board");
         });
     },
     [expandedFolder, setTaskBoards, taskBoards],

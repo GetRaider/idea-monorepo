@@ -1,13 +1,22 @@
-import type { DataAccess } from "@/db/data-access";
+import type { DataAccess } from "@/db/repositories/base.repository";
 import type { TasksRepository } from "@/db/repositories/tasks.repository";
+import { BaseApiService } from "@/services/api/base.api.service";
 
-export class StatsApiService {
-  constructor(private readonly repository: TasksRepository) {}
+export class StatsApiService extends BaseApiService {
+  constructor(private readonly repository: TasksRepository) {
+    super();
+  }
 
   async getCounts(
     timeframe: "all" | "week" | "month" | "quarter",
     access: DataAccess,
   ) {
-    return this.repository.getTaskCounts(timeframe, access);
+    return this.handleOperation(() =>
+      this.repository.getTaskCounts(timeframe, access),
+    );
+  }
+
+  protected override mapError(error: unknown): never {
+    throw error;
   }
 }

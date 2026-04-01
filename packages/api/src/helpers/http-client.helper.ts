@@ -64,6 +64,7 @@ export class HttpClient implements IHttpClient {
       method,
       data: body,
       timeout,
+      validateStatus: () => true,
       headers:
         headers instanceof AxiosHeaders
           ? headers
@@ -78,10 +79,9 @@ export class HttpClient implements IHttpClient {
         config: response.config,
       };
     } catch (error) {
-      // TODO: Think about better error handling on different levels besides here.
-      const errorMessage = `Failed to send request.\nRequest: ${primitiveHelper.jsonStringify(requestConfig)}\nError: ${error instanceof Error ? error.message : String(error)}`;
+      const errorMessage = `Transport failure (no HTTP response).\nRequest: ${primitiveHelper.jsonStringify(requestConfig)}\nError: ${error instanceof Error ? error.message : String(error)}`;
       logger.error(errorMessage);
-      throw new Error(errorMessage);
+      throw error;
     }
   }
 }

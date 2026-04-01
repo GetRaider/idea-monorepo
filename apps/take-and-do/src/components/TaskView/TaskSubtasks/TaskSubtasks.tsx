@@ -61,14 +61,10 @@ export function TaskSubtasks({
         subtasks: updatedSubtasks,
       });
 
-      if (onTaskUpdate) {
-        onTaskUpdate(updatedTask);
-      }
+      if (updatedTask && onTaskUpdate) onTaskUpdate(updatedTask);
 
       setNewSubtaskSummary("");
       setIsCreatingSubtask(false);
-    } catch (error) {
-      console.error("Failed to create subtask:", error);
     } finally {
       isSavingSubtaskRef.current = false;
     }

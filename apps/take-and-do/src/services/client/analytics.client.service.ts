@@ -1,5 +1,6 @@
 import { TaskStatsInput } from "@/db/dtos";
 import type { AnalyticsStats } from "@/services/ai";
+
 import { BaseClientService } from "./base.client.service";
 
 export class AnalyticsClientService extends BaseClientService {
@@ -7,22 +8,26 @@ export class AnalyticsClientService extends BaseClientService {
     super("/analytics");
   }
 
-  async getStatsByTimeframe(timeframe: Timeframe): Promise<AnalyticsStats> {
-    const response = await this.get<AnalyticsStatsResponse>({
+  async getStatsByTimeframe(
+    timeframe: Timeframe,
+  ): Promise<AnalyticsStats | null> {
+    const result = await this.get<AnalyticsStatsResponse>({
       queries: { timeframe },
     });
-    return response.data.stats;
+    if (!this.isResultOk(result)) return null;
+    return result.data.stats ?? null;
   }
 
   async generateSummary({
     stats,
     timeframe,
     shouldUseAI,
-  }: GenerateSummaryInput): Promise<AnalyticsData> {
-    const response = await this.post<GenerateSummaryResponse>({
+  }: GenerateSummaryInput): Promise<AnalyticsData | null> {
+    const result = await this.post<GenerateSummaryResponse>({
       body: { stats, timeframe, shouldUseAI },
     });
-    return response.data.analytics;
+    if (!this.isResultOk(result)) return null;
+    return result.data.analytics ?? null;
   }
 }
 

@@ -1,15 +1,13 @@
 import { and, eq } from "drizzle-orm";
 
-import { type DataAccess, dataAccessFilter } from "@/db/data-access";
-import { DB } from "@/db/client";
+import type { DataAccess } from "@/db/repositories/base.repository";
 import { foldersTable } from "@/db/schemas/folder.schema";
 import { genericHelper } from "@/helpers/generic.helper";
+import { BaseRepository } from "@/db/repositories/base.repository";
 
 import type { Folder } from "@/types/workspace";
 
-export class FoldersRepository {
-  constructor(private readonly db: DB) {}
-
+export class FoldersRepository extends BaseRepository {
   async createFolder(
     name: string,
     access: DataAccess,
@@ -49,13 +47,13 @@ export class FoldersRepository {
     const rows = await this.db
       .select()
       .from(foldersTable)
-      .where(dataAccessFilter(foldersTable, access.userId, access.isAnonymous));
+      .where(this.accessWhere(foldersTable, access));
     return rows.map((row: FolderRow) => ({
       id: row.id,
       name: row.name,
       emoji: row.emoji,
       isPublic: row.isPublic,
-      createdAt: new Date(row.createdAt),
+      createdAt: row.createdAt,
       updatedAt: new Date(row.updatedAt),
     }));
   }
@@ -68,10 +66,7 @@ export class FoldersRepository {
       .select()
       .from(foldersTable)
       .where(
-        and(
-          eq(foldersTable.id, id),
-          dataAccessFilter(foldersTable, access.userId, access.isAnonymous),
-        ),
+        and(eq(foldersTable.id, id), this.accessWhere(foldersTable, access)),
       );
     if (rows.length === 0) return undefined;
     const row = rows[0];

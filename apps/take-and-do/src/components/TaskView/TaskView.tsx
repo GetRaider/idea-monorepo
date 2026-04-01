@@ -92,18 +92,14 @@ export function TaskView({
   const handleUpdateTask = useCallback(
     async (updates: TaskUpdate) => {
       if (!task || !task.id) return;
-      try {
-        const updatedTask = await updateTask(task.id, updates);
-        setTask(updatedTask);
-        onTaskUpdate?.(updatedTask);
-        setPendingUpdates({});
-        setTitleValue(updatedTask.summary);
-        setDescriptionValue(updatedTask.description || "");
-        toast.success("Task updated");
-      } catch (error) {
-        console.error("Failed to update task:", error);
-        toast.error("Failed to update task");
-      }
+      const updatedTask = await updateTask(task.id, updates);
+      if (!updatedTask) return;
+      setTask(updatedTask);
+      onTaskUpdate?.(updatedTask);
+      setPendingUpdates({});
+      setTitleValue(updatedTask.summary);
+      setDescriptionValue(updatedTask.description || "");
+      toast.success("Task updated");
     },
     [task, onTaskUpdate, updateTask],
   );
@@ -271,13 +267,11 @@ export function TaskView({
       };
 
       const createdTask = await createTask(taskData);
+      if (!createdTask) return;
       setTask(createdTask);
       onTaskCreated?.(createdTask);
       setIsEditingTitle(false);
       toast.success("Task created");
-    } catch (error) {
-      console.error("Failed to create task:", error);
-      toast.error("Failed to create task");
     } finally {
       setIsCreatingTask(false);
     }
@@ -287,15 +281,10 @@ export function TaskView({
 
   const handleDeleteConfirm = useCallback(async () => {
     if (!task || !task.id || isCreating) return;
-    try {
-      await deleteTask(task.id);
-      onTaskDelete?.(task.id);
-      onClose();
-      toast.success("Task deleted");
-    } catch (error) {
-      console.error("Failed to delete task:", error);
-      toast.error("Failed to delete task");
-    }
+    await deleteTask(task.id);
+    onTaskDelete?.(task.id);
+    onClose();
+    toast.success("Task deleted");
   }, [task, isCreating, onTaskDelete, onClose, deleteTask]);
 
   const handleDeleteClick = useCallback(() => {

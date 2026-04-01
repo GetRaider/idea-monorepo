@@ -76,7 +76,7 @@ export function MultipleKanbanBoard({
   } = useKanbanTaskHandlers({ onTaskOpen, onTaskClose, onSubtaskOpen });
 
   const boardOptions = useMemo(
-    () => boardsWithTasks.map((b) => ({ id: b.id, name: b.name })),
+    () => boardsWithTasks.map((board) => ({ id: board.id, name: board.name })),
     [boardsWithTasks],
   );
 
@@ -116,28 +116,14 @@ export function MultipleKanbanBoard({
         selectedTask?.id === updatedTask.id &&
         selectedTask.taskBoardId !== updatedTask.taskBoardId;
       if (boardRelocated) {
-        try {
-          setBoardsWithTasks(await fetchBoards());
-        } catch (error) {
-          console.error(
-            "[MultipleKanbanBoard] Failed to refresh tasks after board change:",
-            error,
-          );
-        }
+        setBoardsWithTasks(await fetchBoards());
         setSelectedTask(updatedTask);
         return;
       }
 
       if (scheduleDate) {
         if (!updatedTask.scheduleDate) {
-          try {
-            setBoardsWithTasks(await fetchBoards());
-          } catch (error) {
-            console.error(
-              "Failed to refresh tasks after schedule update:",
-              error,
-            );
-          }
+          setBoardsWithTasks(await fetchBoards());
           if (selectedTask?.id === updatedTask.id) {
             setSelectedTask(updatedTask);
           }
@@ -146,14 +132,7 @@ export function MultipleKanbanBoard({
 
         const taskDate = tasksHelper.date.parse(updatedTask.scheduleDate);
         if (!taskDate) {
-          try {
-            setBoardsWithTasks(await fetchBoards());
-          } catch (error) {
-            console.error(
-              "Failed to refresh tasks after schedule update:",
-              error,
-            );
-          }
+          setBoardsWithTasks(await fetchBoards());
           if (selectedTask?.id === updatedTask.id) {
             setSelectedTask(updatedTask);
           }
@@ -166,14 +145,7 @@ export function MultipleKanbanBoard({
         const matchesSchedule = taskDate.getTime() === currentDate.getTime();
 
         if (!matchesSchedule) {
-          try {
-            setBoardsWithTasks(await fetchBoards());
-          } catch (error) {
-            console.error(
-              "Failed to refresh tasks after schedule update:",
-              error,
-            );
-          }
+          setBoardsWithTasks(await fetchBoards());
           if (selectedTask?.id === updatedTask.id) {
             setSelectedTask(updatedTask);
           }
@@ -234,45 +206,33 @@ export function MultipleKanbanBoard({
         console.error("Cannot compose task: taskBoardId not found");
         return;
       }
-      try {
-        const additionalData: Partial<Omit<Task, "id">> = scheduleDate
-          ? { scheduleDate }
-          : {};
-        const composedData = await clientServices.tasks.composeWithAI({
-          text,
-          taskBoardId,
-          additionalData,
-        });
-        const overrideScheduleDate = scheduleDate ?? undefined;
-        setSelectedTask(composedDataToTask(composedData, overrideScheduleDate));
-        setSelectedBoardIdForAI(null);
-      } catch (error) {
-        console.error("Failed to compose task with AI:", error);
-        throw error;
-      }
+      const additionalData: Partial<Omit<Task, "id">> = scheduleDate
+        ? { scheduleDate }
+        : {};
+      const composedData = await clientServices.tasks.composeWithAI({
+        text,
+        taskBoardId,
+        additionalData,
+      });
+      if (!composedData) return;
+      const overrideScheduleDate = scheduleDate ?? undefined;
+      setSelectedTask(composedDataToTask(composedData, overrideScheduleDate));
+      setSelectedBoardIdForAI(null);
     },
     [boardsWithTasks, scheduleDate, selectedBoardIdForAI, setSelectedTask],
   );
 
   const handleTaskCreated = useCallback(
     async (createdTask: Task) => {
-      try {
-        setBoardsWithTasks(await fetchBoards());
-        setSelectedTask(createdTask);
-      } catch (error) {
-        console.error("Failed to refresh tasks after creation:", error);
-      }
+      setBoardsWithTasks(await fetchBoards());
+      setSelectedTask(createdTask);
     },
     [fetchBoards, setSelectedTask, setBoardsWithTasks],
   );
 
   const handleTaskDelete = useCallback(async () => {
-    try {
-      setBoardsWithTasks(await fetchBoards());
-      setSelectedTask(null);
-    } catch (error) {
-      console.error("Failed to refresh tasks after deletion:", error);
-    }
+    setBoardsWithTasks(await fetchBoards());
+    setSelectedTask(null);
   }, [fetchBoards, setSelectedTask, setBoardsWithTasks]);
 
   return (

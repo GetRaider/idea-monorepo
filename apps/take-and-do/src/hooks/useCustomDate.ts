@@ -53,9 +53,6 @@ export function useCustomDateTasks(customDate: string): UseCustomDateReturn {
       try {
         const tasks = await clientServices.tasks.getByDate(date);
         if (isMounted) setCustomDateTasks(tasks);
-      } catch (error) {
-        console.error(error);
-        if (isMounted) setCustomDateTasks([]);
       } finally {
         if (isMounted) setIsLoadingCustomDate(false);
       }

@@ -1,22 +1,18 @@
 import { and, eq } from "drizzle-orm";
 
-import { type DataAccess, dataAccessFilter } from "@/db/data-access";
-import { DB } from "@/db/client";
+import type { DataAccess } from "@/db/repositories/base.repository";
 import { taskBoardsTable } from "@/db/schemas/taskBoard.schema";
 import { genericHelper } from "@/helpers/generic.helper";
+import { BaseRepository } from "@/db/repositories/base.repository";
 
 import type { TaskBoard } from "@/types/workspace";
 
-export class TaskBoardsRepository {
-  constructor(private readonly db: DB) {}
-
+export class TaskBoardsRepository extends BaseRepository {
   async getAllTaskBoards(access: DataAccess): Promise<TaskBoard[]> {
     const rows = await this.db
       .select()
       .from(taskBoardsTable)
-      .where(
-        dataAccessFilter(taskBoardsTable, access.userId, access.isAnonymous),
-      );
+      .where(this.accessWhere(taskBoardsTable, access));
     return rows.map((row: TaskBoardRow) => ({
       id: row.id,
       isPublic: row.isPublic,
@@ -38,7 +34,7 @@ export class TaskBoardsRepository {
       .where(
         and(
           eq(taskBoardsTable.id, id),
-          dataAccessFilter(taskBoardsTable, access.userId, access.isAnonymous),
+          this.accessWhere(taskBoardsTable, access),
         ),
       );
     if (rows.length === 0) return undefined;
@@ -64,7 +60,7 @@ export class TaskBoardsRepository {
       .where(
         and(
           eq(taskBoardsTable.folderId, folderId),
-          dataAccessFilter(taskBoardsTable, access.userId, access.isAnonymous),
+          this.accessWhere(taskBoardsTable, access),
         ),
       );
     return rows.map((row) => ({

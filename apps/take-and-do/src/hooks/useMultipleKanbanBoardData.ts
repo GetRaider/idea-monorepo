@@ -79,11 +79,6 @@ export function useMultipleKanbanBoardData(
         if (boards.length > 0) {
           setExpandedBoardIds(new Set(boards.map((b) => b.id)));
         }
-      } catch (error) {
-        if (!cancelled) {
-          console.error("Failed to fetch tasks:", error);
-          setBoardsWithTasks([]);
-        }
       } finally {
         if (!cancelled) setIsLoading(false);
       }

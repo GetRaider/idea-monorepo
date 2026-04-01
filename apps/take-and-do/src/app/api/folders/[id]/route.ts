@@ -2,13 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { getAccessByAuth, requireAuth } from "@/auth/guards";
 import { apiServices } from "@/services/api";
-import { defineRoute } from "@/lib/api/defineRoute";
+import { handleRoute } from "@/lib/api/handleRoute";
 import { BadRequestError, NotFoundError } from "@/lib/api/errors";
 import { UpdateFolderDto } from "@/db/dtos";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-export const GET = defineRoute(async (_request: NextRequest, context) => {
+export const GET = handleRoute(async (_request: NextRequest, context) => {
   const auth = await requireAuth();
   const access = getAccessByAuth(auth);
   const { id: folderId } = await (context as RouteContext).params;
@@ -17,7 +17,7 @@ export const GET = defineRoute(async (_request: NextRequest, context) => {
   return NextResponse.json(folder);
 });
 
-export const PATCH = defineRoute(async (request: NextRequest, context) => {
+export const PATCH = handleRoute(async (request: NextRequest, context) => {
   const auth = await requireAuth();
   const access = getAccessByAuth(auth);
   const { id: folderId } = await (context as RouteContext).params;
@@ -37,7 +37,7 @@ export const PATCH = defineRoute(async (request: NextRequest, context) => {
   );
 });
 
-export const DELETE = defineRoute(async (_request: NextRequest, context) => {
+export const DELETE = handleRoute(async (_request: NextRequest, context) => {
   const auth = await requireAuth();
   const access = getAccessByAuth(auth);
   const { id: folderId } = await (context as RouteContext).params;

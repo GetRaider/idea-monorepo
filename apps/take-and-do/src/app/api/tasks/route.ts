@@ -8,10 +8,10 @@ import {
 } from "@/auth/guards";
 import { apiServices } from "@/services/api";
 import { tasksHelper } from "@/helpers/task.helper";
-import { defineRoute } from "@/lib/api";
+import { handleRoute } from "@/lib/api";
 import { BadRequestError } from "@/lib/api/errors";
 
-export const GET = defineRoute(async (request: NextRequest) => {
+export const GET = handleRoute(async (request: NextRequest) => {
   const auth = await requireAuth();
   const access = getAccessByAuth(auth);
   const { searchParams } = new URL(request.url);
@@ -40,7 +40,7 @@ export const GET = defineRoute(async (request: NextRequest) => {
   return NextResponse.json(await apiServices.tasks.getAll(access));
 });
 
-export const POST = defineRoute(async (request: NextRequest) => {
+export const POST = handleRoute(async (request: NextRequest) => {
   const auth = await requireAuth();
   const access = getAccessByAuth(auth);
   const payload = tasksHelper.fromJson.postPayload(await request.json());
@@ -57,7 +57,7 @@ export const POST = defineRoute(async (request: NextRequest) => {
   );
 });
 
-export const DELETE = defineRoute(async (request: NextRequest) => {
+export const DELETE = handleRoute(async (request: NextRequest) => {
   const auth = await requireNonAnonymous();
   const access = getAccessByAuth(auth);
   const taskBoardId = new URL(request.url).searchParams.get("taskBoardId");

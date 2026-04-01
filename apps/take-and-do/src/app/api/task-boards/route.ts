@@ -3,13 +3,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { env } from "@/env";
 import { getAccessByAuth, requireAuth } from "@/auth/guards";
 import { apiServices } from "@/services/api";
-import { defineRoute } from "@/lib/api/defineRoute";
+import { handleRoute } from "@/lib/api/handleRoute";
 import { BadRequestError, NotFoundError } from "@/lib/api/errors";
 import { CreateTaskBoardDto, UpdateTaskBoardDto } from "@/db/dtos";
 
 import type { TaskBoard } from "@/types/workspace";
 
-export const GET = defineRoute(async (request: NextRequest) => {
+export const GET = handleRoute(async (request: NextRequest) => {
   const auth = await requireAuth();
   const access = getAccessByAuth(auth);
   const { searchParams } = new URL(request.url);
@@ -25,7 +25,7 @@ export const GET = defineRoute(async (request: NextRequest) => {
   return NextResponse.json(taskBoards);
 });
 
-export const POST = defineRoute(async (request: NextRequest) => {
+export const POST = handleRoute(async (request: NextRequest) => {
   const auth = await requireAuth();
   const access = getAccessByAuth(auth);
   const { name, folderId, emoji } = CreateTaskBoardDto.parse(
@@ -65,7 +65,7 @@ export const POST = defineRoute(async (request: NextRequest) => {
   }
 });
 
-export const PATCH = defineRoute(async (request: NextRequest) => {
+export const PATCH = handleRoute(async (request: NextRequest) => {
   const auth = await requireAuth();
   const access = getAccessByAuth(auth);
   const { searchParams } = new URL(request.url);
@@ -89,7 +89,7 @@ export const PATCH = defineRoute(async (request: NextRequest) => {
   );
 });
 
-export const DELETE = defineRoute(async (request: NextRequest) => {
+export const DELETE = handleRoute(async (request: NextRequest) => {
   const auth = await requireAuth();
   const access = getAccessByAuth(auth);
   const { searchParams } = new URL(request.url);

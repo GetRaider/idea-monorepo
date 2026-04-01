@@ -8,7 +8,7 @@ type NextHandler = (
   context?: unknown,
 ) => Promise<NextResponse | Response>;
 
-export function defineRoute(handler: NextHandler): NextHandler {
+export function handleRoute(handler: NextHandler): NextHandler {
   return async (request: NextRequest, context: unknown) => {
     try {
       return await handler(request, context);

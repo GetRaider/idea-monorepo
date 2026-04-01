@@ -20,31 +20,33 @@ export class BaseClientService {
 
   protected constructor(protected readonly relativeUrl: string) {}
 
-  async get<T>({ pathParams, queries, token }: IBaseRequest = {}): Promise<
-    IHttpResponse<T>
-  > {
+  protected async get<T>({
+    pathParams,
+    queries,
+    token,
+  }: IBaseRequest = {}): Promise<IHttpResponse<T>> {
     return this.httpClient.get({
       url: this.getUrl(pathParams, queries),
       headers: this.getDefaultHeaders(token),
     });
   }
 
-  protected async getAtPath<T>(
-    pathSegments: string[],
-    queries: Record<string, string> = {},
-  ): Promise<IHttpResponse<T>> {
-    const url = urlHelper.construct({
-      base: this.baseUrl,
-      params: pathSegments,
-      queries,
-    });
-    return this.httpClient.get({
-      url,
-      headers: this.getDefaultHeaders(),
-    });
-  }
+  // protected async getAtPath<T>(
+  //   pathSegments: string[],
+  //   queries: Record<string, string> = {},
+  // ): Promise<IHttpResponse<T>> {
+  //   const url = urlHelper.construct({
+  //     base: this.baseUrl,
+  //     params: pathSegments,
+  //     queries,
+  //   });
+  //   return this.httpClient.get({
+  //     url,
+  //     headers: this.getDefaultHeaders(),
+  //   });
+  // }
 
-  async post<T>({
+  protected async post<T>({
     body,
     pathParams,
     queries,
@@ -57,7 +59,7 @@ export class BaseClientService {
     });
   }
 
-  async put<T>({
+  protected async put<T>({
     pathParams,
     queries,
     body,
@@ -70,7 +72,7 @@ export class BaseClientService {
     });
   }
 
-  async patch<T>({
+  protected async patch<T>({
     pathParams,
     queries,
     body,
@@ -83,7 +85,7 @@ export class BaseClientService {
     });
   }
 
-  async delete<T>({
+  protected async delete<T>({
     pathParams,
     queries,
     token,

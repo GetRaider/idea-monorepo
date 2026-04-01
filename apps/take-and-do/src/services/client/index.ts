@@ -4,16 +4,19 @@ import { LabelsClientService } from "./labels.client.service";
 import { StatsClientService } from "./stats.client.service";
 import { TaskBoardsClientService } from "./task-boards.client.service";
 import { TasksClientService } from "./tasks.client.service";
-
 export type { AnalyticsData, Timeframe } from "./analytics.client.service";
 
+const tasksClientService = new TasksClientService();
+const foldersClientService = new FoldersClientService();
+
 export const clientServices = {
-  tasks: new TasksClientService(),
-  folders: new FoldersClientService(),
+  tasks: tasksClientService,
+  folders: foldersClientService,
   labels: new LabelsClientService(),
-  taskBoards: new TaskBoardsClientService(),
+  taskBoards: new TaskBoardsClientService(
+    tasksClientService,
+    foldersClientService,
+  ),
   analytics: new AnalyticsClientService(),
   stats: new StatsClientService(),
 };
-
-export const apiServices = clientServices;

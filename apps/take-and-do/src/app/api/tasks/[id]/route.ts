@@ -7,12 +7,12 @@ import {
 } from "@/auth/guards";
 import { apiServices } from "@/services/api";
 import { tasksHelper } from "@/helpers/task.helper";
-import { defineRoute } from "@/lib/api/defineRoute";
+import { handleRoute } from "@/lib/api/handleRoute";
 import { NotFoundError } from "@/lib/api/errors";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-export const GET = defineRoute(async (_request: NextRequest, context) => {
+export const GET = handleRoute(async (_request: NextRequest, context) => {
   const auth = await requireAuth();
   const access = getAccessByAuth(auth);
   const { id: taskId } = await (context as RouteContext).params;
@@ -21,7 +21,7 @@ export const GET = defineRoute(async (_request: NextRequest, context) => {
   return NextResponse.json(task);
 });
 
-export const PATCH = defineRoute(async (request: NextRequest, context) => {
+export const PATCH = handleRoute(async (request: NextRequest, context) => {
   const auth = await requireNonAnonymous();
   const access = getAccessByAuth(auth);
   const { id: taskId } = await (context as RouteContext).params;
@@ -35,7 +35,7 @@ export const PATCH = defineRoute(async (request: NextRequest, context) => {
   return NextResponse.json(updatedTask);
 });
 
-export const DELETE = defineRoute(async (_request: NextRequest, context) => {
+export const DELETE = handleRoute(async (_request: NextRequest, context) => {
   const auth = await requireNonAnonymous();
   const access = getAccessByAuth(auth);
   const { id: taskId } = await (context as RouteContext).params;

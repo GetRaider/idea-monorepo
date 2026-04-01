@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 
 import { getAccessByAuth, requireAuth } from "@/auth/guards";
 import { apiServices } from "@/services/api";
-import { defineRoute } from "@/lib/api/defineRoute";
+import { handleRoute } from "@/lib/api/handleRoute";
 
-export const GET = defineRoute(async () => {
+export const GET = handleRoute(async () => {
   const auth = await requireAuth();
   const access = getAccessByAuth(auth);
   const [folders, taskBoards] = await Promise.all([

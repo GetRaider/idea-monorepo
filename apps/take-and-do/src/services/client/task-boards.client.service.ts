@@ -3,10 +3,14 @@ import { tasksHelper } from "@/helpers/task.helper";
 import { guestStoreHelper } from "@/stores/guest";
 import { TaskBoard } from "@/types/workspace";
 import { BaseClientService } from "./base.client.service";
-import { apiServices } from ".";
+import { TasksClientService } from "./tasks.client.service";
+import { FoldersClientService } from "./folders.client.service";
 
 export class TaskBoardsClientService extends BaseClientService {
-  constructor() {
+  constructor(
+    private readonly tasksClientService: TasksClientService,
+    private readonly foldersClientService: FoldersClientService,
+  ) {
     super("/task-boards");
   }
 
@@ -23,7 +27,10 @@ export class TaskBoardsClientService extends BaseClientService {
   }
 
   async getTasks(taskBoardId: string): Promise<Task[]> {
-    const response = await this.getAtPath<Task[]>(["tasks"], { taskBoardId });
+    const response = await this.get<Task[]>({
+      pathParams: ["tasks"],
+      queries: { taskBoardId },
+    });
     return response.data.map(normalizeTask);
   }
 
@@ -79,15 +86,15 @@ export class TaskBoardsClientService extends BaseClientService {
       },
     });
     if (skipCascade) return updatedBoard;
-    const tasks = await apiServices.tasks.getByBoardId(id);
+    const tasks = await this.tasksClientService.getByBoardId(id);
     for (const task of tasks) {
-      await apiServices.tasks.update({
+      await this.tasksClientService.update({
         taskId: task.id,
         updates: { isPublic: toPublic },
       });
     }
     if (board.folderId) {
-      await apiServices.folders.update({
+      await this.foldersClientService.update({
         id: board.folderId,
         updates: { isPublic: toPublic },
       });

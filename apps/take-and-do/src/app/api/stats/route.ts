@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { getAccessByAuth, requireAuth } from "@/auth/guards";
-import { defineRoute } from "@/lib/api/defineRoute";
+import { handleRoute } from "@/lib/api/handleRoute";
 import { apiServices } from "@/services/api";
 
-export const GET = defineRoute(async (request: NextRequest) => {
+export const GET = handleRoute(async (request: NextRequest) => {
   const auth = await requireAuth();
   const access = getAccessByAuth(auth);
   const { searchParams } = new URL(request.url);

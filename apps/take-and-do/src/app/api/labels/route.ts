@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { requireAuth, requireNonAnonymous } from "@/auth/guards";
 import { apiServices } from "@/services/api";
-import { defineRoute } from "@/lib/api/defineRoute";
+import { handleRoute } from "@/lib/api/handleRoute";
 import {
   BadRequestError,
   ConflictError,
@@ -10,20 +10,20 @@ import {
 } from "@/lib/api/errors";
 import { CreateLabelDto, DeleteLabelDto, RenameLabelDto } from "@/db/dtos";
 
-export const GET = defineRoute(async () => {
+export const GET = handleRoute(async () => {
   await requireAuth();
   const labels = await apiServices.labels.getAll();
   return NextResponse.json(labels);
 });
 
-export const POST = defineRoute(async (request: NextRequest) => {
+export const POST = handleRoute(async (request: NextRequest) => {
   await requireNonAnonymous();
   const { label } = CreateLabelDto.parse(await request.json());
   const newLabel = await apiServices.labels.add(label.trim());
   return NextResponse.json({ label: newLabel }, { status: 201 });
 });
 
-export const PATCH = defineRoute(async (request: NextRequest) => {
+export const PATCH = handleRoute(async (request: NextRequest) => {
   await requireNonAnonymous();
   const { oldName, newName } = RenameLabelDto.parse(await request.json());
   try {
@@ -40,7 +40,7 @@ export const PATCH = defineRoute(async (request: NextRequest) => {
   }
 });
 
-export const DELETE = defineRoute(async (request: NextRequest) => {
+export const DELETE = handleRoute(async (request: NextRequest) => {
   await requireNonAnonymous();
   const { name } = DeleteLabelDto.parse(await request.json());
   await apiServices.labels.delete(name);

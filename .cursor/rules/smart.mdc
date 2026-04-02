@@ -43,7 +43,7 @@ This is a pnpm monorepo with Turborepo:
 - `packages/api` — Shared TypeScript models and DTOs
 - `packages/ui` — Shared React components
 - `packages/eslint-config` — Shared ESLint configs
-- `packages/jest-config` — Shared Jest configs
+- `packages/vitest-config` — Shared Vitest configs
 - `packages/typescript-config` — Shared TypeScript configs
 
 Import shared packages via `@repo/api`, `@repo/ui`, etc.

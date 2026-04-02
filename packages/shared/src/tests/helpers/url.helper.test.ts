@@ -1,4 +1,4 @@
-import { describe, it, expect } from "@jest/globals";
+import { describe, expect, it } from "vitest";
 import { urlHelper } from "../../helpers/url.helper";
 
 describe("urlHelper", () => {

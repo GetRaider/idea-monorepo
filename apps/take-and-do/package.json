@@ -74,7 +74,7 @@
     "pretty-quick": "^4.2.2",
     "tsx": "^4.21.0",
     "typescript": "catalog:",
-    "vitest": "^3.2.4"
+    "vitest": "catalog:"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx,mjs,cjs}": "eslint --max-warnings=0"

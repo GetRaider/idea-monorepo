@@ -16,7 +16,7 @@ This repository includes the following applications and packages:
     └── packages
         ├── @repo/api                 # Shared NestJS resources
         ├── @repo/eslint-config       # ESLint configurations (includes Prettier)
-        ├── @repo/jest-config         # Jest configurations
+        ├── @repo/vitest-config       # Vitest configurations
         ├── @repo/typescript-config   # `tsconfig.json`s used throughout the monorepo
         └── @repo/ui                  # Shareable React component library
 
@@ -30,7 +30,7 @@ The repository uses modern development tools and practices:
 - [TypeScript](https://www.typescriptlang.org/) for static type-safety
 - [ESLint](https://eslint.org/) for code linting
 - [Prettier](https://prettier.io) for code formatting
-- [Jest](https://jestjs.io) & [Playwright](https://playwright.dev/) for testing
+- [Vitest](https://vitest.dev) & [Playwright](https://playwright.dev/) for testing
 
 ### Development Commands
 

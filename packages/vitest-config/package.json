@@ -1,0 +1,28 @@
+{
+  "name": "@repo/vitest-config",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./nest": "./src/nest.ts",
+    "./next": "./src/next.ts"
+  },
+  "scripts": {
+    "clean": "rm -rf .turbo",
+    "clean:hard": "pnpm run clean && rm -rf node_modules"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "catalog:",
+    "jsdom": "catalog:"
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  },
+  "peerDependencies": {
+    "vitest": "^3.0.0"
+  }
+}

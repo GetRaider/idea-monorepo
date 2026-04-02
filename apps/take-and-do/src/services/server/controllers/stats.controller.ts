@@ -7,10 +7,10 @@ import { BaseController } from "./base.controller";
 export class StatsController extends BaseController {
   getCounts = this.createRoute({
     responseDto: TaskCountsResponseDto,
-    handler: async (req, _body, _ctx) => {
+    handler: async ({ request }) => {
       const auth = await requireAuth();
       const access = getAccessByAuth(auth);
-      const { searchParams } = new URL(req.url);
+      const { searchParams } = new URL(request.url);
       const timeframe = (searchParams.get("timeframe") || "all") as
         | "all"
         | "week"

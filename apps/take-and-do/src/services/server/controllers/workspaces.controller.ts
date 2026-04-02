@@ -7,7 +7,7 @@ import { BaseController } from "./base.controller";
 export class WorkspacesController extends BaseController {
   get = this.createRoute({
     responseDto: WorkspacesResponseDto,
-    handler: async (_req, _body, _ctx) => {
+    handler: async () => {
       const auth = await requireAuth();
       const access = getAccessByAuth(auth);
       const [folders, taskBoards] = await Promise.all([

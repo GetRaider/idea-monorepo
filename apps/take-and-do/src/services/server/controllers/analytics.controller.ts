@@ -7,15 +7,15 @@ import {
 } from "@/db/dtos";
 import { apiServices } from "@/services/server/api";
 
-import { BaseController } from "./base.controller";
+import { BaseController, InputType } from "./base.controller";
 
 export class AnalyticsController extends BaseController {
   getStatistics = this.createRoute({
     responseDto: AnalyticsGetResponseDto,
-    handler: async (req, _body, _ctx) => {
+    handler: async ({ request }) => {
       const auth = await requireAuth();
       const access = getAccessByAuth(auth);
-      const { searchParams } = new URL(req.url);
+      const { searchParams } = new URL(request.url);
       const timeframe = timeframeEnum.parse(
         searchParams.get("timeframe") || "month",
       );
@@ -29,8 +29,9 @@ export class AnalyticsController extends BaseController {
 
   generate = this.createRoute({
     requestDto: GenerateAnalyticsDto,
+    inputType: InputType.Body,
     responseDto: AnalyticsPostResponseDto,
-    handler: async (_req, body, _ctx) => {
+    handler: async ({ input: body }) => {
       const auth = await requireAuth();
       const { stats, timeframe, shouldUseAI } = body;
       const analytics = await apiServices.analytics.generate(

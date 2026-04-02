@@ -17,7 +17,7 @@ import { apiServices } from "@/services/server/api";
 
 import type { TaskBoard } from "@/types/workspace";
 
-import { BaseController } from "./base.controller";
+import { BaseController, InputType } from "./base.controller";
 
 const taskBoardIdQuerySchema = z.object({ id: z.string().min(1) });
 
@@ -32,10 +32,10 @@ const listOrGetResponseSchema = TaskBoardListResponseDto.or(
 export class TaskBoardsController extends BaseController {
   listOrGetOne = this.createRoute({
     responseDto: listOrGetResponseSchema,
-    handler: async (req, _body, _ctx) => {
+    handler: async ({ request }) => {
       const auth = await requireAuth();
       const access = getAccessByAuth(auth);
-      const { searchParams } = new URL(req.url);
+      const { searchParams } = new URL(request.url);
       const id = searchParams.get("id");
 
       if (id) {
@@ -50,17 +50,18 @@ export class TaskBoardsController extends BaseController {
 
   create = this.createRoute({
     requestDto: CreateTaskBoardDto,
+    inputType: InputType.Body,
     responseDto: TaskBoardResponseDto,
-    jsonStatus: 201,
-    handler: async (_req, body, _ctx) => {
+    status: 201,
+    handler: async ({ input }) => {
       const auth = await requireAuth();
       const access = getAccessByAuth(auth);
 
       const taskBoardData: Omit<TaskBoard, "id" | "createdAt" | "updatedAt"> = {
-        name: body.name.trim(),
-        folderId: body.folderId ?? undefined,
+        name: input.name.trim(),
+        folderId: input.folderId ?? undefined,
         isPublic: false,
-        ...(body.emoji !== undefined && { emoji: body.emoji }),
+        ...(input.emoji !== undefined && { emoji: input.emoji }),
       };
 
       try {
@@ -90,28 +91,32 @@ export class TaskBoardsController extends BaseController {
   });
 
   update = this.createRoute({
-    requestDto: patchTaskBoardRequestSchema,
-    requestSource: async (req, _ctx) => {
-      const id = new URL(req.url).searchParams.get("id");
-      if (!id) throw new BadRequestError("id is required");
-      const json = await req.json();
-      return patchTaskBoardRequestSchema.parse({ id, ...json });
-    },
     responseDto: TaskBoardResponseDto,
-    handler: async (_req, data, _ctx) => {
+    handler: async ({ request }) => {
       const auth = await requireAuth();
       const access = getAccessByAuth(auth);
-      const { id, ...body } = data;
+      const id = new URL(request.url).searchParams.get("id");
+      if (!id) throw new BadRequestError("id is required");
+      const json = await request.json();
+      const data = patchTaskBoardRequestSchema.parse({ id, ...json });
+      const { id: taskBoardId, ...body } = data;
 
       if (Object.keys(body).length === 0)
         throw new BadRequestError("No updates provided");
 
       if (!access.isAnonymous) {
-        const existing = await apiServices.taskBoards.getById(id, access);
+        const existing = await apiServices.taskBoards.getById(
+          taskBoardId,
+          access,
+        );
         if (!existing) throw new NotFoundError("Task board");
       }
 
-      const updated = await apiServices.taskBoards.update(id, body, access);
+      const updated = await apiServices.taskBoards.update(
+        taskBoardId,
+        body,
+        access,
+      );
       return access.isAnonymous
         ? { ...updated, guest: true as const }
         : updated;
@@ -120,16 +125,12 @@ export class TaskBoardsController extends BaseController {
 
   delete = this.createRoute({
     requestDto: taskBoardIdQuerySchema,
-    requestSource: async (req, _ctx) => {
-      const id = new URL(req.url).searchParams.get("id");
-      if (!id) throw new BadRequestError("id is required");
-      return taskBoardIdQuerySchema.parse({ id });
-    },
+    inputType: InputType.Query,
     responseDto: GuestResourceDeleteResponseDto,
-    handler: async (_req, payload, _ctx) => {
+    handler: async ({ input }) => {
       const auth = await requireAuth();
       const access = getAccessByAuth(auth);
-      const { id } = payload;
+      const { id } = input;
 
       if (!access.isAnonymous) {
         const existing = await apiServices.taskBoards.getById(id, access);

@@ -21,7 +21,7 @@ import {
 import { BadRequestError, NotFoundError } from "@/lib/api/errors";
 import { apiServices } from "@/services/server/api";
 
-import { BaseController } from "./base.controller";
+import { BaseController, InputType } from "./base.controller";
 
 const taskIdParamsSchema = z.object({ id: z.string() });
 
@@ -41,10 +41,10 @@ const deleteTasksForBoardQuerySchema = z.object({
 export class TasksController extends BaseController {
   list = this.createRoute({
     responseDto: TaskListResponseDto,
-    handler: async (req, _body, _ctx) => {
+    handler: async ({ request }) => {
       const auth = await requireAuth();
       const access = getAccessByAuth(auth);
-      const { searchParams } = new URL(req.url);
+      const { searchParams } = new URL(request.url);
       const taskBoardId = searchParams.get("taskBoardId");
       const date = searchParams.get("date");
 
@@ -71,15 +71,16 @@ export class TasksController extends BaseController {
 
   create = this.createRoute({
     requestDto: TaskPostBodySchema,
+    inputType: InputType.Body,
     responseDto: TaskCreateResponseDto,
-    jsonStatus: 201,
-    handler: async (_req, body, _ctx) => {
+    status: 201,
+    handler: async ({ input }) => {
       const auth = await requireAuth();
       const access = getAccessByAuth(auth);
 
-      if (body.shouldUseAI) await requireAiAccess();
+      if (input.shouldUseAI) await requireAiAccess();
 
-      const result = await apiServices.tasks.create(body, access);
+      const result = await apiServices.tasks.create(input, access);
 
       if (result.composed) return result.composed;
 
@@ -95,20 +96,13 @@ export class TasksController extends BaseController {
 
   deleteAllForBoard = this.createRoute({
     requestDto: deleteTasksForBoardQuerySchema,
-    requestSource: async (req, _ctx) => {
-      const taskBoardId = new URL(req.url).searchParams.get("taskBoardId");
-      if (!taskBoardId?.trim())
-        throw new BadRequestError("taskBoardId query parameter is required");
-      return deleteTasksForBoardQuerySchema.parse({
-        taskBoardId: taskBoardId.trim(),
-      });
-    },
+    inputType: InputType.Query,
     responseDto: TasksDeletedCountResponseDto,
-    handler: async (_req, query, _ctx) => {
+    handler: async ({ input }) => {
       const auth = await requireNonAnonymous();
       const access = getAccessByAuth(auth);
       const deleted = await apiServices.tasks.deleteAllForBoard(
-        query.taskBoardId,
+        input.taskBoardId,
         access,
       );
       return { deleted };
@@ -117,28 +111,26 @@ export class TasksController extends BaseController {
 
   getById = this.createRoute({
     requestDto: taskIdParamsSchema,
-    requestSource: async (_req, ctx) =>
-      taskIdParamsSchema.parse(await ctx.params),
+    inputType: InputType.Params,
     responseDto: TaskResponseDto,
-    handler: async (_req, params, _ctx) => {
+    handler: async ({ input }) => {
       const auth = await requireAuth();
       const access = getAccessByAuth(auth);
-      const task = await apiServices.tasks.getById(params.id, access);
+      const task = await apiServices.tasks.getById(input.id, access);
       if (!task) throw new NotFoundError("Task");
       return task;
     },
   });
 
   update = this.createRoute({
-    requestDto: taskPatchMergedSchema,
-    requestSource: async (req, ctx) => {
-      const { id } = taskIdParamsSchema.parse(await ctx.params);
-      return { id, json: await req.json() };
-    },
     responseDto: TaskResponseDto,
-    handler: async (_req, body, _ctx) => {
+    handler: async ({ request, context }) => {
       const auth = await requireNonAnonymous();
       const access = getAccessByAuth(auth);
+      const params = await Promise.resolve(context.params);
+      const { id } = taskIdParamsSchema.parse(params);
+      const json = await request.json();
+      const body = taskPatchMergedSchema.parse({ id, json });
       const { id: taskId, ...updateData } = body;
       const updatedTask = await apiServices.tasks.update(
         taskId,
@@ -152,26 +144,24 @@ export class TasksController extends BaseController {
 
   delete = this.createRoute({
     requestDto: taskIdParamsSchema,
-    requestSource: async (_req, ctx) =>
-      taskIdParamsSchema.parse(await ctx.params),
+    inputType: InputType.Params,
     responseDto: TaskDeleteSuccessResponseDto,
-    handler: async (_req, params, _ctx) => {
+    handler: async ({ input }) => {
       const auth = await requireNonAnonymous();
       const access = getAccessByAuth(auth);
-      await apiServices.tasks.delete(params.id, access);
+      await apiServices.tasks.delete(input.id, access);
       return { success: true };
     },
   });
 
   getByKey = this.createRoute({
     requestDto: taskKeyParamsSchema,
-    requestSource: async (_req, ctx) =>
-      taskKeyParamsSchema.parse(await ctx.params),
+    inputType: InputType.Params,
     responseDto: TaskByKeyResponseDto,
-    handler: async (_req, params, _ctx) => {
+    handler: async ({ input }) => {
       const auth = await requireAuth();
       const access = getAccessByAuth(auth);
-      const result = await apiServices.tasks.getByKey(params.taskKey, access);
+      const result = await apiServices.tasks.getByKey(input.taskKey, access);
       if (!result) throw new NotFoundError("Task");
       return result;
     },
@@ -179,11 +169,12 @@ export class TasksController extends BaseController {
 
   optimize = this.createRoute({
     requestDto: OptimizeTasksDto,
+    inputType: InputType.Body,
     responseDto: OptimizeTasksResponseDto,
-    handler: async (_req, body, _ctx) => {
+    handler: async ({ input }) => {
       const auth = await requireAiAccess();
       const access = getAccessByAuth(auth);
-      return apiServices.tasks.optimize(body.taskIds, access);
+      return apiServices.tasks.optimize(input.taskIds, access);
     },
   });
 }

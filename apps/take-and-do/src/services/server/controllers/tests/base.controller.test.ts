@@ -4,7 +4,11 @@ import { z } from "zod";
 
 import { HttpError } from "@/lib/api/errors";
 
-import { BaseController, type NextAppRouteContext } from "./base.controller";
+import {
+  BaseController,
+  InputType,
+  type NextAppRouteContext,
+} from "../base.controller";
 
 const emptyCtx: NextAppRouteContext = { params: Promise.resolve({}) };
 
@@ -33,14 +37,16 @@ describe("BaseController", () => {
       expect(await response.json()).toEqual({ message: "ok" });
     });
 
-    it("validates request body and passes typed body to handler", async () => {
-      const bodySpy = vi.fn();
+    it("validates request body and passes typed input to handler", async () => {
+      const inputSpy = vi.fn();
+      const nameBodySchema = z.object({ name: z.string() });
       class TestController extends BaseController {
         run = this.createRoute({
-          requestDto: z.object({ name: z.string() }),
+          requestDto: nameBodySchema,
+          inputType: InputType.Body,
           responseDto: z.object({ ok: z.literal(true) }),
-          handler: async (_req, body) => {
-            bodySpy(body);
+          handler: async ({ input }) => {
+            inputSpy(input);
             return { ok: true };
           },
         });
@@ -49,28 +55,7 @@ describe("BaseController", () => {
         jsonRequest("http://localhost/", { name: "x" }),
         emptyCtx,
       );
-      expect(bodySpy).toHaveBeenCalledWith({ name: "x" });
-    });
-
-    it("uses requestSource when provided instead of req.json()", async () => {
-      const sourceSpy = vi.fn();
-      class TestController extends BaseController {
-        run = this.createRoute({
-          requestDto: z.object({ n: z.number() }),
-          requestSource: (req, ctx) => {
-            sourceSpy(req, ctx);
-            return { n: 7 };
-          },
-          responseDto: z.object({ n: z.number() }),
-          handler: async (_req, body) => ({ n: body.n }),
-        });
-      }
-      const response = await new TestController().run(
-        new NextRequest("http://localhost/", { method: "GET" }),
-        emptyCtx,
-      );
-      expect(sourceSpy).toHaveBeenCalled();
-      expect(await response.json()).toEqual({ n: 7 });
+      expect(inputSpy).toHaveBeenCalledWith({ name: "x" });
     });
 
     it("skips request validation when requestDto is omitted", async () => {
@@ -101,9 +86,11 @@ describe("BaseController", () => {
     });
 
     it("returns 400 when request body fails ZodError", async () => {
+      const xBodySchema = z.object({ x: z.string() });
       class TestController extends BaseController {
         run = this.createRoute({
-          requestDto: z.object({ x: z.string() }),
+          requestDto: xBodySchema,
+          inputType: InputType.Body,
           handler: async () => ({ ok: true }),
         });
       }
@@ -170,12 +157,15 @@ describe("BaseController", () => {
       expect(await response.json()).toEqual({ error: "boom" });
     });
 
-    it("does not pass body argument to handler when requestDto is omitted", async () => {
+    it("passes empty input when requestDto is omitted", async () => {
       class TestController extends BaseController {
         run = this.createRoute({
           responseDto: z.object({ got: z.string() }),
-          handler: async (_req, body) => ({
-            got: body === undefined ? "undefined" : "defined",
+          handler: async ({ input }) => ({
+            got:
+              input && Object.keys(input as object).length > 0
+                ? "present"
+                : "absent",
           }),
         });
       }
@@ -183,13 +173,12 @@ describe("BaseController", () => {
         new NextRequest("http://localhost/"),
         emptyCtx,
       );
-      expect(await response.json()).toEqual({ got: "undefined" });
+      expect(await response.json()).toEqual({ got: "absent" });
     });
 
     it("returns Response from handler without JSON validation", async () => {
       class TestController extends BaseController {
         run = this.createRoute({
-          responseDto: z.object({ never: z.literal(true) }),
           handler: async () => new NextResponse(null, { status: 204 }),
         });
       }

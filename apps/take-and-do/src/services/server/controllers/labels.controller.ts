@@ -9,12 +9,12 @@ import {
 } from "@/db/dtos";
 import { apiServices } from "@/services/server/api";
 
-import { BaseController } from "./base.controller";
+import { BaseController, InputType } from "./base.controller";
 
 export class LabelsController extends BaseController {
   list = this.createRoute({
     responseDto: LabelsListResponseDto,
-    handler: async (_req, _body, _ctx) => {
+    handler: async () => {
       await requireAuth();
       return apiServices.labels.getAll();
     },
@@ -22,23 +22,25 @@ export class LabelsController extends BaseController {
 
   create = this.createRoute({
     requestDto: CreateLabelDto,
+    inputType: InputType.Body,
     responseDto: LabelMutationResponseDto,
-    jsonStatus: 201,
-    handler: async (_req, body, _ctx) => {
+    status: 201,
+    handler: async ({ input }) => {
       await requireNonAnonymous();
-      const newLabel = await apiServices.labels.add(body.label.trim());
+      const newLabel = await apiServices.labels.add(input.label.trim());
       return { label: newLabel };
     },
   });
 
   rename = this.createRoute({
     requestDto: RenameLabelDto,
+    inputType: InputType.Body,
     responseDto: LabelMutationResponseDto,
-    handler: async (_req, body, _ctx) => {
+    handler: async ({ input }) => {
       await requireNonAnonymous();
       const label = await apiServices.labels.rename(
-        body.oldName.trim(),
-        body.newName,
+        input.oldName.trim(),
+        input.newName,
       );
       return { label };
     },
@@ -46,10 +48,11 @@ export class LabelsController extends BaseController {
 
   remove = this.createRoute({
     requestDto: DeleteLabelDto,
+    inputType: InputType.Body,
     responseDto: OkTrueResponseDto,
-    handler: async (_req, body, _ctx) => {
+    handler: async ({ input }) => {
       await requireNonAnonymous();
-      await apiServices.labels.delete(body.name);
+      await apiServices.labels.delete(input.name);
       return { ok: true };
     },
   });

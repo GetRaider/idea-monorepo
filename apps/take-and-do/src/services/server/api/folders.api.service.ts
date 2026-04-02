@@ -1,6 +1,6 @@
 import type { DataAccess } from "@/db/repositories/base.repository";
 import type { FoldersRepository } from "@/db/repositories/folders.repository";
-import { BaseApiService } from "@/services/api/base.api.service";
+import { BaseApiService } from "@/services/server/api/base.api.service";
 
 export class FoldersApiService extends BaseApiService {
   constructor(private readonly repository: FoldersRepository) {

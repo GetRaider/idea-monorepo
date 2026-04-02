@@ -1,56 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { FoldersController } from "@/services/server/controllers";
 
-import { getAccessByAuth, requireAuth } from "@/auth/guards";
-import { apiServices } from "@/services/api";
-import { handleRoute } from "@/lib/api/handleRoute";
-import { BadRequestError, NotFoundError } from "@/lib/api/errors";
-import { UpdateFolderDto } from "@/db/dtos";
+const controller = new FoldersController();
 
-type RouteContext = { params: Promise<{ id: string }> };
-
-export const GET = handleRoute(async (_request: NextRequest, context) => {
-  const auth = await requireAuth();
-  const access = getAccessByAuth(auth);
-  const { id: folderId } = await (context as RouteContext).params;
-  const folder = await apiServices.folders.getById(folderId, access);
-  if (!folder) throw new NotFoundError("Folder");
-  return NextResponse.json(folder);
-});
-
-export const PATCH = handleRoute(async (request: NextRequest, context) => {
-  const auth = await requireAuth();
-  const access = getAccessByAuth(auth);
-  const { id: folderId } = await (context as RouteContext).params;
-  const body = UpdateFolderDto.parse(await request.json());
-
-  if (Object.keys(body).length === 0)
-    throw new BadRequestError("No updates provided");
-
-  if (!access.isAnonymous) {
-    const folder = await apiServices.folders.getById(folderId, access);
-    if (!folder) throw new NotFoundError("Folder");
-  }
-
-  const updated = await apiServices.folders.update(folderId, body, access);
-  return NextResponse.json(
-    access.isAnonymous ? { ...updated, guest: true } : updated,
-  );
-});
-
-export const DELETE = handleRoute(async (_request: NextRequest, context) => {
-  const auth = await requireAuth();
-  const access = getAccessByAuth(auth);
-  const { id: folderId } = await (context as RouteContext).params;
-
-  if (!access.isAnonymous) {
-    const folder = await apiServices.folders.getById(folderId, access);
-    if (!folder) throw new NotFoundError("Folder");
-  }
-
-  await apiServices.folders.delete(folderId, access);
-
-  if (access.isAnonymous) {
-    return NextResponse.json({ id: folderId, deleted: true, guest: true });
-  }
-  return new NextResponse(null, { status: 204 });
-});
+export const GET = controller.getById;
+export const PATCH = controller.update;
+export const DELETE = controller.delete;

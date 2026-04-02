@@ -19,7 +19,7 @@ export class BaseApiService {
 
   /**
    * Map repository/domain failures to HTTP errors (`notFound`, `badRequest`, …).
-   * Rethrow anything you do not translate so `handleRoute` can respond with 500.
+   * Rethrow anything you do not translate so route handlers can respond with 500.
    */
   protected mapError(error: unknown): never {
     throw error;

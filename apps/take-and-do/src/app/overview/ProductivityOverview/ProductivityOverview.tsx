@@ -32,7 +32,7 @@ import {
 } from "./ProductivityOverview.ui";
 import { ProductivitySummaryDialog } from "./ProductivitySummaryDialog/ProductivitySummaryDialog";
 import { ProductivitySummarySelectionDialog } from "./ProductivitySummarySelectionDialog/ProductivitySummarySelectionDialog";
-import type { AnalyticsStats } from "@/services/ai";
+import type { AnalyticsStats } from "@/services/server/ai";
 import { EmptyState } from "@/components/EmptyState";
 import { Dropdown } from "@/components/Dropdown";
 import { clientServices } from "@/services/client";

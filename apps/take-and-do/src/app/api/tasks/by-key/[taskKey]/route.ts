@@ -1,17 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+import { TasksController } from "@/services/server/controllers";
 
-import { getAccessByAuth, requireAuth } from "@/auth/guards";
-import { handleRoute } from "@/lib/api/handleRoute";
-import { NotFoundError } from "@/lib/api/errors";
-import { apiServices } from "@/services/api";
+const controller = new TasksController();
 
-type RouteContext = { params: Promise<{ taskKey: string }> };
-
-export const GET = handleRoute(async (_request: NextRequest, context) => {
-  const auth = await requireAuth();
-  const access = getAccessByAuth(auth);
-  const { taskKey } = await (context as RouteContext).params;
-  const result = await apiServices.tasks.getByKey(taskKey, access);
-  if (!result) throw new NotFoundError("Task");
-  return NextResponse.json(result);
-});
+export const GET = controller.getByKey;

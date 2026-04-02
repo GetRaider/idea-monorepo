@@ -1,5 +1,5 @@
 import { Task, TaskUpdate, toTaskPriority } from "@/types/task";
-import type { ComposeTaskOutput } from "@/services/ai/schemas";
+import type { ComposeTaskOutput } from "@/services/server/ai/schemas";
 import { guestStoreHelper } from "@/stores/guest";
 import { tasksHelper } from "@/helpers/task.helper";
 

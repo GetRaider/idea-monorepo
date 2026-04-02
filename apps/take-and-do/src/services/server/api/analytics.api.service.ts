@@ -1,8 +1,8 @@
-import { aiServices } from "@/services/ai";
+import { aiServices } from "@/services/server/ai";
 import { ForbiddenError } from "@/lib/api/errors";
-import { BaseApiService } from "@/services/api/base.api.service";
+import { BaseApiService } from "@/services/server/api/base.api.service";
 
-import type { AnalyticsInput, AnalyticsOutput } from "@/services/ai";
+import type { AnalyticsInput, AnalyticsOutput } from "@/services/server/ai";
 import type { TaskStatsInput, Timeframe } from "@/db/dtos";
 import type { DataAccess } from "@/db/repositories/base.repository";
 import type { TasksRepository } from "@/db/repositories/tasks.repository";

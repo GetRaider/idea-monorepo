@@ -1,4 +1,4 @@
-import { BaseApiService } from "@/services/api/base.api.service";
+import { BaseApiService } from "@/services/server/api/base.api.service";
 
 import type { LabelsRepository } from "@/db/repositories/labels.repository";
 
@@ -30,7 +30,6 @@ export class LabelsApiService extends BaseApiService {
     if (message === "Label not found") this.notFound("Label");
     if (message === "Label name is required") this.badRequest(message);
     if (message === "Label name is already taken") this.conflict(message);
-    if (message === "Label name is required") this.badRequest(message);
     throw error;
   }
 }

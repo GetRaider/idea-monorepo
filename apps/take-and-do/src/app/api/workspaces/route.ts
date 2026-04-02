@@ -1,15 +1,5 @@
-import { NextResponse } from "next/server";
+import { WorkspacesController } from "@/services/server/controllers";
 
-import { getAccessByAuth, requireAuth } from "@/auth/guards";
-import { apiServices } from "@/services/api";
-import { handleRoute } from "@/lib/api/handleRoute";
+const controller = new WorkspacesController();
 
-export const GET = handleRoute(async () => {
-  const auth = await requireAuth();
-  const access = getAccessByAuth(auth);
-  const [folders, taskBoards] = await Promise.all([
-    apiServices.folders.getAll(access),
-    apiServices.taskBoards.getAll(access),
-  ]);
-  return NextResponse.json({ folders, taskBoards });
-});
+export const GET = controller.get;

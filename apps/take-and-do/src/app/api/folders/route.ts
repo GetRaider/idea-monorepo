@@ -1,24 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
+import { FoldersController } from "@/services/server/controllers";
 
-import { getAccessByAuth, requireAuth } from "@/auth/guards";
-import { apiServices } from "@/services/api";
-import { handleRoute } from "@/lib/api/handleRoute";
-import { CreateFolderDto } from "@/db/dtos";
+const controller = new FoldersController();
 
-export const GET = handleRoute(async () => {
-  const auth = await requireAuth();
-  const access = getAccessByAuth(auth);
-  const folders = await apiServices.folders.getAll(access);
-  return NextResponse.json(folders);
-});
-
-export const POST = handleRoute(async (request: NextRequest) => {
-  const auth = await requireAuth();
-  const access = getAccessByAuth(auth);
-  const { name, emoji } = CreateFolderDto.parse(await request.json());
-  const folder = await apiServices.folders.create(name.trim(), access, emoji);
-  return NextResponse.json(
-    access.isAnonymous ? { ...folder, guest: true } : folder,
-    { status: 201 },
-  );
-});
+export const GET = controller.list;
+export const POST = controller.create;

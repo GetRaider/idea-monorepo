@@ -1,9 +1,9 @@
-import { aiServices } from "@/services/ai";
+import { aiServices } from "@/services/server/ai";
 import { tasksHelper } from "@/helpers/task.helper";
-import { BaseApiService } from "@/services/api/base.api.service";
+import { BaseApiService } from "@/services/server/api/base.api.service";
 
 import type { TaskPostPayload } from "@/helpers/task.helper";
-import type { ComposeTaskOutput } from "@/services/ai";
+import type { ComposeTaskOutput } from "@/services/server/ai";
 import type { Task, TaskUpdate } from "@/types/task";
 import type { DataAccess } from "@/db/repositories/base.repository";
 import type { TasksRepository } from "@/db/repositories/tasks.repository";

@@ -1,2 +1,2 @@
 export * from "./errors";
-export * from "./handleRoute";
+export * from "./format-zod-error";

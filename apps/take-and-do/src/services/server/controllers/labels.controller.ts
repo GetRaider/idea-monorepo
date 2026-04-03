@@ -9,7 +9,7 @@ import {
 } from "@/db/dtos";
 import { apiServices } from "@/services/server/api";
 
-import { BaseController, InputType } from "./base.controller";
+import { BaseController } from "./base.controller";
 
 export class LabelsController extends BaseController {
   list = this.createRoute({
@@ -21,21 +21,19 @@ export class LabelsController extends BaseController {
   });
 
   create = this.createRoute({
-    inputType: InputType.Body,
-    requestDto: CreateLabelDto,
+    bodyDto: CreateLabelDto,
     responseDto: LabelMutationResponseDto,
     status: 201,
-    handler: async ({ input: body }) => {
+    handler: async ({ body }) => {
       await requireNonAnonymous();
       return { label: await apiServices.labels.add(body.label.trim()) };
     },
   });
 
   rename = this.createRoute({
-    inputType: InputType.Body,
-    requestDto: RenameLabelDto,
+    bodyDto: RenameLabelDto,
     responseDto: LabelMutationResponseDto,
-    handler: async ({ input: body }) => {
+    handler: async ({ body }) => {
       await requireNonAnonymous();
       const { oldName, newName } = body;
       return {
@@ -45,10 +43,9 @@ export class LabelsController extends BaseController {
   });
 
   remove = this.createRoute({
-    inputType: InputType.Body,
-    requestDto: DeleteLabelDto,
+    bodyDto: DeleteLabelDto,
     responseDto: OkTrueResponseDto,
-    handler: async ({ input: body }) => {
+    handler: async ({ body }) => {
       await requireNonAnonymous();
       await apiServices.labels.delete(body.name);
       return { ok: true };

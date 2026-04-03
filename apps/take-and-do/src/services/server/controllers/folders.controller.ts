@@ -12,7 +12,7 @@ import {
 import { BadRequestError, NotFoundError } from "@/lib/api/errors";
 import { apiServices } from "@/services/server/api";
 
-import { BaseController, InputType } from "./base.controller";
+import { BaseController } from "./base.controller";
 
 export class FoldersController extends BaseController {
   getAll = this.createRoute({
@@ -25,11 +25,10 @@ export class FoldersController extends BaseController {
   });
 
   create = this.createRoute({
-    inputType: InputType.Body,
-    requestDto: CreateFolderDto,
+    bodyDto: CreateFolderDto,
     responseDto: FolderResponseDto,
     status: 201,
-    handler: async ({ input: body }) => {
+    handler: async ({ body }) => {
       const auth = await requireAuth();
       const access = getAccessByAuth(auth);
       const { name, emoji = null } = body;
@@ -43,10 +42,9 @@ export class FoldersController extends BaseController {
   });
 
   getById = this.createRoute({
-    inputType: InputType.Params,
-    requestDto: FolderByIdRequestDto,
+    paramsDto: FolderByIdRequestDto,
     responseDto: FolderResponseDto,
-    handler: async ({ input: params }) => {
+    handler: async ({ params }) => {
       const auth = await requireAuth();
       const access = getAccessByAuth(auth);
       const folder = await apiServices.folders.getById(params.id, access);
@@ -56,10 +54,9 @@ export class FoldersController extends BaseController {
   });
 
   update = this.createRoute({
-    inputType: InputType.Body,
-    requestDto: UpdateFolderRequestDto,
+    bodyDto: UpdateFolderRequestDto,
     responseDto: FolderResponseDto,
-    handler: async ({ input: body }) => {
+    handler: async ({ body }) => {
       const auth = await requireAuth();
       const access = getAccessByAuth(auth);
       const { id: folderId, ...updates } = body;
@@ -85,10 +82,9 @@ export class FoldersController extends BaseController {
   });
 
   delete = this.createRoute({
-    inputType: InputType.Params,
-    requestDto: FolderByIdRequestDto,
+    paramsDto: FolderByIdRequestDto,
     responseDto: GuestResourceDeleteResponseDto,
-    handler: async ({ input: params }) => {
+    handler: async ({ params }) => {
       const auth = await requireAuth();
       const access = getAccessByAuth(auth);
       const folderId = params.id;

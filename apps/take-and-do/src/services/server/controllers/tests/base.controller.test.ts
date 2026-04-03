@@ -4,11 +4,7 @@ import { z } from "zod";
 
 import { HttpError } from "@/lib/api/errors";
 
-import {
-  BaseController,
-  InputType,
-  type NextAppRouteContext,
-} from "../base.controller";
+import { BaseController, type NextAppRouteContext } from "../base.controller";
 
 const emptyCtx: NextAppRouteContext = { params: Promise.resolve({}) };
 
@@ -37,16 +33,15 @@ describe("BaseController", () => {
       expect(await response.json()).toEqual({ message: "ok" });
     });
 
-    it("validates request body and passes typed input to handler", async () => {
-      const inputSpy = vi.fn();
+    it("validates request body and passes typed body to handler", async () => {
+      const bodySpy = vi.fn();
       const nameBodySchema = z.object({ name: z.string() });
       class TestController extends BaseController {
         run = this.createRoute({
-          requestDto: nameBodySchema,
-          inputType: InputType.Body,
+          bodyDto: nameBodySchema,
           responseDto: z.object({ ok: z.literal(true) }),
-          handler: async ({ input }) => {
-            inputSpy(input);
+          handler: async ({ body }) => {
+            bodySpy(body);
             return { ok: true };
           },
         });
@@ -55,10 +50,10 @@ describe("BaseController", () => {
         jsonRequest("http://localhost/", { name: "x" }),
         emptyCtx,
       );
-      expect(inputSpy).toHaveBeenCalledWith({ name: "x" });
+      expect(bodySpy).toHaveBeenCalledWith({ name: "x" });
     });
 
-    it("skips request validation when requestDto is omitted", async () => {
+    it("skips body validation when bodyDto is omitted", async () => {
       class TestController extends BaseController {
         run = this.createRoute({
           responseDto: z.object({ a: z.number() }),
@@ -89,8 +84,7 @@ describe("BaseController", () => {
       const xBodySchema = z.object({ x: z.string() });
       class TestController extends BaseController {
         run = this.createRoute({
-          requestDto: xBodySchema,
-          inputType: InputType.Body,
+          bodyDto: xBodySchema,
           handler: async () => ({ ok: true }),
         });
       }
@@ -157,13 +151,13 @@ describe("BaseController", () => {
       expect(await response.json()).toEqual({ error: "boom" });
     });
 
-    it("passes empty input when requestDto is omitted", async () => {
+    it("passes null body when bodyDto is omitted", async () => {
       class TestController extends BaseController {
         run = this.createRoute({
           responseDto: z.object({ got: z.string() }),
-          handler: async ({ input }) => ({
+          handler: async ({ body }) => ({
             got:
-              input && Object.keys(input as object).length > 0
+              body && Object.keys(body as object).length > 0
                 ? "present"
                 : "absent",
           }),

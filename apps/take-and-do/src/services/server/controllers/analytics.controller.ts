@@ -7,14 +7,13 @@ import {
 } from "@/db/dtos";
 import { apiServices } from "@/services/server/api";
 
-import { BaseController, InputType } from "./base.controller";
+import { BaseController } from "./base.controller";
 
 export class AnalyticsController extends BaseController {
   getStatistics = this.createRoute({
-    inputType: InputType.Query,
-    requestDto: GetAnalyticsQueryDto,
+    queryDto: GetAnalyticsQueryDto,
     responseDto: AnalyticsGetResponseDto,
-    handler: async ({ input: query }) => {
+    handler: async ({ query }) => {
       const auth = await requireAuth();
       const access = getAccessByAuth(auth);
       const stats = await apiServices.analytics.getStatistics(
@@ -26,10 +25,9 @@ export class AnalyticsController extends BaseController {
   });
 
   generate = this.createRoute({
-    inputType: InputType.Body,
-    requestDto: GenerateAnalyticsDto,
+    bodyDto: GenerateAnalyticsDto,
     responseDto: AnalyticsPostResponseDto,
-    handler: async ({ input: body }) => {
+    handler: async ({ body }) => {
       const auth = await requireAuth();
       const { stats, timeframe, shouldUseAI = false } = body;
       const analytics = await apiServices.analytics.generate(

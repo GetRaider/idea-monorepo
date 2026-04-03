@@ -14,10 +14,8 @@ import {
 } from "@/db/dtos";
 import { BadRequestError, NotFoundError } from "@/lib/api/errors";
 import { apiServices } from "@/services/server/api";
-
 import type { TaskBoard } from "@/types/workspace";
-
-import { BaseController, InputType } from "./base.controller";
+import { BaseController } from "./base.controller";
 
 const taskBoardIdQuerySchema = z.object({ id: z.string().min(1) });
 
@@ -35,10 +33,9 @@ export const TaskBoardByQueryRequestDto = z.object({
 
 export class TaskBoardsController extends BaseController {
   getByQuery = this.createRoute({
-    inputType: InputType.Query,
-    requestDto: TaskBoardByQueryRequestDto,
+    queryDto: TaskBoardByQueryRequestDto,
     responseDto: listOrGetResponseSchema,
-    handler: async ({ input: query }) => {
+    handler: async ({ query }) => {
       const auth = await requireAuth();
       const access = getAccessByAuth(auth);
       const { id } = query;
@@ -54,11 +51,10 @@ export class TaskBoardsController extends BaseController {
   });
 
   create = this.createRoute({
-    inputType: InputType.Body,
-    requestDto: CreateTaskBoardDto,
+    bodyDto: CreateTaskBoardDto,
     responseDto: TaskBoardResponseDto,
     status: 201,
-    handler: async ({ input: body }) => {
+    handler: async ({ body }) => {
       const auth = await requireAuth();
       const access = getAccessByAuth(auth);
       const { name, folderId = null, emoji = null } = body;
@@ -131,13 +127,12 @@ export class TaskBoardsController extends BaseController {
   });
 
   delete = this.createRoute({
-    inputType: InputType.Query,
-    requestDto: taskBoardIdQuerySchema,
+    queryDto: taskBoardIdQuerySchema,
     responseDto: GuestResourceDeleteResponseDto,
-    handler: async ({ input }) => {
+    handler: async ({ query }) => {
       const auth = await requireAuth();
       const access = getAccessByAuth(auth);
-      const { id } = input;
+      const { id } = query;
 
       if (!access.isAnonymous) {
         const existing = await apiServices.taskBoards.getById(id, access);

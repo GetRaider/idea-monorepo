@@ -16,8 +16,8 @@ export const GenerateAnalyticsDto = z.object({
 });
 
 export const GetAnalyticsQueryDto = z.object({
-  stats: taskStatsSchema,
   timeframe: timeframeEnum,
+  stats: taskStatsSchema.optional(),
   shouldUseAI: z.boolean().optional(),
 });
 

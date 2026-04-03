@@ -4,94 +4,96 @@ import { ZodError, type z } from "zod";
 import { HttpError } from "@/lib/api/errors";
 import { formatZodError } from "@/lib/api/format-zod-error";
 
+type InferredDto<Dto extends z.ZodType<unknown> | undefined> =
+  Dto extends z.ZodType<infer T> ? T : null;
+
 export class BaseController {
-  protected createRoute<TRequest, TResponse>({
-    requestDto,
-    inputType,
-    handler,
+  protected createRoute<
+    const PDto extends z.ZodType<unknown> | undefined = undefined,
+    const QDto extends z.ZodType<unknown> | undefined = undefined,
+    const BDto extends z.ZodType<unknown> | undefined = undefined,
+    TResponse = unknown,
+  >({
+    paramsDto,
+    queryDto,
+    bodyDto,
     responseDto,
+    handler,
     status = 200,
-  }: CreateRouteParams<TRequest, TResponse>): AppRouteHandler {
+  }: CreateRouteParams<PDto, QDto, BDto, TResponse>): AppRouteHandler {
     return async (request, context) => {
       try {
-        const inputData: TRequest =
-          requestDto && inputType
-            ? await this.getVerifiedInputData(
-                request,
-                context,
-                inputType,
-                requestDto,
-              )
-            : ({} as TRequest);
+        const { params, query, body } = await this.getRequestInputs({
+          paramsDto,
+          queryDto,
+          bodyDto,
+          context,
+          request,
+        });
 
         const response = await handler({
           request,
           context,
-          input: inputData,
+          params: params as InferredDto<PDto>,
+          query: query as InferredDto<QDto>,
+          body: body as InferredDto<BDto>,
         });
 
+        // Handles: No body (204 / 205), Redirects, Non-JSON body
         if (response instanceof Response) return response;
 
-        const finalResponse = responseDto
+        const validatedResponse = responseDto
           ? this.validateResponseDto(responseDto, response)
           : response;
 
-        return NextResponse.json(finalResponse, { status });
+        return NextResponse.json(validatedResponse, { status });
       } catch (error) {
         return this.handleError(error);
       }
     };
   }
 
-  private async getVerifiedInputData<TRequest>(
-    request: NextRequest,
-    context: NextAppRouteContext,
-    inputType: InputType,
-    requestDto: z.ZodType<TRequest>,
-  ): Promise<TRequest> {
-    const rawInputData = await this.getRawInputData(
-      request,
-      context,
-      inputType,
-    );
-    return this.validateRequestDto(requestDto, rawInputData);
+  private async getRequestInputs<TParams, TQuery, TBody>({
+    paramsDto,
+    queryDto,
+    bodyDto,
+    context,
+    request,
+  }: GetInputsParams<TParams, TQuery, TBody>): Promise<
+    Inputs<TParams, TQuery, TBody>
+  > {
+    const params = paramsDto
+      ? this.validateDto(paramsDto, await context.params)
+      : null;
+
+    const query = queryDto
+      ? this.validateDto(
+          queryDto,
+          Object.fromEntries(new URL(request.url).searchParams),
+        )
+      : null;
+
+    const body = bodyDto
+      ? this.validateDto(bodyDto, await request.json())
+      : null;
+
+    return { params, query, body };
   }
 
-  private async getRawInputData(
-    request: NextRequest,
-    context: NextAppRouteContext,
-    inputType: InputType,
-  ): Promise<Record<string, unknown>> {
-    switch (inputType) {
-      case InputType.Body:
-        return request.json();
-      case InputType.Params: {
-        return (await context.params) as Record<string, unknown>;
-      }
-      case InputType.Query:
-        return Object.fromEntries(new URL(request.url).searchParams);
-      default:
-        throw new HttpError(400, `Invalid request source: '${inputType}'`);
-    }
+  private validateDto<T>(dto: z.ZodType<T>, data: unknown): T {
+    return dto.parse(data);
   }
 
   private validateResponseDto<TResponse>(
     responseDto: z.ZodType<TResponse>,
     response: unknown,
-  ): unknown {
+  ): TResponse {
     const validated = responseDto.safeParse(response);
     if (!validated.success) {
       console.error("Invalid response shape", validated.error);
       throw new HttpError(500, "Unexpected response shape");
     }
     return validated.data;
-  }
-
-  private validateRequestDto<TRequest>(
-    requestDto: z.ZodType<TRequest>,
-    parsedInputData: Record<string, unknown>,
-  ): TRequest {
-    return requestDto.parse(parsedInputData);
   }
 
   private handleError(error: unknown): NextResponse {
@@ -119,10 +121,18 @@ export class BaseController {
   }
 }
 
-export enum InputType {
-  Body = "body",
-  Params = "params",
-  Query = "query",
+interface Inputs<TParams, TQuery, TBody> {
+  params: TParams | null;
+  query: TQuery | null;
+  body: TBody | null;
+}
+
+interface GetInputsParams<TParams, TQuery, TBody> {
+  paramsDto?: z.ZodType<TParams>;
+  queryDto?: z.ZodType<TQuery>;
+  bodyDto?: z.ZodType<TBody>;
+  context: NextAppRouteContext;
+  request: NextRequest;
 }
 
 interface ErrorResponseBody {
@@ -139,19 +149,30 @@ export type AppRouteHandler = (
   context: NextAppRouteContext,
 ) => Promise<Response>;
 
-interface HandlerParams<TRequest> {
+export interface HandlerParams<TParams = null, TQuery = null, TBody = null> {
   request: NextRequest;
   context: NextAppRouteContext;
-  input: TRequest;
+  params: TParams;
+  query: TQuery;
+  body: TBody;
 }
 
-type InputValidationCondition<TRequest> =
-  | { requestDto: z.ZodType<TRequest>; inputType: InputType }
-  | { requestDto?: never; inputType?: never };
-
-type CreateRouteParams<TRequest, TResponse> =
-  InputValidationCondition<TRequest> & {
-    handler: (params: HandlerParams<TRequest>) => Promise<TResponse | Response>;
-    responseDto?: z.ZodType<unknown>;
-    status?: number;
-  };
+type CreateRouteParams<
+  ParamsDto extends z.ZodType<unknown> | undefined,
+  QueryDto extends z.ZodType<unknown> | undefined,
+  BodyDto extends z.ZodType<unknown> | undefined,
+  TResponse,
+> = {
+  paramsDto?: ParamsDto;
+  queryDto?: QueryDto;
+  bodyDto?: BodyDto;
+  responseDto?: z.ZodType<TResponse>;
+  handler: (
+    params: HandlerParams<
+      InferredDto<ParamsDto>,
+      InferredDto<QueryDto>,
+      InferredDto<BodyDto>
+    >,
+  ) => Promise<TResponse | Response>;
+  status?: number;
+};

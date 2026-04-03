@@ -29,14 +29,19 @@ const listOrGetResponseSchema = TaskBoardListResponseDto.or(
   TaskBoardSingleQueryResponseDto,
 );
 
+export const TaskBoardByQueryRequestDto = z.object({
+  id: z.string().min(1).optional(),
+});
+
 export class TaskBoardsController extends BaseController {
-  listOrGetOne = this.createRoute({
+  getByQuery = this.createRoute({
+    inputType: InputType.Query,
+    requestDto: TaskBoardByQueryRequestDto,
     responseDto: listOrGetResponseSchema,
-    handler: async ({ request }) => {
+    handler: async ({ input: query }) => {
       const auth = await requireAuth();
       const access = getAccessByAuth(auth);
-      const { searchParams } = new URL(request.url);
-      const id = searchParams.get("id");
+      const { id } = query;
 
       if (id) {
         const board = await apiServices.taskBoards.getById(id, access);
@@ -49,21 +54,23 @@ export class TaskBoardsController extends BaseController {
   });
 
   create = this.createRoute({
-    requestDto: CreateTaskBoardDto,
     inputType: InputType.Body,
+    requestDto: CreateTaskBoardDto,
     responseDto: TaskBoardResponseDto,
     status: 201,
-    handler: async ({ input }) => {
+    handler: async ({ input: body }) => {
       const auth = await requireAuth();
       const access = getAccessByAuth(auth);
+      const { name, folderId = null, emoji = null } = body;
 
       const taskBoardData: Omit<TaskBoard, "id" | "createdAt" | "updatedAt"> = {
-        name: input.name.trim(),
-        folderId: input.folderId ?? undefined,
+        name: name.trim(),
         isPublic: false,
-        ...(input.emoji !== undefined && { emoji: input.emoji }),
+        folderId,
+        emoji,
       };
 
+      // TODO: Move error handling to the base controller level.
       try {
         const newTaskBoard = await apiServices.taskBoards.create(
           taskBoardData,
@@ -124,8 +131,8 @@ export class TaskBoardsController extends BaseController {
   });
 
   delete = this.createRoute({
-    requestDto: taskBoardIdQuerySchema,
     inputType: InputType.Query,
+    requestDto: taskBoardIdQuerySchema,
     responseDto: GuestResourceDeleteResponseDto,
     handler: async ({ input }) => {
       const auth = await requireAuth();

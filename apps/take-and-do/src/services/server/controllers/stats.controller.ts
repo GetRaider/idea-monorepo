@@ -1,22 +1,17 @@
 import { getAccessByAuth, requireAuth } from "@/auth/guards";
-import { TaskCountsResponseDto } from "@/db/dtos";
+import { GetTaskCountsQueryDto, TaskCountsResponseDto } from "@/db/dtos";
 import { apiServices } from "@/services/server/api";
-
-import { BaseController } from "./base.controller";
+import { BaseController, InputType } from "./base.controller";
 
 export class StatsController extends BaseController {
   getCounts = this.createRoute({
+    inputType: InputType.Query,
+    requestDto: GetTaskCountsQueryDto,
     responseDto: TaskCountsResponseDto,
-    handler: async ({ request }) => {
+    handler: async ({ input: query }) => {
       const auth = await requireAuth();
       const access = getAccessByAuth(auth);
-      const { searchParams } = new URL(request.url);
-      const timeframe = (searchParams.get("timeframe") || "all") as
-        | "all"
-        | "week"
-        | "month"
-        | "quarter";
-      return apiServices.stats.getCounts(timeframe, access);
+      return apiServices.stats.getCounts(query.timeframe, access);
     },
   });
 }

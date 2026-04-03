@@ -14,5 +14,12 @@ export const UpdateFolderDto = z.object({
   createdAt: z.string().min(1).optional(),
 });
 
+export const FolderByIdRequestDto = z.object({ id: z.string() });
+
+export const UpdateFolderRequestDto = z.intersection(
+  FolderByIdRequestDto,
+  UpdateFolderDto,
+);
+
 export type CreateFolderInput = z.infer<typeof CreateFolderDto>;
 export type UpdateFolderInput = z.infer<typeof UpdateFolderDto>;

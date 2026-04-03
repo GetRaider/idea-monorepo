@@ -15,6 +15,12 @@ export const GenerateAnalyticsDto = z.object({
   shouldUseAI: z.boolean().optional(),
 });
 
+export const GetAnalyticsQueryDto = z.object({
+  stats: taskStatsSchema,
+  timeframe: timeframeEnum,
+  shouldUseAI: z.boolean().optional(),
+});
+
 export const OptimizeTasksDto = z.object({
   taskIds: z.array(z.string()).min(1, "'taskIds' must be a non-empty array"),
 });

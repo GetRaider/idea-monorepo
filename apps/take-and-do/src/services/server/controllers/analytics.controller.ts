@@ -3,7 +3,7 @@ import {
   AnalyticsGetResponseDto,
   AnalyticsPostResponseDto,
   GenerateAnalyticsDto,
-  timeframeEnum,
+  GetAnalyticsQueryDto,
 } from "@/db/dtos";
 import { apiServices } from "@/services/server/api";
 
@@ -11,40 +11,38 @@ import { BaseController, InputType } from "./base.controller";
 
 export class AnalyticsController extends BaseController {
   getStatistics = this.createRoute({
+    inputType: InputType.Query,
+    requestDto: GetAnalyticsQueryDto,
     responseDto: AnalyticsGetResponseDto,
-    handler: async ({ request }) => {
+    handler: async ({ input: query }) => {
       const auth = await requireAuth();
       const access = getAccessByAuth(auth);
-      const { searchParams } = new URL(request.url);
-      const timeframe = timeframeEnum.parse(
-        searchParams.get("timeframe") || "month",
-      );
       const stats = await apiServices.analytics.getStatistics(
-        timeframe,
+        query.timeframe,
         access,
       );
-      return { timeframe, stats };
+      return { timeframe: query.timeframe, stats };
     },
   });
 
   generate = this.createRoute({
-    requestDto: GenerateAnalyticsDto,
     inputType: InputType.Body,
+    requestDto: GenerateAnalyticsDto,
     responseDto: AnalyticsPostResponseDto,
     handler: async ({ input: body }) => {
       const auth = await requireAuth();
-      const { stats, timeframe, shouldUseAI } = body;
+      const { stats, timeframe, shouldUseAI = false } = body;
       const analytics = await apiServices.analytics.generate(
         stats,
         timeframe,
-        shouldUseAI ?? false,
+        shouldUseAI,
         auth.isAnonymous,
       );
       return {
         timeframe,
         stats,
         analytics,
-        aiGenerated: shouldUseAI === true,
+        aiGenerated: shouldUseAI,
       };
     },
   });

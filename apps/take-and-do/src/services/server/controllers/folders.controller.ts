@@ -1,29 +1,22 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
 
 import { getAccessByAuth, requireAuth } from "@/auth/guards";
 import {
   CreateFolderDto,
+  FolderByIdRequestDto,
   FolderResponseDto,
-  FoldersListResponseDto,
+  FoldersListResponseDto as GetAllFoldersResponseDto,
   GuestResourceDeleteResponseDto,
-  UpdateFolderDto,
+  UpdateFolderRequestDto,
 } from "@/db/dtos";
 import { BadRequestError, NotFoundError } from "@/lib/api/errors";
 import { apiServices } from "@/services/server/api";
 
 import { BaseController, InputType } from "./base.controller";
 
-const folderIdParamsSchema = z.object({ id: z.string() });
-
-const folderUpdateRequestSchema = z.intersection(
-  folderIdParamsSchema,
-  UpdateFolderDto,
-);
-
 export class FoldersController extends BaseController {
-  list = this.createRoute({
-    responseDto: FoldersListResponseDto,
+  getAll = this.createRoute({
+    responseDto: GetAllFoldersResponseDto,
     handler: async () => {
       const auth = await requireAuth();
       const access = getAccessByAuth(auth);
@@ -32,48 +25,48 @@ export class FoldersController extends BaseController {
   });
 
   create = this.createRoute({
+    inputType: InputType.Body,
     requestDto: CreateFolderDto,
     responseDto: FolderResponseDto,
-    inputType: InputType.Body,
     status: 201,
-    handler: async ({ input }) => {
+    handler: async ({ input: body }) => {
       const auth = await requireAuth();
       const access = getAccessByAuth(auth);
+      const { name, emoji = null } = body;
       const folder = await apiServices.folders.create(
-        input.name.trim(),
+        name.trim(),
         access,
-        input.emoji,
+        emoji,
       );
       return access.isAnonymous ? { ...folder, guest: true as const } : folder;
     },
   });
 
   getById = this.createRoute({
-    requestDto: folderIdParamsSchema,
     inputType: InputType.Params,
+    requestDto: FolderByIdRequestDto,
     responseDto: FolderResponseDto,
-    handler: async ({ input }) => {
+    handler: async ({ input: params }) => {
       const auth = await requireAuth();
       const access = getAccessByAuth(auth);
-      const folder = await apiServices.folders.getById(input.id, access);
+      const folder = await apiServices.folders.getById(params.id, access);
       if (!folder) throw new NotFoundError("Folder");
       return folder;
     },
   });
 
   update = this.createRoute({
+    inputType: InputType.Body,
+    requestDto: UpdateFolderRequestDto,
     responseDto: FolderResponseDto,
-    handler: async ({ request, context }) => {
+    handler: async ({ input: body }) => {
       const auth = await requireAuth();
       const access = getAccessByAuth(auth);
-      const params = await Promise.resolve(context.params);
-      const idRecord = folderIdParamsSchema.parse(params);
-      const json = await request.json();
-      const body = folderUpdateRequestSchema.parse({ ...idRecord, ...json });
       const { id: folderId, ...updates } = body;
 
-      if (Object.keys(updates).length === 0)
+      if (Object.keys(updates).length === 0) {
         throw new BadRequestError("No updates provided");
+      }
 
       if (!access.isAnonymous) {
         const folder = await apiServices.folders.getById(folderId, access);
@@ -92,13 +85,13 @@ export class FoldersController extends BaseController {
   });
 
   delete = this.createRoute({
-    requestDto: folderIdParamsSchema,
     inputType: InputType.Params,
+    requestDto: FolderByIdRequestDto,
     responseDto: GuestResourceDeleteResponseDto,
-    handler: async ({ input }) => {
+    handler: async ({ input: params }) => {
       const auth = await requireAuth();
       const access = getAccessByAuth(auth);
-      const folderId = input.id;
+      const folderId = params.id;
 
       if (!access.isAnonymous) {
         const folder = await apiServices.folders.getById(folderId, access);

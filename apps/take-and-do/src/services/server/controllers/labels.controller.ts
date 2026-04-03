@@ -21,38 +21,36 @@ export class LabelsController extends BaseController {
   });
 
   create = this.createRoute({
-    requestDto: CreateLabelDto,
     inputType: InputType.Body,
+    requestDto: CreateLabelDto,
     responseDto: LabelMutationResponseDto,
     status: 201,
-    handler: async ({ input }) => {
+    handler: async ({ input: body }) => {
       await requireNonAnonymous();
-      const newLabel = await apiServices.labels.add(input.label.trim());
-      return { label: newLabel };
+      return { label: await apiServices.labels.add(body.label.trim()) };
     },
   });
 
   rename = this.createRoute({
-    requestDto: RenameLabelDto,
     inputType: InputType.Body,
+    requestDto: RenameLabelDto,
     responseDto: LabelMutationResponseDto,
-    handler: async ({ input }) => {
+    handler: async ({ input: body }) => {
       await requireNonAnonymous();
-      const label = await apiServices.labels.rename(
-        input.oldName.trim(),
-        input.newName,
-      );
-      return { label };
+      const { oldName, newName } = body;
+      return {
+        label: await apiServices.labels.rename(oldName.trim(), newName),
+      };
     },
   });
 
   remove = this.createRoute({
-    requestDto: DeleteLabelDto,
     inputType: InputType.Body,
+    requestDto: DeleteLabelDto,
     responseDto: OkTrueResponseDto,
-    handler: async ({ input }) => {
+    handler: async ({ input: body }) => {
       await requireNonAnonymous();
-      await apiServices.labels.delete(input.name);
+      await apiServices.labels.delete(body.name);
       return { ok: true };
     },
   });

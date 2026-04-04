@@ -216,13 +216,11 @@ export function MultipleKanbanBoard({
         taskBoardId,
         additionalData,
       });
-      if (!composedData) {
-        toast.error("Can't compose task with AI");
-        return;
+      if (composedData) {
+        const overrideScheduleDate = scheduleDate ?? undefined;
+        setSelectedTask(composedDataToTask(composedData, overrideScheduleDate));
+        setSelectedBoardIdForAI(null);
       }
-      const overrideScheduleDate = scheduleDate ?? undefined;
-      setSelectedTask(composedDataToTask(composedData, overrideScheduleDate));
-      setSelectedBoardIdForAI(null);
     },
     [boardsWithTasks, scheduleDate, selectedBoardIdForAI, setSelectedTask],
   );

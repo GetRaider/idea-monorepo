@@ -15,7 +15,6 @@ export function AuthRedirectRegistrar() {
   useEffect(() => {
     setAuthRedirectHandlers({
       onUnauthorized: () => router.push(Route.LOGIN),
-      onForbidden: () => router.push(Route.FORBIDDEN),
     });
     return () => resetAuthRedirectHandlers();
   }, [router]);

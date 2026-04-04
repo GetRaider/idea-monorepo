@@ -227,11 +227,9 @@ export function SingleKanbanBoard({
         text,
         taskBoardId: boardId,
       });
-      if (!composedData) {
-        toast.error("Can't compose task with AI");
-        return;
+      if (composedData) {
+        setSelectedTask(composedDataToTask(composedData));
       }
-      setSelectedTask(composedDataToTask(composedData));
     },
     [boardId, setSelectedTask],
   );

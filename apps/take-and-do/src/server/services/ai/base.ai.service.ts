@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { primitiveHelper } from "@repo/shared";
 import { getAIProvider } from "./provider";
+import { BadRequestError } from "@/lib/api";
 
 type AIError = { path: (string | number)[]; message: string };
 type AIResult<OutputSchema extends z.ZodTypeAny> = z.SafeParseSuccess<
@@ -31,7 +32,7 @@ export class BaseAIService {
     try {
       return inputSchema.parse(input);
     } catch (error) {
-      throw new Error(`Failed on AI input validation: ${error}`);
+      throw new BadRequestError(`Failed on AI input validation: ${error}`);
     }
   }
 
@@ -59,7 +60,7 @@ export class BaseAIService {
     const errors = result.error.errors
       .map((error: AIError) => `${error.path.join(".")}: ${error.message}`)
       .join(", ");
-    throw new Error(`AI response failed validation: ${errors}`);
+    throw new BadRequestError(`AI response failed validation: ${errors}`);
   }
 
   private parseJSON(content: string): unknown {

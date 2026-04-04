@@ -12,7 +12,7 @@ export class TasksClientService extends BaseClientService {
   }
 
   async getAll(): Promise<Task[]> {
-    const result = await this.get<Task[]>({});
+    const result = await this.get<Task[]>();
     if (!this.isResultOk(result)) return [];
     return result.data.map((task: Task) => normalizeTask(task));
   }

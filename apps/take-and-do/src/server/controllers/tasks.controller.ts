@@ -125,10 +125,10 @@ export class TasksController extends BaseController {
   optimize = this.initRoute({
     bodyDto: OptimizeTasksDto,
     responseDto: OptimizeTasksResponseDto,
-    handler: async ({ body }) => {
+    handler: async ({ body: { taskIds } }) => {
       const auth = await requireAiAccess();
       const access = getAccessByAuth(auth);
-      return apiServices.tasks.optimize(body.taskIds, access);
+      return apiServices.tasks.optimize(taskIds, access);
     },
   });
 

@@ -14,9 +14,7 @@ import { Route } from "@/constants/route.constant";
 export class BaseClientService {
   protected readonly httpClient = new HttpClient();
   protected readonly baseUrl = "/api";
-  protected readonly defaultHeaders = {
-    // TODO: Define default headers
-  };
+  protected readonly defaultHeaders = {};
 
   protected constructor(protected readonly relativeUrl: Route) {}
 
@@ -180,11 +178,6 @@ export class BaseClientService {
 
     if (response.status === 401) {
       getAuthRedirectHandlers().onUnauthorized();
-      return;
-    }
-
-    if (response.status === 403) {
-      getAuthRedirectHandlers().onForbidden();
       return;
     }
 

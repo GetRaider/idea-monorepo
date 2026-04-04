@@ -7,7 +7,7 @@ const PUBLIC_PATHS = ["/", "/login", "/signup", "/api/auth"];
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (pathname.startsWith(`/api/${Route.AUTH}`)) {
+  if (pathname.startsWith(`/api${Route.AUTH}`)) {
     return NextResponse.next();
   }
 

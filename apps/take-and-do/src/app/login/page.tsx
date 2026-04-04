@@ -8,6 +8,8 @@ import { useRouter } from "next/navigation";
 import { FcGoogle } from "react-icons/fc";
 import { Dialog } from "@/components/Dialogs";
 import { SpinnerRing } from "@/components/Spinner/Spinner";
+import { AppTooltip } from "@/components/Tooltip/AppTooltip";
+import { isAuthRestrictedInProductionBuild } from "@/constants/auth-restriction.constant";
 import { trackEvent } from "@/lib/maxpanel-analytics";
 import { authClient } from "@/auth/client";
 
@@ -25,10 +27,12 @@ export default function LoginPage() {
   const [guestOtherText, setGuestOtherText] = useState("");
 
   const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+  const authRestricted = isAuthRestrictedInProductionBuild;
 
   const isBusy = loading !== null;
 
   async function handleGoogle() {
+    if (authRestricted) return;
     setError(null);
     setLoading("google");
     try {
@@ -44,6 +48,7 @@ export default function LoginPage() {
 
   async function handleEmailSignIn(event: React.FormEvent) {
     event.preventDefault();
+    if (authRestricted) return;
     setError(null);
     setLoading("email");
     try {
@@ -111,17 +116,38 @@ export default function LoginPage() {
 
         {googleClientId ? (
           <>
-            <button
-              type="button"
-              onClick={() => void handleGoogle()}
-              disabled={isBusy}
-              className="flex w-full items-center justify-center gap-2 rounded-lg border border-[var(--border-color)] bg-white px-4 py-3 text-sm font-medium text-[var(--foreground)] transition hover:bg-[var(--input-bg)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-primary)] disabled:opacity-50 dark:bg-[#2a2a2a]"
-            >
-              {loading === "google" ? (
-                <SpinnerRing className="h-5 w-5 border-t-[var(--brand-primary)]" />
-              ) : null}
-              <FcGoogle className="size-5" /> Continue with Google
-            </button>
+            {authRestricted ? (
+              <AppTooltip
+                content={<AuthRestrictionTooltipContent />}
+                contentClassName="max-w-[min(100vw-2rem,280px)] text-left leading-snug"
+              >
+                <span className="block w-full">
+                  <button
+                    type="button"
+                    onClick={() => void handleGoogle()}
+                    disabled={isBusy || authRestricted}
+                    className="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-lg border border-[var(--border-color)] bg-white px-4 py-3 text-sm font-medium text-[var(--foreground)] transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-primary)] disabled:opacity-50 dark:bg-[#2a2a2a]"
+                  >
+                    {loading === "google" ? (
+                      <SpinnerRing className="h-5 w-5 border-t-[var(--brand-primary)]" />
+                    ) : null}
+                    <FcGoogle className="size-5" /> Continue with Google
+                  </button>
+                </span>
+              </AppTooltip>
+            ) : (
+              <button
+                type="button"
+                onClick={() => void handleGoogle()}
+                disabled={isBusy}
+                className="flex w-full items-center justify-center gap-2 rounded-lg border border-[var(--border-color)] bg-white px-4 py-3 text-sm font-medium text-[var(--foreground)] transition hover:bg-[var(--input-bg)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-primary)] disabled:opacity-50 dark:bg-[#2a2a2a]"
+              >
+                {loading === "google" ? (
+                  <SpinnerRing className="h-5 w-5 border-t-[var(--brand-primary)]" />
+                ) : null}
+                <FcGoogle className="size-5" /> Continue with Google
+              </button>
+            )}
             <div className="relative my-8">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-[var(--border-color)]" />
@@ -148,7 +174,7 @@ export default function LoginPage() {
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               required
-              disabled={isBusy}
+              disabled={isBusy || authRestricted}
               className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[var(--foreground)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-primary)] disabled:opacity-50"
             />
           </div>
@@ -166,7 +192,7 @@ export default function LoginPage() {
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               required
-              disabled={isBusy}
+              disabled={isBusy || authRestricted}
               className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[var(--foreground)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-primary)] disabled:opacity-50"
             />
           </div>
@@ -175,16 +201,36 @@ export default function LoginPage() {
               {error}
             </p>
           ) : null}
-          <button
-            type="submit"
-            disabled={isBusy}
-            className="flex w-full size-11 items-center justify-center gap-2 rounded-lg border-0 bg-[#7255c1] px-7 py-3.5 text-base font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#5a42a1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-secondary)] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {loading === "email" ? (
-              <SpinnerRing className="h-5 w-5 border-t-white" />
-            ) : null}
-            Sign In
-          </button>
+          {authRestricted ? (
+            <AppTooltip
+              content={<AuthRestrictionTooltipContent />}
+              contentClassName="max-w-[min(100vw-2rem,280px)] text-left leading-snug"
+            >
+              <span className="block w-full">
+                <button
+                  type="submit"
+                  disabled={isBusy || authRestricted}
+                  className="flex w-full size-11 cursor-not-allowed items-center justify-center gap-2 rounded-lg border-0 bg-[#7255c1] px-7 py-3.5 text-base font-semibold text-white transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-secondary)] disabled:opacity-50"
+                >
+                  {loading === "email" ? (
+                    <SpinnerRing className="h-5 w-5 border-t-white" />
+                  ) : null}
+                  Sign In
+                </button>
+              </span>
+            </AppTooltip>
+          ) : (
+            <button
+              type="submit"
+              disabled={isBusy}
+              className="flex w-full size-11 items-center justify-center gap-2 rounded-lg border-0 bg-[#7255c1] px-7 py-3.5 text-base font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#5a42a1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-secondary)] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {loading === "email" ? (
+                <SpinnerRing className="h-5 w-5 border-t-white" />
+              ) : null}
+              Sign In
+            </button>
+          )}
         </form>
 
         <p className="mt-4 text-center text-sm text-[var(--text-secondary)]">
@@ -204,7 +250,7 @@ export default function LoginPage() {
           </h2>
           <p className="mt-1 text-xs text-[var(--text-tertiary)]">
             Browse without an account. You get a temporary session; data stays
-            with this browser until you sign out or it expires.
+            with this browser until you sign out or it expires in 7 days.
           </p>
           <button
             type="button"
@@ -235,6 +281,19 @@ export default function LoginPage() {
           onOtherTextChange={setGuestOtherText}
         />
       ) : null}
+    </div>
+  );
+}
+
+function AuthRestrictionTooltipContent() {
+  return (
+    <div className="w-full">
+      <p className="m-0 w-full text-center text-[var(--text-secondary)]">
+        User list is restricted for now.
+      </p>
+      <p className="m-0 mt-2 w-full text-left text-[var(--text-secondary)]">
+        Continue as a Guest to explore the platform.
+      </p>
     </div>
   );
 }

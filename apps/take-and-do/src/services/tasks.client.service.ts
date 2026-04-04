@@ -1,5 +1,5 @@
 import { TaskPriority, TaskStatus } from "@/constants/tasks.constants";
-import { Task, TaskUpdate, toTaskPriority } from "@/types/task";
+import { Task, TaskUpdate } from "@/types/task";
 import type { ComposeTaskOutput } from "@/server/services/ai/schemas";
 import { guestStoreHelper } from "@/stores/guest";
 import { tasksHelper } from "@/helpers/task.helper";
@@ -15,7 +15,7 @@ export class TasksClientService extends BaseClientService {
   async getAll(): Promise<Task[]> {
     const result = await this.get<Task[]>();
     if (!this.isResultOk(result)) return [];
-    return result.data.map((task: Task) => normalizeTask(task));
+    return result.data;
   }
 
   async getBySchedule(): Promise<{
@@ -42,8 +42,8 @@ export class TasksClientService extends BaseClientService {
       : [];
 
     return {
-      today: todayTasks.map((task: Task) => normalizeTask(task)),
-      tomorrow: tomorrowTasks.map((task: Task) => normalizeTask(task)),
+      today: todayTasks,
+      tomorrow: tomorrowTasks,
     };
   }
 
@@ -53,7 +53,7 @@ export class TasksClientService extends BaseClientService {
       queries: { date: dateString },
     });
     if (!this.isResultOk(result)) return [];
-    return result.data.map((task: Task) => normalizeTask(task));
+    return result.data;
   }
 
   async getRecent(days: number = 7): Promise<Task[]> {
@@ -81,13 +81,13 @@ export class TasksClientService extends BaseClientService {
       queries: { taskBoardId: boardId },
     });
     if (!this.isResultOk(result)) return [];
-    return result.data.map((task: Task) => normalizeTask(task));
+    return result.data;
   }
 
   async getById(taskId: string): Promise<Task | null> {
     const result = await this.get<Task>({ pathParams: [taskId] });
     if (!this.isResultOk(result)) return null;
-    return normalizeTask(result.data);
+    return result.data;
   }
 
   async getByKey(
@@ -97,11 +97,7 @@ export class TasksClientService extends BaseClientService {
       pathParams: ["by-key", taskKey],
     });
     if (!this.isResultOk(result)) return null;
-    const data = result.data;
-    return {
-      task: normalizeTask(data.task),
-      parent: data.parent ? normalizeTask(data.parent) : null,
-    };
+    return result.data;
   }
 
   async create(
@@ -113,9 +109,9 @@ export class TasksClientService extends BaseClientService {
     if (!this.isResultOk(result)) return null;
     const raw = result.data;
     const { guest, ...rest } = raw as Task & { guest?: boolean };
-    const normalized = normalizeTask(rest as Task);
-    if (guest) guestStoreHelper.addTask(normalized);
-    return normalized;
+    const created = rest as Task;
+    if (guest) guestStoreHelper.addTask(created);
+    return created;
   }
 
   async composeWithAI({
@@ -157,7 +153,7 @@ export class TasksClientService extends BaseClientService {
       },
     });
     if (!this.isResultOk(result)) return null;
-    return normalizeTask(result.data);
+    return result.data;
   }
 
   async createSubtask(
@@ -174,7 +170,7 @@ export class TasksClientService extends BaseClientService {
       body: input,
     });
     if (!this.isResultOk(result)) return null;
-    return normalizeTask(result.data);
+    return result.data;
   }
 
   async update({
@@ -189,7 +185,7 @@ export class TasksClientService extends BaseClientService {
       body: updates,
     });
     if (!this.isResultOk(result)) return null;
-    return normalizeTask(result.data);
+    return result.data;
   }
 
   async deleteById(taskId: string): Promise<null> {
@@ -237,14 +233,4 @@ interface ScheduleOptimizationResult {
     insights: string[];
   };
   tasksCount: number;
-}
-
-function normalizeTask(task: Task): Task {
-  return {
-    ...task,
-    dueDate: tasksHelper.date.parse(task.dueDate),
-    scheduleDate: tasksHelper.date.parse(task.scheduleDate),
-    priority: toTaskPriority(task.priority),
-    subtasks: (task.subtasks || []).map((subtask) => normalizeTask(subtask)),
-  };
 }

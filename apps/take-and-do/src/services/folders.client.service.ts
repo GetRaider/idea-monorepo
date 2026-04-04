@@ -12,13 +12,13 @@ export class FoldersClientService extends BaseClientService {
   async getAll(): Promise<Folder[]> {
     const result = await this.get<Folder[]>({});
     if (!this.isResultOk(result)) return [];
-    return result.data.map(normalizeFolder);
+    return result.data;
   }
 
   async getById(id: string): Promise<Folder | null> {
     const result = await this.get<Folder>({ pathParams: [id] });
     if (!this.isResultOk(result)) return null;
-    return normalizeFolder(result.data);
+    return result.data;
   }
 
   async create(params: {
@@ -30,9 +30,9 @@ export class FoldersClientService extends BaseClientService {
     });
     if (!this.isResultOk(result)) return null;
     const { guest, ...rest } = result.data;
-    const normalized = normalizeFolder(rest);
-    if (guest) guestStoreHelper.upsertFolder(normalized);
-    return normalized;
+    const folder = rest as Folder;
+    if (guest) guestStoreHelper.upsertFolder(folder);
+    return folder;
   }
 
   async update({
@@ -49,9 +49,9 @@ export class FoldersClientService extends BaseClientService {
     if (!this.isResultOk(result)) return null;
     const payload = result.data;
     const { guest, ...rest } = payload as Folder & { guest?: boolean };
-    const normalized = normalizeFolder(rest as Folder);
-    if (guest) guestStoreHelper.upsertFolder(normalized);
-    return normalized;
+    const folder = rest as Folder;
+    if (guest) guestStoreHelper.upsertFolder(folder);
+    return folder;
   }
 
   async deleteFolder(id: string): Promise<void> {
@@ -61,14 +61,6 @@ export class FoldersClientService extends BaseClientService {
     if (this.isResultOk(result) && result.data?.guest)
       guestStoreHelper.deleteFolder(id);
   }
-}
-
-function normalizeFolder(folder: Folder): Folder {
-  return {
-    ...folder,
-    createdAt: new Date(folder.createdAt),
-    updatedAt: new Date(folder.updatedAt),
-  };
 }
 
 interface FolderUpdate {

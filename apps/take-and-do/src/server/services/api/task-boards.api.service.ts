@@ -23,9 +23,9 @@ export class TaskBoardsApiService extends BaseApiService {
         isPublic: row.isPublic,
         name: row.name,
         emoji: row.emoji,
-        folderId: row.folderId || undefined,
-        createdAt: new Date(row.createdAt),
-        updatedAt: new Date(row.updatedAt),
+        folderId: row.folderId,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
       }));
     });
   }
@@ -48,9 +48,9 @@ export class TaskBoardsApiService extends BaseApiService {
         isPublic: row.isPublic,
         name: row.name,
         emoji: row.emoji,
-        folderId: row.folderId || undefined,
-        createdAt: new Date(row.createdAt),
-        updatedAt: new Date(row.updatedAt),
+        folderId: row.folderId,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
       };
     });
   }
@@ -73,9 +73,9 @@ export class TaskBoardsApiService extends BaseApiService {
         isPublic: row.isPublic,
         name: row.name,
         emoji: row.emoji,
-        folderId: row.folderId || undefined,
-        createdAt: new Date(row.createdAt),
-        updatedAt: new Date(row.updatedAt),
+        folderId: row.folderId,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
       };
     });
   }

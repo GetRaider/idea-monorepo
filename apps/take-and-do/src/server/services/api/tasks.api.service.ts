@@ -67,13 +67,7 @@ export class TasksApiService extends BaseApiService {
         allTaskRows.map((row) => row.id),
       );
 
-      const task = await this.convertTaskRowToTask(
-        taskRow,
-        allTaskRows,
-        labelsByTaskId,
-      );
-      if (!task) return null;
-      return serializeTask(task);
+      return this.convertTaskRowToTask(taskRow, allTaskRows, labelsByTaskId);
     });
   }
 
@@ -99,10 +93,10 @@ export class TasksApiService extends BaseApiService {
       description: taskRow.description,
       status: taskRow.status as TaskStatus,
       priority: taskRow.priority as TaskPriority,
-      dueDate: tasksHelper.date.parse(taskRow.dueDate),
-      estimation: taskRow.estimation || undefined,
+      dueDate: taskRow.dueDate ?? undefined,
+      estimation: taskRow.estimation ?? undefined,
       subtasks: subtasks.length > 0 ? subtasks : undefined,
-      scheduleDate: tasksHelper.date.parse(taskRow.scheduleDate),
+      scheduleDate: taskRow.scheduleDate ?? undefined,
       labels: labelNames && labelNames.length > 0 ? labelNames : undefined,
     };
   }
@@ -144,19 +138,13 @@ export class TasksApiService extends BaseApiService {
         }
       }
 
-      const result = {
+      return {
         task: await this.convertTaskRowToTask(
           taskRow,
           allTaskRows,
           labelsByTaskId,
         ),
         parent,
-      };
-
-      if (!result) return null;
-      return {
-        task: serializeTask(result.task),
-        parent: result.parent ? serializeTask(result.parent) : null,
       };
     });
   }
@@ -269,7 +257,7 @@ export class TasksApiService extends BaseApiService {
     taskData: Omit<Task, "id">,
     access: DataAccess,
     options?: { taskBoardName?: string },
-  ): Promise<SerializedTask | Task> {
+  ): Promise<Task> {
     return this.handleOperation(async () => {
       if (!taskData.taskBoardId)
         throw new Error("Task must have a taskBoardId");
@@ -360,7 +348,7 @@ export class TasksApiService extends BaseApiService {
   async create(
     payload: TaskPostPayload,
     access: DataAccess,
-  ): Promise<{ task?: SerializedTask | Task; composed?: ComposeTaskOutput }> {
+  ): Promise<{ task?: Task; composed?: ComposeTaskOutput }> {
     return this.handleOperation(async () => {
       if (payload.shouldUseAI && payload.text) {
         const composed = await aiServices.task.compose({ text: payload.text });
@@ -788,8 +776,11 @@ export class TasksApiService extends BaseApiService {
       highPriority: rows.filter((row) => row.priority === TaskPriority.HIGH)
         .length,
       overdue: rows.filter((row) => {
-        const due = tasksHelper.date.parse(row.dueDate);
-        return due !== undefined && due < now && row.status !== TaskStatus.DONE;
+        return (
+          row.dueDate !== null &&
+          row.dueDate < now &&
+          row.status !== TaskStatus.DONE
+        );
       }).length,
     };
   }
@@ -925,38 +916,6 @@ export class TasksApiService extends BaseApiService {
     }
     return map;
   }
-}
-
-function serializeTask(task: Task): SerializedTask {
-  return {
-    id: task.id,
-    taskBoardId: task.taskBoardId,
-    taskKey: task.taskKey,
-    summary: task.summary,
-    description: task.description,
-    status: task.status,
-    priority: task.priority,
-    labels: task.labels || [],
-    dueDate: tasksHelper.date.toISOString(task.dueDate),
-    estimation: task.estimation,
-    subtasks: (task.subtasks || []).map((subtask) => serializeTask(subtask)),
-    scheduleDate: tasksHelper.date.toISOString(task.scheduleDate),
-  };
-}
-
-interface SerializedTask {
-  id: string;
-  taskBoardId: string;
-  taskKey?: string;
-  summary: string;
-  description: string;
-  status: string;
-  priority: string;
-  labels: string[];
-  dueDate?: string;
-  estimation?: number;
-  subtasks: SerializedTask[];
-  scheduleDate?: string;
 }
 
 export interface TaskForOptimization {

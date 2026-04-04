@@ -9,7 +9,6 @@ import type { AnalyticsInput, AnalyticsOutput } from "@/server/services/ai";
 import type { TaskStatsInput, Timeframe } from "@/db/dtos";
 import { DB, and, gte } from "@/db/client";
 import { tasks } from "@/db/schemas";
-import { tasksHelper } from "@/helpers/task.helper";
 import { TaskStatistics } from "./tasks.api.service";
 
 export class AnalyticsApiService extends BaseApiService {
@@ -77,8 +76,7 @@ export class AnalyticsApiService extends BaseApiService {
       const tasksWithDueDate = allTasks.filter((t) => t.dueDate !== null);
       const overdueTasks = tasksWithDueDate.filter((t) => {
         if (t.status === "Done") return false;
-        const dueDate = tasksHelper.date.parse(t.dueDate);
-        return dueDate !== undefined && dueDate < now;
+        return t.dueDate !== null && t.dueDate < now;
       });
 
       return {

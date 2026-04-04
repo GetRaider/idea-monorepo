@@ -1,5 +1,4 @@
 import { Task } from "@/types/task";
-import { tasksHelper } from "@/helpers/task.helper";
 import { guestStoreHelper } from "@/stores/guest";
 import { TaskBoard } from "@/types/workspace";
 
@@ -19,13 +18,13 @@ export class TaskBoardsClientService extends BaseClientService {
   async getAll(): Promise<TaskBoard[]> {
     const result = await this.get<TaskBoard[]>({});
     if (!this.isResultOk(result)) return [];
-    return result.data.map(normalizeTaskBoard);
+    return result.data;
   }
 
   async getById(id: string): Promise<TaskBoard | null> {
     const result = await this.get<TaskBoard[]>({ queries: { id } });
     if (!this.isResultOk(result) || result.data.length === 0) return null;
-    return normalizeTaskBoard(result.data[0]);
+    return result.data[0];
   }
 
   async getTasks(taskBoardId: string): Promise<Task[]> {
@@ -34,7 +33,7 @@ export class TaskBoardsClientService extends BaseClientService {
       queries: { taskBoardId },
     });
     if (!this.isResultOk(result)) return [];
-    return result.data.map(normalizeTask);
+    return result.data;
   }
 
   async create(
@@ -46,9 +45,9 @@ export class TaskBoardsClientService extends BaseClientService {
     if (!this.isResultOk(result)) return null;
     const payload = result.data;
     const { guest, ...rest } = payload as TaskBoard & { guest?: boolean };
-    const normalized = normalizeTaskBoard(rest as TaskBoard);
-    if (guest) guestStoreHelper.upsertTaskBoard(normalized);
-    return normalized;
+    const board = rest as TaskBoard;
+    if (guest) guestStoreHelper.upsertTaskBoard(board);
+    return board;
   }
 
   async update({
@@ -65,9 +64,9 @@ export class TaskBoardsClientService extends BaseClientService {
     if (!this.isResultOk(result)) return null;
     const payload = result.data;
     const { guest, ...rest } = payload as TaskBoard & { guest?: boolean };
-    const normalized = normalizeTaskBoard(rest as TaskBoard);
-    if (guest) guestStoreHelper.upsertTaskBoard(normalized);
-    return normalized;
+    const board = rest as TaskBoard;
+    if (guest) guestStoreHelper.upsertTaskBoard(board);
+    return board;
   }
 
   async changeVisibility({
@@ -120,25 +119,6 @@ export class TaskBoardsClientService extends BaseClientService {
       guestStoreHelper.deleteTaskBoard(id);
     return null;
   }
-}
-
-function normalizeTaskBoard(board: TaskBoard): TaskBoard {
-  return {
-    ...board,
-    isPublic: board.isPublic ?? false,
-    createdAt: new Date(board.createdAt),
-    updatedAt: new Date(board.updatedAt),
-  };
-}
-
-function normalizeTask(task: Task): Task {
-  return {
-    ...task,
-    dueDate: tasksHelper.date.parse(task.dueDate),
-    scheduleDate: tasksHelper.date.parse(task.scheduleDate),
-    priority: tasksHelper.priority.format(task.priority),
-    subtasks: (task.subtasks ?? []).map(normalizeTask),
-  };
 }
 
 interface TaskBoardUpdate {

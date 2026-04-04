@@ -23,7 +23,7 @@ export class FoldersApiService extends BaseApiService {
         emoji: row.emoji,
         isPublic: row.isPublic,
         createdAt: row.createdAt,
-        updatedAt: new Date(row.updatedAt),
+        updatedAt: row.updatedAt,
       }));
     });
   }
@@ -43,8 +43,8 @@ export class FoldersApiService extends BaseApiService {
         name: row.name,
         emoji: row.emoji,
         isPublic: row.isPublic,
-        createdAt: new Date(row.createdAt),
-        updatedAt: new Date(row.updatedAt),
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
       };
     });
   }

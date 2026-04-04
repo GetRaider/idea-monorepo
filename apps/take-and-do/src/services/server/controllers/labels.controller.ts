@@ -1,4 +1,8 @@
-import { requireAuth, requireNonAnonymous } from "@/auth/guards";
+import {
+  getAccessByAuth,
+  requireAuth,
+  requireNonAnonymous,
+} from "@/auth/guards";
 import {
   CreateLabelDto,
   DeleteLabelDto,
@@ -9,13 +13,15 @@ import {
 } from "@/db/dtos";
 import { apiServices } from "@/services/server/api";
 import { BaseController } from "./base.controller";
+import { NextResponse } from "next/server";
 
 export class LabelsController extends BaseController {
-  list = this.initRoute({
+  getAll = this.initRoute({
     responseDto: LabelsListResponseDto,
     handler: async () => {
-      await requireAuth();
-      return apiServices.labels.getAll();
+      const auth = await requireAuth();
+      const access = getAccessByAuth(auth);
+      return apiServices.labels.getAll(access);
     },
   });
 
@@ -24,8 +30,9 @@ export class LabelsController extends BaseController {
     responseDto: LabelMutationResponseDto,
     status: 201,
     handler: async ({ body: { label } }) => {
-      await requireNonAnonymous();
-      return { label: await apiServices.labels.add(label.trim()) };
+      const auth = await requireNonAnonymous();
+      const access = getAccessByAuth(auth);
+      return { label: await apiServices.labels.add(access, label.trim()) };
     },
   });
 
@@ -33,21 +40,23 @@ export class LabelsController extends BaseController {
     bodyDto: RenameLabelDto,
     responseDto: LabelMutationResponseDto,
     handler: async ({ body }) => {
-      await requireNonAnonymous();
+      const auth = await requireNonAnonymous();
+      const access = getAccessByAuth(auth);
       const { oldName, newName } = body;
       return {
-        label: await apiServices.labels.rename(oldName.trim(), newName),
+        label: await apiServices.labels.rename(access, oldName.trim(), newName),
       };
     },
   });
 
-  remove = this.initRoute({
+  delete = this.initRoute({
     bodyDto: DeleteLabelDto,
     responseDto: OkTrueResponseDto,
     handler: async ({ body }) => {
-      await requireNonAnonymous();
-      await apiServices.labels.delete(body.name);
-      return { ok: true };
+      const auth = await requireNonAnonymous();
+      const access = getAccessByAuth(auth);
+      await apiServices.labels.delete(access, body.name);
+      return new NextResponse(null, { status: 204 });
     },
   });
 }

@@ -112,9 +112,7 @@ export class TasksClientService extends BaseClientService {
     const raw = result.data;
     const { guest, ...rest } = raw as Task & { guest?: boolean };
     const normalized = normalizeTask(rest as Task);
-    if (guest) {
-      guestStoreHelper.addTask(normalized);
-    }
+    if (guest) guestStoreHelper.addTask(normalized);
     return normalized;
   }
 

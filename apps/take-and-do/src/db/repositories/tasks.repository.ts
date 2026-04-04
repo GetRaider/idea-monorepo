@@ -1,11 +1,13 @@
-import { eq, and, isNull, inArray, gte, lt } from "drizzle-orm";
+import { asc, eq, and, isNull, inArray, gte, lt } from "drizzle-orm";
 
 import type { DataAccess } from "@/db/repositories/base.repository";
 import { DB } from "@/db/client";
 import { tasks } from "@/db/schemas/task.schema";
 import { labelsTable } from "@/db/schemas/label.schema";
+import { taskLabelsTable } from "@/db/schemas/task-label.schema";
 import { TaskPriority, TaskStatus } from "@/types/task";
 import { TaskBoardsRepository } from "./task-boards.repository";
+import { LabelsRepository } from "@/db/repositories/labels.repository";
 import { BaseRepository } from "@/db/repositories/base.repository";
 import { tasksHelper } from "@/helpers/task.helper";
 import {
@@ -21,6 +23,7 @@ export class TasksRepository extends BaseRepository {
   constructor(
     db: DB,
     private readonly taskBoardsRepository: TaskBoardsRepository,
+    private readonly labelsRepository: LabelsRepository,
   ) {
     super(db);
   }
@@ -55,7 +58,11 @@ export class TasksRepository extends BaseRepository {
       .from(tasks)
       .where(and(eq(tasks.taskBoardId, taskRow.taskBoardId), accessCond));
 
-    return this.convertTaskRowToTask(taskRow, allTaskRows);
+    const labelsByTaskId = await this.loadLabelNamesByTaskIds(
+      allTaskRows.map((row) => row.id),
+    );
+
+    return this.convertTaskRowToTask(taskRow, allTaskRows, labelsByTaskId);
   }
 
   async getTaskByKey(
@@ -73,6 +80,15 @@ export class TasksRepository extends BaseRepository {
     const taskRow = taskRows[0];
     let parent: Task | null = null;
 
+    const allTaskRows = await this.db
+      .select()
+      .from(tasks)
+      .where(and(eq(tasks.taskBoardId, taskRow.taskBoardId), accessCond));
+
+    const labelsByTaskId = await this.loadLabelNamesByTaskIds(
+      allTaskRows.map((row) => row.id),
+    );
+
     if (taskRow.parentTaskId) {
       const parentRows = await this.db
         .select()
@@ -80,24 +96,20 @@ export class TasksRepository extends BaseRepository {
         .where(and(eq(tasks.id, taskRow.parentTaskId), accessCond));
 
       if (parentRows.length > 0) {
-        const allTaskRowsForParent = await this.db
-          .select()
-          .from(tasks)
-          .where(and(eq(tasks.taskBoardId, taskRow.taskBoardId), accessCond));
         parent = await this.convertTaskRowToTask(
           parentRows[0],
-          allTaskRowsForParent,
+          allTaskRows,
+          labelsByTaskId,
         );
       }
     }
 
-    const allTaskRows = await this.db
-      .select()
-      .from(tasks)
-      .where(and(eq(tasks.taskBoardId, taskRow.taskBoardId), accessCond));
-
     return {
-      task: await this.convertTaskRowToTask(taskRow, allTaskRows),
+      task: await this.convertTaskRowToTask(
+        taskRow,
+        allTaskRows,
+        labelsByTaskId,
+      ),
       parent,
     };
   }
@@ -178,12 +190,12 @@ export class TasksRepository extends BaseRepository {
           updatedAt: new Date(),
         });
         if (subtask.labels?.length)
-          await this.syncTaskLabels(processed.id, subtask.labels);
+          await this.syncTaskLabels(processed.id, subtask.labels, access);
       }
     }
 
     if (taskData.labels?.length)
-      await this.syncTaskLabels(taskId, taskData.labels);
+      await this.syncTaskLabels(taskId, taskData.labels, access);
 
     const created = await this.getTaskById(taskId, access);
     if (!created) throw new Error("Failed to retrieve created task");
@@ -301,13 +313,14 @@ export class TasksRepository extends BaseRepository {
             updatedAt: new Date(),
           });
           if (subtask.labels?.length)
-            await this.syncTaskLabels(processed.id, subtask.labels);
+            await this.syncTaskLabels(processed.id, subtask.labels, access);
         }
       }
     }
 
-    if (updates.labels !== undefined)
-      await this.syncTaskLabels(taskId, updates.labels);
+    if (updates.labels !== undefined) {
+      await this.syncTaskLabels(taskId, updates.labels, access);
+    }
 
     return this.getTaskById(taskId, access);
   }
@@ -591,13 +604,16 @@ export class TasksRepository extends BaseRepository {
   async convertTaskRowToTask(
     taskRow: typeof tasks.$inferSelect,
     allTasks: Array<typeof tasks.$inferSelect>,
+    labelsByTaskId: Map<string, string[]>,
   ): Promise<Task> {
     const subtaskRows = allTasks.filter((t) => t.parentTaskId === taskRow.id);
     const subtasks = await Promise.all(
       subtaskRows.map((subtaskRow) =>
-        this.convertTaskRowToTask(subtaskRow, allTasks),
+        this.convertTaskRowToTask(subtaskRow, allTasks, labelsByTaskId),
       ),
     );
+
+    const labelNames = labelsByTaskId.get(taskRow.id);
 
     return {
       id: taskRow.id,
@@ -611,6 +627,7 @@ export class TasksRepository extends BaseRepository {
       estimation: taskRow.estimation || undefined,
       subtasks: subtasks.length > 0 ? subtasks : undefined,
       scheduleDate: tasksHelper.date.parse(taskRow.scheduleDate),
+      labels: labelNames && labelNames.length > 0 ? labelNames : undefined,
     };
   }
 
@@ -704,26 +721,65 @@ export class TasksRepository extends BaseRepository {
     }
 
     const topLevelTasks = allTaskRows.filter((t) => !t.parentTaskId);
+    const labelsByTaskId = await this.loadLabelNamesByTaskIds(
+      allTaskRows.map((row) => row.id),
+    );
     return Promise.all(
       topLevelTasks.map((taskRow) =>
-        this.convertTaskRowToTask(taskRow, allTaskRows),
+        this.convertTaskRowToTask(taskRow, allTaskRows, labelsByTaskId),
       ),
     );
   }
 
-  async syncTaskLabels(_taskId: string, labelNames: string[]): Promise<void> {
-    for (const rawName of labelNames) {
-      const name = rawName.trim();
-      if (!name) continue;
-      const existing = await this.db
-        .select()
-        .from(labelsTable)
-        .where(eq(labelsTable.name, name));
-      if (existing.length > 0) continue;
-      await this.db.insert(labelsTable).values({
-        id: genericHelper.generateId(),
-        name,
-        createdAt: new Date(),
+  private async loadLabelNamesByTaskIds(
+    taskIds: string[],
+  ): Promise<Map<string, string[]>> {
+    if (taskIds.length === 0) return new Map();
+
+    const rows = await this.db
+      .select({
+        taskId: taskLabelsTable.taskId,
+        name: labelsTable.name,
+        position: taskLabelsTable.position,
+      })
+      .from(taskLabelsTable)
+      .innerJoin(labelsTable, eq(taskLabelsTable.labelId, labelsTable.id))
+      .where(inArray(taskLabelsTable.taskId, taskIds))
+      .orderBy(asc(taskLabelsTable.taskId), asc(taskLabelsTable.position));
+
+    const map = new Map<string, string[]>();
+    for (const row of rows) {
+      const list = map.get(row.taskId) ?? [];
+      list.push(row.name);
+      map.set(row.taskId, list);
+    }
+    return map;
+  }
+
+  async syncTaskLabels(
+    taskId: string,
+    labelNames: string[],
+    access: DataAccess,
+  ): Promise<void> {
+    if (access.isAnonymous) return;
+
+    await this.db
+      .delete(taskLabelsTable)
+      .where(eq(taskLabelsTable.taskId, taskId));
+
+    if (labelNames.length === 0) return;
+
+    const labelIds = await this.labelsRepository.getOrCreateLabelIdsByNames(
+      access.userId,
+      labelNames,
+    );
+
+    let position = 0;
+    for (const labelId of labelIds) {
+      await this.db.insert(taskLabelsTable).values({
+        taskId,
+        labelId,
+        position: position++,
       });
     }
   }

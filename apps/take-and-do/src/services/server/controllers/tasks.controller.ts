@@ -38,7 +38,7 @@ const deleteTasksForBoardQuerySchema = z.object({
 });
 
 export class TasksController extends BaseController {
-  list = this.initRoute({
+  getAll = this.initRoute({
     queryDto: TaskListQueryDto,
     responseDto: TaskListResponseDto,
     handler: async ({ query }) => {
@@ -58,6 +58,30 @@ export class TasksController extends BaseController {
       }
 
       return apiServices.tasks.getAll(access);
+    },
+  });
+
+  getById = this.initRoute({
+    paramsDto: taskIdParamsSchema,
+    responseDto: TaskResponseDto,
+    handler: async ({ params: { id } }) => {
+      const auth = await requireAuth();
+      const access = getAccessByAuth(auth);
+      const task = await apiServices.tasks.getById(id, access);
+      if (!task) throw new NotFoundError("Task");
+      return task;
+    },
+  });
+
+  getByKey = this.initRoute({
+    paramsDto: taskKeyParamsSchema,
+    responseDto: TaskByKeyResponseDto,
+    handler: async ({ params }) => {
+      const auth = await requireAuth();
+      const access = getAccessByAuth(auth);
+      const result = await apiServices.tasks.getByKey(params.taskKey, access);
+      if (!result) throw new NotFoundError("Task");
+      return result;
     },
   });
 
@@ -85,32 +109,6 @@ export class TasksController extends BaseController {
     },
   });
 
-  deleteAllForBoard = this.initRoute({
-    queryDto: deleteTasksForBoardQuerySchema,
-    responseDto: TasksDeletedCountResponseDto,
-    handler: async ({ query: { taskBoardId } }) => {
-      const auth = await requireNonAnonymous();
-      const access = getAccessByAuth(auth);
-      const deleted = await apiServices.tasks.deleteAllForBoard(
-        taskBoardId,
-        access,
-      );
-      return { deleted };
-    },
-  });
-
-  getById = this.initRoute({
-    paramsDto: taskIdParamsSchema,
-    responseDto: TaskResponseDto,
-    handler: async ({ params: { id } }) => {
-      const auth = await requireAuth();
-      const access = getAccessByAuth(auth);
-      const task = await apiServices.tasks.getById(id, access);
-      if (!task) throw new NotFoundError("Task");
-      return task;
-    },
-  });
-
   update = this.initRoute({
     paramsDto: taskIdParamsSchema,
     bodyDto: TaskPatchBodySchema,
@@ -121,6 +119,16 @@ export class TasksController extends BaseController {
       const updatedTask = await apiServices.tasks.update(id, body, access);
       if (!updatedTask) throw new NotFoundError("Task");
       return updatedTask;
+    },
+  });
+
+  optimize = this.initRoute({
+    bodyDto: OptimizeTasksDto,
+    responseDto: OptimizeTasksResponseDto,
+    handler: async ({ body }) => {
+      const auth = await requireAiAccess();
+      const access = getAccessByAuth(auth);
+      return apiServices.tasks.optimize(body.taskIds, access);
     },
   });
 
@@ -135,25 +143,17 @@ export class TasksController extends BaseController {
     },
   });
 
-  getByKey = this.initRoute({
-    paramsDto: taskKeyParamsSchema,
-    responseDto: TaskByKeyResponseDto,
-    handler: async ({ params }) => {
-      const auth = await requireAuth();
+  deleteAllForBoard = this.initRoute({
+    queryDto: deleteTasksForBoardQuerySchema,
+    responseDto: TasksDeletedCountResponseDto,
+    handler: async ({ query: { taskBoardId } }) => {
+      const auth = await requireNonAnonymous();
       const access = getAccessByAuth(auth);
-      const result = await apiServices.tasks.getByKey(params.taskKey, access);
-      if (!result) throw new NotFoundError("Task");
-      return result;
-    },
-  });
-
-  optimize = this.initRoute({
-    bodyDto: OptimizeTasksDto,
-    responseDto: OptimizeTasksResponseDto,
-    handler: async ({ body }) => {
-      const auth = await requireAiAccess();
-      const access = getAccessByAuth(auth);
-      return apiServices.tasks.optimize(body.taskIds, access);
+      const deleted = await apiServices.tasks.deleteAllForBoard(
+        taskBoardId,
+        access,
+      );
+      return { deleted };
     },
   });
 }

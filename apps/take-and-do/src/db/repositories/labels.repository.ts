@@ -1,28 +1,102 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 import { labelsTable } from "@/db/schemas/label.schema";
 import { genericHelper } from "@/helpers/generic.helper";
-import { BaseRepository } from "@/db/repositories/base.repository";
+import {
+  BaseRepository,
+  type DataAccess,
+} from "@/db/repositories/base.repository";
 
 export class LabelsRepository extends BaseRepository {
-  async getAllLabels(): Promise<string[]> {
-    const rows = await this.db.select().from(labelsTable);
+  async getAllLabels(access: DataAccess): Promise<string[]> {
+    if (access.isAnonymous) return [];
+    const rows = await this.db
+      .select({ name: labelsTable.name })
+      .from(labelsTable)
+      .where(eq(labelsTable.userId, access.userId));
     return rows.map((row) => row.name);
   }
 
-  async addLabel(label: string): Promise<string> {
-    const trimmedLabel = label.trim();
+  async findOrCreateLabelId(userId: string, rawName: string): Promise<string> {
+    const trimmedLabel = rawName.trim();
+    if (!trimmedLabel) throw new Error("Label name is required");
 
-    const existingLabels = await this.db
+    const [existing] = await this.db
       .select()
       .from(labelsTable)
-      .where(eq(labelsTable.name, trimmedLabel));
+      .where(
+        and(eq(labelsTable.userId, userId), eq(labelsTable.name, trimmedLabel)),
+      )
+      .limit(1);
 
-    if (existingLabels.length > 0) return trimmedLabel;
+    if (existing) return existing.id;
 
     const labelId = genericHelper.generateId();
+    try {
+      await this.db.insert(labelsTable).values({
+        id: labelId,
+        userId,
+        name: trimmedLabel,
+        createdAt: new Date(),
+      });
+      return labelId;
+    } catch {
+      const [again] = await this.db
+        .select()
+        .from(labelsTable)
+        .where(
+          and(
+            eq(labelsTable.userId, userId),
+            eq(labelsTable.name, trimmedLabel),
+          ),
+        )
+        .limit(1);
+      if (again) return again.id;
+      throw new Error("Failed to create label");
+    }
+  }
+
+  async getOrCreateLabelIdsByNames(
+    userId: string,
+    names: string[],
+  ): Promise<string[]> {
+    const orderedUniqueNames: string[] = [];
+    const seen = new Set<string>();
+    for (const raw of names) {
+      const trimmed = raw.trim();
+      if (!trimmed || seen.has(trimmed)) continue;
+      seen.add(trimmed);
+      orderedUniqueNames.push(trimmed);
+    }
+
+    const ids: string[] = [];
+    for (const name of orderedUniqueNames) {
+      ids.push(await this.findOrCreateLabelId(userId, name));
+    }
+    return ids;
+  }
+
+  async addLabel(access: DataAccess, label: string): Promise<string> {
+    if (access.isAnonymous) throw new Error("Guest users cannot add labels");
+    const trimmedLabel = label.trim();
+    if (!trimmedLabel) throw new Error("Label name is required");
+
+    const [existing] = await this.db
+      .select()
+      .from(labelsTable)
+      .where(
+        and(
+          eq(labelsTable.userId, access.userId),
+          eq(labelsTable.name, trimmedLabel),
+        ),
+      )
+      .limit(1);
+
+    if (existing) return trimmedLabel;
+
     await this.db.insert(labelsTable).values({
-      id: labelId,
+      id: genericHelper.generateId(),
+      userId: access.userId,
       name: trimmedLabel,
       createdAt: new Date(),
     });
@@ -30,7 +104,12 @@ export class LabelsRepository extends BaseRepository {
     return trimmedLabel;
   }
 
-  async renameLabel(oldName: string, newName: string): Promise<string> {
+  async renameLabel(
+    access: DataAccess,
+    oldName: string,
+    newName: string,
+  ): Promise<string> {
+    if (access.isAnonymous) throw new Error("Guest users cannot rename labels");
     const trimmedNew = newName.trim();
     if (!trimmedNew) throw new Error("Label name is required");
     if (trimmedNew === oldName) return oldName;
@@ -38,27 +117,50 @@ export class LabelsRepository extends BaseRepository {
     const [existingOld] = await this.db
       .select()
       .from(labelsTable)
-      .where(eq(labelsTable.name, oldName));
+      .where(
+        and(
+          eq(labelsTable.userId, access.userId),
+          eq(labelsTable.name, oldName),
+        ),
+      );
 
     if (!existingOld) throw new Error("Label not found");
 
     const [nameTaken] = await this.db
       .select()
       .from(labelsTable)
-      .where(eq(labelsTable.name, trimmedNew));
+      .where(
+        and(
+          eq(labelsTable.userId, access.userId),
+          eq(labelsTable.name, trimmedNew),
+        ),
+      );
 
     if (nameTaken) throw new Error("A label with that name already exists");
 
     await this.db
       .update(labelsTable)
       .set({ name: trimmedNew })
-      .where(eq(labelsTable.name, oldName));
+      .where(
+        and(
+          eq(labelsTable.userId, access.userId),
+          eq(labelsTable.name, oldName),
+        ),
+      );
 
     return trimmedNew;
   }
 
-  async deleteLabelByName(name: string): Promise<void> {
+  async deleteLabelByName(access: DataAccess, name: string): Promise<void> {
+    if (access.isAnonymous) throw new Error("Guest users cannot delete labels");
     const trimmed = name.trim();
-    await this.db.delete(labelsTable).where(eq(labelsTable.name, trimmed));
+    await this.db
+      .delete(labelsTable)
+      .where(
+        and(
+          eq(labelsTable.userId, access.userId),
+          eq(labelsTable.name, trimmed),
+        ),
+      );
   }
 }

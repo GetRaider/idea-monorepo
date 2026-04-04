@@ -36,6 +36,13 @@
       "when": 1765710832900,
       "tag": "0004_drop_task_labels",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1765710833000,
+      "tag": "0005_user_labels_and_task_labels",
+      "breakpoints": true
     }
   ]
 }

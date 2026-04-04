@@ -12,12 +12,17 @@ import { TaskBoardsApiService } from "./task-boards.api.service";
 import { TasksApiService } from "./tasks.api.service";
 
 const taskBoardsRepository = new TaskBoardsRepository(db);
-const tasksRepository = new TasksRepository(db, taskBoardsRepository);
+const labelsRepository = new LabelsRepository(db);
+const tasksRepository = new TasksRepository(
+  db,
+  taskBoardsRepository,
+  labelsRepository,
+);
 
 export const apiServices = {
   tasks: new TasksApiService(tasksRepository),
   folders: new FoldersApiService(new FoldersRepository(db)),
-  labels: new LabelsApiService(new LabelsRepository(db)),
+  labels: new LabelsApiService(labelsRepository),
   taskBoards: new TaskBoardsApiService(taskBoardsRepository),
   analytics: new AnalyticsApiService(tasksRepository),
   stats: new StatsApiService(tasksRepository),

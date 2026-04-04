@@ -5,17 +5,92 @@ import { BaseApiService } from "@/services/server/api/base.api.service";
 import type { AnalyticsInput, AnalyticsOutput } from "@/services/server/ai";
 import type { TaskStatsInput, Timeframe } from "@/db/dtos";
 import type { DataAccess } from "@/db/repositories/base.repository";
-import type { TasksRepository } from "@/db/repositories/tasks.repository";
+import { DB, and, gte } from "@/db/client";
+import { tasks } from "@/db/schemas";
+import { tasksHelper } from "@/helpers/task.helper";
+import { TaskStatistics } from "./tasks.api.service";
 
 export class AnalyticsApiService extends BaseApiService {
-  constructor(private readonly repository: TasksRepository) {
-    super();
+  constructor(protected readonly db: DB) {
+    super(db);
   }
 
-  async getStatistics(timeframe: Timeframe, access: DataAccess) {
-    return this.handleOperation(() =>
-      this.repository.getTaskStatistics(timeframe, access),
-    );
+  async getTasksStatistic(
+    timeframe: "week" | "month" | "quarter" | "all" = "month",
+    access: DataAccess,
+  ): Promise<TaskStatistics> {
+    return this.handleOperation(async () => {
+      const now = new Date();
+      let startDate: Date | null = null;
+
+      switch (timeframe) {
+        case "week":
+          startDate = new Date(now);
+          startDate.setDate(now.getDate() - 7);
+          break;
+        case "month":
+          startDate = new Date(now);
+          startDate.setMonth(now.getMonth() - 1);
+          break;
+        case "quarter":
+          startDate = new Date(now);
+          startDate.setMonth(now.getMonth() - 3);
+          break;
+      }
+
+      const accessCond = this.accessWhere(tasks, access);
+      const query = this.db
+        .select({
+          id: tasks.id,
+          status: tasks.status,
+          createdAt: tasks.createdAt,
+          updatedAt: tasks.updatedAt,
+          dueDate: tasks.dueDate,
+        })
+        .from(tasks);
+
+      const allTasks = startDate
+        ? await query.where(and(gte(tasks.createdAt, startDate), accessCond))
+        : await query.where(accessCond);
+
+      const completedTasks = allTasks.filter((t) => t.status === "Done");
+      let avgCompletionTimeDays = 0;
+
+      if (completedTasks.length > 0) {
+        const completionTimes = completedTasks
+          .map(
+            (task) =>
+              (new Date(task.updatedAt).getTime() -
+                new Date(task.createdAt).getTime()) /
+              (1000 * 60 * 60 * 24),
+          )
+          .filter((days) => days >= 0);
+        if (completionTimes.length > 0) {
+          avgCompletionTimeDays =
+            completionTimes.reduce((sum, days) => sum + days, 0) /
+            completionTimes.length;
+        }
+      }
+
+      const tasksWithDueDate = allTasks.filter((t) => t.dueDate !== null);
+      const overdueTasks = tasksWithDueDate.filter((t) => {
+        if (t.status === "Done") return false;
+        const dueDate = tasksHelper.date.parse(t.dueDate);
+        return dueDate !== undefined && dueDate < now;
+      });
+
+      return {
+        tasksCreated: allTasks.length,
+        tasksCompleted: completedTasks.length,
+        avgCompletionTimeDays: Math.round(avgCompletionTimeDays * 10) / 10,
+        overdueRate:
+          tasksWithDueDate.length > 0
+            ? Math.round(
+                (overdueTasks.length / tasksWithDueDate.length) * 100,
+              ) / 100
+            : 0,
+      };
+    });
   }
 
   async generate(

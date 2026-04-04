@@ -2,38 +2,6 @@ import axios, { AxiosHeaders, RawAxiosRequestHeaders } from "axios";
 import { logger } from "./logger.helper";
 import { primitiveHelper } from "@repo/shared";
 
-export interface IHttpRequest {
-  url: string;
-  headers?:
-    | RawAxiosRequestHeaders
-    | Record<string, string | string[] | number | boolean | null>;
-  body?: unknown;
-  timeout?: number;
-}
-
-export interface IHttpResponse<T> {
-  data: T;
-  headers: unknown;
-  status: number;
-  config: unknown;
-}
-
-export interface IBaseRequest {
-  queries?: Record<string, string>;
-  pathParams?: string[];
-  body?: unknown;
-  timeout?: number;
-  token?: string;
-}
-
-interface IHttpClient {
-  get<T>(args: IHttpRequest): Promise<IHttpResponse<T>>;
-  post<T>(args: IHttpRequest): Promise<IHttpResponse<T>>;
-  put<T>(args: IHttpRequest): Promise<IHttpResponse<T>>;
-  patch<T>(args: IHttpRequest): Promise<IHttpResponse<T>>;
-  delete<T>(args: IHttpRequest): Promise<IHttpResponse<T>>;
-}
-
 export class HttpClient implements IHttpClient {
   async get<T>(args: IHttpRequest): Promise<IHttpResponse<T>> {
     return this.sendRequest<T>("GET", args);
@@ -87,3 +55,35 @@ export class HttpClient implements IHttpClient {
 }
 
 export const httpClient = new HttpClient();
+
+export interface IHttpRequest {
+  url: string;
+  headers?:
+    | RawAxiosRequestHeaders
+    | Record<string, string | string[] | number | boolean | null>;
+  body?: unknown;
+  timeout?: number;
+}
+
+export interface IHttpResponse<T> {
+  data: T;
+  headers: unknown;
+  status: number;
+  config: unknown;
+}
+
+export interface IBaseRequest {
+  queries?: Record<string, string>;
+  pathParams?: string[];
+  body?: unknown;
+  timeout?: number;
+  token?: string;
+}
+
+interface IHttpClient {
+  get<T>(args: IHttpRequest): Promise<IHttpResponse<T>>;
+  post<T>(args: IHttpRequest): Promise<IHttpResponse<T>>;
+  put<T>(args: IHttpRequest): Promise<IHttpResponse<T>>;
+  patch<T>(args: IHttpRequest): Promise<IHttpResponse<T>>;
+  delete<T>(args: IHttpRequest): Promise<IHttpResponse<T>>;
+}

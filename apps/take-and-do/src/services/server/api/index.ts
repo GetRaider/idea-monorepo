@@ -1,9 +1,4 @@
 import { db } from "@/db/client";
-import { TasksRepository } from "@/db/repositories/tasks.repository";
-import { FoldersRepository } from "@/db/repositories/folders.repository";
-import { LabelsRepository } from "@/db/repositories/labels.repository";
-import { TaskBoardsRepository } from "@/db/repositories/task-boards.repository";
-
 import { AnalyticsApiService } from "./analytics.api.service";
 import { FoldersApiService } from "./folders.api.service";
 import { LabelsApiService } from "./labels.api.service";
@@ -11,19 +6,15 @@ import { StatsApiService } from "./stats.api.service";
 import { TaskBoardsApiService } from "./task-boards.api.service";
 import { TasksApiService } from "./tasks.api.service";
 
-const taskBoardsRepository = new TaskBoardsRepository(db);
-const labelsRepository = new LabelsRepository(db);
-const tasksRepository = new TasksRepository(
-  db,
-  taskBoardsRepository,
-  labelsRepository,
-);
+const taskBoardsService = new TaskBoardsApiService(db);
+const labelsService = new LabelsApiService(db);
+const tasksService = new TasksApiService(db, taskBoardsService, labelsService);
 
 export const apiServices = {
-  tasks: new TasksApiService(tasksRepository),
-  folders: new FoldersApiService(new FoldersRepository(db)),
-  labels: new LabelsApiService(labelsRepository),
-  taskBoards: new TaskBoardsApiService(taskBoardsRepository),
-  analytics: new AnalyticsApiService(tasksRepository),
-  stats: new StatsApiService(tasksRepository),
+  tasks: tasksService,
+  folders: new FoldersApiService(db),
+  labels: labelsService,
+  taskBoards: taskBoardsService,
+  analytics: new AnalyticsApiService(db),
+  stats: new StatsApiService(db, tasksService),
 };

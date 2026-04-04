@@ -15,7 +15,7 @@ export class AnalyticsController extends BaseController {
     handler: async ({ query }) => {
       const auth = await requireAuth();
       const access = getAccessByAuth(auth);
-      const stats = await apiServices.analytics.getStatistics(
+      const stats = await apiServices.analytics.getTasksStatistic(
         query.timeframe,
         access,
       );

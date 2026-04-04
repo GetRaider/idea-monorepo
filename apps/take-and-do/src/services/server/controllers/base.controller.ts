@@ -5,7 +5,7 @@ import { HttpError } from "@/lib/api/errors";
 import { formatZodError } from "@/lib/api/format-zod-error";
 
 export class BaseController {
-  protected createRoute<
+  protected initRoute<
     const PDto extends OptionalZodSchema = undefined,
     const QDto extends OptionalZodSchema = undefined,
     const BDto extends OptionalZodSchema = undefined,
@@ -17,7 +17,7 @@ export class BaseController {
     responseDto,
     handler,
     status = 200,
-  }: CreateRouteParams<PDto, QDto, BDto, TResponse>): AppRouteHandler {
+  }: InitRouteParams<PDto, QDto, BDto, TResponse>): AppRouteHandler {
     return async (request, context) => {
       try {
         const { params, query, body } = await this.getRequestInputs({
@@ -60,31 +60,31 @@ export class BaseController {
     Inputs<TParams, TQuery, TBody>
   > {
     const params = paramsDto
-      ? this.validateDto(paramsDto, await context.params)
+      ? this.validateRequestDto(paramsDto, await context.params)
       : null;
 
     const query = queryDto
-      ? this.validateDto(
+      ? this.validateRequestDto(
           queryDto,
           Object.fromEntries(new URL(request.url).searchParams),
         )
       : null;
 
     const body = bodyDto
-      ? this.validateDto(bodyDto, await request.json())
+      ? this.validateRequestDto(bodyDto, await request.json())
       : null;
 
     return { params, query, body };
   }
 
-  private validateDto<T>(dto: z.ZodType<T>, data: unknown): T {
+  private validateRequestDto<T>(dto: z.ZodType<T>, data: unknown): T {
     return dto.parse(data);
   }
 
-  private validateResponseDto<TResponse>(
-    responseDto: z.ZodType<TResponse>,
+  private validateResponseDto<T>(
+    responseDto: z.ZodType<T>,
     response: unknown,
-  ): TResponse {
+  ): T {
     const validated = responseDto.safeParse(response);
     if (!validated.success) {
       console.error("Invalid response shape", validated.error);
@@ -121,7 +121,7 @@ export class BaseController {
 type OptionalZodSchema = z.ZodType<unknown> | undefined;
 
 type InferredDto<Dto extends z.ZodType<unknown> | undefined> =
-  Dto extends z.ZodType<infer T> ? T : null;
+  Dto extends z.ZodType<unknown> ? z.output<Dto> : null;
 
 interface Inputs<TParams, TQuery, TBody> {
   params: TParams | null;
@@ -159,7 +159,7 @@ export interface HandlerParams<TParams = null, TQuery = null, TBody = null> {
   body: TBody;
 }
 
-type CreateRouteParams<
+type InitRouteParams<
   ParamsDto extends z.ZodType<unknown> | undefined,
   QueryDto extends z.ZodType<unknown> | undefined,
   BodyDto extends z.ZodType<unknown> | undefined,

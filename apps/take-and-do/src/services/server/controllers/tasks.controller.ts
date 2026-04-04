@@ -18,58 +18,50 @@ import {
   TasksDeletedCountResponseDto,
   OptimizeTasksDto,
 } from "@/db/dtos";
-import { BadRequestError, NotFoundError } from "@/lib/api/errors";
+import { BadRequestError, HttpError, NotFoundError } from "@/lib/api/errors";
 import { apiServices } from "@/services/server/api";
 
 import { BaseController } from "./base.controller";
+import { tasksHelper } from "@/helpers/task.helper";
 
 const taskIdParamsSchema = z.object({ id: z.string() });
 
 const taskKeyParamsSchema = z.object({ taskKey: z.string() });
 
-const taskPatchMergedSchema = z
-  .object({ id: z.string(), json: z.unknown() })
-  .transform(({ id, json }) => ({
-    id,
-    ...TaskPatchBodySchema.parse(json),
-  }));
+const TaskListQueryDto = z.object({
+  taskBoardId: z.string().min(1).optional(),
+  date: z.string().min(1).optional(),
+});
 
 const deleteTasksForBoardQuerySchema = z.object({
   taskBoardId: z.string().min(1),
 });
 
 export class TasksController extends BaseController {
-  list = this.createRoute({
+  list = this.initRoute({
+    queryDto: TaskListQueryDto,
     responseDto: TaskListResponseDto,
-    handler: async ({ request }) => {
+    handler: async ({ query }) => {
       const auth = await requireAuth();
       const access = getAccessByAuth(auth);
-      const { searchParams } = new URL(request.url);
-      const taskBoardId = searchParams.get("taskBoardId");
-      const date = searchParams.get("date");
-
-      if (taskBoardId)
+      const { taskBoardId, date } = query;
+      if (taskBoardId) {
         return apiServices.tasks.getByBoardId(taskBoardId, access);
+      }
 
       if (date) {
-        const parts = date.split("-");
-        if (parts.length !== 3)
-          throw new BadRequestError("Invalid date format. Expected YYYY-MM-DD");
-        const parsed = new Date(
-          parseInt(parts[0], 10),
-          parseInt(parts[1], 10) - 1,
-          parseInt(parts[2], 10),
-        );
-        if (isNaN(parsed.getTime()))
-          throw new BadRequestError("Invalid date format");
-        return apiServices.tasks.getByDate(parsed, access);
+        const parsed = tasksHelper.date.parseCalendarDay(date);
+
+        if (!parsed) throw new BadRequestError("Invalid date format");
+
+        return apiServices.tasks.getByDate(parsed!, access);
       }
 
       return apiServices.tasks.getAll(access);
     },
   });
 
-  create = this.createRoute({
+  create = this.initRoute({
     bodyDto: TaskPostBodySchema,
     responseDto: TaskCreateResponseDto,
     status: 201,
@@ -84,7 +76,7 @@ export class TasksController extends BaseController {
       if (result.composed) return result.composed;
 
       if (!result.task) {
-        throw new Error("Unexpected create result: missing task");
+        throw new HttpError(500, "Unexpected create result: missing task");
       }
 
       return access.isAnonymous
@@ -93,53 +85,46 @@ export class TasksController extends BaseController {
     },
   });
 
-  deleteAllForBoard = this.createRoute({
+  deleteAllForBoard = this.initRoute({
     queryDto: deleteTasksForBoardQuerySchema,
     responseDto: TasksDeletedCountResponseDto,
-    handler: async ({ query }) => {
+    handler: async ({ query: { taskBoardId } }) => {
       const auth = await requireNonAnonymous();
       const access = getAccessByAuth(auth);
       const deleted = await apiServices.tasks.deleteAllForBoard(
-        query.taskBoardId,
+        taskBoardId,
         access,
       );
       return { deleted };
     },
   });
 
-  getById = this.createRoute({
+  getById = this.initRoute({
     paramsDto: taskIdParamsSchema,
     responseDto: TaskResponseDto,
-    handler: async ({ params }) => {
+    handler: async ({ params: { id } }) => {
       const auth = await requireAuth();
       const access = getAccessByAuth(auth);
-      const task = await apiServices.tasks.getById(params.id, access);
+      const task = await apiServices.tasks.getById(id, access);
       if (!task) throw new NotFoundError("Task");
       return task;
     },
   });
 
-  update = this.createRoute({
+  update = this.initRoute({
+    paramsDto: taskIdParamsSchema,
+    bodyDto: TaskPatchBodySchema,
     responseDto: TaskResponseDto,
-    handler: async ({ request, context }) => {
+    handler: async ({ params: { id }, body }) => {
       const auth = await requireNonAnonymous();
       const access = getAccessByAuth(auth);
-      const params = await Promise.resolve(context.params);
-      const { id } = taskIdParamsSchema.parse(params);
-      const json = await request.json();
-      const body = taskPatchMergedSchema.parse({ id, json });
-      const { id: taskId, ...updateData } = body;
-      const updatedTask = await apiServices.tasks.update(
-        taskId,
-        updateData,
-        access,
-      );
+      const updatedTask = await apiServices.tasks.update(id, body, access);
       if (!updatedTask) throw new NotFoundError("Task");
       return updatedTask;
     },
   });
 
-  delete = this.createRoute({
+  delete = this.initRoute({
     paramsDto: taskIdParamsSchema,
     responseDto: TaskDeleteSuccessResponseDto,
     handler: async ({ params }) => {
@@ -150,7 +135,7 @@ export class TasksController extends BaseController {
     },
   });
 
-  getByKey = this.createRoute({
+  getByKey = this.initRoute({
     paramsDto: taskKeyParamsSchema,
     responseDto: TaskByKeyResponseDto,
     handler: async ({ params }) => {
@@ -162,7 +147,7 @@ export class TasksController extends BaseController {
     },
   });
 
-  optimize = this.createRoute({
+  optimize = this.initRoute({
     bodyDto: OptimizeTasksDto,
     responseDto: OptimizeTasksResponseDto,
     handler: async ({ body }) => {

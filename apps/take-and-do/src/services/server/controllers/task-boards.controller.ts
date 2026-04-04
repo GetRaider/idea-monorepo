@@ -32,13 +32,12 @@ export const TaskBoardByQueryRequestDto = z.object({
 });
 
 export class TaskBoardsController extends BaseController {
-  getByQuery = this.createRoute({
+  getByQuery = this.initRoute({
     queryDto: TaskBoardByQueryRequestDto,
     responseDto: listOrGetResponseSchema,
-    handler: async ({ query }) => {
+    handler: async ({ query: { id } }) => {
       const auth = await requireAuth();
       const access = getAccessByAuth(auth);
-      const { id } = query;
 
       if (id) {
         const board = await apiServices.taskBoards.getById(id, access);
@@ -50,7 +49,7 @@ export class TaskBoardsController extends BaseController {
     },
   });
 
-  create = this.createRoute({
+  create = this.initRoute({
     bodyDto: CreateTaskBoardDto,
     responseDto: TaskBoardResponseDto,
     status: 201,
@@ -93,7 +92,7 @@ export class TaskBoardsController extends BaseController {
     },
   });
 
-  update = this.createRoute({
+  update = this.initRoute({
     responseDto: TaskBoardResponseDto,
     handler: async ({ request }) => {
       const auth = await requireAuth();
@@ -126,7 +125,7 @@ export class TaskBoardsController extends BaseController {
     },
   });
 
-  delete = this.createRoute({
+  delete = this.initRoute({
     queryDto: taskBoardIdQuerySchema,
     responseDto: GuestResourceDeleteResponseDto,
     handler: async ({ query }) => {

@@ -6,11 +6,10 @@ import {
   GetAnalyticsQueryDto,
 } from "@/db/dtos";
 import { apiServices } from "@/services/server/api";
-
 import { BaseController } from "./base.controller";
 
 export class AnalyticsController extends BaseController {
-  getStatistics = this.createRoute({
+  getStatistics = this.initRoute({
     queryDto: GetAnalyticsQueryDto,
     responseDto: AnalyticsGetResponseDto,
     handler: async ({ query }) => {
@@ -24,7 +23,7 @@ export class AnalyticsController extends BaseController {
     },
   });
 
-  generate = this.createRoute({
+  generate = this.initRoute({
     bodyDto: GenerateAnalyticsDto,
     responseDto: AnalyticsPostResponseDto,
     handler: async ({ body }) => {

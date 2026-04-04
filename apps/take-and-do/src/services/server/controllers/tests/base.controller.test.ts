@@ -20,7 +20,7 @@ describe("BaseController", () => {
   describe("createRoute", () => {
     it("returns 200 with validated response on success", async () => {
       class TestController extends BaseController {
-        run = this.createRoute({
+        run = this.initRoute({
           responseDto: z.object({ message: z.string() }),
           handler: async () => ({ message: "ok" }),
         });
@@ -37,7 +37,7 @@ describe("BaseController", () => {
       const bodySpy = vi.fn();
       const nameBodySchema = z.object({ name: z.string() });
       class TestController extends BaseController {
-        run = this.createRoute({
+        run = this.initRoute({
           bodyDto: nameBodySchema,
           responseDto: z.object({ ok: z.literal(true) }),
           handler: async ({ body }) => {
@@ -55,7 +55,7 @@ describe("BaseController", () => {
 
     it("skips body validation when bodyDto is omitted", async () => {
       class TestController extends BaseController {
-        run = this.createRoute({
+        run = this.initRoute({
           responseDto: z.object({ a: z.number() }),
           handler: async () => ({ a: 1 }),
         });
@@ -69,7 +69,7 @@ describe("BaseController", () => {
 
     it("skips response validation when responseDto is omitted", async () => {
       class TestController extends BaseController {
-        run = this.createRoute({
+        run = this.initRoute({
           handler: async () => ({ loose: "value" }),
         });
       }
@@ -83,7 +83,7 @@ describe("BaseController", () => {
     it("returns 400 when request body fails ZodError", async () => {
       const xBodySchema = z.object({ x: z.string() });
       class TestController extends BaseController {
-        run = this.createRoute({
+        run = this.initRoute({
           bodyDto: xBodySchema,
           handler: async () => ({ ok: true }),
         });
@@ -103,7 +103,7 @@ describe("BaseController", () => {
         .spyOn(console, "error")
         .mockImplementation(() => {});
       class TestController extends BaseController {
-        run = this.createRoute({
+        run = this.initRoute({
           responseDto: z.object({ ok: z.literal(true) }),
           handler: async () => ({ ok: false }) as { ok: boolean },
         });
@@ -121,7 +121,7 @@ describe("BaseController", () => {
 
     it("returns mapped status when handler throws HttpError", async () => {
       class TestController extends BaseController {
-        run = this.createRoute({
+        run = this.initRoute({
           handler: async () => {
             throw new HttpError(418, "short and stout");
           },
@@ -137,7 +137,7 @@ describe("BaseController", () => {
 
     it("returns 500 for unknown errors", async () => {
       class TestController extends BaseController {
-        run = this.createRoute({
+        run = this.initRoute({
           handler: async () => {
             throw new Error("boom");
           },
@@ -153,7 +153,7 @@ describe("BaseController", () => {
 
     it("passes null body when bodyDto is omitted", async () => {
       class TestController extends BaseController {
-        run = this.createRoute({
+        run = this.initRoute({
           responseDto: z.object({ got: z.string() }),
           handler: async ({ body }) => ({
             got:
@@ -172,7 +172,7 @@ describe("BaseController", () => {
 
     it("returns Response from handler without JSON validation", async () => {
       class TestController extends BaseController {
-        run = this.createRoute({
+        run = this.initRoute({
           handler: async () => new NextResponse(null, { status: 204 }),
         });
       }

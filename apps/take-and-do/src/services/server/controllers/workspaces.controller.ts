@@ -5,7 +5,7 @@ import { apiServices } from "@/services/server/api";
 import { BaseController } from "./base.controller";
 
 export class WorkspacesController extends BaseController {
-  get = this.createRoute({
+  get = this.initRoute({
     responseDto: WorkspacesResponseDto,
     handler: async () => {
       const auth = await requireAuth();

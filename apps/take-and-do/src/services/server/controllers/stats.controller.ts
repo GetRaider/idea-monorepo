@@ -4,13 +4,13 @@ import { apiServices } from "@/services/server/api";
 import { BaseController } from "./base.controller";
 
 export class StatsController extends BaseController {
-  getCounts = this.createRoute({
+  getCounts = this.initRoute({
     queryDto: GetTaskCountsQueryDto,
     responseDto: TaskCountsResponseDto,
-    handler: async ({ query }) => {
+    handler: async ({ query: { timeframe } }) => {
       const auth = await requireAuth();
       const access = getAccessByAuth(auth);
-      return apiServices.stats.getCounts(query.timeframe, access);
+      return apiServices.stats.getCounts(timeframe, access);
     },
   });
 }

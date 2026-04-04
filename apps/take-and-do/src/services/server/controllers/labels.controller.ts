@@ -8,11 +8,10 @@ import {
   RenameLabelDto,
 } from "@/db/dtos";
 import { apiServices } from "@/services/server/api";
-
 import { BaseController } from "./base.controller";
 
 export class LabelsController extends BaseController {
-  list = this.createRoute({
+  list = this.initRoute({
     responseDto: LabelsListResponseDto,
     handler: async () => {
       await requireAuth();
@@ -20,17 +19,17 @@ export class LabelsController extends BaseController {
     },
   });
 
-  create = this.createRoute({
+  create = this.initRoute({
     bodyDto: CreateLabelDto,
     responseDto: LabelMutationResponseDto,
     status: 201,
-    handler: async ({ body }) => {
+    handler: async ({ body: { label } }) => {
       await requireNonAnonymous();
-      return { label: await apiServices.labels.add(body.label.trim()) };
+      return { label: await apiServices.labels.add(label.trim()) };
     },
   });
 
-  rename = this.createRoute({
+  rename = this.initRoute({
     bodyDto: RenameLabelDto,
     responseDto: LabelMutationResponseDto,
     handler: async ({ body }) => {
@@ -42,7 +41,7 @@ export class LabelsController extends BaseController {
     },
   });
 
-  remove = this.createRoute({
+  remove = this.initRoute({
     bodyDto: DeleteLabelDto,
     responseDto: OkTrueResponseDto,
     handler: async ({ body }) => {

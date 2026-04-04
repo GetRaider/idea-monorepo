@@ -11,11 +11,10 @@ import {
 } from "@/db/dtos";
 import { BadRequestError, NotFoundError } from "@/lib/api/errors";
 import { apiServices } from "@/services/server/api";
-
 import { BaseController } from "./base.controller";
 
 export class FoldersController extends BaseController {
-  getAll = this.createRoute({
+  getAll = this.initRoute({
     responseDto: GetAllFoldersResponseDto,
     handler: async () => {
       const auth = await requireAuth();
@@ -24,7 +23,7 @@ export class FoldersController extends BaseController {
     },
   });
 
-  create = this.createRoute({
+  create = this.initRoute({
     bodyDto: CreateFolderDto,
     responseDto: FolderResponseDto,
     status: 201,
@@ -41,7 +40,7 @@ export class FoldersController extends BaseController {
     },
   });
 
-  getById = this.createRoute({
+  getById = this.initRoute({
     paramsDto: FolderByIdRequestDto,
     responseDto: FolderResponseDto,
     handler: async ({ params }) => {
@@ -53,7 +52,7 @@ export class FoldersController extends BaseController {
     },
   });
 
-  update = this.createRoute({
+  update = this.initRoute({
     bodyDto: UpdateFolderRequestDto,
     responseDto: FolderResponseDto,
     handler: async ({ body }) => {
@@ -81,7 +80,7 @@ export class FoldersController extends BaseController {
     },
   });
 
-  delete = this.createRoute({
+  delete = this.initRoute({
     paramsDto: FolderByIdRequestDto,
     responseDto: GuestResourceDeleteResponseDto,
     handler: async ({ params }) => {

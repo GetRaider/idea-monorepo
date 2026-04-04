@@ -4,14 +4,11 @@ import { ZodError, type z } from "zod";
 import { HttpError } from "@/lib/api/errors";
 import { formatZodError } from "@/lib/api/format-zod-error";
 
-type InferredDto<Dto extends z.ZodType<unknown> | undefined> =
-  Dto extends z.ZodType<infer T> ? T : null;
-
 export class BaseController {
   protected createRoute<
-    const PDto extends z.ZodType<unknown> | undefined = undefined,
-    const QDto extends z.ZodType<unknown> | undefined = undefined,
-    const BDto extends z.ZodType<unknown> | undefined = undefined,
+    const PDto extends OptionalZodSchema = undefined,
+    const QDto extends OptionalZodSchema = undefined,
+    const BDto extends OptionalZodSchema = undefined,
     TResponse = unknown,
   >({
     paramsDto,
@@ -120,6 +117,11 @@ export class BaseController {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+
+type OptionalZodSchema = z.ZodType<unknown> | undefined;
+
+type InferredDto<Dto extends z.ZodType<unknown> | undefined> =
+  Dto extends z.ZodType<infer T> ? T : null;
 
 interface Inputs<TParams, TQuery, TBody> {
   params: TParams | null;

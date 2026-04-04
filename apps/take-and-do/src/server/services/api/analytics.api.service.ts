@@ -1,10 +1,12 @@
 import { aiServices } from "@/server/services/ai";
 import { ForbiddenError } from "@/lib/api/errors";
-import { BaseApiService } from "@/server/services/api/base.api.service";
+import {
+  BaseApiService,
+  DataAccess,
+} from "@/server/services/api/base.api.service";
 
 import type { AnalyticsInput, AnalyticsOutput } from "@/server/services/ai";
 import type { TaskStatsInput, Timeframe } from "@/db/dtos";
-import type { DataAccess } from "@/db/repositories/base.repository";
 import { DB, and, gte } from "@/db/client";
 import { tasks } from "@/db/schemas";
 import { tasksHelper } from "@/helpers/task.helper";

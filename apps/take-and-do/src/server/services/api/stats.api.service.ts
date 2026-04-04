@@ -1,6 +1,8 @@
 import { DB } from "@/db/client";
-import type { DataAccess } from "@/db/repositories/base.repository";
-import { BaseApiService } from "@/server/services/api/base.api.service";
+import {
+  BaseApiService,
+  DataAccess,
+} from "@/server/services/api/base.api.service";
 import { TasksApiService } from "./tasks.api.service";
 
 export class StatsApiService extends BaseApiService {

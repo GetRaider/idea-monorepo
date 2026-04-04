@@ -4,7 +4,7 @@ import { ForbiddenError, UnauthorizedError } from "@/lib/api/errors";
 import {
   isAnonymousUser,
   type DataAccess,
-} from "@/db/repositories/base.repository";
+} from "@/server/services/api/base.api.service";
 import { auth } from "./server";
 
 export function getAccessByAuth(authContext: AuthenticatedContext): DataAccess {

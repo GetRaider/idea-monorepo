@@ -6,7 +6,7 @@ import { Task } from "@/components/Boards/KanbanBoard/types";
 import { useIsAnonymous } from "@/hooks/use-is-anonymous";
 import { useGuestTasks } from "@/hooks/use-guest-store";
 import { guestTasksRecent } from "@/stores/guest/guest-task-filters";
-import { clientServices } from "@/services/client";
+import { clientServices } from "@/services";
 
 interface UseRecentTasksReturn {
   recentTasks: Task[];

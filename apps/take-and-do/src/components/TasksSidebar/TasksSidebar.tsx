@@ -49,7 +49,7 @@ const ROOT_DROP_ID = "__root__";
 const isRootDrop = (id: string) => id === ROOT_DROP_ID;
 import { Folder, TaskBoard } from "@/types/workspace";
 import { toast } from "sonner";
-import { clientServices } from "@/services/client";
+import { clientServices } from "@/services";
 import { ConfirmDialog } from "@/components/Dialogs";
 import { Spinner } from "@/components/Spinner/Spinner";
 import { TASKS_ROOT_VIEW_ID, tasksUrlHelper } from "@/helpers/tasks-url.helper";

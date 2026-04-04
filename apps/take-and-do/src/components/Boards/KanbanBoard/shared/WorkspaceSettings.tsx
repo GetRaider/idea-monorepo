@@ -8,7 +8,7 @@ import { Switch } from "@/components/Switch/Switch";
 import { AppTooltip } from "@/components/Tooltip/AppTooltip";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useIsAnonymous } from "@/hooks/use-is-anonymous";
-import { clientServices } from "@/services/client";
+import { clientServices } from "@/services";
 import { toast } from "sonner";
 
 import { PopoverContainer, Popover, SettingsButton } from "../KanbanBoard.ui";

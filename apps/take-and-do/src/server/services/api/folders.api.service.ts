@@ -4,7 +4,7 @@ import { genericHelper } from "@/helpers/generic.helper";
 import {
   BaseApiService,
   DataAccess,
-} from "@/services/server/api/base.api.service";
+} from "@/server/services/api/base.api.service";
 
 export class FoldersApiService extends BaseApiService {
   constructor(protected readonly db: DB) {

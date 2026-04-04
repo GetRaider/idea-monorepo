@@ -13,7 +13,7 @@ import { waiterHelper } from "@/helpers/waiter.helper";
 import { useWorkspaces } from "@/hooks/useWorkspaces";
 import { WorkspaceProvider } from "@/contexts/WorkspaceContext";
 import { useTasksSidebarWidthPx } from "@/hooks/useTasksSidebarWidthPx";
-import { clientServices } from "@/services/client";
+import { clientServices } from "@/services";
 import { toast } from "sonner";
 
 export default function TasksLayout({

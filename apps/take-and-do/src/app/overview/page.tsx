@@ -10,7 +10,7 @@ import { useIsAnonymous } from "@/hooks/use-is-anonymous";
 import { useGuestTasks } from "@/hooks/use-guest-store";
 import { useTasksSidebarWidthPx } from "@/hooks/useTasksSidebarWidthPx";
 import { guestTasksBySchedule } from "@/stores/guest/guest-task-filters";
-import { clientServices } from "@/services/client";
+import { clientServices } from "@/services";
 import { toast } from "sonner";
 
 import {

@@ -17,9 +17,9 @@ import { Dropdown } from "@/components/Dropdown";
 import { ConfirmDialog } from "@/components/Dialogs";
 import { Input } from "@/components/Input";
 import { Task } from "../../Boards/KanbanBoard/types";
-import { clientServices } from "@/services/client";
 import { getLabelAccent } from "@/helpers/label-color.helper";
 import { toast } from "sonner";
+import { clientServices } from "@/services";
 
 const LABEL_MENU_WIDTH = 200;
 const LABEL_MENU_EDGE = 10;

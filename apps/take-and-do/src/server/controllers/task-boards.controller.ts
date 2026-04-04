@@ -13,7 +13,7 @@ import {
   UpdateTaskBoardDto,
 } from "@/db/dtos";
 import { BadRequestError, NotFoundError } from "@/lib/api/errors";
-import { apiServices } from "@/services/server/api";
+import { apiServices } from "@/server/services/api";
 import type { TaskBoard } from "@/types/workspace";
 import { BaseController } from "./base.controller";
 

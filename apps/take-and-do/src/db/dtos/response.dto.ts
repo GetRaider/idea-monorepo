@@ -4,7 +4,7 @@ import {
   AnalyticsOutputSchema,
   ComposeTaskOutputSchema,
   OptimizeScheduleOutputSchema,
-} from "@/services/server/ai/schemas";
+} from "@/server/services/ai/schemas";
 
 import { taskStatsSchema, timeframeEnum } from "./analytics.dto";
 

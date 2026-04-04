@@ -1,6 +1,6 @@
 import type { TaskBoard } from "@/types/workspace";
 import type { DataAccess } from "@/db/repositories/base.repository";
-import { BaseApiService } from "@/services/server/api/base.api.service";
+import { BaseApiService } from "@/server/services/api/base.api.service";
 import { DB, and, eq } from "@/db/client";
 import { taskBoardsTable } from "@/db/schemas/taskBoard.schema";
 import { genericHelper } from "@/helpers/generic.helper";

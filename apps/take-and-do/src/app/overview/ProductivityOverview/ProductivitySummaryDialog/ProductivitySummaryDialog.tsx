@@ -14,7 +14,7 @@ import {
   CardContent,
   CardList,
 } from "./ProductivitySummaryDialog.ui";
-import type { AnalyticsData } from "@/services/client";
+import type { AnalyticsData } from "@/services";
 
 interface ProductivitySummaryDialogProps {
   analytics: AnalyticsData;

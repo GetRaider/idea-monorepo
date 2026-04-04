@@ -5,7 +5,7 @@ import {
   GenerateAnalyticsDto,
   GetAnalyticsQueryDto,
 } from "@/db/dtos";
-import { apiServices } from "@/services/server/api";
+import { apiServices } from "@/server/services/api";
 import { BaseController } from "./base.controller";
 
 export class AnalyticsController extends BaseController {

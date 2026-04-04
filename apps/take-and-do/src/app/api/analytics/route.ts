@@ -1,4 +1,4 @@
-import { AnalyticsController } from "@/services/server/controllers";
+import { AnalyticsController } from "@/server/controllers";
 
 const controller = new AnalyticsController();
 

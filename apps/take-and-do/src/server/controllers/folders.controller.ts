@@ -10,7 +10,7 @@ import {
   UpdateFolderRequestDto,
 } from "@/db/dtos";
 import { BadRequestError, NotFoundError } from "@/lib/api/errors";
-import { apiServices } from "@/services/server/api";
+import { apiServices } from "@/server/services/api";
 import { BaseController } from "./base.controller";
 
 export class FoldersController extends BaseController {

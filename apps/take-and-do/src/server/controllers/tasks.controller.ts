@@ -19,7 +19,7 @@ import {
   OptimizeTasksDto,
 } from "@/db/dtos";
 import { BadRequestError, HttpError, NotFoundError } from "@/lib/api/errors";
-import { apiServices } from "@/services/server/api";
+import { apiServices } from "@/server/services/api";
 
 import { BaseController } from "./base.controller";
 import { tasksHelper } from "@/helpers/task.helper";

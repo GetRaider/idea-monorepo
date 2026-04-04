@@ -11,7 +11,7 @@ import {
   guestTasksForBoard,
   guestTasksForScheduleDate,
 } from "@/stores/guest/guest-task-filters";
-import { clientServices } from "@/services/client";
+import { clientServices } from "@/services";
 import type { TaskBoardWithTasks } from "@/types/workspace";
 
 export function useMultipleKanbanBoardData(

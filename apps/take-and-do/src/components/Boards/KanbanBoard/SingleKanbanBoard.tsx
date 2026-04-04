@@ -33,7 +33,7 @@ import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
 import { EmptyState } from "../../EmptyState";
 import { AIComposeDialog } from "./shared/AIComposeDialog";
-import { clientServices } from "@/services/client";
+import { clientServices } from "@/services";
 import { toast } from "sonner";
 
 interface SingleKanbanBoardProps {

@@ -9,7 +9,7 @@ import {
   guestTasksForBoard,
   guestTasksForScheduleDate,
 } from "@/stores/guest/guest-task-filters";
-import { clientServices } from "@/services/client";
+import { clientServices } from "@/services";
 
 interface UseTasksReturn {
   tasks: Task[];

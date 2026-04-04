@@ -35,7 +35,7 @@ import { updateTaskInColumns } from "@/hooks/useTaskBoardState";
 import { EmptyState } from "../../EmptyState";
 import { TasksWorkspaceEmptyState } from "../../TasksWorkspaceEmptyState";
 import { AIComposeDialog } from "./shared/AIComposeDialog";
-import { clientServices } from "@/services/client";
+import { clientServices } from "@/services";
 import { toast } from "sonner";
 import type { TaskBoardWithTasks } from "@/types/workspace";
 import { tasksUrlHelper, type ScheduleDate } from "@/helpers/tasks-url.helper";

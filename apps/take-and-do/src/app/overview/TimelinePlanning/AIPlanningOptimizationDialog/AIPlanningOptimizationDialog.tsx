@@ -2,7 +2,7 @@
 
 import { useId, useRef, useState } from "react";
 import { toast } from "sonner";
-import { clientServices } from "@/services/client";
+import { clientServices } from "@/services";
 import { tasksHelper } from "@/helpers/task.helper";
 import { CloseIcon } from "@/components/Icons";
 import { SelectList } from "@/components/SelectList";

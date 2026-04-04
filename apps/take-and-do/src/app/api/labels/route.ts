@@ -1,4 +1,4 @@
-import { LabelsController } from "@/services/server/controllers";
+import { LabelsController } from "@/server/controllers";
 
 const controller = new LabelsController();
 

@@ -1,4 +1,4 @@
-import { WorkspacesController } from "@/services/server/controllers";
+import { WorkspacesController } from "@/server/controllers";
 
 const controller = new WorkspacesController();
 

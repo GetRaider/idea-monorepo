@@ -7,7 +7,7 @@ import { Theme } from "@radix-ui/themes";
 import { Analytics } from "@/components/Analytics";
 import { GuestBanner } from "@/components/GuestBanner";
 import { GuestStoreGuard } from "@/components/GuestStoreGuard";
-import { AuthRedirectRegistrar } from "@/services/client/auth-redirect.registrar";
+import { AuthRedirectRegistrar } from "@/services/auth-redirect.registrar";
 
 const inter = Inter({
   subsets: ["latin"],

@@ -1,5 +1,5 @@
 import { TaskStatsInput } from "@/db/dtos";
-import type { AnalyticsStats } from "@/services/server/ai";
+import type { AnalyticsStats } from "@/server/services/ai";
 
 import { BaseClientService } from "./base.client.service";
 

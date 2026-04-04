@@ -6,7 +6,7 @@ import { TaskStatus } from "@/constants/tasks.constants";
 import { useIsAnonymous } from "@/hooks/use-is-anonymous";
 import { useGuestTasks } from "@/hooks/use-guest-store";
 import { guestTasksForBoard } from "@/stores/guest/guest-task-filters";
-import { clientServices } from "@/services/client";
+import { clientServices } from "@/services";
 import { cn } from "@/lib/styles/utils";
 import type { Task } from "@/components/Boards/KanbanBoard/types";
 import type { TaskBoard } from "@/types/workspace";

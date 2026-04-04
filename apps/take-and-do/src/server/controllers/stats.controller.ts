@@ -1,6 +1,6 @@
 import { getAccessByAuth, requireAuth } from "@/auth/guards";
 import { GetTaskCountsQueryDto, TaskCountsResponseDto } from "@/db/dtos";
-import { apiServices } from "@/services/server/api";
+import { apiServices } from "@/server/services/api";
 import { BaseController } from "./base.controller";
 
 export class StatsController extends BaseController {

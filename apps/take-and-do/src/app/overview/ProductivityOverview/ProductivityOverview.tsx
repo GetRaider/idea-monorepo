@@ -32,12 +32,12 @@ import {
 } from "./ProductivityOverview.ui";
 import { ProductivitySummaryDialog } from "./ProductivitySummaryDialog/ProductivitySummaryDialog";
 import { ProductivitySummarySelectionDialog } from "./ProductivitySummarySelectionDialog/ProductivitySummarySelectionDialog";
-import type { AnalyticsStats } from "@/services/server/ai";
+import type { AnalyticsStats } from "@/server/services/ai";
 import { EmptyState } from "@/components/EmptyState";
 import { Dropdown } from "@/components/Dropdown";
-import { clientServices } from "@/services/client";
+import { clientServices } from "@/services";
 import { toast } from "sonner";
-import type { AnalyticsData, Timeframe } from "@/services/client";
+import type { AnalyticsData, Timeframe } from "@/services";
 
 const CHART_TOOLTIP_STYLE = {
   background: "#2a2a2a",

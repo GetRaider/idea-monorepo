@@ -21,7 +21,7 @@ import {
   EmptyState,
 } from "./ProductivitySummary.ui";
 import { ChevronDownIcon } from "@/components/Icons";
-import type { AnalyticsData, Timeframe } from "@/services/client";
+import type { AnalyticsData, Timeframe } from "@/services";
 
 export function ProductivitySummary({
   analytics,

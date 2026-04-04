@@ -1,6 +1,6 @@
 import { toast } from "sonner";
 
-import { clientServices } from "@/services/client";
+import { clientServices } from "@/services";
 import type { TaskBoardWithTasks } from "@/types/workspace";
 
 import { TaskStatus, Task } from "../types";

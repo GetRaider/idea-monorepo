@@ -1,4 +1,4 @@
-import { StatsController } from "@/services/server/controllers";
+import { StatsController } from "@/server/controllers";
 
 const controller = new StatsController();
 

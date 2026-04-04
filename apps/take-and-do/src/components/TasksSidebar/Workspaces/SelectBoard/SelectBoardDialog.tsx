@@ -13,7 +13,7 @@ import { useIsAnonymous } from "@/hooks/use-is-anonymous";
 import { GUEST_STORE_UPDATED_EVENT } from "@/stores/guest/constants";
 import { guestStoreHelper } from "@/stores/guest";
 import { TaskBoard } from "@/types/workspace";
-import { clientServices } from "@/services/client";
+import { clientServices } from "@/services";
 import { cn } from "@/lib/styles/utils";
 import type { UiProps } from "@/lib/styles/ui-props";
 

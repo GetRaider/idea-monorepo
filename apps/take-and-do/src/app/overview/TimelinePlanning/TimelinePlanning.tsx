@@ -7,7 +7,7 @@ import { Task } from "@/components/Boards/KanbanBoard/types";
 import { EmptyState } from "@/components/EmptyState";
 import { useIsAnonymous } from "@/hooks/use-is-anonymous";
 import { guestStoreHelper } from "@/stores/guest";
-import { clientServices } from "@/services/client";
+import { clientServices } from "@/services";
 import { ScheduleType, tasksHelper } from "@/helpers/task.helper";
 import { AiGate } from "@/components/ai-gate";
 import { AIPlanningOptimizationDialog } from "./AIPlanningOptimizationDialog/AIPlanningOptimizationDialog";

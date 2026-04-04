@@ -3,7 +3,7 @@ import type { DataAccess } from "@/db/repositories/base.repository";
 import { labelsTable } from "@/db/schemas";
 import { genericHelper } from "@/helpers/generic.helper";
 
-import { BaseApiService } from "@/services/server/api/base.api.service";
+import { BaseApiService } from "@/server/services/api/base.api.service";
 
 export class LabelsApiService extends BaseApiService {
   constructor(protected readonly db: DB) {

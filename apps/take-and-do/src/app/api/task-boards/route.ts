@@ -1,4 +1,4 @@
-import { TaskBoardsController } from "@/services/server/controllers";
+import { TaskBoardsController } from "@/server/controllers";
 
 const controller = new TaskBoardsController();
 

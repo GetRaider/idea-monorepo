@@ -11,7 +11,7 @@ import { tasksHelper } from "@/helpers/task.helper";
 import { useIsAnonymous } from "@/hooks/use-is-anonymous";
 import { useGuestTasks } from "@/hooks/use-guest-store";
 import { cn } from "@/lib/styles/utils";
-import { clientServices } from "@/services/client";
+import { clientServices } from "@/services";
 import type { TaskBoard } from "@/types/workspace";
 
 type TasksSidebarTaskSearchProps = {

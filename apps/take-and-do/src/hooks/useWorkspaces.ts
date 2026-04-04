@@ -5,7 +5,7 @@ import { useEffect, useState, type Dispatch, type SetStateAction } from "react";
 import { useIsAnonymous } from "@/hooks/use-is-anonymous";
 import { GUEST_STORE_UPDATED_EVENT } from "@/stores/guest/constants";
 import { guestStoreHelper } from "@/stores/guest";
-import { clientServices } from "@/services/client";
+import { clientServices } from "@/services";
 import { Folder, TaskBoard } from "@/types/workspace";
 
 interface UseWorkspacesReturn {

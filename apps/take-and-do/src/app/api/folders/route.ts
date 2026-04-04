@@ -1,4 +1,4 @@
-import { FoldersController } from "@/services/server/controllers";
+import { FoldersController } from "@/server/controllers";
 
 const controller = new FoldersController();
 

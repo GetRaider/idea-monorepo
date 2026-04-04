@@ -11,7 +11,7 @@ import {
   OkTrueResponseDto,
   RenameLabelDto,
 } from "@/db/dtos";
-import { apiServices } from "@/services/server/api";
+import { apiServices } from "@/server/services/api";
 import { BaseController } from "./base.controller";
 import { NextResponse } from "next/server";
 

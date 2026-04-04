@@ -9,6 +9,7 @@ import {
 import { urlHelper } from "@repo/shared";
 import type { ApiOk, ApiResult } from "./api-result.types";
 import { getAuthRedirectHandlers } from "./auth-redirect.registry";
+import { Route } from "@/constants/route.constant";
 
 export class BaseClientService {
   protected readonly httpClient = new HttpClient();
@@ -17,7 +18,7 @@ export class BaseClientService {
     // TODO: Define default headers
   };
 
-  protected constructor(protected readonly relativeUrl: string) {}
+  protected constructor(protected readonly relativeUrl: Route) {}
 
   protected async get<T>({
     pathParams,

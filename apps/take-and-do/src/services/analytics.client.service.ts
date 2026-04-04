@@ -2,10 +2,11 @@ import { TaskStatsInput } from "@/db/dtos";
 import type { AnalyticsStats } from "@/server/services/ai";
 
 import { BaseClientService } from "./base.client.service";
+import { Route } from "@/constants/route.constant";
 
 export class AnalyticsClientService extends BaseClientService {
   constructor() {
-    super("/analytics");
+    super(Route.ANALYTICS);
   }
 
   async getStatsByTimeframe(

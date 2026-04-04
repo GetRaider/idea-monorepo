@@ -1,8 +1,9 @@
 import { BaseClientService } from "./base.client.service";
+import { Route } from "@/constants/route.constant";
 
 export class StatsClientService extends BaseClientService {
   constructor() {
-    super("/stats");
+    super(Route.STATS);
   }
 
   async getByTimeframe(timeframe: Timeframe): Promise<TaskStats | null> {

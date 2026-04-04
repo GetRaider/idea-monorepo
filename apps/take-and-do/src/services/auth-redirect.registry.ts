@@ -1,3 +1,5 @@
+import { Route } from "@/constants/route.constant";
+
 export type AuthRedirectHandlers = {
   onUnauthorized: () => void;
   onForbidden: () => void;
@@ -5,10 +7,10 @@ export type AuthRedirectHandlers = {
 
 const defaultHandlers: AuthRedirectHandlers = {
   onUnauthorized: () => {
-    if (typeof window !== "undefined") window.location.assign("/login");
+    if (typeof window !== "undefined") window.location.assign(Route.LOGIN);
   },
   onForbidden: () => {
-    if (typeof window !== "undefined") window.location.assign("/forbidden");
+    if (typeof window !== "undefined") window.location.assign(Route.FORBIDDEN);
   },
 };
 

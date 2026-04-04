@@ -1,5 +1,6 @@
 "use client";
 
+import { Route } from "@/constants/route.constant";
 import {
   GetStartedLink,
   LandingContent,
@@ -14,7 +15,7 @@ export function LandingPage() {
       <LandingContent>
         <LandingTitle>Take & Do</LandingTitle>
         <LandingSubtitle>As simple as possible</LandingSubtitle>
-        <GetStartedLink href="/login">Get Started</GetStartedLink>
+        <GetStartedLink href={Route.LOGIN}>Get Started</GetStartedLink>
       </LandingContent>
     </LandingPageRoot>
   );

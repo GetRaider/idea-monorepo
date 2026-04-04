@@ -1,8 +1,9 @@
+import { Route } from "@/constants/route.constant";
 import { BaseClientService } from "./base.client.service";
 
 export class LabelsClientService extends BaseClientService {
   constructor() {
-    super("/labels");
+    super(Route.LABELS);
   }
 
   async getAll(): Promise<string[]> {

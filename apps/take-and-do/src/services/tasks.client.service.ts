@@ -4,10 +4,11 @@ import { guestStoreHelper } from "@/stores/guest";
 import { tasksHelper } from "@/helpers/task.helper";
 
 import { BaseClientService } from "./base.client.service";
+import { Route } from "@/constants/route.constant";
 
 export class TasksClientService extends BaseClientService {
   constructor() {
-    super("/tasks");
+    super(Route.TASKS);
   }
 
   async getAll(): Promise<Task[]> {

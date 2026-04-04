@@ -1,4 +1,5 @@
 import { Task, TaskStatus } from "@/components/Boards/KanbanBoard/types";
+import { Route } from "@/constants/route.constant";
 
 const PATHNAME_SYNC_EVENT = "app:shallow-url-pathname";
 
@@ -38,11 +39,11 @@ export const tasksUrlHelper = {
     },
 
     buildRootUrl(): string {
-      return "/tasks";
+      return Route.TASKS;
     },
 
     buildScheduleUrl(date: ScheduleDate): string {
-      return `/tasks/schedule/${date}`;
+      return `${Route.TASKS}/schedule/${date}`;
     },
 
     buildScheduleTaskUrl(
@@ -64,12 +65,12 @@ export const tasksUrlHelper = {
       const encodedBoardName = encodeURIComponent(boardName);
 
       if (subtaskKey && taskKey) {
-        return `/tasks/board/${encodedBoardName}/${taskKey}/${subtaskKey}`;
+        return `${Route.TASKS}/board/${encodedBoardName}/${taskKey}/${subtaskKey}`;
       }
       if (taskKey) {
-        return `/tasks/board/${encodedBoardName}/${taskKey}`;
+        return `${Route.TASKS}/board/${encodedBoardName}/${taskKey}`;
       }
-      return `/tasks/board/${encodedBoardName}`;
+      return `${Route.TASKS}/board/${encodedBoardName}`;
     },
 
     buildTasksUrl(view: TasksView): string {
@@ -106,7 +107,7 @@ export const tasksUrlHelper = {
 
     getActiveViewFromPathname(pathname: string): string {
       const normalized = pathname.replace(/\/+$/, "") || "/";
-      if (normalized === "/tasks") {
+      if (normalized === Route.TASKS) {
         return TASKS_ROOT_VIEW_ID;
       }
       if (/^\/tasks\/schedule\/today(?:\/|$)/.test(pathname)) return "today";
@@ -188,7 +189,7 @@ export const tasksUrlHelper = {
       boardName: string,
     ): { taskKey?: string; subtaskKey?: string } {
       const path = pathname.replace(/\/$/, "") || "/";
-      const prefix = `/tasks/board/${encodeURIComponent(boardName)}`;
+      const prefix = `${Route.TASKS}/board/${encodeURIComponent(boardName)}`;
       if (path === prefix || !path.startsWith(`${prefix}/`)) return {};
 
       const parts = path

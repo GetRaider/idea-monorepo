@@ -1,3 +1,4 @@
+import { Route } from "@/constants/route.constant";
 import Link from "next/link";
 
 export default function SignupPage() {
@@ -9,7 +10,7 @@ export default function SignupPage() {
           {/* TODO: email/password sign-up flow */}
           Registration is not available yet. Use{" "}
           <Link
-            href="/login"
+            href={Route.LOGIN}
             className="text-[var(--accent-primary)] underline underline-offset-2"
           >
             Sign in

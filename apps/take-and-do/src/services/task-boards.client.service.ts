@@ -6,13 +6,14 @@ import { TaskBoard } from "@/types/workspace";
 import { BaseClientService } from "./base.client.service";
 import { TasksClientService } from "./tasks.client.service";
 import { FoldersClientService } from "./folders.client.service";
+import { Route } from "@/constants/route.constant";
 
 export class TaskBoardsClientService extends BaseClientService {
   constructor(
     private readonly tasksClientService: TasksClientService,
     private readonly foldersClientService: FoldersClientService,
   ) {
-    super("/task-boards");
+    super(Route.TASK_BOARDS);
   }
 
   async getAll(): Promise<TaskBoard[]> {

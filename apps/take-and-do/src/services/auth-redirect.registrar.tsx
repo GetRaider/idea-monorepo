@@ -7,14 +7,15 @@ import {
   resetAuthRedirectHandlers,
   setAuthRedirectHandlers,
 } from "./auth-redirect.registry";
+import { Route } from "@/constants/route.constant";
 
 export function AuthRedirectRegistrar() {
   const router = useRouter();
 
   useEffect(() => {
     setAuthRedirectHandlers({
-      onUnauthorized: () => router.push("/login"),
-      onForbidden: () => router.push("/forbidden"),
+      onUnauthorized: () => router.push(Route.LOGIN),
+      onForbidden: () => router.push(Route.FORBIDDEN),
     });
     return () => resetAuthRedirectHandlers();
   }, [router]);

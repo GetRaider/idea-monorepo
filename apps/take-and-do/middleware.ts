@@ -1,3 +1,4 @@
+import { Route } from "@/constants/route.constant";
 import { getSessionCookie } from "better-auth/cookies";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -6,7 +7,7 @@ const PUBLIC_PATHS = ["/", "/login", "/signup", "/api/auth"];
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (pathname.startsWith("/api/auth")) {
+  if (pathname.startsWith(`/api/${Route.AUTH}`)) {
     return NextResponse.next();
   }
 
@@ -24,7 +25,7 @@ export function middleware(request: NextRequest) {
   if (!isPublic) {
     const sessionCookie = getSessionCookie(request);
     if (!sessionCookie) {
-      return NextResponse.redirect(new URL("/login", request.url));
+      return NextResponse.redirect(new URL(Route.LOGIN, request.url));
     }
   }
 

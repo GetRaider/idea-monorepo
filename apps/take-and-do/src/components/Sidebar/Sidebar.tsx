@@ -17,6 +17,7 @@ import {
 } from "./Sidebar.ui";
 import { GuestAvatarIcon } from "../Icons/GuestAvatarIcon";
 import { DefaultAvatarIcon } from "../Icons/DefaulAvatarIcon";
+import { Route } from "@/constants/route.constant";
 
 const buttonsSet: Array<{
   label: string;
@@ -27,13 +28,13 @@ const buttonsSet: Array<{
   {
     label: "Overview",
     icon: <OverviewIcon size={24} className="text-white" />,
-    path: "/overview",
+    path: Route.OVERVIEW,
     tooltip: "Overview of your progress and productivity",
   },
   {
     label: "Tasks",
     icon: "/tasks.svg",
-    path: "/tasks",
+    path: Route.TASKS,
     tooltip: "Your tasks and to-dos",
   },
   {

@@ -41,6 +41,7 @@ import { LoadingStackContainer } from "@/components/LoadingStack/LoadingStack";
 import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
 import { Dropdown } from "@/components/Dropdown";
 import { toast } from "sonner";
+import { Route } from "@/constants/route.constant";
 
 interface TimelinePlanningProps {
   todayTasks: Task[];
@@ -180,7 +181,7 @@ export function TimelinePlanning({
           message="Try adding some tasks to your workspace and come back later to analyze them."
         />
       )}
-      <ViewAllLink href="/tasks">View all tasks →</ViewAllLink>
+      <ViewAllLink href={Route.TASKS}>View all tasks →</ViewAllLink>
 
       {isOptimizationDialogOpen && (
         <AIPlanningOptimizationDialog

@@ -2,10 +2,11 @@ import { guestStoreHelper } from "@/stores/guest";
 import { Folder } from "@/types/workspace";
 
 import { BaseClientService } from "./base.client.service";
+import { Route } from "@/constants/route.constant";
 
 export class FoldersClientService extends BaseClientService {
   constructor() {
-    super("/folders");
+    super(Route.FOLDERS);
   }
 
   async getAll(): Promise<Folder[]> {

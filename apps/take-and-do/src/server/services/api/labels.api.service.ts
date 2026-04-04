@@ -14,7 +14,6 @@ export class LabelsApiService extends BaseApiService {
 
   async getAll(access: DataAccess) {
     return this.handleOperation(async () => {
-      if (access.isAnonymous) return [];
       const rows = await this.db
         .select({ name: labelsTable.name })
         .from(labelsTable)
@@ -91,7 +90,6 @@ export class LabelsApiService extends BaseApiService {
 
   async add(access: DataAccess, label: string) {
     return this.handleOperation(async () => {
-      if (access.isAnonymous) throw new Error("Guest users cannot add labels");
       const trimmedLabel = label.trim();
       if (!trimmedLabel) throw new Error("Label name is required");
 
@@ -121,8 +119,6 @@ export class LabelsApiService extends BaseApiService {
 
   async rename(access: DataAccess, oldName: string, newName: string) {
     return this.handleOperation(async () => {
-      if (access.isAnonymous)
-        throw new Error("Guest users cannot rename labels");
       const trimmedNew = newName.trim();
       if (!trimmedNew) throw new Error("Label name is required");
       if (trimmedNew === oldName) return oldName;
@@ -167,8 +163,6 @@ export class LabelsApiService extends BaseApiService {
 
   async delete(access: DataAccess, name: string) {
     return this.handleOperation(async () => {
-      if (access.isAnonymous)
-        throw new Error("Guest users cannot delete labels");
       const trimmed = name.trim();
       await this.db
         .delete(labelsTable)

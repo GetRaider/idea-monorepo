@@ -45,3 +45,12 @@ export const TaskPostBodySchema: z.ZodType<TaskPostPayload> = z
     }
   })
   .transform((raw) => tasksHelper.fromJson.postPayload(raw));
+
+export const CreateSubtaskBodySchema = z
+  .object({
+    summary: z.string().min(1),
+    description: z.string().optional(),
+    status: z.nativeEnum(TaskStatus).optional(),
+    priority: z.nativeEnum(TaskPriority).optional(),
+  })
+  .strict();

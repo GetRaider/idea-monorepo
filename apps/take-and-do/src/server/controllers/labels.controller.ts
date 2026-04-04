@@ -1,8 +1,4 @@
-import {
-  getAccessByAuth,
-  requireAuth,
-  requireNonAnonymous,
-} from "@/auth/guards";
+import { getAccessByAuth, requireAuth } from "@/auth/guards";
 import {
   CreateLabelDto,
   DeleteLabelDto,
@@ -30,7 +26,7 @@ export class LabelsController extends BaseController {
     responseDto: LabelMutationResponseDto,
     status: 201,
     handler: async ({ body: { label } }) => {
-      const auth = await requireNonAnonymous();
+      const auth = await requireAuth();
       const access = getAccessByAuth(auth);
       return { label: await apiServices.labels.add(access, label.trim()) };
     },
@@ -40,7 +36,7 @@ export class LabelsController extends BaseController {
     bodyDto: RenameLabelDto,
     responseDto: LabelMutationResponseDto,
     handler: async ({ body }) => {
-      const auth = await requireNonAnonymous();
+      const auth = await requireAuth();
       const access = getAccessByAuth(auth);
       const { oldName, newName } = body;
       return {
@@ -53,7 +49,7 @@ export class LabelsController extends BaseController {
     bodyDto: DeleteLabelDto,
     responseDto: OkTrueResponseDto,
     handler: async ({ body }) => {
-      const auth = await requireNonAnonymous();
+      const auth = await requireAuth();
       const access = getAccessByAuth(auth);
       await apiServices.labels.delete(access, body.name);
       return new NextResponse(null, { status: 204 });

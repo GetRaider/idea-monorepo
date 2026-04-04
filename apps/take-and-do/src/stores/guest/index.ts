@@ -8,7 +8,10 @@ import { tasksHelper } from "@/helpers/task.helper";
 import { genericHelper } from "@/helpers/generic.helper";
 import type { Folder, TaskBoard } from "@/types/workspace";
 
-import { recomposeGuestTaskTreeForBoard } from "@/helpers/task-key.helper";
+import {
+  appendSubtaskToParentSubtasks,
+  recomposeGuestTaskTreeForBoard,
+} from "@/helpers/task-key.helper";
 
 import { GUEST_STORE_UPDATED_EVENT } from "./constants";
 import type { GuestSidebarOrder, GuestStore } from "./types";
@@ -184,6 +187,17 @@ function updateTaskInTree(
     return task;
   });
   return { tasks: next, updated };
+}
+
+function findTaskByIdInTree(taskList: Task[], id: string): Task | null {
+  for (const task of taskList) {
+    if (task.id === id) return task;
+    if (task.subtasks?.length) {
+      const nested = findTaskByIdInTree(task.subtasks, id);
+      if (nested) return nested;
+    }
+  }
+  return null;
 }
 
 function deleteTaskFromTree(tasks: Task[], id: string): Task[] {
@@ -460,6 +474,13 @@ export const guestStoreHelper = {
       return { ...store, tasks: nextTasks };
     });
     return updated;
+  },
+
+  appendSubtask(parentId: string, input: { summary: string }): Task | null {
+    const parent = findTaskByIdInTree(this.getTasks(), parentId);
+    if (!parent) return null;
+    const nextSubtasks = appendSubtaskToParentSubtasks(parent, input.summary);
+    return this.updateTask(parentId, { subtasks: nextSubtasks });
   },
 
   deleteTask(id: string): void {

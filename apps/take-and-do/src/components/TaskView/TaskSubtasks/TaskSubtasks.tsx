@@ -11,9 +11,8 @@ import {
 } from "@/components/Icons";
 import { tasksHelper } from "@/helpers/task.helper";
 import { useTaskActions } from "@/hooks/useTasks";
-import { genericHelper } from "@/helpers/generic.helper";
 
-import { Task, TaskPriority, TaskStatus } from "../../Boards/KanbanBoard/types";
+import { Task } from "../../Boards/KanbanBoard/types";
 import { StatusIcon } from "../../Boards/KanbanBoard/Column/Column.ui";
 import { cn } from "@/lib/styles/utils";
 import type { UiProps } from "@/lib/styles/ui-props";
@@ -23,7 +22,7 @@ export function TaskSubtasks({
   onSubtaskClick,
   onTaskUpdate,
 }: TaskSubtasksProps) {
-  const { updateTask } = useTaskActions();
+  const { createSubtask } = useTaskActions();
   const [isSubtasksExpanded, setIsSubtasksExpanded] = useState(
     !!task.subtasks?.length,
   );
@@ -47,19 +46,8 @@ export function TaskSubtasks({
     isSavingSubtaskRef.current = true;
 
     try {
-      const newSubtask: Task = {
-        id: genericHelper.generateId(),
-        taskBoardId: task.taskBoardId,
+      const updatedTask = await createSubtask(task.id, {
         summary: newSubtaskSummary.trim(),
-        description: "",
-        status: TaskStatus.TODO,
-        priority: TaskPriority.MEDIUM,
-        subtasks: [],
-      };
-
-      const updatedSubtasks = [...(task.subtasks || []), newSubtask];
-      const updatedTask = await updateTask(task.id, {
-        subtasks: updatedSubtasks,
       });
 
       if (!updatedTask) {
@@ -81,7 +69,10 @@ export function TaskSubtasks({
         <span>Subtasks</span>
         <SubtasksHeaderButtons>
           <SubtasksHeaderButton
-            onClick={() => setIsCreatingSubtask(true)}
+            onClick={() => {
+              setIsCreatingSubtask(true);
+              setIsSubtasksExpanded(true);
+            }}
             title="Add subtask"
           >
             <PlusIcon />

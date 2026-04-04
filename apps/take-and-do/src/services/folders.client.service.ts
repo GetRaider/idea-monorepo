@@ -25,9 +25,14 @@ export class FoldersClientService extends BaseClientService {
     name: string;
     emoji?: string | null;
   }): Promise<Folder | null> {
-    const result = await this.post<Folder>({ body: params });
+    const result = await this.post<Folder & { guest?: boolean }>({
+      body: params,
+    });
     if (!this.isResultOk(result)) return null;
-    return normalizeFolder(result.data);
+    const { guest, ...rest } = result.data;
+    const normalized = normalizeFolder(rest);
+    if (guest) guestStoreHelper.upsertFolder(normalized);
+    return normalized;
   }
 
   async update({

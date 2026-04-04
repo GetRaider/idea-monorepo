@@ -1,5 +1,6 @@
 import type { Task } from "@/components/Boards/KanbanBoard/types";
 import type { TaskBoard } from "@/types/workspace";
+import { TaskPriority, TaskStatus } from "@/constants/tasks.constants";
 import { genericHelper } from "@/helpers/generic.helper";
 
 export function deriveTaskKeyPrefix(taskKey?: string | null): string {
@@ -139,4 +140,48 @@ export function recomposeGuestTaskTreeForBoard(
   });
 
   return { ...task, taskKey: parentKey, subtasks: newSubtasks };
+}
+
+export function appendSubtaskToParentSubtasks(
+  parent: Task,
+  summary: string,
+): Task[] {
+  const existing = parent.subtasks ?? [];
+  const trimmed = summary.trim();
+  if (!trimmed) return existing;
+
+  const prefix = deriveTaskKeyPrefix(parent.taskKey);
+  const maxAmongSubtasks = existing.reduce((max, subtask) => {
+    const n = extractNumericPortion(subtask.taskKey);
+    return n !== null ? Math.max(max, n) : max;
+  }, 0);
+  const initialNextNum = Math.max(
+    extractNumericPortion(parent.taskKey) ?? 0,
+    maxAmongSubtasks,
+  );
+
+  const merged: Task[] = [
+    ...existing,
+    {
+      taskBoardId: parent.taskBoardId,
+      summary: trimmed,
+      description: "",
+      status: TaskStatus.TODO,
+      priority: TaskPriority.MEDIUM,
+      subtasks: [],
+    } as unknown as Task,
+  ];
+
+  const processed = assignSubtaskIdsAndKeys(
+    merged,
+    prefix,
+    initialNextNum,
+    (subtaskId) => existing.find((s) => s.id === subtaskId)?.taskKey,
+  );
+
+  return merged.map((subtask, index) => ({
+    ...subtask,
+    id: processed[index]!.id,
+    taskKey: processed[index]!.taskKey,
+  }));
 }

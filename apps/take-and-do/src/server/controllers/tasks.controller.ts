@@ -7,6 +7,7 @@ import {
   requireNonAnonymous,
 } from "@/auth/guards";
 import {
+  CreateSubtaskBodySchema,
   OptimizeTasksResponseDto,
   TaskByKeyResponseDto,
   TaskCreateResponseDto,
@@ -100,7 +101,10 @@ export class TasksController extends BaseController {
       if (result.composed) return result.composed;
 
       if (!result.task) {
-        throw new HttpError(500, "Unexpected create result: missing task");
+        throw new HttpError(
+          500,
+          "Unexpected create result: AI hasn't composed task",
+        );
       }
 
       return access.isAnonymous
@@ -117,6 +121,24 @@ export class TasksController extends BaseController {
       const auth = await requireNonAnonymous();
       const access = getAccessByAuth(auth);
       const updatedTask = await apiServices.tasks.update(id, body, access);
+      if (!updatedTask) throw new NotFoundError("Task");
+      return updatedTask;
+    },
+  });
+
+  createSubtask = this.initRoute({
+    paramsDto: taskIdParamsSchema,
+    bodyDto: CreateSubtaskBodySchema,
+    responseDto: TaskResponseDto,
+    status: 201,
+    handler: async ({ params: { id }, body }) => {
+      const auth = await requireNonAnonymous();
+      const access = getAccessByAuth(auth);
+      const updatedTask = await apiServices.tasks.createSubtask(
+        id,
+        body,
+        access,
+      );
       if (!updatedTask) throw new NotFoundError("Task");
       return updatedTask;
     },

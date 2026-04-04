@@ -9,6 +9,7 @@ import {
   guestTasksForBoard,
   guestTasksForScheduleDate,
 } from "@/stores/guest/guest-task-filters";
+import { guestStoreHelper } from "@/stores/guest";
 import { clientServices } from "@/services";
 
 interface UseTasksReturn {
@@ -109,6 +110,16 @@ export function useTaskActions() {
     [isAnonymous, update],
   );
 
+  const createSubtask = useCallback(
+    async (parentTaskId: string, input: { summary: string }) => {
+      if (isAnonymous) {
+        return guestStoreHelper.appendSubtask(parentTaskId, input);
+      }
+      return clientServices.tasks.createSubtask(parentTaskId, input);
+    },
+    [isAnonymous],
+  );
+
   const deleteTask = useCallback(
     async (taskId: string) => {
       if (isAnonymous) {
@@ -120,5 +131,11 @@ export function useTaskActions() {
     [isAnonymous, remove],
   );
 
-  return { createTask, updateTask, deleteTask, isGuest: isAnonymous };
+  return {
+    createTask,
+    createSubtask,
+    updateTask,
+    deleteTask,
+    isGuest: isAnonymous,
+  };
 }

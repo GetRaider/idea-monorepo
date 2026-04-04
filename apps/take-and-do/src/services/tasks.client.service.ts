@@ -1,3 +1,4 @@
+import { TaskPriority, TaskStatus } from "@/constants/tasks.constants";
 import { Task, TaskUpdate, toTaskPriority } from "@/types/task";
 import type { ComposeTaskOutput } from "@/server/services/ai/schemas";
 import { guestStoreHelper } from "@/stores/guest";
@@ -154,6 +155,23 @@ export class TasksClientService extends BaseClientService {
         taskBoardId,
         ...additionalData,
       },
+    });
+    if (!this.isResultOk(result)) return null;
+    return normalizeTask(result.data);
+  }
+
+  async createSubtask(
+    parentTaskId: string,
+    input: {
+      summary: string;
+      description?: string;
+      status?: TaskStatus;
+      priority?: TaskPriority;
+    },
+  ): Promise<Task | null> {
+    const result = await this.post<Task>({
+      pathParams: [parentTaskId, "subtasks"],
+      body: input,
     });
     if (!this.isResultOk(result)) return null;
     return normalizeTask(result.data);

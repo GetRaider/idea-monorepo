@@ -161,7 +161,7 @@ export class TasksApiService extends BaseApiService {
     });
   }
 
-  async createTaskInMemoryWithoutDatabase(
+  async createGuestTask(
     taskData: Omit<Task, "id">,
     access: DataAccess,
     options?: { taskBoardName?: string },
@@ -274,12 +274,9 @@ export class TasksApiService extends BaseApiService {
       if (!taskData.taskBoardId)
         throw new Error("Task must have a taskBoardId");
 
-      if (access.isAnonymous)
-        return this.createTaskInMemoryWithoutDatabase(
-          taskData,
-          access,
-          options,
-        );
+      if (access.isAnonymous) {
+        return this.createGuestTask(taskData, access, options);
+      }
 
       const board = await this.taskBoardsService.getById(
         taskData.taskBoardId,
@@ -499,8 +496,6 @@ export class TasksApiService extends BaseApiService {
     labelNames: string[],
     access: DataAccess,
   ): Promise<void> {
-    if (access.isAnonymous) return;
-
     await this.db
       .delete(taskLabelsTable)
       .where(eq(taskLabelsTable.taskId, taskId));
@@ -642,6 +637,36 @@ export class TasksApiService extends BaseApiService {
       }
 
       return await this.getById(taskId, access);
+    });
+  }
+
+  async createSubtask(
+    parentTaskId: string,
+    body: {
+      summary: string;
+      description?: string;
+      status?: TaskStatus;
+      priority?: TaskPriority;
+    },
+    access: DataAccess,
+  ) {
+    return this.handleOperation(async () => {
+      const parent = await this.getById(parentTaskId, access);
+      if (!parent) return null;
+
+      const mergedSubtasks: Task[] = [
+        ...((parent.subtasks ?? []) as Task[]),
+        {
+          taskBoardId: parent.taskBoardId,
+          summary: body.summary.trim(),
+          description: body.description ?? "",
+          status: body.status ?? TaskStatus.TODO,
+          priority: body.priority ?? TaskPriority.MEDIUM,
+          subtasks: [],
+        } as unknown as Task,
+      ];
+
+      return this.update(parentTaskId, { subtasks: mergedSubtasks }, access);
     });
   }
 

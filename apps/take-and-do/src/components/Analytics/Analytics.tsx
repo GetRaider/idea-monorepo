@@ -2,11 +2,11 @@
 
 import { useEffect } from "react";
 
-import { initMixpanel } from "@/lib/maxpanel-analytics";
+import { mixpanelAnalytics } from "@/lib/analytics/maxpanel-analytics";
 
 export function Analytics() {
   useEffect(() => {
-    initMixpanel();
+    mixpanelAnalytics.init();
   }, []);
   return null;
 }

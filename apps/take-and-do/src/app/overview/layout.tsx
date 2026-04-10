@@ -1,4 +1,4 @@
-import { RequireSession } from "@/components/auth/RequireSession";
+import { RequireSession } from "@/components/Auth/RequireSession";
 
 export default async function OverviewLayout({
   children,

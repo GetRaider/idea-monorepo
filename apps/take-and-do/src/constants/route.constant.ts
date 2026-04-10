@@ -1,5 +1,6 @@
 export enum Route {
   LOGIN = "/login",
+  AUTH_ERROR = "/auth/error",
   FORBIDDEN = "/forbidden",
   AUTH = "/auth",
   OVERVIEW = "/overview",

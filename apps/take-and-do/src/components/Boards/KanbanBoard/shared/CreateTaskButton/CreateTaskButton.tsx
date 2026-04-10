@@ -2,6 +2,8 @@
 
 import Image from "next/image";
 
+import { AiGate } from "@/components/ai-gate";
+
 interface CreateTaskButtonProps {
   onManualCreate?: () => void;
   onAICreate?: () => void;
@@ -28,13 +30,15 @@ export function CreateTaskButton({
         >
           Compose Manually
         </button>
-        <button
-          type="button"
-          className="w-full bg-transparent px-3 py-2.5 text-left text-sm text-white transition-colors duration-200 last:rounded-b-lg hover:bg-[#3a3a3a]"
-          onClick={onAICreate}
-        >
-          Compose with AI
-        </button>
+        <AiGate>
+          <button
+            type="button"
+            className="w-full bg-transparent px-3 py-2.5 text-left text-sm text-white transition-colors duration-200 last:rounded-b-lg hover:bg-[#3a3a3a]"
+            onClick={onAICreate}
+          >
+            Compose with AI
+          </button>
+        </AiGate>
       </div>
     </div>
   );

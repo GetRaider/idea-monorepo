@@ -9,8 +9,8 @@ import {
   KanbanSpinner,
 } from "@/components/Boards/KanbanBoard/KanbanBoard.ui";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
-import { useBoardTaskUrlSync } from "@/hooks/useKanbanTaskUrlSync";
-import { useWorkspaceInitialLoadReady } from "@/hooks/useWorkspaceInitialLoadReady";
+import { useBoardTaskUrlSync } from "@/hooks/tasks/useKanbanTaskUrlSync";
+import { useWorkspaceInitialLoadReady } from "@/hooks/tasks/useWorkspaceInitialLoadReady";
 import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
 
 export default function BoardPage({ params }: BoardPageProps) {

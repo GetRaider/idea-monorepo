@@ -1,7 +1,7 @@
 "use client";
 
-import { cn } from "@/lib/utils";
-import type { UiProps } from "@/lib/ui-props";
+import { cn } from "@/lib/styles/utils";
+import type { UiProps } from "@/lib/styles/ui-props";
 
 export function DialogHeading({ className, ref, ...props }: UiProps<"h2">) {
   return (

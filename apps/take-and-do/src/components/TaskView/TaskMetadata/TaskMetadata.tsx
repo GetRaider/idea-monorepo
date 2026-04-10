@@ -17,9 +17,9 @@ import { Dropdown } from "@/components/Dropdown";
 import { ConfirmDialog } from "@/components/Dialogs";
 import { Input } from "@/components/Input";
 import { Task } from "../../Boards/KanbanBoard/types";
-import { apiServices } from "@/services/api";
 import { getLabelAccent } from "@/helpers/label-color.helper";
 import { toast } from "sonner";
+import { clientServices } from "@/services";
 
 const LABEL_MENU_WIDTH = 200;
 const LABEL_MENU_EDGE = 10;
@@ -332,7 +332,7 @@ type TagDotProps = HTMLAttributes<HTMLSpanElement> & { color?: string };
 function TagDot({ className, style, color, ...props }: TagDotProps) {
   return (
     <span
-      style={{ ...style, background: color ?? "#667eea" }}
+      style={{ ...style, background: color ?? "var(--brand-primary)" }}
       className={joinClassNames("h-1.5 w-1.5 shrink-0 rounded-full", className)}
       {...props}
     />
@@ -369,7 +369,7 @@ function CreateLabelSpan({
 }: CreateLabelSpanProps) {
   return (
     <span
-      style={{ ...style, color: accentColor ?? "#667eea" }}
+      style={{ ...style, color: accentColor ?? "var(--brand-primary)" }}
       className={className}
       {...props}
     />
@@ -451,14 +451,10 @@ export function TaskMetadata({
 
   useEffect(() => {
     const fetchLabels = async () => {
-      try {
-        const labels = await apiServices.labels.getAll();
-        setAvailableLabels(labels);
-      } catch (error) {
-        console.error("Failed to fetch labels:", error);
-      }
+      const labels = await clientServices.labels.getAll();
+      setAvailableLabels(labels);
     };
-    fetchLabels();
+    void fetchLabels();
   }, []);
 
   useLayoutEffect(() => {
@@ -616,52 +612,53 @@ export function TaskMetadata({
       setEditingCatalogLabel(null);
       return;
     }
-    try {
-      const newName = await apiServices.labels.rename(oldName, trimmed);
-      setAvailableLabels((prev) =>
-        [...prev.map((l) => (l === oldName ? newName : l))].sort((a, b) =>
-          a.localeCompare(b),
-        ),
-      );
-      if (task.labels?.includes(oldName)) {
-        updateTask({
-          labels: task.labels.map((l) => (l === oldName ? newName : l)),
-        });
-      }
-      setEditingCatalogLabel(null);
-      toast.success("Label renamed");
-    } catch (error) {
-      console.error("Failed to rename label:", error);
-      toast.error("Failed to rename label");
+    const newName = await clientServices.labels.rename({
+      oldName,
+      newName: trimmed,
+    });
+    if (!newName) {
+      toast.error("Can't rename label");
+      return;
     }
+    setAvailableLabels((prev) =>
+      [...prev.map((l) => (l === oldName ? newName : l))].sort((a, b) =>
+        a.localeCompare(b),
+      ),
+    );
+    if (task.labels?.includes(oldName)) {
+      updateTask({
+        labels: task.labels.map((l) => (l === oldName ? newName : l)),
+      });
+    }
+    setEditingCatalogLabel(null);
+    toast.success("Label renamed");
   };
 
   const handleConfirmDeleteLabel = async () => {
     if (!labelPendingDelete) return;
     const name = labelPendingDelete;
     setLabelPendingDelete(null);
-    try {
-      await apiServices.labels.remove(name);
-      setAvailableLabels((prev) => prev.filter((l) => l !== name));
-      if (task.labels?.includes(name)) {
-        updateTask({ labels: task.labels.filter((l) => l !== name) });
-      }
-      toast.success("Label deleted");
-    } catch (error) {
-      console.error("Failed to delete label:", error);
-      toast.error("Failed to delete label");
+    const ok = await clientServices.labels.remove(name);
+    if (!ok) {
+      toast.error("Can't delete label");
+      return;
     }
+    setAvailableLabels((prev) => prev.filter((l) => l !== name));
+    if (task.labels?.includes(name)) {
+      updateTask({ labels: task.labels.filter((l) => l !== name) });
+    }
+    toast.success("Label deleted");
   };
   const handleCreateAndSelectLabel = async () => {
     if (labelSearchValue.trim()) {
       const newLabel = labelSearchValue.trim();
-      try {
-        await apiServices.labels.create(newLabel);
+      const created = await clientServices.labels.create(newLabel);
+      if (created === null) {
+        toast.error("Can't create label");
+      } else {
         setAvailableLabels((prev) => [...prev, newLabel]);
         const newLabels = [...(task?.labels || []), newLabel];
         updateTask({ labels: newLabels });
-      } catch (error) {
-        console.error("Failed to create label:", error);
       }
       setIsLabelDropdownOpen(false);
       setLabelSearchValue("");

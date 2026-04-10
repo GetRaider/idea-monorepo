@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, type ComponentProps } from "react";
+import { toast } from "sonner";
 
 import { Input } from "@/components/Input";
 import {
@@ -9,18 +10,19 @@ import {
   PlusIcon,
 } from "@/components/Icons";
 import { tasksHelper } from "@/helpers/task.helper";
-import { apiServices } from "@/services/api";
+import { useTaskActions } from "@/hooks/tasks/useTasks";
 
-import { Task, TaskPriority, TaskStatus } from "../../Boards/KanbanBoard/types";
+import { Task } from "../../Boards/KanbanBoard/types";
 import { StatusIcon } from "../../Boards/KanbanBoard/Column/Column.ui";
-import { cn } from "@/lib/utils";
-import type { UiProps } from "@/lib/ui-props";
+import { cn } from "@/lib/styles/utils";
+import type { UiProps } from "@/lib/styles/ui-props";
 
 export function TaskSubtasks({
   task,
   onSubtaskClick,
   onTaskUpdate,
 }: TaskSubtasksProps) {
+  const { createSubtask } = useTaskActions();
   const [isSubtasksExpanded, setIsSubtasksExpanded] = useState(
     !!task.subtasks?.length,
   );
@@ -44,28 +46,18 @@ export function TaskSubtasks({
     isSavingSubtaskRef.current = true;
 
     try {
-      const newSubtask: Partial<Task> = {
-        taskBoardId: task.taskBoardId,
+      const updatedTask = await createSubtask(task.id, {
         summary: newSubtaskSummary.trim(),
-        description: "",
-        status: TaskStatus.TODO,
-        priority: TaskPriority.MEDIUM,
-        subtasks: [],
-      };
-
-      const updatedSubtasks = [...(task.subtasks || []), newSubtask];
-      const updatedTask = await apiServices.tasks.update(task.id, {
-        subtasks: updatedSubtasks as Task[],
       });
 
-      if (onTaskUpdate) {
-        onTaskUpdate(updatedTask);
+      if (!updatedTask) {
+        toast.error("Can't add subtask");
+        return;
       }
+      onTaskUpdate?.(updatedTask);
 
       setNewSubtaskSummary("");
       setIsCreatingSubtask(false);
-    } catch (error) {
-      console.error("Failed to create subtask:", error);
     } finally {
       isSavingSubtaskRef.current = false;
     }
@@ -77,7 +69,10 @@ export function TaskSubtasks({
         <span>Subtasks</span>
         <SubtasksHeaderButtons>
           <SubtasksHeaderButton
-            onClick={() => setIsCreatingSubtask(true)}
+            onClick={() => {
+              setIsCreatingSubtask(true);
+              setIsSubtasksExpanded(true);
+            }}
             title="Add subtask"
           >
             <PlusIcon />

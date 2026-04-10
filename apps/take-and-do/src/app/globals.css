@@ -5,7 +5,13 @@
 @tailwind utilities;
 
 @layer base {
+  /* Login / brand — align with app theme; see Radix + shell.ui */
   :root {
+    --brand-primary: #764ba2;
+    --brand-secondary: #a784d8;
+    --brand-gradient-from: #1a1035;
+    --brand-gradient-to: #0d2138;
+    --brand-text-on-gradient: #f4f4f5;
     --background: #0f0f0f;
     --foreground: #ededed;
     --sidebar-bg: #1a1a1a;
@@ -17,8 +23,8 @@
     --text-tertiary: #666666;
     --accent-primary: #667eea;
     --accent-secondary: #764ba2;
-    --input-bg: #2a2a2a;
-    --input-border: #3a3a3a;
+    --input-bg: #212229;
+    --input-border: #2a2a2a;
     --input-border-hover: #555555;
     --focus-ring: #7255c1;
     --radius-sm: 4px;
@@ -30,17 +36,30 @@
     --dialog-max-width: 500px;
   }
 
-  * {
-    @apply box-border p-0 m-0;
+  *,
+  *::before,
+  *::after {
+    @apply box-border;
   }
 
-  html,
-  body {
+  html {
     @apply max-w-full overflow-x-hidden h-full;
+    min-height: 100%;
+    color-scheme: dark;
+    background-color: var(--sidebar-bg);
+    background-image: linear-gradient(
+      to bottom right,
+      var(--brand-gradient-from),
+      var(--brand-gradient-to)
+    );
+    background-attachment: fixed;
+    background-size: cover;
   }
 
   body {
-    @apply text-foreground bg-background antialiased;
+    @apply max-w-full overflow-x-hidden h-full text-foreground antialiased;
+    margin: 0;
+    background: transparent;
     font-family:
       var(--font-inter),
       -apple-system,
@@ -64,10 +83,6 @@
     font-family: inherit;
   }
 
-  html {
-    color-scheme: dark;
-  }
-
   ::-webkit-scrollbar {
     @apply w-2 h-2;
   }
@@ -77,11 +92,12 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    @apply rounded-sm bg-[#2a2a2a];
+    @apply rounded-sm;
+    background-color: var(--border-color);
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-[#3a3a3a];
+    background-color: var(--input-border);
   }
 }
 
@@ -129,8 +145,8 @@
 }
 
 [data-sonner-toast][data-styled="true"] [data-close-button]:hover {
-  background: #3a3a3a !important;
-  border-color: #3a3a3a !important;
+  background: var(--input-border) !important;
+  border-color: var(--input-border) !important;
   color: var(--text-primary) !important;
 }
 
@@ -153,8 +169,8 @@
   gap: 4px;
   margin-bottom: 0;
   border-radius: 4px 4px 0 0;
-  border: 1px solid #3a3a3a;
-  background: #2a2a2a;
+  border: 1px solid var(--input-border);
+  background: var(--input-bg);
   padding: 8px;
 }
 
@@ -165,7 +181,7 @@
   background: transparent;
   padding: 6px 10px;
   font-size: 14px;
-  color: #888;
+  color: var(--text-secondary);
   white-space: nowrap;
   transition: all 0.2s;
 }
@@ -178,13 +194,13 @@
 }
 
 .task-editor-root .editor-toolbar button:hover {
-  background: #3a3a3a;
-  color: #fff;
+  background: var(--input-border);
+  color: var(--text-primary);
 }
 
 .task-editor-root .editor-toolbar button.is-active {
-  background: #667eea;
-  color: #fff;
+  background: var(--accent-primary);
+  color: var(--text-primary);
 }
 
 .task-editor-root .ProseMirror {
@@ -192,20 +208,20 @@
   max-height: 300px;
   overflow-y: auto;
   border-radius: 0 0 4px 4px;
-  border: 1px solid #3a3a3a;
+  border: 1px solid var(--input-border);
   border-top: none;
   background: transparent;
   padding: 12px;
   font-size: 14px;
   line-height: 1.6;
-  color: #888;
+  color: var(--text-secondary);
   outline: none;
 }
 
 .task-editor-root .ProseMirror p.is-editor-empty:first-child::before {
   float: left;
   height: 0;
-  color: #666;
+  color: var(--text-tertiary);
   pointer-events: none;
   content: attr(data-placeholder);
 }
@@ -216,7 +232,7 @@
   margin-top: 1.5em;
   margin-bottom: 0.5em;
   font-weight: 600;
-  color: #fff;
+  color: var(--text-primary);
 }
 
 .task-editor-root .ProseMirror h2 {
@@ -247,7 +263,7 @@
 
 .task-editor-root .ProseMirror strong {
   font-weight: 600;
-  color: #fff;
+  color: var(--text-primary);
 }
 
 .task-editor-root .ProseMirror em {

@@ -5,6 +5,7 @@ const config: Config = {
   content: [
     "./src/app/**/*.{ts,tsx}",
     "./src/components/**/*.{ts,tsx}",
+    "./src/lib/**/*.{ts,tsx}",
     "./src/pages/**/*.{ts,tsx}",
   ],
   theme: {
@@ -25,6 +26,9 @@ const config: Config = {
         "input-border": "var(--input-border)",
         "input-border-hover": "var(--input-border-hover)",
         "focus-ring": "var(--focus-ring)",
+        "brand-primary": "var(--brand-primary)",
+        "brand-gradient-from": "var(--brand-gradient-from)",
+        "brand-gradient-to": "var(--brand-gradient-to)",
       },
       borderRadius: {
         sm: "var(--radius-sm)",

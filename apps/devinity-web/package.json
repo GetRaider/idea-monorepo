@@ -9,8 +9,8 @@
     "dev": "NODE_ENV=development next dev --port 3001",
     "prod": "NODE_ENV=production next start --port 10000",
     "lint": "eslint . --max-warnings 0",
-    "test": "jest",
-    "test:watch": "jest --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "test:e2e": "playwright test"
   },
   "dependencies": {
@@ -32,10 +32,9 @@
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
-    "@repo/jest-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
+    "@repo/vitest-config": "workspace:*",
     "typescript": "catalog:",
-    "@jest/globals": "catalog:",
     "@next/eslint-plugin-next": "catalog:",
     "@playwright/test": "catalog:",
     "@testing-library/jest-dom": "catalog:",
@@ -44,8 +43,7 @@
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@types/styled-components": "catalog:",
-    "jest": "catalog:",
-    "jest-environment-jsdom": "catalog:",
+    "vitest": "catalog:",
     "typed-css-modules": "catalog:"
   }
 }

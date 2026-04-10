@@ -1,2 +1,1 @@
-export * from "../lib/db/schema";
-
+export * from "./schemas";

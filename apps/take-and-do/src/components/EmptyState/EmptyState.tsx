@@ -2,8 +2,8 @@
 
 import Image from "next/image";
 
-import { cn } from "@/lib/utils";
-import type { UiProps } from "@/lib/ui-props";
+import { cn } from "@/lib/styles/utils";
+import type { UiProps } from "@/lib/styles/ui-props";
 
 export function EmptyState({
   title = "You have no tasks",

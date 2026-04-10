@@ -340,11 +340,13 @@ export const tasksHelper = {
         throw new Error("Invalid JSON body");
       }
       const src = body as Record<string, unknown>;
-      const { shouldUseAI, text, _composeOnly, ...rest } = src;
+      const { shouldUseAI, text, _composeOnly, taskBoardName, ...rest } = src;
       return {
         shouldUseAI: shouldUseAI === true ? true : undefined,
         text: typeof text === "string" ? text : undefined,
         _composeOnly: _composeOnly === true ? true : undefined,
+        taskBoardName:
+          typeof taskBoardName === "string" ? taskBoardName.trim() : undefined,
         task: tasksHelper.fromJson.createTask(rest),
       };
     },
@@ -382,6 +384,8 @@ export type TaskPostPayload = {
   shouldUseAI?: boolean;
   text?: string;
   _composeOnly?: boolean;
+  /** Sent with creates so guest/in-memory keying can use the real board name. */
+  taskBoardName?: string;
   task: Omit<Task, "id">;
 };
 

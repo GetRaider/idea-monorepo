@@ -1,4 +1,6 @@
-import { apiServices } from "@/services/api";
+import { toast } from "sonner";
+
+import { clientServices } from "@/services";
 import type { TaskBoardWithTasks } from "@/types/workspace";
 
 import { TaskStatus, Task } from "../types";
@@ -253,52 +255,54 @@ export async function handleSingleBoardTaskStatusChange(
   taskId: string,
   newStatus: TaskStatus,
   targetIndex?: number,
+  updateTaskStatus?: (taskId: string, newStatus: TaskStatus) => Promise<void>,
 ): Promise<void> {
-  try {
-    const { task: currentTask } = findTaskInTasks(tasks, taskId);
+  const persistStatus =
+    updateTaskStatus ??
+    (async (id: string, status: TaskStatus) => {
+      const updated = await clientServices.tasks.update({
+        taskId: id,
+        updates: { status },
+      });
+      if (!updated) toast.error("Can't update task status");
+    });
 
-    if (!currentTask) {
-      console.warn(`Task ${taskId} not found in current view`);
-    }
+  const { task: currentTask } = findTaskInTasks(tasks, taskId);
 
-    // If status hasn't changed, handle reordering within the same column
-    if (currentTask && currentTask.status === newStatus) {
-      const updatedTasks = reorderTaskInColumn(
-        tasks,
-        taskId,
-        newStatus,
-        targetIndex,
-      );
-      setTasks(updatedTasks);
-      return;
-    }
+  if (!currentTask) {
+    console.warn(`Task ${taskId} not found in current view`);
+  }
 
-    // OPTIMISTIC UPDATE: Update local state immediately for smooth animation
-    const optimisticTasks = moveTaskToNewStatus(
+  if (currentTask && currentTask.status === newStatus) {
+    const updatedTasks = reorderTaskInColumn(
       tasks,
       taskId,
       newStatus,
-      currentTask,
       targetIndex,
     );
-    setTasks(optimisticTasks);
-
-    // Update task status via API (after optimistic update for smooth UX)
-    await apiServices.tasks.update(taskId, { status: newStatus });
-
-    // Update state after API call (in case of any server-side changes)
-    const finalTasks = moveTaskToNewStatus(
-      optimisticTasks,
-      taskId,
-      newStatus,
-      currentTask,
-      targetIndex,
-    );
-    setTasks(finalTasks);
-  } catch (error) {
-    console.error("Failed to update task status:", error);
-    // Optionally show an error message to the user
+    setTasks(updatedTasks);
+    return;
   }
+
+  const optimisticTasks = moveTaskToNewStatus(
+    tasks,
+    taskId,
+    newStatus,
+    currentTask,
+    targetIndex,
+  );
+  setTasks(optimisticTasks);
+
+  await persistStatus(taskId, newStatus);
+
+  const finalTasks = moveTaskToNewStatus(
+    optimisticTasks,
+    taskId,
+    newStatus,
+    currentTask,
+    targetIndex,
+  );
+  setTasks(finalTasks);
 }
 
 /**
@@ -310,54 +314,62 @@ export async function handleMultipleBoardsTaskStatusChange(
   taskId: string,
   newStatus: TaskStatus,
   targetIndex?: number,
+  updateTaskStatus?: (taskId: string, newStatus: TaskStatus) => Promise<void>,
 ): Promise<void> {
-  try {
-    const { task: currentTask, boardIndex: currentBoardIndex } =
-      findTaskInBoards(boardsWithTasks, taskId);
+  const persistStatus =
+    updateTaskStatus ??
+    (async (id: string, status: TaskStatus) => {
+      const updated = await clientServices.tasks.update({
+        taskId: id,
+        updates: { status },
+      });
+      if (!updated) toast.error("Can't update task status");
+    });
 
-    if (!currentTask) {
-      console.warn(`Task ${taskId} not found in current view`);
-    }
+  const { task: currentTask, boardIndex: currentBoardIndex } = findTaskInBoards(
+    boardsWithTasks,
+    taskId,
+  );
 
-    if (
-      currentTask &&
-      currentTask.status === newStatus &&
-      typeof currentBoardIndex === "number"
-    ) {
-      const updated = reorderTaskInBoardColumn(
-        boardsWithTasks,
-        taskId,
-        newStatus,
-        currentBoardIndex,
-        targetIndex,
-      );
-      setBoardsWithTasks(updated);
-      return;
-    }
+  if (!currentTask) {
+    console.warn(`Task ${taskId} not found in current view`);
+  }
 
-    const optimistic = moveTaskToNewStatusInBoard(
+  if (
+    currentTask &&
+    currentTask.status === newStatus &&
+    typeof currentBoardIndex === "number"
+  ) {
+    const updated = reorderTaskInBoardColumn(
       boardsWithTasks,
       taskId,
       newStatus,
-      currentTask,
       currentBoardIndex,
       targetIndex,
     );
-    setBoardsWithTasks(optimistic);
-
-    await apiServices.tasks.update(taskId, { status: newStatus });
-
-    const finalBoards = moveTaskToNewStatusInBoard(
-      optimistic,
-      taskId,
-      newStatus,
-      currentTask,
-      currentBoardIndex,
-      targetIndex,
-    );
-    setBoardsWithTasks(finalBoards);
-  } catch (error) {
-    console.error("Failed to update task status:", error);
-    // Optionally show an error message to the user
+    setBoardsWithTasks(updated);
+    return;
   }
+
+  const optimistic = moveTaskToNewStatusInBoard(
+    boardsWithTasks,
+    taskId,
+    newStatus,
+    currentTask,
+    currentBoardIndex,
+    targetIndex,
+  );
+  setBoardsWithTasks(optimistic);
+
+  await persistStatus(taskId, newStatus);
+
+  const finalBoards = moveTaskToNewStatusInBoard(
+    optimistic,
+    taskId,
+    newStatus,
+    currentTask,
+    currentBoardIndex,
+    targetIndex,
+  );
+  setBoardsWithTasks(finalBoards);
 }

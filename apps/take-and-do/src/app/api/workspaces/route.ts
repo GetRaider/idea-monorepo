@@ -1,18 +1,5 @@
-import { NextResponse } from "next/server";
-import { getAllFolders, getAllTaskBoards } from "@/lib/db/queries";
+import { WorkspacesController } from "@/server/controllers";
 
-export async function GET() {
-  try {
-    const [folders, taskBoards] = await Promise.all([
-      getAllFolders(),
-      getAllTaskBoards(),
-    ]);
+const controller = new WorkspacesController();
 
-    return NextResponse.json({ folders, taskBoards });
-  } catch {
-    return NextResponse.json(
-      { error: "Failed to fetch workspaces" },
-      { status: 500 },
-    );
-  }
-}
+export const GET = controller.get;

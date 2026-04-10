@@ -1,10 +1,14 @@
 import { Task, TaskStatus } from "@/components/Boards/KanbanBoard/types";
+import { Route } from "@/constants/route.constant";
 
 const PATHNAME_SYNC_EVENT = "app:shallow-url-pathname";
 
 const VALID_SCHEDULE_DATES = ["today", "tomorrow"] as const;
 
 export type ScheduleDate = (typeof VALID_SCHEDULE_DATES)[number];
+
+/** Sidebar `activeView` token for `/tasks` (all workspaces root). */
+export const TASKS_ROOT_VIEW_ID = "__tasks_root__";
 
 export const tasksUrlHelper = {
   shallow: {
@@ -34,8 +38,12 @@ export const tasksUrlHelper = {
       return VALID_SCHEDULE_DATES.includes(value as ScheduleDate);
     },
 
+    buildRootUrl(): string {
+      return Route.TASKS;
+    },
+
     buildScheduleUrl(date: ScheduleDate): string {
-      return `/tasks/schedule/${date}`;
+      return `${Route.TASKS}/schedule/${date}`;
     },
 
     buildScheduleTaskUrl(
@@ -57,12 +65,12 @@ export const tasksUrlHelper = {
       const encodedBoardName = encodeURIComponent(boardName);
 
       if (subtaskKey && taskKey) {
-        return `/tasks/board/${encodedBoardName}/${taskKey}/${subtaskKey}`;
+        return `${Route.TASKS}/board/${encodedBoardName}/${taskKey}/${subtaskKey}`;
       }
       if (taskKey) {
-        return `/tasks/board/${encodedBoardName}/${taskKey}`;
+        return `${Route.TASKS}/board/${encodedBoardName}/${taskKey}`;
       }
-      return `/tasks/board/${encodedBoardName}`;
+      return `${Route.TASKS}/board/${encodedBoardName}`;
     },
 
     buildTasksUrl(view: TasksView): string {
@@ -98,6 +106,10 @@ export const tasksUrlHelper = {
     },
 
     getActiveViewFromPathname(pathname: string): string {
+      const normalized = pathname.replace(/\/+$/, "") || "/";
+      if (normalized === Route.TASKS) {
+        return TASKS_ROOT_VIEW_ID;
+      }
       if (/^\/tasks\/schedule\/today(?:\/|$)/.test(pathname)) return "today";
       if (/^\/tasks\/schedule\/tomorrow(?:\/|$)/.test(pathname))
         return "tomorrow";
@@ -177,7 +189,7 @@ export const tasksUrlHelper = {
       boardName: string,
     ): { taskKey?: string; subtaskKey?: string } {
       const path = pathname.replace(/\/$/, "") || "/";
-      const prefix = `/tasks/board/${encodeURIComponent(boardName)}`;
+      const prefix = `${Route.TASKS}/board/${encodeURIComponent(boardName)}`;
       if (path === prefix || !path.startsWith(`${prefix}/`)) return {};
 
       const parts = path

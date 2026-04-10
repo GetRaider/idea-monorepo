@@ -1,0 +1,47 @@
+"use client";
+
+import { useEffect, useState } from "react";
+
+import { Task } from "@/components/Boards/KanbanBoard/types";
+import { useIsAnonymous } from "@/hooks/auth/use-is-anonymous";
+import { useGuestTasks } from "@/hooks/tasks/use-guest-store";
+import { guestTasksRecent } from "@/stores/guest/guest-task-filters";
+import { clientServices } from "@/services";
+
+interface UseRecentTasksReturn {
+  recentTasks: Task[];
+  isLoadingRecent: boolean;
+}
+
+export function useRecentTasks(tasksNumber: number = 7): UseRecentTasksReturn {
+  const isAnonymous = useIsAnonymous();
+  const { tasks: guestTasks } = useGuestTasks();
+  const [recentTasks, setRecentTasks] = useState<Task[]>([]);
+  const [isLoadingRecent, setIsLoadingRecent] = useState(true);
+
+  useEffect(() => {
+    if (isAnonymous) {
+      setRecentTasks(guestTasksRecent(guestTasks, tasksNumber));
+      setIsLoadingRecent(false);
+      return;
+    }
+
+    let isMounted = true;
+    const fetchRecentTasks = async () => {
+      setIsLoadingRecent(true);
+      try {
+        const tasks = await clientServices.tasks.getRecent(tasksNumber);
+        if (isMounted) setRecentTasks(tasks);
+      } finally {
+        if (isMounted) setIsLoadingRecent(false);
+      }
+    };
+
+    void fetchRecentTasks();
+    return () => {
+      isMounted = false;
+    };
+  }, [tasksNumber, isAnonymous, guestTasks]);
+
+  return { recentTasks, isLoadingRecent };
+}

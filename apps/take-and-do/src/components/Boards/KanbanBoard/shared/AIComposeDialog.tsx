@@ -62,9 +62,8 @@ export function AIComposeDialog({
       setProgressStep(COMPOSE_STEPS - 1);
       setText("");
       setTimeout(() => onClose(), 200);
-    } catch (error) {
-      console.error("Failed to compose task:", error);
-      toast.error("Failed to compose task with AI");
+    } catch {
+      toast.error("Can't compose task with AI");
     } finally {
       setIsComposing(false);
     }

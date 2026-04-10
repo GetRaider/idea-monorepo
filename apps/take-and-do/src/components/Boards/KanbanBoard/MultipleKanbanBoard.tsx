@@ -26,13 +26,17 @@ import {
   composedDataToTask,
   createNewTaskTemplate,
 } from "./shared/taskComposeHelpers";
-import { useKanbanTaskHandlers } from "../../../hooks/useKanbanTaskHandlers";
-import { useMultipleKanbanBoardData } from "../../../hooks/useMultipleKanbanBoardData";
+import { useKanbanTaskHandlers } from "../../../hooks/tasks/useKanbanTaskHandlers";
+import { useMultipleKanbanBoardData } from "../../../hooks/tasks/useMultipleKanbanBoardData";
+import { useTaskActions } from "@/hooks/tasks/useTasks";
 import { TaskView } from "../../TaskView/TaskView";
-import { updateTaskInColumns } from "@/hooks/useTaskBoardState";
+import { useWorkspace } from "@/contexts";
+import { updateTaskInColumns } from "@/hooks/tasks/useTaskBoardState";
 import { EmptyState } from "../../EmptyState";
+import { TasksWorkspaceEmptyState } from "../../TasksWorkspaceEmptyState";
 import { AIComposeDialog } from "./shared/AIComposeDialog";
-import { apiServices } from "@/services/api";
+import { clientServices } from "@/services";
+import { toast } from "sonner";
 import type { TaskBoardWithTasks } from "@/types/workspace";
 import { tasksUrlHelper, type ScheduleDate } from "@/helpers/tasks-url.helper";
 import { tasksHelper } from "@/helpers/task.helper";
@@ -46,6 +50,8 @@ export function MultipleKanbanBoard({
   onTaskClose,
   onSubtaskOpen,
 }: MultipleKanbanBoardProps) {
+  const { updateTask } = useTaskActions();
+  const { taskBoards, isBoardsLoading, openCreateWorkspace } = useWorkspace();
   const {
     boardsWithTasks,
     setBoardsWithTasks,
@@ -71,7 +77,7 @@ export function MultipleKanbanBoard({
   } = useKanbanTaskHandlers({ onTaskOpen, onTaskClose, onSubtaskOpen });
 
   const boardOptions = useMemo(
-    () => boardsWithTasks.map((b) => ({ id: b.id, name: b.name })),
+    () => boardsWithTasks.map((board) => ({ id: board.id, name: board.name })),
     [boardsWithTasks],
   );
 
@@ -84,6 +90,14 @@ export function MultipleKanbanBoard({
     setParentTask(null);
   }, [parentTask, schedule, setSelectedTask, setParentTask]);
 
+  const persistTaskStatus = useCallback(
+    async (taskId: string, newStatus: TaskStatus) => {
+      const updated = await updateTask(taskId, { status: newStatus });
+      if (!updated) toast.error("Can't update task status");
+    },
+    [updateTask],
+  );
+
   const handleTaskStatusChange = useCallback(
     async (taskId: string, newStatus: TaskStatus, targetIndex?: number) => {
       await handleMultipleBoardsTaskStatusChange(
@@ -92,9 +106,10 @@ export function MultipleKanbanBoard({
         taskId,
         newStatus,
         targetIndex,
+        persistTaskStatus,
       );
     },
-    [boardsWithTasks, setBoardsWithTasks],
+    [boardsWithTasks, setBoardsWithTasks, persistTaskStatus],
   );
 
   const handleTaskUpdate = useCallback(
@@ -103,28 +118,14 @@ export function MultipleKanbanBoard({
         selectedTask?.id === updatedTask.id &&
         selectedTask.taskBoardId !== updatedTask.taskBoardId;
       if (boardRelocated) {
-        try {
-          setBoardsWithTasks(await fetchBoards());
-        } catch (error) {
-          console.error(
-            "[MultipleKanbanBoard] Failed to refresh tasks after board change:",
-            error,
-          );
-        }
+        setBoardsWithTasks(await fetchBoards());
         setSelectedTask(updatedTask);
         return;
       }
 
       if (scheduleDate) {
         if (!updatedTask.scheduleDate) {
-          try {
-            setBoardsWithTasks(await fetchBoards());
-          } catch (error) {
-            console.error(
-              "Failed to refresh tasks after schedule update:",
-              error,
-            );
-          }
+          setBoardsWithTasks(await fetchBoards());
           if (selectedTask?.id === updatedTask.id) {
             setSelectedTask(updatedTask);
           }
@@ -133,14 +134,7 @@ export function MultipleKanbanBoard({
 
         const taskDate = tasksHelper.date.parse(updatedTask.scheduleDate);
         if (!taskDate) {
-          try {
-            setBoardsWithTasks(await fetchBoards());
-          } catch (error) {
-            console.error(
-              "Failed to refresh tasks after schedule update:",
-              error,
-            );
-          }
+          setBoardsWithTasks(await fetchBoards());
           if (selectedTask?.id === updatedTask.id) {
             setSelectedTask(updatedTask);
           }
@@ -153,14 +147,7 @@ export function MultipleKanbanBoard({
         const matchesSchedule = taskDate.getTime() === currentDate.getTime();
 
         if (!matchesSchedule) {
-          try {
-            setBoardsWithTasks(await fetchBoards());
-          } catch (error) {
-            console.error(
-              "Failed to refresh tasks after schedule update:",
-              error,
-            );
-          }
+          setBoardsWithTasks(await fetchBoards());
           if (selectedTask?.id === updatedTask.id) {
             setSelectedTask(updatedTask);
           }
@@ -221,21 +208,18 @@ export function MultipleKanbanBoard({
         console.error("Cannot compose task: taskBoardId not found");
         return;
       }
-      try {
-        const additionalData: Partial<Omit<Task, "id">> = scheduleDate
-          ? { scheduleDate }
-          : {};
-        const composedData = await apiServices.tasks.composeWithAI(
-          text,
-          taskBoardId,
-          additionalData,
-        );
+      const additionalData: Partial<Omit<Task, "id">> = scheduleDate
+        ? { scheduleDate }
+        : {};
+      const composedData = await clientServices.tasks.composeWithAI({
+        text,
+        taskBoardId,
+        additionalData,
+      });
+      if (composedData) {
         const overrideScheduleDate = scheduleDate ?? undefined;
         setSelectedTask(composedDataToTask(composedData, overrideScheduleDate));
         setSelectedBoardIdForAI(null);
-      } catch (error) {
-        console.error("Failed to compose task with AI:", error);
-        throw error;
       }
     },
     [boardsWithTasks, scheduleDate, selectedBoardIdForAI, setSelectedTask],
@@ -243,23 +227,15 @@ export function MultipleKanbanBoard({
 
   const handleTaskCreated = useCallback(
     async (createdTask: Task) => {
-      try {
-        setBoardsWithTasks(await fetchBoards());
-        setSelectedTask(createdTask);
-      } catch (error) {
-        console.error("Failed to refresh tasks after creation:", error);
-      }
+      setBoardsWithTasks(await fetchBoards());
+      setSelectedTask(createdTask);
     },
     [fetchBoards, setSelectedTask, setBoardsWithTasks],
   );
 
   const handleTaskDelete = useCallback(async () => {
-    try {
-      setBoardsWithTasks(await fetchBoards());
-      setSelectedTask(null);
-    } catch (error) {
-      console.error("Failed to refresh tasks after deletion:", error);
-    }
+    setBoardsWithTasks(await fetchBoards());
+    setSelectedTask(null);
   }, [fetchBoards, setSelectedTask, setBoardsWithTasks]);
 
   return (
@@ -281,7 +257,13 @@ export function MultipleKanbanBoard({
         />
 
         <BoardMultiLayout>
-          {isLoading ? (
+          {!isBoardsLoading && taskBoards.length === 0 ? (
+            <EmptyStateWrapper>
+              <TasksWorkspaceEmptyState
+                onCreateWorkspace={openCreateWorkspace}
+              />
+            </EmptyStateWrapper>
+          ) : isLoading ? (
             <LoadingContainer>
               <KanbanSpinner />
             </LoadingContainer>

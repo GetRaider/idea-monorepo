@@ -1,18 +1,19 @@
 "use client";
 
 import { ReactNode, useEffect, useId, useMemo, useRef } from "react";
+import { createPortal } from "react-dom";
 
 import { CloseIcon } from "@/components/Icons";
 import { CloseButton } from "@/components/Buttons";
-import { cn } from "@/lib/utils";
-import type { UiProps } from "@/lib/ui-props";
+import { cn } from "@/lib/styles/utils";
+import type { UiProps } from "@/lib/styles/ui-props";
 
 export function DialogOverlay({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
       className={cn(
-        "fixed inset-0 z-[4000] flex items-center justify-center bg-black/30 p-5 backdrop-blur-sm sm:p-5 max-[600px]:p-2.5",
+        "fixed inset-0 z-[4000] flex items-center justify-center bg-black/40 p-5 backdrop-blur-md sm:p-5 max-[600px]:p-2.5",
         className,
       )}
       {...props}
@@ -54,7 +55,7 @@ export function DialogHeader({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
-      className={cn("mb-6 flex items-center justify-between", className)}
+      className={cn("mb-6 flex items-start justify-between gap-4", className)}
       {...props}
     />
   );
@@ -65,6 +66,19 @@ export function DialogTitle({ className, ref, ...props }: UiProps<"h2">) {
     <h2
       ref={ref}
       className={cn("m-0 text-xl font-semibold text-white", className)}
+      {...props}
+    />
+  );
+}
+
+export function DialogSubtitle({ className, ref, ...props }: UiProps<"p">) {
+  return (
+    <p
+      ref={ref}
+      className={cn(
+        "m-0 mt-1 text-sm leading-normal text-[var(--text-secondary)]",
+        className,
+      )}
       {...props}
     />
   );
@@ -151,17 +165,9 @@ export function ConfirmDangerBtn({
   );
 }
 
-interface DialogProps {
-  title: string;
-  onClose: () => void;
-  children: ReactNode;
-  showCloseButton?: boolean;
-  maxWidth?: number;
-  minHeight?: number;
-}
-
 export function Dialog({
   title,
+  subtitle,
   onClose,
   children,
   showCloseButton = true,
@@ -169,7 +175,11 @@ export function Dialog({
   minHeight,
 }: DialogProps) {
   const titleId = useId();
+  const subtitleId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
   const focusSelectors = useMemo(
     () =>
       'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
@@ -205,7 +215,7 @@ export function Dialog({
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.preventDefault();
-        onClose();
+        onCloseRef.current();
         return;
       }
 
@@ -250,9 +260,9 @@ export function Dialog({
       document.body.style.overflow = prevOverflow;
       prevFocused?.focus?.();
     };
-  }, [focusSelectors, onClose]);
+  }, [focusSelectors]);
 
-  return (
+  const dialogTree = (
     <DialogOverlay onClick={handleOverlayClick}>
       <DialogContainer
         ref={dialogRef}
@@ -262,10 +272,16 @@ export function Dialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
+        aria-describedby={subtitle ? subtitleId : undefined}
         tabIndex={-1}
       >
         <DialogHeader>
-          <DialogTitle id={titleId}>{title}</DialogTitle>
+          <div className="min-w-0 flex-1">
+            <DialogTitle id={titleId}>{title}</DialogTitle>
+            {subtitle && (
+              <DialogSubtitle id={subtitleId}>{subtitle}</DialogSubtitle>
+            )}
+          </div>
           {showCloseButton && (
             <CloseButton onClick={onClose}>
               <CloseIcon />
@@ -276,4 +292,18 @@ export function Dialog({
       </DialogContainer>
     </DialogOverlay>
   );
+
+  if (typeof document === "undefined") return null;
+
+  return createPortal(dialogTree, document.body);
+}
+
+interface DialogProps {
+  title: string;
+  subtitle?: ReactNode;
+  onClose: () => void;
+  children: ReactNode;
+  showCloseButton?: boolean;
+  maxWidth?: number;
+  minHeight?: number;
 }

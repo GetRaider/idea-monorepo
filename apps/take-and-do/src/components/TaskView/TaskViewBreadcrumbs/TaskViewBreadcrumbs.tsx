@@ -18,8 +18,8 @@ import {
 } from "../TaskView.ui";
 import { tasksHelper } from "@/helpers/task.helper";
 import { MenuRowButton } from "@/components/MenuRowButton/MenuRowButton";
-import { cn } from "@/lib/utils";
-import type { UiProps } from "@/lib/ui-props";
+import { cn } from "@/lib/styles/utils";
+import type { UiProps } from "@/lib/styles/ui-props";
 
 export function TaskViewBreadcrumbs({
   boardDisplayName,

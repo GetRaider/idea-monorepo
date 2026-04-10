@@ -12,7 +12,7 @@ export const nestJsConfig = [
     languageOptions: {
       globals: {
         ...globals.node,
-        ...globals.jest,
+        ...(globals.vitest ?? globals.jest),
       },
       sourceType: "commonjs",
       parserOptions: {

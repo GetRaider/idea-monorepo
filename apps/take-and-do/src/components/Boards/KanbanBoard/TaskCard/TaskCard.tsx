@@ -6,7 +6,7 @@ import { CalendarIcon, ClockIcon } from "@/components/Icons";
 import { Task, TaskStatus } from "../types";
 import { tasksHelper } from "@/helpers/task.helper";
 import { getLabelAccent } from "@/helpers/label-color.helper";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/styles/utils";
 
 interface TaskCardProps {
   task: Task;

@@ -14,7 +14,7 @@ import {
   TaskSelectionSection,
 } from "@/components/SelectableList";
 
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/styles/utils";
 
 export function DropdownMultiSelect<T extends string = string>({
   options,

@@ -3,15 +3,16 @@
 import Link from "next/link";
 import type { ComponentProps } from "react";
 
-import { cn } from "@/lib/utils";
-import type { UiProps } from "@/lib/ui-props";
+import { TASKS_SIDEBAR_DEFAULT_WIDTH_PX } from "@/helpers/tasks-sidebar-layout";
+import { cn } from "@/lib/styles/utils";
+import type { UiProps } from "@/lib/styles/ui-props";
 
 export function PageContainer({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
       className={cn(
-        "flex h-screen overflow-hidden bg-gradient-to-br from-[#1a1a1a] to-[#3c2856]",
+        "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-gradient-to-br from-[#1a1a1a] to-[#3c2856]",
         className,
       )}
       {...props}
@@ -21,20 +22,25 @@ export function PageContainer({ className, ref, ...props }: UiProps<"div">) {
 
 type WithNavSidebarProps = UiProps<"main"> & {
   withNavSidebar: boolean;
+  /** Tasks sidebar width when open; used with nav rail (60px). */
+  tasksSidebarWidthPx?: number;
 };
 
 export function TasksLayoutMain({
   className,
   withNavSidebar,
+  tasksSidebarWidthPx = TASKS_SIDEBAR_DEFAULT_WIDTH_PX,
   ref,
+  style,
   ...props
 }: WithNavSidebarProps) {
+  const marginLeftPx = withNavSidebar ? 60 + tasksSidebarWidthPx : 60;
   return (
     <main
       ref={ref}
+      style={{ marginLeft: marginLeftPx, ...style }}
       className={cn(
-        "flex flex-1 flex-col overflow-hidden bg-gradient-to-br from-[#1a1a1a] to-[#3c2856] transition-[margin-left] duration-300 ease-out",
-        withNavSidebar ? "ml-[280px]" : "ml-[60px]",
+        "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-gradient-to-br from-[#1a1a1a] to-[#3c2856]",
         className,
       )}
       {...props}
@@ -45,15 +51,18 @@ export function TasksLayoutMain({
 export function HomeMainContent({
   className,
   withNavSidebar,
+  tasksSidebarWidthPx = TASKS_SIDEBAR_DEFAULT_WIDTH_PX,
   ref,
+  style,
   ...props
 }: WithNavSidebarProps) {
+  const marginLeftPx = withNavSidebar ? 60 + tasksSidebarWidthPx : 60;
   return (
     <main
       ref={ref}
+      style={{ marginLeft: marginLeftPx, ...style }}
       className={cn(
-        "flex flex-1 flex-col overflow-y-auto bg-gradient-to-br from-[#1a1a1a] to-[#3c2856] p-8 text-white transition-[margin-left] duration-300 ease-out",
-        withNavSidebar ? "ml-[280px]" : "ml-[60px]",
+        "flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto bg-gradient-to-br from-[#1a1a1a] to-[#3c2856] p-8 text-white",
         className,
       )}
       {...props}
@@ -132,12 +141,12 @@ export function WelcomeSection({ className, ref, ...props }: UiProps<"div">) {
   return <div ref={ref} className={cn("mb-8", className)} {...props} />;
 }
 
-export function HomePageTitle({ className, ref, ...props }: UiProps<"h1">) {
+export function AppPageTitle({ className, ref, ...props }: UiProps<"h1">) {
   return (
     <h1
       ref={ref}
       className={cn(
-        "m-0 mb-2 bg-gradient-to-br from-white to-purple-400 bg-clip-text text-4xl font-bold text-transparent",
+        "m-0 mb-2 bg-gradient-to-br from-white to-purple-400 bg-clip-text text-2xl font-bold text-transparent",
         className,
       )}
       {...props}
@@ -145,11 +154,11 @@ export function HomePageTitle({ className, ref, ...props }: UiProps<"h1">) {
   );
 }
 
-export function HomePageSubtitle({ className, ref, ...props }: UiProps<"p">) {
+export function AppPageSubtitle({ className, ref, ...props }: UiProps<"p">) {
   return (
     <p
       ref={ref}
-      className={cn("m-0 text-lg text-slate-300", className)}
+      className={cn("m-0 text-l text-slate-300", className)}
       {...props}
     />
   );

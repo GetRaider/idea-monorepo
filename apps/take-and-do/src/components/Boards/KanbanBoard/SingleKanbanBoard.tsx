@@ -17,18 +17,24 @@ import {
   composedDataToTask,
   createNewTaskTemplate,
 } from "./shared/taskComposeHelpers";
-import { useKanbanTaskHandlers } from "../../../hooks/useKanbanTaskHandlers";
-import { useBoardUrlTaskDialogSync } from "@/hooks/useBoardUrlTaskDialogSync";
+import { useKanbanTaskHandlers } from "../../../hooks/tasks/useKanbanTaskHandlers";
+import { useBoardUrlTaskDialogSync } from "@/hooks/tasks/useBoardUrlTaskDialogSync";
+import { useIsAnonymous } from "@/hooks/auth/use-is-anonymous";
+import { useTaskActions } from "@/hooks/tasks/useTasks";
+import { GUEST_STORE_UPDATED_EVENT } from "@/stores/guest/constants";
+import { guestStoreHelper } from "@/stores/guest";
+import { guestTasksForBoard } from "@/stores/guest/guest-task-filters";
 import { TaskView } from "../../TaskView/TaskView";
 import {
   removeTaskFromColumns,
   updateTaskInColumns,
-} from "@/hooks/useTaskBoardState";
+} from "@/hooks/tasks/useTaskBoardState";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
 import { EmptyState } from "../../EmptyState";
 import { AIComposeDialog } from "./shared/AIComposeDialog";
-import { apiServices } from "@/services/api";
+import { clientServices } from "@/services";
+import { toast } from "sonner";
 
 interface SingleKanbanBoardProps {
   boardId: string;
@@ -48,6 +54,8 @@ export function SingleKanbanBoard({
   onSubtaskOpen,
 }: SingleKanbanBoardProps) {
   const router = useRouter();
+  const isAnonymous = useIsAnonymous();
+  const { updateTask } = useTaskActions();
   const { taskBoards } = useWorkspace();
   const boardOptions = useMemo(
     () => taskBoards.map((b) => ({ id: b.id, name: b.name })),
@@ -90,13 +98,23 @@ export function SingleKanbanBoard({
     };
   }, []);
 
+  const persistTaskStatus = useCallback(
+    async (taskId: string, newStatus: TaskStatus) => {
+      const updated = await updateTask(taskId, { status: newStatus });
+      if (!updated) toast.error("Can't update task status");
+    },
+    [updateTask],
+  );
+
   const fetchTasks = useCallback(async () => {
     if (!boardId) return;
 
     const seq = ++fetchSeqRef.current;
     setIsLoading(true);
     try {
-      const tasks = await apiServices.tasks.getByBoardId(boardId);
+      const tasks = isAnonymous
+        ? guestTasksForBoard(guestStoreHelper.getTasks(), boardId)
+        : await clientServices.tasks.getByBoardId(boardId);
       const tasksByStatusMap: Record<TaskStatus, Task[]> = {
         [TaskStatus.TODO]: [],
         [TaskStatus.IN_PROGRESS]: [],
@@ -112,19 +130,28 @@ export function SingleKanbanBoard({
       });
       if (!isMountedRef.current || seq !== fetchSeqRef.current) return;
       setTasksByStatus(tasksByStatusMap);
-    } catch (error) {
-      if (!isMountedRef.current || seq !== fetchSeqRef.current) return;
-      console.error("Failed to fetch tasks:", error);
-      setTasksByStatus(emptyTaskColumns);
     } finally {
       if (!isMountedRef.current || seq !== fetchSeqRef.current) return;
       setIsLoading(false);
     }
-  }, [boardId]);
+  }, [boardId, isAnonymous]);
 
   useEffect(() => {
-    fetchTasks();
+    void fetchTasks();
   }, [fetchTasks]);
+
+  useEffect(() => {
+    if (!isAnonymous) return;
+    const onGuestStoreUpdated = () => {
+      void fetchTasks();
+    };
+    window.addEventListener(GUEST_STORE_UPDATED_EVENT, onGuestStoreUpdated);
+    return () =>
+      window.removeEventListener(
+        GUEST_STORE_UPDATED_EVENT,
+        onGuestStoreUpdated,
+      );
+  }, [isAnonymous, fetchTasks]);
 
   const handleTaskStatusChange = useCallback(
     async (taskId: string, newStatus: TaskStatus, targetIndex?: number) => {
@@ -134,9 +161,10 @@ export function SingleKanbanBoard({
         taskId,
         newStatus,
         targetIndex,
+        persistTaskStatus,
       );
     },
-    [tasksByStatus],
+    [tasksByStatus, persistTaskStatus],
   );
 
   const handleNavigateToParentTask = useCallback(() => {
@@ -195,15 +223,12 @@ export function SingleKanbanBoard({
         console.error("Cannot compose task: taskBoardId not found");
         return;
       }
-      try {
-        const composedData = await apiServices.tasks.composeWithAI(
-          text,
-          boardId,
-        );
+      const composedData = await clientServices.tasks.composeWithAI({
+        text,
+        taskBoardId: boardId,
+      });
+      if (composedData) {
         setSelectedTask(composedDataToTask(composedData));
-      } catch (error) {
-        console.error("Failed to compose task with AI:", error);
-        throw error;
       }
     },
     [boardId, setSelectedTask],
@@ -235,6 +260,7 @@ export function SingleKanbanBoard({
           workspaceEmoji={boardEmoji}
           onCreateTask={handleCreateTask}
           onCreateTaskWithAI={handleCreateTaskWithAI}
+          boardId={boardId}
         />
 
         <Board fillHeight>

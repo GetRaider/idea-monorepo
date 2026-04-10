@@ -13,10 +13,11 @@ import {
   DialogFormGroup,
   DialogFormLabel,
 } from "@/components/Dialogs/DialogForm";
+import { EmojiPickerField } from "@/components/TasksSidebar/EmojiPickerField";
 import { Folder, TaskBoard } from "@/types/workspace";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
-import type { UiProps } from "@/lib/ui-props";
+import { cn } from "@/lib/styles/utils";
+import type { UiProps } from "@/lib/styles/ui-props";
 
 const FormGroup = DialogFormGroup;
 const Label = DialogFormLabel;
@@ -34,6 +35,8 @@ export function CreateWorkspaceDialog({
 }: CreateWorkspaceDialogProps) {
   const [type, setType] = useState<WorkspaceCreateType>("board");
   const [name, setName] = useState("");
+  const [emoji, setEmoji] = useState<string | null>(null);
+  const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [selectedBoardIds, setSelectedBoardIds] = useState<string[]>([]);
   const [folderId, setFolderId] = useState("");
@@ -44,18 +47,13 @@ export function CreateWorkspaceDialog({
 
     setIsCreating(true);
     try {
-      if (type === "folder") {
-        await onCreateFolder(name.trim(), selectedBoardIds);
-      } else {
-        await onCreateBoard(name.trim(), folderId);
-      }
-      toast.success(type === "folder" ? "Folder created" : "Board created");
-    } catch {
-      toast.error(
+      const ok =
         type === "folder"
-          ? "Failed to create folder"
-          : "Failed to create board",
-      );
+          ? await onCreateFolder(name.trim(), selectedBoardIds, emoji)
+          : await onCreateBoard(name.trim(), folderId, emoji);
+      if (ok) {
+        toast.success(type === "folder" ? "Folder created" : "Board created");
+      }
     } finally {
       setIsCreating(false);
     }
@@ -98,26 +96,46 @@ export function CreateWorkspaceDialog({
 
         <FormGroup>
           <Label htmlFor="workspace-name">Name</Label>
-          <Input
-            id="workspace-name"
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder={
-              type === "folder"
-                ? "Enter folder name..."
-                : "Enter task board name..."
-            }
-            autoFocus
-            required
-            maxLength={32}
-          />
+          <div className="flex flex-row items-center gap-2">
+            <EmojiPickerField
+              emoji={emoji}
+              isOpen={emojiPickerOpen}
+              fallbackIconSrc={
+                type === "folder" ? "/folder.svg" : "/kanban-board.svg"
+              }
+              fallbackIconAlt={type === "folder" ? "Folder" : "Board"}
+              onToggle={() => setEmojiPickerOpen((open) => !open)}
+              onSelect={(next) => {
+                setEmoji(next);
+                setEmojiPickerOpen(false);
+              }}
+              onClear={() => {
+                setEmoji(null);
+                setEmojiPickerOpen(false);
+              }}
+            />
+            <Input
+              id="workspace-name"
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder={
+                type === "folder"
+                  ? "Enter folder name..."
+                  : "Enter task board name..."
+              }
+              autoFocus
+              required
+              maxLength={30}
+              className="min-w-0 flex-1"
+            />
+          </div>
         </FormGroup>
 
         <FormGroup>
           {type === "folder" ? (
             <>
-              <Label htmlFor="board-names">Board Names</Label>
+              <Label htmlFor="board-names">Boards</Label>
               <DropdownMultiSelect
                 id="board-names"
                 listTitle="Boards"
@@ -217,8 +235,16 @@ function TypeButton({
 
 interface CreateWorkspaceDialogProps {
   onClose: () => void;
-  onCreateFolder: (name: string, boardIdsToMove: string[]) => Promise<void>;
-  onCreateBoard: (name: string, folderId: string) => Promise<void>;
+  onCreateFolder: (
+    name: string,
+    boardIdsToMove: string[],
+    emoji?: string | null,
+  ) => Promise<boolean>;
+  onCreateBoard: (
+    name: string,
+    folderId: string,
+    emoji?: string | null,
+  ) => Promise<boolean>;
   taskBoards: TaskBoard[];
   folders: Folder[];
 }

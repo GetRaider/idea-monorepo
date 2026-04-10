@@ -8,11 +8,11 @@ import { TasksSidebar } from "@/components/TasksSidebar/TasksSidebar";
 import { CreateWorkspaceDialog } from "@/components/TasksSidebar/Workspaces/CreateWorkspace/CreateWorkspaceDialog";
 import { PageContainer, TasksLayoutMain as Main } from "../shell.ui";
 import { TASKS_ROOT_VIEW_ID, tasksUrlHelper } from "@/helpers/tasks-url.helper";
-import { useIsAnonymous } from "@/hooks/use-is-anonymous";
+import { useIsAnonymous } from "@/hooks/auth/use-is-anonymous";
 import { waiterHelper } from "@/helpers/waiter.helper";
-import { useWorkspaces } from "@/hooks/useWorkspaces";
+import { useWorkspaces } from "@/hooks/tasks/useWorkspaces";
 import { WorkspaceProvider } from "@/contexts/WorkspaceContext";
-import { useTasksSidebarWidthPx } from "@/hooks/useTasksSidebarWidthPx";
+import { useTasksSidebarWidthPx } from "@/hooks/tasks/useTasksSidebarWidthPx";
 import { clientServices } from "@/services";
 import { toast } from "sonner";
 

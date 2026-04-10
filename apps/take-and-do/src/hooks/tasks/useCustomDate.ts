@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 
 import { Task } from "@/components/Boards/KanbanBoard/types";
-import { useIsAnonymous } from "@/hooks/use-is-anonymous";
-import { useGuestTasks } from "@/hooks/use-guest-store";
+import { useIsAnonymous } from "@/hooks/auth/use-is-anonymous";
+import { useGuestTasks } from "@/hooks/tasks/use-guest-store";
 import { guestTasksForScheduleDate } from "@/stores/guest/guest-task-filters";
 import { clientServices } from "@/services";
 import { ScheduleType, tasksHelper } from "@/helpers/task.helper";

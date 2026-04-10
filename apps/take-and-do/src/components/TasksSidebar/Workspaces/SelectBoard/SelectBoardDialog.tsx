@@ -9,7 +9,7 @@ import {
   DialogFormGroup,
   DialogFormLabel,
 } from "@/components/Dialogs/DialogForm";
-import { useIsAnonymous } from "@/hooks/use-is-anonymous";
+import { useIsAnonymous } from "@/hooks/auth/use-is-anonymous";
 import { GUEST_STORE_UPDATED_EVENT } from "@/stores/guest/constants";
 import { guestStoreHelper } from "@/stores/guest";
 import { TaskBoard } from "@/types/workspace";

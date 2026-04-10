@@ -10,7 +10,7 @@ import {
   PlusIcon,
 } from "@/components/Icons";
 import { tasksHelper } from "@/helpers/task.helper";
-import { useTaskActions } from "@/hooks/useTasks";
+import { useTaskActions } from "@/hooks/tasks/useTasks";
 
 import { Task } from "../../Boards/KanbanBoard/types";
 import { StatusIcon } from "../../Boards/KanbanBoard/Column/Column.ui";

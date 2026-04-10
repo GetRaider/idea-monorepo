@@ -8,7 +8,7 @@ import {
   TaskUpdate,
 } from "../Boards/KanbanBoard/types";
 import { toast } from "sonner";
-import { useTaskActions } from "@/hooks/useTasks";
+import { useTaskActions } from "@/hooks/tasks/useTasks";
 import { TextEditor } from "../TextEditor/TextEditor";
 import { tasksHelper } from "@/helpers/task.helper";
 import { TaskViewHeader } from "./TaskViewHeader/TaskViewHeader";
@@ -34,7 +34,7 @@ import {
 } from "./TaskView.ui";
 import { TaskMetadata } from "./TaskMetadata/TaskMetadata";
 import { TaskSubtasks } from "./TaskSubtasks/TaskSubtasks";
-import { useClickOutside } from "@/hooks/useClickOutside";
+import { useClickOutside } from "@/hooks/ui/useClickOutside";
 
 export function TaskView({
   task: initialTask,

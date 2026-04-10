@@ -41,8 +41,8 @@ import {
   ActionsContainer,
   OptimizeButton,
 } from "./AIPlanningOptimizationDialog.ui";
-import { useDialogFocusLock } from "@/hooks/useDialogFocusLock";
-import { useTaskActions, useTasks } from "@/hooks/useTasks";
+import { useDialogFocusLock } from "@/hooks/ui/useDialogFocusLock";
+import { useTaskActions, useTasks } from "@/hooks/tasks/useTasks";
 import type { Task } from "@/components/Boards/KanbanBoard/types";
 
 export function AIPlanningOptimizationDialog({

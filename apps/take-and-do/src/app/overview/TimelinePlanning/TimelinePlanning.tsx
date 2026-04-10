@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { Task } from "@/components/Boards/KanbanBoard/types";
 import { EmptyState } from "@/components/EmptyState";
-import { useIsAnonymous } from "@/hooks/use-is-anonymous";
+import { useIsAnonymous } from "@/hooks/auth/use-is-anonymous";
 import { guestStoreHelper } from "@/stores/guest";
 import { clientServices } from "@/services";
 import { ScheduleType, tasksHelper } from "@/helpers/task.helper";
@@ -34,8 +34,8 @@ import {
   ViewAllLink,
   ScheduleSelectContainer,
 } from "./TimelinePlanning.ui";
-import { useRecentTasks } from "@/hooks/useRecentTasks";
-import { useCustomDateTasks } from "@/hooks/useCustomDate";
+import { useRecentTasks } from "@/hooks/tasks/useRecentTasks";
+import { useCustomDateTasks } from "@/hooks/tasks/useCustomDate";
 import { SpinnerRing } from "@/components/Spinner/Spinner";
 import { LoadingStackContainer } from "@/components/LoadingStack/LoadingStack";
 import { tasksUrlHelper } from "@/helpers/tasks-url.helper";

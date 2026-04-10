@@ -4,7 +4,7 @@ import { use } from "react";
 import { notFound } from "next/navigation";
 
 import { MultipleKanbanBoard } from "@/components/Boards/KanbanBoard/MultipleKanbanBoard";
-import { useScheduleTaskUrlSync } from "@/hooks/useKanbanTaskUrlSync";
+import { useScheduleTaskUrlSync } from "@/hooks/tasks/useKanbanTaskUrlSync";
 import { tasksUrlHelper, type ScheduleDate } from "@/helpers/tasks-url.helper";
 
 interface SchedulePageProps {

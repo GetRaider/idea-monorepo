@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Task, TaskUpdate } from "@/components/Boards/KanbanBoard/types";
-import { useIsAnonymous } from "@/hooks/use-is-anonymous";
-import { useGuestTasks } from "@/hooks/use-guest-store";
+import { useIsAnonymous } from "@/hooks/auth/use-is-anonymous";
+import { useGuestTasks } from "@/hooks/tasks/use-guest-store";
 import {
   guestTasksForBoard,
   guestTasksForScheduleDate,

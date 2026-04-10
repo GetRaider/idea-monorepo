@@ -17,10 +17,10 @@ import {
   composedDataToTask,
   createNewTaskTemplate,
 } from "./shared/taskComposeHelpers";
-import { useKanbanTaskHandlers } from "../../../hooks/useKanbanTaskHandlers";
-import { useBoardUrlTaskDialogSync } from "@/hooks/useBoardUrlTaskDialogSync";
-import { useIsAnonymous } from "@/hooks/use-is-anonymous";
-import { useTaskActions } from "@/hooks/useTasks";
+import { useKanbanTaskHandlers } from "../../../hooks/tasks/useKanbanTaskHandlers";
+import { useBoardUrlTaskDialogSync } from "@/hooks/tasks/useBoardUrlTaskDialogSync";
+import { useIsAnonymous } from "@/hooks/auth/use-is-anonymous";
+import { useTaskActions } from "@/hooks/tasks/useTasks";
 import { GUEST_STORE_UPDATED_EVENT } from "@/stores/guest/constants";
 import { guestStoreHelper } from "@/stores/guest";
 import { guestTasksForBoard } from "@/stores/guest/guest-task-filters";
@@ -28,7 +28,7 @@ import { TaskView } from "../../TaskView/TaskView";
 import {
   removeTaskFromColumns,
   updateTaskInColumns,
-} from "@/hooks/useTaskBoardState";
+} from "@/hooks/tasks/useTaskBoardState";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
 import { EmptyState } from "../../EmptyState";

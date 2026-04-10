@@ -60,7 +60,7 @@ import { EmojiPickerField } from "./EmojiPickerField";
 import { useEmojiPickerState } from "./useEmojiPickerState";
 import { useSidebarEditingState } from "./useSidebarEditingState";
 import { useSidebarDeleteState } from "./useSidebarDeleteState";
-import { useTasksSidebarOrder } from "@/hooks/useTasksSidebarOrder";
+import { useTasksSidebarOrder } from "@/hooks/tasks/useTasksSidebarOrder";
 
 import { TasksSidebarTaskSearch } from "./TasksSidebarTaskSearch";
 

@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { TaskStatus } from "@/constants/tasks.constants";
-import { useIsAnonymous } from "@/hooks/use-is-anonymous";
-import { useGuestTasks } from "@/hooks/use-guest-store";
+import { useIsAnonymous } from "@/hooks/auth/use-is-anonymous";
+import { useGuestTasks } from "@/hooks/tasks/use-guest-store";
 import { guestTasksForBoard } from "@/stores/guest/guest-task-filters";
 import { clientServices } from "@/services";
 import { cn } from "@/lib/styles/utils";

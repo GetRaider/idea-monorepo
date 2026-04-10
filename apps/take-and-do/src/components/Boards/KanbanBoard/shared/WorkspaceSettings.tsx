@@ -7,7 +7,7 @@ import { InfoCircleIcon, PublicWorkspaceIcon } from "@/components/Icons";
 import { Switch } from "@/components/Switch/Switch";
 import { AppTooltip } from "@/components/Tooltip/AppTooltip";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
-import { useIsAnonymous } from "@/hooks/use-is-anonymous";
+import { useIsAnonymous } from "@/hooks/auth/use-is-anonymous";
 import { clientServices } from "@/services";
 import { toast } from "sonner";
 

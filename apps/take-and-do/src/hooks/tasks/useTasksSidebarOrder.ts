@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { useIsAnonymous } from "@/hooks/use-is-anonymous";
+import { useIsAnonymous } from "@/hooks/auth/use-is-anonymous";
 import { guestStoreHelper } from "@/stores/guest";
 import type { Folder, TaskBoard } from "@/types/workspace";
 

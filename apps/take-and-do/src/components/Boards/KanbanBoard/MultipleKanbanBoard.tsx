@@ -26,12 +26,12 @@ import {
   composedDataToTask,
   createNewTaskTemplate,
 } from "./shared/taskComposeHelpers";
-import { useKanbanTaskHandlers } from "../../../hooks/useKanbanTaskHandlers";
-import { useMultipleKanbanBoardData } from "../../../hooks/useMultipleKanbanBoardData";
-import { useTaskActions } from "@/hooks/useTasks";
+import { useKanbanTaskHandlers } from "../../../hooks/tasks/useKanbanTaskHandlers";
+import { useMultipleKanbanBoardData } from "../../../hooks/tasks/useMultipleKanbanBoardData";
+import { useTaskActions } from "@/hooks/tasks/useTasks";
 import { TaskView } from "../../TaskView/TaskView";
 import { useWorkspace } from "@/contexts";
-import { updateTaskInColumns } from "@/hooks/useTaskBoardState";
+import { updateTaskInColumns } from "@/hooks/tasks/useTaskBoardState";
 import { EmptyState } from "../../EmptyState";
 import { TasksWorkspaceEmptyState } from "../../TasksWorkspaceEmptyState";
 import { AIComposeDialog } from "./shared/AIComposeDialog";

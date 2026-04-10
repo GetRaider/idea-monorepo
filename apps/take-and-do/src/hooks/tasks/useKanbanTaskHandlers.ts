@@ -1,6 +1,6 @@
 import { useCallback } from "react";
-import { useTaskBoardState } from "@/hooks/useTaskBoardState";
-import { Task } from "../components/Boards/KanbanBoard/types";
+import { useTaskBoardState } from "@/hooks/tasks/useTaskBoardState";
+import { Task } from "../../components/Boards/KanbanBoard/types";
 
 export function useKanbanTaskHandlers(
   options: UseKanbanTaskHandlersOptions = {},

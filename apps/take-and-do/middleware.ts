@@ -1,11 +1,17 @@
 import { Route } from "@/constants/route.constant";
+import { inMemoryRateLimiter } from "@/lib/rate-limit";
 import { getSessionCookie } from "better-auth/cookies";
 import { NextRequest, NextResponse } from "next/server";
 
-const PUBLIC_PATHS = ["/", "/login", "/signup", "/auth", "/api/auth"];
+const PUBLIC_PATH_PREFIXES = ["/login", "/signup", "/auth", "/api/auth"];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  if (pathname.startsWith("/api/")) {
+    const rateLimitResponse = inMemoryRateLimiter.checkRateLimit(request);
+    if (rateLimitResponse) return rateLimitResponse;
+  }
 
   if (pathname.startsWith(`/api${Route.AUTH}`)) {
     return NextResponse.next();
@@ -21,7 +27,9 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  const isPublic = PUBLIC_PATHS.some((path) => pathname.startsWith(path));
+  const isPublic =
+    pathname === "/" ||
+    PUBLIC_PATH_PREFIXES.some((path) => pathname.startsWith(path));
   if (!isPublic) {
     const sessionCookie = getSessionCookie(request);
     if (!sessionCookie) {

@@ -3,14 +3,14 @@
 import { useState } from "react";
 import { FiUser, FiAlertTriangle } from "react-icons/fi";
 
-import { GuestDialog } from "./GuestDialog";
+import { useGuestAnonymousSignIn } from "@/hooks/auth/useGuestAnonymousSignIn";
+import { AuthSecondaryButton } from "@/components/Auth/AuthButtons";
 import {
   JoinWhitelistDialog,
   JoinWhitelistOutlineButton,
 } from "./JoinWhitelistDialog";
-import { useGuestAnonymousSignIn } from "../../hooks/auth/useGuestAnonymousSignIn";
+import { GuestDialog } from "./GuestDialog";
 import { OrDivider } from "./OtherActions";
-import { AuthSecondaryButton } from "./AuthButtons";
 
 export function WhitelistRestrictedAuthPanel({
   isErrorPage = false,

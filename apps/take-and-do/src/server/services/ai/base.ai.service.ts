@@ -4,13 +4,6 @@ import { primitiveHelper } from "@repo/shared";
 import { getAIProvider } from "./provider";
 import { BadRequestError } from "@/lib/api";
 
-type AIError = { path: (string | number)[]; message: string };
-type AIResult<OutputSchema extends z.ZodTypeAny> = z.SafeParseSuccess<
-  z.output<OutputSchema>
->;
-type ParsePromptResult<OutputSchema extends z.ZodTypeAny> =
-  z.SafeParseReturnType<unknown, z.output<OutputSchema>>;
-
 export class BaseAIService {
   protected readonly aiProvider = getAIProvider();
 
@@ -77,3 +70,10 @@ export class BaseAIService {
     }
   }
 }
+
+type AIError = { path: (string | number)[]; message: string };
+type AIResult<OutputSchema extends z.ZodTypeAny> = z.SafeParseSuccess<
+  z.output<OutputSchema>
+>;
+type ParsePromptResult<OutputSchema extends z.ZodTypeAny> =
+  z.SafeParseReturnType<unknown, z.output<OutputSchema>>;

@@ -12,8 +12,14 @@ class MixpanelAnalytics {
   }
 
   init() {
-    if (this.initialized) return;
-    if (!this.token) return;
+    if (this.initialized) {
+      console.warn("Mixpanel already initialized");
+      return;
+    }
+    if (!this.token) {
+      console.warn("Mixpanel token is not set");
+      return;
+    }
     this.mixpanel.init(this.token, {
       debug: process.env.NODE_ENV === "development",
     });
@@ -21,12 +27,18 @@ class MixpanelAnalytics {
   }
 
   trackEvent(event: string, properties?: Record<string, unknown>) {
-    if (!this.initialized) return;
+    if (!this.initialized) {
+      console.warn("[Track Event] Mixpanel not initialized");
+      return;
+    }
     this.mixpanel.track(event, properties);
   }
 
   identifyUser(userId: string, traits?: Record<string, unknown>) {
-    if (!this.initialized) return;
+    if (!this.initialized) {
+      console.warn("[Identify User] Mixpanel not initialized");
+      return;
+    }
     this.mixpanel.identify(userId);
     if (traits) this.mixpanel.people.set(traits);
   }

@@ -28,10 +28,8 @@ import {
   SidebarChevronGutter,
 } from "@/components/TasksSidebar/TasksSidebar.ui";
 import { BoardHealthPanel } from "@/components/BoardHealthPanel";
-import {
-  CreateWorkspacePrimaryButton,
-  TasksWorkspaceEmptyState,
-} from "@/components/TasksWorkspaceEmptyState";
+import { PrimaryButton } from "@/components/Buttons";
+import { TasksWorkspaceEmptyState } from "@/components/TasksWorkspaceEmptyState";
 import { useWorkspace } from "@/contexts";
 import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
 import { cn } from "@/lib/styles/utils";
@@ -234,7 +232,7 @@ function FolderSection({
       <button
         type="button"
         onClick={onToggleExpanded}
-        className="flex w-full min-w-0 items-center gap-2 rounded-2xl border border-[var(--border-color)] bg-[var(--card-bg)] p-4 text-left transition-colors hover:bg-[var(--input-bg)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
+        className="flex w-full min-w-0 items-center gap-2 rounded-2xl border border-[var(--border-color)] bg-[var(--background-primary)] p-4 text-left transition-colors hover:bg-[var(--input-bg)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
       >
         <FolderChevron isExpanded={isExpanded} aria-hidden>
           <ChevronRightIcon size={11} />
@@ -291,7 +289,7 @@ function WorkspaceBoardCard({
       type="button"
       onClick={onOpen}
       className={cn(
-        "flex w-full min-w-0 items-center gap-2 rounded-2xl border border-[var(--border-color)] bg-[var(--card-bg)] p-4 text-left transition-colors hover:bg-[var(--input-bg)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]",
+        "flex w-full min-w-0 items-center gap-2 rounded-2xl border border-[var(--border-color)] bg-[var(--background-primary)] p-4 text-left transition-colors hover:bg-[var(--input-bg)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]",
         nested && "rounded-xl py-3 pl-3 pr-3",
       )}
     >
@@ -420,13 +418,14 @@ function WorkspacesRootLayout({
               </button>
             )}
           </div>
-          <CreateWorkspacePrimaryButton
+          <PrimaryButton
+            size="sm"
             onClick={onCreateWorkspace}
-            className="shrink-0 px-[22px] py-3 text-sm font-medium hover:translate-y-0 hover:bg-[#6346b0]"
+            className="shrink-0 font-medium"
           >
             <PlusIcon size={18} className="shrink-0 text-white" />
             Create Workspace
-          </CreateWorkspacePrimaryButton>
+          </PrimaryButton>
         </div>
       </div>
 

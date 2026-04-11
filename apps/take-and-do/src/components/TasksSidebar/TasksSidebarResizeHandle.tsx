@@ -51,7 +51,7 @@ export function TasksSidebarResizeHandle({
       className={cn(
         "absolute right-0 top-1/2 z-[95] -translate-y-1/2 translate-x-1/2",
         "flex h-7 w-7 touch-none cursor-ew-resize items-center justify-center rounded-full",
-        "border border-border-app bg-nav-sidebar-bg text-text-secondary shadow-md",
+        "border border-border-app bg-background-primary text-text-secondary shadow-md",
         "hover:border-focus-ring hover:text-text-primary",
         "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring",
       )}

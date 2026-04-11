@@ -1,10 +1,10 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
-import { asc, eq, and, isNull, inArray, gte, lt } from "drizzle-orm";
+import { asc, eq, and, isNull, inArray, gte, lt, or } from "drizzle-orm";
 
 import { env } from "@/env";
 
-export { asc, eq, and, isNull, inArray, gte, lt };
+export { asc, eq, and, isNull, inArray, gte, lt, or };
 const connectionString = env.db.connectionString;
 
 export const pool = new Pool({

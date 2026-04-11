@@ -30,7 +30,7 @@ export function TaskViewContainer({
     <div
       ref={ref}
       className={cn(
-        "flex max-h-[90vh] min-w-0 w-full max-w-[800px] flex-col overflow-y-auto overflow-x-hidden rounded-xl border border-border-app bg-card-bg pb-0 shadow-dialog max-[600px]:max-h-[95vh] max-[600px]:rounded-lg",
+        "flex max-h-[90vh] min-w-0 w-full max-w-[800px] flex-col overflow-y-auto overflow-x-hidden rounded-xl border border-border-app bg-background-primary pb-0 shadow-dialog max-[600px]:max-h-[95vh] max-[600px]:rounded-lg",
         className,
       )}
       {...props}

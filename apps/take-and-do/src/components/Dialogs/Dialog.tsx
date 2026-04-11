@@ -43,7 +43,7 @@ export function DialogContainer({
         ...(minHeight !== undefined ? { minHeight } : {}),
       }}
       className={cn(
-        "flex max-h-[90vh] w-full flex-col overflow-y-auto rounded-xl border border-border-app bg-card-bg p-6 shadow-dialog max-[600px]:max-h-[95vh] max-[600px]:rounded-lg",
+        "flex max-h-[90vh] w-full flex-col overflow-y-auto rounded-xl border border-border-app bg-background-primary p-6 shadow-dialog max-[600px]:max-h-[95vh] max-[600px]:rounded-lg",
         className,
       )}
       {...props}

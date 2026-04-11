@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { taskStatsSchema } from "@/db/dtos/analytics.dto";
+
 const TaskPrioritySchema = z.enum(["low", "medium", "high", "critical"]);
 
 // ============================================
@@ -28,12 +30,7 @@ export const DecomposeTaskOutputSchema = z.object({
 // Analytics Summary Schemas
 // ============================================
 
-export const AnalyticsStatsSchema = z.object({
-  tasksCreated: z.number().int().min(0),
-  tasksCompleted: z.number().int().min(0),
-  avgCompletionTimeDays: z.number().min(0),
-  overdueRate: z.number().min(0).max(1),
-});
+export const AnalyticsStatsSchema = taskStatsSchema;
 
 export const AnalyticsInputSchema = z.object({
   stats: AnalyticsStatsSchema,
@@ -56,6 +53,9 @@ export type DecomposedTask = z.infer<typeof DecomposedTaskSchema>;
 export type DecomposeTaskOutput = z.infer<typeof DecomposeTaskOutputSchema>;
 
 export type AnalyticsStats = z.infer<typeof AnalyticsStatsSchema>;
+
+/** @deprecated Prefer AnalyticsStats — alias retained for dashboard wording */
+export type DashboardMetrics = AnalyticsStats;
 export type AnalyticsInput = z.infer<typeof AnalyticsInputSchema>;
 export type AnalyticsOutput = z.infer<typeof AnalyticsOutputSchema>;
 

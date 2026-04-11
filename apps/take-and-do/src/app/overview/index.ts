@@ -4,5 +4,5 @@ export { SummarySection } from "./ProductivitySummary";
 export { TimelinePlanning } from "./TimelinePlanning";
 
 export type { TaskStats } from "./StatsCards/StatsCards";
-export type { AnalyticsStats } from "./ProductivityOverview";
+export type { AnalyticsStats, DashboardMetrics } from "./ProductivityOverview";
 export type { AnalyticsData, Timeframe } from "./ProductivitySummary";

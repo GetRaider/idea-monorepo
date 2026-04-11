@@ -91,7 +91,7 @@ export function TasksSidebarTaskSearch({
       {showPopover ? (
         <div
           className={cn(
-            "absolute left-0 right-0 top-full z-[100] mt-1 max-h-64 overflow-y-auto overflow-x-hidden rounded-lg border border-border-app bg-card-bg py-1 shadow-lg",
+            "absolute left-0 right-0 top-full z-[100] mt-1 max-h-64 overflow-y-auto overflow-x-hidden rounded-lg border border-border-app bg-background-primary py-1 shadow-lg",
           )}
           aria-label="Task search results"
         >

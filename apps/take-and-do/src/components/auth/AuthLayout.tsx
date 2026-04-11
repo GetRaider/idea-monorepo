@@ -25,7 +25,7 @@ export default function AuthLayout({
           Take &amp; Do
         </h1>
       </div>
-      <div className="w-full max-w-[440px] rounded-2xl border border-[#282930] bg-[#12131a]/95 px-8 py-11 shadow-[var(--shadow-dialog)] backdrop-blur-md">
+      <div className="w-full max-w-[440px] rounded-2xl border border-[#282930] bg-background-login px-8 py-11 shadow-[var(--shadow-dialog)] backdrop-blur-md">
         <div className="text-center">
           <p className="m-0 text-2xl font-semibold text-[var(--text-primary)]">
             {title}

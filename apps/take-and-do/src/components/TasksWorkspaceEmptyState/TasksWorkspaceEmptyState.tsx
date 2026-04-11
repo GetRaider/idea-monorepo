@@ -1,5 +1,6 @@
 "use client";
 
+import { PrimaryButton } from "@/components/Buttons";
 import { PlusIcon } from "@/components/Icons";
 import { RocketIcon } from "@/components/Icons/RocketIcon";
 import { cn } from "@/lib/styles/utils";
@@ -20,10 +21,10 @@ export function TasksWorkspaceEmptyState({
         <Subtitle>
           You can create a new workspace and manage your tasks.
         </Subtitle>
-        <CreateWorkspacePrimaryButton onClick={onCreateWorkspace}>
+        <PrimaryButton size="sm" onClick={onCreateWorkspace}>
           <PlusIcon size={16} className="shrink-0 text-white" />
           Create Workspace
-        </CreateWorkspacePrimaryButton>
+        </PrimaryButton>
       </Inner>
     </Outer>
   );
@@ -78,7 +79,7 @@ function IconCard({ className, ref, ...props }: UiProps<"div">) {
     <div
       ref={ref}
       className={cn(
-        "flex h-14 w-14 items-center justify-center rounded-xl border border-[var(--border-color)] bg-[var(--card-bg)] shadow-[var(--shadow-dropdown)]",
+        "flex h-14 w-14 items-center justify-center rounded-xl border border-[var(--border-color)] bg-[var(--background-primary)] shadow-[var(--shadow-dropdown)]",
         className,
       )}
       {...props}
@@ -105,24 +106,6 @@ function Subtitle({ className, ref, ...props }: UiProps<"p">) {
       ref={ref}
       className={cn(
         "m-0 max-w-sm text-sm leading-relaxed text-[var(--text-secondary)]",
-        className,
-      )}
-      {...props}
-    />
-  );
-}
-
-export function CreateWorkspacePrimaryButton({
-  className,
-  ref,
-  ...props
-}: UiProps<"button">) {
-  return (
-    <button
-      ref={ref}
-      type="button"
-      className={cn(
-        "inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border-0 bg-[#7255c1] px-7 py-3.5 text-base font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#5a42a1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-secondary)] disabled:cursor-not-allowed disabled:opacity-50",
         className,
       )}
       {...props}

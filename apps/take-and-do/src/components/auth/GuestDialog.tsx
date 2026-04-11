@@ -77,7 +77,7 @@ export function GuestDialog({
             value={guestOtherText}
             onChange={(event) => onOtherTextChange(event.target.value)}
             disabled={isBusy}
-            className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-sm text-[var(--foreground)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-primary)]"
+            className="w-full rounded-lg border border-[var(--input-login-border)] bg-[var(--input-login-bg)] px-3 py-2 text-sm text-[var(--foreground)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-primary)]"
           />
         </div>
       ) : null}
@@ -119,8 +119,8 @@ function IntentOption({
       disabled={disabled}
       className={`w-full rounded-lg border p-3 text-left text-sm transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-primary)] disabled:opacity-50 ${
         selected
-          ? "border-[var(--brand-primary)] bg-[var(--input-bg)]"
-          : "border-[var(--border-color)] hover:border-[var(--input-border-hover)]"
+          ? "border-[var(--brand-primary)] bg-[var(--input-login-bg)]"
+          : "border-[var(--border-color)] hover:border-[var(--input-login-border-hover)]"
       }`}
     >
       <span className="font-medium text-[var(--foreground)]">{label}</span>

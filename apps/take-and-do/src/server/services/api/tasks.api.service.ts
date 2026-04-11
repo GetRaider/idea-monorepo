@@ -10,6 +10,7 @@ import type { ComposeTaskOutput } from "@/server/services/ai";
 import { Task, TaskPriority, TaskStatus, TaskUpdate } from "@/types/task";
 import { DB, lt, gte, isNull, and, eq, inArray, asc } from "@/db/client";
 import { labelsTable, taskLabelsTable, tasks } from "@/db/schemas";
+import type { TaskStatsInput } from "@/db/dtos/analytics.dto";
 import { TaskBoardsApiService } from "./task-boards.api.service";
 import { LabelsApiService } from "./labels.api.service";
 import {
@@ -937,9 +938,4 @@ export interface TaskCounts {
   overdue: number;
 }
 
-export interface TaskStatistics {
-  tasksCreated: number;
-  tasksCompleted: number;
-  avgCompletionTimeDays: number;
-  overdueRate: number;
-}
+export type TaskStatistics = TaskStatsInput;

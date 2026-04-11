@@ -11,7 +11,7 @@ import { authClient } from "@/auth/client";
 import { SpinnerRing } from "@/components/Spinner/Spinner";
 import { toast } from "sonner";
 
-import { AuthPrimaryButton } from "./AuthButtons";
+import { AuthPrimaryButton } from "@/components/Auth/AuthButtons";
 
 type LoadingKey = "google" | "email" | null;
 
@@ -117,7 +117,7 @@ export function Login() {
               onChange={(event) => setEmail(event.target.value)}
               required
               disabled={isBusy}
-              className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[var(--foreground)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-primary)] disabled:opacity-50"
+              className="w-full rounded-lg border border-[var(--input-login-border)] bg-[var(--input-login-bg)] px-3 py-2 text-[var(--foreground)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-primary)] disabled:opacity-50"
             />
           </div>
           <div>
@@ -135,7 +135,7 @@ export function Login() {
               onChange={(event) => setPassword(event.target.value)}
               required
               disabled={isBusy}
-              className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[var(--foreground)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-primary)] disabled:opacity-50"
+              className="w-full rounded-lg border border-[var(--input-login-border)] bg-[var(--input-login-bg)] px-3 py-2 text-[var(--foreground)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-primary)] disabled:opacity-50"
             />
           </div>
           {error ? (

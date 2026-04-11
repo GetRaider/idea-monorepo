@@ -7,7 +7,6 @@ import {
   Controls,
   TimeframeSelect,
 } from "../productivity-blocks";
-import { gradientActionButtonClass } from "@/lib/styles/animated-gradient";
 import { cn } from "@/lib/styles/utils";
 import type { UiProps } from "@/lib/styles/ui-props";
 
@@ -23,36 +22,6 @@ export function Section({ className, ref, ...props }: UiProps<"div">) {
 }
 
 export { SectionHeader, SectionTitle, Controls, TimeframeSelect };
-
-type GenerateButtonProps = UiProps<"button"> & {
-  inactive?: boolean;
-};
-
-export function GenerateButton({
-  className,
-  type = "button",
-  inactive,
-  disabled,
-  ref,
-  ...props
-}: GenerateButtonProps) {
-  const isDisabled = disabled ?? inactive;
-  return (
-    <button
-      ref={ref}
-      type={type}
-      disabled={isDisabled}
-      className={cn(
-        "relative overflow-hidden rounded-md border-0 px-4 py-2 text-sm font-semibold text-white transition-colors duration-200 motion-reduce:!animate-none motion-reduce:!bg-[#7255c1]",
-        isDisabled
-          ? "cursor-not-allowed bg-[#7255c1] opacity-60"
-          : cn(gradientActionButtonClass, "cursor-pointer opacity-100"),
-        className,
-      )}
-      {...props}
-    />
-  );
-}
 
 export function ChartsGrid({ className, ref, ...props }: UiProps<"div">) {
   return (

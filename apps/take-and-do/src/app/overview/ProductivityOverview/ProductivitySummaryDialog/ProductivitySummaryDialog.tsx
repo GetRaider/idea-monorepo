@@ -40,7 +40,7 @@ export function ProductivitySummaryDialog({
     <DialogScrim onClick={handleOverlayClick}>
       <DialogContent>
         <DialogHeader>
-          <DialogHeading>⚡ Productivity Summary</DialogHeading>
+          <DialogHeading>Productivity Summary</DialogHeading>
           <CloseButton onClick={onClose}>
             <CloseIcon />
           </CloseButton>

@@ -101,7 +101,7 @@ export function BoardHealthPanel({ boards }: { boards: TaskBoard[] }) {
   return (
     <aside
       className={cn(
-        "flex w-full min-w-0 flex-col rounded-2xl border border-[var(--border-color)] bg-[var(--card-bg)] p-4 lg:sticky lg:top-6 lg:max-h-[min(80vh,calc(100vh-8rem))] lg:overflow-y-auto",
+        "flex w-full min-w-0 flex-col rounded-2xl border border-[var(--border-color)] bg-[var(--background-primary)] p-4 lg:sticky lg:top-6 lg:max-h-[min(80vh,calc(100vh-8rem))] lg:overflow-y-auto",
       )}
     >
       <h2 className="m-0 text-sm font-semibold text-[var(--text-primary)]">

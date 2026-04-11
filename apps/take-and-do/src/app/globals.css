@@ -16,16 +16,20 @@
     --foreground: #ededed;
     --sidebar-bg: #1a1a1a;
     --nav-sidebar-bg: #1e1e1e;
-    --card-bg: #1e1e1e;
+    --background-primary: #1e1e1e;
+    --background-login: rgb(18 19 26 / 0.95);
     --border-color: #2a2a2a;
     --text-primary: #ffffff;
     --text-secondary: #888888;
     --text-tertiary: #666666;
     --accent-primary: #667eea;
     --accent-secondary: #764ba2;
-    --input-bg: #212229;
-    --input-border: #2a2a2a;
-    --input-border-hover: #555555;
+    --input-login-bg: #212229;
+    --input-login-border: #2a2a2a;
+    --input-login-border-hover: #555555;
+    --input-bg: #201f1f;
+    --input-border: #3a3a3a;
+    --input-border-hover: #666666;
     --focus-ring: #7255c1;
     --radius-sm: 4px;
     --radius-md: 6px;
@@ -103,7 +107,7 @@
 
 [data-sonner-toaster][data-sonner-theme="dark"]
   [data-sonner-toast][data-styled="true"] {
-  background: var(--card-bg) !important;
+  background: var(--background-primary) !important;
   border-color: var(--border-color) !important;
   color: var(--foreground) !important;
 }

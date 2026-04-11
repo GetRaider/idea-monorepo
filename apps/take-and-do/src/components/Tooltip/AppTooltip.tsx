@@ -24,12 +24,12 @@ export function AppTooltip({
             align={align}
             sideOffset={sideOffset}
             className={cn(
-              "z-[10050] max-w-xs rounded-md border border-border-app bg-card-bg px-3 py-2 text-left text-xs leading-relaxed text-text-primary shadow-dropdown",
+              "z-[10050] max-w-xs rounded-md border border-border-app bg-background-primary px-3 py-2 text-left text-xs leading-relaxed text-text-primary shadow-dropdown",
               contentClassName,
             )}
           >
             {content}
-            <Tooltip.Arrow className="fill-card-bg" />
+            <Tooltip.Arrow className="fill-background-primary" />
           </Tooltip.Content>
         </Tooltip.Portal>
       </Tooltip.Root>

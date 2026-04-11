@@ -3,13 +3,13 @@
 import { useState } from "react";
 import { FiUser } from "react-icons/fi";
 
-import { GuestDialog } from "./GuestDialog";
+import { GuestDialog } from "@/components/Auth/GuestDialog";
 import {
   JoinWhitelistDialog,
   JoinWhitelistOutlineButton,
-} from "./JoinWhitelistDialog";
+} from "@/components/Auth/JoinWhitelistDialog";
 import { useGuestAnonymousSignIn } from "../../hooks/auth/useGuestAnonymousSignIn";
-import { AuthSecondaryButton } from "./AuthButtons";
+import { AuthSecondaryButton } from "@/components/Auth/AuthButtons";
 
 export function OtherActionsPanel({
   disabled: disabledFromParent = false,
@@ -35,7 +35,7 @@ export function OtherActionsPanel({
   return (
     <div className="mt-8">
       <div
-        className="flex flex-col rounded-xl border border-dashed border-[var(--border-color)] bg-[var(--card-bg)]/50 px-5 pb-5 pt-4"
+        className="flex flex-col rounded-xl border border-dashed border-[var(--border-color)] bg-[color-mix(in_srgb,var(--background-login)_50%,transparent)] px-5 pb-5 pt-4"
         data-testid="continue-as-guest-card"
       >
         <h2 className="m-0 text-center text-sm font-semibold text-[var(--foreground)]">

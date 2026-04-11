@@ -1,6 +1,5 @@
 "use client";
 
-import { gradientActionButtonClass } from "@/lib/styles/animated-gradient";
 import { cn } from "@/lib/styles/utils";
 import type { UiProps } from "@/lib/styles/ui-props";
 
@@ -263,24 +262,3 @@ export function ActionsContainer({ className, ref, ...props }: UiProps<"div">) {
     />
   );
 }
-
-const gradientButtonBase =
-  "rounded-md border-0 px-5 py-2.5 text-sm font-semibold text-white transition-all disabled:!animate-none disabled:!cursor-not-allowed disabled:!bg-[#7255c1] disabled:!opacity-60 motion-reduce:!animate-none motion-reduce:!bg-[#7255c1]";
-
-export function GenerateOptimizationButton({
-  className,
-  type = "button",
-  ref,
-  ...props
-}: UiProps<"button">) {
-  return (
-    <button
-      ref={ref}
-      type={type}
-      className={cn(gradientActionButtonClass, gradientButtonBase, className)}
-      {...props}
-    />
-  );
-}
-
-export const OptimizeButton = GenerateOptimizationButton;

@@ -69,6 +69,10 @@ function OverviewPage() {
     }
   };
 
+  const hasWorkspaceTaskData = isAnonymous
+    ? guestTasks.length > 0
+    : (taskStats?.total ?? 0) > 0;
+
   if (isLoading) {
     return (
       <PageContainer>
@@ -97,11 +101,12 @@ function OverviewPage() {
           </AppPageSubtitle>
         </WelcomeSection>
 
-        <ProductivityOverview />
+        <ProductivityOverview hasWorkspaceTaskData={hasWorkspaceTaskData} />
 
         <TimelinePlanning
           todayTasks={todayTasks}
           tomorrowTasks={tomorrowTasks}
+          hasWorkspaceTaskData={hasWorkspaceTaskData}
         />
 
         {taskStats && <StatsCards stats={taskStats} />}

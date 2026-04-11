@@ -40,7 +40,10 @@ export function SectionTitle({ className, ref, ...props }: UiProps<"h2">) {
   return (
     <h2
       ref={ref}
-      className={cn("m-0 text-xl font-semibold text-white", className)}
+      className={cn(
+        "m-0 flex items-center gap-2 text-xl font-semibold text-white",
+        className,
+      )}
       {...props}
     />
   );

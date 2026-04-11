@@ -98,7 +98,7 @@ export function WorkspaceSettings({ boardId }: WorkspaceSettingsProps) {
         <Popover
           role="dialog"
           aria-label="Manage settings"
-          className="w-[min(100vw-2rem,420px)] rounded-2xl border-border-app bg-card-bg p-6 text-text-primary shadow-dropdown"
+          className="w-[min(100vw-2rem,420px)] rounded-2xl border-border-app bg-background-primary p-6 text-text-primary shadow-dropdown"
         >
           <header className="border-b border-border-app pb-4">
             <h2 className="m-0 text-lg font-semibold leading-tight text-text-primary">

@@ -15,6 +15,7 @@ export type {
   AnalyticsInput,
   AnalyticsOutput,
   AnalyticsStats,
+  DashboardMetrics,
   ComposeTaskInput,
   ComposeTaskOutput,
   OptimizeScheduleInput,

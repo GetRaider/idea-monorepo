@@ -7,9 +7,10 @@ import {
 
 import type { AnalyticsInput, AnalyticsOutput } from "@/server/services/ai";
 import type { TaskStatsInput, Timeframe } from "@/db/dtos";
-import { DB, and, gte } from "@/db/client";
+import { DB, and, gte, or } from "@/db/client";
 import { tasks } from "@/db/schemas";
-import { TaskStatistics } from "./tasks.api.service";
+import { analyticsHelper } from "@/helpers/analytics.metrics.helper";
+import type { TaskStatistics } from "./tasks.api.service";
 
 export class AnalyticsApiService extends BaseApiService {
   constructor(protected readonly db: DB) {
@@ -40,7 +41,7 @@ export class AnalyticsApiService extends BaseApiService {
       }
 
       const accessCond = this.accessWhere(tasks, access);
-      const query = this.db
+      const baseQuery = this.db
         .select({
           id: tasks.id,
           status: tasks.status,
@@ -51,8 +52,44 @@ export class AnalyticsApiService extends BaseApiService {
         .from(tasks);
 
       const allTasks = startDate
-        ? await query.where(and(gte(tasks.createdAt, startDate), accessCond))
-        : await query.where(accessCond);
+        ? await baseQuery.where(
+            and(gte(tasks.createdAt, startDate), accessCond),
+          )
+        : await baseQuery.where(accessCond);
+
+      const extendedLookbackStart = new Date(now);
+      extendedLookbackStart.setDate(extendedLookbackStart.getDate() - 84);
+
+      const extendedQuery = this.db
+        .select({
+          status: tasks.status,
+          createdAt: tasks.createdAt,
+          updatedAt: tasks.updatedAt,
+          dueDate: tasks.dueDate,
+        })
+        .from(tasks)
+        .where(
+          and(
+            accessCond,
+            or(
+              gte(tasks.createdAt, extendedLookbackStart),
+              gte(tasks.updatedAt, extendedLookbackStart),
+            ),
+          ),
+        );
+
+      const priorityQuery = this.db
+        .select({
+          status: tasks.status,
+          priority: tasks.priority,
+        })
+        .from(tasks)
+        .where(accessCond);
+
+      const [extendedRows, priorityRows] = await Promise.all([
+        extendedQuery,
+        priorityQuery,
+      ]);
 
       const completedTasks = allTasks.filter((t) => t.status === "Done");
       let avgCompletionTimeDays = 0;
@@ -79,6 +116,12 @@ export class AnalyticsApiService extends BaseApiService {
         return t.dueDate !== null && t.dueDate < now;
       });
 
+      const extendedMetrics = analyticsHelper.buildExtendedDashboardMetrics(
+        extendedRows,
+        priorityRows,
+        now,
+      );
+
       return {
         tasksCreated: allTasks.length,
         tasksCompleted: completedTasks.length,
@@ -89,6 +132,7 @@ export class AnalyticsApiService extends BaseApiService {
                 (overdueTasks.length / tasksWithDueDate.length) * 100,
               ) / 100
             : 0,
+        ...extendedMetrics,
       };
     });
   }

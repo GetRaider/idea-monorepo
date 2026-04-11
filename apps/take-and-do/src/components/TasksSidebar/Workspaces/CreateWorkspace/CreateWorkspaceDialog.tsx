@@ -225,7 +225,7 @@ function TypeButton({
         "flex flex-1 cursor-pointer items-center justify-center gap-2.5 rounded-lg border px-4 py-3.5 text-sm font-medium text-[#e0e0e0] transition-all duration-200 [&_img]:h-5 [&_img]:w-5",
         isSelected
           ? "border-[#7255c1] bg-[#2a2540] hover:border-[#7255c1] hover:bg-[#2a2540]"
-          : "border-border-app bg-card-bg hover:border-[#3a3a3a] hover:bg-[#252525]",
+          : "border-border-app bg-background-primary hover:border-[#3a3a3a] hover:bg-[#252525]",
         className,
       )}
       {...props}

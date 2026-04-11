@@ -4,7 +4,7 @@ import {
   CircleCheckIcon,
   CheckListIcon,
   ClockIcon,
-  LightningIcon,
+  LightningStatIcon,
   OverdueIcon,
   ShieldCheckIcon,
 } from "@/components/Icons";
@@ -30,7 +30,7 @@ export function StatsCards({ stats }: StatsCardsProps) {
       label: "Completed",
     },
     highPriority: {
-      icon: <LightningIcon />,
+      icon: <LightningStatIcon />,
       label: "High Priority",
     },
     overdue: {

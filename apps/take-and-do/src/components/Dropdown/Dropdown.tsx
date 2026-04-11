@@ -39,6 +39,7 @@ interface DropdownProps<T extends string = string> {
   onChange: (value: T) => void;
   placeholder?: string;
   trigger?: ReactNode;
+  disabled?: boolean;
   /**
    * With a custom `trigger`: `left` keeps the menu’s right edge aligned with the
    * trigger’s right edge (extends left). `right` places the menu’s left edge at the
@@ -58,6 +59,7 @@ export function Dropdown<T extends string = string>({
   onChange,
   placeholder = "Select...",
   trigger,
+  disabled = false,
   menuOpensTo = "left",
   onOpenChange,
   className,
@@ -144,6 +146,12 @@ export function Dropdown<T extends string = string>({
   }, [trigger, menuMinWidth, menuOpensTo, options.length]);
 
   useEffect(() => {
+    if (disabled) {
+      updateOpen(false);
+    }
+  }, [disabled, updateOpen]);
+
+  useEffect(() => {
     if (!isOpen) return;
     measureMenu();
     window.addEventListener("scroll", measureMenu, true);
@@ -182,10 +190,14 @@ export function Dropdown<T extends string = string>({
         {trigger ? (
           <button
             type="button"
-            className="inline-flex cursor-pointer items-center border-0 bg-transparent p-0"
+            disabled={disabled}
+            className={cn(
+              "inline-flex cursor-pointer items-center border-0 bg-transparent p-0",
+              disabled && "cursor-not-allowed opacity-60",
+            )}
             aria-haspopup="menu"
             aria-expanded={isOpen}
-            onClick={() => updateOpen(!isOpen)}
+            onClick={() => !disabled && updateOpen(!isOpen)}
           >
             {trigger}
           </button>
@@ -193,13 +205,16 @@ export function Dropdown<T extends string = string>({
           <button
             type="button"
             id={id}
+            disabled={disabled}
             className={cn(
               "flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-md border border-input-border bg-input-bg px-3 py-1.5 text-sm text-white transition-[border-color] duration-200 hover:border-input-border-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring",
               fullWidth ? "w-full justify-between" : "w-auto justify-start",
+              disabled &&
+                "cursor-not-allowed opacity-60 hover:border-input-border",
             )}
             aria-haspopup="menu"
             aria-expanded={isOpen}
-            onClick={() => updateOpen(!isOpen)}
+            onClick={() => !disabled && updateOpen(!isOpen)}
           >
             {selectedLabel}
             <DropdownChevron open={isOpen} />

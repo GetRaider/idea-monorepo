@@ -1,8 +1,5 @@
 "use client";
 
-import type { ComponentProps } from "react";
-
-import { SecondaryButton } from "@/components/Buttons";
 import { gradientOptionSurfaceClass } from "@/lib/styles/animated-gradient";
 import { cn } from "@/lib/styles/utils";
 import type { UiProps } from "@/lib/styles/ui-props";
@@ -128,21 +125,6 @@ export function ActionsContainer({ className, ref, ...props }: UiProps<"div">) {
       ref={ref}
       className={cn(
         "flex justify-end gap-3 border-t border-border-app pt-6",
-        className,
-      )}
-      {...props}
-    />
-  );
-}
-
-type SaveButtonProps = ComponentProps<typeof SecondaryButton>;
-
-export function SaveButton({ className, ref, ...props }: SaveButtonProps) {
-  return (
-    <SecondaryButton
-      ref={ref}
-      className={cn(
-        "rounded-md border-0 bg-[#7255c1] px-5 py-2.5 text-sm font-semibold text-white hover:border-transparent hover:bg-[#8255d1] hover:disabled:bg-[#7255c1] disabled:cursor-not-allowed disabled:opacity-60",
         className,
       )}
       {...props}

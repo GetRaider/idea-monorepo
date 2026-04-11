@@ -8,7 +8,6 @@ import {
   Controls,
   TimeframeSelect,
   DropdownContainer,
-  GenerateButton,
   DropdownMenu,
   DropdownItem,
   AISection,
@@ -20,6 +19,7 @@ import {
   CardList,
   EmptyState,
 } from "./ProductivitySummary.ui";
+import { AIActionButton } from "@/components/Buttons";
 import { ChevronDownIcon } from "@/components/Icons";
 import type { AnalyticsData, Timeframe } from "@/services";
 
@@ -66,7 +66,7 @@ export function ProductivitySummary({
             <option value="quarter">Quarter</option>
           </TimeframeSelect>
           <DropdownContainer ref={dropdownRef}>
-            <GenerateButton
+            <AIActionButton
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
               onMouseEnter={() => setIsDropdownOpen(true)}
               inactive={isGenerating}
@@ -80,7 +80,7 @@ export function ProductivitySummary({
                   transition: "transform 0.2s",
                 }}
               />
-            </GenerateButton>
+            </AIActionButton>
             {isDropdownOpen && (
               <DropdownMenu onMouseLeave={() => setIsDropdownOpen(false)}>
                 <DropdownItem onClick={() => handleGenerate(false)}>

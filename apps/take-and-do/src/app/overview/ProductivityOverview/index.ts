@@ -1,2 +1,2 @@
 export { ProductivityOverview } from "./ProductivityOverview";
-export type { AnalyticsStats } from "@/server/services/ai";
+export type { AnalyticsStats, DashboardMetrics } from "@/server/services/ai";

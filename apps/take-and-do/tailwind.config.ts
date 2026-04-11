@@ -7,15 +7,17 @@ const config: Config = {
     "./src/components/**/*.{ts,tsx}",
     "./src/lib/**/*.{ts,tsx}",
     "./src/pages/**/*.{ts,tsx}",
+    "./node_modules/@tremor/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
     extend: {
       colors: {
         background: "var(--background)",
+        "background-primary": "var(--background-primary)",
+        "background-login": "var(--background-login)",
         foreground: "var(--foreground)",
         "sidebar-bg": "var(--sidebar-bg)",
         "nav-sidebar-bg": "var(--nav-sidebar-bg)",
-        "card-bg": "var(--card-bg)",
         "border-app": "var(--border-color)",
         "text-primary": "var(--text-primary)",
         "text-secondary": "var(--text-secondary)",
@@ -25,6 +27,9 @@ const config: Config = {
         "input-bg": "var(--input-bg)",
         "input-border": "var(--input-border)",
         "input-border-hover": "var(--input-border-hover)",
+        "input-login-bg": "var(--input-login-bg)",
+        "input-login-border": "var(--input-login-border)",
+        "input-login-border-hover": "var(--input-login-border-hover)",
         "focus-ring": "var(--focus-ring)",
         "brand-primary": "var(--brand-primary)",
         "brand-gradient-from": "var(--brand-gradient-from)",

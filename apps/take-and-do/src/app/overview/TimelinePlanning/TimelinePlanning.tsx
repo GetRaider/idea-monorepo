@@ -4,14 +4,14 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Task } from "@/components/Boards/KanbanBoard/types";
-import { EmptyState } from "@/components/EmptyState";
+import { AIActionButton, PrimaryButton } from "@/components/Buttons";
+import { TimePlanningIcon } from "@/components/Icons/TimePlanningIcon";
 import { useIsAnonymous } from "@/hooks/auth/use-is-anonymous";
 import { guestStoreHelper } from "@/stores/guest";
 import { clientServices } from "@/services";
 import { ScheduleType, tasksHelper } from "@/helpers/task.helper";
 import { AiGate } from "@/components/ai-gate";
 import { AIPlanningOptimizationDialog } from "./AIPlanningOptimizationDialog/AIPlanningOptimizationDialog";
-import { OptimizeButton } from "./AIPlanningOptimizationDialog/AIPlanningOptimizationDialog.ui";
 import {
   Section,
   SectionHeader,
@@ -42,15 +42,14 @@ import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
 import { Dropdown } from "@/components/Dropdown";
 import { toast } from "sonner";
 import { Route } from "@/constants/route.constant";
-
-interface TimelinePlanningProps {
-  todayTasks: Task[];
-  tomorrowTasks: Task[];
-}
+import { AIIcon } from "@/components/Icons/AIIcon";
+import { OverviewEmptyStateBackdrop } from "@/app/overview/OverviewEmptyStateBackdrop";
+import { RulerIcon } from "@/components/Icons/RulerIcon";
 
 export function TimelinePlanning({
   todayTasks,
   tomorrowTasks,
+  hasWorkspaceTaskData,
 }: TimelinePlanningProps) {
   const isAnonymous = useIsAnonymous();
   const [customDate, setCustomDate] = useState<string>("");
@@ -75,6 +74,8 @@ export function TimelinePlanning({
     setIsOptimizationDialogOpen(true);
   };
 
+  const controlsDisabled = !hasWorkspaceTaskData;
+
   const handleTaskClick = async (task: Task) => {
     const taskBoard = isAnonymous
       ? guestStoreHelper.getTaskBoardById(task.taskBoardId)
@@ -94,14 +95,22 @@ export function TimelinePlanning({
 
   return (
     <Section>
-      <SectionHeader>
-        <SectionTitle>⏳ Timeline Planning</SectionTitle>
+      <SectionHeader className="mb-0 pb-4">
+        <SectionTitle>
+          <TimePlanningIcon
+            size={20}
+            className="shrink-0 text-white"
+            aria-hidden
+          />
+          <span>Timeline Planning</span>
+        </SectionTitle>
         <ScheduleSelectContainer>
           {schedule === "custom" && (
             <DateInputWrapper>
               <DateInput
                 type="date"
                 value={customDate}
+                disabled={controlsDisabled}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                   setCustomDate(e.target.value)
                 }
@@ -120,68 +129,74 @@ export function TimelinePlanning({
             ]}
             value={schedule}
             onChange={(value) => setSchedule(value as ScheduleType)}
+            disabled={controlsDisabled}
           />
           <AiGate>
-            <OptimizeButton onClick={handleOpenOptimizationDialog}>
-              ✨ Explore AI Optimization
-            </OptimizeButton>
+            <AIActionButton
+              size="comfortable"
+              onClick={handleOpenOptimizationDialog}
+              disabled={controlsDisabled}
+            >
+              <AIIcon size={16} /> Explore AI Optimization
+            </AIActionButton>
           </AiGate>
         </ScheduleSelectContainer>
       </SectionHeader>
-      {isLoading ? (
-        <LoadingStackContainer>
-          <SpinnerRing />
-        </LoadingStackContainer>
-      ) : firstFiveTasks.length > 0 ? (
-        <TaskList>
-          <TaskListHeader>
-            <HeaderCell>Task</HeaderCell>
-            <HeaderCell>Schedule</HeaderCell>
-            <HeaderCell>Due Date</HeaderCell>
-            <HeaderCell>Est.</HeaderCell>
-            <HeaderCell>Status</HeaderCell>
-          </TaskListHeader>
-          {firstFiveTasks.map((task: Task) => (
-            <TaskItem key={task.id} onClick={() => handleTaskClick(task)}>
-              <TaskContent>
-                <TaskLeft>
-                  <PriorityIcon>
-                    {tasksHelper.priority.getIconLabel(task.priority)}
-                  </PriorityIcon>
-                  <TaskSummaryText>{task.summary}</TaskSummaryText>
-                </TaskLeft>
-              </TaskContent>
-              <TaskCell>
-                {task.scheduleDate
-                  ? tasksHelper.date.formatForSchedule(task.scheduleDate)
-                  : "—"}
-              </TaskCell>
-              <TaskCell>
-                {task.dueDate
-                  ? tasksHelper.date.formatForSchedule(task.dueDate)
-                  : "—"}
-              </TaskCell>
-              <TaskCellMuted>
-                {task.estimation
-                  ? tasksHelper.estimation.hours(task.estimation)
-                  : "—"}
-              </TaskCellMuted>
-              <StatusContainer>
-                <StatusIcon status={task.status}>
-                  {tasksHelper.status.getIcon(task.status)}
-                </StatusIcon>
-                <StatusText status={task.status}>{task.status}</StatusText>
-              </StatusContainer>
-            </TaskItem>
-          ))}
-        </TaskList>
-      ) : (
-        <EmptyState
-          title="You have no recent tasks to analyze"
-          message="Try adding some tasks to your workspace and come back later to analyze them."
-        />
-      )}
-      <ViewAllLink href={Route.TASKS}>View all tasks →</ViewAllLink>
+      <div className="-mx-6 border-t border-border-app px-6 pt-6">
+        {isLoading ? (
+          <LoadingStackContainer>
+            <SpinnerRing />
+          </LoadingStackContainer>
+        ) : firstFiveTasks.length > 0 ? (
+          <>
+            <TaskList>
+              <TaskListHeader>
+                <HeaderCell>Task</HeaderCell>
+                <HeaderCell>Schedule</HeaderCell>
+                <HeaderCell>Due Date</HeaderCell>
+                <HeaderCell>Est.</HeaderCell>
+                <HeaderCell>Status</HeaderCell>
+              </TaskListHeader>
+              {firstFiveTasks.map((task: Task) => (
+                <TaskItem key={task.id} onClick={() => handleTaskClick(task)}>
+                  <TaskContent>
+                    <TaskLeft>
+                      <PriorityIcon>
+                        {tasksHelper.priority.getIconLabel(task.priority)}
+                      </PriorityIcon>
+                      <TaskSummaryText>{task.summary}</TaskSummaryText>
+                    </TaskLeft>
+                  </TaskContent>
+                  <TaskCell>
+                    {task.scheduleDate
+                      ? tasksHelper.date.formatForSchedule(task.scheduleDate)
+                      : "—"}
+                  </TaskCell>
+                  <TaskCell>
+                    {task.dueDate
+                      ? tasksHelper.date.formatForSchedule(task.dueDate)
+                      : "—"}
+                  </TaskCell>
+                  <TaskCellMuted>
+                    {task.estimation
+                      ? tasksHelper.estimation.hours(task.estimation)
+                      : "—"}
+                  </TaskCellMuted>
+                  <StatusContainer>
+                    <StatusIcon status={task.status}>
+                      {tasksHelper.status.getIcon(task.status)}
+                    </StatusIcon>
+                    <StatusText status={task.status}>{task.status}</StatusText>
+                  </StatusContainer>
+                </TaskItem>
+              ))}
+            </TaskList>
+            <ViewAllLink href={Route.TASKS}>View all tasks →</ViewAllLink>
+          </>
+        ) : (
+          <TimelinePlanningEmptyState />
+        )}
+      </div>
 
       {isOptimizationDialogOpen && (
         <AIPlanningOptimizationDialog
@@ -190,4 +205,39 @@ export function TimelinePlanning({
       )}
     </Section>
   );
+}
+
+function TimelinePlanningEmptyState() {
+  const router = useRouter();
+
+  return (
+    <div className="relative flex min-h-[280px] flex-col items-center justify-center px-6 py-12">
+      <OverviewEmptyStateBackdrop />
+      <div className="relative z-[1] flex max-w-md flex-col items-center gap-5 text-center">
+        <div className="flex h-14 w-14 items-center justify-center rounded-xl border border-[var(--border-color)] bg-[var(--background-primary)] shadow-[var(--shadow-dropdown)]">
+          <RulerIcon size={28} className="text-[var(--text-primary)]" />
+        </div>
+        <h2 className="m-0 text-lg font-semibold leading-snug text-[var(--text-primary)]">
+          No tasks to analyze yet
+        </h2>
+        <p className="m-0 max-w-sm text-sm leading-relaxed text-[var(--text-secondary)]">
+          Add tasks to your workspace and Timeline Planning will help you
+          optimize deadlines and spot bottlenecks.
+        </p>
+        <PrimaryButton
+          type="button"
+          onClick={() => router.push(Route.TASKS)}
+          size="sm"
+        >
+          Create Task →
+        </PrimaryButton>
+      </div>
+    </div>
+  );
+}
+
+interface TimelinePlanningProps {
+  todayTasks: Task[];
+  tomorrowTasks: Task[];
+  hasWorkspaceTaskData: boolean;
 }

@@ -67,7 +67,7 @@ export function TaskCard({ task, onTaskClick }: TaskCardProps) {
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       onClick={handleClick}
-      className="flex cursor-grab flex-col gap-3 rounded-xl border border-border-app bg-card-bg p-4 transition-[border-color] duration-200 ease-out hover:border-[#3a3a3a] active:cursor-grabbing"
+      className="flex cursor-grab flex-col gap-3 rounded-xl border border-border-app bg-background-primary p-4 transition-[border-color] duration-200 ease-out hover:border-[#3a3a3a] active:cursor-grabbing"
     >
       <div className="flex items-center gap-2">
         <span className="flex items-center justify-center text-xl leading-none">

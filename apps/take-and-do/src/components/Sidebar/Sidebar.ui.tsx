@@ -15,7 +15,7 @@ export function SidebarContainer({
     <aside
       ref={ref}
       className={cn(
-        "fixed left-0 top-0 z-[100] flex h-screen w-[60px] flex-col items-center border-r border-border-app bg-nav-sidebar-bg py-4",
+        "fixed left-0 top-0 z-[100] flex h-screen w-[60px] flex-col items-center border-r border-border-app bg-background-primary py-4",
         className,
       )}
       {...props}

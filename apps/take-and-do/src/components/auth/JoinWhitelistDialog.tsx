@@ -9,7 +9,7 @@ import {
   JOIN_WHITELIST_DEFAULT_MESSAGE,
   getWhitelistFormSubmitRecipientEmail,
 } from "@/constants/whitelist.constant";
-import { AuthSecondaryButton } from "./AuthButtons";
+import { AuthSecondaryButton } from "@/components/Auth/AuthButtons";
 import { mixpanelAnalytics } from "@/lib/analytics/maxpanel-analytics";
 import { sendJoinWhitelistFormSubmit } from "@/lib/analytics/form-submit-analytics";
 
@@ -106,7 +106,7 @@ export function JoinWhitelistDialog({ onClose }: JoinWhitelistDialogProps) {
                 onChange={(event) => setEmail(event.target.value)}
                 required
                 disabled={submitting}
-                className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-sm text-[var(--foreground)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-primary)] disabled:opacity-50"
+                className="w-full rounded-lg border border-[var(--input-login-border)] bg-[var(--input-login-bg)] px-3 py-2 text-sm text-[var(--foreground)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-primary)] disabled:opacity-50"
               />
             </div>
             <div>
@@ -125,7 +125,7 @@ export function JoinWhitelistDialog({ onClose }: JoinWhitelistDialogProps) {
                 onChange={(event) => setFullName(event.target.value)}
                 required
                 disabled={submitting}
-                className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-sm text-[var(--foreground)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-primary)] disabled:opacity-50"
+                className="w-full rounded-lg border border-[var(--input-login-border)] bg-[var(--input-login-bg)] px-3 py-2 text-sm text-[var(--foreground)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-primary)] disabled:opacity-50"
               />
             </div>
             <div>
@@ -142,7 +142,7 @@ export function JoinWhitelistDialog({ onClose }: JoinWhitelistDialogProps) {
                 value={message}
                 onChange={(event) => setMessage(event.target.value)}
                 disabled={submitting}
-                className="w-full resize-y rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-sm text-[var(--foreground)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-primary)] disabled:opacity-50"
+                className="w-full resize-y rounded-lg border border-[var(--input-login-border)] bg-[var(--input-login-bg)] px-3 py-2 text-sm text-[var(--foreground)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-primary)] disabled:opacity-50"
               />
             </div>
 

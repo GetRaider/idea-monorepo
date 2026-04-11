@@ -2,7 +2,11 @@
 
 import { AiGate } from "@/components/ai-gate";
 import { CloseIcon } from "@/components/Icons";
-import { SecondaryButton, CloseButton } from "@/components/Buttons";
+import {
+  AIActionButton,
+  CloseButton,
+  SecondaryButton,
+} from "@/components/Buttons";
 import { DialogHeading, DialogScrim } from "@/components/Dialogs";
 import {
   DialogContent,
@@ -13,7 +17,6 @@ import {
   OptionTitle,
   OptionDescription,
   ActionsContainer,
-  SaveButton,
   DialogDescription,
 } from "./ProductivitySummarySelectionDialog.ui";
 
@@ -43,7 +46,7 @@ export function ProductivitySummarySelectionDialog({
       <DialogContent>
         <DialogHeader>
           <HeaderContent>
-            <DialogHeading>⚡ Productivity Summary</DialogHeading>
+            <DialogHeading>Productivity Summary</DialogHeading>
             <DialogDescription>
               Explore your productivity by generating an AI personalized or
               basic summary, calculated based on your task statistics and
@@ -84,12 +87,13 @@ export function ProductivitySummarySelectionDialog({
 
         <ActionsContainer>
           <SecondaryButton onClick={onClose}>Cancel</SecondaryButton>
-          <SaveButton
+          <AIActionButton
+            size="comfortable"
             onClick={onSave}
             disabled={isGenerating || selectedOption === null}
           >
             {isGenerating ? "Generating..." : "Generate"}
-          </SaveButton>
+          </AIActionButton>
         </ActionsContainer>
       </DialogContent>
     </DialogScrim>

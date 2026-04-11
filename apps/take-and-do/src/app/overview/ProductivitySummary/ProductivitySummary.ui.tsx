@@ -40,34 +40,6 @@ export function DropdownContainer({
   return <div ref={ref} className={cn("relative", className)} {...props} />;
 }
 
-type GenerateButtonProps = UiProps<"button"> & {
-  inactive?: boolean;
-};
-
-export function GenerateButton({
-  className,
-  type = "button",
-  inactive,
-  disabled,
-  ref,
-  ...props
-}: GenerateButtonProps) {
-  const isDisabled = disabled ?? inactive;
-  return (
-    <button
-      ref={ref}
-      type={type}
-      disabled={isDisabled}
-      className={cn(
-        "flex cursor-pointer items-center gap-1.5 rounded-md border-0 bg-[#7255c1] px-4 py-2 text-sm font-semibold text-white",
-        isDisabled && "cursor-not-allowed opacity-60",
-        className,
-      )}
-      {...props}
-    />
-  );
-}
-
 export function DropdownMenu({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div

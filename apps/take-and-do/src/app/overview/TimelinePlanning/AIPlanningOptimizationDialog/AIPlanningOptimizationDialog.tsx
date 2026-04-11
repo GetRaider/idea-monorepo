@@ -6,7 +6,11 @@ import { clientServices } from "@/services";
 import { tasksHelper } from "@/helpers/task.helper";
 import { CloseIcon } from "@/components/Icons";
 import { SelectList } from "@/components/SelectList";
-import { SecondaryButton, CloseButton } from "@/components/Buttons";
+import {
+  AIActionButton,
+  CloseButton,
+  SecondaryButton,
+} from "@/components/Buttons";
 import { DialogHeading, DialogScrim } from "@/components/Dialogs";
 import { SpinnerRing } from "@/components/Spinner/Spinner";
 import {
@@ -37,9 +41,7 @@ import {
   InsightsList,
   InsightItem,
   ErrorState,
-  GenerateOptimizationButton,
   ActionsContainer,
-  OptimizeButton,
 } from "./AIPlanningOptimizationDialog.ui";
 import { useDialogFocusLock } from "@/hooks/ui/useDialogFocusLock";
 import { useTaskActions, useTasks } from "@/hooks/tasks/useTasks";
@@ -186,12 +188,13 @@ export function AIPlanningOptimizationDialog({
 
             <ActionsContainer>
               <SecondaryButton onClick={onClose}>Cancel</SecondaryButton>
-              <GenerateOptimizationButton
+              <AIActionButton
+                size="comfortable"
                 onClick={handleExplore}
                 disabled={selectedTaskIds.size === 0}
               >
                 ✨ Explore
-              </GenerateOptimizationButton>
+              </AIActionButton>
             </ActionsContainer>
           </>
         )}
@@ -272,9 +275,13 @@ export function AIPlanningOptimizationDialog({
 
             <ActionsContainer>
               <SecondaryButton onClick={onClose}>Cancel</SecondaryButton>
-              <OptimizeButton onClick={handleOptimize} disabled={isOptimizing}>
+              <AIActionButton
+                size="comfortable"
+                onClick={handleOptimize}
+                disabled={isOptimizing}
+              >
                 {isOptimizing ? "Optimizing..." : "✨ Optimize"}
-              </OptimizeButton>
+              </AIActionButton>
             </ActionsContainer>
           </OptimizationContent>
         )}

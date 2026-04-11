@@ -33,7 +33,7 @@ export function TasksSidebarContainer({
         ...style,
       }}
       className={cn(
-        "fixed left-[60px] top-0 z-[90] flex h-screen flex-col gap-6 overflow-visible border-r border-border-app bg-card-bg p-4 transition-transform duration-300 ease-out",
+        "fixed left-[60px] top-0 z-[90] flex h-screen flex-col gap-6 overflow-visible border-r border-border-app bg-background-primary p-4 transition-transform duration-300 ease-out",
         isOpen ? "translate-x-0" : "-translate-x-full",
         className,
       )}
@@ -369,7 +369,7 @@ export function EmojiPickerPopover({
     <div
       ref={ref}
       className={cn(
-        "absolute left-0 top-[34px] z-[200] w-80 overflow-hidden rounded-[10px] border border-border-app bg-card-bg shadow-[0_10px_30px_rgba(0,0,0,0.35)]",
+        "absolute left-0 top-[34px] z-[200] w-80 overflow-hidden rounded-[10px] border border-border-app bg-background-primary shadow-[0_10px_30px_rgba(0,0,0,0.35)]",
         className,
       )}
       {...props}

@@ -166,7 +166,7 @@ export function AIPlanningOptimizationDialog({
         <DialogHeader>
           <HeaderContent>
             <DialogHeading id={dialogTitleId}>
-              ⏳ AI Planning Optimization
+              AI Planning Optimization
             </DialogHeading>
             <DialogDescription>
               Explore Planning Optimization with AI-powered analysis based on
@@ -193,7 +193,7 @@ export function AIPlanningOptimizationDialog({
                 onClick={handleExplore}
                 disabled={selectedTaskIds.size === 0}
               >
-                ✨ Explore
+                Explore
               </AIActionButton>
             </ActionsContainer>
           </>

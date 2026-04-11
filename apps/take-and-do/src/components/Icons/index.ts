@@ -12,7 +12,7 @@ export { ClockCircleIcon } from "./ClockCircleIcon";
 export { ClockIcon } from "./ClockIcon";
 export { ClockNavIcon } from "./ClockNavIcon";
 export { InfoCircleIcon } from "./InfoCircleIcon";
-export { LightningIcon } from "./LightningIcon";
+export { LightningStatIcon } from "./LightningStatIcon";
 export { OverdueIcon } from "./OverdueIcon";
 export { OverviewIcon } from "./OverviewIcon";
 export { PlusIcon } from "./PlusIcon";

@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 
 import { Task } from "@/components/Boards/KanbanBoard/types";
 import { AIActionButton, PrimaryButton } from "@/components/Buttons";
-import { RocketIcon } from "@/components/Icons/RocketIcon";
 import { TimePlanningIcon } from "@/components/Icons/TimePlanningIcon";
 import { useIsAnonymous } from "@/hooks/auth/use-is-anonymous";
 import { guestStoreHelper } from "@/stores/guest";
@@ -44,6 +43,8 @@ import { Dropdown } from "@/components/Dropdown";
 import { toast } from "sonner";
 import { Route } from "@/constants/route.constant";
 import { AIIcon } from "@/components/Icons/AIIcon";
+import { OverviewEmptyStateBackdrop } from "@/app/overview/OverviewEmptyStateBackdrop";
+import { RulerIcon } from "@/components/Icons/RulerIcon";
 
 export function TimelinePlanning({
   todayTasks,
@@ -94,7 +95,7 @@ export function TimelinePlanning({
 
   return (
     <Section>
-      <SectionHeader>
+      <SectionHeader className="mb-0 pb-4">
         <SectionTitle>
           <TimePlanningIcon
             size={20}
@@ -141,59 +142,61 @@ export function TimelinePlanning({
           </AiGate>
         </ScheduleSelectContainer>
       </SectionHeader>
-      {isLoading ? (
-        <LoadingStackContainer>
-          <SpinnerRing />
-        </LoadingStackContainer>
-      ) : firstFiveTasks.length > 0 ? (
-        <>
-          <TaskList>
-            <TaskListHeader>
-              <HeaderCell>Task</HeaderCell>
-              <HeaderCell>Schedule</HeaderCell>
-              <HeaderCell>Due Date</HeaderCell>
-              <HeaderCell>Est.</HeaderCell>
-              <HeaderCell>Status</HeaderCell>
-            </TaskListHeader>
-            {firstFiveTasks.map((task: Task) => (
-              <TaskItem key={task.id} onClick={() => handleTaskClick(task)}>
-                <TaskContent>
-                  <TaskLeft>
-                    <PriorityIcon>
-                      {tasksHelper.priority.getIconLabel(task.priority)}
-                    </PriorityIcon>
-                    <TaskSummaryText>{task.summary}</TaskSummaryText>
-                  </TaskLeft>
-                </TaskContent>
-                <TaskCell>
-                  {task.scheduleDate
-                    ? tasksHelper.date.formatForSchedule(task.scheduleDate)
-                    : "—"}
-                </TaskCell>
-                <TaskCell>
-                  {task.dueDate
-                    ? tasksHelper.date.formatForSchedule(task.dueDate)
-                    : "—"}
-                </TaskCell>
-                <TaskCellMuted>
-                  {task.estimation
-                    ? tasksHelper.estimation.hours(task.estimation)
-                    : "—"}
-                </TaskCellMuted>
-                <StatusContainer>
-                  <StatusIcon status={task.status}>
-                    {tasksHelper.status.getIcon(task.status)}
-                  </StatusIcon>
-                  <StatusText status={task.status}>{task.status}</StatusText>
-                </StatusContainer>
-              </TaskItem>
-            ))}
-          </TaskList>
-          <ViewAllLink href={Route.TASKS}>View all tasks →</ViewAllLink>
-        </>
-      ) : (
-        <TimelinePlanningEmptyState />
-      )}
+      <div className="-mx-6 border-t border-border-app px-6 pt-6">
+        {isLoading ? (
+          <LoadingStackContainer>
+            <SpinnerRing />
+          </LoadingStackContainer>
+        ) : firstFiveTasks.length > 0 ? (
+          <>
+            <TaskList>
+              <TaskListHeader>
+                <HeaderCell>Task</HeaderCell>
+                <HeaderCell>Schedule</HeaderCell>
+                <HeaderCell>Due Date</HeaderCell>
+                <HeaderCell>Est.</HeaderCell>
+                <HeaderCell>Status</HeaderCell>
+              </TaskListHeader>
+              {firstFiveTasks.map((task: Task) => (
+                <TaskItem key={task.id} onClick={() => handleTaskClick(task)}>
+                  <TaskContent>
+                    <TaskLeft>
+                      <PriorityIcon>
+                        {tasksHelper.priority.getIconLabel(task.priority)}
+                      </PriorityIcon>
+                      <TaskSummaryText>{task.summary}</TaskSummaryText>
+                    </TaskLeft>
+                  </TaskContent>
+                  <TaskCell>
+                    {task.scheduleDate
+                      ? tasksHelper.date.formatForSchedule(task.scheduleDate)
+                      : "—"}
+                  </TaskCell>
+                  <TaskCell>
+                    {task.dueDate
+                      ? tasksHelper.date.formatForSchedule(task.dueDate)
+                      : "—"}
+                  </TaskCell>
+                  <TaskCellMuted>
+                    {task.estimation
+                      ? tasksHelper.estimation.hours(task.estimation)
+                      : "—"}
+                  </TaskCellMuted>
+                  <StatusContainer>
+                    <StatusIcon status={task.status}>
+                      {tasksHelper.status.getIcon(task.status)}
+                    </StatusIcon>
+                    <StatusText status={task.status}>{task.status}</StatusText>
+                  </StatusContainer>
+                </TaskItem>
+              ))}
+            </TaskList>
+            <ViewAllLink href={Route.TASKS}>View all tasks →</ViewAllLink>
+          </>
+        ) : (
+          <TimelinePlanningEmptyState />
+        )}
+      </div>
 
       {isOptimizationDialogOpen && (
         <AIPlanningOptimizationDialog
@@ -209,18 +212,10 @@ function TimelinePlanningEmptyState() {
 
   return (
     <div className="relative flex min-h-[280px] flex-col items-center justify-center px-6 py-12">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 flex items-center justify-center overflow-hidden"
-      >
-        <div
-          aria-hidden
-          className="aspect-[4/5] h-[min(400px,55vh)] w-[min(92vw,400px)] opacity-50 [background-image:linear-gradient(to_right,rgba(255,255,255,0.035)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.035)_1px,transparent_1px)] [background-size:18px_18px] [mask-image:radial-gradient(ellipse_72%_65%_at_50%_48%,#000_22%,transparent_78%)]"
-        />
-      </div>
+      <OverviewEmptyStateBackdrop />
       <div className="relative z-[1] flex max-w-md flex-col items-center gap-5 text-center">
         <div className="flex h-14 w-14 items-center justify-center rounded-xl border border-[var(--border-color)] bg-[var(--background-primary)] shadow-[var(--shadow-dropdown)]">
-          <RocketIcon size={28} className="text-[var(--text-primary)]" />
+          <RulerIcon size={28} className="text-[var(--text-primary)]" />
         </div>
         <h2 className="m-0 text-lg font-semibold leading-snug text-[var(--text-primary)]">
           No tasks to analyze yet

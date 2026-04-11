@@ -21,11 +21,12 @@ import { Dropdown } from "@/components/Dropdown";
 import { clientServices } from "@/services";
 import { toast } from "sonner";
 import type { AnalyticsData, Timeframe } from "@/services";
-import { RocketIcon } from "@/components/Icons/RocketIcon";
 import { cn } from "@/lib/styles/utils";
 import { Route } from "@/constants/route.constant";
 import { ProductivityOverviewIcon } from "@/components/Icons/ProductivityOverviewIcon";
 import { AIIcon } from "@/components/Icons/AIIcon";
+import { OverviewEmptyStateBackdrop } from "@/app/overview/OverviewEmptyStateBackdrop";
+import { LightningIcon } from "@/components/Icons/LightningIcon";
 
 export function ProductivityOverview({
   hasWorkspaceTaskData,
@@ -106,7 +107,7 @@ export function ProductivityOverview({
   return (
     <>
       <Section>
-        <SectionHeader>
+        <SectionHeader className="mb-0 pb-4">
           <SectionTitle>
             <ProductivityOverviewIcon
               size={20}
@@ -135,15 +136,17 @@ export function ProductivityOverview({
             </AIActionButton>
           </Controls>
         </SectionHeader>
-        {isLoading ? (
-          <Spinner />
-        ) : stats && hasDashboardData(stats) ? (
-          <Charts stats={stats} />
-        ) : stats === null ? (
-          <ProductivityMetricsEmptyState variant="error" />
-        ) : (
-          <ProductivityMetricsEmptyState variant="encourage" />
-        )}
+        <div className="-mx-6 border-t border-border-app px-6 pt-6">
+          {isLoading ? (
+            <Spinner />
+          ) : stats && hasDashboardData(stats) ? (
+            <Charts stats={stats} />
+          ) : stats === null ? (
+            <ProductivityMetricsEmptyState variant="error" />
+          ) : (
+            <ProductivityMetricsEmptyState variant="encourage" />
+          )}
+        </div>
       </Section>
 
       {isSelectionDialogOpen && (
@@ -388,18 +391,10 @@ function ProductivityMetricsEmptyState({
 
   return (
     <div className="relative flex min-h-[280px] flex-col items-center justify-center px-6 py-12">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 flex items-center justify-center overflow-hidden"
-      >
-        <div
-          aria-hidden
-          className="aspect-[4/5] h-[min(400px,55vh)] w-[min(92vw,400px)] opacity-50 [background-image:linear-gradient(to_right,rgba(255,255,255,0.035)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.035)_1px,transparent_1px)] [background-size:18px_18px] [mask-image:radial-gradient(ellipse_72%_65%_at_50%_48%,#000_22%,transparent_78%)]"
-        />
-      </div>
+      <OverviewEmptyStateBackdrop />
       <div className="relative z-[1] flex max-w-md flex-col items-center gap-5 text-center">
         <div className="flex h-14 w-14 items-center justify-center rounded-xl border border-[var(--border-color)] bg-[var(--background-primary)] shadow-[var(--shadow-dropdown)]">
-          <RocketIcon size={28} className="text-[var(--text-primary)]" />
+          <LightningIcon size={28} className="text-[var(--text-primary)]" />
         </div>
         {variant === "encourage" ? (
           <>

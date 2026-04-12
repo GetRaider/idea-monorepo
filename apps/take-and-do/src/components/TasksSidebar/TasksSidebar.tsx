@@ -42,11 +42,7 @@ import {
 } from "./TasksSidebar.ui";
 import { TasksSidebarResizeHandle } from "./TasksSidebarResizeHandle";
 
-const DRAG_BOARD_KEY = "application/x-task-board-id";
-const DRAG_REORDER_FOLDER_KEY = "application/x-tasks-sidebar-folder-reorder";
-const DRAG_REORDER_BOARD_KEY = "application/x-tasks-sidebar-board-reorder";
-const ROOT_DROP_ID = "__root__";
-const isRootDrop = (id: string) => id === ROOT_DROP_ID;
+import { isDuplicateWorkspaceName } from "@/helpers/workspace-name.helper";
 import { Folder, TaskBoard } from "@/types/workspace";
 import { toast } from "sonner";
 import { clientServices } from "@/services";
@@ -61,8 +57,13 @@ import { useEmojiPickerState } from "./useEmojiPickerState";
 import { useSidebarEditingState } from "./useSidebarEditingState";
 import { useSidebarDeleteState } from "./useSidebarDeleteState";
 import { useTasksSidebarOrder } from "@/hooks/tasks/useTasksSidebarOrder";
-
 import { TasksSidebarTaskSearch } from "./TasksSidebarTaskSearch";
+
+const DRAG_BOARD_KEY = "application/x-task-board-id";
+const DRAG_REORDER_FOLDER_KEY = "application/x-tasks-sidebar-folder-reorder";
+const DRAG_REORDER_BOARD_KEY = "application/x-tasks-sidebar-board-reorder";
+const ROOT_DROP_ID = "__root__";
+const isRootDrop = (id: string) => id === ROOT_DROP_ID;
 
 export function TasksSidebar({
   isOpen,
@@ -123,6 +124,38 @@ export function TasksSidebar({
     return () => window.removeEventListener("dragend", endDrag);
   }, []);
 
+  useEffect(() => {
+    if (!editingBoardId && !editingFolderId) return;
+
+    const cancelInlineEditIfOutside = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      if (target.closest("[data-sidebar-inline-edit]")) return;
+      if (target.closest("[data-dropdown-portal]")) return;
+      if (target.closest("[data-emoji-picker-popover]")) return;
+      if (target.closest("[data-emoji-trigger]")) return;
+      setEditingBoardId(null);
+      setEditingFolderId(null);
+      setOpenBoardEmojiPickerId(null);
+      setOpenFolderEmojiPickerId(null);
+    };
+
+    document.addEventListener("pointerdown", cancelInlineEditIfOutside, true);
+    return () =>
+      document.removeEventListener(
+        "pointerdown",
+        cancelInlineEditIfOutside,
+        true,
+      );
+  }, [
+    editingBoardId,
+    editingFolderId,
+    setEditingBoardId,
+    setEditingFolderId,
+    setOpenBoardEmojiPickerId,
+    setOpenFolderEmojiPickerId,
+  ]);
+
   const handleViewChange = (view: string) => onViewChange?.(view);
 
   const toggleFolder = (folderId: string) =>
@@ -150,10 +183,20 @@ export function TasksSidebar({
       const nameChanged = !!trimmedName && trimmedName !== (board.name ?? "");
       const emojiChanged = desiredEmoji !== (board.emoji ?? null);
 
+      if (!nameChanged && !emojiChanged) return;
+
+      if (
+        nameChanged &&
+        isDuplicateWorkspaceName(trimmedName, taskBoards, folders, {
+          boardId: board.id,
+        })
+      ) {
+        toast.error("A workspace with this name already exists");
+        return;
+      }
+
       setEditingBoardId(null);
       setOpenBoardEmojiPickerId(null);
-
-      if (!nameChanged && !emojiChanged) return;
 
       const updated = await clientServices.taskBoards.update({
         id: board.id,
@@ -187,6 +230,8 @@ export function TasksSidebar({
       setEditingBoardId,
       setOpenBoardEmojiPickerId,
       setTaskBoards,
+      taskBoards,
+      folders,
     ],
   );
 
@@ -232,10 +277,20 @@ export function TasksSidebar({
       const nameChanged = !!trimmedName && trimmedName !== (folder.name ?? "");
       const emojiChanged = desiredEmoji !== (folder.emoji ?? null);
 
+      if (!nameChanged && !emojiChanged) return;
+
+      if (
+        nameChanged &&
+        isDuplicateWorkspaceName(trimmedName, taskBoards, folders, {
+          folderId: folder.id,
+        })
+      ) {
+        toast.error("A workspace with this name already exists");
+        return;
+      }
+
       setEditingFolderId(null);
       setOpenFolderEmojiPickerId(null);
-
-      if (!nameChanged && !emojiChanged) return;
 
       const updated = await clientServices.folders.update({
         id: folder.id,
@@ -263,6 +318,8 @@ export function TasksSidebar({
       setEditingFolderId,
       setOpenFolderEmojiPickerId,
       setFolders,
+      folders,
+      taskBoards,
     ],
   );
 
@@ -647,7 +704,10 @@ export function TasksSidebar({
                     >
                       <FolderRow isActive={openMenuFolderId === folder.id}>
                         {editingFolderId === folder.id ? (
-                          <FolderEditWrap onClick={(e) => e.stopPropagation()}>
+                          <FolderEditWrap
+                            data-sidebar-inline-edit=""
+                            onClick={(e) => e.stopPropagation()}
+                          >
                             <SidebarChevronGutter />
                             <span className="flex min-w-0 flex-1 items-center gap-1.5">
                               <EmojiPickerField

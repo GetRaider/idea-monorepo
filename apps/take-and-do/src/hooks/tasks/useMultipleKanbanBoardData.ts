@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-import { Task } from "@/components/Boards/KanbanBoard/types";
+import { Task, type TaskStatus } from "@/components/Boards/KanbanBoard/types";
 import { tasksIntoStatusColumns } from "@/components/Boards/KanbanBoard/shared/tasksIntoStatusColumns";
 import { useIsAnonymous } from "@/hooks/auth/use-is-anonymous";
 import { GUEST_STORE_UPDATED_EVENT } from "@/stores/guest/constants";
@@ -13,6 +13,14 @@ import {
 } from "@/stores/guest/guest-task-filters";
 import { clientServices } from "@/services";
 import type { TaskBoardWithTasks } from "@/types/workspace";
+
+function countTasksInColumns(tasks: Record<TaskStatus, Task[]>): number {
+  let total = 0;
+  for (const column of Object.values(tasks)) {
+    total += column.length;
+  }
+  return total;
+}
 
 export function useMultipleKanbanBoardData(
   scheduleDate: Date | undefined,
@@ -44,10 +52,12 @@ export function useMultipleKanbanBoardData(
         list.push(task);
         tasksByBoardId.set(task.taskBoardId, list);
       }
-      return taskBoards.map((board) => ({
-        ...board,
-        tasks: tasksIntoStatusColumns(tasksByBoardId.get(board.id) ?? []),
-      }));
+      return taskBoards
+        .map((board) => ({
+          ...board,
+          tasks: tasksIntoStatusColumns(tasksByBoardId.get(board.id) ?? []),
+        }))
+        .filter((board) => countTasksInColumns(board.tasks) > 0);
     }
 
     if (folderId) {

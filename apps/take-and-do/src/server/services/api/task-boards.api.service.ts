@@ -6,9 +6,13 @@ import {
 import { DB, and, eq } from "@/db/client";
 import { taskBoardsTable } from "@/db/schemas/taskBoard.schema";
 import { genericHelper } from "@/helpers/generic.helper";
+import type { WorkspaceApiService } from "@/server/services/api/workspace.api.service";
 
 export class TaskBoardsApiService extends BaseApiService {
-  constructor(protected readonly db: DB) {
+  constructor(
+    protected readonly db: DB,
+    private readonly workspace: WorkspaceApiService,
+  ) {
     super(db);
   }
 
@@ -85,12 +89,15 @@ export class TaskBoardsApiService extends BaseApiService {
     access: DataAccess,
   ) {
     return this.handleOperation(async () => {
+      const nameTrimmed = taskBoardData.name.trim();
+      if (!nameTrimmed) throw new Error("Task board name is required");
+
       if (access.isAnonymous) {
         const taskBoardId = genericHelper.generateId();
         const now = new Date();
         return {
           id: taskBoardId,
-          name: taskBoardData.name,
+          name: nameTrimmed,
           emoji: taskBoardData.emoji ?? null,
           folderId: taskBoardData.folderId ?? null,
           isPublic: taskBoardData.isPublic ?? false,
@@ -99,13 +106,16 @@ export class TaskBoardsApiService extends BaseApiService {
         };
       }
 
+      if (await this.workspace.isNameTaken(access, nameTrimmed))
+        throw new Error("A workspace with this name already exists");
+
       const taskBoardId = genericHelper.generateId();
 
       await this.db.insert(taskBoardsTable).values({
         id: taskBoardId,
         userId: access.userId,
         isPublic: taskBoardData.isPublic ?? false,
-        name: taskBoardData.name,
+        name: nameTrimmed,
         emoji: taskBoardData.emoji ?? null,
         folderId: taskBoardData.folderId || null,
         createdAt: new Date(),
@@ -136,6 +146,7 @@ export class TaskBoardsApiService extends BaseApiService {
         ) {
           throw new Error("Task board name is required");
         }
+        const nameTrimmed = data.name.trim();
         const now = new Date();
         const createdAt = data.createdAt
           ? new Date(data.createdAt as string | Date)
@@ -149,7 +160,7 @@ export class TaskBoardsApiService extends BaseApiService {
 
         return {
           id,
-          name: data.name.trim(),
+          name: nameTrimmed,
           emoji: data.emoji !== undefined ? data.emoji : null,
           folderId,
           isPublic: data.isPublic ?? false,
@@ -161,10 +172,21 @@ export class TaskBoardsApiService extends BaseApiService {
       const existing = await this.getById(id, access);
       if (!existing) throw new Error("Task board not found");
 
+      if (data.name !== undefined) {
+        const nameTrimmed = data.name.trim();
+        if (!nameTrimmed) throw new Error("Task board name is required");
+        if (
+          await this.workspace.isNameTaken(access, nameTrimmed, {
+            boardId: id,
+          })
+        )
+          throw new Error("A workspace with this name already exists");
+      }
+
       await this.db
         .update(taskBoardsTable)
         .set({
-          ...(data.name !== undefined && { name: data.name }),
+          ...(data.name !== undefined && { name: data.name.trim() }),
           ...(data.folderId !== undefined && {
             folderId: data.folderId ?? null,
           }),
@@ -194,6 +216,11 @@ export class TaskBoardsApiService extends BaseApiService {
     const message = error instanceof Error ? error.message : "";
     if (message === "Task board not found") this.notFound("Task board");
     if (message === "Task board name is required") this.badRequest(message);
+    if (
+      message === "A board with this name already exists" ||
+      message === "A workspace with this name already exists"
+    )
+      this.badRequest(message);
     throw error;
   }
 }

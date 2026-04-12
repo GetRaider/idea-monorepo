@@ -263,7 +263,7 @@ export function BoardRow({
     <div
       ref={ref}
       className={cn(
-        "group/board-row relative flex items-center rounded-lg transition-colors duration-150 hover:bg-[#2a2a2a]",
+        "group/board-row relative flex w-full items-center rounded-lg transition-colors duration-150 hover:bg-[#2a2a2a]",
         highlighted ? "bg-[#2a2a2a]" : "bg-transparent",
         highlighted && "[&_[data-workspace-row-actions]]:opacity-100",
         highlighted && "[&_button]:text-white",
@@ -530,10 +530,10 @@ export function FolderDropTarget({
     <div
       ref={ref}
       className={cn(
-        "rounded-lg border transition-[border-color,background] duration-150 hover:[&_[data-workspace-toggle]]:bg-[#2a2a2a] hover:[&_[data-workspace-toggle]]:text-white",
+        "rounded-lg transition-[border-color,background] duration-150 hover:[&_[data-workspace-toggle]]:bg-[#2a2a2a] hover:[&_[data-workspace-toggle]]:text-white",
         isDragOver
-          ? "border-[#7255c1] bg-[rgba(114,85,193,0.15)]"
-          : "border-transparent bg-transparent",
+          ? "border border-[#7255c1] bg-[rgba(114,85,193,0.15)]"
+          : "border-0 bg-transparent",
         className,
       )}
       {...props}
@@ -549,7 +549,7 @@ export function RootBoardsDropZone({
   return (
     <div
       ref={ref}
-      className={cn("flex min-h-0 flex-col gap-1", className)}
+      className={cn("flex min-h-0 flex-col gap-2", className)}
       {...props}
     />
   );

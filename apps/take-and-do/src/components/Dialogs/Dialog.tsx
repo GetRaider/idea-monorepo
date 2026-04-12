@@ -109,7 +109,7 @@ export function ConfirmBody({ className, ref, ...props }: UiProps<"p">) {
     <p
       ref={ref}
       className={cn(
-        "mb-6 m-0 text-sm leading-normal text-slate-300",
+        "mx-0 mt-0 mb-6 text-sm leading-normal text-slate-300",
         className,
       )}
       {...props}

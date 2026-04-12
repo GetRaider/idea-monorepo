@@ -35,6 +35,7 @@ import { updateTaskInColumns } from "@/hooks/tasks/useTaskBoardState";
 import { EmptyState } from "../../EmptyState";
 import { TasksWorkspaceEmptyState } from "../../TasksWorkspaceEmptyState";
 import { AIComposeDialog } from "./shared/AIComposeDialog";
+import { ScheduleBoardPickerDialog } from "./shared/ScheduleBoardPickerDialog";
 import { clientServices } from "@/services";
 import { toast } from "sonner";
 import type { TaskBoardWithTasks } from "@/types/workspace";
@@ -64,6 +65,9 @@ export function MultipleKanbanBoard({
   const [isAIComposeDialogOpen, setIsAIComposeDialogOpen] = useState(false);
   const [selectedBoardIdForAI, setSelectedBoardIdForAI] = useState<
     string | null
+  >(null);
+  const [boardPickerIntent, setBoardPickerIntent] = useState<
+    null | "task" | "ai"
   >(null);
 
   const {
@@ -176,33 +180,75 @@ export function MultipleKanbanBoard({
     ],
   );
 
+  const defaultBoardIdForSchedule =
+    boardsWithTasks[0]?.id ?? taskBoards[0]?.id ?? null;
+
+  const isScheduleDay = schedule === "today" || schedule === "tomorrow";
+
   const handleCreateTask = useCallback(() => {
-    if (boardsWithTasks.length === 0) {
-      console.error("Cannot create task: no task boards available");
+    if (taskBoards.length === 0 || !defaultBoardIdForSchedule) {
+      toast.error("Create a board first");
+      return;
+    }
+    if (isScheduleDay) {
+      setBoardPickerIntent("task");
       return;
     }
     setSelectedTask(
       createNewTaskTemplate({
-        taskBoardId: boardsWithTasks[0].id,
+        taskBoardId: defaultBoardIdForSchedule,
         scheduleDate: scheduleDate ?? undefined,
       }),
     );
-  }, [boardsWithTasks, setSelectedTask, scheduleDate]);
+  }, [
+    taskBoards.length,
+    isScheduleDay,
+    defaultBoardIdForSchedule,
+    setSelectedTask,
+    scheduleDate,
+  ]);
 
   const handleCreateTaskWithAI = useCallback(() => {
-    if (boardsWithTasks.length === 0) {
-      console.error("Cannot create task: no task boards available");
+    if (taskBoards.length === 0) {
+      toast.error("Create a board first");
       return;
     }
-    setSelectedBoardIdForAI(boardsWithTasks[0].id);
+    if (isScheduleDay) {
+      setBoardPickerIntent("ai");
+      return;
+    }
+    if (!defaultBoardIdForSchedule) {
+      toast.error("Create a board first");
+      return;
+    }
+    setSelectedBoardIdForAI(defaultBoardIdForSchedule);
     setIsAIComposeDialogOpen(true);
-  }, [boardsWithTasks]);
+  }, [taskBoards.length, isScheduleDay, defaultBoardIdForSchedule]);
+
+  const handleScheduleBoardPicked = useCallback(
+    (boardId: string) => {
+      const intent = boardPickerIntent;
+      setBoardPickerIntent(null);
+      if (intent === "task") {
+        setSelectedTask(
+          createNewTaskTemplate({
+            taskBoardId: boardId,
+            scheduleDate: scheduleDate ?? undefined,
+          }),
+        );
+      } else if (intent === "ai") {
+        setSelectedBoardIdForAI(boardId);
+        setIsAIComposeDialogOpen(true);
+      }
+    },
+    [boardPickerIntent, scheduleDate, setSelectedTask],
+  );
 
   const handleAICompose = useCallback(
     async (text: string) => {
       let taskBoardId = selectedBoardIdForAI;
-      if (!taskBoardId && boardsWithTasks.length > 0) {
-        taskBoardId = boardsWithTasks[0].id;
+      if (!taskBoardId && defaultBoardIdForSchedule) {
+        taskBoardId = defaultBoardIdForSchedule;
       }
       if (!taskBoardId) {
         console.error("Cannot compose task: taskBoardId not found");
@@ -222,7 +268,12 @@ export function MultipleKanbanBoard({
         setSelectedBoardIdForAI(null);
       }
     },
-    [boardsWithTasks, scheduleDate, selectedBoardIdForAI, setSelectedTask],
+    [
+      defaultBoardIdForSchedule,
+      scheduleDate,
+      selectedBoardIdForAI,
+      setSelectedTask,
+    ],
   );
 
   const handleTaskCreated = useCallback(
@@ -305,12 +356,11 @@ export function MultipleKanbanBoard({
           ) : (
             <EmptyStateWrapper>
               <EmptyState
-                title="You have no tasks"
-                message={
-                  scheduleDate
-                    ? `No tasks scheduled for ${scheduleDate.toLocaleDateString()}`
-                    : `No tasks available for ${workspaceName}`
-                }
+                {...getScheduleEmptyStateCopy(
+                  schedule,
+                  workspaceName,
+                  scheduleDate,
+                )}
               />
             </EmptyStateWrapper>
           )}
@@ -332,6 +382,12 @@ export function MultipleKanbanBoard({
         onTaskDelete={handleTaskDelete}
         onNavigateToParentTask={handleNavigateToParentTask}
       />
+      <ScheduleBoardPickerDialog
+        open={boardPickerIntent !== null}
+        boards={taskBoards}
+        onClose={() => setBoardPickerIntent(null)}
+        onSelect={handleScheduleBoardPicked}
+      />
       <AIComposeDialog
         isOpen={isAIComposeDialogOpen}
         onClose={() => {
@@ -352,6 +408,29 @@ function getTaskWorkspaceTitle(
   if (!task) return workspaceName;
   const board = boardsWithTasks.find((board) => board.id === task.taskBoardId);
   return board?.name || workspaceName;
+}
+
+function getScheduleEmptyStateCopy(
+  schedule: ScheduleDate | undefined,
+  workspaceName: string,
+  scheduleDate: Date | undefined,
+): { title: string; message: string } {
+  if (schedule === "today" || schedule === "tomorrow") {
+    return {
+      title: `No tasks scheduled for ${schedule}`,
+      message: `When you schedule tasks, they will appear here grouped by board.`,
+    };
+  }
+  if (scheduleDate) {
+    return {
+      title: "You have no tasks",
+      message: `No tasks scheduled for ${scheduleDate.toLocaleDateString()}`,
+    };
+  }
+  return {
+    title: "You have no tasks",
+    message: `No tasks available for ${workspaceName}`,
+  };
 }
 
 interface MultipleKanbanBoardProps {

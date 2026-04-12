@@ -13,6 +13,7 @@ import { waiterHelper } from "@/helpers/waiter.helper";
 import { useWorkspaces } from "@/hooks/tasks/useWorkspaces";
 import { WorkspaceProvider } from "@/contexts/WorkspaceContext";
 import { useTasksSidebarWidthPx } from "@/hooks/tasks/useTasksSidebarWidthPx";
+import { isDuplicateWorkspaceName } from "@/helpers/workspace-name.helper";
 import { clientServices } from "@/services";
 import { toast } from "sonner";
 
@@ -62,6 +63,10 @@ export default function TasksLayout({
     boardIdsToMove: string[] = [],
     emoji?: string | null,
   ): Promise<boolean> => {
+    if (isDuplicateWorkspaceName(name.trim(), taskBoards, folders)) {
+      toast.error("A workspace with this name already exists");
+      return false;
+    }
     const folder = await clientServices.folders.create({ name, emoji });
     if (!folder) {
       toast.error("Can't create folder");
@@ -113,6 +118,10 @@ export default function TasksLayout({
     folderId: string,
     emoji?: string | null,
   ): Promise<boolean> => {
+    if (isDuplicateWorkspaceName(name.trim(), taskBoards, folders)) {
+      toast.error("A workspace with this name already exists");
+      return false;
+    }
     const createdBoard = await clientServices.taskBoards.create({
       name,
       folderId: folderId || undefined,

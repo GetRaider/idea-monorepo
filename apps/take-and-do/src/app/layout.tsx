@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import { Toaster } from "sonner";
 import "./globals.css";
 import { Theme } from "@radix-ui/themes";
 
+import { AppToaster } from "@/components/AppToaster";
 import { Analytics } from "@/components/Analytics";
 import { GuestBanner } from "@/components/GuestBanner";
 import { GuestStoreGuard } from "@/components/GuestStoreGuard";
@@ -53,13 +53,8 @@ export default function RootLayout({
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
             {children}
           </div>
-          <Toaster
-            theme="dark"
-            position="bottom-right"
-            closeButton
-            toastOptions={{ duration: 5000 }}
-          />
         </Theme>
+        <AppToaster />
       </body>
     </html>
   );

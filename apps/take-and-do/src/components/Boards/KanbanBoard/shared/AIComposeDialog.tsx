@@ -82,7 +82,7 @@ export function AIComposeDialog({
         onClick={(event) => event.stopPropagation()}
       >
         <DialogHeader>
-          <DialogTitle>⚡ Compose Task with AI</DialogTitle>
+          <DialogTitle>Compose Task with AI</DialogTitle>
           <CloseButton onClick={handleClose} disabled={isComposing}>
             <CloseIcon />
           </CloseButton>

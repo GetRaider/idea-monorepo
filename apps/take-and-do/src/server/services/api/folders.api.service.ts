@@ -5,9 +5,13 @@ import {
   BaseApiService,
   DataAccess,
 } from "@/server/services/api/base.api.service";
+import type { WorkspaceApiService } from "@/server/services/api/workspace.api.service";
 
 export class FoldersApiService extends BaseApiService {
-  constructor(protected readonly db: DB) {
+  constructor(
+    protected readonly db: DB,
+    private readonly workspace: WorkspaceApiService,
+  ) {
     super(db);
   }
 
@@ -54,12 +58,14 @@ export class FoldersApiService extends BaseApiService {
       const id = genericHelper.generateId();
       const trimmedEmoji =
         emoji === undefined || emoji === null ? null : emoji.trim() || null;
+      const nameTrimmed = name.trim();
+      if (!nameTrimmed) throw new Error("Folder name is required");
 
       if (access.isAnonymous) {
         const now = new Date();
         return {
           id,
-          name,
+          name: nameTrimmed,
           emoji: trimmedEmoji,
           isPublic: false,
           createdAt: now,
@@ -67,11 +73,14 @@ export class FoldersApiService extends BaseApiService {
         };
       }
 
+      if (await this.workspace.isNameTaken(access, nameTrimmed))
+        throw new Error("A workspace with this name already exists");
+
       await this.db.insert(foldersTable).values({
         id,
         userId: access.userId,
         isPublic: false,
-        name,
+        name: nameTrimmed,
         emoji: trimmedEmoji,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -120,10 +129,21 @@ export class FoldersApiService extends BaseApiService {
         throw new Error("Folder not found");
       }
 
+      if (data.name !== undefined) {
+        const nameTrimmed = data.name.trim();
+        if (!nameTrimmed) throw new Error("Folder name is required");
+        if (
+          await this.workspace.isNameTaken(access, nameTrimmed, {
+            folderId: id,
+          })
+        )
+          throw new Error("A workspace with this name already exists");
+      }
+
       await this.db
         .update(foldersTable)
         .set({
-          ...(data.name !== undefined && { name: data.name }),
+          ...(data.name !== undefined && { name: data.name.trim() }),
           ...(data.emoji !== undefined && { emoji: data.emoji }),
           ...(data.isPublic !== undefined && { isPublic: data.isPublic }),
           updatedAt: new Date(),
@@ -152,6 +172,8 @@ export class FoldersApiService extends BaseApiService {
     const message = error instanceof Error ? error.message : "";
     if (message === "Folder not found") this.notFound("Folder");
     if (message === "Folder name is required") this.badRequest(message);
+    if (message === "A workspace with this name already exists")
+      this.badRequest(message);
     throw error;
   }
 }

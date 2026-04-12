@@ -433,7 +433,7 @@ export function TaskView({
         <ConfirmDialog
           title="Delete task?"
           description="This will permanently delete this task. This action cannot be undone."
-          confirmLabel="Delete task"
+          confirmLabel="Delete"
           onConfirm={handleDeleteConfirm}
           onClose={() => setShowDeleteConfirm(false)}
         />

@@ -105,6 +105,11 @@
   }
 }
 
+/* Above modal overlays (e.g. z-[4000]); toaster is portaled to body in AppToaster */
+[data-sonner-toaster] {
+  z-index: 100000 !important;
+}
+
 [data-sonner-toaster][data-sonner-theme="dark"]
   [data-sonner-toast][data-styled="true"] {
   background: var(--background-primary) !important;

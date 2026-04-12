@@ -14,6 +14,7 @@ import {
   DialogFormLabel,
 } from "@/components/Dialogs/DialogForm";
 import { EmojiPickerField } from "@/components/TasksSidebar/EmojiPickerField";
+import { isDuplicateWorkspaceName } from "@/helpers/workspace-name.helper";
 import { Folder, TaskBoard } from "@/types/workspace";
 import { toast } from "sonner";
 import { cn } from "@/lib/styles/utils";
@@ -44,6 +45,11 @@ export function CreateWorkspaceDialog({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || isCreating) return;
+
+    if (isDuplicateWorkspaceName(name.trim(), taskBoards, folders)) {
+      toast.error("A workspace with this name already exists");
+      return;
+    }
 
     setIsCreating(true);
     try {

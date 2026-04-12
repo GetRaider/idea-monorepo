@@ -7,6 +7,7 @@ import { UserWithAnonymous } from "better-auth/plugins";
 import { Dropdown } from "@/components/Dropdown";
 import { OverviewIcon, SunIcon } from "@/components/Icons";
 import { signOutAndClear, useSession } from "@/auth/client";
+import { AppTooltip } from "@/components/Tooltip/AppTooltip";
 import {
   SidebarContainer,
   Logo,
@@ -21,7 +22,6 @@ import { Route } from "@/constants/route.constant";
 
 const buttonsSet: Array<{
   label: string;
-  tooltip: string;
   icon: string | React.ReactNode;
   path: string | null;
 }> = [
@@ -29,25 +29,21 @@ const buttonsSet: Array<{
     label: "Overview",
     icon: <OverviewIcon size={24} className="text-white" />,
     path: Route.OVERVIEW,
-    tooltip: "Overview of your progress and productivity",
   },
   {
     label: "Tasks",
     icon: "/tasks.svg",
     path: Route.TASKS,
-    tooltip: "Your tasks and to-dos",
   },
   {
     label: "Calendar",
     icon: "/calendar.svg",
     path: null,
-    tooltip: "Coming soon",
   },
   {
     label: "Docs",
     icon: "/docs.svg",
     path: null,
-    tooltip: "Coming soon",
   },
 ];
 
@@ -67,23 +63,34 @@ export function Sidebar({ onNavigationChange }: SidebarProps) {
 
       <Nav>
         {buttonsSet.map((button) => (
-          <NavButton
-            disabled={!button.path}
+          <AppTooltip
             key={button.label}
-            isActive={button.path ? pathname.startsWith(button.path) : false}
-            onClick={() => handleNavClick(button.label, button?.path ?? "")}
+            content={button.path ? button.label : "Coming Soon"}
+            side="right"
           >
-            {typeof button.icon === "string" ? (
-              <Image
-                width={24}
-                height={24}
-                src={button.icon}
-                alt={button.label}
-              />
-            ) : (
-              button.icon
-            )}
-          </NavButton>
+            <span className="inline-flex">
+              <NavButton
+                disabled={!button.path}
+                isActive={
+                  button.path ? pathname.startsWith(button.path) : false
+                }
+                onClick={() =>
+                  button.path && handleNavClick(button.label, button.path)
+                }
+              >
+                {typeof button.icon === "string" ? (
+                  <Image
+                    width={24}
+                    height={24}
+                    src={button.icon}
+                    alt={button.label}
+                  />
+                ) : (
+                  button.icon
+                )}
+              </NavButton>
+            </span>
+          </AppTooltip>
         ))}
       </Nav>
 

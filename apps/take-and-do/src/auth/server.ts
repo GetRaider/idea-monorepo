@@ -7,14 +7,16 @@ import { eq } from "drizzle-orm";
 
 import { AUTH_RESTRICTION_MESSAGE } from "@/constants/auth-restriction.constant";
 import { ACCESS_RESTRICTED_NO_ACCOUNT_CODE } from "@/constants/whitelist.constant";
-import { env } from "@/env";
+import { envServer } from "@/env";
 import { db } from "@/db/client";
 import * as authSchema from "@/db/schemas/auth.schema";
 
 export const auth = betterAuth({
-  secret: env.auth.secret,
-  baseURL: env.auth.baseURL,
-  onAPIError: { errorURL: `${env.auth.baseURL.replace(/\/$/, "")}/auth/error` },
+  secret: envServer.auth.secret,
+  baseURL: envServer.auth.baseURL,
+  onAPIError: {
+    errorURL: `${envServer.auth.baseURL.replace(/\/$/, "")}/auth/error`,
+  },
   database: drizzleAdapter(db, {
     provider: "pg",
     schema: {
@@ -25,13 +27,15 @@ export const auth = betterAuth({
     },
   }),
   emailAndPassword: { enabled: true },
-  ...(env.auth.google
+  ...(envServer.auth.google
     ? {
         socialProviders: {
           google: {
-            clientId: env.auth.google.clientId,
-            clientSecret: env.auth.google.clientSecret,
-            ...(env.nodeEnv === "production" ? { disableSignUp: true } : {}),
+            clientId: envServer.auth.google.clientId,
+            clientSecret: envServer.auth.google.clientSecret,
+            ...(envServer.nodeEnv === "production"
+              ? { disableSignUp: true }
+              : {}),
           },
         },
       }
@@ -74,7 +78,7 @@ export const auth = betterAuth({
           }
         }
       }
-      if (env.nodeEnv !== "production") return;
+      if (envServer.nodeEnv !== "production") return;
       if (!isRestrictedAuthPath(ctx.path)) return;
       throw new APIError("FORBIDDEN", { message: AUTH_RESTRICTION_MESSAGE });
     }),

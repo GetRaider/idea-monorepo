@@ -12,7 +12,7 @@ import {
   DialogFormButton,
   DialogFormGroup,
   DialogFormLabel,
-} from "@/components/Dialogs/DialogForm";
+} from "@repo/ui/components/Dialog";
 import { EmojiPickerField } from "@/components/TasksSidebar/EmojiPickerField";
 import { isDuplicateWorkspaceName } from "@/helpers/workspace-name.helper";
 import { Folder, TaskBoard } from "@/types/workspace";

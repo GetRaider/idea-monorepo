@@ -1,7 +1,7 @@
 "use client";
 
-import { cn } from "@/lib/styles/utils";
-import type { UiProps } from "@/lib/styles/ui-props";
+import { cn } from "../../lib/cn";
+import type { UiProps } from "../../lib/ui-props";
 
 export function DialogFormGroup({ className, ref, ...props }: UiProps<"div">) {
   return <div ref={ref} className={cn("mb-5", className)} {...props} />;
@@ -15,7 +15,7 @@ export function DialogFormLabel({
   return (
     <label
       ref={ref}
-      className={cn("mb-2 block text-sm font-medium text-[#888]", className)}
+      className={cn("mb-2 block text-sm font-medium text-zinc-500", className)}
       {...props}
     />
   );
@@ -56,9 +56,9 @@ export function DialogFormButton({
         "cursor-pointer rounded-lg border-0 px-5 py-2.5 text-sm font-medium transition-all duration-200",
         primary
           ? disabled
-            ? "cursor-not-allowed bg-[#2a2a2a] text-[#666]"
-            : "bg-[#7255c1] text-white hover:bg-[#5a42a1] hover:disabled:bg-[#2a2a2a]"
-          : "border border-border-app bg-transparent text-[#888] hover:bg-[#2a2a2a] hover:text-white",
+            ? "cursor-not-allowed bg-zinc-800 text-zinc-500"
+            : "bg-violet-600 text-white hover:bg-violet-700 hover:disabled:bg-zinc-800"
+          : "border border-zinc-600 bg-transparent text-zinc-400 hover:bg-zinc-800 hover:text-white",
         className,
       )}
       {...props}

@@ -8,7 +8,7 @@ import {
   DialogFormButton,
   DialogFormGroup,
   DialogFormLabel,
-} from "@/components/Dialogs/DialogForm";
+} from "@repo/ui/components/Dialog";
 import { useIsAnonymous } from "@/hooks/auth/use-is-anonymous";
 import { GUEST_STORE_UPDATED_EVENT } from "@/stores/guest/constants";
 import { guestStoreHelper } from "@/stores/guest";

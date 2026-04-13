@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { type MouseEvent, useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { CloseIcon } from "@/components/Icons";
 import { SecondaryButton, CloseButton } from "@/components/Buttons";
@@ -10,7 +10,7 @@ import {
   DialogHeader,
   DialogOverlay,
   DialogTitle,
-} from "@/components/Dialogs/Dialog";
+} from "@repo/ui/components/Dialog";
 import { StepProgressSegments } from "@/components/StepProgressSegments";
 
 interface AIComposeDialogProps {
@@ -79,7 +79,7 @@ export function AIComposeDialog({
     <DialogOverlay onClick={handleClose}>
       <DialogContainer
         maxWidth={720}
-        onClick={(event) => event.stopPropagation()}
+        onClick={(event: MouseEvent<HTMLDivElement>) => event.stopPropagation()}
       >
         <DialogHeader>
           <DialogTitle>Compose Task with AI</DialogTitle>

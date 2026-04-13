@@ -11,7 +11,10 @@
     "generate:component": "turbo gen react-component"
   },
   "exports": {
-    "./*": "./src/*.tsx"
+    ".": "./src/index.ts",
+    "./tailwind-preset": "./tailwind.preset.ts",
+    "./assets/brands/take-and-do.svg": "./assets/brands/take-and-do.svg",
+    "./*": "./src/*"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
@@ -24,10 +27,13 @@
     "@types/styled-components": "catalog:",
     "eslint": "catalog:",
     "react": "catalog:",
+    "tailwindcss": "^3.4.17",
     "typescript": "catalog:"
   },
   "dependencies": {
     "@radix-ui/themes": "catalog:",
-    "styled-components": "catalog:"
+    "clsx": "^2.1.1",
+    "styled-components": "catalog:",
+    "tailwind-merge": "^3.5.0"
   }
 }

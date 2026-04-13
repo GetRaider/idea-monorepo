@@ -52,7 +52,7 @@ That fracture is painful in software development *and* in real life: you context
 - \`Auth Login Started\`, \`Auth Login Succeeded\` — separate funnel from guest traffic.
 
 **Improvements —** super-properties for workspace tier (guest vs registered), session replay sampling on error boundaries, and cohort reports that compare “guests who created ≥3 tasks” vs “waitlist only”—so marketing spend optimizes for retained trials, not form fills alone. Server-side logs remain the source of truth for API failures; Mixpanel explains *behavior*, not stack traces.`,
-    prodUrl: "https://take-and-do.com",
+    prodUrl: "https://take-and-do.vercel.app",
     repoUrl:
       "https://github.com/GetRaider/idea-monorepo/tree/main/apps/take-and-do",
   },

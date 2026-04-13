@@ -6,16 +6,19 @@ A repository where I invent, test, and validate product ideas. This monorepo con
 
 This repository includes the following applications and packages:
 
+- [Take&Do](https://take-and-do.vercel.app/)
+
 ### Apps and Packages
 
     .
     ├── apps
-    │   ├── devinity-api              # NestJS API for engineering management app
-    │   ├── devinity-web              # Next.js web application for engineering management
-    │   └── take-and-do              # Next.js productivity management app
+    │   ├── devinity-api              # Nest.js API for the Devinity (AI Engineering Management app)
+    │   ├── devinity-web              # Next.js WEB for the Devinity (AI Engineering Management app)
+    │   └── take-and-do               # Next.js full-stack app for the Take&Do (AI Productivity Management app)
     └── packages
-        ├── @repo/api                 # Shared NestJS resources
+        ├── @repo/api                 # Shared Nest.js resources
         ├── @repo/eslint-config       # ESLint configurations (includes Prettier)
+        ├── @repo/shared              # Shared TS utilities/modules used across apps
         ├── @repo/vitest-config       # Vitest configurations
         ├── @repo/typescript-config   # `tsconfig.json`s used throughout the monorepo
         └── @repo/ui                  # Shareable React component library
@@ -40,7 +43,8 @@ The repository uses modern development tools and practices:
 # Build all apps and packages
 pnpm run build
 
-# Note: If building apps individually, build packages first
+# Rebuild (clean + build)
+pnpm run rebuild
 ```
 
 #### Develop
@@ -49,8 +53,17 @@ pnpm run build
 # Start development servers for all apps
 pnpm run dev
 
+# Start only Devinity (+ required packages)
+pnpm run dev:devinity
+
+# Start only Take&Do (+ required packages)
+pnpm run dev:take-and-do
+
 # Run in production mode
 pnpm run prod
+
+# Run Take&Do in production mode (+ required packages)
+pnpm run prod:take-and-do
 ```
 
 #### Test
@@ -82,4 +95,14 @@ pnpm format
 ```bash
 # Run TypeScript type checking and linting
 pnpm run codeCheck
+```
+
+#### Clean
+
+```bash
+# Remove build outputs (via Turborepo)
+pnpm run clean
+
+# Remove build outputs + root node_modules
+pnpm run clean:hard
 ```

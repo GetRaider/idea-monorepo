@@ -9,7 +9,7 @@ import {
   JOIN_WHITELIST_DEFAULT_MESSAGE,
   getWhitelistFormSubmitRecipientEmail,
 } from "@/constants/whitelist.constant";
-import { AuthSecondaryButton } from "@/components/Auth/AuthButtons";
+import { AuthSecondaryButton } from "@/components/auth/AuthButtons";
 import { mixpanelAnalytics } from "@/lib/analytics/maxpanel-analytics";
 import { sendJoinWhitelistFormSubmit } from "@/lib/analytics/form-submit-analytics";
 

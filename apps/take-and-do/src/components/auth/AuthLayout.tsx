@@ -1,7 +1,7 @@
 import Image from "next/image";
 import { FiAlertTriangle } from "react-icons/fi";
 
-export default function AuthLayout({
+export function AuthLayout({
   title,
   children,
   subtitle = "",

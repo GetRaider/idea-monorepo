@@ -3,13 +3,13 @@
 import { useState } from "react";
 import { FiUser } from "react-icons/fi";
 
-import { GuestDialog } from "@/components/Auth/GuestDialog";
+import { GuestDialog } from "@/components/auth/GuestDialog";
 import {
   JoinWhitelistDialog,
   JoinWhitelistOutlineButton,
-} from "@/components/Auth/JoinWhitelistDialog";
-import { useGuestAnonymousSignIn } from "../../hooks/auth/useGuestAnonymousSignIn";
-import { AuthSecondaryButton } from "@/components/Auth/AuthButtons";
+} from "@/components/auth/JoinWhitelistDialog";
+import { useGuestAnonymousSignIn } from "@/hooks/auth/useGuestAnonymousSignIn";
+import { AuthSecondaryButton } from "@/components/auth/AuthButtons";
 
 export function OtherActionsPanel({
   disabled: disabledFromParent = false,

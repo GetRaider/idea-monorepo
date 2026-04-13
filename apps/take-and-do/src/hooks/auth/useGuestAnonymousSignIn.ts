@@ -6,7 +6,7 @@ import { useState } from "react";
 import { authClient } from "@/auth/client";
 import { mixpanelAnalytics } from "@/lib/analytics/maxpanel-analytics";
 
-import type { GuestIntent } from "../../components/Auth/GuestDialog";
+import type { GuestIntent } from "@/components/auth/GuestDialog";
 
 export function useGuestAnonymousSignIn() {
   const router = useRouter();

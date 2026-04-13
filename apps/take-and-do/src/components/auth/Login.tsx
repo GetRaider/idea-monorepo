@@ -11,7 +11,7 @@ import { authClient } from "@/auth/client";
 import { SpinnerRing } from "@/components/Spinner/Spinner";
 import { toast } from "sonner";
 
-import { AuthPrimaryButton } from "@/components/Auth/AuthButtons";
+import { AuthPrimaryButton } from "@/components/auth/AuthButtons";
 
 type LoadingKey = "google" | "email" | null;
 

@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-import AuthLayout from "@/components/Auth/AuthLayout";
-import { WhitelistRestrictedAuthPanel } from "@/components/Auth/WhitelistRestrictedAuthPanel";
+import { AuthLayout } from "@/components/auth/AuthLayout";
+import { WhitelistRestrictedAuthPanel } from "@/components/auth/WhitelistRestrictedAuthPanel";
 import { Route } from "@/constants/route.constant";
 
 export default function AuthErrorPage() {

@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-import AuthLayout from "@/components/Auth/AuthLayout";
-import { Login } from "@/components/Auth/Login";
-import { OtherActionsPanel } from "@/components/Auth/OtherActions";
+import { AuthLayout } from "@/components/auth/AuthLayout";
+import { Login } from "@/components/auth/Login";
+import { OtherActionsPanel } from "@/components/auth/OtherActions";
 import { GOOGLE_SIGNUP_DISABLED_MESSAGE } from "@/constants/auth-restriction.constant";
 
 export default function LoginPage() {

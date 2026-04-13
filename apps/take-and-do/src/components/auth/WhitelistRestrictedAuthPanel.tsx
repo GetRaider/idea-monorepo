@@ -4,7 +4,7 @@ import { useState } from "react";
 import { FiUser, FiAlertTriangle } from "react-icons/fi";
 
 import { useGuestAnonymousSignIn } from "@/hooks/auth/useGuestAnonymousSignIn";
-import { AuthSecondaryButton } from "@/components/Auth/AuthButtons";
+import { AuthSecondaryButton } from "@/components/auth/AuthButtons";
 import {
   JoinWhitelistDialog,
   JoinWhitelistOutlineButton,

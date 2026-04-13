@@ -2,6 +2,25 @@
   "$schema": "https://turborepo.com/schema.json",
   "ui": "tui",
   "globalDependencies": ["**/.env.*local"],
+  "globalEnv": [
+    "AI_API_KEY",
+    "AI_BASE_URL",
+    "AI_MODEL",
+    "AI_PROVIDER",
+    "BETTER_AUTH_SECRET",
+    "BETTER_AUTH_URL",
+    "DB_CONNECTION_STRING",
+    "GOOGLE_CLIENT_ID",
+    "GOOGLE_CLIENT_SECRET",
+    "LOG_LEVEL",
+    "NEXT_PUBLIC_GOOGLE_CLIENT_ID",
+    "NEXT_PUBLIC_MIXPANEL_TOKEN",
+    "NEXT_PUBLIC_WHITELIST_CONTACT_EMAIL",
+    "NODE_ENV",
+    "VERCEL",
+    "VERCEL_ENV",
+    "VERCEL_URL"
+  ],
   "tasks": {
     "clean": {
       "inputs": ["^clean"],

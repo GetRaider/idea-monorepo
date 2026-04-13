@@ -2,10 +2,10 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { asc, eq, and, isNull, inArray, gte, lt, or } from "drizzle-orm";
 
-import { env } from "@/env";
+import { envServer } from "@/env";
 
 export { asc, eq, and, isNull, inArray, gte, lt, or };
-const connectionString = env.db.connectionString;
+const connectionString = envServer.db.connectionString;
 
 export const pool = new Pool({
   connectionString,
@@ -13,7 +13,7 @@ export const pool = new Pool({
   connectionTimeoutMillis: 10000,
 });
 
-if (env.nodeEnv === "development") {
+if (envServer.nodeEnv === "development") {
   console.log(`[DB] Connecting to: ${getHostName(connectionString)}`);
 }
 

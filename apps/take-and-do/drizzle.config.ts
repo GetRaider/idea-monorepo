@@ -1,10 +1,10 @@
 import type { Config } from "drizzle-kit";
 
-import { env } from "./src/env";
+import { envServer } from "./src/env";
 
 export default {
   schema: "./src/db/schema.ts",
   dialect: "postgresql",
-  dbCredentials: { url: env.db.connectionString },
+  dbCredentials: { url: envServer.db.connectionString },
   out: "./drizzle",
 } satisfies Config;

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { env } from "@/env";
+import { envServer } from "@/env";
 import { getAccessByAuth, requireAuth } from "@/auth/guards";
 import {
   CreateTaskBoardDto,
@@ -83,7 +83,7 @@ export class TaskBoardsController extends BaseController {
           const payload = TaskBoardCreateErrorResponseDto.parse({
             error:
               "Database connection failed. Please check your DB_CONNECTION_STRING environment variable.",
-            details: env.nodeEnv === "development" ? message : undefined,
+            details: envServer.nodeEnv === "development" ? message : undefined,
           });
           return NextResponse.json(payload, { status: 500 });
         }

@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 
-import { env } from "@/env";
+import { envServer } from "@/env";
 import { AI_CONFIG } from "@/constants/ai.constant";
 
 class AIProvider {
@@ -9,7 +9,7 @@ class AIProvider {
 
   constructor() {
     this.client = new OpenAI(AI_CONFIG);
-    this.model = env.ai.model;
+    this.model = envServer.ai.model;
   }
 
   async complete(prompt: string): Promise<string> {

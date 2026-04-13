@@ -53,7 +53,8 @@ That fracture is painful in software development *and* in real life: you context
 
 **Improvements —** super-properties for workspace tier (guest vs registered), session replay sampling on error boundaries, and cohort reports that compare “guests who created ≥3 tasks” vs “waitlist only”—so marketing spend optimizes for retained trials, not form fills alone. Server-side logs remain the source of truth for API failures; Mixpanel explains *behavior*, not stack traces.`,
     prodUrl: "https://take-and-do.com",
-    repoUrl: "https://github.com/example/take-and-do",
+    repoUrl:
+      "https://github.com/GetRaider/idea-monorepo/tree/main/apps/take-and-do",
   },
   {
     slug: "devinity",
@@ -104,7 +105,8 @@ The pain intensifies when work spans multiple teams and vendors—you need a liv
     analytics:
       "Optional: add Plausible or Vercel Analytics later; currently no third-party trackers.",
     prodUrl: null,
-    repoUrl: "https://github.com/example/idea-monorepo",
+    repoUrl:
+      "https://github.com/GetRaider/idea-monorepo/tree/main/apps/portfolio",
   },
 ];
 

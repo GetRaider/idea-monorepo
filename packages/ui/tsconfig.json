@@ -3,6 +3,6 @@
   "compilerOptions": {
     "outDir": "dist"
   },
-  "include": ["src"],
+  "include": ["src", "assets", "tailwind.preset.ts"],
   "exclude": ["node_modules", "dist"]
 }

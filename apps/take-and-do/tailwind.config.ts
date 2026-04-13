@@ -8,6 +8,7 @@ const config: Config = {
     "./src/lib/**/*.{ts,tsx}",
     "./src/pages/**/*.{ts,tsx}",
     "./node_modules/@tremor/**/*.{js,ts,jsx,tsx}",
+    "../../packages/ui/src/**/*.{ts,tsx}",
   ],
   theme: {
     extend: {

@@ -17,6 +17,7 @@
     "dev": "turbo run dev",
     "dev:devinity": "turbo run dev --filter=devinity-api --filter=devinity-web --filter=@repo/api --filter=@repo/ui",
     "dev:take-and-do": "turbo run dev --filter=take-and-do --filter=@repo/ui --filter=@repo/api --filter=@repo/shared",
+    "dev:portfolio": "turbo run dev --filter=portfolio --filter=@repo/ui",
     "prod:take-and-do": "turbo run prod --filter=take-and-do --filter=@repo/ui --filter=@repo/api --filter=@repo/shared",
     "prod": "turbo run prod",
     "test": "turbo run test",

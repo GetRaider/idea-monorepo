@@ -1,7 +1,7 @@
 "use client";
 
-import { cn } from "@/lib/styles/utils";
-import type { UiProps } from "@/lib/styles/ui-props";
+import { cn } from "../../lib/cn";
+import type { UiProps } from "../../lib/ui-props";
 
 export function DialogScrim({ className, ref, ...props }: UiProps<"div">) {
   return (

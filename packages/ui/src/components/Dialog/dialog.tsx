@@ -1,12 +1,60 @@
 "use client";
 
-import { ReactNode, useEffect, useId, useMemo, useRef } from "react";
+import {
+  type MouseEvent,
+  type ReactNode,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+} from "react";
 import { createPortal } from "react-dom";
 
-import { CloseIcon } from "@/components/Icons";
-import { CloseButton } from "@/components/Buttons";
-import { cn } from "@/lib/styles/utils";
-import type { UiProps } from "@/lib/styles/ui-props";
+import { cn } from "../../lib/cn";
+import type { UiProps } from "../../lib/ui-props";
+
+function CloseIcon({
+  size = 16,
+  className,
+}: {
+  size?: number;
+  className?: string;
+}) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      className={className}
+    >
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  );
+}
+
+function DialogCloseButton({
+  className,
+  type = "button",
+  ref,
+  ...props
+}: UiProps<"button">) {
+  return (
+    <button
+      ref={ref}
+      type={type}
+      className={cn(
+        "flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-md border-0 bg-transparent p-0 text-[28px] leading-none text-zinc-400 transition-all duration-200 hover:bg-zinc-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-50 hover:disabled:bg-transparent hover:disabled:text-zinc-400",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
 
 export function DialogOverlay({ className, ref, ...props }: UiProps<"div">) {
   return (
@@ -43,7 +91,7 @@ export function DialogContainer({
         ...(minHeight !== undefined ? { minHeight } : {}),
       }}
       className={cn(
-        "flex max-h-[90vh] w-full flex-col overflow-y-auto rounded-xl border border-border-app bg-background-primary p-6 shadow-dialog max-[600px]:max-h-[95vh] max-[600px]:rounded-lg",
+        "flex max-h-[90vh] w-full flex-col overflow-y-auto rounded-xl border border-white/10 bg-zinc-950/95 p-6 shadow-2xl backdrop-blur-xl max-[600px]:max-h-[95vh] max-[600px]:rounded-lg",
         className,
       )}
       {...props}
@@ -75,10 +123,7 @@ export function DialogSubtitle({ className, ref, ...props }: UiProps<"p">) {
   return (
     <p
       ref={ref}
-      className={cn(
-        "m-0 mt-1 text-sm leading-normal text-[var(--text-secondary)]",
-        className,
-      )}
+      className={cn("m-0 mt-1 text-sm leading-normal text-zinc-400", className)}
       {...props}
     />
   );
@@ -138,7 +183,7 @@ export function ConfirmCancelBtn({
       ref={ref}
       type={type}
       className={cn(
-        "cursor-pointer rounded-lg border border-border-app bg-transparent px-5 py-2.5 text-sm font-medium text-text-secondary transition-all duration-200 hover:bg-[#2a2a2a] hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:cursor-not-allowed disabled:opacity-60 hover:disabled:bg-transparent hover:disabled:text-text-secondary",
+        "cursor-pointer rounded-lg border border-zinc-600 bg-transparent px-5 py-2.5 text-sm font-medium text-zinc-400 transition-all duration-200 hover:bg-zinc-800 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 disabled:cursor-not-allowed disabled:opacity-60 hover:disabled:bg-transparent hover:disabled:text-zinc-400",
         className,
       )}
       {...props}
@@ -186,7 +231,7 @@ export function Dialog({
     [],
   );
 
-  const handleOverlayClick = (e: React.MouseEvent) => {
+  const handleOverlayClick = (e: MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) onClose();
   };
 
@@ -238,8 +283,8 @@ export function Dialog({
         return;
       }
 
-      const first = focusables[0];
-      const last = focusables[focusables.length - 1];
+      const first = focusables[0]!;
+      const last = focusables[focusables.length - 1]!;
       const active = document.activeElement as HTMLElement | null;
 
       if (e.shiftKey) {
@@ -283,9 +328,9 @@ export function Dialog({
             )}
           </div>
           {showCloseButton && (
-            <CloseButton onClick={onClose}>
+            <DialogCloseButton onClick={onClose}>
               <CloseIcon />
-            </CloseButton>
+            </DialogCloseButton>
           )}
         </DialogHeader>
         <DialogBody>{children}</DialogBody>

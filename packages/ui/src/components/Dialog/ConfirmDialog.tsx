@@ -6,7 +6,7 @@ import {
   ConfirmCancelBtn,
   ConfirmDangerBtn,
   Dialog,
-} from "./Dialog";
+} from "./dialog";
 
 interface ConfirmDialogProps {
   title: string;

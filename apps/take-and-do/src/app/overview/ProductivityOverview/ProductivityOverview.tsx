@@ -403,7 +403,8 @@ function ProductivityMetricsEmptyState({
             </h2>
             <p className="m-0 max-w-sm text-sm leading-relaxed text-[var(--text-secondary)]">
               Complete your first tasks to unlock charts, trends, and AI-powered
-              insights about how you work.
+              insights about how you work. It&apos;ll take sometime to prepare
+              insights.
             </p>
             <PrimaryButton
               type="button"

@@ -1,0 +1,41 @@
+#!/usr/bin/env sh
+set -e
+
+branch_name="$(git rev-parse --abbrev-ref HEAD)"
+
+if [ "$branch_name" = "HEAD" ]; then
+  echo "pre-commit: detached HEAD; skipping branch name lint"
+else
+  if [ "$branch_name" = "main" ] || [ "$branch_name" = "master" ] || [ "$branch_name" = "develop" ]; then
+    echo "pre-commit: skipping branch name lint on $branch_name"
+  else
+  branch_name_length="${#branch_name}"
+  if [ "$branch_name_length" -gt 50 ]; then
+    echo "pre-commit: branch name too long ($branch_name_length > 50)"
+    echo "branch: $branch_name"
+    exit 1
+  fi
+
+  # Expected: type/SCOPE-your-branch-name
+  # Example: feat/GEN-my-branch-name
+  echo "$branch_name" | grep -Eq '^(feat|fix|test|chore|docs|refactor|style)/(GEN|TAD|DVN|PRT)-[A-Za-z0-9][A-Za-z0-9-]*$' || {
+    echo "pre-commit: invalid branch name"
+    echo "branch: $branch_name"
+    echo "expected: <type>/<SCOPE>-<name>"
+    echo "type: feat|fix|test|chore|docs|refactor|style"
+    echo "SCOPE: GEN|TAD|DVN|PRT"
+    echo "example: feat/GEN-my-branch-name"
+    exit 1
+  }
+  fi
+fi
+
+staged_files="$(git diff --cached --name-only --diff-filter=ACMR)"
+
+# Keep existing Take&Do pre-commit behavior, but only when relevant
+if [ -f "apps/take-and-do/.husky/pre-commit" ]; then
+  if echo "$staged_files" | grep -Eq '^apps/take-and-do/'; then
+    sh "apps/take-and-do/.husky/pre-commit"
+  fi
+fi
+

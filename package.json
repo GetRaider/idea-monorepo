@@ -24,14 +24,18 @@
     "test:e2e": "turbo run test:e2e",
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "codeCheck": "npx tsc && pnpm lint"
+    "codeCheck": "npx tsc && pnpm lint",
+    "prepare": "husky"
   },
   "devDependencies": {
+    "@better-auth/cli": "1.3.8",
+    "@commitlint/cli": "^20.5.0",
+    "@commitlint/config-conventional": "^20.5.0",
     "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
-    "@better-auth/cli": "1.3.8",
     "drizzle-kit": "catalog:",
     "eslint": "^8.57.0",
+    "husky": "^9.1.7",
     "prettier": "^3.5.3",
     "turbo": "catalog:"
   },

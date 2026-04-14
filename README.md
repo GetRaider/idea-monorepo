@@ -1,14 +1,15 @@
 # Idea Monorepo
 
-A repository where I invent, test, and validate product ideas. This monorepo contains multiple applications and shared packages, serving as a space to experiment with new concepts, build prototypes, and showcase development work.
+A repository where I develop, test, and validate product ideas. This monorepo contains multiple applications and shared packages, serving as a space to experiment with new concepts, build prototypes, and showcase development work.
 
 ## Projects
 
-This repository includes the following applications and packages:
+### Deployed apps:
 
+- [Portfolio Website](https://portfolio-ten-snowy-m8019vod5u.vercel.app/)
 - [Take&Do](https://take-and-do.vercel.app/)
 
-### Apps and Packages
+### Apps and Packages Structure
 
     .
     ├── apps
@@ -34,6 +35,51 @@ The repository uses modern development tools and practices:
 - [ESLint](https://eslint.org/) for code linting
 - [Prettier](https://prettier.io) for code formatting
 - [Vitest](https://vitest.dev) & [Playwright](https://playwright.dev/) for testing
+- [ZOD](https://zod.dev/) for schema validation
+
+### Git Conventions
+
+This repo enforces **branch naming** on `pre-commit` + `pre-push`, and **commit message format** on `commit-msg`.
+
+#### Branch names
+
+Format:
+
+`<type>/<SCOPE>-<branch-name>`
+
+Rules:
+
+- Allowed `type`: `feat`, `fix`, `test`, `chore`, `docs`, `refactor`, `style`
+- Allowed `SCOPE`:
+  - `GEN` - general
+  - `TAD` - take&do
+  - `DVN` - devinity
+  - `PRT` - portfolio
+- Max branch length: **50** characters
+- `main`, `master`, `develop` are allowed as exceptions
+
+Examples:
+
+- `feat/GEN-commitlint-and-branchlint`
+- `fix/TAD-kanban-dnd-bug`
+
+#### Commit messages
+
+Format:
+
+`<type>(<SCOPE>): <subject>`
+
+Rules:
+
+- Allowed `type`: `feat`, `fix`, `test`, `chore`, `docs`, `refactor`, `style`
+- Allowed `SCOPE`: `GEN`, `TAD`, `DVN`, `PRT`
+- Max commit message length: **85** characters (single-line header)
+- Commit body/footer are not allowed
+
+Examples:
+
+- `feat(GEN): enforce commit message and branch naming rules`
+- `docs(PRT): document local dev commands`
 
 ### Development Commands
 
@@ -58,6 +104,9 @@ pnpm run dev:devinity
 
 # Start only Take&Do (+ required packages)
 pnpm run dev:take-and-do
+
+# Start only Portfolio website (+ required packages)
+pnpm run dev:portfolio
 
 # Run in production mode
 pnpm run prod

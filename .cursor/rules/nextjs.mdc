@@ -9,12 +9,15 @@ alwaysApply: true
 # Next.js Task Management App Development Rules
 
 ## Architecture
+
 - Use Next.js App Router with Turbopack
 - Server Components by default, use `"use client"` for interactive components
 - Service layer pattern for API calls (`services/api/`)
 - Colocate component files with styles and types
+- If content doesn’t change per user → don’t use server functions
 
 ## File Structure
+
 - Pages: `app/**/page.tsx`
 - Layouts: `app/**/layout.tsx`
 - API routes: `app/api/**/route.ts`
@@ -24,6 +27,7 @@ alwaysApply: true
 - Types: `types/*.ts`
 
 ## Component Patterns
+
 - Use PascalCase for component files
 - Export default for page components
 - Named exports for reusable components
@@ -50,6 +54,7 @@ export default function Component({ data, onAction }: ComponentProps) {
 ```
 
 ## Styling (styled-components)
+
 - Separate styles into `.styles.tsx` files
 - Use semantic naming for styled components
 - Support transient props with `$` prefix for non-DOM props
@@ -66,17 +71,20 @@ export const Card = styled.div`
 
 export const Title = styled.h3<{ $status?: string }>`
   color: ${({ $status }) => ($status === "done" ? "#666" : "#fff")};
-  text-decoration: ${({ $status }) => ($status === "done" ? "line-through" : "none")};
+  text-decoration: ${({ $status }) =>
+    $status === "done" ? "line-through" : "none"};
 `;
 ```
 
 ## Kanban Board Specific
+
 - `KanbanBoard/` is the main task management component
 - Task types: `TaskSchedule`, `TaskStatus`, `TaskPriority` enums
 - Support drag-and-drop with native HTML5 API
 - Use `SingleKanbanBoard` for individual boards, `MultipleKanbanBoard` for schedules
 
 ## API Routes
+
 - Use Route Handlers in `app/api/`
 - Return proper HTTP status codes
 - Use `NextResponse.json()` for responses
@@ -97,6 +105,7 @@ export async function POST(request: Request) {
 ```
 
 ## Service Layer
+
 - Encapsulate API calls in service files
 - Export typed functions for each operation
 - Handle errors consistently
@@ -108,7 +117,10 @@ export async function getTasks(): Promise<Task[]> {
   return response.json();
 }
 
-export async function updateTaskStatus(id: string, status: TaskStatus): Promise<Task> {
+export async function updateTaskStatus(
+  id: string,
+  status: TaskStatus,
+): Promise<Task> {
   const response = await fetch(`/api/tasks/${id}`, {
     method: "PATCH",
     body: JSON.stringify({ status }),
@@ -118,6 +130,7 @@ export async function updateTaskStatus(id: string, status: TaskStatus): Promise<
 ```
 
 ## Type Definitions
+
 - Define shared types in `types/` directory
 - Use enums for fixed value sets
 - Interface for object shapes
@@ -139,11 +152,13 @@ export interface Task {
 ```
 
 ## UI Components
+
 - Use `@repo/ui` for shared components
 - Use Radix UI (`@radix-ui/themes`) for primitives
 - Custom icons from `/public/*.svg`
 
 ## Drag and Drop
+
 - Use native HTML5 drag and drop API
 - Set `draggable` attribute on draggable elements
 - Use `dataTransfer` to pass task data
@@ -162,14 +177,17 @@ const handleDrop = (e: React.DragEvent) => {
 ```
 
 ## `lib/` Folder — Framework Plumbing Only
+
 `lib/` is strictly for thin wrappers around third-party libraries and framework primitives. Zero business logic, zero domain knowledge.
 
 ### What belongs in `lib/`
+
 - Route infrastructure: `lib/api/defineRoute.ts`, `lib/api/errors.ts`
 - Style utilities: `lib/styles/` (animated-gradient, ui-props, CSS helpers)
 - Third-party SDK wrappers (e.g. analytics provider init)
 
 ### What does NOT belong in `lib/`
+
 - Auth config or guards → `auth/`
 - AI prompts, schemas, providers → `services/ai/`
 - Client-side state stores → `stores/`
@@ -177,9 +195,11 @@ const handleDrop = (e: React.DragEvent) => {
 - Database schemas, repositories, client → `db/`
 
 ### Rule of thumb
+
 If a file imports domain types (`Task`, `Workspace`, etc.) or calls a repository/service, it does not belong in `lib/`. Move it to the appropriate domain folder.
 
 ## Best Practices
+
 - Handle loading and error states
 - Use proper TypeScript types throughout
 - Keep components small and composable

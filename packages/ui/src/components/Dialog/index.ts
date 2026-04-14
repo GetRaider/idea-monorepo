@@ -1,4 +1,5 @@
 export {
+  CloseIcon,
   ConfirmActions,
   ConfirmBody,
   ConfirmCancelBtn,
@@ -11,6 +12,7 @@ export {
   DialogOverlay,
   DialogSubtitle,
   DialogTitle,
+  IconCloseButton,
 } from "./dialog";
 export { ConfirmDialog } from "./ConfirmDialog";
 export { DialogHeading } from "./DialogHeading";

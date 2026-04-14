@@ -22,7 +22,7 @@ export const projects: PortfolioProject[] = [
     why: `Most people do not fail because they lack an app—they fail because their commitments live in disconnected surfaces. A release checklist sits in Jira, the dentist sits in Apple Calendar, the talk outline lives in Notion, and the weekend errands live in a phone reminder. Popular “GTD” and “inbox zero” products optimize a single list metaphor, but they rarely preserve the *relationship* between a task, the calendar block that protects it, and the document that proves the spec.
 
 That fracture is painful in software development *and* in real life: you context-switch between “shipping mode” and “life admin” without a single trustworthy graph of what is blocked, what is time-bound, and what is merely aspirational. Take & Do exists to tighten that loop—one workspace where boards, timelines, and notes can evolve together instead of constantly being re-synced in your head.`,
-    how: `**Stack —** Next.js 15 (App Router) with Turbopack in development, React 19, strict TypeScript, and a hybrid styling model: styled-components for feature UI, Radix Themes / primitives for accessible controls, and Tailwind where utility-first wins (shared dialog chrome from \`@repo/ui\`).
+    how: `**Stack —** Next.js 15 (App Router) with Turbopack in development, React 19, strict TypeScript, Tailwind CSS for styling, Radix Themes / primitives for accessible controls, and shared dialog chrome from \`@repo/ui\`.
 
 **Data & auth —** Drizzle ORM against PostgreSQL for durable workspace, board, task, and schedule data; Better Auth with email/password plus optional Google, anonymous “guest” sessions where appropriate, and server-enforced access rules so workspaces stay isolated.
 

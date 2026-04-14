@@ -4,18 +4,12 @@ import Image from "next/image";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  SidebarContainer,
-  NavGrid,
-  SquareButton,
-  Label,
-  Icon,
-} from "./Sidebar.styles";
+import { cn } from "@repo/ui";
 
 type NavItem = {
   label: string;
   href: string;
-  icon?: string; // path to image/icon
+  icon?: string;
 };
 
 const navLinks: NavItem[] = [
@@ -35,8 +29,8 @@ export function Sidebar() {
   }, []);
 
   useEffect(() => {
-    function handleSidebarCollapse(e: CustomEvent) {
-      setCollapsed(e.detail);
+    function handleSidebarCollapse(event: CustomEvent<boolean>) {
+      setCollapsed(event.detail);
     }
 
     window.addEventListener(
@@ -51,29 +45,55 @@ export function Sidebar() {
   }, []);
 
   return (
-    <SidebarContainer $collapsed={collapsed}>
-      <NavGrid>
+    <aside
+      className={cn(
+        "sticky top-16 flex h-[calc(100vh-4rem)] flex-col gap-4 border-r border-slate-400/25 bg-slate-800 p-4 transition-[width] duration-200 ease-out lg:static",
+        collapsed ? "w-20" : "w-[260px]",
+        "max-lg:fixed max-lg:left-0 max-lg:top-16 max-lg:z-50",
+      )}
+    >
+      <ul className="m-0 grid list-none grid-cols-1 gap-2 p-0">
         {navLinks.map((link) => {
           const isActive = pathname === link.href;
-          const iconEl = link.icon ? (
-            <Icon src={link.icon} alt="" width={20} height={20} />
+          const iconElement = link.icon ? (
+            <Image
+              src={link.icon}
+              alt=""
+              width={20}
+              height={20}
+              className="opacity-90"
+            />
           ) : null;
-          const content = (
-            <Link href={link.href} style={{ textDecoration: "none" }}>
-              <SquareButton
-                $variant={isActive ? "solid" : undefined}
-                $collapsed={collapsed}
-                title={collapsed ? link.label : undefined}
-              >
-                {iconEl}
-                <Label $collapsed={collapsed}>{link.label}</Label>
-              </SquareButton>
-            </Link>
+          return (
+            <li key={link.href}>
+              <Link href={link.href} className="no-underline">
+                <button
+                  type="button"
+                  title={collapsed ? link.label : undefined}
+                  className={cn(
+                    "flex h-11 w-full cursor-pointer items-center gap-2.5 rounded-lg border-none px-3 font-medium tracking-wide",
+                    collapsed ? "justify-center" : "justify-start",
+                    isActive
+                      ? "bg-violet-600 text-white hover:bg-violet-700"
+                      : "bg-transparent text-slate-300 hover:bg-slate-700",
+                  )}
+                >
+                  {iconElement}
+                  <span
+                    className={cn(
+                      "whitespace-nowrap font-medium text-inherit",
+                      collapsed ? "hidden" : "inline",
+                    )}
+                  >
+                    {link.label}
+                  </span>
+                </button>
+              </Link>
+            </li>
           );
-          return <li key={link.href}>{content}</li>;
         })}
-      </NavGrid>
-    </SidebarContainer>
+      </ul>
+    </aside>
   );
 }
 

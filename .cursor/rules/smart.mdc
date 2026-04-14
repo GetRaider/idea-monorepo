@@ -38,7 +38,7 @@ DO NOT GIVE ME HIGH LEVEL STUFF, IF I ASK FOR FIX OR EXPLANATION, I WANT ACTUAL 
 This is a pnpm monorepo with Turborepo:
 
 - `apps/devinity-api` — NestJS API with Drizzle ORM, PostgreSQL, Redis, Better-Auth
-- `apps/devinity-web` — Next.js frontend with styled-components, Radix UI
+- `apps/devinity-web` — Next.js frontend with Tailwind CSS, Radix UI
 - `apps/take-and-do` — Next.js task management app with Kanban boards
 - `packages/api` — Shared TypeScript models and DTOs
 - `packages/ui` — Shared React components
@@ -61,4 +61,4 @@ Import shared packages via `@repo/api`, `@repo/ui`, etc.
 # FE
 
 - Never use `export default` with an anonymous component—always name components and use either named export or `export default <Name>;`
-- Never use inline styles. All styles must be in separate `.styles.tsx` files using `styled-components`.
+- Use Tailwind utility classes (and `cn` from `@repo/ui` when merging classes). Avoid inline `style` except where unavoidable for third-party components.

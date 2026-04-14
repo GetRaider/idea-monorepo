@@ -1,6 +1,6 @@
 "use client";
 
-import { gradientOptionSurfaceClass } from "@/lib/styles/animated-gradient";
+import { gradientOptionSurfaceClass } from "@repo/ui";
 import { cn } from "@/lib/styles/utils";
 import type { UiProps } from "@/lib/styles/ui-props";
 

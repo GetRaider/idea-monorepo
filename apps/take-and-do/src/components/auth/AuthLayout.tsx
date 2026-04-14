@@ -1,6 +1,8 @@
 import Image from "next/image";
 import { FiAlertTriangle } from "react-icons/fi";
 
+import { AuthBrandedPageShell, AuthFormCard } from "@repo/ui";
+
 export function AuthLayout({
   title,
   children,
@@ -11,21 +13,25 @@ export function AuthLayout({
   subtitle?: string;
 }) {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-[#1a1a1a] to-[#3c2856] p-4">
-      <div className="absolute left-6 top-6 flex items-center gap-3">
-        <Image
-          src="/logo.svg"
-          alt=""
-          width={40}
-          height={40}
-          className="h-10 w-10 shrink-0"
-          priority
-        />
-        <h1 className="text-2xl font-semibold text-[var(--foreground)]">
-          Take &amp; Do
-        </h1>
-      </div>
-      <div className="w-full max-w-[440px] rounded-2xl border border-[#282930] bg-background-login px-8 py-11 shadow-[var(--shadow-dialog)] backdrop-blur-md">
+    <AuthBrandedPageShell
+      backgroundClassName="bg-gradient-to-br from-[#1a1a1a] to-[#3c2856]"
+      topLeft={
+        <>
+          <Image
+            src="/logo.svg"
+            alt=""
+            width={40}
+            height={40}
+            className="h-10 w-10 shrink-0"
+            priority
+          />
+          <h1 className="text-2xl font-semibold text-[var(--foreground)]">
+            Take &amp; Do
+          </h1>
+        </>
+      }
+    >
+      <AuthFormCard className="border-[#282930] bg-background-login shadow-[var(--shadow-dialog)]">
         <div className="text-center">
           <p className="m-0 text-2xl font-semibold text-[var(--text-primary)]">
             {title}
@@ -39,7 +45,7 @@ export function AuthLayout({
         </div>
 
         <div className="mt-8">{children}</div>
-      </div>
-    </div>
+      </AuthFormCard>
+    </AuthBrandedPageShell>
   );
 }

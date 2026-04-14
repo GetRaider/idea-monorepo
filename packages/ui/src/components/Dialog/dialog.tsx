@@ -13,7 +13,7 @@ import { createPortal } from "react-dom";
 import { cn } from "../../lib/cn";
 import type { UiProps } from "../../lib/ui-props";
 
-function CloseIcon({
+export function CloseIcon({
   size = 16,
   className,
 }: {
@@ -37,7 +37,7 @@ function CloseIcon({
   );
 }
 
-function DialogCloseButton({
+export function IconCloseButton({
   className,
   type = "button",
   ref,
@@ -328,9 +328,9 @@ export function Dialog({
             )}
           </div>
           {showCloseButton && (
-            <DialogCloseButton onClick={onClose}>
+            <IconCloseButton onClick={onClose}>
               <CloseIcon />
-            </DialogCloseButton>
+            </IconCloseButton>
           )}
         </DialogHeader>
         <DialogBody>{children}</DialogBody>

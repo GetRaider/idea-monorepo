@@ -19,7 +19,6 @@
     "next": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
-    "styled-components": "catalog:",
     "@radix-ui/react-icons": "catalog:",
     "@radix-ui/react-tooltip": "catalog:",
     "@radix-ui/themes": "catalog:",
@@ -42,7 +41,9 @@
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
-    "@types/styled-components": "catalog:",
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.3",
+    "tailwindcss": "^3.4.17",
     "vitest": "catalog:",
     "typed-css-modules": "catalog:"
   }

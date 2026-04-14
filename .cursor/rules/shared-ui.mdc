@@ -62,25 +62,8 @@ export const Button = ({
 ```
 
 ## Styling Pattern
-- Use styled-components for custom styling
-- Keep styles in separate `.styles.tsx` files
-- Export styled components as named exports
-
-```typescript
-import styled from "styled-components";
-
-export const Container = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-`;
-
-export const Title = styled.h1`
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: inherit;
-`;
-```
+- Use Tailwind CSS utility classes; use `cn` from `@repo/ui` for conditional class names
+- Co-locate layout classes on the component; optional small `*.ui.tsx` helpers if a subtree is large
 
 ## Props Design
 - Use TypeScript union types for variants/sizes

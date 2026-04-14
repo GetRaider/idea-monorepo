@@ -1,6 +1,6 @@
 "use client";
 
-import Header from "@repo/ui/components/Header/Header.component";
+import { Header } from "@repo/ui";
 import { signOut, useSession } from "@lib/auth-client";
 
 export default function HeaderBar({

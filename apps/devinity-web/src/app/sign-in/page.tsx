@@ -3,28 +3,32 @@
 import { useState, useEffect, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Button, TextField } from "@radix-ui/themes";
+import { cn } from "@repo/ui";
 
 import { signIn, signUp, useSession } from "@lib/auth-client";
 import { api } from "@lib/api";
-import {
-  SignInContainer,
-  SignInCard,
-  SignInTitle,
-  SignInDescription,
-  Logo,
-  BrandName,
-  Divider,
-  Form,
-  ToggleText,
-  ErrorMessage,
-  PasswordStrength,
-  ValidationMessage,
-} from "./page.styles";
 
 interface PasswordValidation {
   isValid: boolean;
   strength: "weak" | "medium" | "strong";
   messages: string[];
+}
+
+function passwordStrengthClass(strength: PasswordValidation["strength"]) {
+  switch (strength) {
+    case "strong":
+      return "border border-green-400/20 bg-green-400/10 text-green-400";
+    case "medium":
+      return "border border-amber-400/20 bg-amber-400/10 text-amber-400";
+    default:
+      return "border border-red-400/20 bg-red-400/10 text-red-400";
+  }
+}
+
+function validationMessageClass(type: "error" | "info") {
+  return type === "error"
+    ? "border border-red-400/20 bg-red-400/10 text-red-400"
+    : "border border-slate-400/20 bg-slate-400/10 text-slate-400";
 }
 
 export default function SignInPage() {
@@ -42,7 +46,6 @@ export default function SignInPage() {
   const { data: session, isPending } = useSession();
   const router = useRouter();
 
-  // Redirect to home if already authenticated
   useEffect(() => {
     if (!isPending && session?.user) {
       console.log("User is authenticated, redirecting to home");
@@ -50,7 +53,6 @@ export default function SignInPage() {
     }
   }, [session, isPending, router]);
 
-  // Validate password strength
   const validatePassword = (password: string): PasswordValidation => {
     const messages: string[] = [];
     let strength: "weak" | "medium" | "strong" = "weak";
@@ -86,7 +88,6 @@ export default function SignInPage() {
     return { isValid, strength, messages };
   };
 
-  // Check if email exists
   const checkEmailExists = async (email: string) => {
     if (!email || !isSignUp) {
       setEmailError(null);
@@ -104,12 +105,10 @@ export default function SignInPage() {
       }
     } catch (err) {
       console.error("Email check error:", err);
-      // Don't show error if the endpoint doesn't exist yet
       setEmailError(null);
     }
   };
 
-  // Handle password change with validation
   const handlePasswordChange = (password: string) => {
     setFormData({ ...formData, password });
     if (isSignUp && password) {
@@ -119,7 +118,6 @@ export default function SignInPage() {
     }
   };
 
-  // Handle email change with debounced existence check
   const handleEmailChange = (email: string) => {
     setFormData({ ...formData, email });
     setEmailError(null);
@@ -128,7 +126,7 @@ export default function SignInPage() {
   useEffect(() => {
     const timer = setTimeout(() => {
       if (formData.email && isSignUp) {
-        checkEmailExists(formData.email);
+        void checkEmailExists(formData.email);
       }
     }, 500);
 
@@ -140,7 +138,6 @@ export default function SignInPage() {
       setError(null);
       console.log("Starting GitHub sign-in...");
 
-      // Call the backend to get the OAuth URL, then redirect
       await signIn.social({
         provider: "github",
         callbackURL: window.location.origin,
@@ -151,11 +148,10 @@ export default function SignInPage() {
     }
   };
 
-  const handleEmailAuth = async (e: FormEvent) => {
-    e.preventDefault();
+  const handleEmailAuth = async (event: FormEvent) => {
+    event.preventDefault();
     setError(null);
 
-    // Validate password strength on sign-up
     if (isSignUp) {
       const validation = validatePassword(formData.password);
       if (!validation.isValid) {
@@ -163,14 +159,12 @@ export default function SignInPage() {
         return;
       }
 
-      // Check for email error
       if (emailError) {
         setError(emailError);
         return;
       }
     }
 
-    // For sign-in, check if email exists
     if (!isSignUp) {
       try {
         const response = await api.get(
@@ -182,7 +176,6 @@ export default function SignInPage() {
         }
       } catch (err) {
         console.error("Email check error:", err);
-        // Continue with sign-in even if check fails
       }
     }
 
@@ -190,7 +183,6 @@ export default function SignInPage() {
 
     try {
       if (isSignUp) {
-        // Sign up
         await signUp.email({
           email: formData.email,
           password: formData.password,
@@ -200,7 +192,6 @@ export default function SignInPage() {
         console.log("Sign-up successful, redirecting...");
         router.push("/");
       } else {
-        // Sign in
         const result = await signIn.email({
           email: formData.email,
           password: formData.password,
@@ -214,21 +205,26 @@ export default function SignInPage() {
         console.log("Sign-in successful, redirecting...");
         router.push("/");
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Authentication error:", err);
 
-      // Provide user-friendly error messages
       let errorMessage = "Authentication failed";
 
-      if (err.message) {
-        const msg = err.message.toLowerCase();
-        if (msg.includes("password") || msg.includes("invalid credentials")) {
+      if (err instanceof Error && err.message) {
+        const messageLower = err.message.toLowerCase();
+        if (
+          messageLower.includes("password") ||
+          messageLower.includes("invalid credentials")
+        ) {
           errorMessage = "Invalid email or password. Please try again.";
-        } else if (msg.includes("email") && msg.includes("not found")) {
+        } else if (
+          messageLower.includes("email") &&
+          messageLower.includes("not found")
+        ) {
           errorMessage = "No account found with this email.";
         } else if (
-          msg.includes("already exists") ||
-          msg.includes("duplicate")
+          messageLower.includes("already exists") ||
+          messageLower.includes("duplicate")
         ) {
           errorMessage = "An account with this email already exists.";
         } else {
@@ -250,19 +246,23 @@ export default function SignInPage() {
   };
 
   return (
-    <SignInContainer>
-      <SignInCard>
-        <Logo>
-          <BrandName>Devinity</BrandName>
-        </Logo>
-        <SignInTitle>Welcome to Devinity</SignInTitle>
-        <SignInDescription>
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800 p-8">
+      <div className="flex w-full max-w-[450px] flex-col items-center gap-8 rounded-[20px] border border-white/10 bg-white/5 p-12 shadow-2xl shadow-black/30 backdrop-blur-xl">
+        <div className="flex items-center gap-2">
+          <h1 className="m-0 bg-gradient-to-br from-violet-500 to-purple-500 bg-clip-text text-4xl font-bold text-transparent">
+            Devinity
+          </h1>
+        </div>
+        <h2 className="m-0 text-center text-3xl font-semibold text-slate-50">
+          Welcome to Devinity
+        </h2>
+        <p className="m-0 max-w-[350px] text-center text-lg leading-relaxed text-slate-300">
           Your personal development companion. Sign in to get started and access
           all features.
-        </SignInDescription>
+        </p>
 
         {error && (
-          <ErrorMessage>
+          <div className="rounded-lg border border-red-400/20 bg-red-400/10 px-3 py-3 text-center text-sm text-red-400">
             {error}
             {!isSignUp && error.includes("No account found") && (
               <>
@@ -271,67 +271,78 @@ export default function SignInPage() {
                   variant="ghost"
                   size="2"
                   onClick={toggleMode}
-                  style={{
-                    textDecoration: "underline",
-                    background: "none",
-                    color: "inherit",
-                    padding: 0,
-                    fontWeight: "500",
-                  }}
+                  className="inline p-0 font-medium text-inherit underline"
                 >
                   Create an account
                 </Button>
               </>
             )}
-          </ErrorMessage>
+          </div>
         )}
 
-        <Form onSubmit={handleEmailAuth}>
+        <form onSubmit={handleEmailAuth} className="flex w-full flex-col gap-4">
           {isSignUp && (
             <TextField.Root
               type="text"
               placeholder="Full Name"
               value={formData.name}
-              onChange={(e) =>
-                setFormData({ ...formData, name: e.target.value })
+              onChange={(event) =>
+                setFormData({ ...formData, name: event.target.value })
               }
               required
               size="3"
             />
           )}
-          <div style={{ width: "100%" }}>
+          <div className="w-full">
             <TextField.Root
               type="email"
               placeholder="Email"
               value={formData.email}
-              onChange={(e) => handleEmailChange(e.target.value)}
+              onChange={(event) => handleEmailChange(event.target.value)}
               required
               color={emailError ? "red" : undefined}
               size="3"
             />
             {emailError && (
-              <ValidationMessage $type="error">{emailError}</ValidationMessage>
+              <div
+                className={cn(
+                  "mt-2 rounded-md p-2 text-sm",
+                  validationMessageClass("error"),
+                )}
+              >
+                {emailError}
+              </div>
             )}
           </div>
-          <div style={{ width: "100%" }}>
+          <div className="w-full">
             <TextField.Root
               type="password"
               placeholder="Password"
               value={formData.password}
-              onChange={(e) => handlePasswordChange(e.target.value)}
+              onChange={(event) => handlePasswordChange(event.target.value)}
               required
               minLength={isSignUp ? 8 : 6}
               size="3"
             />
             {isSignUp && passwordValidation && formData.password && (
               <>
-                <PasswordStrength $strength={passwordValidation.strength}>
+                <div
+                  className={cn(
+                    "mt-2 rounded-md p-2 text-sm font-medium capitalize",
+                    passwordStrengthClass(passwordValidation.strength),
+                  )}
+                >
                   Password strength: {passwordValidation.strength}
-                </PasswordStrength>
+                </div>
                 {passwordValidation.messages.length > 0 && (
-                  <ValidationMessage $type="info">
+                  <div
+                    className={cn(
+                      "mt-2 rounded-md p-2 text-sm",
+                      validationMessageClass("info"),
+                    )}
+                  >
                     Required: {passwordValidation.messages.join(", ")}
-                  </ValidationMessage>
+                  </div>
                 )}
               </>
             )}
@@ -346,53 +357,43 @@ export default function SignInPage() {
             size="3"
             variant="solid"
             color="violet"
-            style={{ width: "100%" }}
+            className="w-full"
           >
             {isLoading ? "Loading..." : isSignUp ? "Sign Up" : "Sign In"}
           </Button>
-        </Form>
+        </form>
 
-        <ToggleText>
+        <p className="m-0 text-center text-slate-300">
           {isSignUp ? "Already have an account?" : "Don't have an account?"}
           <Button
             variant="ghost"
             size="2"
             onClick={toggleMode}
-            style={{
-              textDecoration: "underline",
-              background: "none",
-              color: "#8b5cf6",
-              padding: 0,
-              marginLeft: "0.25rem",
-            }}
+            className="ml-1 inline p-0 text-violet-500 underline"
           >
             {isSignUp ? "Sign In" : "Sign Up"}
           </Button>
-        </ToggleText>
+        </p>
 
-        <Divider>OR</Divider>
+        <div className="flex w-full items-center gap-4 text-sm text-slate-400">
+          <div className="h-px flex-1 bg-white/10" />
+          <span>OR</span>
+          <div className="h-px flex-1 bg-white/10" />
+        </div>
 
         <Button
-          onClick={handleGitHubSignIn}
+          onClick={() => void handleGitHubSignIn()}
           size="3"
           variant="solid"
           color="gray"
-          style={{
-            width: "100%",
-            minWidth: "250px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "0.75rem",
-            backgroundColor: "#24292e",
-          }}
+          className="flex min-w-[250px] w-full items-center justify-center gap-3 bg-[#24292e]"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
             <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
           </svg>
           Sign in with GitHub
         </Button>
-      </SignInCard>
-    </SignInContainer>
+      </div>
+    </div>
   );
 }

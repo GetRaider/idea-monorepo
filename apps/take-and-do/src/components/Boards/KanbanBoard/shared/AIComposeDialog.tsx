@@ -3,7 +3,11 @@
 import { type MouseEvent, useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { CloseIcon } from "@/components/Icons";
-import { SecondaryButton, CloseButton } from "@/components/Buttons";
+import {
+  PrimaryButton,
+  SecondaryButton,
+  CloseButton,
+} from "@/components/Buttons";
 import { CharCounter } from "@/components/Labels/CharCounter";
 import {
   DialogContainer,
@@ -115,14 +119,15 @@ export function AIComposeDialog({
               </CharCounter>
               <div className="flex justify-end gap-3">
                 <SecondaryButton onClick={handleClose}>Cancel</SecondaryButton>
-                <button
+                <PrimaryButton
                   type="button"
+                  size="sm"
                   onClick={handleCreate}
                   disabled={!text.trim()}
-                  className="cursor-pointer rounded-lg border-0 bg-[#7255c1] px-5 py-2.5 text-sm font-medium text-white transition-all duration-200 hover:-translate-y-px hover:bg-[#5a42a1] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="translate-y-0 px-5 py-2.5 text-sm font-medium hover:translate-y-[-1px] disabled:translate-y-0"
                 >
                   Compose
-                </button>
+                </PrimaryButton>
               </div>
             </>
           )}

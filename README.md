@@ -39,29 +39,34 @@ The repository uses modern development tools and practices:
 
 ### Git Conventions
 
-This repo enforces **branch naming** on `pre-commit` + `pre-push`, and **commit message format** on `commit-msg`.
+This repo enforces **branch naming** on `pre-commit` + `pre-push`, and **commit message format** on `commit-msg` (see `commitlint.config.cjs` and `.husky/*`).
 
 #### Branch names
 
 Format:
 
-`<type>/<SCOPE>-<branch-name>`
+`<type>/<SCOPE>-<name|version|version+name>`
 
-Rules:
-
-- Allowed `type`: `feat`, `fix`, `test`, `chore`, `docs`, `refactor`, `style`
+- Allowed `type`: `feat`, `fix`, `test`, `chore`, `docs`, `refactor`, `style`, `release`
 - Allowed `SCOPE`:
-  - `GEN` - general
-  - `TAD` - take&do
-  - `DVN` - devinity
-  - `PRT` - portfolio
+  - `GEN` — general / repo-wide
+  - `TAD` — take&do
+  - `DVN` — devinity
+  - `PRT` — portfolio
+- After `<SCOPE>-`, use a short slug: a descriptive name, a version (e.g. `v1`, `1.2.0`), or both (e.g. `1.2.0-changelog`). The segment starts with a letter or digit; the rest may use letters, digits, hyphens, and dots.
+
+**Other rules**
+
 - Max branch length: **50** characters
-- `main`, `master`, `develop` are allowed as exceptions
+- `main`, `master`, and `develop` are allowed without following the pattern above
 
 Examples:
 
 - `feat/GEN-commitlint-and-branchlint`
 - `fix/TAD-kanban-dnd-bug`
+- `release/GEN-v1`
+- `release/TAD-1.2.0`
+- `release/DVN-2.0.0-notes`
 
 #### Commit messages
 
@@ -71,15 +76,16 @@ Format:
 
 Rules:
 
-- Allowed `type`: `feat`, `fix`, `test`, `chore`, `docs`, `refactor`, `style`
+- Allowed `type`: `feat`, `fix`, `test`, `chore`, `docs`, `refactor`, `style`, `release`
 - Allowed `SCOPE`: `GEN`, `TAD`, `DVN`, `PRT`
-- Max commit message length: **85** characters (single-line header)
-- Commit body/footer are not allowed
+- Max header length: **60** characters (single line), enforced by Commitlint
+- Commit body and footer are not used (enforced)
 
 Examples:
 
 - `feat(GEN): enforce commit message and branch naming rules`
 - `docs(PRT): document local dev commands`
+- `release(GEN): cut v1.0.0` — version tagging, changelog, or other release prep
 
 ### Development Commands
 

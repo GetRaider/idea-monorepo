@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AreaChart, type CustomTooltipProps } from "@tremor/react";
 import { AIActionButton, PrimaryButton } from "@/components/Buttons";
@@ -18,6 +19,7 @@ import { ProductivitySummaryDialog } from "./ProductivitySummaryDialog/Productiv
 import { ProductivitySummarySelectionDialog } from "./ProductivitySummarySelectionDialog/ProductivitySummarySelectionDialog";
 import type { AnalyticsStats } from "@/server/services/ai";
 import { Dropdown } from "@/components/Dropdown";
+import { queryKeys } from "@/lib/query-keys";
 import { clientServices } from "@/services";
 import { toast } from "sonner";
 import type { AnalyticsData, Timeframe } from "@/services";
@@ -32,33 +34,61 @@ export function ProductivityOverview({
   hasWorkspaceTaskData,
 }: ProductivityOverviewProps) {
   const [timeframe, setTimeframe] = useState<Timeframe>("all");
-  const [stats, setStats] = useState<AnalyticsStats | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
-  const [isGeneratingAnalytics, setIsGeneratingAnalytics] = useState(false);
   const [isSelectionDialogOpen, setIsSelectionDialogOpen] = useState(false);
   const [isResultsDialogOpen, setIsResultsDialogOpen] = useState(false);
   const [selectedOption, setSelectedOption] = useState<"basic" | "ai" | null>(
     null,
   );
 
-  useEffect(() => {
-    const fetchStats = async () => {
-      setIsLoading(true);
-      try {
-        const fetchedStats =
-          await clientServices.analytics.getStatsByTimeframe(timeframe);
-        setStats(fetchedStats);
-        if (fetchedStats === null) {
-          toast.error("Can't load productivity stats");
-        }
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  const statsQuery = useQuery({
+    queryKey: queryKeys.analytics(timeframe),
+    queryFn: () => clientServices.analytics.getStatsByTimeframe(timeframe),
+  });
 
-    fetchStats();
-  }, [timeframe]);
+  const stats = statsQuery.data ?? null;
+  const isLoading = statsQuery.isPending;
+
+  const statsErrorToastShown = useRef(false);
+  useEffect(() => {
+    if (!statsQuery.isSuccess || statsQuery.data !== null) {
+      if (statsQuery.data !== null) statsErrorToastShown.current = false;
+      return;
+    }
+    if (statsErrorToastShown.current) return;
+    statsErrorToastShown.current = true;
+    toast.error("Can't load productivity stats");
+  }, [statsQuery.data, statsQuery.isSuccess]);
+
+  const generateSummaryMutation = useMutation({
+    mutationFn: async (useAI: boolean) => {
+      let fetchedStats = statsQuery.data;
+      if (fetchedStats === undefined) {
+        const refetched = await statsQuery.refetch();
+        fetchedStats = refetched.data;
+      }
+      if (fetchedStats === null || fetchedStats === undefined) {
+        toast.error("Can't load stats for summary");
+        throw new Error("no-stats");
+      }
+      const generated = await clientServices.analytics.generateSummary({
+        stats: fetchedStats,
+        timeframe,
+        shouldUseAI: useAI,
+      });
+      if (!generated) {
+        toast.error("Can't generate productivity summary");
+        throw new Error("no-summary");
+      }
+      return generated;
+    },
+    onSuccess: (generatedAnalytics) => {
+      setAnalytics(generatedAnalytics);
+      setIsSelectionDialogOpen(false);
+      setIsResultsDialogOpen(true);
+      setSelectedOption(null);
+    },
+  });
 
   const handleOpenSelectionDialog = () => {
     setIsSelectionDialogOpen(true);
@@ -71,35 +101,7 @@ export function ProductivityOverview({
 
   const handleSave = async () => {
     if (selectedOption === null) return;
-
-    setIsGeneratingAnalytics(true);
-    try {
-      const fetchedStats =
-        await clientServices.analytics.getStatsByTimeframe(timeframe);
-      if (!fetchedStats) {
-        toast.error("Can't load stats for summary");
-        return;
-      }
-
-      const generatedAnalytics = await clientServices.analytics.generateSummary(
-        {
-          stats: fetchedStats,
-          timeframe,
-          shouldUseAI: selectedOption === "ai",
-        },
-      );
-      if (!generatedAnalytics) {
-        toast.error("Can't generate productivity summary");
-        return;
-      }
-
-      setAnalytics(generatedAnalytics);
-      setIsSelectionDialogOpen(false);
-      setIsResultsDialogOpen(true);
-      setSelectedOption(null);
-    } finally {
-      setIsGeneratingAnalytics(false);
-    }
+    await generateSummaryMutation.mutateAsync(selectedOption === "ai");
   };
 
   const controlsDisabled = !hasWorkspaceTaskData;
@@ -130,7 +132,7 @@ export function ProductivityOverview({
             />
             <AIActionButton
               onClick={handleOpenSelectionDialog}
-              inactive={controlsDisabled || isGeneratingAnalytics}
+              inactive={controlsDisabled || generateSummaryMutation.isPending}
             >
               <AIIcon size={16} /> Explore AI Summary
             </AIActionButton>
@@ -158,7 +160,7 @@ export function ProductivityOverview({
           onSelect={handleSelectOption}
           selectedOption={selectedOption}
           onSave={handleSave}
-          isGenerating={isGeneratingAnalytics}
+          isGenerating={generateSummaryMutation.isPending}
         />
       )}
 

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 
 import { Dialog } from "@/components/Dialogs";
 import {
@@ -13,6 +14,7 @@ import { useIsAnonymous } from "@/hooks/auth/use-is-anonymous";
 import { GUEST_STORE_UPDATED_EVENT } from "@/stores/guest/constants";
 import { guestStoreHelper } from "@/stores/guest";
 import { TaskBoard } from "@/types/workspace";
+import { queryKeys } from "@/lib/query-keys";
 import { clientServices } from "@/services";
 import { cn } from "@/lib/styles/utils";
 import type { UiProps } from "@/lib/styles/ui-props";
@@ -29,7 +31,14 @@ export function SelectBoardDialog({
   const isAnonymous = useIsAnonymous();
   const [boards, setBoards] = useState<TaskBoard[]>([]);
   const [selectedBoardId, setSelectedBoardId] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
+
+  const boardsQuery = useQuery({
+    queryKey: queryKeys.taskBoards.all,
+    queryFn: () => clientServices.taskBoards.getAll(),
+    enabled: !isAnonymous,
+  });
+
+  const isLoading = isAnonymous ? false : boardsQuery.isPending;
 
   useEffect(() => {
     if (isAnonymous) {
@@ -45,25 +54,19 @@ export function SelectBoardDialog({
         });
       };
       sync();
-      setIsLoading(false);
       window.addEventListener(GUEST_STORE_UPDATED_EVENT, sync);
       return () => window.removeEventListener(GUEST_STORE_UPDATED_EVENT, sync);
     }
-
-    const fetchBoards = async () => {
-      try {
-        const allBoards = await clientServices.taskBoards.getAll();
-        setBoards(allBoards);
-        if (allBoards.length > 0) {
-          setSelectedBoardId(allBoards[0].id);
-        }
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    void fetchBoards();
-  }, [isAnonymous]);
+    const allBoards = boardsQuery.data ?? [];
+    setBoards(allBoards);
+    if (allBoards.length > 0) {
+      setSelectedBoardId((previous) =>
+        allBoards.some((board) => board.id === previous)
+          ? previous
+          : allBoards[0].id,
+      );
+    }
+  }, [isAnonymous, boardsQuery.data]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

@@ -24,13 +24,14 @@ export class HttpClient implements IHttpClient {
 
   private async sendRequest<T>(
     method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
-    { url, headers, body, timeout = 0 }: IHttpRequest,
+    { url, headers, body, timeout = 0, withCredentials }: IHttpRequest,
   ): Promise<IHttpResponse<T>> {
     const requestConfig = {
       url,
       method,
       data: body,
       timeout,
+      ...(withCredentials !== undefined ? { withCredentials } : {}),
       validateStatus: () => true,
       headers:
         headers instanceof AxiosHeaders
@@ -62,6 +63,8 @@ export interface IHttpRequest {
     | Record<string, string | string[] | number | boolean | null>;
   body?: unknown;
   timeout?: number;
+  /** When set, forwarded to axios (e.g. cookie-based cross-origin requests). */
+  withCredentials?: boolean;
 }
 
 export interface IHttpResponse<T> {

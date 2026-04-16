@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useQueries } from "@tanstack/react-query";
+import { useMemo } from "react";
 
 import { TaskStatus } from "@/constants/tasks.constants";
+import { queryKeys } from "@/lib/query-keys";
 import { useIsAnonymous } from "@/hooks/auth/use-is-anonymous";
 import { useGuestTasks } from "@/hooks/tasks/use-guest-store";
 import { guestTasksForBoard } from "@/stores/guest/guest-task-filters";
@@ -32,51 +34,35 @@ function countStatusesRecursive(tasks: Task[]): StatusCounts {
 export function BoardHealthPanel({ boards }: { boards: TaskBoard[] }) {
   const isAnonymous = useIsAnonymous();
   const { tasks: guestTasks } = useGuestTasks();
-  const [countsByBoardId, setCountsByBoardId] = useState<
-    Record<string, StatusCounts | undefined>
-  >({});
-  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    if (boards.length === 0) {
-      setIsLoading(false);
-      return;
+  const taskQueries = useQueries({
+    queries: boards.map((board) => ({
+      queryKey: queryKeys.tasks.byBoard(board.id),
+      queryFn: () => clientServices.tasks.getByBoardId(board.id),
+      enabled: !isAnonymous && boards.length > 0,
+    })),
+  });
+
+  const countsByBoardId = useMemo(() => {
+    if (boards.length === 0) return {};
+    if (isAnonymous) {
+      return Object.fromEntries(
+        boards.map((board) => {
+          const tasks = guestTasksForBoard(guestTasks, board.id);
+          return [board.id, countStatusesRecursive(tasks)] as const;
+        }),
+      );
     }
+    return Object.fromEntries(
+      boards.map((board, index) => {
+        const tasks = taskQueries[index]?.data ?? [];
+        return [board.id, countStatusesRecursive(tasks)] as const;
+      }),
+    );
+  }, [boards, isAnonymous, guestTasks, taskQueries]);
 
-    let cancelled = false;
-
-    const run = async () => {
-      setIsLoading(true);
-      try {
-        if (isAnonymous) {
-          const results = boards.map((board) => {
-            const tasks = guestTasksForBoard(guestTasks, board.id);
-            return [board.id, countStatusesRecursive(tasks)] as const;
-          });
-          if (cancelled) return;
-          setCountsByBoardId(Object.fromEntries(results));
-          return;
-        }
-
-        const results = await Promise.all(
-          boards.map(async (board) => {
-            const tasks = await clientServices.tasks.getByBoardId(board.id);
-            return [board.id, countStatusesRecursive(tasks)] as const;
-          }),
-        );
-        if (cancelled) return;
-        setCountsByBoardId(Object.fromEntries(results));
-      } finally {
-        if (!cancelled) setIsLoading(false);
-      }
-    };
-
-    void run();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [boards, isAnonymous, guestTasks]);
+  const isLoading =
+    !isAnonymous && boards.length > 0 && taskQueries.some((q) => q.isPending);
 
   const sortedBoards = useMemo(
     () => [...boards].sort((a, b) => a.name.localeCompare(b.name)),

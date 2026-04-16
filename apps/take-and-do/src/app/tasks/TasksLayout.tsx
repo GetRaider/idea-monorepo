@@ -1,5 +1,6 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
@@ -14,6 +15,7 @@ import { useWorkspaces } from "@/hooks/tasks/useWorkspaces";
 import { WorkspaceProvider } from "@/contexts/WorkspaceContext";
 import { useTasksSidebarWidthPx } from "@/hooks/tasks/useTasksSidebarWidthPx";
 import { isDuplicateWorkspaceName } from "@/helpers/workspace-name.helper";
+import { invalidateWorkspaceQueries } from "@/lib/invalidate-app-queries";
 import { clientServices } from "@/services";
 import { toast } from "sonner";
 
@@ -24,6 +26,7 @@ export default function TasksLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const isAnonymous = useIsAnonymous();
   const {
     folders,
@@ -109,6 +112,10 @@ export default function TasksLayout({
       }
     }
 
+    if (!isAnonymous) {
+      await invalidateWorkspaceQueries(queryClient);
+    }
+
     setIsWorkspaceCreateDialogOpen(false);
     return true;
   };
@@ -157,6 +164,7 @@ export default function TasksLayout({
         }
         return [...previous, resolvedBoard];
       });
+      await invalidateWorkspaceQueries(queryClient);
     }
 
     setIsWorkspaceCreateDialogOpen(false);

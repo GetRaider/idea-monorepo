@@ -23,9 +23,8 @@
     "@radix-ui/react-icons": "catalog:",
     "@radix-ui/react-tooltip": "catalog:",
     "@radix-ui/themes": "catalog:",
+    "@tanstack/react-query": "catalog:",
     "@stackframe/react": "catalog:",
-    "@types/axios": "catalog:",
-    "axios": "catalog:",
     "better-auth": "catalog:",
     "dotenv": "catalog:",
     "zod": "catalog:"

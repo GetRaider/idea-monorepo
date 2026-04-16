@@ -75,6 +75,7 @@ catalog:
   "axios": ^1.10.0
   "dotenv": "^16.5.0"
   "zod": ^4.1.11
+  "@tanstack/react-query": ^5.62.11
   "uuid": 11.0.3
   "tsconfig-paths": ^4.2.0
   ## Lint

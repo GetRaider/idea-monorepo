@@ -31,6 +31,7 @@
     "@repo/api": "workspace:*",
     "@repo/shared": "workspace:*",
     "@repo/ui": "workspace:*",
+    "@tanstack/react-query": "catalog:",
     "@tailwindcss/typography": "^0.5.19",
     "@tiptap/extension-placeholder": "^3.11.0",
     "@tiptap/react": "^3.11.0",

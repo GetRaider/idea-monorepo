@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import type { Task } from "@/components/Boards/KanbanBoard/types";
@@ -8,6 +9,7 @@ import { Search, SearchInput } from "@/components/TasksSidebar/TasksSidebar.ui";
 import { SearchIcon } from "@/components/Icons";
 import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
 import { tasksHelper } from "@/helpers/task.helper";
+import { queryKeys } from "@/lib/query-keys";
 import { useIsAnonymous } from "@/hooks/auth/use-is-anonymous";
 import { useGuestTasks } from "@/hooks/tasks/use-guest-store";
 import { cn } from "@/lib/styles/utils";
@@ -25,31 +27,18 @@ export function TasksSidebarTaskSearch({
   const isAnonymous = useIsAnonymous();
   const { tasks: guestTasks } = useGuestTasks();
   const [query, setQuery] = useState("");
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [loaded, setLoaded] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
-    if (isAnonymous) {
-      setTasks(guestTasks);
-      setLoaded(true);
-      return () => {
-        cancelled = true;
-      };
-    }
+  const allTasksQuery = useQuery({
+    queryKey: queryKeys.tasks.all,
+    queryFn: () => clientServices.tasks.getAll(),
+    enabled: !isAnonymous,
+  });
 
-    clientServices.tasks
-      .getAll()
-      .then((data) => {
-        if (!cancelled) setTasks(data);
-      })
-      .finally(() => {
-        if (!cancelled) setLoaded(true);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [isAnonymous, guestTasks]);
+  const tasks = useMemo(
+    () => (isAnonymous ? guestTasks : (allTasksQuery.data ?? [])),
+    [isAnonymous, guestTasks, allTasksQuery.data],
+  );
+  const loaded = isAnonymous || !allTasksQuery.isPending;
 
   const normalizedQuery = query.trim().toLowerCase();
 

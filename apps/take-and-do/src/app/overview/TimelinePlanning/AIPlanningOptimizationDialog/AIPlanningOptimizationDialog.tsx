@@ -1,5 +1,6 @@
 "use client";
 
+import { useMutation } from "@tanstack/react-query";
 import { useId, useRef, useState } from "react";
 import { toast } from "sonner";
 import { clientServices } from "@/services";
@@ -53,7 +54,6 @@ export function AIPlanningOptimizationDialog({
   const dialogTitleId = useId();
   const dialogContentRef = useRef<HTMLDivElement>(null);
 
-  const [isExploring, setIsExploring] = useState(false);
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(
@@ -65,6 +65,11 @@ export function AIPlanningOptimizationDialog({
   const { tasks, isLoading: isTasksLoading } = useTasks();
   const { updateTask } = useTaskActions();
 
+  const exploreMutation = useMutation({
+    mutationFn: (taskIds: string[]) =>
+      clientServices.tasks.optimizeSchedule(taskIds),
+  });
+
   useDialogFocusLock(dialogContentRef, onClose);
 
   const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -74,11 +79,10 @@ export function AIPlanningOptimizationDialog({
   const handleExplore = async () => {
     if (selectedTaskIds.size === 0) return;
 
-    setIsExploring(true);
     setError(null);
 
     try {
-      const result = await clientServices.tasks.optimizeSchedule(
+      const result = await exploreMutation.mutateAsync(
         Array.from(selectedTaskIds),
       );
       if (!result) {
@@ -102,8 +106,8 @@ export function AIPlanningOptimizationDialog({
       };
 
       setExploration(sanitized);
-    } finally {
-      setIsExploring(false);
+    } catch {
+      toast.error("Can't run schedule optimization");
     }
   };
 
@@ -177,7 +181,7 @@ export function AIPlanningOptimizationDialog({
             <CloseIcon />
           </CloseButton>
         </DialogHeader>
-        {!exploration && !isExploring && (
+        {!exploration && !exploreMutation.isPending && (
           <>
             <SelectList
               tasks={tasks}
@@ -198,7 +202,7 @@ export function AIPlanningOptimizationDialog({
             </ActionsContainer>
           </>
         )}
-        {isExploring && (
+        {exploreMutation.isPending && (
           <LoadingStackContainer>
             <SpinnerRing />
             <LoadingStackCaption>
@@ -208,7 +212,7 @@ export function AIPlanningOptimizationDialog({
         )}
         {error && <ErrorState>{error}</ErrorState>}
 
-        {exploration && !isExploring && (
+        {exploration && !exploreMutation.isPending && (
           <OptimizationContent>
             <SummarySection>
               <SummaryText>{exploration.summary}</SummaryText>

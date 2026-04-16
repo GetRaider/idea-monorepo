@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
 
 import { Task } from "@/components/Boards/KanbanBoard/types";
+import { queryKeys } from "@/lib/query-keys";
 import { useIsAnonymous } from "@/hooks/auth/use-is-anonymous";
 import { useGuestTasks } from "@/hooks/tasks/use-guest-store";
 import { guestTasksForScheduleDate } from "@/stores/guest/guest-task-filters";
@@ -20,49 +22,46 @@ export function useCustomDateTasks(customDate: string): UseCustomDateReturn {
   const isAnonymous = useIsAnonymous();
   const { tasks: guestTasks } = useGuestTasks();
   const [schedule, setSchedule] = useState<ScheduleType>("new");
-  const [isLoadingCustomDate, setIsLoadingCustomDate] = useState(false);
-  const [customDateTasks, setCustomDateTasks] = useState<Task[]>([]);
 
-  useEffect(() => {
-    let isMounted = true;
-
-    if (schedule !== "custom" || !customDate) {
-      setCustomDateTasks([]);
-      setIsLoadingCustomDate(false);
-      return;
-    }
-
-    const date =
+  const parsedDate = useMemo(() => {
+    if (schedule !== "custom" || !customDate) return undefined;
+    return (
       tasksHelper.date.parseCalendarDay(customDate) ??
-      tasksHelper.date.parse(customDate);
-    if (!date) {
-      setCustomDateTasks([]);
-      setIsLoadingCustomDate(false);
-      return;
-    }
+      tasksHelper.date.parse(customDate)
+    );
+  }, [schedule, customDate]);
 
-    if (isAnonymous) {
-      setIsLoadingCustomDate(true);
-      setCustomDateTasks(guestTasksForScheduleDate(guestTasks, date));
-      setIsLoadingCustomDate(false);
-      return;
-    }
+  const dateIso = parsedDate
+    ? tasksHelper.date.formatForAPI(parsedDate)
+    : undefined;
 
-    const fetchTasksByDate = async () => {
-      setIsLoadingCustomDate(true);
-      try {
-        const tasks = await clientServices.tasks.getByDate(date);
-        if (isMounted) setCustomDateTasks(tasks);
-      } finally {
-        if (isMounted) setIsLoadingCustomDate(false);
-      }
-    };
+  const dbQuery = useQuery({
+    queryKey: dateIso
+      ? queryKeys.tasks.byDate(dateIso)
+      : (["tasks", "custom-date", "idle"] as const),
+    queryFn: () =>
+      parsedDate
+        ? clientServices.tasks.getByDate(parsedDate)
+        : Promise.resolve([]),
+    enabled: !isAnonymous && schedule === "custom" && parsedDate !== undefined,
+  });
 
-    void fetchTasksByDate();
-    return () => {
-      isMounted = false;
-    };
-  }, [schedule, customDate, isAnonymous, guestTasks]);
+  const guestCustom = useMemo(() => {
+    if (!parsedDate) return [];
+    return guestTasksForScheduleDate(guestTasks, parsedDate);
+  }, [guestTasks, parsedDate]);
+
+  const customDateTasks = useMemo(() => {
+    if (schedule !== "custom" || !parsedDate) return [];
+    if (isAnonymous) return guestCustom;
+    return dbQuery.data ?? [];
+  }, [schedule, parsedDate, isAnonymous, guestCustom, dbQuery.data]);
+
+  const isLoadingCustomDate = useMemo(() => {
+    if (schedule !== "custom" || !parsedDate) return false;
+    if (isAnonymous) return false;
+    return dbQuery.isPending;
+  }, [schedule, parsedDate, isAnonymous, dbQuery.isPending]);
 
   return {
     customDateTasks,

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   BoardContainer,
@@ -21,6 +22,7 @@ import { useKanbanTaskHandlers } from "../../../hooks/tasks/useKanbanTaskHandler
 import { useBoardUrlTaskDialogSync } from "@/hooks/tasks/useBoardUrlTaskDialogSync";
 import { useIsAnonymous } from "@/hooks/auth/use-is-anonymous";
 import { useTaskActions } from "@/hooks/tasks/useTasks";
+import { useGuestTasks } from "@/hooks/tasks/use-guest-store";
 import { GUEST_STORE_UPDATED_EVENT } from "@/stores/guest/constants";
 import { guestStoreHelper } from "@/stores/guest";
 import { guestTasksForBoard } from "@/stores/guest/guest-task-filters";
@@ -33,8 +35,26 @@ import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
 import { EmptyState } from "../../EmptyState";
 import { AIComposeDialog } from "./shared/AIComposeDialog";
+import { queryKeys } from "@/lib/query-keys";
 import { clientServices } from "@/services";
 import { toast } from "sonner";
+
+function tasksToColumns(tasks: Task[]): Record<TaskStatus, Task[]> {
+  const tasksByStatusMap: Record<TaskStatus, Task[]> = {
+    [TaskStatus.TODO]: [],
+    [TaskStatus.IN_PROGRESS]: [],
+    [TaskStatus.DONE]: [],
+  };
+  tasks.forEach((task) => {
+    const safeStatus = (Object.values(TaskStatus) as string[]).includes(
+      task.status as unknown as string,
+    )
+      ? task.status
+      : TaskStatus.TODO;
+    tasksByStatusMap[safeStatus].push(task);
+  });
+  return tasksByStatusMap;
+}
 
 interface SingleKanbanBoardProps {
   boardId: string;
@@ -55,6 +75,7 @@ export function SingleKanbanBoard({
 }: SingleKanbanBoardProps) {
   const router = useRouter();
   const isAnonymous = useIsAnonymous();
+  const { tasks: guestTasks } = useGuestTasks();
   const { updateTask } = useTaskActions();
   const { taskBoards } = useWorkspace();
   const boardOptions = useMemo(
@@ -62,12 +83,44 @@ export function SingleKanbanBoard({
     [taskBoards],
   );
 
+  const tasksQuery = useQuery({
+    queryKey: queryKeys.tasks.byBoard(boardId),
+    queryFn: () => clientServices.tasks.getByBoardId(boardId),
+    enabled: !isAnonymous && !!boardId,
+  });
+
   const [tasksByStatus, setTasksByStatus] =
     useState<Record<TaskStatus, Task[]>>(emptyTaskColumns);
-  const [isLoading, setIsLoading] = useState(true);
   const [isAIComposeDialogOpen, setIsAIComposeDialogOpen] = useState(false);
-  const fetchSeqRef = useRef(0);
-  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    if (isAnonymous) {
+      setTasksByStatus(tasksToColumns(guestTasksForBoard(guestTasks, boardId)));
+    }
+  }, [isAnonymous, guestTasks, boardId]);
+
+  useEffect(() => {
+    if (isAnonymous) return;
+    if (tasksQuery.data === undefined) return;
+    setTasksByStatus(tasksToColumns(tasksQuery.data));
+  }, [isAnonymous, tasksQuery.data, boardId]);
+
+  useEffect(() => {
+    if (!isAnonymous) return;
+    const onGuestStoreUpdated = () => {
+      setTasksByStatus(
+        tasksToColumns(
+          guestTasksForBoard(guestStoreHelper.getTasks(), boardId),
+        ),
+      );
+    };
+    window.addEventListener(GUEST_STORE_UPDATED_EVENT, onGuestStoreUpdated);
+    return () =>
+      window.removeEventListener(
+        GUEST_STORE_UPDATED_EVENT,
+        onGuestStoreUpdated,
+      );
+  }, [isAnonymous, boardId]);
 
   const {
     selectedTask,
@@ -78,6 +131,8 @@ export function SingleKanbanBoard({
     handleCloseDialog,
     handleSubtaskClick,
   } = useKanbanTaskHandlers({ onTaskOpen, onTaskClose, onSubtaskOpen });
+
+  const isLoading = !isAnonymous && tasksQuery.isPending;
 
   const { handleCloseBoardDialog } = useBoardUrlTaskDialogSync({
     boardName,
@@ -91,13 +146,6 @@ export function SingleKanbanBoard({
     onTaskOpen,
   });
 
-  useEffect(() => {
-    isMountedRef.current = true;
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
-
   const persistTaskStatus = useCallback(
     async (taskId: string, newStatus: TaskStatus) => {
       const updated = await updateTask(taskId, { status: newStatus });
@@ -105,53 +153,6 @@ export function SingleKanbanBoard({
     },
     [updateTask],
   );
-
-  const fetchTasks = useCallback(async () => {
-    if (!boardId) return;
-
-    const seq = ++fetchSeqRef.current;
-    setIsLoading(true);
-    try {
-      const tasks = isAnonymous
-        ? guestTasksForBoard(guestStoreHelper.getTasks(), boardId)
-        : await clientServices.tasks.getByBoardId(boardId);
-      const tasksByStatusMap: Record<TaskStatus, Task[]> = {
-        [TaskStatus.TODO]: [],
-        [TaskStatus.IN_PROGRESS]: [],
-        [TaskStatus.DONE]: [],
-      };
-      tasks.forEach((task) => {
-        const safeStatus = (Object.values(TaskStatus) as string[]).includes(
-          task.status as unknown as string,
-        )
-          ? task.status
-          : TaskStatus.TODO;
-        tasksByStatusMap[safeStatus].push(task);
-      });
-      if (!isMountedRef.current || seq !== fetchSeqRef.current) return;
-      setTasksByStatus(tasksByStatusMap);
-    } finally {
-      if (!isMountedRef.current || seq !== fetchSeqRef.current) return;
-      setIsLoading(false);
-    }
-  }, [boardId, isAnonymous]);
-
-  useEffect(() => {
-    void fetchTasks();
-  }, [fetchTasks]);
-
-  useEffect(() => {
-    if (!isAnonymous) return;
-    const onGuestStoreUpdated = () => {
-      void fetchTasks();
-    };
-    window.addEventListener(GUEST_STORE_UPDATED_EVENT, onGuestStoreUpdated);
-    return () =>
-      window.removeEventListener(
-        GUEST_STORE_UPDATED_EVENT,
-        onGuestStoreUpdated,
-      );
-  }, [isAnonymous, fetchTasks]);
 
   const handleTaskStatusChange = useCallback(
     async (taskId: string, newStatus: TaskStatus, targetIndex?: number) => {
@@ -217,33 +218,51 @@ export function SingleKanbanBoard({
     setIsAIComposeDialogOpen(true);
   }, []);
 
+  const composeMutation = useMutation({
+    mutationFn: (text: string) =>
+      clientServices.tasks.composeWithAI({
+        text,
+        taskBoardId: boardId,
+      }),
+  });
+
   const handleAICompose = useCallback(
     async (text: string) => {
       if (!boardId) {
         console.error("Cannot compose task: taskBoardId not found");
         return;
       }
-      const composedData = await clientServices.tasks.composeWithAI({
-        text,
-        taskBoardId: boardId,
-      });
+      const composedData = await composeMutation.mutateAsync(text);
       if (composedData) {
         setSelectedTask(composedDataToTask(composedData));
       }
     },
-    [boardId, setSelectedTask],
+    [boardId, composeMutation, setSelectedTask],
   );
+
+  const fetchTasks = useCallback(async () => {
+    if (!boardId) return;
+    if (isAnonymous) {
+      setTasksByStatus(
+        tasksToColumns(
+          guestTasksForBoard(guestStoreHelper.getTasks(), boardId),
+        ),
+      );
+      return;
+    }
+    await tasksQuery.refetch();
+  }, [boardId, isAnonymous, tasksQuery]);
 
   const handleTaskCreated = useCallback(
     (createdTask: Task) => {
-      fetchTasks();
+      void fetchTasks();
       setSelectedTask(createdTask);
     },
     [fetchTasks, setSelectedTask],
   );
 
   const handleTaskDelete = useCallback(() => {
-    fetchTasks();
+    void fetchTasks();
     setSelectedTask(null);
   }, [fetchTasks, setSelectedTask]);
 

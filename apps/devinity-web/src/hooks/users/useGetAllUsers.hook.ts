@@ -1,6 +1,9 @@
-'use client';
-import { useEffect, useState } from 'react';
-import { api } from '../../lib/api';
+"use client";
+
+import { useQuery } from "@tanstack/react-query";
+
+import { queryKeys } from "../../lib/query-keys";
+import { api } from "../../lib/http-client";
 
 export interface User {
   _id: string;
@@ -9,41 +12,18 @@ export interface User {
   age: number;
 }
 
-// TODO: Fix getting users two times
 export function useGetAllUsers() {
-  const [data, setData] = useState<User[] | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<Error | null>(null);
+  const query = useQuery({
+    queryKey: queryKeys.users,
+    queryFn: async () => {
+      const res = await api.get<User[]>("/users");
+      return res.data;
+    },
+  });
 
-  useEffect(() => {
-    let isMounted = true;
-    const fetchUsers = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        // TODO: Polish fetching users
-        const res = await api.get('/users');
-        const users = res.data;
-        console.log({ users });
-        if (isMounted) {
-          setData(users);
-        }
-      } catch (err: any) {
-        console.log(err.stack);
-        if (isMounted) {
-          setError(err);
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    };
-    fetchUsers();
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  return { users: data, loading, error };
+  return {
+    users: query.data ?? null,
+    loading: query.isPending,
+    error: query.error,
+  };
 }

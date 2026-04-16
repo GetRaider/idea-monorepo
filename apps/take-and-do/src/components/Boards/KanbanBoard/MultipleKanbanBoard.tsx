@@ -1,5 +1,6 @@
 "use client";
 
+import { useMutation } from "@tanstack/react-query";
 import { useState, useCallback, useMemo } from "react";
 import {
   ChevronRightIcon,
@@ -244,6 +245,23 @@ export function MultipleKanbanBoard({
     [boardPickerIntent, scheduleDate, setSelectedTask],
   );
 
+  const composeMutation = useMutation({
+    mutationFn: async ({
+      text,
+      taskBoardId,
+      additionalData,
+    }: {
+      text: string;
+      taskBoardId: string;
+      additionalData?: Partial<Omit<Task, "id">>;
+    }) =>
+      clientServices.tasks.composeWithAI({
+        text,
+        taskBoardId,
+        additionalData,
+      }),
+  });
+
   const handleAICompose = useCallback(
     async (text: string) => {
       let taskBoardId = selectedBoardIdForAI;
@@ -257,7 +275,7 @@ export function MultipleKanbanBoard({
       const additionalData: Partial<Omit<Task, "id">> = scheduleDate
         ? { scheduleDate }
         : {};
-      const composedData = await clientServices.tasks.composeWithAI({
+      const composedData = await composeMutation.mutateAsync({
         text,
         taskBoardId,
         additionalData,
@@ -269,6 +287,7 @@ export function MultipleKanbanBoard({
       }
     },
     [
+      composeMutation,
       defaultBoardIdForSchedule,
       scheduleDate,
       selectedBoardIdForAI,

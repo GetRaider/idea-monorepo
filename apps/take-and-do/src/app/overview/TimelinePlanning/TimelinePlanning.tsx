@@ -1,5 +1,6 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -8,6 +9,7 @@ import { AIActionButton, PrimaryButton } from "@/components/Buttons";
 import { TimePlanningIcon } from "@/components/Icons/TimePlanningIcon";
 import { useIsAnonymous } from "@/hooks/auth/use-is-anonymous";
 import { guestStoreHelper } from "@/stores/guest";
+import { queryKeys } from "@/lib/query-keys";
 import { clientServices } from "@/services";
 import { ScheduleType, tasksHelper } from "@/helpers/task.helper";
 import { AiGate } from "@/components/ai-gate";
@@ -52,6 +54,7 @@ export function TimelinePlanning({
   hasWorkspaceTaskData,
 }: TimelinePlanningProps) {
   const isAnonymous = useIsAnonymous();
+  const queryClient = useQueryClient();
   const [customDate, setCustomDate] = useState<string>("");
   const { customDateTasks, isLoadingCustomDate, setSchedule, schedule } =
     useCustomDateTasks(customDate);
@@ -79,7 +82,10 @@ export function TimelinePlanning({
   const handleTaskClick = async (task: Task) => {
     const taskBoard = isAnonymous
       ? guestStoreHelper.getTaskBoardById(task.taskBoardId)
-      : await clientServices.taskBoards.getById(task.taskBoardId);
+      : await queryClient.fetchQuery({
+          queryKey: queryKeys.taskBoards.detail(task.taskBoardId),
+          queryFn: () => clientServices.taskBoards.getById(task.taskBoardId),
+        });
     if (!taskBoard) {
       toast.error(isAnonymous ? "Task board not found" : "Can't load board");
       return;

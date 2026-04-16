@@ -1,11 +1,13 @@
 "use client";
 
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Button, TextField } from "@radix-ui/themes";
 
 import { signIn, signUp, useSession } from "@lib/auth-client";
-import { api } from "@lib/api";
+import { api } from "@lib/http-client";
+import { queryKeys } from "@lib/query-keys";
 import {
   SignInContainer,
   SignInCard,
@@ -41,6 +43,45 @@ export default function SignInPage() {
   });
   const { data: session, isPending } = useSession();
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const [debouncedEmail, setDebouncedEmail] = useState("");
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedEmail(formData.email), 500);
+    return () => clearTimeout(timer);
+  }, [formData.email]);
+
+  const signupEmailCheck = useQuery({
+    queryKey: queryKeys.checkEmailSignup(debouncedEmail),
+    queryFn: async () => {
+      const response = await api.get<{ exists?: boolean }>(
+        `/user/check-email?email=${encodeURIComponent(debouncedEmail)}`,
+      );
+      return response.data;
+    },
+    enabled: isSignUp && debouncedEmail.length > 0,
+  });
+
+  useEffect(() => {
+    if (!isSignUp || !debouncedEmail) {
+      setEmailError(null);
+      return;
+    }
+    if (signupEmailCheck.isError) {
+      setEmailError(null);
+      return;
+    }
+    if (signupEmailCheck.data?.exists) {
+      setEmailError("This email is already registered");
+    } else {
+      setEmailError(null);
+    }
+  }, [
+    isSignUp,
+    debouncedEmail,
+    signupEmailCheck.data?.exists,
+    signupEmailCheck.isError,
+  ]);
 
   // Redirect to home if already authenticated
   useEffect(() => {
@@ -86,29 +127,6 @@ export default function SignInPage() {
     return { isValid, strength, messages };
   };
 
-  // Check if email exists
-  const checkEmailExists = async (email: string) => {
-    if (!email || !isSignUp) {
-      setEmailError(null);
-      return;
-    }
-
-    try {
-      const response = await api.get(
-        `/user/check-email?email=${encodeURIComponent(email)}`,
-      );
-      if (response.data?.exists) {
-        setEmailError("This email is already registered");
-      } else {
-        setEmailError(null);
-      }
-    } catch (err) {
-      console.error("Email check error:", err);
-      // Don't show error if the endpoint doesn't exist yet
-      setEmailError(null);
-    }
-  };
-
   // Handle password change with validation
   const handlePasswordChange = (password: string) => {
     setFormData({ ...formData, password });
@@ -124,16 +142,6 @@ export default function SignInPage() {
     setFormData({ ...formData, email });
     setEmailError(null);
   };
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (formData.email && isSignUp) {
-        checkEmailExists(formData.email);
-      }
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [formData.email, isSignUp]);
 
   const handleGitHubSignIn = async () => {
     try {
@@ -173,15 +181,20 @@ export default function SignInPage() {
     // For sign-in, check if email exists
     if (!isSignUp) {
       try {
-        const response = await api.get(
-          `/users/check-email?email=${encodeURIComponent(formData.email)}`,
-        );
-        if (!response.data?.exists) {
+        const data = await queryClient.fetchQuery({
+          queryKey: queryKeys.checkEmailSignin(formData.email),
+          queryFn: async () => {
+            const response = await api.get<{ exists?: boolean }>(
+              `/users/check-email?email=${encodeURIComponent(formData.email)}`,
+            );
+            return response.data;
+          },
+        });
+        if (!data?.exists) {
           setError("No account found with this email. Please sign up first.");
           return;
         }
-      } catch (err) {
-        console.error("Email check error:", err);
+      } catch {
         // Continue with sign-in even if check fails
       }
     }

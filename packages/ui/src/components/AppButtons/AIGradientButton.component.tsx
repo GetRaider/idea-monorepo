@@ -1,27 +1,31 @@
 "use client";
 
-import { gradientActionButtonClass } from "@/lib/styles/animated-gradient";
-import { cn } from "@/lib/styles/utils";
-import type { UiProps } from "@/lib/styles/ui-props";
+import type { ComponentProps } from "react";
+
+import { gradientActionButtonClass } from "../../lib/animated-gradient";
+import { cn } from "../../lib/cn";
 
 const sizeClasses = {
   default: "px-4 py-2",
   comfortable: "px-5 py-2.5",
 } as const;
 
-export function AIActionButton({
+type AIGradientButtonProps = ComponentProps<"button"> & {
+  size?: keyof typeof sizeClasses;
+  inactive?: boolean;
+};
+
+export function AIGradientButton({
   className,
   type = "button",
   size = "default",
   inactive,
   disabled,
-  ref,
   ...props
-}: AIActionButtonProps) {
+}: AIGradientButtonProps) {
   const isDisabled = disabled ?? inactive;
   return (
     <button
-      ref={ref}
       type={type}
       disabled={isDisabled}
       className={cn(
@@ -34,9 +38,4 @@ export function AIActionButton({
       {...props}
     />
   );
-}
-
-interface AIActionButtonProps extends Omit<UiProps<"button">, "size"> {
-  size?: keyof typeof sizeClasses;
-  inactive?: boolean;
 }

@@ -1,3 +1,6 @@
-export { Button as SecondaryButton, CloseButton } from "./Button";
-export { PrimaryButton } from "./PrimaryButton";
-export { AIActionButton } from "./AIActionButton";
+export {
+  AIGradientButton as AIActionButton,
+  OutlineSecondaryButton as SecondaryButton,
+  PrimaryBrandButton as PrimaryButton,
+} from "@repo/ui";
+export { CloseButton } from "./CloseButton";

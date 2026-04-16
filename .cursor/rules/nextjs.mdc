@@ -22,7 +22,7 @@ alwaysApply: true
 - Layouts: `app/**/layout.tsx`
 - API routes: `app/api/**/route.ts`
 - Components: `components/ComponentName/ComponentName.tsx`
-- Styles: `ComponentName.styles.tsx` (styled-components)
+- Styles: Tailwind classes on components; optional `ComponentName.styles.tsx` only if extracting long repeated class strings
 - Services: `services/api/*.service.ts`
 - Types: `types/*.ts`
 
@@ -53,28 +53,11 @@ export default function Component({ data, onAction }: ComponentProps) {
 }
 ```
 
-## Styling (styled-components)
+## Styling (Tailwind)
 
-- Separate styles into `.styles.tsx` files
-- Use semantic naming for styled components
-- Support transient props with `$` prefix for non-DOM props
-- Include responsive breakpoints
-
-```typescript
-import styled from "styled-components";
-
-export const Card = styled.div`
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 8px;
-  padding: 1rem;
-`;
-
-export const Title = styled.h3<{ $status?: string }>`
-  color: ${({ $status }) => ($status === "done" ? "#666" : "#fff")};
-  text-decoration: ${({ $status }) =>
-    $status === "done" ? "line-through" : "none"};
-`;
-```
+- Prefer Tailwind utilities; use `cn` from `@repo/ui` when classes are conditional
+- Keep responsive behavior with `sm:`, `md:`, etc.
+- No transient `$` props—use `cn` or data attributes if you need state-driven styling
 
 ## Kanban Board Specific
 

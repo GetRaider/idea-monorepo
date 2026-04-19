@@ -30,8 +30,8 @@ export function SocialLinksRow({ compact = false }: SocialLinksRowProps) {
     : "flex flex-wrap items-center justify-center gap-3";
 
   const linkClass = compact
-    ? "inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-xs text-zinc-200 transition-colors hover:border-cyan-400/35 hover:text-white sm:text-sm"
-    : "inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-5 py-2.5 text-sm text-zinc-200 transition-colors hover:text-white";
+    ? "inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-semibold tracking-tight text-zinc-200 transition-colors hover:border-cyan-400/35 hover:text-white sm:text-sm"
+    : "inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-5 py-2.5 text-sm font-semibold tracking-tight text-zinc-200 transition-colors hover:text-white";
 
   return (
     <div className={wrap}>

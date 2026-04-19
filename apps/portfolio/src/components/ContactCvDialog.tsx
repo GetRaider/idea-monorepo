@@ -82,7 +82,7 @@ export function ContactCvDialog({
       subtitle={
         phase === "form"
           ? "Please, describe your interest and I'll get back to you as soon as possible."
-          : "Thanks — I will get back to you shortly."
+          : "Thanks - I will get back to you shortly."
       }
       onClose={resetAndClose}
       maxWidth={480}
@@ -175,7 +175,7 @@ export function ContactCvDialog({
                     Sending
                   </>
                 ) : (
-                  "Send request"
+                  "Send Request"
                 )}
               </DialogFormButton>
             </div>

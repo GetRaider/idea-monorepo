@@ -19,17 +19,13 @@ const config: Config = {
           "100%": { transform: "translateX(-50%)" },
         },
         float: {
-          "0%, 100%": {
-            transform: "translateY(0) rotateX(12deg) rotateY(-8deg)",
-          },
-          "50%": {
-            transform: "translateY(-12px) rotateX(10deg) rotateY(-6deg)",
-          },
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-12px)" },
         },
         "float-slow": {
-          "0%, 100%": { transform: "translateY(0) translateX(0) scale(1)" },
-          "33%": { transform: "translateY(-20px) translateX(8px) scale(1.02)" },
-          "66%": { transform: "translateY(8px) translateX(-12px) scale(0.98)" },
+          "0%, 100%": { transform: "translate(0, 0)" },
+          "33%": { transform: "translate(8px, -18px)" },
+          "66%": { transform: "translate(-10px, 6px)" },
         },
         drift: {
           "0%, 100%": { transform: "translate(0, 0) rotate(0deg)" },
@@ -38,10 +34,6 @@ const config: Config = {
         "aurora-pulse": {
           "0%, 100%": { opacity: "0.5", transform: "scale(1)" },
           "50%": { opacity: "0.85", transform: "scale(1.08)" },
-        },
-        "spin-slow": {
-          "0%": { transform: "rotate(0deg)" },
-          "100%": { transform: "rotate(360deg)" },
         },
         "glow-orbit": {
           "0%": { transform: "rotate(0deg) translateX(120px) rotate(0deg)" },
@@ -60,9 +52,8 @@ const config: Config = {
         "float-slow": "float-slow 14s ease-in-out infinite",
         drift: "drift 18s ease-in-out infinite",
         "aurora-pulse": "aurora-pulse 10s ease-in-out infinite",
-        "spin-slow": "spin-slow 48s linear infinite",
         "glow-orbit": "glow-orbit 22s linear infinite",
-        "scan-line": "scan-line 3.5s ease-in-out infinite",
+        "scan-line": "scan-line 4.5s ease-in-out infinite alternate",
       },
     },
   },

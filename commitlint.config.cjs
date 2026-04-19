@@ -9,7 +9,7 @@ module.exports = {
     ],
     "scope-enum": [2, "always", ["GEN", "TAD", "DVN", "PRT"]],
     "scope-empty": [2, "never"],
-    "header-max-length": [2, "always", 60],
+    "header-max-length": [2, "always", 70],
     "body-empty": [2, "always"],
     "footer-empty": [2, "always"],
   },

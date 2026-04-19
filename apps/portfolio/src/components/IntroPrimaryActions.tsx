@@ -6,6 +6,13 @@ import { useState } from "react";
 import { ContactCvDialog } from "@/components/ContactCvDialog";
 import { SocialLinksRow } from "@/components/SocialLinksRow";
 
+const btnPrimary =
+  "inline-flex rounded-full bg-gradient-to-r from-blue-600 to-violet-600 px-8 py-3 text-sm font-semibold tracking-tight text-white shadow-[0_0_40px_-8px_rgba(99,102,241,0.75)] transition-[transform,box-shadow] hover:scale-[1.02] hover:shadow-[0_0_48px_-6px_rgba(139,92,246,0.85)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-cyan-300/80";
+const btnGhost =
+  "inline-flex rounded-full border border-white/15 bg-black/30 px-8 py-3 text-sm font-semibold tracking-tight text-white backdrop-blur-sm transition-colors hover:border-white/25 hover:bg-white/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-cyan-300/80";
+const btnOutline =
+  "inline-flex rounded-full border border-white/15 bg-black/35 px-8 py-3 text-sm font-semibold tracking-tight text-white backdrop-blur-sm transition-colors hover:border-cyan-400/35 hover:bg-white/[0.06] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-cyan-300/80";
+
 export function IntroPrimaryActions() {
   const [contactOpen, setContactOpen] = useState(false);
 
@@ -19,22 +26,16 @@ export function IntroPrimaryActions() {
       </div>
 
       <div className="mt-10 flex flex-wrap items-center justify-center gap-4 lg:justify-start">
-        <Link
-          href="/home"
-          className="inline-flex rounded-full bg-gradient-to-r from-blue-600 to-violet-600 px-8 py-3 text-sm font-semibold text-white shadow-[0_0_40px_-8px_rgba(99,102,241,0.75)] transition-[transform,box-shadow] hover:scale-[1.02] hover:shadow-[0_0_48px_-6px_rgba(139,92,246,0.85)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-cyan-300/80"
-        >
+        <Link href="/home" className={btnPrimary}>
           Explore
         </Link>
-        <Link
-          href="/projects"
-          className="inline-flex rounded-full border border-white/15 bg-black/30 px-8 py-3 text-sm font-medium text-white backdrop-blur-sm transition-colors hover:border-white/25 hover:bg-white/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-cyan-300/80"
-        >
-          View projects
+        <Link href="/projects" className={btnGhost}>
+          See Projects
         </Link>
         <button
           type="button"
           onClick={() => setContactOpen(true)}
-          className="inline-flex rounded-full border border-white/15 bg-black/35 px-8 py-3 text-sm font-medium text-white backdrop-blur-sm transition-colors hover:border-cyan-400/35 hover:bg-white/[0.06] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-cyan-300/80"
+          className={btnOutline}
         >
           Request CV
         </button>

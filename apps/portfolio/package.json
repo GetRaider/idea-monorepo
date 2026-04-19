@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@repo/api": "workspace:*",
     "@repo/typescript-config": "workspace:*",
     "@repo/ui": "workspace:*",
     "clsx": "^2.1.1",

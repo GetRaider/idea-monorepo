@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { portfolioCta } from "@/constants/cta";
 import { ProjectBrandMark } from "@/components/ProjectBrandMark";
 import { projects } from "@/content/projects";
 import {
@@ -62,7 +63,7 @@ export default function ProjectsPage() {
                     {project.tagline}
                   </p>
                   <p className="mt-4 text-sm font-semibold tracking-tight text-violet-300/90">
-                    View Case Study →
+                    {portfolioCta.viewCase} →
                   </p>
                 </div>
               </Link>

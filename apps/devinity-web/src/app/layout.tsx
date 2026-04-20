@@ -11,7 +11,7 @@ import StyledComponentsRegistry from "../lib/styled-components-registry";
 
 const inter = Inter({ subsets: ["latin"] });
 
-export default function ({ children }: Readonly<PropsWithChildren>) {
+export default function RootLayout({ children }: Readonly<PropsWithChildren>) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className} suppressHydrationWarning>

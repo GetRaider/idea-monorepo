@@ -1,4 +1,5 @@
-import { postFormSubmitAjax } from "@repo/api/form-submit";
+import type { IHttpResponse } from "@repo/api/helpers";
+import { postFormSubmitAjax } from "@repo/api/helpers";
 
 import { getPortfolioContactEmail } from "@/constants/contact.constant";
 
@@ -7,11 +8,11 @@ export async function sendCvRequestFormSubmit(
   name: string,
   reason: string,
   recipient: string | undefined = getPortfolioContactEmail(),
-): Promise<{ status: number; data?: { message?: string } }> {
+): Promise<IHttpResponse<{ message?: string }>> {
   if (!recipient) throw new Error("Recipient email is not configured.");
   return postFormSubmitAjax(recipient, {
-    _subject: "Portfolio - CV request",
-    _replyto: email,
+    subject: "Portfolio - CV request",
+    replyTo: email,
     name,
     email,
     reason,

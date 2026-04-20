@@ -1,7 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import {
+  ghostButtonClassCompact,
+  primaryButtonClassCompact,
+} from "@/components/buttons";
 import { ProjectBrandMark } from "@/components/ProjectBrandMark";
+import { portfolioCta } from "@/constants/cta";
 import { SectionRichText } from "@/components/SectionRichText";
 import {
   PRODUCTION_UNAVAILABLE_TOOLTIP,
@@ -81,9 +86,9 @@ export default async function ProjectDetailPage({ params }: PageProps) {
                     href={project.prodUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex rounded-full bg-gradient-to-r from-blue-600 to-violet-600 px-6 py-2.5 text-sm font-semibold tracking-tight text-white shadow-[0_0_28px_-8px_rgba(99,102,241,0.75)] transition-[transform,box-shadow] hover:scale-[1.02] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-cyan-300/80"
+                    className={primaryButtonClassCompact}
                   >
-                    Open Production
+                    {portfolioCta.openProduction}
                   </a>
                 ) : (
                   <span
@@ -95,7 +100,7 @@ export default async function ProjectDetailPage({ params }: PageProps) {
                       disabled
                       className="pointer-events-none rounded-full border border-white/10 bg-zinc-900/80 px-6 py-2.5 text-sm font-semibold tracking-tight text-zinc-500"
                     >
-                      Open Production
+                      {portfolioCta.openProduction}
                     </button>
                   </span>
                 )}
@@ -103,9 +108,9 @@ export default async function ProjectDetailPage({ params }: PageProps) {
                   href={project.repoUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex rounded-full border border-white/15 bg-black/30 px-6 py-2.5 text-sm font-semibold tracking-tight text-white backdrop-blur-sm transition-colors hover:border-white/25 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-cyan-300/80"
+                  className={ghostButtonClassCompact}
                 >
-                  Repository
+                  {portfolioCta.repository}
                 </a>
               </div>
               <div

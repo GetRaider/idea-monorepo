@@ -3,9 +3,7 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"],
-      "@repo/ui": ["../../packages/ui/src/index.ts"],
-      "@repo/ui/*": ["../../packages/ui/src/*", "../../packages/ui/assets/*"]
+      "@/*": ["./src/*"]
     },
     "plugins": [{ "name": "next" }]
   },

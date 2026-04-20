@@ -472,6 +472,9 @@ importers:
         specifier: "catalog:"
         version: 4.1.12
     devDependencies:
+      "@eslint/eslintrc":
+        specifier: "catalog:"
+        version: 3.3.1
       "@next/eslint-plugin-next":
         specifier: "catalog:"
         version: 15.5.6
@@ -505,6 +508,12 @@ importers:
       "@types/styled-components":
         specifier: "catalog:"
         version: 5.1.34
+      eslint:
+        specifier: "catalog:"
+        version: 9.37.0(jiti@2.6.1)
+      eslint-config-next:
+        specifier: "catalog:"
+        version: 15.5.6(eslint@9.37.0(jiti@2.6.1))(typescript@5.9.3)
       typed-css-modules:
         specifier: "catalog:"
         version: 0.9.1
@@ -542,6 +551,9 @@ importers:
         specifier: ^3.5.0
         version: 3.5.0
     devDependencies:
+      "@eslint/eslintrc":
+        specifier: "catalog:"
+        version: 3.3.1
       "@types/node":
         specifier: "catalog:"
         version: 20.19.20

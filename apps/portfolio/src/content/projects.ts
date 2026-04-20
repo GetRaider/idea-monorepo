@@ -11,7 +11,6 @@ export type PortfolioProject = {
   productRequirements: string;
   analytics: string;
   prodUrl: string | null;
-  /** Shown next to actions, e.g. "In progress", "Done". */
   developmentStage: string;
   repoUrl: string;
 };
@@ -134,7 +133,7 @@ AI fills in what static dictionaries miss: natural examples, short explanations,
   {
     slug: "portfolio",
     title: "Portfolio Website",
-    tagline: "Case studies and CV requests",
+    tagline: "Personal landing page",
     summary:
       "Next.js micro-site inspired by modern AI SaaS landing pages-gradient field, marquee, and FormSubmit-backed contact.",
     why: "Single place to showcase work and filter inbound CV requests with context.",

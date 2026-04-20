@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@repo/ui/components/Button/Button.component";
+import { Button } from "@repo/ui";
 
 import { signOut, useSession } from "@lib/auth-client";
 import {

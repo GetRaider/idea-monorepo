@@ -37,10 +37,10 @@
       "import": "./dist/client.js",
       "require": "./dist/client.js"
     },
-    "./form-submit": {
-      "types": "./dist/helpers/form-submit.helper.d.ts",
-      "import": "./dist/helpers/form-submit.helper.js",
-      "require": "./dist/helpers/form-submit.helper.js"
+    "./helpers": {
+      "types": "./dist/helpers/index.d.ts",
+      "import": "./dist/helpers/index.js",
+      "require": "./dist/helpers/index.js"
     },
     "./*": {
       "import": "./dist/*.js",

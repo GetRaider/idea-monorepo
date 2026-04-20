@@ -1,6 +1,5 @@
-import axios, { AxiosHeaders, RawAxiosRequestHeaders } from "axios";
-import { logger } from "./logger.helper";
 import { primitiveHelper } from "@repo/shared";
+import axios, { AxiosHeaders, RawAxiosRequestHeaders } from "axios";
 
 export class HttpClient implements IHttpClient {
   async get<T>(args: IHttpRequest): Promise<IHttpResponse<T>> {
@@ -36,7 +35,7 @@ export class HttpClient implements IHttpClient {
       headers:
         headers instanceof AxiosHeaders
           ? headers
-          : new AxiosHeaders(headers ?? {}),
+          : ((headers ?? {}) as RawAxiosRequestHeaders),
     };
     try {
       const response = await axios.request(requestConfig);
@@ -48,7 +47,7 @@ export class HttpClient implements IHttpClient {
       };
     } catch (error) {
       const errorMessage = `Transport failure (no HTTP response).\nRequest: ${primitiveHelper.jsonStringify(requestConfig)}\nError: ${error instanceof Error ? error.message : String(error)}`;
-      logger.error(errorMessage);
+      console.error(errorMessage);
       throw error;
     }
   }

@@ -1,18 +1,14 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 
 import { CompanyMarquee } from "@/components/CompanyMarquee";
 import { ContactCvDialog } from "@/components/ContactCvDialog";
 import { PillarIcon } from "@/components/PillarIcons";
+import { GhostLink, PrimaryButton } from "@/components/buttons";
 import { SocialLinksRow } from "@/components/SocialLinksRow";
+import { portfolioCta } from "@/constants/cta";
 import { profile } from "@/content/profile";
-
-const btnPrimary =
-  "inline-flex rounded-full bg-gradient-to-r from-blue-600 to-violet-600 px-8 py-3 text-sm font-semibold tracking-tight text-white shadow-[0_0_36px_-10px_rgba(99,102,241,0.8)] transition-[transform,box-shadow] hover:scale-[1.02] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-cyan-300/80";
-const btnGhost =
-  "inline-flex rounded-full border border-white/15 bg-black/25 px-8 py-3 text-sm font-semibold tracking-tight text-white backdrop-blur-sm transition-colors hover:border-white/25 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-cyan-300/80";
 
 export default function HomePage() {
   const [contactOpen, setContactOpen] = useState(false);
@@ -35,16 +31,10 @@ export default function HomePage() {
           </p>
 
           <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
-            <button
-              type="button"
-              onClick={() => setContactOpen(true)}
-              className={btnPrimary}
-            >
-              Request CV
-            </button>
-            <Link href="/projects" className={btnGhost}>
-              See Projects
-            </Link>
+            <PrimaryButton onClick={() => setContactOpen(true)}>
+              {portfolioCta.requestCv}
+            </PrimaryButton>
+            <GhostLink href="/projects">{portfolioCta.seeProjects}</GhostLink>
           </div>
         </div>
 

@@ -11,7 +11,7 @@ export type PortfolioProject = {
   productRequirements: string;
   analytics: string;
   prodUrl: string | null;
-  developmentStage: string;
+  stage: "Early Access" | "In Progress" | "Planning" | "Public Access";
   repoUrl: string;
 };
 
@@ -56,14 +56,14 @@ That fracture is painful in software development *and* in real life: you context
 
 **Improvements -** super-properties for workspace tier (guest vs registered), session replay sampling on error boundaries, and cohort reports that compare “guests who created ≥3 tasks” vs “waitlist only”-so marketing spend optimizes for retained trials, not form fills alone. Server-side logs remain the source of truth for API failures; Mixpanel explains *behavior*, not stack traces.`,
     prodUrl: "https://take-and-do.vercel.app",
-    developmentStage: "Done",
+    stage: "Early Access",
     repoUrl:
       "https://github.com/GetRaider/idea-monorepo/tree/main/apps/take-and-do",
   },
   {
     slug: "devinity",
     title: "Devinity",
-    tagline: "AI engineering management",
+    tagline: "AI Engineering Management",
     summary:
       "Context for what your teams actually ship. Devinity is an AI-forward engineering management workspace: it connects initiatives, code changes, releases, and team narratives so leaders are not rebuilding a picture of reality from fragmented artifacts scattered across chat, tickets, and decks.",
     why: `Running engineering at scale is less about “tracking story points” and more about maintaining a *shared, honest model* of what is being built, by whom, under which constraints, and what actually reached production. In most organizations that model decays: Jira tickets diverge from Git reality, roadmaps are PowerPoint fiction, and new engineers spend weeks building mental maps from fragmented docs.
@@ -92,7 +92,7 @@ The pain intensifies when work spans multiple teams and vendors-you need a livin
 
 **Privacy -** aggregate-only reporting for comparative team views until explicit opt-in; audit logs for who viewed which AI summary (future enterprise requirement).`,
     prodUrl: null,
-    developmentStage: "In Progress",
+    stage: "In Progress",
     repoUrl: "https://github.com/GetRaider/idea-monorepo/tree/main/apps",
   },
   {
@@ -127,12 +127,12 @@ AI fills in what static dictionaries miss: natural examples, short explanations,
 
 **Privacy posture -** minimize retained content from AI calls; prefer aggregated product metrics over raw prompts in analytics backends.`,
     prodUrl: null,
-    developmentStage: "In Progress",
+    stage: "Planning",
     repoUrl: "https://github.com/GetRaider/idea-monorepo",
   },
   {
     slug: "portfolio",
-    title: "Portfolio Website",
+    title: "Personal Website",
     tagline: "Personal landing page",
     summary:
       "Next.js micro-site inspired by modern AI SaaS landing pages-gradient field, marquee, and FormSubmit-backed contact.",
@@ -143,7 +143,7 @@ AI fills in what static dictionaries miss: natural examples, short explanations,
     analytics:
       "Optional: add Plausible or Vercel Analytics later; currently no third-party trackers.",
     prodUrl: null,
-    developmentStage: "Done",
+    stage: "Public Access",
     repoUrl:
       "https://github.com/GetRaider/idea-monorepo/tree/main/apps/portfolio",
   },

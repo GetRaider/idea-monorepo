@@ -14,3 +14,57 @@ html {
 body {
   @apply min-h-screen bg-[#050505] text-zinc-100 antialiased;
 }
+
+/* Sonner: above dialogs; aligned with take-and-do dark toast styling */
+[data-sonner-toaster] {
+  z-index: 100000 !important;
+}
+
+[data-sonner-toaster][data-sonner-theme="dark"]
+  [data-sonner-toast][data-styled="true"] {
+  background: rgba(24, 24, 27, 0.96) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: #f4f4f5 !important;
+}
+
+[data-sonner-toaster][data-sonner-theme="dark"]
+  [data-sonner-toast]
+  [data-title],
+[data-sonner-toaster][data-sonner-theme="dark"]
+  [data-sonner-toast]
+  [data-description] {
+  color: #f4f4f5 !important;
+}
+
+[data-sonner-toaster][data-sonner-theme="dark"]
+  [data-sonner-toast][data-type="success"] {
+  background: #0f2a16 !important;
+  border-color: #14532d !important;
+  color: #86efac !important;
+}
+
+[data-sonner-toaster][data-sonner-theme="dark"]
+  [data-sonner-toast][data-type="error"] {
+  background: #2a0f0f !important;
+  border-color: #450a0a !important;
+  color: #fca5a5 !important;
+}
+
+[data-sonner-toast][data-styled="true"] [data-close-button] {
+  left: auto !important;
+  right: 8px !important;
+  top: 8px !important;
+  width: 24px !important;
+  height: 24px !important;
+  transform: none !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  color: #e4e4e7 !important;
+  border-radius: 4px !important;
+}
+
+[data-sonner-toast][data-styled="true"] [data-close-button]:hover {
+  background: rgba(255, 255, 255, 0.14) !important;
+  border-color: rgba(255, 255, 255, 0.18) !important;
+  color: #fafafa !important;
+}

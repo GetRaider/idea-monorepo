@@ -6,7 +6,7 @@ A repository where I develop, test, and validate product ideas. This monorepo co
 
 ### Deployed apps:
 
-- [Portfolio Website](https://portfolio-ten-snowy-m8019vod5u.vercel.app/)
+- [Personal Website](https://getadev.xyz/)
 - [Take&Do](https://take-and-do.vercel.app/)
 
 ### Apps and Packages Structure
@@ -91,13 +91,26 @@ Examples:
 
 #### Build
 
+All production builds go through **Turborepo** from the repository root (dependency order and caching are handled for you).
+
 ```bash
 # Build all apps and packages
 pnpm run build
 
+# Build a single app (runs that app’s `build` plus upstream `^build` deps)
+pnpm run build:portfolio
+pnpm run build:take-and-do
+pnpm run build:devinity-web
+pnpm run build:devinity-api
+
+# Shared packages only
+pnpm run build:packages
+
 # Rebuild (clean + build)
 pnpm run rebuild
 ```
+
+Avoid running `pnpm build` inside an app folder if you want the same behavior as CI; use the root commands above instead.
 
 #### Develop
 

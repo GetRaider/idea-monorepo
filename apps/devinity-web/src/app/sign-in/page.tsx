@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, FormEvent } from "react";
+import { useState, useEffect, useCallback, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Button, TextField } from "@radix-ui/themes";
 
@@ -86,28 +86,29 @@ export default function SignInPage() {
     return { isValid, strength, messages };
   };
 
-  // Check if email exists
-  const checkEmailExists = async (email: string) => {
-    if (!email || !isSignUp) {
-      setEmailError(null);
-      return;
-    }
+  const checkEmailExists = useCallback(
+    async (email: string) => {
+      if (!email || !isSignUp) {
+        setEmailError(null);
+        return;
+      }
 
-    try {
-      const response = await api.get(
-        `/user/check-email?email=${encodeURIComponent(email)}`,
-      );
-      if (response.data?.exists) {
-        setEmailError("This email is already registered");
-      } else {
+      try {
+        const response = await api.get(
+          `/user/check-email?email=${encodeURIComponent(email)}`,
+        );
+        if (response.data?.exists) {
+          setEmailError("This email is already registered");
+        } else {
+          setEmailError(null);
+        }
+      } catch (err) {
+        console.error("Email check error:", err);
         setEmailError(null);
       }
-    } catch (err) {
-      console.error("Email check error:", err);
-      // Don't show error if the endpoint doesn't exist yet
-      setEmailError(null);
-    }
-  };
+    },
+    [isSignUp],
+  );
 
   // Handle password change with validation
   const handlePasswordChange = (password: string) => {
@@ -133,7 +134,7 @@ export default function SignInPage() {
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [formData.email, isSignUp]);
+  }, [formData.email, isSignUp, checkEmailExists]);
 
   const handleGitHubSignIn = async () => {
     try {
@@ -214,14 +215,16 @@ export default function SignInPage() {
         console.log("Sign-in successful, redirecting...");
         router.push("/");
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Authentication error:", err);
 
-      // Provide user-friendly error messages
       let errorMessage = "Authentication failed";
 
-      if (err.message) {
-        const msg = err.message.toLowerCase();
+      const rawMessage =
+        err instanceof Error ? err.message : typeof err === "string" ? err : "";
+
+      if (rawMessage) {
+        const msg = rawMessage.toLowerCase();
         if (msg.includes("password") || msg.includes("invalid credentials")) {
           errorMessage = "Invalid email or password. Please try again.";
         } else if (msg.includes("email") && msg.includes("not found")) {
@@ -232,7 +235,7 @@ export default function SignInPage() {
         ) {
           errorMessage = "An account with this email already exists.";
         } else {
-          errorMessage = err.message;
+          errorMessage = rawMessage;
         }
       }
 

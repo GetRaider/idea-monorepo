@@ -2,15 +2,13 @@ import { Link } from "./links/entities/link.entity";
 
 import { CreateLinkDto } from "./links/dto/create-link.dto";
 import { UpdateLinkDto } from "./links/dto/update-link.dto";
-import {
-  HttpClient,
+
+export { HttpClient, httpClient } from "./helpers/http-client.helper";
+export type {
   IBaseRequest,
   IHttpResponse,
   IHttpRequest,
-} from "helpers/http-client.helper";
-
-export { HttpClient } from "./helpers/http-client.helper";
-export type { IBaseRequest, IHttpResponse, IHttpRequest };
+} from "./helpers/http-client.helper";
 
 export const links = {
   dto: {

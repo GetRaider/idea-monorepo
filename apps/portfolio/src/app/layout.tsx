@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 
+import { AppToaster } from "@/components/AppToaster";
 import { EmblemBackdrop } from "@/components/EmblemBackdrop";
 import { SiteHeader } from "@/components/SiteHeader";
 
@@ -13,7 +14,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Andrew Polovets — Portfolio",
+  title: "Andrew Polovets - Portfolio",
   description: "Portfolio and selected projects.",
 };
 
@@ -29,6 +30,7 @@ export default function RootLayout({
           <SiteHeader />
           {children}
         </EmblemBackdrop>
+        <AppToaster />
       </body>
     </html>
   );

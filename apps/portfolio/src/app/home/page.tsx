@@ -1,11 +1,13 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 
 import { CompanyMarquee } from "@/components/CompanyMarquee";
 import { ContactCvDialog } from "@/components/ContactCvDialog";
-import { SocialLinksRow } from "@/components/SocialLinksRow";
+import { PillarIcon } from "@/components/PillarIcons";
+import { GhostLink, PrimaryButton } from "@/components/buttons";
+import { ResourcesSection } from "@/components/ResourcesSection";
+import { portfolioCta } from "@/constants/cta";
 import { profile } from "@/content/profile";
 
 export default function HomePage() {
@@ -29,19 +31,10 @@ export default function HomePage() {
           </p>
 
           <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
-            <button
-              type="button"
-              onClick={() => setContactOpen(true)}
-              className="inline-flex rounded-full bg-gradient-to-r from-blue-600 to-violet-600 px-8 py-3 text-sm font-semibold text-white shadow-[0_0_36px_-10px_rgba(99,102,241,0.8)] transition-[transform,box-shadow] hover:scale-[1.02] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-cyan-300/80"
-            >
-              Request CV
-            </button>
-            <Link
-              href="/projects"
-              className="inline-flex rounded-full border border-white/15 bg-black/25 px-8 py-3 text-sm font-medium text-white backdrop-blur-sm transition-colors hover:border-white/25 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-cyan-300/80"
-            >
-              See projects
-            </Link>
+            <PrimaryButton onClick={() => setContactOpen(true)}>
+              {portfolioCta.requestCv}
+            </PrimaryButton>
+            <GhostLink href="/projects">{portfolioCta.seeProjects}</GhostLink>
           </div>
         </div>
 
@@ -51,8 +44,8 @@ export default function HomePage() {
               key={pillar.title}
               className="rounded-2xl border border-white/[0.07] bg-[var(--surface-glass)] p-6 text-center shadow-[0_0_0_1px_rgba(255,255,255,0.02)_inset] backdrop-blur-md"
             >
-              <div className="mx-auto mb-4 flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-lg font-semibold text-cyan-300/90">
-                ·
+              <div className="mx-auto mb-4 flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04]">
+                <PillarIcon id={pillar.icon} />
               </div>
               <h2 className="m-0 text-base font-semibold text-white">
                 {pillar.title}
@@ -64,12 +57,7 @@ export default function HomePage() {
           ))}
         </div>
 
-        <div className="mx-auto mt-16 max-w-xl">
-          <p className="mb-4 text-center text-[0.65rem] font-medium uppercase tracking-[0.35em] text-zinc-500">
-            Links
-          </p>
-          <SocialLinksRow />
-        </div>
+        <ResourcesSection />
       </main>
 
       <CompanyMarquee />

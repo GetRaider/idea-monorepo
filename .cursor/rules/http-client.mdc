@@ -1,0 +1,47 @@
+---
+description: Use shared HttpClient for HTTP requests (no fetch or ad-hoc axios)
+globs:
+  - "packages/**/*.ts"
+  - "apps/**/*.ts"
+  - "apps/**/*.tsx"
+alwaysApply: false
+---
+
+# HTTP client
+
+## Rule
+
+Use the **`HttpClient`** / **`httpClient`** singleton and HTTP types from **`@repo/api/helpers`** for **outbound HTTP** in this monorepo (JSON APIs, FormSubmit, webhooks, third-party REST).
+
+Do **not**:
+
+- use global **`fetch`** for application HTTP (unless there is no alternative and an exception is agreed),
+- call **`axios`** directly in app or package code,
+- add parallel HTTP stacks.
+
+## Imports
+
+Prefer the helpers barrel (no Nest/DTO surface):
+
+```typescript
+import { httpClient, postFormSubmitAjax } from "@repo/api/helpers";
+import type { IHttpRequest, IHttpResponse } from "@repo/api/helpers";
+```
+
+Inside `packages/api` you may import from relative `./http-client.helper` / `./helpers/index`.
+
+## Pattern
+
+```typescript
+const response = await httpClient.post<{ message?: string }>({
+  url: "https://example.com/api",
+  headers: { "Content-Type": "application/json", Accept: "application/json" },
+  body: payload,
+});
+```
+
+Domain helpers (e.g. `postFormSubmitAjax`) wrap `httpClient` and belong in `packages/api/src/helpers/`.
+
+## NestJS services
+
+Backend code may use Nest `HttpService` only where that app already standardizes on it; otherwise prefer `httpClient` for external calls.

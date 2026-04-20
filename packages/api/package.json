@@ -37,6 +37,11 @@
       "import": "./dist/client.js",
       "require": "./dist/client.js"
     },
+    "./helpers": {
+      "types": "./dist/helpers/index.d.ts",
+      "import": "./dist/helpers/index.js",
+      "require": "./dist/helpers/index.js"
+    },
     "./*": {
       "import": "./dist/*.js",
       "require": "./dist/*.js"

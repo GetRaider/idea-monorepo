@@ -2,7 +2,7 @@ import { useGetAllUsers } from "@hooks/users/useGetAllUsers.hook";
 import { LoadingContainer, UserCard, Spinner } from "./UsersSection.styles";
 
 export const UsersSection = () => {
-  const { users, loading, error } = useGetAllUsers();
+  const { users, loading } = useGetAllUsers();
   if (loading)
     return (
       <LoadingContainer>

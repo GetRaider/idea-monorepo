@@ -1,6 +1,6 @@
-'use client';
-import { useEffect, useState } from 'react';
-import { api } from '../../lib/api';
+"use client";
+import { useEffect, useState } from "react";
+import { api } from "../../lib/api";
 
 export interface User {
   _id: string;
@@ -9,7 +9,6 @@ export interface User {
   age: number;
 }
 
-// TODO: Fix getting users two times
 export function useGetAllUsers() {
   const [data, setData] = useState<User[] | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -22,16 +21,16 @@ export function useGetAllUsers() {
       setError(null);
       try {
         // TODO: Polish fetching users
-        const res = await api.get('/users');
+        const res = await api.get("/users");
         const users = res.data;
         console.log({ users });
         if (isMounted) {
           setData(users);
         }
-      } catch (err: any) {
-        console.log(err.stack);
+      } catch (err: unknown) {
+        console.log(err instanceof Error ? err.stack : err);
         if (isMounted) {
-          setError(err);
+          setError(err instanceof Error ? err : new Error(String(err)));
         }
       } finally {
         if (isMounted) {

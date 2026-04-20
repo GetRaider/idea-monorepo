@@ -1,9 +1,19 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import {
+  ghostButtonClassCompact,
+  primaryButtonClassCompact,
+} from "@/components/buttons";
 import { ProjectBrandMark } from "@/components/ProjectBrandMark";
+import { portfolioCta } from "@/constants/cta";
+import { ResourcesSection } from "@/components/ResourcesSection";
 import { SectionRichText } from "@/components/SectionRichText";
-import { getProjectBySlug, projects } from "@/content/projects";
+import {
+  PRODUCTION_UNAVAILABLE_TOOLTIP,
+  getProjectBySlug,
+  projects,
+} from "@/content/projects";
 import {
   getProjectBrandImage,
   getProjectRasterMatteClass,
@@ -19,11 +29,6 @@ export default async function ProjectDetailPage({ params }: PageProps) {
   const { slug } = await params;
   const project = getProjectBySlug(slug);
   if (!project) notFound();
-
-  const prodRestricted =
-    project.prodUrl === null
-      ? (project.prodRestrictedLabel ?? "Production access restricted")
-      : null;
 
   const brandImage = getProjectBrandImage(project.slug);
 
@@ -66,7 +71,7 @@ export default async function ProjectDetailPage({ params }: PageProps) {
                   <span className="text-white">{project.title}</span>
                   <span className="font-normal text-zinc-400">
                     {" "}
-                    — {project.tagline}
+                    - {project.tagline}
                   </span>
                 </h1>
                 <p className="mt-5 text-sm leading-relaxed text-zinc-500">
@@ -75,34 +80,50 @@ export default async function ProjectDetailPage({ params }: PageProps) {
               </div>
             </div>
 
-            <div className="mt-8 flex flex-wrap gap-3">
-              {project.prodUrl ? (
+            <div className="mt-8 flex flex-col gap-3">
+              <div className="flex flex-wrap gap-3">
+                {project.prodUrl ? (
+                  <a
+                    href={project.prodUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={primaryButtonClassCompact}
+                  >
+                    {portfolioCta.openProduction}
+                  </a>
+                ) : (
+                  <span
+                    className="inline-flex cursor-not-allowed rounded-full"
+                    title={PRODUCTION_UNAVAILABLE_TOOLTIP}
+                  >
+                    <button
+                      type="button"
+                      disabled
+                      className="pointer-events-none rounded-full border border-white/10 bg-zinc-900/80 px-6 py-2.5 text-sm font-semibold tracking-tight text-zinc-500"
+                    >
+                      {portfolioCta.openProduction}
+                    </button>
+                  </span>
+                )}
                 <a
-                  href={project.prodUrl}
+                  href={project.repoUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex rounded-full bg-gradient-to-r from-blue-600 to-violet-600 px-6 py-2.5 text-sm font-semibold text-white shadow-[0_0_28px_-8px_rgba(99,102,241,0.75)] transition-[transform,box-shadow] hover:scale-[1.02] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-cyan-300/80"
+                  className={ghostButtonClassCompact}
                 >
-                  Open production
+                  {portfolioCta.repository}
                 </a>
-              ) : (
-                <button
-                  type="button"
-                  disabled
-                  className="cursor-not-allowed rounded-full border border-white/10 bg-zinc-900/80 px-6 py-2.5 text-sm font-medium text-zinc-500"
-                  title={prodRestricted ?? undefined}
-                >
-                  {prodRestricted}
-                </button>
-              )}
-              <a
-                href={project.repoUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex rounded-full border border-white/15 bg-black/30 px-6 py-2.5 text-sm font-medium text-white backdrop-blur-sm transition-colors hover:border-white/25 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-cyan-300/80"
+              </div>
+              <div
+                className="inline-flex w-fit max-w-full flex-wrap items-center gap-2 rounded-full border border-white/[0.1] bg-white/[0.04] px-4 py-2 shadow-[0_0_0_1px_rgba(255,255,255,0.03)_inset]"
+                role="group"
+                aria-label={`Stage: ${project.stage}`}
               >
-                Repository
-              </a>
+                <span className="text-xs font-medium text-zinc-500">Stage</span>
+                <span className="rounded-full bg-violet-500/15 px-2.5 py-0.5 text-xs font-semibold tracking-tight text-violet-200/95">
+                  {project.stage}
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -134,6 +155,8 @@ export default async function ProjectDetailPage({ params }: PageProps) {
           </section>
         </div>
       </article>
+
+      <ResourcesSection />
     </main>
   );
 }

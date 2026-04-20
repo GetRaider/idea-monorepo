@@ -5,7 +5,7 @@
   "scripts": {
     "clean": "rm -rf .next && rm -rf .turbo",
     "clean:hard": "pnpm run clean && rm -rf node_modules",
-    "build": "next build",
+    "build": "next build --turbopack",
     "dev": "NODE_ENV=development next dev --port 3001",
     "prod": "NODE_ENV=production next start --port 10000",
     "lint": "eslint . --max-warnings 0",
@@ -31,6 +31,9 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "eslint": "catalog:",
+    "@eslint/eslintrc": "catalog:",
+    "eslint-config-next": "catalog:",
     "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
     "@repo/vitest-config": "workspace:*",

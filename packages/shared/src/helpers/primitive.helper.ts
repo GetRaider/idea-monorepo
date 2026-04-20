@@ -1,5 +1,3 @@
-import { randomInt } from "node:crypto";
-
 export interface IJsonStringifyOptions {
   replacer?: () => unknown;
   spaces?: number;
@@ -38,8 +36,15 @@ class PrimitiveHelper {
     return cleaned;
   }
 
+  randomInt(maxExclusive: number): number {
+    if (!Number.isFinite(maxExclusive) || maxExclusive <= 0) {
+      throw new RangeError("maxExclusive must be a finite positive number");
+    }
+    return Math.floor(Math.random() * maxExclusive);
+  }
+
   getRandomFrom<T>(values: T[]): T {
-    return values[randomInt(values.length)];
+    return values[this.randomInt(values.length)];
   }
 
   getCurrentDateTime(): string {

@@ -1,6 +1,8 @@
 import Link from "next/link";
 
 import { ProjectBrandMark } from "@/components/ProjectBrandMark";
+import { ResourcesSection } from "@/components/ResourcesSection";
+import { portfolioCta } from "@/constants/cta";
 import { projects } from "@/content/projects";
 import {
   getProjectBrandImage,
@@ -18,8 +20,8 @@ export default function ProjectsPage() {
           Projects
         </h1>
         <p className="mt-4 text-zinc-400">
-          Deep dives on motivation, implementation, and requirements. Open any
-          card for the full story.
+          Deep dives on motivation, implementation, and requirements of all
+          projects.
         </p>
       </div>
 
@@ -42,7 +44,7 @@ export default function ProjectsPage() {
                 />
                 <div className="relative">
                   <div className="mb-4 h-1 w-full overflow-hidden rounded-full bg-white/5">
-                    <div className="h-full w-1/3 animate-scan-line rounded-full bg-gradient-to-r from-transparent via-fuchsia-400/80 to-transparent" />
+                    <div className="h-full w-1/3 animate-scan-line rounded-full bg-gradient-to-r from-transparent via-fuchsia-400/70 to-transparent" />
                   </div>
                   <div className="mb-4 flex items-center gap-4">
                     {brandImage ? (
@@ -61,8 +63,8 @@ export default function ProjectsPage() {
                   <p className="mt-2 text-sm leading-relaxed text-zinc-400">
                     {project.tagline}
                   </p>
-                  <p className="mt-4 text-sm font-medium text-violet-300/90">
-                    View case study →
+                  <p className="mt-4 text-sm font-semibold tracking-tight text-violet-300/90">
+                    {portfolioCta.viewCase} →
                   </p>
                 </div>
               </Link>
@@ -70,6 +72,7 @@ export default function ProjectsPage() {
           );
         })}
       </ul>
+      <ResourcesSection />
     </main>
   );
 }

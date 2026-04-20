@@ -6,6 +6,7 @@
   "exports": {
     "./base": "./base.js",
     "./library": "./library.js",
+    "./next": "./next.js",
     "./next-js": "./next.js",
     "./nest-js": "./nest.js",
     "./prettier-base": "./prettier-base.js",

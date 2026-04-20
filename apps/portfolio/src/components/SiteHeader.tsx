@@ -5,6 +5,12 @@ import portfolioLogo from "@/images/portfolio-logo.png";
 const linkClass =
   "text-sm text-zinc-400 transition-colors hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-cyan-400/80";
 
+const nav = [
+  { href: "/", label: "Intro" },
+  { href: "/home", label: "Home" },
+  { href: "/projects", label: "Projects" },
+] as const;
+
 export function SiteHeader() {
   return (
     <header className="sticky top-0 z-50 border-b border-white/[0.06] bg-[#050505]/70 backdrop-blur-xl">
@@ -25,15 +31,11 @@ export function SiteHeader() {
           />
         </Link>
         <nav className="flex items-center gap-5 md:gap-8" aria-label="Primary">
-          <Link href="/" className={linkClass}>
-            Intro
-          </Link>
-          <Link href="/home" className={linkClass}>
-            Home
-          </Link>
-          <Link href="/projects" className={linkClass}>
-            Projects
-          </Link>
+          {nav.map((item) => (
+            <Link key={item.href} href={item.href} className={linkClass}>
+              {item.label}
+            </Link>
+          ))}
         </nav>
       </div>
     </header>

@@ -1,7 +1,8 @@
 import Link from "next/link";
 
-import { portfolioCta } from "@/constants/cta";
 import { ProjectBrandMark } from "@/components/ProjectBrandMark";
+import { ResourcesSection } from "@/components/ResourcesSection";
+import { portfolioCta } from "@/constants/cta";
 import { projects } from "@/content/projects";
 import {
   getProjectBrandImage,
@@ -71,6 +72,7 @@ export default function ProjectsPage() {
           );
         })}
       </ul>
+      <ResourcesSection />
     </main>
   );
 }

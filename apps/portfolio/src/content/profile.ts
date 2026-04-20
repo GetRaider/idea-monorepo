@@ -1,3 +1,5 @@
+import { getPortfolioContactEmail } from "@/constants/contact.constant";
+
 export type PillarIconId = "focus" | "stack" | "quality" | "collaboration";
 
 export const profile = {
@@ -29,10 +31,10 @@ export const profile = {
       body: "Clear RFCs, readable PRs, and pairing when things get fuzzy, high-stakes, or worth talking through together",
     },
   ],
+  email: getPortfolioContactEmail(),
   links: {
     linkedin: "https://www.linkedin.com/in/andrew-polovets/",
     github: "https://github.com/GetRaider",
-    mail: "mailto:andrewpolovets@gmail.com",
   },
   employers: ["Evolved Ideas", "Spherity", "CorvaAI", "Mento"],
 } as const;

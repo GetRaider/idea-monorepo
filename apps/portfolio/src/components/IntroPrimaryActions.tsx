@@ -14,7 +14,7 @@ export function IntroPrimaryActions() {
     <>
       <div className="mt-8">
         <p className="mb-3 text-[0.6rem] font-medium uppercase tracking-[0.28em] text-zinc-600">
-          Connect
+          Resources
         </p>
         <SocialLinksRow compact />
       </div>

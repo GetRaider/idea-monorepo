@@ -1,3 +1,8 @@
+"use client";
+
+import { useCallback } from "react";
+import { toast } from "sonner";
+
 import { profile } from "@/content/profile";
 
 function ExternalIcon() {
@@ -19,12 +24,61 @@ function ExternalIcon() {
   );
 }
 
+function ClipboardIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      className="opacity-60"
+      aria-hidden
+    >
+      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h5a2 2 0 0 1 2 2v1" />
+    </svg>
+  );
+}
+
+async function copyEmailToClipboard(): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(profile.email);
+    return true;
+  } catch {
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = profile.email;
+      ta.setAttribute("readonly", "");
+      ta.style.position = "fixed";
+      ta.style.left = "-9999px";
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand("copy");
+      document.body.removeChild(ta);
+      return ok;
+    } catch {
+      return false;
+    }
+  }
+}
+
 type SocialLinksRowProps = {
   /** Tighter spacing for intro hero */
   compact?: boolean;
 };
 
 export function SocialLinksRow({ compact = false }: SocialLinksRowProps) {
+  const onCopyEmail = useCallback(async () => {
+    const ok = await copyEmailToClipboard();
+    if (ok) {
+      toast.success("Email copied to clipboard");
+    } else {
+      toast.error("Couldn't copy email");
+    }
+  }, []);
+
   const wrap = compact
     ? "flex flex-wrap items-center justify-center gap-2.5 lg:justify-start"
     : "flex flex-wrap items-center justify-center gap-3";
@@ -45,13 +99,6 @@ export function SocialLinksRow({ compact = false }: SocialLinksRowProps) {
         <ExternalIcon />
       </a>
       <a
-        href={profile.links.mail}
-        className={`${linkClass} hover:border-fuchsia-400/35`}
-      >
-        Gmail
-        <ExternalIcon />
-      </a>
-      <a
         href={profile.links.linkedin}
         target="_blank"
         rel="noreferrer"
@@ -60,6 +107,15 @@ export function SocialLinksRow({ compact = false }: SocialLinksRowProps) {
         LinkedIn
         <ExternalIcon />
       </a>
+      <button
+        type="button"
+        onClick={onCopyEmail}
+        className={`${linkClass} cursor-pointer hover:border-fuchsia-400/35`}
+        aria-label="Copy email address"
+      >
+        Email
+        <ClipboardIcon />
+      </button>
     </div>
   );
 }

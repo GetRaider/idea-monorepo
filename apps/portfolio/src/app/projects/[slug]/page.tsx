@@ -7,6 +7,7 @@ import {
 } from "@/components/buttons";
 import { ProjectBrandMark } from "@/components/ProjectBrandMark";
 import { portfolioCta } from "@/constants/cta";
+import { ResourcesSection } from "@/components/ResourcesSection";
 import { SectionRichText } from "@/components/SectionRichText";
 import {
   PRODUCTION_UNAVAILABLE_TOOLTIP,
@@ -154,6 +155,8 @@ export default async function ProjectDetailPage({ params }: PageProps) {
           </section>
         </div>
       </article>
+
+      <ResourcesSection />
     </main>
   );
 }

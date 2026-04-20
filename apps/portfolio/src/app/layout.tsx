@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 
+import { AppToaster } from "@/components/AppToaster";
 import { EmblemBackdrop } from "@/components/EmblemBackdrop";
 import { SiteHeader } from "@/components/SiteHeader";
 
@@ -29,6 +30,7 @@ export default function RootLayout({
           <SiteHeader />
           {children}
         </EmblemBackdrop>
+        <AppToaster />
       </body>
     </html>
   );

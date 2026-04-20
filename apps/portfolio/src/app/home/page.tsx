@@ -6,7 +6,7 @@ import { CompanyMarquee } from "@/components/CompanyMarquee";
 import { ContactCvDialog } from "@/components/ContactCvDialog";
 import { PillarIcon } from "@/components/PillarIcons";
 import { GhostLink, PrimaryButton } from "@/components/buttons";
-import { SocialLinksRow } from "@/components/SocialLinksRow";
+import { ResourcesSection } from "@/components/ResourcesSection";
 import { portfolioCta } from "@/constants/cta";
 import { profile } from "@/content/profile";
 
@@ -57,12 +57,7 @@ export default function HomePage() {
           ))}
         </div>
 
-        <div className="mx-auto mt-16 max-w-xl">
-          <p className="mb-4 text-center text-[0.65rem] font-medium uppercase tracking-[0.35em] text-zinc-500">
-            Links
-          </p>
-          <SocialLinksRow />
-        </div>
+        <ResourcesSection />
       </main>
 
       <CompanyMarquee />

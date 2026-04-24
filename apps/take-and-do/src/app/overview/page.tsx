@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useQueries } from "@tanstack/react-query";
+import { useEffect, useRef, useState } from "react";
 import { Sidebar } from "@/components/Sidebar/Sidebar";
 import { Task } from "@/components/Boards/KanbanBoard/types";
 import { StatsCards, ProductivityOverview, TimelinePlanning } from ".";
@@ -9,6 +10,7 @@ import { Spinner } from "@/components/Spinner/Spinner";
 import { useIsAnonymous } from "@/hooks/auth/use-is-anonymous";
 import { useGuestTasks } from "@/hooks/tasks/use-guest-store";
 import { useTasksSidebarWidthPx } from "@/hooks/tasks/useTasksSidebarWidthPx";
+import { queryKeys } from "@/lib/query-keys";
 import { guestTasksBySchedule } from "@/stores/guest/guest-task-filters";
 import { clientServices } from "@/services";
 import { toast } from "sonner";
@@ -27,40 +29,65 @@ function OverviewPage() {
   const [, setCurrentPage] = useState("overview");
   const [isTasksSidebarOpen, setIsTasksSidebarOpen] = useState(false);
   const [tasksSidebarWidthPx] = useTasksSidebarWidthPx();
-  const [isLoading, setIsLoading] = useState(true);
-  const [todayTasks, setTodayTasks] = useState<Task[]>([]);
-  const [tomorrowTasks, setTomorrowTasks] = useState<Task[]>([]);
-  const [taskStats, setTaskStats] = useState<TaskStats | null>(null);
 
+  const scheduledAndStats = useQueries({
+    queries: [
+      {
+        queryKey: queryKeys.tasks.schedule,
+        queryFn: () => clientServices.tasks.getBySchedule(),
+        enabled: !isAnonymous,
+      },
+      {
+        queryKey: queryKeys.stats("month"),
+        queryFn: () => clientServices.stats.getByTimeframe("month"),
+        enabled: !isAnonymous,
+      },
+    ],
+  });
+
+  const [scheduledQuery, statsQuery] = scheduledAndStats;
+  const isLoading =
+    !isAnonymous && (scheduledQuery.isPending || statsQuery.isPending);
+
+  const scheduledTasks =
+    !isAnonymous && scheduledQuery.data
+      ? scheduledQuery.data
+      : { today: [] as Task[], tomorrow: [] as Task[] };
+  const taskStats: TaskStats | null =
+    !isAnonymous && statsQuery.data !== undefined ? statsQuery.data : null;
+
+  const guestSchedule = isAnonymous
+    ? guestTasksBySchedule(guestTasks)
+    : { today: [] as Task[], tomorrow: [] as Task[] };
+
+  const todayTasks = [
+    ...scheduledTasks.today,
+    ...(isAnonymous ? guestSchedule.today : []),
+  ];
+  const tomorrowTasks = [
+    ...scheduledTasks.tomorrow,
+    ...(isAnonymous ? guestSchedule.tomorrow : []),
+  ];
+
+  const statsToastShown = useRef(false);
   useEffect(() => {
-    const fetchData = async () => {
-      setIsLoading(true);
-      try {
-        const [scheduledTasks, dashboardStatsResponse] = await Promise.all([
-          clientServices.tasks.getBySchedule(),
-          clientServices.stats.getByTimeframe("month"),
-        ]);
-
-        const guestSchedule = isAnonymous
-          ? guestTasksBySchedule(guestTasks)
-          : { today: [] as Task[], tomorrow: [] as Task[] };
-
-        setTodayTasks([...scheduledTasks.today, ...guestSchedule.today]);
-        setTomorrowTasks([
-          ...scheduledTasks.tomorrow,
-          ...guestSchedule.tomorrow,
-        ]);
-        setTaskStats(dashboardStatsResponse);
-        if (!isAnonymous && dashboardStatsResponse === null) {
-          toast.error("Can't load dashboard stats");
-        }
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    void fetchData();
-  }, [isAnonymous, guestTasks]);
+    if (
+      isAnonymous ||
+      !statsQuery.isSuccess ||
+      statsQuery.data !== null ||
+      statsQuery.isFetching
+    ) {
+      return;
+    }
+    if (statsToastShown.current) return;
+    statsToastShown.current = true;
+    toast.error("Can't load dashboard stats");
+  }, [
+    isAnonymous,
+    statsQuery.data,
+    statsQuery.isSuccess,
+    statsQuery.isFetching,
+  ]);
 
   const handleNavigationToTasksPage = (page: string) => {
     setCurrentPage(page);

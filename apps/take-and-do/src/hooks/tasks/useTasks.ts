@@ -1,8 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback, useMemo } from "react";
 
 import { Task, TaskUpdate } from "@/components/Boards/KanbanBoard/types";
+import { invalidateTaskDataQueries } from "@/lib/invalidate-app-queries";
+import { queryKeys } from "@/lib/query-keys";
 import { useIsAnonymous } from "@/hooks/auth/use-is-anonymous";
 import { useGuestTasks } from "@/hooks/tasks/use-guest-store";
 import {
@@ -29,9 +32,6 @@ export function useTasks({
 }: UseTasksParams = {}): UseTasksReturn {
   const isAnonymous = useIsAnonymous();
   const { tasks: guestTasks } = useGuestTasks();
-  const [dbTasks, setDbTasks] = useState<Task[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const requestIdRef = useRef(0);
 
   const dateTimestamp = date ? date.getTime() : undefined;
 
@@ -45,34 +45,24 @@ export function useTasks({
     return guestTasks;
   }, [guestTasks, dateTimestamp, taskBoardId]);
 
-  const tasks = isAnonymous ? guestFiltered : dbTasks;
+  const dateKey =
+    dateTimestamp !== undefined
+      ? new Date(dateTimestamp).toISOString().slice(0, 10)
+      : undefined;
 
-  useEffect(() => {
-    if (isAnonymous) {
-      setIsLoading(false);
-      return;
-    }
+  const listQuery = useQuery({
+    queryKey:
+      dateKey !== undefined
+        ? queryKeys.tasks.byDate(dateKey)
+        : taskBoardId
+          ? queryKeys.tasks.byBoard(taskBoardId)
+          : queryKeys.tasks.all,
+    queryFn: () => getTasksFromApi({ dateTimestamp, taskBoardId }),
+    enabled: !isAnonymous,
+  });
 
-    requestIdRef.current += 1;
-    const localRequestId = requestIdRef.current;
-    setIsLoading(true);
-
-    const fetchTasks = async () => {
-      try {
-        const tasksResult = await getTasksFromApi({
-          dateTimestamp,
-          taskBoardId,
-        });
-        if (localRequestId !== requestIdRef.current) return;
-        setDbTasks(tasksResult);
-      } finally {
-        if (localRequestId !== requestIdRef.current) return;
-        setIsLoading(false);
-      }
-    };
-
-    void fetchTasks();
-  }, [isAnonymous, dateTimestamp, taskBoardId]);
+  const tasks = isAnonymous ? guestFiltered : (listQuery.data ?? []);
+  const isLoading = isAnonymous ? false : listQuery.isPending;
 
   return { tasks, isLoading, isGuest: isAnonymous };
 }
@@ -91,13 +81,52 @@ async function getTasksFromApi({
 export function useTaskActions() {
   const isAnonymous = useIsAnonymous();
   const { update, remove } = useGuestTasks();
+  const queryClient = useQueryClient();
 
-  const createTask = useCallback(
-    async (payload: Omit<Task, "id"> & { taskBoardName?: string }) => {
-      return clientServices.tasks.create(payload);
+  const runAfterTaskMutation = useCallback(async () => {
+    await invalidateTaskDataQueries(queryClient);
+  }, [queryClient]);
+
+  const createTask = useMutation({
+    mutationFn: (payload: Omit<Task, "id"> & { taskBoardName?: string }) =>
+      clientServices.tasks.create(payload),
+    onSuccess: () => {
+      void runAfterTaskMutation();
     },
-    [],
-  );
+  });
+
+  const updateTaskMutation = useMutation({
+    mutationFn: ({
+      taskId,
+      updates,
+    }: {
+      taskId: string;
+      updates: TaskUpdate;
+    }) => clientServices.tasks.update({ taskId, updates }),
+    onSuccess: () => {
+      void runAfterTaskMutation();
+    },
+  });
+
+  const createSubtaskMutation = useMutation({
+    mutationFn: ({
+      parentTaskId,
+      input,
+    }: {
+      parentTaskId: string;
+      input: { summary: string };
+    }) => clientServices.tasks.createSubtask(parentTaskId, input),
+    onSuccess: () => {
+      void runAfterTaskMutation();
+    },
+  });
+
+  const deleteTaskMutation = useMutation({
+    mutationFn: (taskId: string) => clientServices.tasks.deleteById(taskId),
+    onSuccess: () => {
+      void runAfterTaskMutation();
+    },
+  });
 
   const updateTask = useCallback(
     async (taskId: string, patch: TaskUpdate) => {
@@ -105,9 +134,16 @@ export function useTaskActions() {
         const result = update(taskId, patch);
         return result ?? null;
       }
-      return clientServices.tasks.update({ taskId, updates: patch });
+      return updateTaskMutation.mutateAsync({ taskId, updates: patch });
     },
-    [isAnonymous, update],
+    [isAnonymous, update, updateTaskMutation],
+  );
+
+  const createTaskFn = useCallback(
+    async (payload: Omit<Task, "id"> & { taskBoardName?: string }) => {
+      return createTask.mutateAsync(payload);
+    },
+    [createTask],
   );
 
   const createSubtask = useCallback(
@@ -115,9 +151,9 @@ export function useTaskActions() {
       if (isAnonymous) {
         return guestStoreHelper.appendSubtask(parentTaskId, input);
       }
-      return clientServices.tasks.createSubtask(parentTaskId, input);
+      return createSubtaskMutation.mutateAsync({ parentTaskId, input });
     },
-    [isAnonymous],
+    [isAnonymous, createSubtaskMutation],
   );
 
   const deleteTask = useCallback(
@@ -126,13 +162,13 @@ export function useTaskActions() {
         remove(taskId);
         return null;
       }
-      return clientServices.tasks.deleteById(taskId);
+      return deleteTaskMutation.mutateAsync(taskId);
     },
-    [isAnonymous, remove],
+    [isAnonymous, remove, deleteTaskMutation],
   );
 
   return {
-    createTask,
+    createTask: createTaskFn,
     createSubtask,
     updateTask,
     deleteTask,

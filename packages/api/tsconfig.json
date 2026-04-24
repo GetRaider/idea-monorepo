@@ -6,7 +6,8 @@
     "allowJs": true,
     "esModuleInterop": true,
     "incremental": false,
-    "noEmit": false
+    "noEmit": false,
+    "rewriteRelativeImportExtensions": true
   },
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "test", "**/*spec.ts"]

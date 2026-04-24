@@ -23,9 +23,8 @@
     "@radix-ui/react-icons": "catalog:",
     "@radix-ui/react-tooltip": "catalog:",
     "@radix-ui/themes": "catalog:",
+    "@tanstack/react-query": "catalog:",
     "@stackframe/react": "catalog:",
-    "@types/axios": "catalog:",
-    "axios": "catalog:",
     "better-auth": "catalog:",
     "dotenv": "catalog:",
     "zod": "catalog:"
@@ -47,6 +46,7 @@
     "@types/react-dom": "catalog:",
     "@types/styled-components": "catalog:",
     "vitest": "catalog:",
-    "typed-css-modules": "catalog:"
+    "typed-css-modules": "catalog:",
+    "@tanstack/react-query-devtools": "catalog:"
   }
 }

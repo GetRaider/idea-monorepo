@@ -1,7 +1,15 @@
 "use client";
 
-import { useEffect, useState, type Dispatch, type SetStateAction } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useCallback,
+  useEffect,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
 
+import { queryKeys } from "@/lib/query-keys";
 import { useIsAnonymous } from "@/hooks/auth/use-is-anonymous";
 import { GUEST_STORE_UPDATED_EVENT } from "@/stores/guest/constants";
 import { guestStoreHelper } from "@/stores/guest";
@@ -19,47 +27,75 @@ interface UseWorkspacesReturn {
 
 export function useWorkspaces(): UseWorkspacesReturn {
   const isAnonymous = useIsAnonymous();
-  const [folders, setFolders] = useState<Folder[]>([]);
-  const [isFoldersLoading, setIsFoldersLoading] = useState(true);
-  const [taskBoards, setTaskBoards] = useState<TaskBoard[]>([]);
-  const [isBoardsLoading, setIsBoardsLoading] = useState(true);
+  const queryClient = useQueryClient();
+
+  const [guestFolders, setGuestFolders] = useState<Folder[]>([]);
+  const [guestBoards, setGuestBoards] = useState<TaskBoard[]>([]);
+
+  const foldersQuery = useQuery({
+    queryKey: queryKeys.folders,
+    queryFn: () => clientServices.folders.getAll(),
+    enabled: !isAnonymous,
+  });
+
+  const boardsQuery = useQuery({
+    queryKey: queryKeys.taskBoards.all,
+    queryFn: () => clientServices.taskBoards.getAll(),
+    enabled: !isAnonymous,
+  });
 
   useEffect(() => {
     if (isAnonymous) {
       const sync = () => {
-        setFolders(guestStoreHelper.getFolders());
-        setTaskBoards(guestStoreHelper.getTaskBoards());
+        setGuestFolders(guestStoreHelper.getFolders());
+        setGuestBoards(guestStoreHelper.getTaskBoards());
       };
       sync();
-      setIsFoldersLoading(false);
-      setIsBoardsLoading(false);
       window.addEventListener(GUEST_STORE_UPDATED_EVENT, sync);
       return () => window.removeEventListener(GUEST_STORE_UPDATED_EVENT, sync);
     }
-
-    let isMounted = true;
-
-    const fetchWorkspaces = async () => {
-      try {
-        const [fetchedFolders, fetchedBoards] = await Promise.all([
-          clientServices.folders.getAll(),
-          clientServices.taskBoards.getAll(),
-        ]);
-        if (!isMounted) return;
-        setFolders(fetchedFolders);
-        setTaskBoards(fetchedBoards);
-      } finally {
-        if (!isMounted) return;
-        setIsFoldersLoading(false);
-        setIsBoardsLoading(false);
-      }
-    };
-
-    void fetchWorkspaces();
-    return () => {
-      isMounted = false;
-    };
   }, [isAnonymous]);
+
+  const folders = isAnonymous ? guestFolders : (foldersQuery.data ?? []);
+  const taskBoards = isAnonymous ? guestBoards : (boardsQuery.data ?? []);
+
+  const isFoldersLoading = isAnonymous ? false : foldersQuery.isPending;
+  const isBoardsLoading = isAnonymous ? false : boardsQuery.isPending;
+
+  const setFolders = useCallback(
+    (updater: SetStateAction<Folder[]>) => {
+      if (isAnonymous) {
+        setGuestFolders((prev) =>
+          typeof updater === "function" ? updater(prev) : updater,
+        );
+        return;
+      }
+      queryClient.setQueryData<Folder[]>(queryKeys.folders, (previous) => {
+        const prev = previous ?? [];
+        return typeof updater === "function" ? updater(prev) : updater;
+      });
+    },
+    [isAnonymous, queryClient],
+  );
+
+  const setTaskBoards = useCallback(
+    (updater: SetStateAction<TaskBoard[]>) => {
+      if (isAnonymous) {
+        setGuestBoards((prev) =>
+          typeof updater === "function" ? updater(prev) : updater,
+        );
+        return;
+      }
+      queryClient.setQueryData<TaskBoard[]>(
+        queryKeys.taskBoards.all,
+        (previous) => {
+          const prev = previous ?? [];
+          return typeof updater === "function" ? updater(prev) : updater;
+        },
+      );
+    },
+    [isAnonymous, queryClient],
+  );
 
   return {
     folders,

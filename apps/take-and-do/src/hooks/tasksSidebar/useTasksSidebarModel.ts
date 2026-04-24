@@ -1,5 +1,6 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -14,6 +15,7 @@ import {
 import { useTasksSidebarOrder } from "@/hooks/tasks/useTasksSidebarOrder";
 import { isDuplicateWorkspaceName } from "@/helpers/workspace-name.helper";
 import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
+import { invalidateWorkspaceQueries } from "@/lib/invalidate-app-queries";
 import { clientServices } from "@/services";
 import type { Folder, TaskBoard } from "@/types/workspace";
 
@@ -30,6 +32,7 @@ export function useTasksSidebarModel({
   setFolders,
 }: TasksSidebarProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [expandedFolder, setExpandedFolder] = useState<string>("");
   const [openMenuBoardId, setOpenMenuBoardId] = useState<string | null>(null);
   const [dragOverTarget, setDragOverTarget] = useState<string | null>(null);
@@ -171,11 +174,13 @@ export function useTasksSidebarModel({
       if (nameChanged) {
         router.push(tasksUrlHelper.routing.buildBoardUrl(updated.name));
       }
+      await invalidateWorkspaceQueries(queryClient);
       toast.success(nameChanged ? "Board renamed" : "Board emoji updated");
     },
     [
       editingName,
       editingBoardEmoji,
+      queryClient,
       router,
       setEditingBoardId,
       setOpenBoardEmojiPickerId,
@@ -197,6 +202,7 @@ export function useTasksSidebarModel({
         ? tasksUrlHelper.routing.buildBoardUrl(remaining[0].name)
         : tasksUrlHelper.routing.buildRootUrl(),
     );
+    await invalidateWorkspaceQueries(queryClient);
     toast.success(`'${name}' board deleted`);
   };
 
@@ -260,11 +266,13 @@ export function useTasksSidebarModel({
         previous.map((item) => (item.id === updated.id ? updated : item)),
       );
 
+      await invalidateWorkspaceQueries(queryClient);
       toast.success(nameChanged ? "Folder renamed" : "Folder emoji updated");
     },
     [
       editingFolderEmoji,
       editingFolderName,
+      queryClient,
       setEditingFolderId,
       setOpenFolderEmojiPickerId,
       setFolders,
@@ -289,6 +297,7 @@ export function useTasksSidebarModel({
         b.folderId === folder.id ? { ...b, folderId: undefined } : b,
       ),
     );
+    await invalidateWorkspaceQueries(queryClient);
     toast.success("Folder deleted");
   };
 
@@ -330,7 +339,7 @@ export function useTasksSidebarModel({
             createdAt: board.createdAt,
           },
         })
-        .then((updated) => {
+        .then(async (updated) => {
           if (!updated) {
             toast.error("Can't move board");
             return;
@@ -338,12 +347,13 @@ export function useTasksSidebarModel({
           setTaskBoards((previous) =>
             previous.map((item) => (item.id === updated.id ? updated : item)),
           );
+          await invalidateWorkspaceQueries(queryClient);
           if (folderId && expandedFolder !== folderId)
             setExpandedFolder(folderId);
           toast.success("Board moved");
         });
     },
-    [expandedFolder, setTaskBoards, taskBoards],
+    [expandedFolder, queryClient, setTaskBoards, taskBoards],
   );
 
   const handleBoardReorderDragOver = (event: React.DragEvent) => {

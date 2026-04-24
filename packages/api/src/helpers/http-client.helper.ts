@@ -1,4 +1,3 @@
-import { primitiveHelper } from "@repo/shared";
 import axios, { AxiosHeaders, RawAxiosRequestHeaders } from "axios";
 
 export class HttpClient implements IHttpClient {
@@ -24,13 +23,14 @@ export class HttpClient implements IHttpClient {
 
   private async sendRequest<T>(
     method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
-    { url, headers, body, timeout = 0 }: IHttpRequest,
+    { url, headers, body, timeout = 0, withCredentials }: IHttpRequest,
   ): Promise<IHttpResponse<T>> {
     const requestConfig = {
       url,
       method,
       data: body,
       timeout,
+      ...(withCredentials !== undefined ? { withCredentials } : {}),
       validateStatus: () => true,
       headers:
         headers instanceof AxiosHeaders
@@ -46,7 +46,7 @@ export class HttpClient implements IHttpClient {
         config: response.config,
       };
     } catch (error) {
-      const errorMessage = `Transport failure (no HTTP response).\nRequest: ${primitiveHelper.jsonStringify(requestConfig)}\nError: ${error instanceof Error ? error.message : String(error)}`;
+      const errorMessage = `Transport failure (no HTTP response).\nRequest: ${stringifyForTransportLog(requestConfig)}\nError: ${error instanceof Error ? error.message : String(error)}`;
       console.error(errorMessage);
       throw error;
     }
@@ -62,6 +62,8 @@ export interface IHttpRequest {
     | Record<string, string | string[] | number | boolean | null>;
   body?: unknown;
   timeout?: number;
+  /** When set, forwarded to axios (e.g. cookie-based cross-origin requests). */
+  withCredentials?: boolean;
 }
 
 export interface IHttpResponse<T> {
@@ -85,4 +87,23 @@ interface IHttpClient {
   put<T>(args: IHttpRequest): Promise<IHttpResponse<T>>;
   patch<T>(args: IHttpRequest): Promise<IHttpResponse<T>>;
   delete<T>(args: IHttpRequest): Promise<IHttpResponse<T>>;
+}
+
+function stringifyForTransportLog(value: unknown): string {
+  return JSON.stringify(value, transportLogReplacer, 2);
+}
+
+function transportLogReplacer(_key: string, val: unknown): unknown {
+  if (typeof val === "function") {
+    return `[Function: ${val.name || "anonymous"}]`;
+  }
+  if (val instanceof Error) {
+    const errorObj: Record<string, unknown> = {};
+    const err = val as unknown as Record<string, unknown>;
+    for (const k of Object.getOwnPropertyNames(val)) {
+      errorObj[k] = err[k];
+    }
+    return errorObj;
+  }
+  return val;
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -11,6 +12,7 @@ import {
 import { diffTaskMetadataForPending } from "@/helpers/task-metadata.helper";
 import type { TaskMetadataProps } from "@/components/TaskView/TaskMetadata/taskMetadata.types";
 import { tasksHelper } from "@/helpers/task.helper";
+import { queryKeys } from "@/lib/query-keys";
 import { clientServices } from "@/services";
 
 export function useTaskMetadataModel({
@@ -41,7 +43,6 @@ export function useTaskMetadataModel({
   const [estimationHours, setEstimationHours] = useState(0);
   const [estimationMinutes, setEstimationMinutes] = useState(0);
   const [isLabelDropdownOpen, setIsLabelDropdownOpen] = useState(false);
-  const [availableLabels, setAvailableLabels] = useState<string[]>([]);
   const [labelSearchValue, setLabelSearchValue] = useState("");
   const [openMenuLabelName, setOpenMenuLabelName] = useState<string | null>(
     null,
@@ -55,6 +56,40 @@ export function useTaskMetadataModel({
   );
   const labelDropdownRef = useRef<HTMLDivElement>(null);
   const estimationGroupRef = useRef<HTMLDivElement>(null);
+  const queryClient = useQueryClient();
+
+  const labelsQuery = useQuery({
+    queryKey: queryKeys.labels,
+    queryFn: () => clientServices.labels.getAll(),
+  });
+
+  const availableLabels = useMemo(
+    () => labelsQuery.data ?? [],
+    [labelsQuery.data],
+  );
+
+  const renameLabelMutation = useMutation({
+    mutationFn: (params: { oldName: string; newName: string }) =>
+      clientServices.labels.rename(params),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.labels });
+    },
+  });
+
+  const removeLabelMutation = useMutation({
+    mutationFn: (name: string) => clientServices.labels.remove(name),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.labels });
+      void queryClient.invalidateQueries({ queryKey: ["tasks"] });
+    },
+  });
+
+  const createLabelMutation = useMutation({
+    mutationFn: (label: string) => clientServices.labels.create(label),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.labels });
+    },
+  });
 
   const filteredCatalogLabels = useMemo(() => {
     const query = labelSearchValue.toLowerCase();
@@ -85,14 +120,6 @@ export function useTaskMetadataModel({
       setScheduleDateValue("");
     }
   }, [task]);
-
-  useEffect(() => {
-    const fetchLabels = async () => {
-      const labels = await clientServices.labels.getAll();
-      setAvailableLabels(labels);
-    };
-    void fetchLabels();
-  }, []);
 
   useLayoutEffect(() => {
     if (!isLabelDropdownOpen) {
@@ -249,7 +276,7 @@ export function useTaskMetadataModel({
       setEditingCatalogLabel(null);
       return;
     }
-    const newName = await clientServices.labels.rename({
+    const newName = await renameLabelMutation.mutateAsync({
       oldName,
       newName: trimmed,
     });
@@ -257,11 +284,6 @@ export function useTaskMetadataModel({
       toast.error("Can't rename label");
       return;
     }
-    setAvailableLabels((prev) =>
-      [...prev.map((l) => (l === oldName ? newName : l))].sort((a, b) =>
-        a.localeCompare(b),
-      ),
-    );
     if (task.labels?.includes(oldName)) {
       updateTask({
         labels: task.labels.map((l) => (l === oldName ? newName : l)),
@@ -275,12 +297,11 @@ export function useTaskMetadataModel({
     if (!labelPendingDelete) return;
     const name = labelPendingDelete;
     setLabelPendingDelete(null);
-    const ok = await clientServices.labels.remove(name);
+    const ok = await removeLabelMutation.mutateAsync(name);
     if (!ok) {
       toast.error("Can't delete label");
       return;
     }
-    setAvailableLabels((prev) => prev.filter((l) => l !== name));
     if (task.labels?.includes(name)) {
       updateTask({ labels: task.labels.filter((l) => l !== name) });
     }
@@ -289,11 +310,10 @@ export function useTaskMetadataModel({
   const handleCreateAndSelectLabel = async () => {
     if (labelSearchValue.trim()) {
       const newLabel = labelSearchValue.trim();
-      const created = await clientServices.labels.create(newLabel);
+      const created = await createLabelMutation.mutateAsync(newLabel);
       if (created === null) {
         toast.error("Can't create label");
       } else {
-        setAvailableLabels((prev) => [...prev, newLabel]);
         const newLabels = [...(task?.labels || []), newLabel];
         updateTask({ labels: newLabels });
       }

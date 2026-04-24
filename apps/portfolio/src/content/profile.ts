@@ -36,5 +36,5 @@ export const profile = {
     linkedin: "https://www.linkedin.com/in/andrew-polovets/",
     github: "https://github.com/GetRaider",
   },
-  employers: ["Evolved Ideas", "Spherity", "CorvaAI", "Mento"],
+  employers: ["Evolved Ideas", "Spherity", "CorvaAI"],
 } as const;

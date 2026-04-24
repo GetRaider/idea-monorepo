@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
 
 import { Task } from "@/components/Boards/KanbanBoard/types";
+import { queryKeys } from "@/lib/query-keys";
 import { useIsAnonymous } from "@/hooks/auth/use-is-anonymous";
 import { useGuestTasks } from "@/hooks/tasks/use-guest-store";
 import { guestTasksRecent } from "@/stores/guest/guest-task-filters";
@@ -16,32 +18,19 @@ interface UseRecentTasksReturn {
 export function useRecentTasks(tasksNumber: number = 7): UseRecentTasksReturn {
   const isAnonymous = useIsAnonymous();
   const { tasks: guestTasks } = useGuestTasks();
-  const [recentTasks, setRecentTasks] = useState<Task[]>([]);
-  const [isLoadingRecent, setIsLoadingRecent] = useState(true);
 
-  useEffect(() => {
-    if (isAnonymous) {
-      setRecentTasks(guestTasksRecent(guestTasks, tasksNumber));
-      setIsLoadingRecent(false);
-      return;
-    }
+  const dbQuery = useQuery({
+    queryKey: queryKeys.tasks.recent(tasksNumber),
+    queryFn: () => clientServices.tasks.getRecent(tasksNumber),
+    enabled: !isAnonymous,
+  });
 
-    let isMounted = true;
-    const fetchRecentTasks = async () => {
-      setIsLoadingRecent(true);
-      try {
-        const tasks = await clientServices.tasks.getRecent(tasksNumber);
-        if (isMounted) setRecentTasks(tasks);
-      } finally {
-        if (isMounted) setIsLoadingRecent(false);
-      }
-    };
+  const recentTasks = useMemo(() => {
+    if (isAnonymous) return guestTasksRecent(guestTasks, tasksNumber);
+    return dbQuery.data ?? [];
+  }, [isAnonymous, guestTasks, tasksNumber, dbQuery.data]);
 
-    void fetchRecentTasks();
-    return () => {
-      isMounted = false;
-    };
-  }, [tasksNumber, isAnonymous, guestTasks]);
+  const isLoadingRecent = isAnonymous ? false : dbQuery.isPending;
 
   return { recentTasks, isLoadingRecent };
 }

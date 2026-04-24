@@ -1,14 +1,14 @@
-import { Link } from "./links/entities/link.entity";
+import { Link } from "./links/entities/link.entity.ts";
 
-import { CreateLinkDto } from "./links/dto/create-link.dto";
-import { UpdateLinkDto } from "./links/dto/update-link.dto";
+import { CreateLinkDto } from "./links/dto/create-link.dto.ts";
+import { UpdateLinkDto } from "./links/dto/update-link.dto.ts";
 
-export { HttpClient, httpClient } from "./helpers/http-client.helper";
+export { HttpClient, httpClient } from "./helpers/http-client.helper.ts";
 export type {
   IBaseRequest,
   IHttpResponse,
   IHttpRequest,
-} from "./helpers/http-client.helper";
+} from "./helpers/http-client.helper.ts";
 
 export const links = {
   dto: {

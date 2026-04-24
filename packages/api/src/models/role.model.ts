@@ -1,6 +1,6 @@
-import { IsOptional, IsString } from 'class-validator';
+import { IsOptional, IsString } from "class-validator";
 
-import { Role } from '../constants/roles.constants';
+import { Role } from "../constants/roles.constants.ts";
 
 export interface IRoleModel {
   readonly id: string;

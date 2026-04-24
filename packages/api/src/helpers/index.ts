@@ -1,8 +1,11 @@
-export { HttpClient, httpClient } from "./http-client.helper";
+export { HttpClient, httpClient } from "./http-client.helper.ts";
 export type {
   IBaseRequest,
   IHttpRequest,
   IHttpResponse,
-} from "./http-client.helper";
+} from "./http-client.helper.ts";
 
-export { postFormSubmitAjax, type FormSubmitBody } from "./form-submit.helper";
+export {
+  postFormSubmitAjax,
+  type FormSubmitBody,
+} from "./form-submit.helper.ts";

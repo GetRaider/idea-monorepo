@@ -8,6 +8,7 @@ import { usePathname } from "next/navigation";
 import "./globals.css";
 import AppShell from "./components/AppShell/AppShell.component";
 import StyledComponentsRegistry from "../lib/styled-components-registry";
+import { QueryProvider } from "../providers/query-provider";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -23,7 +24,9 @@ export default function RootLayout({ children }: Readonly<PropsWithChildren>) {
           className="radix-theme-with-gradient"
         >
           <StyledComponentsRegistry>
-            <LayoutWrapper>{children}</LayoutWrapper>
+            <QueryProvider>
+              <LayoutWrapper>{children}</LayoutWrapper>
+            </QueryProvider>
           </StyledComponentsRegistry>
         </Theme>
       </body>

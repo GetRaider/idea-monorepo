@@ -54,21 +54,30 @@ export default function SignInPage() {
   const signupEmailCheck = useQuery({
     queryKey: queryKeys.checkEmailSignup(debouncedEmail),
     queryFn: async () => {
-      const response = await api.get<{ exists?: boolean }>(
-        `/user/check-email?email=${encodeURIComponent(debouncedEmail)}`,
+      const response = await api.get<{ exists: boolean }>(
+        `/users/email-exists/${encodeURIComponent(debouncedEmail)}`,
       );
       return response.data;
     },
     enabled: isSignUp && debouncedEmail.length > 0,
   });
 
+  const signupEmailCheckPending =
+    isSignUp &&
+    !!debouncedEmail &&
+    (signupEmailCheck.isPending || signupEmailCheck.isFetching);
+
   useEffect(() => {
     if (!isSignUp || !debouncedEmail) {
       setEmailError(null);
       return;
     }
-    if (signupEmailCheck.isError) {
+    if (signupEmailCheck.isPending || signupEmailCheck.isFetching) {
       setEmailError(null);
+      return;
+    }
+    if (signupEmailCheck.isError) {
+      setEmailError("Could not verify email");
       return;
     }
     if (signupEmailCheck.data?.exists) {
@@ -81,6 +90,8 @@ export default function SignInPage() {
     debouncedEmail,
     signupEmailCheck.data?.exists,
     signupEmailCheck.isError,
+    signupEmailCheck.isPending,
+    signupEmailCheck.isFetching,
   ]);
 
   // Redirect to home if already authenticated
@@ -184,8 +195,8 @@ export default function SignInPage() {
         const data = await queryClient.fetchQuery({
           queryKey: queryKeys.checkEmailSignin(formData.email),
           queryFn: async () => {
-            const response = await api.get<{ exists?: boolean }>(
-              `/users/check-email?email=${encodeURIComponent(formData.email)}`,
+            const response = await api.get<{ exists: boolean }>(
+              `/users/email-exists/${encodeURIComponent(formData.email)}`,
             );
             return response.data;
           },
@@ -227,14 +238,16 @@ export default function SignInPage() {
         console.log("Sign-in successful, redirecting...");
         router.push("/");
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Authentication error:", err);
 
-      // Provide user-friendly error messages
       let errorMessage = "Authentication failed";
 
-      if (err.message) {
-        const msg = err.message.toLowerCase();
+      const rawMessage =
+        err instanceof Error ? err.message : typeof err === "string" ? err : "";
+
+      if (rawMessage) {
+        const msg = rawMessage.toLowerCase();
         if (msg.includes("password") || msg.includes("invalid credentials")) {
           errorMessage = "Invalid email or password. Please try again.";
         } else if (msg.includes("email") && msg.includes("not found")) {
@@ -245,7 +258,7 @@ export default function SignInPage() {
         ) {
           errorMessage = "An account with this email already exists.";
         } else {
-          errorMessage = err.message;
+          errorMessage = rawMessage;
         }
       }
 
@@ -353,6 +366,7 @@ export default function SignInPage() {
             type="submit"
             disabled={
               isLoading ||
+              signupEmailCheckPending ||
               (isSignUp && !!emailError) ||
               (isSignUp && !!passwordValidation && !passwordValidation.isValid)
             }

@@ -1,5 +1,5 @@
-import type { IHttpResponse } from "./http-client.helper";
-import { httpClient } from "./http-client.helper";
+import type { IHttpResponse } from "./http-client.helper.ts";
+import { httpClient } from "./http-client.helper.ts";
 
 export async function postFormSubmitAjax<
   T extends { message?: string } = { message?: string },

@@ -4,7 +4,7 @@ const isProd = process.env.NODE_ENV === "production";
 const webBaseUrl = "https://take-and-do.com";
 
 const nextConfig: NextConfig = {
-  transpilePackages: ["@repo/ui"],
+  transpilePackages: ["@repo/ui", "@repo/api"],
   images: {
     remotePatterns: [
       {

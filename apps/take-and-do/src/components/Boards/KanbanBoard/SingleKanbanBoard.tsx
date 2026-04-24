@@ -232,9 +232,13 @@ export function SingleKanbanBoard({
         console.error("Cannot compose task: taskBoardId not found");
         return;
       }
-      const composedData = await composeMutation.mutateAsync(text);
-      if (composedData) {
-        setSelectedTask(composedDataToTask(composedData));
+      try {
+        const composedData = await composeMutation.mutateAsync(text);
+        if (composedData) {
+          setSelectedTask(composedDataToTask(composedData));
+        }
+      } catch {
+        toast.error("Can't compose task with AI");
       }
     },
     [boardId, composeMutation, setSelectedTask],

@@ -275,15 +275,21 @@ export function MultipleKanbanBoard({
       const additionalData: Partial<Omit<Task, "id">> = scheduleDate
         ? { scheduleDate }
         : {};
-      const composedData = await composeMutation.mutateAsync({
-        text,
-        taskBoardId,
-        additionalData,
-      });
-      if (composedData) {
-        const overrideScheduleDate = scheduleDate ?? undefined;
-        setSelectedTask(composedDataToTask(composedData, overrideScheduleDate));
-        setSelectedBoardIdForAI(null);
+      try {
+        const composedData = await composeMutation.mutateAsync({
+          text,
+          taskBoardId,
+          additionalData,
+        });
+        if (composedData) {
+          const overrideScheduleDate = scheduleDate ?? undefined;
+          setSelectedTask(
+            composedDataToTask(composedData, overrideScheduleDate),
+          );
+          setSelectedBoardIdForAI(null);
+        }
+      } catch {
+        toast.error("Can't compose task with AI");
       }
     },
     [

@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 module.exports = {
-  transpilePackages: ["@repo/ui"],
+  transpilePackages: ["@repo/ui", "@repo/api"],
   compiler: {
     styledComponents: true,
   },

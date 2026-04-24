@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "license": "MIT",
-  "type": "commonjs",
+  "type": "module",
   "scripts": {
     "build": "tsc -b -v",
     "rebuild": "rm -rf dist && pnpm build",
@@ -34,8 +34,10 @@
       "require": "./dist/index.js"
     },
     "./client": {
+      "types": "./dist/client.d.ts",
       "import": "./dist/client.js",
-      "require": "./dist/client.js"
+      "require": "./dist/client.js",
+      "default": "./dist/client.js"
     },
     "./helpers": {
       "types": "./dist/helpers/index.d.ts",
@@ -53,7 +55,6 @@
     "@nestjs/core": "catalog:",
     "@nestjs/mapped-types": "catalog:",
     "@nestjs/platform-express": "catalog:",
-    "@repo/shared": "workspace:*",
     "axios": "catalog:",
     "pino": "^10.3.0",
     "tsx": "^4.21.0"

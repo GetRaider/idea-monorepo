@@ -1,5 +1,5 @@
-import { IsArray, IsOptional, IsString } from 'class-validator';
-import { IRoleModel } from './role.model';
+import { IsArray, IsOptional, IsString } from "class-validator";
+import { IRoleModel } from "./role.model.ts";
 
 export interface IUserModel {
   readonly id: string;

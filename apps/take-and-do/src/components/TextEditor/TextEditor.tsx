@@ -11,7 +11,7 @@ export function TextEditor({
   onBlur,
   content = "",
   editable = false,
-  placeholder = "No description provided.",
+  placeholder = "No description",
 }: TextEditorProps) {
   const editor = useEditor({
     extensions: [

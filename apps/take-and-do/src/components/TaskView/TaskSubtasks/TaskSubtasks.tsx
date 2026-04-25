@@ -146,7 +146,7 @@ function SubtasksSection({ className, ref, ...props }: UiProps<"div">) {
     <div
       ref={ref}
       className={cn(
-        "mx-6 mb-8 rounded-xl border border-border-app bg-[#1a1a1a]",
+        "mx-6 mb-6 rounded-xl border border-white/[0.08] bg-[#1e1e22] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]",
         className,
       )}
       {...props}
@@ -159,7 +159,7 @@ function SubtasksHeader({ className, ref, ...props }: UiProps<"div">) {
     <div
       ref={ref}
       className={cn(
-        "flex items-center justify-between px-5 py-4 text-[15px] font-semibold text-white",
+        "flex items-center justify-between px-4 py-3 text-[13px] font-semibold tracking-wide text-[#b0b0b0] uppercase",
         className,
       )}
       {...props}
@@ -188,7 +188,7 @@ function SubtasksHeaderButton({
       ref={ref}
       type={type}
       className={cn(
-        "flex h-7 w-7 cursor-pointer items-center justify-center rounded border-0 bg-transparent p-1 text-lg text-[#666] transition-all duration-200 hover:bg-[#2a2a2a] hover:text-white",
+        "flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border-0 bg-transparent p-1 text-[#666] transition-colors duration-150 hover:bg-white/[0.06] hover:text-white",
         className,
       )}
       {...props}
@@ -209,7 +209,11 @@ function SubtasksContainer({
   return (
     <div
       ref={ref}
-      className={cn("px-3 pb-3", isExpanded ? "block" : "hidden", className)}
+      className={cn(
+        "px-3 pb-3 pt-0",
+        isExpanded ? "block" : "hidden",
+        className,
+      )}
       {...props}
     />
   );

@@ -23,10 +23,12 @@ import {
 
 type TaskMetadataLabelsSectionProps = {
   model: TaskMetadataModel;
+  labelMenuPlacement?: "up" | "down";
 };
 
 export function TaskMetadataLabelsSection({
   model,
+  labelMenuPlacement = "down",
 }: TaskMetadataLabelsSectionProps) {
   const {
     task,
@@ -74,7 +76,10 @@ export function TaskMetadataLabelsSection({
         <AddLabelTag onClick={handleLabelDropdownToggle} title="Add label">
           + Label
         </AddLabelTag>
-        <LabelDropdown isOpen={isLabelDropdownOpen}>
+        <LabelDropdown
+          isOpen={isLabelDropdownOpen}
+          placement={labelMenuPlacement}
+        >
           <LabelDropdownInput
             type="text"
             value={labelSearchValue}

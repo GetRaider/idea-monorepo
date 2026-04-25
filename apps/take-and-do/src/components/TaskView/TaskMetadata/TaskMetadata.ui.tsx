@@ -108,17 +108,27 @@ export function EstimationLabel({
   );
 }
 
-type LabelDropdownProps = HTMLAttributes<HTMLDivElement> & { isOpen: boolean };
+type LabelDropdownProps = HTMLAttributes<HTMLDivElement> & {
+  isOpen: boolean;
+  /** Open upward (e.g. labels at bottom of sidebar) vs downward (default). */
+  placement?: "up" | "down";
+};
 
 export function LabelDropdown({
   className,
   isOpen,
+  placement = "down",
   ...props
 }: LabelDropdownProps) {
+  const position =
+    placement === "up"
+      ? "bottom-full top-auto mb-1 mt-0"
+      : "top-full bottom-auto mt-1 mb-0";
   return (
     <div
       className={joinClassNames(
-        "absolute left-[var(--label-menu-left,0px)] right-auto top-full z-[1001] mt-1 box-border max-h-60 w-[200px] max-w-[min(200px,calc(100vw-48px))] overflow-y-auto rounded-lg border border-input-border bg-input-bg shadow-[0_4px_12px_rgba(0,0,0,0.3)]",
+        "absolute left-[var(--label-menu-left,0px)] right-auto z-[1300] box-border max-h-60 w-[200px] max-w-[min(200px,calc(100vw-48px))] overflow-y-auto rounded-xl border border-white/10 bg-[#1c1c1e] shadow-[0_8px_24px_rgba(0,0,0,0.5)]",
+        position,
         isOpen ? "block" : "hidden",
         className,
       )}

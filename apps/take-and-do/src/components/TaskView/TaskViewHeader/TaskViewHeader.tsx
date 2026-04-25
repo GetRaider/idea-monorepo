@@ -1,12 +1,13 @@
 "use client";
 
-import { TrashIcon, CloseIcon } from "@/components/Icons";
-import { Task, TaskStatus } from "../../Boards/KanbanBoard/types";
+import { CopyIcon, CloseIcon, TrashIcon } from "@/components/Icons";
+import { Task } from "../../Boards/KanbanBoard/types";
 import { CloseButton } from "@/components/Buttons";
 import {
   TaskViewDialogHeader,
   HeaderLeft,
   HeaderRight,
+  StatusIconButton,
   DeleteButton,
 } from "../TaskView.ui";
 import { TaskViewBreadcrumbs } from "../TaskViewBreadcrumbs/TaskViewBreadcrumbs";
@@ -19,9 +20,9 @@ export function TaskViewHeader({
   parentTask,
   onNavigateToParentTask,
   task,
-  onStatusSelect,
   onClose,
   onDelete,
+  onDuplicate,
   isCreating = false,
 }: TaskViewHeaderProps) {
   return (
@@ -35,8 +36,12 @@ export function TaskViewHeader({
           parentTask={parentTask}
           onParentTaskClick={onNavigateToParentTask}
           task={task}
-          onStatusSelect={onStatusSelect}
         />
+        {!isCreating && onDuplicate && (
+          <StatusIconButton title="Duplicate task" onClick={onDuplicate}>
+            <CopyIcon size={15} />
+          </StatusIconButton>
+        )}
       </HeaderLeft>
       <HeaderRight>
         {!isCreating && onDelete && (
@@ -44,7 +49,11 @@ export function TaskViewHeader({
             <TrashIcon size={16} />
           </DeleteButton>
         )}
-        <CloseButton onClick={onClose} title="Close">
+        <CloseButton
+          onClick={onClose}
+          title="Close"
+          className="transition-colors duration-150 hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/20"
+        >
           <CloseIcon />
         </CloseButton>
       </HeaderRight>
@@ -65,8 +74,8 @@ interface TaskViewHeaderProps {
   task: Task;
   parentTask?: Task | null;
   onNavigateToParentTask?: () => void;
-  onStatusSelect: (status: TaskStatus) => void;
   onClose: () => void;
   onDelete?: () => void;
+  onDuplicate?: () => void;
   isCreating?: boolean;
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Task,
   TaskPriority,
@@ -10,31 +10,44 @@ import {
 import { toast } from "sonner";
 import { useTaskActions } from "@/hooks/tasks/useTasks";
 import { TextEditor } from "../TextEditor/TextEditor";
-import { tasksHelper } from "@/helpers/task.helper";
 import { TaskViewHeader } from "./TaskViewHeader/TaskViewHeader";
 import { SecondaryButton } from "@/components/Buttons";
 import { ConfirmDialog } from "@/components/Dialogs";
 import {
   TaskViewOverlay,
   TaskViewContainer,
+  TaskViewBody,
+  TaskViewLeftPanel,
+  TaskViewRightPanel,
   TaskTitleSection,
-  PriorityIcon,
   TaskTitle,
   TaskTitleInput,
   TaskDescriptionMarkdown,
-  DropdownContainer,
-  DropdownItem,
-  PriorityDropdownWrapper,
-  PriorityIconSpan,
   DescriptionContent,
   NoDescriptionText,
   TaskViewFooter,
+  FooterActions,
   CreateTaskButton,
   TaskSaveButton,
 } from "./TaskView.ui";
 import { TaskMetadata } from "./TaskMetadata/TaskMetadata";
 import { TaskSubtasks } from "./TaskSubtasks/TaskSubtasks";
-import { useClickOutside } from "@/hooks/ui/useClickOutside";
+import { TaskViewSidebar } from "./TaskViewSidebar/TaskViewSidebar";
+
+/** TipTap / rich HTML with no visible text (e.g. `<p></p>`) should behave like empty. */
+function isDescriptionHtmlEmpty(html: string): boolean {
+  if (!html?.trim()) return true;
+  const text = html
+    .replace(/<[^>]*>/g, "")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/\u200b/g, "")
+    .trim();
+  return text.length === 0;
+}
+
+function normalizeDescriptionHtml(html: string): string {
+  return isDescriptionHtmlEmpty(html) ? "" : html;
+}
 
 export function TaskView({
   task: initialTask,
@@ -56,12 +69,11 @@ export function TaskView({
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [titleValue, setTitleValue] = useState("");
   const [descriptionValue, setDescriptionValue] = useState("");
-  const [isPriorityDropdownOpen, setIsPriorityDropdownOpen] = useState(false);
   const [isCreatingTask, setIsCreatingTask] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [pendingUpdates, setPendingUpdates] = useState<Partial<Task>>({});
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  const priorityDropdownRef = useRef<HTMLDivElement>(null);
   const shouldCreateTask = useMemo(
     () => isCreating && !task?.id,
     [isCreating, task?.id],
@@ -71,23 +83,15 @@ export function TaskView({
     setTask(initialTask);
     if (initialTask) {
       setTitleValue(initialTask.summary);
-      setDescriptionValue(initialTask.description || "");
+      setDescriptionValue(
+        normalizeDescriptionHtml(initialTask.description || ""),
+      );
     } else {
       setTitleValue("");
       setDescriptionValue("");
     }
     setPendingUpdates({});
   }, [initialTask]);
-
-  const closePriorityDropdown = useCallback(
-    () => setIsPriorityDropdownOpen(false),
-    [],
-  );
-  useClickOutside(
-    priorityDropdownRef,
-    isPriorityDropdownOpen,
-    closePriorityDropdown,
-  );
 
   const handleUpdateTask = useCallback(
     async (updates: TaskUpdate) => {
@@ -101,7 +105,9 @@ export function TaskView({
       onTaskUpdate?.(updatedTask);
       setPendingUpdates({});
       setTitleValue(updatedTask.summary);
-      setDescriptionValue(updatedTask.description || "");
+      setDescriptionValue(
+        normalizeDescriptionHtml(updatedTask.description || ""),
+      );
       toast.success("Task updated");
     },
     [task, onTaskUpdate, updateTask],
@@ -111,7 +117,8 @@ export function TaskView({
     if (!initialTask || !initialTask.id) return false;
     return (
       titleValue !== initialTask.summary ||
-      descriptionValue !== (initialTask.description || "") ||
+      normalizeDescriptionHtml(descriptionValue) !==
+        normalizeDescriptionHtml(initialTask.description || "") ||
       Object.keys(pendingUpdates).length > 0
     );
   }, [initialTask, titleValue, descriptionValue, pendingUpdates]);
@@ -125,11 +132,12 @@ export function TaskView({
     if (titleValue !== initialTask.summary) {
       updates.summary = titleValue;
     }
-    if (descriptionValue !== (initialTask.description || "")) {
-      updates.description = descriptionValue;
+    const nextDesc = normalizeDescriptionHtml(descriptionValue);
+    const initialDesc = normalizeDescriptionHtml(initialTask.description || "");
+    if (nextDesc !== initialDesc) {
+      updates.description = nextDesc;
     }
 
-    // Merge pending updates from metadata
     const allUpdates = { ...pendingUpdates, ...updates };
 
     if (Object.keys(allUpdates).length === 0) return;
@@ -163,6 +171,7 @@ export function TaskView({
   }, []);
 
   const handleDescriptionBlur = useCallback(() => {
+    setDescriptionValue((prev) => normalizeDescriptionHtml(prev));
     setIsEditingDescription(false);
   }, []);
 
@@ -176,7 +185,9 @@ export function TaskView({
     if (initialTask) {
       setTask(initialTask);
       setTitleValue(initialTask.summary);
-      setDescriptionValue(initialTask.description || "");
+      setDescriptionValue(
+        normalizeDescriptionHtml(initialTask.description || ""),
+      );
       setPendingUpdates({});
       setIsEditingTitle(false);
       setIsEditingDescription(false);
@@ -184,22 +195,12 @@ export function TaskView({
     onClose();
   };
 
-  const handleTitleClick = () => {
-    setIsEditingTitle(true);
-  };
-
-  const handleTitleBlur = () => {
-    setIsEditingTitle(false);
-  };
+  const handleTitleClick = () => setIsEditingTitle(true);
+  const handleTitleBlur = () => setIsEditingTitle(false);
 
   const handleTitleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
-      if (shouldCreateTask) {
-        // In create mode, Enter just blurs (user must click save)
-        e.currentTarget.blur();
-      } else {
-        e.currentTarget.blur();
-      }
+      e.currentTarget.blur();
     } else if (e.key === "Escape") {
       if (isCreating) {
         onClose();
@@ -210,23 +211,7 @@ export function TaskView({
     }
   };
 
-  const handleDescriptionClick = () => {
-    setIsEditingDescription(true);
-  };
-
-  const handlePriorityClick = () => {
-    setIsPriorityDropdownOpen(!isPriorityDropdownOpen);
-  };
-
-  const handlePrioritySelect = (priority: TaskPriority) => {
-    setIsPriorityDropdownOpen(false);
-    if (shouldCreateTask) {
-      if (task) setTask({ ...task, priority });
-    } else {
-      setPendingUpdates((prev) => ({ ...prev, priority }));
-      setTask((prev) => (prev ? { ...prev, priority } : null));
-    }
-  };
+  const handleDescriptionClick = () => setIsEditingDescription(true);
 
   const handleStatusSelect = (status: TaskStatus) => {
     if (shouldCreateTask) {
@@ -234,6 +219,15 @@ export function TaskView({
     } else {
       setPendingUpdates((prev) => ({ ...prev, status }));
       setTask((prev) => (prev ? { ...prev, status } : null));
+    }
+  };
+
+  const handlePrioritySelect = (priority: TaskPriority) => {
+    if (shouldCreateTask) {
+      if (task) setTask({ ...task, priority });
+    } else {
+      setPendingUpdates((prev) => ({ ...prev, priority }));
+      setTask((prev) => (prev ? { ...prev, priority } : null));
     }
   };
 
@@ -258,7 +252,7 @@ export function TaskView({
       const taskData: Omit<Task, "id"> & { taskBoardName?: string } = {
         taskBoardId: task.taskBoardId,
         summary: titleValue.trim(),
-        description: descriptionValue || "",
+        description: normalizeDescriptionHtml(descriptionValue),
         status: task.status || TaskStatus.TODO,
         priority: task.priority || TaskPriority.MEDIUM,
         labels: task.labels,
@@ -283,8 +277,6 @@ export function TaskView({
     }
   };
 
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-
   const handleDeleteConfirm = useCallback(async () => {
     if (!task || !task.id || isCreating) return;
     await deleteTask(task.id);
@@ -298,6 +290,23 @@ export function TaskView({
     setShowDeleteConfirm(true);
   }, [task, isCreating]);
 
+  const handleDuplicate = useCallback(async () => {
+    if (!task || !task.id || isCreating) return;
+    const duplicated = await createTask({
+      taskBoardId: task.taskBoardId,
+      summary: `${task.summary} (Copy)`,
+      description: task.description || "",
+      status: task.status,
+      priority: task.priority,
+      labels: task.labels,
+      dueDate: task.dueDate,
+      estimation: task.estimation,
+      scheduleDate: task.scheduleDate,
+    });
+    if (duplicated) onTaskCreated?.(duplicated);
+    toast.success("Task duplicated");
+  }, [task, isCreating, createTask, onTaskCreated]);
+
   const boardDisplayName = useMemo(() => {
     if (!task) return boardName;
     const fromOptions = boardOptions.find(
@@ -309,7 +318,6 @@ export function TaskView({
   const boardPickerDisabled =
     boardOptions.length === 0 || (isCreating && !!task && !task.taskBoardId);
 
-  // Only render if we have a task (either existing or for creation)
   if (!task) return null;
 
   const displayTask = task;
@@ -328,107 +336,125 @@ export function TaskView({
           task={displayTask}
           parentTask={parentTask}
           onNavigateToParentTask={onNavigateToParentTask}
-          onStatusSelect={handleStatusSelect}
           onClose={onClose}
-          onDelete={handleDeleteClick}
+          onDelete={!isCreating ? handleDeleteClick : undefined}
+          onDuplicate={!isCreating ? handleDuplicate : undefined}
           isCreating={isCreating}
         />
-        <TaskTitleSection>
-          <PriorityDropdownWrapper ref={priorityDropdownRef}>
-            <PriorityIcon onClick={handlePriorityClick}>
-              {tasksHelper.priority.getIconLabel(displayTask.priority)}
-            </PriorityIcon>
-            <DropdownContainer isOpen={isPriorityDropdownOpen}>
-              {Object.values(TaskPriority).map((priority) => (
-                <DropdownItem
-                  key={priority}
-                  onClick={() => handlePrioritySelect(priority)}
-                >
-                  <PriorityIconSpan>
-                    {tasksHelper.priority.getIconLabel(priority)}
-                  </PriorityIconSpan>
-                  {tasksHelper.priority.getName(priority)}
-                </DropdownItem>
-              ))}
-            </DropdownContainer>
-          </PriorityDropdownWrapper>
-          {isEditingTitle ? (
-            <TaskTitleInput
-              value={titleValue}
-              onChange={(e) => setTitleValue(e.target.value)}
-              onBlur={handleTitleBlur}
-              onKeyDown={handleTitleKeyDown}
-              autoFocus
-              placeholder="Enter task summary..."
-            />
-          ) : (
-            <TaskTitle onClick={handleTitleClick}>
-              {titleValue || displayTask.summary || "Untitled Task"}
-            </TaskTitle>
-          )}
-        </TaskTitleSection>
-        {/* Description */}
-        {isEditingDescription ? (
-          <TextEditor
-            content={descriptionValue}
-            editable={isEditingDescription}
-            placeholder="No description provided."
-            onUpdate={handleDescriptionUpdate}
-            onBlur={handleDescriptionBlur}
-          />
-        ) : (
-          <TaskDescriptionMarkdown onClick={handleDescriptionClick}>
-            {descriptionValue || task.description ? (
-              <DescriptionContent
-                dangerouslySetInnerHTML={{
-                  __html: descriptionValue || task.description || "",
-                }}
+
+        <TaskViewBody>
+          <TaskViewLeftPanel>
+            <TaskTitleSection>
+              {isEditingTitle ? (
+                <TaskTitleInput
+                  value={titleValue}
+                  onChange={(e) => setTitleValue(e.target.value)}
+                  onBlur={handleTitleBlur}
+                  onKeyDown={handleTitleKeyDown}
+                  autoFocus
+                  placeholder="Enter task summary..."
+                />
+              ) : (
+                <TaskTitle onClick={handleTitleClick}>
+                  {titleValue || displayTask.summary || "Untitled Task"}
+                </TaskTitle>
+              )}
+            </TaskTitleSection>
+
+            {isEditingDescription ? (
+              <TextEditor
+                content={descriptionValue}
+                editable={isEditingDescription}
+                placeholder="No description"
+                onUpdate={handleDescriptionUpdate}
+                onBlur={handleDescriptionBlur}
               />
             ) : (
-              <NoDescriptionText>No description provided.</NoDescriptionText>
+              <TaskDescriptionMarkdown onClick={handleDescriptionClick}>
+                {!isDescriptionHtmlEmpty(
+                  descriptionValue || task.description || "",
+                ) ? (
+                  <DescriptionContent
+                    dangerouslySetInnerHTML={{
+                      __html: descriptionValue || task.description || "",
+                    }}
+                  />
+                ) : (
+                  <NoDescriptionText>No description</NoDescriptionText>
+                )}
+              </TaskDescriptionMarkdown>
             )}
-          </TaskDescriptionMarkdown>
-        )}
-        <TaskMetadata
-          task={displayTask}
-          initialTask={initialTask}
-          isCreating={isCreating}
-          onTaskChange={setTask}
-          onPendingMetadataUpdates={(updates) =>
-            setPendingUpdates((prev) => ({ ...prev, ...updates }))
-          }
-        />
-        {!isSubtask && displayTask.id && (
-          <TaskSubtasks
-            task={displayTask}
-            onSubtaskClick={onSubtaskClick}
-            onTaskUpdate={handleTaskUpdateFromSubtasks}
-          />
-        )}
-        {isCreating ? (
-          <TaskViewFooter>
-            <SecondaryButton onClick={onClose}>Cancel</SecondaryButton>
-            <CreateTaskButton
-              onClick={handleCreateTask}
-              disabled={!titleValue.trim() || isCreatingTask}
-              inactive={!titleValue.trim() || isCreatingTask}
-            >
-              {isCreatingTask ? "Creating..." : "Create"}
-            </CreateTaskButton>
-          </TaskViewFooter>
-        ) : (
-          <TaskViewFooter>
-            <SecondaryButton onClick={handleCancel}>Cancel</SecondaryButton>
-            <TaskSaveButton
-              onClick={handleSaveChanges}
-              disabled={isSaving || !hasUnsavedChanges}
-              inactive={isSaving || !hasUnsavedChanges}
-            >
-              {isSaving ? "Saving..." : "Save"}
-            </TaskSaveButton>
-          </TaskViewFooter>
-        )}
+
+            <div className="min-h-3 flex-1" />
+
+            {!isSubtask && displayTask.id && (
+              <div className="mt-8 shrink-0">
+                <TaskSubtasks
+                  task={displayTask}
+                  onSubtaskClick={onSubtaskClick}
+                  onTaskUpdate={handleTaskUpdateFromSubtasks}
+                />
+              </div>
+            )}
+          </TaskViewLeftPanel>
+
+          <TaskViewRightPanel>
+            {isCreating ? (
+              <TaskMetadata
+                task={displayTask}
+                initialTask={initialTask}
+                isCreating={isCreating}
+                onTaskChange={setTask}
+                onPendingMetadataUpdates={(updates) =>
+                  setPendingUpdates((prev) => ({ ...prev, ...updates }))
+                }
+              />
+            ) : (
+              <TaskViewSidebar
+                task={displayTask}
+                initialTask={initialTask}
+                isCreating={isCreating}
+                onTaskChange={setTask}
+                onPendingMetadataUpdates={(updates) =>
+                  setPendingUpdates((prev) => ({ ...prev, ...updates }))
+                }
+                onStatusSelect={handleStatusSelect}
+                onPrioritySelect={handlePrioritySelect}
+              />
+            )}
+          </TaskViewRightPanel>
+        </TaskViewBody>
+
+        <TaskViewFooter>
+          <div />
+          <FooterActions>
+            {isCreating ? (
+              <>
+                <SecondaryButton onClick={onClose}>Cancel</SecondaryButton>
+                <CreateTaskButton
+                  onClick={handleCreateTask}
+                  disabled={!titleValue.trim() || isCreatingTask}
+                  inactive={!titleValue.trim() || isCreatingTask}
+                >
+                  {isCreatingTask ? "Creating..." : "Create"}
+                </CreateTaskButton>
+              </>
+            ) : (
+              <>
+                <SecondaryButton onClick={handleCancel}>Cancel</SecondaryButton>
+                <TaskSaveButton
+                  onClick={handleSaveChanges}
+                  disabled={isSaving || !hasUnsavedChanges}
+                  inactive={isSaving || !hasUnsavedChanges}
+                >
+                  {isSaving ? "Saving..." : "Save"}
+                </TaskSaveButton>
+              </>
+            )}
+          </FooterActions>
+        </TaskViewFooter>
       </TaskViewContainer>
+
       {showDeleteConfirm && (
         <ConfirmDialog
           title="Delete task?"

@@ -9,14 +9,7 @@ import {
   type Ref,
 } from "react";
 
-import { StatusIcon } from "../../Boards/KanbanBoard/Column/Column.ui";
-import { Task, TaskStatus } from "../../Boards/KanbanBoard/types";
-import {
-  DropdownContainer,
-  DropdownItem,
-  StatusIconButton,
-} from "../TaskView.ui";
-import { tasksHelper } from "@/helpers/task.helper";
+import { Task } from "../../Boards/KanbanBoard/types";
 import { MenuRowButton } from "@/components/MenuRowButton/MenuRowButton";
 import { cn } from "@/lib/styles/utils";
 import type { UiProps } from "@/lib/styles/ui-props";
@@ -29,21 +22,15 @@ export function TaskViewBreadcrumbs({
   parentTask,
   onParentTaskClick,
   task,
-  onStatusSelect,
 }: TaskViewBreadcrumbsProps) {
   const [isBoardOpen, setIsBoardOpen] = useState(false);
-  const [isStatusOpen, setIsStatusOpen] = useState(false);
   const boardRef = useRef<HTMLDivElement>(null);
-  const statusRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleMouseDown = (event: MouseEvent) => {
       const t = event.target as Node;
       if (boardRef.current && !boardRef.current.contains(t)) {
         setIsBoardOpen(false);
-      }
-      if (statusRef.current && !statusRef.current.contains(t)) {
-        setIsStatusOpen(false);
       }
     };
     document.addEventListener("mousedown", handleMouseDown);
@@ -58,13 +45,6 @@ export function TaskViewBreadcrumbs({
   const handleBoardPick = (boardId: string) => {
     setIsBoardOpen(false);
     onBoardSelect(boardId);
-  };
-
-  const handleStatusClick = () => setIsStatusOpen((open) => !open);
-
-  const handleStatusPick = (status: TaskStatus) => {
-    setIsStatusOpen(false);
-    onStatusSelect(status);
   };
 
   return (
@@ -103,25 +83,6 @@ export function TaskViewBreadcrumbs({
           <BreadcrumbChevron src="/breadcrumb-chevron.svg" alt="" aria-hidden />
         </>
       ) : null}
-      <StatusDropdownWrap ref={statusRef as Ref<HTMLDivElement>}>
-        <StatusIconButton type="button" onClick={handleStatusClick}>
-          <StatusIcon status={task.status}>
-            {tasksHelper.status.getIcon(task.status)}
-          </StatusIcon>
-        </StatusIconButton>
-        <DropdownContainer isOpen={isStatusOpen}>
-          {Object.values(TaskStatus).map((status) => (
-            <DropdownItem key={status} onClick={() => handleStatusPick(status)}>
-              <span style={{ marginRight: "8px" }}>
-                <StatusIcon status={status}>
-                  {tasksHelper.status.getIcon(status)}
-                </StatusIcon>
-              </span>
-              {status}
-            </DropdownItem>
-          ))}
-        </DropdownContainer>
-      </StatusDropdownWrap>
       {task.taskKey ? <TaskKeyText>{task.taskKey}</TaskKeyText> : null}
     </BreadcrumbsRow>
   );
@@ -168,7 +129,7 @@ function BoardTrigger({
       ref={ref}
       type={type}
       className={cn(
-        "m-0 max-w-[200px] cursor-pointer overflow-hidden text-ellipsis whitespace-nowrap rounded-md border-0 bg-transparent px-1.5 py-1 font-inherit text-base text-[#888] transition-colors hover:bg-[#2a2a2a] hover:text-white disabled:cursor-default disabled:opacity-70 hover:disabled:bg-transparent hover:disabled:text-[#888]",
+        "m-0 max-w-[200px] cursor-pointer overflow-hidden text-ellipsis whitespace-nowrap rounded-md border-0 bg-transparent px-1.5 py-1 font-inherit text-sm text-[#888] transition-colors hover:bg-white/[0.06] hover:text-white disabled:cursor-default disabled:opacity-70 hover:disabled:bg-transparent hover:disabled:text-[#888]",
         className,
       )}
       {...props}
@@ -237,19 +198,9 @@ function ParentTaskButton({
       ref={ref}
       type={type}
       className={cn(
-        "m-0 cursor-pointer rounded-md border-0 bg-transparent px-1.5 py-1 font-inherit text-base text-[#888] hover:bg-[#2a2a2a] hover:text-white",
+        "m-0 cursor-pointer rounded-md border-0 bg-transparent px-1.5 py-1 font-inherit text-sm text-[#888] transition-colors hover:bg-white/[0.06] hover:text-white",
         className,
       )}
-      {...props}
-    />
-  );
-}
-
-function StatusDropdownWrap({ className, ref, ...props }: UiProps<"div">) {
-  return (
-    <div
-      ref={ref}
-      className={cn("relative flex items-center", className)}
       {...props}
     />
   );
@@ -259,7 +210,7 @@ function TaskKeyText({ className, ref, ...props }: UiProps<"span">) {
   return (
     <span
       ref={ref}
-      className={cn("ml-1 text-base text-[#888]", className)}
+      className={cn("ml-1 text-sm tabular-nums text-[#888]", className)}
       {...props}
     />
   );
@@ -278,5 +229,4 @@ interface TaskViewBreadcrumbsProps {
   parentTask?: Task | null;
   onParentTaskClick?: () => void;
   task: Task;
-  onStatusSelect: (status: TaskStatus) => void;
 }

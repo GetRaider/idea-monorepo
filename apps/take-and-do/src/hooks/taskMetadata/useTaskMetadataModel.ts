@@ -4,16 +4,30 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
-import type { Task } from "@/components/Boards/KanbanBoard/types";
+import type { Task, TaskUpdate } from "@/components/Boards/KanbanBoard/types";
 import {
   LABEL_MENU_EDGE,
   LABEL_MENU_WIDTH,
 } from "@/constants/taskMetadata.constants";
-import { diffTaskMetadataForPending } from "@/helpers/task-metadata.helper";
 import type { TaskMetadataProps } from "@/components/TaskView/TaskMetadata/taskMetadata.types";
 import { tasksHelper } from "@/helpers/task.helper";
 import { queryKeys } from "@/lib/query-keys";
 import { clientServices } from "@/services";
+
+function toLocalTaskPatch(updates: TaskUpdate): Partial<Task> {
+  const patch = { ...updates } as Partial<Task>;
+  if ("dueDate" in updates) patch.dueDate = updates.dueDate ?? undefined;
+  if ("scheduleDate" in updates) {
+    patch.scheduleDate = updates.scheduleDate ?? undefined;
+  }
+  if ("estimation" in updates)
+    patch.estimation = updates.estimation ?? undefined;
+  return patch;
+}
+
+function toEstimationMinutes(value: number | undefined | null): number {
+  return Math.round((value ?? 0) * 60);
+}
 
 export function useTaskMetadataModel({
   task,
@@ -22,17 +36,16 @@ export function useTaskMetadataModel({
   onTaskChange,
   onPendingMetadataUpdates,
 }: TaskMetadataProps) {
-  const emitTaskUpdate = (next: Task) => {
+  const emitTaskUpdate = (next: Task, updates: TaskUpdate) => {
     onTaskChange?.(next);
     if (isCreating || !initialTask?.id) return;
-    const delta = diffTaskMetadataForPending(initialTask, next);
-    if (Object.keys(delta).length > 0) {
-      onPendingMetadataUpdates?.(delta);
+    if (Object.keys(updates).length > 0) {
+      onPendingMetadataUpdates?.(updates);
     }
   };
 
-  const updateTask = (updates: Partial<Task>) => {
-    emitTaskUpdate({ ...task, ...updates } as Task);
+  const updateTask = (updates: TaskUpdate) => {
+    emitTaskUpdate({ ...task, ...toLocalTaskPatch(updates) } as Task, updates);
   };
   const [isEditingDueDate, setIsEditingDueDate] = useState(false);
   const [dueDateValue, setDueDateValue] = useState("");
@@ -191,13 +204,15 @@ export function useTaskMetadataModel({
   };
   const handleDueDateBlur = () => {
     setIsEditingDueDate(false);
+    const currentValue = tasksHelper.date.formatForInput(task.dueDate);
+    if (dueDateValue === currentValue) return;
     if (dueDateValue) {
       const newDate = tasksHelper.date.parseCalendarDay(dueDateValue);
       if (newDate) {
         updateTask({ dueDate: newDate });
       }
     } else {
-      updateTask({ dueDate: undefined });
+      updateTask({ dueDate: null });
     }
   };
   const handleScheduleDateClick = () => {
@@ -208,13 +223,15 @@ export function useTaskMetadataModel({
   };
   const handleScheduleDateBlur = () => {
     setIsEditingScheduleDate(false);
+    const currentValue = tasksHelper.date.formatForInput(task.scheduleDate);
+    if (scheduleDateValue === currentValue) return;
     if (scheduleDateValue) {
       const newDate = tasksHelper.date.parseCalendarDay(scheduleDateValue);
       if (newDate) {
         updateTask({ scheduleDate: newDate });
       }
     } else {
-      updateTask({ scheduleDate: undefined });
+      updateTask({ scheduleDate: null });
     }
   };
   const handleEstimationClick = () => {
@@ -227,7 +244,12 @@ export function useTaskMetadataModel({
       estimationHours,
       estimationMinutes,
     );
-    updateTask({ estimation: totalHours > 0 ? totalHours : undefined });
+    if (
+      toEstimationMinutes(totalHours) === toEstimationMinutes(task.estimation)
+    ) {
+      return;
+    }
+    updateTask({ estimation: totalHours > 0 ? totalHours : null });
   };
   const handleEstimationBlur = (e: React.FocusEvent) => {
     const relatedTarget = e.relatedTarget as HTMLElement;

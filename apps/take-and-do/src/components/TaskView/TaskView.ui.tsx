@@ -30,7 +30,7 @@ export function TaskViewContainer({
     <div
       ref={ref}
       className={cn(
-        "flex max-h-[90vh] min-w-0 w-full max-w-[800px] flex-col overflow-y-auto overflow-x-hidden rounded-xl border border-border-app bg-background-primary pb-0 shadow-dialog max-[600px]:max-h-[95vh] max-[600px]:rounded-lg",
+        "flex max-h-[92vh] min-h-[70vh] min-w-0 w-full max-w-[960px] flex-col overflow-x-hidden overflow-y-visible rounded-xl border border-border-app bg-background-primary pb-0 shadow-dialog max-[600px]:max-h-[95vh] max-[600px]:min-h-[75vh] max-[600px]:rounded-lg",
         className,
       )}
       {...props}
@@ -47,7 +47,7 @@ export function TaskViewDialogHeader({
     <div
       ref={ref}
       className={cn(
-        "flex flex-wrap items-center justify-between gap-2 border-b border-border-app px-6 py-[18px] max-[600px]:px-4 max-[600px]:py-3.5",
+        "flex flex-wrap items-center justify-between gap-2 border-b border-border-app px-6 py-2.5 max-[600px]:px-4 max-[600px]:py-2.5",
         className,
       )}
       {...props}
@@ -59,7 +59,10 @@ export function HeaderLeft({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
-      className={cn("flex items-center gap-1 text-base text-[#888]", className)}
+      className={cn(
+        "flex min-w-0 items-center gap-1.5 text-sm text-[#888]",
+        className,
+      )}
       {...props}
     />
   );
@@ -76,7 +79,7 @@ export function StatusIconButton({
       ref={ref}
       type={type}
       className={cn(
-        "flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border-0 bg-transparent p-1.5 text-[#888] transition-all duration-200 hover:bg-[#2a2a2a] hover:text-white [&_svg]:h-[18px] [&_svg]:w-[18px]",
+        "flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-md border-0 bg-transparent p-1.5 text-[#888] transition-colors duration-150 hover:bg-white/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/20 [&_svg]:h-[17px] [&_svg]:w-[17px]",
         className,
       )}
       {...props}
@@ -105,7 +108,7 @@ export function DeleteButton({
       ref={ref}
       type={type}
       className={cn(
-        "flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border-0 bg-transparent p-0 leading-none text-[#888] transition-all duration-200 hover:bg-[#2a2a2a] hover:text-red-500 [&_svg]:m-0 [&_svg]:block [&_svg]:h-4 [&_svg]:w-4 [&_svg]:shrink-0",
+        "flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-md border-0 bg-transparent p-0 leading-none text-[#888] transition-colors duration-150 hover:bg-white/[0.06] hover:text-red-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/20 [&_svg]:m-0 [&_svg]:block [&_svg]:h-4 [&_svg]:w-4 [&_svg]:shrink-0",
         className,
       )}
       {...props}
@@ -118,7 +121,7 @@ export function TaskTitleSection({ className, ref, ...props }: UiProps<"div">) {
     <div
       ref={ref}
       className={cn(
-        "flex min-w-0 items-center gap-3 px-6 pb-4 pt-6",
+        "group/title flex min-w-0 items-start gap-1 px-6 pb-3 pt-6",
         className,
       )}
       {...props}
@@ -150,7 +153,7 @@ export function TaskTitle({ className, ref, ...props }: UiProps<"h2">) {
     <h2
       ref={ref}
       className={cn(
-        "m-0 flex-1 cursor-pointer rounded p-1 text-lg font-semibold leading-snug text-white transition-all duration-200 hover:bg-[#2a2a2a]",
+        "m-0 box-border flex-1 cursor-pointer rounded-md border border-transparent px-2 py-1 text-xl font-semibold leading-snug text-white transition-colors duration-150 hover:bg-white/[0.04]",
         className,
       )}
       {...props}
@@ -169,7 +172,7 @@ export function TaskTitleInput({
     <Input
       ref={ref}
       className={cn(
-        "m-0 min-w-0 flex-1 rounded px-2 py-1 text-lg font-semibold leading-snug",
+        "m-0 min-w-0 flex-1 rounded-md border-transparent bg-transparent px-2 py-1 text-xl font-semibold leading-snug text-white focus:border-input-border",
         className,
       )}
       {...props}
@@ -228,11 +231,7 @@ export function TaskDescriptionMarkdown({
     <div
       ref={ref}
       className={cn(
-        "prose prose-invert prose-sm max-w-none min-h-[100px] max-h-[300px] flex-shrink-0 cursor-pointer overflow-y-auto rounded px-8 py-3 pb-6 text-[#888] transition-all duration-200 hover:bg-[#2a2a2a]",
-        "prose-headings:mt-[1.5em] prose-headings:mb-2 prose-headings:font-semibold prose-headings:text-white",
-        "prose-h2:text-xl prose-h3:text-lg prose-h4:text-base",
-        "prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-ul:pl-6 prose-ol:pl-6 prose-li:my-1",
-        "prose-strong:text-white prose-strong:font-semibold prose-em:italic prose-u:underline",
+        "task-view-description box-border max-w-none min-h-[140px] cursor-pointer overflow-y-auto rounded-md px-6 py-3 text-white transition-colors duration-150 hover:bg-white/[0.04]",
         className,
       )}
       {...props}
@@ -283,7 +282,7 @@ export function DropdownContainer({
     <div
       ref={ref}
       className={cn(
-        "absolute left-0 top-full z-[1001] mt-1 min-w-[150px] rounded-lg border border-input-border bg-input-bg shadow-[0_4px_12px_rgba(0,0,0,0.3)]",
+        "absolute left-0 top-full z-[1200] mt-1.5 min-w-[180px] rounded-xl border border-white/10 bg-[#1c1c1e] shadow-[0_8px_24px_rgba(0,0,0,0.5)]",
         isOpen ? "block" : "hidden",
         className,
       )}
@@ -302,8 +301,11 @@ export function DropdownItem({
     <MenuRowButton
       ref={ref}
       type={type}
-      rowTransition="all"
-      className={className}
+      rowTransition="colors"
+      className={cn(
+        "py-2 text-[#ddd] hover:bg-white/[0.07] hover:text-white",
+        className,
+      )}
       {...props}
     />
   );
@@ -410,23 +412,6 @@ export function HistoryHeader({ className, ref, ...props }: UiProps<"div">) {
   );
 }
 
-export function CommentInputWrapper({
-  className,
-  ref,
-  ...props
-}: UiProps<"div">) {
-  return (
-    <div
-      ref={ref}
-      className={cn(
-        "flex items-center gap-2 rounded-lg border border-input-border bg-input-bg p-3",
-        className,
-      )}
-      {...props}
-    />
-  );
-}
-
 export function AttachIconButton({
   className,
   type = "button",
@@ -469,13 +454,7 @@ export function DescriptionContent({
   ref,
   ...props
 }: UiProps<"div">) {
-  return (
-    <div
-      ref={ref}
-      className={cn("text-sm leading-relaxed text-[#888]", className)}
-      {...props}
-    />
-  );
+  return <div ref={ref} className={cn("contents", className)} {...props} />;
 }
 
 export function NoDescriptionText({
@@ -483,7 +462,274 @@ export function NoDescriptionText({
   ref,
   ...props
 }: UiProps<"span">) {
-  return <span ref={ref} className={cn("text-[#666]", className)} {...props} />;
+  return (
+    <span
+      ref={ref}
+      className={cn(
+        "text-[13px] font-normal not-italic leading-relaxed text-[#666]",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+export function TaskViewBody({ className, ref, ...props }: UiProps<"div">) {
+  return (
+    <div
+      ref={ref}
+      className={cn(
+        "relative z-[5] flex min-h-0 flex-1 flex-row max-[600px]:flex-col",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+export function TaskViewLeftPanel({
+  className,
+  ref,
+  ...props
+}: UiProps<"div">) {
+  return (
+    <div
+      ref={ref}
+      className={cn("flex min-w-0 flex-1 flex-col overflow-y-auto", className)}
+      {...props}
+    />
+  );
+}
+
+export function TaskViewRightPanel({
+  className,
+  ref,
+  ...props
+}: UiProps<"div">) {
+  return (
+    <div
+      ref={ref}
+      className={cn(
+        "w-[260px] shrink-0 border-l border-border-app bg-white/[0.015] max-[600px]:w-full max-[600px]:border-l-0 max-[600px]:border-t",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+export function SidebarPropertyRow({
+  className,
+  ref,
+  ...props
+}: UiProps<"div">) {
+  return (
+    <div
+      ref={ref}
+      className={cn(
+        "flex min-h-[36px] items-center gap-2 rounded-md px-3 py-1.5",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+export function SidebarPropertyLabel({
+  className,
+  ref,
+  ...props
+}: UiProps<"span">) {
+  return (
+    <span
+      ref={ref}
+      className={cn(
+        "w-[72px] shrink-0 text-[10px] font-semibold tracking-wider text-[#4a4a4a] uppercase",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+export function SidebarPropertyValue({
+  className,
+  ref,
+  ...props
+}: UiProps<"div">) {
+  return (
+    <div
+      ref={ref}
+      className={cn(
+        "flex min-w-0 flex-1 flex-wrap items-center gap-1",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+export function SidebarValueButton({
+  className,
+  type = "button",
+  ref,
+  ...props
+}: UiProps<"button">) {
+  return (
+    <button
+      ref={ref}
+      type={type}
+      className={cn(
+        "flex min-h-[32px] min-w-0 max-w-full cursor-pointer items-center gap-1.5 rounded-md border border-transparent bg-transparent px-2 py-1 text-sm text-[#bbb] transition-colors duration-150 hover:border-white/10 hover:bg-white/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/15",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+export function CommentSection({ className, ref, ...props }: UiProps<"div">) {
+  return (
+    <div
+      ref={ref}
+      className={cn("border-t border-border-app/50 px-6 py-4", className)}
+      {...props}
+    />
+  );
+}
+
+export function CommentInputRow({ className, ref, ...props }: UiProps<"div">) {
+  return (
+    <div
+      ref={ref}
+      className={cn("flex items-start gap-3", className)}
+      {...props}
+    />
+  );
+}
+
+export function CommentAvatar({ className, ref, ...props }: UiProps<"div">) {
+  return (
+    <div
+      ref={ref}
+      className={cn(
+        "flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#3a3a3a] text-[11px] text-[#888]",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+export function CommentInputWrapper({
+  className,
+  ref,
+  ...props
+}: UiProps<"div">) {
+  return (
+    <div
+      ref={ref}
+      className={cn("flex flex-1 flex-col gap-2", className)}
+      {...props}
+    />
+  );
+}
+
+export function CommentTextInput({
+  className,
+  ref,
+  ...props
+}: UiProps<"textarea">) {
+  return (
+    <textarea
+      ref={ref}
+      className={cn(
+        "min-h-[60px] w-full resize-none rounded-lg border border-input-border bg-transparent px-3 py-2 text-sm text-[#aaa] outline-none placeholder:text-[#555] focus:border-[#4a4a4a] focus:text-white",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+export function CommentSubmitRow({ className, ref, ...props }: UiProps<"div">) {
+  return (
+    <div
+      ref={ref}
+      className={cn("flex items-center justify-between", className)}
+      {...props}
+    />
+  );
+}
+
+export function CommentAttachButton({
+  className,
+  type = "button",
+  ref,
+  ...props
+}: UiProps<"button">) {
+  return (
+    <button
+      ref={ref}
+      type={type}
+      className={cn(
+        "flex cursor-pointer items-center gap-1.5 rounded border-0 bg-transparent p-1 text-[#555] transition-colors duration-150 hover:text-[#888]",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+export function CommentSubmitButton({
+  className,
+  type = "button",
+  ref,
+  ...props
+}: UiProps<"button">) {
+  return (
+    <button
+      ref={ref}
+      type={type}
+      className={cn(
+        "cursor-pointer rounded-md border border-input-border bg-transparent px-3 py-1.5 text-xs font-medium text-[#888] transition-all duration-150 hover:border-[#4a4a4a] hover:bg-[#2a2a2a] hover:text-white",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+export function TitleActions({ className, ref, ...props }: UiProps<"div">) {
+  return (
+    <div
+      ref={ref}
+      className={cn(
+        "ml-1 flex shrink-0 items-center gap-1 opacity-0 transition-opacity duration-150 group-hover/title:opacity-100",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+export function TitleIconButton({
+  className,
+  type = "button",
+  ref,
+  ...props
+}: UiProps<"button">) {
+  return (
+    <button
+      ref={ref}
+      type={type}
+      className={cn(
+        "flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded border-0 bg-transparent p-0 text-[#555] transition-colors duration-150 hover:bg-[#2a2a2a] hover:text-[#aaa]",
+        className,
+      )}
+      {...props}
+    />
+  );
 }
 
 export function TaskViewFooter({ className, ref, ...props }: UiProps<"div">) {
@@ -491,7 +737,55 @@ export function TaskViewFooter({ className, ref, ...props }: UiProps<"div">) {
     <div
       ref={ref}
       className={cn(
-        "flex justify-end gap-3 border-t border-border-app px-6 pb-6 pt-[22px]",
+        "relative z-[1] flex items-center justify-between gap-3 border-t border-border-app bg-background-primary px-6 pb-3.5 pt-2.5",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+export function FooterActions({ className, ref, ...props }: UiProps<"div">) {
+  return (
+    <div
+      ref={ref}
+      className={cn("flex items-center gap-3", className)}
+      {...props}
+    />
+  );
+}
+
+export function SnoozeButton({
+  className,
+  type = "button",
+  ref,
+  ...props
+}: UiProps<"button">) {
+  return (
+    <button
+      ref={ref}
+      type={type}
+      className={cn(
+        "flex cursor-pointer items-center gap-1.5 rounded-md border-0 bg-transparent px-2 py-1.5 text-sm text-[#666] transition-colors duration-150 hover:text-[#888]",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+export function DeleteTaskFooterButton({
+  className,
+  type = "button",
+  ref,
+  ...props
+}: UiProps<"button">) {
+  return (
+    <button
+      ref={ref}
+      type={type}
+      className={cn(
+        "flex cursor-pointer items-center gap-1.5 rounded-md border-0 bg-transparent px-2 py-1.5 text-sm text-[#666] transition-colors duration-150 hover:text-red-500",
         className,
       )}
       {...props}
@@ -518,10 +812,10 @@ export function CreateTaskButton({
       type={type}
       disabled={isDisabled}
       className={cn(
-        "rounded-md border-0 px-4 py-2 text-sm font-medium",
+        "rounded-md border px-4 py-2 text-sm font-medium transition-colors duration-150",
         isDisabled
-          ? "cursor-not-allowed bg-[#2a2a2a] text-[#666]"
-          : "cursor-pointer bg-[#7255c1] text-white",
+          ? "cursor-not-allowed border-white/[0.08] bg-[#242426] text-[#8c8c8c]"
+          : "cursor-pointer border-transparent bg-[#7255c1] text-white hover:bg-[#5a42a1]",
         className,
       )}
       {...props}
@@ -548,10 +842,10 @@ export function TaskSaveButton({
       type={type}
       disabled={isDisabled}
       className={cn(
-        "rounded-lg border-0 px-5 py-2.5 text-sm font-medium transition-all duration-200",
+        "rounded-lg border px-5 py-2.5 text-sm font-medium transition-colors duration-150",
         isDisabled
-          ? "cursor-not-allowed bg-[#2a2a2a] text-[#666]"
-          : "cursor-pointer bg-[#7255c1] text-white hover:bg-[#5a42a1]",
+          ? "cursor-not-allowed border-white/[0.08] bg-[#242426] text-[#8c8c8c]"
+          : "cursor-pointer border-transparent bg-[#7255c1] text-white hover:bg-[#5a42a1]",
         className,
       )}
       {...props}

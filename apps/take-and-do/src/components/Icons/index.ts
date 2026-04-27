@@ -1,5 +1,9 @@
 export { CalendarIcon } from "./CalendarIcon";
+export { CopyIcon } from "./CopyIcon";
 export { DashboardIcon } from "./DashboardIcon";
+export { ExpandIcon } from "./ExpandIcon";
+export { LinkIcon } from "./LinkIcon";
+export { MoonIcon } from "./MoonIcon";
 export { DotsVerticalIcon } from "./DotsVerticalIcon";
 export { CalendarMonthIcon } from "./CalendarMonthIcon";
 export { CheckListIcon } from "./CheckListIcon";

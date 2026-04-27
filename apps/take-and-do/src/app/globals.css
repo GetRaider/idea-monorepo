@@ -162,69 +162,143 @@
 .task-editor-root {
   position: relative;
   z-index: 2;
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
   flex-shrink: 0;
-  padding: 12px 24px 24px;
+  padding: 0;
 }
 
 @media (max-width: 600px) {
   .task-editor-root {
-    padding: 12px 16px 16px;
+    padding: 0;
   }
 }
 
-.task-editor-root .editor-toolbar {
+.task-editor-root .task-editor-surface {
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-bottom: 0;
-  border-radius: 4px 4px 0 0;
-  border: 1px solid var(--input-border);
-  background: var(--input-bg);
-  padding: 8px;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  overflow: visible;
 }
 
-.task-editor-root .editor-toolbar button {
+.task-editor-root .task-editor-surface > div {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
+.editor-bubble-menu {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: #1c1c1e;
+  padding: 4px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  z-index: 1400;
+}
+
+.editor-menu-button {
+  min-width: 30px;
+  height: 30px;
   cursor: pointer;
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
   background: transparent;
-  padding: 6px 10px;
+  padding: 0 8px;
   font-size: 14px;
+  font-weight: 600;
   color: var(--text-secondary);
-  white-space: nowrap;
-  transition: all 0.2s;
+  transition:
+    background-color 0.15s,
+    color 0.15s;
 }
 
-@media (max-width: 480px) {
-  .task-editor-root .editor-toolbar button {
-    padding: 6px 8px;
-    font-size: 12px;
-  }
-}
-
-.task-editor-root .editor-toolbar button:hover {
-  background: var(--input-border);
+.editor-menu-button:hover {
+  background: rgba(255, 255, 255, 0.06);
   color: var(--text-primary);
 }
 
-.task-editor-root .editor-toolbar button.is-active {
+.editor-menu-button.is-active {
   background: var(--accent-primary);
   color: var(--text-primary);
 }
 
-.task-editor-root .ProseMirror {
-  min-height: 100px;
-  max-height: 300px;
+.editor-slash-menu {
+  position: absolute;
+  z-index: 1400;
+  width: 240px;
+  max-height: 320px;
   overflow-y: auto;
-  border-radius: 0 0 4px 4px;
-  border: 1px solid var(--input-border);
-  border-top: none;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  background: #1c1c1e;
+  padding: 6px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5);
+}
+
+.editor-slash-menu.is-top {
+  transform-origin: bottom left;
+}
+
+.editor-slash-menu.is-bottom {
+  transform-origin: top left;
+}
+
+.editor-slash-menu-item {
+  display: flex;
+  width: 100%;
+  min-height: 38px;
+  cursor: pointer;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: none;
+  border-radius: 8px;
   background: transparent;
-  padding: 12px;
+  padding: 8px 10px;
+  text-align: left;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.editor-slash-menu-item:hover,
+.editor-slash-menu-item.is-active {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.editor-slash-menu-item kbd {
+  color: var(--text-tertiary);
+  font-size: 12px;
+  font-family: inherit;
+}
+
+.task-editor-root .ProseMirror {
+  min-height: 140px;
+  flex: 1;
+  max-height: none;
+  overflow-y: auto;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  padding: 12px 24px;
   font-size: 14px;
   line-height: 1.6;
-  color: var(--text-secondary);
+  color: var(--text-primary);
   outline: none;
+}
+
+.task-view-description {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-primary);
 }
 
 .task-editor-root .ProseMirror p.is-editor-empty:first-child::before {
@@ -237,37 +311,173 @@
 
 .task-editor-root .ProseMirror h2,
 .task-editor-root .ProseMirror h3,
-.task-editor-root .ProseMirror h4 {
+.task-editor-root .ProseMirror h4,
+.task-view-description h2,
+.task-view-description h3,
+.task-view-description h4 {
   margin-top: 1.5em;
   margin-bottom: 0.5em;
   font-weight: 600;
   color: var(--text-primary);
 }
 
-.task-editor-root .ProseMirror h2 {
+.task-editor-root .ProseMirror h2,
+.task-view-description h2 {
   font-size: 20px;
 }
 
-.task-editor-root .ProseMirror h3 {
+.task-editor-root .ProseMirror h3,
+.task-view-description h3 {
   font-size: 18px;
 }
 
-.task-editor-root .ProseMirror h4 {
+.task-editor-root .ProseMirror h4,
+.task-view-description h4 {
   font-size: 16px;
 }
 
-.task-editor-root .ProseMirror p {
+.task-editor-root .ProseMirror p,
+.task-view-description p {
   margin: 0.5em 0;
 }
 
-.task-editor-root .ProseMirror ul,
-.task-editor-root .ProseMirror ol {
-  margin: 0.5em 0;
-  padding-left: 1.5em;
+.task-editor-root .ProseMirror p:empty::before,
+.task-view-description p:empty::before {
+  content: "\00a0";
 }
 
-.task-editor-root .ProseMirror li {
+.task-editor-root .ProseMirror blockquote,
+.task-view-description blockquote {
+  margin: 0.75em 0;
+  border-left: 2px solid rgba(255, 255, 255, 0.18);
+  padding-left: 1em;
+  color: var(--text-primary);
+  font-style: normal;
+}
+
+.task-editor-root .ProseMirror pre,
+.task-view-description pre {
+  margin: 0.75em 0;
+  overflow-x: auto;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.22);
+  padding: 12px;
+  color: var(--text-primary);
+}
+
+.task-editor-root .ProseMirror pre code,
+.task-view-description pre code {
+  background: transparent;
+  padding: 0;
+  color: inherit;
+  font-size: 13px;
+}
+
+.task-editor-root .ProseMirror :not(pre) > code,
+.task-view-description :not(pre) > code {
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 0.1em 0.35em;
+  color: var(--text-primary);
+  font-size: 0.9em;
+}
+
+.task-editor-root .ProseMirror ul:not([data-type="taskList"]),
+.task-editor-root .ProseMirror ol,
+.task-view-description ul:not([data-type="taskList"]),
+.task-view-description ol {
+  margin: 0.5em 0;
+  padding-left: 1.5rem;
+}
+
+.task-editor-root .ProseMirror ul:not([data-type="taskList"]),
+.task-view-description ul:not([data-type="taskList"]) {
+  list-style-type: disc;
+  list-style-position: outside;
+}
+
+.task-editor-root .ProseMirror ol,
+.task-view-description ol {
+  list-style-type: decimal;
+  list-style-position: outside;
+}
+
+.task-editor-root .ProseMirror li,
+.task-view-description li {
   margin: 0.25em 0;
+}
+
+.task-editor-root .ProseMirror li > p,
+.task-view-description li > p {
+  margin: 0.15em 0;
+}
+
+.task-editor-root .ProseMirror ul[data-type="taskList"],
+.task-view-description ul[data-type="taskList"] {
+  margin: 0.5em 0;
+  padding-left: 0;
+  list-style: none;
+}
+
+.task-editor-root .ProseMirror ul[data-type="taskList"] li,
+.task-view-description ul[data-type="taskList"] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin: 0.25em 0;
+}
+
+.task-editor-root .ProseMirror ul[data-type="taskList"] li label,
+.task-view-description ul[data-type="taskList"] li label {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  margin-top: 0.2rem;
+  line-height: 1;
+}
+
+.task-editor-root .ProseMirror ul[data-type="taskList"] input[type="checkbox"],
+.task-view-description ul[data-type="taskList"] input[type="checkbox"] {
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.04);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 0.75rem 0.75rem;
+}
+
+.task-editor-root .ProseMirror ul[data-type="taskList"] input[type="checkbox"] {
+  cursor: pointer;
+}
+
+.task-editor-root
+  .ProseMirror
+  ul[data-type="taskList"]
+  input[type="checkbox"]:checked,
+.task-view-description ul[data-type="taskList"] input[type="checkbox"]:checked {
+  border-color: var(--accent-primary, #6366f1);
+  background-color: var(--accent-primary, #6366f1);
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M2.5 6.2L4.8 8.5L9.5 3.5' stroke='white' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+.task-view-description ul[data-type="taskList"] input[type="checkbox"] {
+  pointer-events: none;
+}
+
+.task-editor-root .ProseMirror ul[data-type="taskList"] li > div,
+.task-view-description ul[data-type="taskList"] li > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.task-editor-root .ProseMirror ul[data-type="taskList"] li > div p,
+.task-view-description ul[data-type="taskList"] li > div p {
+  margin: 0;
 }
 
 .task-editor-root .ProseMirror strong {

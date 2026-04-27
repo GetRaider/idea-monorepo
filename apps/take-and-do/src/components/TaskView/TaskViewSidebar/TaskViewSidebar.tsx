@@ -224,7 +224,7 @@ export function TaskViewSidebar({
           {model.isEditingEstimation ? (
             <div
               ref={model.estimationGroupRef}
-              className="flex shrink-0 items-center gap-0.5 rounded-md border border-input-border bg-input-bg px-1.5 py-0.5 focus-within:border-accent-primary"
+              className="flex shrink-0 items-center gap-px rounded-md border border-input-border bg-input-bg px-1 py-0.5 focus-within:border-accent-primary"
             >
               <EstimationInput
                 type="number"
@@ -238,7 +238,7 @@ export function TaskViewSidebar({
                 onBlur={model.handleEstimationBlur}
                 placeholder="0"
                 min="0"
-                className="w-9 px-1 py-0.5 text-[12px]"
+                className="w-7 px-0.5 py-0.5 text-[12px]"
               />
               <EstimationLabel>d</EstimationLabel>
               <EstimationInput
@@ -255,7 +255,7 @@ export function TaskViewSidebar({
                 min="0"
                 max="23"
                 autoFocus
-                className="w-9 px-1 py-0.5 text-[12px]"
+                className="w-7 px-0.5 py-0.5 text-[12px]"
               />
               <EstimationLabel>h</EstimationLabel>
               <EstimationInput
@@ -271,7 +271,7 @@ export function TaskViewSidebar({
                 placeholder="0"
                 min="0"
                 max="59"
-                className="w-9 px-1 py-0.5 text-[12px]"
+                className="w-7 px-0.5 py-0.5 text-[12px]"
               />
               <EstimationLabel>m</EstimationLabel>
             </div>

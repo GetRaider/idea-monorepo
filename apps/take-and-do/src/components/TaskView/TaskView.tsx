@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   Task,
   TaskPriority,
@@ -28,7 +28,6 @@ import {
   TaskViewFooter,
   FooterActions,
   CreateTaskButton,
-  TaskSaveButton,
 } from "./TaskView.ui";
 import { TaskMetadata } from "./TaskMetadata/TaskMetadata";
 import { TaskSubtasks } from "./TaskSubtasks/TaskSubtasks";
@@ -70,9 +69,8 @@ export function TaskView({
   const [titleValue, setTitleValue] = useState("");
   const [descriptionValue, setDescriptionValue] = useState("");
   const [isCreatingTask, setIsCreatingTask] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [pendingUpdates, setPendingUpdates] = useState<Partial<Task>>({});
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const isClosingRef = useRef(false);
 
   const shouldCreateTask = useMemo(
     () => isCreating && !task?.id,
@@ -80,6 +78,9 @@ export function TaskView({
   );
 
   useEffect(() => {
+    if (initialTask) {
+      isClosingRef.current = false;
+    }
     setTask(initialTask);
     if (initialTask) {
       setTitleValue(initialTask.summary);
@@ -90,7 +91,6 @@ export function TaskView({
       setTitleValue("");
       setDescriptionValue("");
     }
-    setPendingUpdates({});
   }, [initialTask]);
 
   const handleUpdateTask = useCallback(
@@ -101,62 +101,29 @@ export function TaskView({
         toast.error("Can't update task");
         return;
       }
+      if (isClosingRef.current) {
+        toast.success("Task updated");
+        return;
+      }
       setTask(updatedTask);
       onTaskUpdate?.(updatedTask);
-      setPendingUpdates({});
-      setTitleValue(updatedTask.summary);
-      setDescriptionValue(
-        normalizeDescriptionHtml(updatedTask.description || ""),
-      );
+      if ("summary" in updates) {
+        setTitleValue(updatedTask.summary);
+      }
+      if ("description" in updates) {
+        setDescriptionValue(
+          normalizeDescriptionHtml(updatedTask.description || ""),
+        );
+      }
       toast.success("Task updated");
     },
     [task, onTaskUpdate, updateTask],
   );
 
-  const hasUnsavedChanges = useMemo(() => {
-    if (!initialTask || !initialTask.id) return false;
-    return (
-      titleValue !== initialTask.summary ||
-      normalizeDescriptionHtml(descriptionValue) !==
-        normalizeDescriptionHtml(initialTask.description || "") ||
-      Object.keys(pendingUpdates).length > 0
-    );
-  }, [initialTask, titleValue, descriptionValue, pendingUpdates]);
-
-  const handleSaveChanges = useCallback(async () => {
-    if (!initialTask || !initialTask.id || isSaving || !hasUnsavedChanges)
-      return;
-
-    const updates: TaskUpdate = {};
-
-    if (titleValue !== initialTask.summary) {
-      updates.summary = titleValue;
-    }
-    const nextDesc = normalizeDescriptionHtml(descriptionValue);
-    const initialDesc = normalizeDescriptionHtml(initialTask.description || "");
-    if (nextDesc !== initialDesc) {
-      updates.description = nextDesc;
-    }
-
-    const allUpdates = { ...pendingUpdates, ...updates };
-
-    if (Object.keys(allUpdates).length === 0) return;
-
-    setIsSaving(true);
-    try {
-      await handleUpdateTask(allUpdates);
-    } finally {
-      setIsSaving(false);
-    }
-  }, [
-    initialTask,
-    titleValue,
-    descriptionValue,
-    pendingUpdates,
-    isSaving,
-    hasUnsavedChanges,
-    handleUpdateTask,
-  ]);
+  const handleClose = useCallback(() => {
+    isClosingRef.current = true;
+    onClose();
+  }, [onClose]);
 
   const handleTaskUpdateFromSubtasks = useCallback(
     (updatedTask: Task) => {
@@ -170,40 +137,37 @@ export function TaskView({
     setDescriptionValue(html);
   }, []);
 
-  const handleDescriptionBlur = useCallback(() => {
-    setDescriptionValue((prev) => normalizeDescriptionHtml(prev));
+  const handleDescriptionBlur = useCallback(async () => {
+    const nextDescription = normalizeDescriptionHtml(descriptionValue);
+    setDescriptionValue(nextDescription);
     setIsEditingDescription(false);
-  }, []);
+    if (shouldCreateTask) return;
+    if (nextDescription === normalizeDescriptionHtml(task?.description || "")) {
+      return;
+    }
+    await handleUpdateTask({ description: nextDescription });
+  }, [descriptionValue, handleUpdateTask, shouldCreateTask, task?.description]);
 
   const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) {
-      onClose();
+      handleClose();
     }
-  };
-
-  const handleCancel = () => {
-    if (initialTask) {
-      setTask(initialTask);
-      setTitleValue(initialTask.summary);
-      setDescriptionValue(
-        normalizeDescriptionHtml(initialTask.description || ""),
-      );
-      setPendingUpdates({});
-      setIsEditingTitle(false);
-      setIsEditingDescription(false);
-    }
-    onClose();
   };
 
   const handleTitleClick = () => setIsEditingTitle(true);
-  const handleTitleBlur = () => setIsEditingTitle(false);
+  const handleTitleBlur = async () => {
+    setIsEditingTitle(false);
+    const nextTitle = titleValue.trim();
+    if (shouldCreateTask || !nextTitle || nextTitle === task?.summary) return;
+    await handleUpdateTask({ summary: nextTitle });
+  };
 
   const handleTitleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       e.currentTarget.blur();
     } else if (e.key === "Escape") {
       if (isCreating) {
-        onClose();
+        handleClose();
       } else {
         setTitleValue(task?.summary || "");
         setIsEditingTitle(false);
@@ -217,8 +181,8 @@ export function TaskView({
     if (shouldCreateTask) {
       if (task) setTask({ ...task, status });
     } else {
-      setPendingUpdates((prev) => ({ ...prev, status }));
-      setTask((prev) => (prev ? { ...prev, status } : null));
+      if (!task || status === task.status) return;
+      void handleUpdateTask({ status });
     }
   };
 
@@ -226,8 +190,8 @@ export function TaskView({
     if (shouldCreateTask) {
       if (task) setTask({ ...task, priority });
     } else {
-      setPendingUpdates((prev) => ({ ...prev, priority }));
-      setTask((prev) => (prev ? { ...prev, priority } : null));
+      if (!task || priority === task.priority) return;
+      void handleUpdateTask({ priority });
     }
   };
 
@@ -235,10 +199,18 @@ export function TaskView({
     if (shouldCreateTask) {
       if (task) setTask({ ...task, taskBoardId: boardId });
     } else {
-      setPendingUpdates((prev) => ({ ...prev, taskBoardId: boardId }));
-      setTask((prev) => (prev ? { ...prev, taskBoardId: boardId } : null));
+      if (!task || boardId === task.taskBoardId) return;
+      void handleUpdateTask({ taskBoardId: boardId });
     }
   };
+
+  const handleMetadataAutoSave = useCallback(
+    (updates: TaskUpdate) => {
+      if (shouldCreateTask) return;
+      void handleUpdateTask(updates);
+    },
+    [handleUpdateTask, shouldCreateTask],
+  );
 
   const handleCreateTask = async () => {
     if (!task || !titleValue.trim() || isCreatingTask || !task.taskBoardId)
@@ -281,9 +253,9 @@ export function TaskView({
     if (!task || !task.id || isCreating) return;
     await deleteTask(task.id);
     onTaskDelete?.(task.id);
-    onClose();
+    handleClose();
     toast.success("Task deleted");
-  }, [task, isCreating, onTaskDelete, onClose, deleteTask]);
+  }, [task, isCreating, onTaskDelete, handleClose, deleteTask]);
 
   const handleDeleteClick = useCallback(() => {
     if (!task || !task.id || isCreating) return;
@@ -336,7 +308,7 @@ export function TaskView({
           task={displayTask}
           parentTask={parentTask}
           onNavigateToParentTask={onNavigateToParentTask}
-          onClose={onClose}
+          onClose={handleClose}
           onDelete={!isCreating ? handleDeleteClick : undefined}
           onDuplicate={!isCreating ? handleDuplicate : undefined}
           isCreating={isCreating}
@@ -363,6 +335,7 @@ export function TaskView({
 
             {isEditingDescription ? (
               <TextEditor
+                className="min-h-[260px] flex-1"
                 content={descriptionValue}
                 editable={isEditingDescription}
                 placeholder="No description"
@@ -370,7 +343,10 @@ export function TaskView({
                 onBlur={handleDescriptionBlur}
               />
             ) : (
-              <TaskDescriptionMarkdown onClick={handleDescriptionClick}>
+              <TaskDescriptionMarkdown
+                className="min-h-[260px] flex-1"
+                onClick={handleDescriptionClick}
+              >
                 {!isDescriptionHtmlEmpty(
                   descriptionValue || task.description || "",
                 ) ? (
@@ -385,10 +361,8 @@ export function TaskView({
               </TaskDescriptionMarkdown>
             )}
 
-            <div className="min-h-3 flex-1" />
-
             {!isSubtask && displayTask.id && (
-              <div className="mt-8 shrink-0">
+              <div className="mt-6 shrink-0">
                 <TaskSubtasks
                   task={displayTask}
                   onSubtaskClick={onSubtaskClick}
@@ -405,9 +379,6 @@ export function TaskView({
                 initialTask={initialTask}
                 isCreating={isCreating}
                 onTaskChange={setTask}
-                onPendingMetadataUpdates={(updates) =>
-                  setPendingUpdates((prev) => ({ ...prev, ...updates }))
-                }
               />
             ) : (
               <TaskViewSidebar
@@ -415,9 +386,7 @@ export function TaskView({
                 initialTask={initialTask}
                 isCreating={isCreating}
                 onTaskChange={setTask}
-                onPendingMetadataUpdates={(updates) =>
-                  setPendingUpdates((prev) => ({ ...prev, ...updates }))
-                }
+                onPendingMetadataUpdates={handleMetadataAutoSave}
                 onStatusSelect={handleStatusSelect}
                 onPrioritySelect={handlePrioritySelect}
               />
@@ -425,34 +394,21 @@ export function TaskView({
           </TaskViewRightPanel>
         </TaskViewBody>
 
-        <TaskViewFooter>
-          <div />
-          <FooterActions>
-            {isCreating ? (
-              <>
-                <SecondaryButton onClick={onClose}>Cancel</SecondaryButton>
-                <CreateTaskButton
-                  onClick={handleCreateTask}
-                  disabled={!titleValue.trim() || isCreatingTask}
-                  inactive={!titleValue.trim() || isCreatingTask}
-                >
-                  {isCreatingTask ? "Creating..." : "Create"}
-                </CreateTaskButton>
-              </>
-            ) : (
-              <>
-                <SecondaryButton onClick={handleCancel}>Cancel</SecondaryButton>
-                <TaskSaveButton
-                  onClick={handleSaveChanges}
-                  disabled={isSaving || !hasUnsavedChanges}
-                  inactive={isSaving || !hasUnsavedChanges}
-                >
-                  {isSaving ? "Saving..." : "Save"}
-                </TaskSaveButton>
-              </>
-            )}
-          </FooterActions>
-        </TaskViewFooter>
+        {isCreating && (
+          <TaskViewFooter>
+            <div />
+            <FooterActions>
+              <SecondaryButton onClick={handleClose}>Cancel</SecondaryButton>
+              <CreateTaskButton
+                onClick={handleCreateTask}
+                disabled={!titleValue.trim() || isCreatingTask}
+                inactive={!titleValue.trim() || isCreatingTask}
+              >
+                {isCreatingTask ? "Creating..." : "Create"}
+              </CreateTaskButton>
+            </FooterActions>
+          </TaskViewFooter>
+        )}
       </TaskViewContainer>
 
       {showDeleteConfirm && (

@@ -146,7 +146,7 @@ function SubtasksSection({ className, ref, ...props }: UiProps<"div">) {
     <div
       ref={ref}
       className={cn(
-        "mx-6 mb-6 rounded-xl border border-white/[0.08] bg-[#1e1e22] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]",
+        "mx-6 mb-6 rounded-xl border border-border-app bg-transparent",
         className,
       )}
       {...props}
@@ -159,7 +159,7 @@ function SubtasksHeader({ className, ref, ...props }: UiProps<"div">) {
     <div
       ref={ref}
       className={cn(
-        "flex items-center justify-between px-4 py-3 text-[13px] font-semibold tracking-wide text-[#b0b0b0] uppercase",
+        "flex items-center justify-between px-4 py-3 text-sm font-semibold text-[#888]",
         className,
       )}
       {...props}

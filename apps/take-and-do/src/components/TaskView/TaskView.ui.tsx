@@ -153,7 +153,7 @@ export function TaskTitle({ className, ref, ...props }: UiProps<"h2">) {
     <h2
       ref={ref}
       className={cn(
-        "m-0 flex-1 cursor-pointer rounded-md px-2 py-1 text-xl font-semibold leading-snug text-white transition-colors duration-150 hover:bg-white/[0.04]",
+        "m-0 box-border flex-1 cursor-pointer rounded-md border border-transparent px-2 py-1 text-xl font-semibold leading-snug text-white transition-colors duration-150 hover:bg-white/[0.04]",
         className,
       )}
       {...props}
@@ -172,7 +172,7 @@ export function TaskTitleInput({
     <Input
       ref={ref}
       className={cn(
-        "m-0 min-w-0 flex-1 rounded-md px-2 py-1 text-xl font-semibold leading-snug",
+        "m-0 min-w-0 flex-1 rounded-md border-transparent bg-transparent px-2 py-1 text-xl font-semibold leading-snug text-white focus:border-input-border",
         className,
       )}
       {...props}
@@ -231,11 +231,7 @@ export function TaskDescriptionMarkdown({
     <div
       ref={ref}
       className={cn(
-        "prose prose-invert prose-sm max-w-none min-h-[140px] cursor-pointer overflow-y-auto rounded-md px-6 py-3 text-[#888] transition-colors duration-200 hover:bg-white/[0.03]",
-        "prose-headings:mt-[1.5em] prose-headings:mb-2 prose-headings:font-semibold prose-headings:text-white",
-        "prose-h2:text-xl prose-h3:text-lg prose-h4:text-base",
-        "prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-ul:pl-6 prose-ol:pl-6 prose-li:my-1",
-        "prose-strong:text-white prose-strong:font-semibold prose-em:italic prose-u:underline",
+        "task-view-description box-border max-w-none min-h-[140px] cursor-pointer overflow-y-auto rounded-md px-6 py-3 text-white transition-colors duration-150 hover:bg-white/[0.04]",
         className,
       )}
       {...props}
@@ -458,13 +454,7 @@ export function DescriptionContent({
   ref,
   ...props
 }: UiProps<"div">) {
-  return (
-    <div
-      ref={ref}
-      className={cn("text-sm leading-relaxed text-[#888]", className)}
-      {...props}
-    />
-  );
+  return <div ref={ref} className={cn("contents", className)} {...props} />;
 }
 
 export function NoDescriptionText({

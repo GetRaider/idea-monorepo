@@ -6,22 +6,34 @@ import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import type { TasksSidebarProps } from "@/components/TasksSidebar/tasksSidebar.types";
-import {
-  DRAG_BOARD_KEY,
-  DRAG_REORDER_BOARD_KEY,
-  DRAG_REORDER_FOLDER_KEY,
-  isRootDrop,
-} from "@/constants/tasksSidebar.constants";
 import { useTasksSidebarOrder } from "@/hooks/tasks/useTasksSidebarOrder";
 import { isDuplicateWorkspaceName } from "@/helpers/workspace-name.helper";
 import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
 import { invalidateWorkspaceQueries } from "@/lib/invalidate-app-queries";
+import {
+  type DragEndEvent,
+  type DragOverEvent,
+  type SidebarDraggableData,
+  type SidebarDroppableData,
+} from "@/lib/board-dnd";
 import { clientServices } from "@/services";
 import type { Folder, TaskBoard } from "@/types/workspace";
 
 import { useEmojiPickerState } from "./useEmojiPickerState";
 import { useSidebarDeleteState } from "./useSidebarDeleteState";
 import { useSidebarEditingState } from "./useSidebarEditingState";
+
+/** Live drop feedback for workspace list DnD. */
+export type SidebarDragHighlight =
+  | null
+  | { kind: "root-surface" }
+  | { kind: "folder"; folderId: string }
+  | {
+      kind: "before-board";
+      targetBoardId: string;
+      folderScope: string | null;
+    }
+  | { kind: "top-insert"; beforeId: string | null };
 
 export function useTasksSidebarModel({
   activeView = "today",
@@ -35,7 +47,8 @@ export function useTasksSidebarModel({
   const queryClient = useQueryClient();
   const [expandedFolder, setExpandedFolder] = useState<string>("");
   const [openMenuBoardId, setOpenMenuBoardId] = useState<string | null>(null);
-  const [dragOverTarget, setDragOverTarget] = useState<string | null>(null);
+  const [sidebarDragHighlight, setSidebarDragHighlight] =
+    useState<SidebarDragHighlight>(null);
   const [openMenuFolderId, setOpenMenuFolderId] = useState<string | null>(null);
   const {
     editingBoardId,
@@ -63,19 +76,14 @@ export function useTasksSidebarModel({
   } = useEmojiPickerState();
 
   const {
-    sortedFolders,
-    rootBoardsSorted,
+    sortedTopLevelRows,
     boardsInFolderSorted,
-    reorderFolder,
-    reorderRootBoard,
+    reorderTopLevel,
     reorderBoardInFolder,
+    removeFromTopLevel,
+    insertRootBoardTopLevel,
+    moveTopLevelToEnd,
   } = useTasksSidebarOrder(folders, taskBoards);
-
-  useEffect(() => {
-    const endDrag = () => setDragOverTarget(null);
-    window.addEventListener("dragend", endDrag);
-    return () => window.removeEventListener("dragend", endDrag);
-  }, []);
 
   useEffect(() => {
     if (!editingBoardId && !editingFolderId) return;
@@ -301,32 +309,20 @@ export function useTasksSidebarModel({
     toast.success("Folder deleted");
   };
 
-  const handleBoardDragStart = (e: React.DragEvent, taskBoard: TaskBoard) => {
-    if ((e.target as HTMLElement).closest("[data-board-actions-trigger]"))
-      return;
-    // Some browsers (notably Safari) won't start a drag without a text/plain payload.
-    e.dataTransfer.setData("text/plain", taskBoard.id);
-    e.dataTransfer.setData(DRAG_BOARD_KEY, taskBoard.id);
-    e.dataTransfer.setData(
-      DRAG_REORDER_BOARD_KEY,
-      JSON.stringify({
-        boardId: taskBoard.id,
-        folderId: taskBoard.folderId ?? null,
-      }),
-    );
-    e.dataTransfer.effectAllowed = "move";
-  };
-
-  const handleDropOn = useCallback(
-    (targetFolderId: string) => (e: React.DragEvent) => {
-      e.preventDefault();
-      setDragOverTarget(null);
-      const boardId = e.dataTransfer.getData(DRAG_BOARD_KEY);
-      if (!boardId) return;
-      const folderId = isRootDrop(targetFolderId) ? null : targetFolderId;
+  const moveBoardToFolder = useCallback(
+    (
+      boardId: string,
+      folderId: string | null,
+      rootInsertBeforeId?: string | null,
+    ) => {
       const board = taskBoards.find((b) => b.id === boardId);
       if (!board) return;
-      if ((board.folderId ?? null) === folderId) return;
+      if ((board.folderId ?? null) === folderId) {
+        if (folderId == null && rootInsertBeforeId !== undefined) {
+          insertRootBoardTopLevel(boardId, rootInsertBeforeId);
+        }
+        return;
+      }
 
       void clientServices.taskBoards
         .update({
@@ -344,56 +340,196 @@ export function useTasksSidebarModel({
             toast.error("Can't move board");
             return;
           }
+          const wasRoot = !board.folderId;
           setTaskBoards((previous) =>
             previous.map((item) => (item.id === updated.id ? updated : item)),
           );
+          if (!updated.folderId) {
+            insertRootBoardTopLevel(boardId, rootInsertBeforeId ?? null);
+          } else if (wasRoot) {
+            removeFromTopLevel(boardId);
+          }
           await invalidateWorkspaceQueries(queryClient);
           if (folderId && expandedFolder !== folderId)
             setExpandedFolder(folderId);
           toast.success("Board moved");
         });
     },
-    [expandedFolder, queryClient, setTaskBoards, taskBoards],
+    [
+      expandedFolder,
+      insertRootBoardTopLevel,
+      queryClient,
+      removeFromTopLevel,
+      setTaskBoards,
+      taskBoards,
+    ],
   );
 
-  const handleBoardReorderDragOver = (event: React.DragEvent) => {
-    if (!event.dataTransfer.types.includes(DRAG_REORDER_BOARD_KEY)) return;
-    event.preventDefault();
-    event.stopPropagation();
-    event.dataTransfer.dropEffect = "move";
-  };
-
-  const handleBoardReorderDrop = (
-    event: React.DragEvent,
-    targetBoard: TaskBoard,
-    folderScope: string | null,
-  ) => {
-    const raw = event.dataTransfer.getData(DRAG_REORDER_BOARD_KEY);
-    if (!raw) return;
-    event.preventDefault();
-    event.stopPropagation();
-    setDragOverTarget(null);
-    let payload: { boardId: string; folderId: string | null };
-    try {
-      payload = JSON.parse(raw) as { boardId: string; folderId: string | null };
-    } catch {
+  const handleSidebarDragOver = useCallback((event: DragOverEvent) => {
+    const { active, over } = event;
+    if (!over) {
+      setSidebarDragHighlight(null);
       return;
     }
-    const targetFolderId = targetBoard.folderId ?? null;
-    if (payload.folderId !== targetFolderId) return;
-    if (payload.boardId === targetBoard.id) return;
-    if (folderScope === null) reorderRootBoard(payload.boardId, targetBoard.id);
-    else reorderBoardInFolder(folderScope, payload.boardId, targetBoard.id);
-  };
+    const activeData = active.data.current as SidebarDraggableData | undefined;
+    const overData = over.data.current as SidebarDroppableData | undefined;
+    if (!overData) {
+      setSidebarDragHighlight(null);
+      return;
+    }
 
-  const handleFolderReorderDragOver =
-    (targetFolderId: string) => (event: React.DragEvent) => {
-      if (!event.dataTransfer.types.includes(DRAG_REORDER_FOLDER_KEY)) return;
-      event.preventDefault();
-      event.stopPropagation();
-      event.dataTransfer.dropEffect = "move";
-      setDragOverTarget(targetFolderId);
-    };
+    if (activeData?.type === "sidebar-folder") {
+      if (
+        overData.type === "sidebar-top-insert" ||
+        overData.type === "sidebar-top-insert-end"
+      ) {
+        setSidebarDragHighlight({
+          kind: "top-insert",
+          beforeId:
+            overData.type === "sidebar-top-insert-end"
+              ? null
+              : overData.beforeId,
+        });
+        return;
+      }
+      if (overData.type === "sidebar-folder-target") {
+        setSidebarDragHighlight({
+          kind: "folder",
+          folderId: overData.folderId,
+        });
+      } else {
+        setSidebarDragHighlight(null);
+      }
+      return;
+    }
+
+    if (overData.type === "sidebar-top-insert") {
+      setSidebarDragHighlight({
+        kind: "top-insert",
+        beforeId: overData.beforeId,
+      });
+      return;
+    }
+    if (overData.type === "sidebar-top-insert-end") {
+      setSidebarDragHighlight({ kind: "top-insert", beforeId: null });
+      return;
+    }
+
+    if (overData.type === "sidebar-root") {
+      setSidebarDragHighlight({ kind: "root-surface" });
+      return;
+    }
+    if (overData.type === "sidebar-folder-target") {
+      setSidebarDragHighlight({ kind: "folder", folderId: overData.folderId });
+      return;
+    }
+    if (overData.type === "sidebar-board-insert") {
+      setSidebarDragHighlight({
+        kind: "before-board",
+        targetBoardId: overData.targetBoardId,
+        folderScope: overData.folderScope,
+      });
+      return;
+    }
+
+    setSidebarDragHighlight(null);
+  }, []);
+
+  const handleSidebarDragCancel = useCallback(() => {
+    setSidebarDragHighlight(null);
+  }, []);
+
+  const handleSidebarDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      setSidebarDragHighlight(null);
+      const { active, over } = event;
+      if (!over) return;
+
+      const activeData = active.data.current as
+        | SidebarDraggableData
+        | undefined;
+      const overData = over.data.current as SidebarDroppableData | undefined;
+      if (!activeData || !overData) return;
+
+      if (activeData.type === "sidebar-folder") {
+        if (overData.type === "sidebar-top-insert") {
+          if (activeData.folderId !== overData.beforeId) {
+            reorderTopLevel(activeData.folderId, overData.beforeId);
+          }
+          return;
+        }
+        if (overData.type === "sidebar-top-insert-end") {
+          moveTopLevelToEnd(activeData.folderId);
+          return;
+        }
+        if (overData.type === "sidebar-folder-target") {
+          if (activeData.folderId === overData.folderId) return;
+          reorderTopLevel(activeData.folderId, overData.folderId);
+        }
+        return;
+      }
+
+      if (activeData.type !== "sidebar-board") return;
+
+      const { boardId, folderId: sourceFolderId } = activeData;
+
+      if (overData.type === "sidebar-root") {
+        moveBoardToFolder(boardId, null);
+        return;
+      }
+
+      if (overData.type === "sidebar-folder-target") {
+        moveBoardToFolder(boardId, overData.folderId);
+        return;
+      }
+
+      if (overData.type === "sidebar-top-insert") {
+        const { beforeId } = overData;
+        if (sourceFolderId == null) {
+          if (boardId === beforeId) return;
+          reorderTopLevel(boardId, beforeId);
+          return;
+        }
+        moveBoardToFolder(boardId, null, beforeId);
+        return;
+      }
+
+      if (overData.type === "sidebar-top-insert-end") {
+        if (sourceFolderId == null) {
+          moveTopLevelToEnd(boardId);
+          return;
+        }
+        moveBoardToFolder(boardId, null, null);
+        return;
+      }
+
+      if (overData.type === "sidebar-board-insert") {
+        const targetBoard = taskBoards.find(
+          (b) => b.id === overData.targetBoardId,
+        );
+        if (!targetBoard) return;
+        const targetFolderId = targetBoard.folderId ?? null;
+        if (sourceFolderId !== targetFolderId) return;
+        if (boardId === overData.targetBoardId) return;
+        if (overData.folderScope === null) {
+          reorderTopLevel(boardId, overData.targetBoardId);
+        } else {
+          reorderBoardInFolder(
+            overData.folderScope,
+            boardId,
+            overData.targetBoardId,
+          );
+        }
+      }
+    },
+    [
+      moveBoardToFolder,
+      moveTopLevelToEnd,
+      reorderBoardInFolder,
+      reorderTopLevel,
+      taskBoards,
+    ],
+  );
 
   return {
     activeView,
@@ -401,8 +537,7 @@ export function useTasksSidebarModel({
     setExpandedFolder,
     openMenuBoardId,
     setOpenMenuBoardId,
-    dragOverTarget,
-    setDragOverTarget,
+    sidebarDragHighlight,
     openMenuFolderId,
     setOpenMenuFolderId,
     editingBoardId,
@@ -425,10 +560,10 @@ export function useTasksSidebarModel({
     setEditingFolderEmoji,
     openFolderEmojiPickerId,
     setOpenFolderEmojiPickerId,
-    sortedFolders,
-    rootBoardsSorted,
+    sortedTopLevelRows,
     boardsInFolderSorted,
-    reorderFolder,
+    folders,
+    taskBoards,
     handleViewChange,
     toggleFolder,
     handleEditBoard,
@@ -437,11 +572,9 @@ export function useTasksSidebarModel({
     handleEditFolder,
     handleFolderAction,
     handleFolderDeleteConfirm,
-    handleBoardDragStart,
-    handleDropOn,
-    handleBoardReorderDragOver,
-    handleBoardReorderDrop,
-    handleFolderReorderDragOver,
+    handleSidebarDragEnd,
+    handleSidebarDragOver,
+    handleSidebarDragCancel,
   };
 }
 

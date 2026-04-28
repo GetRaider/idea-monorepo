@@ -8,38 +8,78 @@ import type { Folder, TaskBoard } from "@/types/workspace";
 
 const STORAGE_KEY = "take-and-do:tasks-sidebar-order:v1";
 
+export type TopLevelRow =
+  | { kind: "folder"; id: string; folder: Folder }
+  | { kind: "board"; id: string; board: TaskBoard };
+
 type OrderState = {
-  folderIds: string[];
-  rootBoardIds: string[];
+  /** Interleaved folder ids and root-level task board ids (in-folder boards omitted). */
+  topLevelIds: string[];
   boardsInFolder: Record<string, string[]>;
 };
 
-function readStorage(): OrderState {
-  if (typeof window === "undefined") {
-    return { folderIds: [], rootBoardIds: [], boardsInFolder: {} };
+function emptyOrder(): OrderState {
+  return { topLevelIds: [], boardsInFolder: {} };
+}
+
+function normalizeOrderState(parsed: unknown): OrderState {
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    return emptyOrder();
   }
+  const p = parsed as Record<string, unknown>;
+  const boardsInFolder: Record<string, string[]> = {};
+  const bifRaw = p.boardsInFolder;
+  if (bifRaw && typeof bifRaw === "object" && !Array.isArray(bifRaw)) {
+    for (const [key, value] of Object.entries(bifRaw)) {
+      if (Array.isArray(value)) {
+        boardsInFolder[key] = value.filter(
+          (id): id is string => typeof id === "string",
+        );
+      }
+    }
+  }
+
+  if (Array.isArray(p.topLevelIds)) {
+    return {
+      topLevelIds: p.topLevelIds.filter(
+        (id): id is string => typeof id === "string",
+      ),
+      boardsInFolder,
+    };
+  }
+
+  const legacyFolders = Array.isArray(p.folderIds)
+    ? p.folderIds.filter((id): id is string => typeof id === "string")
+    : [];
+  const legacyRoots = Array.isArray(p.rootBoardIds)
+    ? p.rootBoardIds.filter((id): id is string => typeof id === "string")
+    : [];
+  return {
+    topLevelIds: [...legacyFolders, ...legacyRoots],
+    boardsInFolder,
+  };
+}
+
+function readStorage(): OrderState {
+  if (typeof window === "undefined") return emptyOrder();
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { folderIds: [], rootBoardIds: [], boardsInFolder: {} };
-    const parsed = JSON.parse(raw) as Partial<OrderState>;
-    return {
-      folderIds: Array.isArray(parsed.folderIds) ? parsed.folderIds : [],
-      rootBoardIds: Array.isArray(parsed.rootBoardIds)
-        ? parsed.rootBoardIds
-        : [],
-      boardsInFolder:
-        parsed.boardsInFolder && typeof parsed.boardsInFolder === "object"
-          ? parsed.boardsInFolder
-          : {},
-    };
+    if (!raw) return emptyOrder();
+    return normalizeOrderState(JSON.parse(raw) as unknown);
   } catch {
-    return { folderIds: [], rootBoardIds: [], boardsInFolder: {} };
+    return emptyOrder();
   }
 }
 
 function writeStorage(next: OrderState) {
   if (typeof window === "undefined") return;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify({
+      topLevelIds: next.topLevelIds,
+      boardsInFolder: next.boardsInFolder,
+    }),
+  );
 }
 
 function mergeIds(current: string[], preferred: string[]): string[] {
@@ -63,15 +103,19 @@ function mergeIds(current: string[], preferred: string[]): string[] {
 function reorderBeforeTarget(
   ids: string[],
   activeId: string,
-  overId: string,
+  beforeId: string,
 ): string[] {
-  if (activeId === overId) return ids;
+  if (activeId === beforeId) return ids;
   const from = ids.indexOf(activeId);
-  const to = ids.indexOf(overId);
+  const to = ids.indexOf(beforeId);
   if (from === -1 || to === -1) return ids;
   const next = [...ids];
   const [removed] = next.splice(from, 1);
-  const insertAt = next.indexOf(overId);
+  const insertAt = next.indexOf(beforeId);
+  if (insertAt === -1) {
+    next.push(removed);
+    return next;
+  }
   next.splice(insertAt, 0, removed);
   return next;
 }
@@ -82,15 +126,10 @@ function readInitialOrder(): OrderState {
   const fromGuest = guestStoreHelper.getSidebarOrder();
   if (
     fromGuest &&
-    (fromGuest.folderIds.length > 0 ||
-      fromGuest.rootBoardIds.length > 0 ||
-      Object.keys(fromGuest.boardsInFolder).length > 0)
+    (fromGuest.topLevelIds?.length ||
+      Object.keys(fromGuest.boardsInFolder ?? {}).length)
   ) {
-    return {
-      folderIds: fromGuest.folderIds,
-      rootBoardIds: fromGuest.rootBoardIds,
-      boardsInFolder: { ...fromGuest.boardsInFolder },
-    };
+    return normalizeOrderState(fromGuest);
   }
   return fromStorage;
 }
@@ -107,15 +146,10 @@ export function useTasksSidebarOrder(
     const fromGuest = guestStoreHelper.getSidebarOrder();
     if (
       fromGuest &&
-      (fromGuest.folderIds.length > 0 ||
-        fromGuest.rootBoardIds.length > 0 ||
-        Object.keys(fromGuest.boardsInFolder).length > 0)
+      (fromGuest.topLevelIds?.length ||
+        Object.keys(fromGuest.boardsInFolder ?? {}).length)
     ) {
-      setOrder({
-        folderIds: fromGuest.folderIds,
-        rootBoardIds: fromGuest.rootBoardIds,
-        boardsInFolder: { ...fromGuest.boardsInFolder },
-      });
+      setOrder(normalizeOrderState(fromGuest));
     }
   }, [isAnonymous]);
 
@@ -130,33 +164,29 @@ export function useTasksSidebarOrder(
     [taskBoards],
   );
 
-  const sortedFolderIds = useMemo(
-    () => mergeIds(currentFolderIds, order.folderIds),
-    [currentFolderIds, order.folderIds],
+  const currentTopLevelIds = useMemo(
+    () => [...currentFolderIds, ...currentRootBoardIds],
+    [currentFolderIds, currentRootBoardIds],
   );
 
-  const sortedFolders = useMemo(
-    () =>
-      sortedFolderIds
-        .map((id) => folders.find((folder) => folder.id === id))
-        .filter((folder): folder is Folder => folder != null),
-    [sortedFolderIds, folders],
+  const sortedTopLevelIds = useMemo(
+    () => mergeIds(currentTopLevelIds, order.topLevelIds),
+    [currentTopLevelIds, order.topLevelIds],
   );
 
-  const sortedRootBoardIds = useMemo(
-    () => mergeIds(currentRootBoardIds, order.rootBoardIds),
-    [currentRootBoardIds, order.rootBoardIds],
-  );
-
-  const rootBoardsSorted = useMemo(
-    () =>
-      sortedRootBoardIds
-        .map((id) =>
-          taskBoards.find((board) => board.id === id && !board.folderId),
-        )
-        .filter((board): board is TaskBoard => board != null),
-    [sortedRootBoardIds, taskBoards],
-  );
+  const sortedTopLevelRows = useMemo((): TopLevelRow[] => {
+    const rows: TopLevelRow[] = [];
+    for (const id of sortedTopLevelIds) {
+      const folder = folders.find((f) => f.id === id);
+      if (folder) {
+        rows.push({ kind: "folder", id, folder });
+        continue;
+      }
+      const board = taskBoards.find((b) => b.id === id && !b.folderId);
+      if (board) rows.push({ kind: "board", id, board });
+    }
+    return rows;
+  }, [sortedTopLevelIds, folders, taskBoards]);
 
   const boardsInFolderSorted = useCallback(
     (folderId: string) => {
@@ -177,30 +207,54 @@ export function useTasksSidebarOrder(
       writeStorage(next);
       setOrder(next);
       if (isAnonymous) {
-        guestStoreHelper.setSidebarOrder(next);
+        guestStoreHelper.setSidebarOrder({
+          topLevelIds: next.topLevelIds,
+          boardsInFolder: next.boardsInFolder,
+        });
       }
     },
     [isAnonymous],
   );
 
-  const reorderFolder = useCallback(
-    (activeId: string, overId: string) => {
-      const merged = mergeIds(currentFolderIds, order.folderIds);
-      const nextIds = reorderBeforeTarget(merged, activeId, overId);
+  const reorderTopLevel = useCallback(
+    (activeId: string, beforeId: string) => {
+      if (activeId === beforeId) return;
+      const merged = mergeIds(currentTopLevelIds, order.topLevelIds);
+      const nextIds = reorderBeforeTarget(merged, activeId, beforeId);
       if (nextIds === merged) return;
-      persist({ ...order, folderIds: nextIds });
+      persist({ ...order, topLevelIds: nextIds });
     },
-    [currentFolderIds, order, persist],
+    [currentTopLevelIds, order, persist],
   );
 
-  const reorderRootBoard = useCallback(
-    (activeId: string, overId: string) => {
-      const merged = mergeIds(currentRootBoardIds, order.rootBoardIds);
-      const nextIds = reorderBeforeTarget(merged, activeId, overId);
-      if (nextIds === merged) return;
-      persist({ ...order, rootBoardIds: nextIds });
+  /** Root board leaves the top strip (e.g. moved into a folder). */
+  const removeFromTopLevel = useCallback(
+    (boardId: string) => {
+      const merged = mergeIds(currentTopLevelIds, order.topLevelIds);
+      if (!merged.includes(boardId)) return;
+      const nextIds = merged.filter((id) => id !== boardId);
+      persist({ ...order, topLevelIds: nextIds });
     },
-    [currentRootBoardIds, order, persist],
+    [currentTopLevelIds, order, persist],
+  );
+
+  /** Root board enters the top strip (e.g. moved out of a folder). */
+  const insertRootBoardTopLevel = useCallback(
+    (boardId: string, beforeId: string | null) => {
+      const merged = mergeIds(currentTopLevelIds, order.topLevelIds).filter(
+        (id) => id !== boardId,
+      );
+      let nextIds: string[];
+      if (beforeId == null) {
+        nextIds = [...merged, boardId];
+      } else {
+        const i = merged.indexOf(beforeId);
+        if (i === -1) nextIds = [...merged, boardId];
+        else nextIds = [...merged.slice(0, i), boardId, ...merged.slice(i)];
+      }
+      persist({ ...order, topLevelIds: nextIds });
+    },
+    [currentTopLevelIds, order, persist],
   );
 
   const reorderBoardInFolder = useCallback(
@@ -220,12 +274,24 @@ export function useTasksSidebarOrder(
     [order, persist, taskBoards],
   );
 
+  const moveTopLevelToEnd = useCallback(
+    (activeId: string) => {
+      const merged = mergeIds(currentTopLevelIds, order.topLevelIds).filter(
+        (id) => id !== activeId,
+      );
+      merged.push(activeId);
+      persist({ ...order, topLevelIds: merged });
+    },
+    [currentTopLevelIds, order, persist],
+  );
+
   return {
-    sortedFolders,
-    rootBoardsSorted,
+    sortedTopLevelRows,
     boardsInFolderSorted,
-    reorderFolder,
-    reorderRootBoard,
+    reorderTopLevel,
     reorderBoardInFolder,
+    removeFromTopLevel,
+    insertRootBoardTopLevel,
+    moveTopLevelToEnd,
   };
 }

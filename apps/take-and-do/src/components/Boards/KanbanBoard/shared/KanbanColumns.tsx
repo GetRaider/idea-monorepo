@@ -1,27 +1,24 @@
 "use client";
 
 import {
+  BOARD_AUTO_SCROLL,
+  BOARD_DROP_MEASURING,
   DndContext,
   DragOverlay,
   type DragEndEvent,
   type DragOverEvent,
   type DragStartEvent,
-  MeasuringStrategy,
-  PointerSensor,
+  type KanbanCardDraggableData,
+  type KanbanDraggableData,
+  type KanbanDroppableData,
   pointerWithin,
-  useSensor,
-  useSensors,
-} from "@dnd-kit/core";
+  useBoardPointerSensors,
+} from "@/lib/board-dnd";
 import { type ReactNode, useCallback, useMemo, useState } from "react";
 
 import { Column } from "../Column/Column";
 import { TaskCardView } from "../TaskCard/TaskCard";
 import { TaskStatus, Task } from "../types";
-import type {
-  KanbanCardDraggableData,
-  KanbanDraggableData,
-  KanbanDroppableData,
-} from "./kanbanDnd";
 
 interface KanbanColumnsProps {
   tasksByStatus: Record<TaskStatus, Task[]>;
@@ -47,11 +44,7 @@ export function KanbanColumns({
   onTaskDrop,
   onTaskClick,
 }: KanbanColumnsProps) {
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: { distance: 4 },
-    }),
-  );
+  const sensors = useBoardPointerSensors();
 
   const [activeDropStatus, setActiveDropStatus] = useState<TaskStatus | null>(
     null,
@@ -104,10 +97,8 @@ export function KanbanColumns({
     <DndContext
       sensors={sensors}
       collisionDetection={pointerWithin}
-      measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
-      // Auto-scroll vertically only — the columns sit inside an overflow-x
-      // scroller and we don't want the page to drift sideways during a drag.
-      autoScroll={{ threshold: { x: 0, y: 0.15 } }}
+      measuring={BOARD_DROP_MEASURING}
+      autoScroll={BOARD_AUTO_SCROLL}
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
       onDragCancel={resetDragState}

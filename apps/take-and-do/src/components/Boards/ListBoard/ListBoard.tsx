@@ -1,17 +1,16 @@
 "use client";
 
 import {
-  type CollisionDetection,
+  BOARD_AUTO_SCROLL,
+  BOARD_DROP_MEASURING,
   DndContext,
   type DragEndEvent,
   type DragOverEvent,
-  MeasuringStrategy,
-  PointerSensor,
-  pointerWithin,
-  rectIntersection,
-  useSensor,
-  useSensors,
-} from "@dnd-kit/core";
+  type ListDraggableData,
+  type ListDroppableData,
+  listBoardCollisionDetection,
+  useBoardPointerSensors,
+} from "@/lib/board-dnd";
 import {
   Fragment,
   type ReactNode,
@@ -44,7 +43,6 @@ import {
 } from "./ListBoard.ui";
 import { TaskListRow } from "./TaskListRow";
 import { DropZoneBetween } from "./DropZoneBetween";
-import type { ListDraggableData, ListDroppableData } from "./listDnd";
 import type { BoardListSubmode } from "@/hooks/tasks/useBoardListSubmode";
 
 const STATUS_ORDER: TaskStatus[] = [
@@ -71,29 +69,6 @@ const SINGLE_LIST_SECTIONS = [
       tasksByStatus[TaskStatus.DONE] ?? [],
   },
 ] as const;
-
-/**
- * The "between row" reorder zones overlap row edges (negative margin trick) so
- * they can be hit easily. When the cursor sits in the overlap, both a reorder
- * and a subtask droppable contain it — this resolver always prefers reorder so
- * the user gets the more common "drop before/after" intent. Subtask drops only
- * win when no reorder zone is under the pointer at all (i.e. cursor in the
- * row's body, not its edges).
- */
-const listCollisionDetection: CollisionDetection = (args) => {
-  const pointerHits = pointerWithin(args);
-  if (pointerHits.length === 0) {
-    // Fall back to rect intersection so dragging just past the edge still
-    // resolves to the closest droppable instead of `null`.
-    return rectIntersection(args);
-  }
-  const reorderHits = pointerHits.filter((c) => {
-    const data = args.droppableContainers.find((d) => d.id === c.id)?.data
-      .current as ListDroppableData | undefined;
-    return data?.type === "reorder";
-  });
-  return reorderHits.length > 0 ? reorderHits : pointerHits;
-};
 
 /**
  * Default expansion: collapse the Done column and any empty columns. The user can
@@ -143,12 +118,7 @@ export function ListBoard({
   onTaskStatusChange,
   onTaskFieldUpdate,
 }: ListBoardProps) {
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      // Small distance ensures plain clicks open the task instead of starting a drag.
-      activationConstraint: { distance: 4 },
-    }),
-  );
+  const sensors = useBoardPointerSensors();
 
   const [sectionOverrides, setSectionOverrides] = useState<
     Map<TaskStatus, boolean>
@@ -323,12 +293,9 @@ export function ListBoard({
     <div className="flex min-h-0 flex-1 flex-col">
       <DndContext
         sensors={sensors}
-        collisionDetection={listCollisionDetection}
-        measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
-        // Only auto-scroll vertically. The list view sits inside a horizontal
-        // overflow container which would otherwise grow / shift sideways while
-        // the user is dragging tasks up and down.
-        autoScroll={{ threshold: { x: 0, y: 0.15 } }}
+        collisionDetection={listBoardCollisionDetection}
+        measuring={BOARD_DROP_MEASURING}
+        autoScroll={BOARD_AUTO_SCROLL}
         onDragOver={handleDragOver}
         onDragCancel={handleDragCancel}
         onDragEnd={handleDragEnd}

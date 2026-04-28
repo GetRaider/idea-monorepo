@@ -1,12 +1,15 @@
 "use client";
 
-import { useDroppable } from "@dnd-kit/core";
 import type { ReactNode } from "react";
 
+import {
+  reorderDroppableId,
+  type ReorderDroppableData,
+  useDroppable,
+} from "@/lib/board-dnd";
 import { cn } from "@/lib/styles/utils";
 
 import { TaskStatus } from "../KanbanBoard/types";
-import { reorderDroppableId, type ReorderDroppableData } from "./listDnd";
 
 interface DropZoneBetweenProps {
   status: TaskStatus;
@@ -51,9 +54,9 @@ export function DropZoneBetween({
 
   // Layout height stays small (12px), but the negative margin extends the
   // bounding rect 4px into each adjacent row. That gives dnd-kit a forgiving
-  // ~20px hit area for "drop before/after" without changing the visual gap —
-  // and the custom collision detection in `ListBoard` prefers reorder zones
-  // over the surrounding subtask zones so this overlap is unambiguous.
+  // ~20px hit area for "drop before/after" without changing the visual gap.
+  // `listBoardCollisionDetection` in `@/lib/board-dnd` prefers reorder zones
+  // over subtask zones when both overlap the pointer.
   return (
     <div
       ref={setNodeRef}

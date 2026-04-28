@@ -1,7 +1,14 @@
 "use client";
 
-import { useDraggable, useDroppable } from "@dnd-kit/core";
-import { CSS } from "@dnd-kit/utilities";
+import {
+  CSS,
+  subtaskDroppableId,
+  type SubtaskDraggableData,
+  type SubtaskDroppableData,
+  type TaskDraggableData,
+  useDraggable,
+  useDroppable,
+} from "@/lib/board-dnd";
 import {
   type CSSProperties,
   type KeyboardEvent,
@@ -23,12 +30,6 @@ import { tasksHelper } from "@/helpers/task.helper";
 import { useClickOutside } from "@/hooks/ui/useClickOutside";
 
 import { Task, TaskPriority, TaskStatus } from "../KanbanBoard/types";
-import {
-  subtaskDroppableId,
-  type SubtaskDraggableData,
-  type SubtaskDroppableData,
-  type TaskDraggableData,
-} from "./listDnd";
 import { ListRowAnchorMenu } from "./ListRowAnchorMenu";
 import {
   PriorityButton,

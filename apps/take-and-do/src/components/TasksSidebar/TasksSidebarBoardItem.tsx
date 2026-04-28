@@ -4,6 +4,14 @@ import Image from "next/image";
 
 import { DotsVerticalIcon } from "@/components/Icons";
 import { Dropdown } from "@/components/Dropdown";
+import {
+  sidebarBoardDraggableId,
+  sidebarBoardInsertDroppableId,
+  type SidebarBoardDraggableData,
+  type SidebarBoardInsertDroppableData,
+  useDraggable,
+  useDroppable,
+} from "@/lib/board-dnd";
 import { TaskBoard } from "@/types/workspace";
 import { EmojiPickerField } from "./EmojiPickerField";
 import {
@@ -33,6 +41,7 @@ export function TasksSidebarBoardItem({
 }: TasksSidebarBoardItemProps) {
   const {
     activeView,
+    sidebarDragHighlight,
     editingBoardId,
     setEditingBoardId,
     editingName,
@@ -46,26 +55,53 @@ export function TasksSidebarBoardItem({
     handleViewChange,
     handleEditBoard,
     handleBoardAction,
-    handleBoardDragStart,
-    handleBoardReorderDragOver,
-    handleBoardReorderDrop,
-    setDragOverTarget,
   } = model;
 
   const isEditing = editingBoardId === taskBoard.id;
   const isMenuOpen = openMenuBoardId === taskBoard.id;
   const isSelected = activeView === taskBoard.name;
 
+  const {
+    attributes,
+    listeners,
+    setNodeRef: setDragRef,
+    isDragging,
+  } = useDraggable({
+    id: sidebarBoardDraggableId(taskBoard.id),
+    data: {
+      type: "sidebar-board",
+      boardId: taskBoard.id,
+      folderId: taskBoard.folderId ?? null,
+    } satisfies SidebarBoardDraggableData,
+    disabled: isEditing,
+  });
+
+  const { setNodeRef: setDropRef } = useDroppable({
+    id: sidebarBoardInsertDroppableId(folderScope, taskBoard.id),
+    data: {
+      type: "sidebar-board-insert",
+      folderScope,
+      targetBoardId: taskBoard.id,
+    } satisfies SidebarBoardInsertDroppableData,
+  });
+
+  const showDropSlot =
+    sidebarDragHighlight?.kind === "before-board" &&
+    sidebarDragHighlight.targetBoardId === taskBoard.id &&
+    sidebarDragHighlight.folderScope === folderScope;
+
+  const isNestedInFolder = folderScope != null;
+
   return (
     <WorkspaceItem>
       <BoardRow
+        ref={setDropRef}
         isActive={isMenuOpen}
         isSelected={isSelected}
+        isDropSlotActive={isNestedInFolder && showDropSlot}
+        showDropInsertLine={!isNestedInFolder && showDropSlot}
         data-selected={isSelected || undefined}
-        onDragOver={handleBoardReorderDragOver}
-        onDrop={(event) =>
-          handleBoardReorderDrop(event, taskBoard, folderScope)
-        }
+        className={isDragging ? "opacity-0" : undefined}
       >
         {isEditing ? (
           <BoardEditWrap>
@@ -116,10 +152,10 @@ export function TasksSidebarBoardItem({
           </BoardEditWrap>
         ) : (
           <div
+            ref={setDragRef}
             className="flex min-w-0 flex-1 items-center"
-            draggable
-            onDragStart={(event) => handleBoardDragStart(event, taskBoard)}
-            onDragEnd={() => setDragOverTarget(null)}
+            {...listeners}
+            {...attributes}
           >
             <BoardToggle
               onClick={() => {

@@ -14,7 +14,6 @@ import {
   Board,
   LoadingContainer,
   KanbanSpinner,
-  EmptyStateWrapper,
 } from "./KanbanBoard.ui";
 import { Toolbar } from "./shared/Toolbar";
 import { KanbanColumns } from "./shared/KanbanColumns";
@@ -45,7 +44,7 @@ import {
 } from "@/lib/effects/completion";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
-import { EmptyState } from "../../EmptyState";
+import { BoardTasksEmptyState } from "../shared/BoardTasksEmptyState";
 import { AIComposeDialog } from "./shared/AIComposeDialog";
 import { ListBoard } from "../ListBoard";
 import { sortTasksForList } from "../ListBoard/listSort";
@@ -443,6 +442,9 @@ export function SingleKanbanBoard({
                 <QuickCreateTaskRow
                   taskBoardId={boardId}
                   onCreate={handleQuickCreate}
+                  triggerLabel={
+                    totalTasksLength === 0 ? "Add your first task" : undefined
+                  }
                 />
               }
             />
@@ -484,15 +486,10 @@ function BoardContent({
 }: BoardContentProps) {
   if (totalTasksLength === 0) {
     return (
-      <EmptyStateWrapper>
-        {quickCreateRow ? (
-          <div className="mb-4 w-full max-w-[520px]">{quickCreateRow}</div>
-        ) : null}
-        <EmptyState
-          title="No tasks"
-          message={`No tasks in the '${boardName}' board`}
-        />
-      </EmptyStateWrapper>
+      <BoardTasksEmptyState
+        boardName={boardName}
+        quickCreateSlot={quickCreateRow}
+      />
     );
   }
 

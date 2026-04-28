@@ -1,14 +1,13 @@
 "use client";
 
-import { useDroppable } from "@dnd-kit/core";
-
 import { cn } from "@/lib/styles/utils";
-
-import { TaskStatus } from "../types";
 import {
   kanbanReorderDroppableId,
   type KanbanReorderDroppableData,
-} from "../shared/kanbanDnd";
+  useDroppable,
+} from "@/lib/board-dnd";
+
+import { TaskStatus } from "../types";
 
 interface KanbanDropZoneProps {
   status: TaskStatus;

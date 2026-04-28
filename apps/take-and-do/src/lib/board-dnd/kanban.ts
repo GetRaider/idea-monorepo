@@ -1,9 +1,8 @@
-import type { TaskStatus } from "../types";
+import type { TaskStatus } from "@/types/task";
 
 /**
- * dnd-kit droppable / draggable shapes for the Kanban view. Each `useDroppable`
- * registers a {@link KanbanReorderDroppableData} so the global `onDragEnd`
- * handler can compute the destination column + index without inspecting DOM ids.
+ * Droppable / draggable metadata for Kanban view. Each `useDroppable` registers
+ * {@link KanbanReorderDroppableData} so `onDragEnd` can resolve column + index.
  */
 export interface KanbanReorderDroppableData {
   type: "reorder";

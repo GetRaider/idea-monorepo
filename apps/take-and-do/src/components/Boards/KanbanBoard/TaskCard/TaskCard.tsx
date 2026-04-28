@@ -1,14 +1,15 @@
 "use client";
 
 import Image from "next/image";
-import { useDraggable } from "@dnd-kit/core";
 import type { CSSProperties } from "react";
+
 import { CalendarIcon, ClockIcon } from "@/components/Icons";
-import { Task, TaskStatus } from "../types";
-import { tasksHelper } from "@/helpers/task.helper";
 import { getLabelAccent } from "@/helpers/label-color.helper";
+import { tasksHelper } from "@/helpers/task.helper";
+import { type KanbanCardDraggableData, useDraggable } from "@/lib/board-dnd";
 import { cn } from "@/lib/styles/utils";
-import type { KanbanCardDraggableData } from "../shared/kanbanDnd";
+
+import { Task, TaskStatus } from "../types";
 
 interface TaskCardProps {
   task: Task;

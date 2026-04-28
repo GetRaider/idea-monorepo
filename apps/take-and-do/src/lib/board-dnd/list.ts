@@ -1,10 +1,8 @@
-import type { TaskStatus } from "../KanbanBoard/types";
+import type { TaskStatus } from "@/types/task";
 
 /**
- * dnd-kit droppable / draggable metadata shapes for the List view. Every
- * `useDroppable` registers one of {@link ListDroppableData} so the global
- * `onDragEnd` handler can decide what to do (re-parent vs reorder vs status
- * change) without having to inspect DOM ids.
+ * Droppable / draggable metadata for List view. Each `useDroppable` registers
+ * {@link ListDroppableData} so `onDragEnd` can branch without parsing DOM ids.
  */
 export interface ReorderDroppableData {
   type: "reorder";

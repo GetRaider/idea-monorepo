@@ -82,6 +82,9 @@ export function TaskView({
     if (initialTask) {
       isClosingRef.current = false;
     }
+    // If we just opened the manual create flow (a "template" task with no id),
+    // force title edit mode so the input + placeholder are always visible.
+    setIsEditingTitle(!initialTask || !initialTask.id);
     setTask(initialTask);
     if (initialTask) {
       setTitleValue(initialTask.summary);

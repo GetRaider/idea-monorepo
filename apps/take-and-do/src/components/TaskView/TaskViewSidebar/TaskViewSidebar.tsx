@@ -7,6 +7,7 @@ import { StatusIcon } from "@/components/Boards/KanbanBoard/Column/Column.ui";
 import { ConfirmDialog } from "@/components/Dialogs";
 import { useTaskMetadataModel } from "@/hooks/taskMetadata/useTaskMetadataModel";
 import { tasksHelper } from "@/helpers/task.helper";
+import { TaskStatusGlyph } from "@/components/TaskStatusGlyph";
 import { TaskPriority, TaskStatus } from "../../Boards/KanbanBoard/types";
 import { useClickOutside } from "@/hooks/ui/useClickOutside";
 import { TaskMetadataLabelsSection } from "../TaskMetadata/TaskMetadataLabelsSection";
@@ -86,7 +87,7 @@ export function TaskViewSidebar({
           <div ref={statusRef} className="relative">
             <SidebarValueButton onClick={() => setIsStatusOpen((o) => !o)}>
               <StatusIcon status={task.status}>
-                {tasksHelper.status.getIcon(task.status)}
+                <TaskStatusGlyph status={task.status} size={14} />
               </StatusIcon>
               <span>{tasksHelper.status.getName(task.status)}</span>
             </SidebarValueButton>
@@ -107,7 +108,7 @@ export function TaskViewSidebar({
                 >
                   <PriorityIconSpan>
                     <StatusIcon status={status}>
-                      {tasksHelper.status.getIcon(status)}
+                      <TaskStatusGlyph status={status} size={14} />
                     </StatusIcon>
                   </PriorityIconSpan>
                   {tasksHelper.status.getName(status)}

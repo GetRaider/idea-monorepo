@@ -1,9 +1,5 @@
-interface ExpandIconProps {
-  size?: number;
-  className?: string;
-}
-
-export function ExpandIcon({ size = 16, className }: ExpandIconProps) {
+import type { SvgIconProps } from "./svgIconProps";
+export function ExpandIcon({ size = 16, className }: SvgIconProps) {
   return (
     <svg
       width={size}

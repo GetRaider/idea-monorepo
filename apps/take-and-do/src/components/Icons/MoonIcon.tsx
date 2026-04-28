@@ -1,9 +1,5 @@
-interface MoonIconProps {
-  size?: number;
-  className?: string;
-}
-
-export function MoonIcon({ size = 16, className }: MoonIconProps) {
+import type { SvgIconProps } from "./svgIconProps";
+export function MoonIcon({ size = 16, className }: SvgIconProps) {
   return (
     <svg
       width={size}

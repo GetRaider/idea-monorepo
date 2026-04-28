@@ -1,9 +1,5 @@
-interface CheckListIconProps {
-  size?: number;
-  className?: string;
-}
-
-export function CheckListIcon({ size = 24, className }: CheckListIconProps) {
+import type { SvgIconProps } from "./svgIconProps";
+export function CheckListIcon({ size = 24, className }: SvgIconProps) {
   return (
     <svg
       width={size}

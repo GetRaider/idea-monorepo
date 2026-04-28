@@ -1,7 +1,5 @@
-export function TimePlanningIcon({
-  size = 14,
-  className,
-}: TimePlanningIconProps) {
+import type { SvgIconProps } from "./svgIconProps";
+export function TimePlanningIcon({ size = 14, className }: SvgIconProps) {
   return (
     <svg
       width={size}
@@ -19,9 +17,4 @@ export function TimePlanningIcon({
       ></path>
     </svg>
   );
-}
-
-interface TimePlanningIconProps {
-  size?: number;
-  className?: string;
 }

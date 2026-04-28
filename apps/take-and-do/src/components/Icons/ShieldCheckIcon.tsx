@@ -1,12 +1,5 @@
-interface ShieldCheckIconProps {
-  size?: number;
-  className?: string;
-}
-
-export function ShieldCheckIcon({
-  size = 24,
-  className,
-}: ShieldCheckIconProps) {
+import type { SvgIconProps } from "./svgIconProps";
+export function ShieldCheckIcon({ size = 24, className }: SvgIconProps) {
   return (
     <svg
       width={size}

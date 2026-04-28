@@ -1,9 +1,5 @@
-interface RocketIconProps {
-  size?: number;
-  className?: string;
-}
-
-export function RocketIcon({ size = 14, className }: RocketIconProps) {
+import type { SvgIconProps } from "./svgIconProps";
+export function RocketIcon({ size = 14, className }: SvgIconProps) {
   return (
     <svg
       width={size}

@@ -20,6 +20,7 @@ export const TaskPatchBodySchema = z
     scheduleDate: z.union([z.null(), z.coerce.date()]).optional(),
     subtasks: z.array(z.unknown()).optional(),
     isPublic: z.boolean().optional(),
+    parentTaskId: z.union([z.null(), z.string()]).optional(),
   })
   .strict()
   .transform(

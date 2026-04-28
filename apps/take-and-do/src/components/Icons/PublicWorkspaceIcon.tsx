@@ -1,7 +1,5 @@
-export function PublicWorkspaceIcon({
-  size = 14,
-  className,
-}: PublicWorkspaceIconProps) {
+import type { SvgIconProps } from "./svgIconProps";
+export function PublicWorkspaceIcon({ size = 14, className }: SvgIconProps) {
   return (
     <svg
       width={size}
@@ -19,9 +17,4 @@ export function PublicWorkspaceIcon({
       />
     </svg>
   );
-}
-
-interface PublicWorkspaceIconProps {
-  size?: number;
-  className?: string;
 }

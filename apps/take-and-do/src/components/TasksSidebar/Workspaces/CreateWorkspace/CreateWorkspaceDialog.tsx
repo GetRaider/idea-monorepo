@@ -19,6 +19,7 @@ import { Folder, TaskBoard } from "@/types/workspace";
 import { toast } from "sonner";
 import { cn } from "@/lib/styles/utils";
 import type { UiProps } from "@/lib/styles/ui-props";
+import { OptionToggleButton } from "@/components/OptionToggleButton/OptionToggleButton";
 
 const FormGroup = DialogFormGroup;
 const Label = DialogFormLabel;
@@ -76,27 +77,33 @@ export function CreateWorkspaceDialog({
         <FormGroup>
           <Label>Type</Label>
           <TypeSelector>
-            <TypeButton
+            <OptionToggleButton
               type="button"
               isSelected={type === "folder"}
               onClick={() => setType("folder")}
+              className="flex-1"
+              icon={
+                <Image src="/folder.svg" alt="Folder" width={20} height={20} />
+              }
             >
-              <Image src="/folder.svg" alt="Folder" width={20} height={20} />
               Folder
-            </TypeButton>
-            <TypeButton
+            </OptionToggleButton>
+            <OptionToggleButton
               type="button"
               isSelected={type === "board"}
               onClick={() => setType("board")}
+              className="flex-1"
+              icon={
+                <Image
+                  src="/kanban-board.svg"
+                  alt="Board"
+                  width={20}
+                  height={20}
+                />
+              }
             >
-              <Image
-                src="/kanban-board.svg"
-                alt="Board"
-                width={20}
-                height={20}
-              />
               Board
-            </TypeButton>
+            </OptionToggleButton>
           </TypeSelector>
         </FormGroup>
 
@@ -209,33 +216,6 @@ function Input({ className, ref, ...props }: InputProps) {
 function TypeSelector({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div ref={ref} className={cn("mb-5 flex gap-3", className)} {...props} />
-  );
-}
-
-type TypeButtonProps = UiProps<"button"> & {
-  isSelected?: boolean;
-};
-
-function TypeButton({
-  className,
-  type = "button",
-  isSelected,
-  ref,
-  ...props
-}: TypeButtonProps) {
-  return (
-    <button
-      ref={ref}
-      type={type}
-      className={cn(
-        "flex flex-1 cursor-pointer items-center justify-center gap-2.5 rounded-lg border px-4 py-3.5 text-sm font-medium text-[#e0e0e0] transition-all duration-200 [&_img]:h-5 [&_img]:w-5",
-        isSelected
-          ? "border-[#7255c1] bg-[#2a2540] hover:border-[#7255c1] hover:bg-[#2a2540]"
-          : "border-border-app bg-background-primary hover:border-[#3a3a3a] hover:bg-[#252525]",
-        className,
-      )}
-      {...props}
-    />
   );
 }
 

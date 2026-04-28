@@ -16,6 +16,7 @@ import { Task } from "../../Boards/KanbanBoard/types";
 import { StatusIcon } from "../../Boards/KanbanBoard/Column/Column.ui";
 import { cn } from "@/lib/styles/utils";
 import type { UiProps } from "@/lib/styles/ui-props";
+import { TaskStatusGlyph } from "@/components/TaskStatusGlyph";
 
 export function TaskSubtasks({
   task,
@@ -120,7 +121,7 @@ export function TaskSubtasks({
               >
                 <SubtaskHeader>
                   <StatusIcon status={subtask.status}>
-                    {tasksHelper.status.getIcon(subtask.status)}
+                    <TaskStatusGlyph status={subtask.status} size={14} />
                   </StatusIcon>
                   <SubtaskIcon>
                     {tasksHelper.priority.getIconLabel(subtask.priority)}

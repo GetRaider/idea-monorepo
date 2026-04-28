@@ -1,9 +1,5 @@
-interface TrashIconProps {
-  size?: number;
-  className?: string;
-}
-
-export function TrashIcon({ size = 16, className }: TrashIconProps) {
+import type { SvgIconProps } from "./svgIconProps";
+export function TrashIcon({ size = 16, className }: SvgIconProps) {
   return (
     <svg
       width={size}

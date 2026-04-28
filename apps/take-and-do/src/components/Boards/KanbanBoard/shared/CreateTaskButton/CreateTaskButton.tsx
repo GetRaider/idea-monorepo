@@ -20,7 +20,7 @@ export function CreateTaskButton({
         className="flex w-full cursor-pointer items-center gap-2 rounded-lg border-0 bg-[#7255c1] px-[22px] py-3 text-sm font-medium text-white transition-colors duration-200 hover:bg-[#6346b0] [&_svg]:h-[18px] [&_svg]:w-[18px]"
       >
         <Image width={20} height={20} src="/plus.svg" alt="Create Task" />
-        Create Task
+        Task
       </button>
       <div className="absolute right-0 top-[calc(100%+4px)] z-[1001] hidden w-full overflow-hidden rounded-lg border border-input-border bg-input-bg shadow-[0_4px_12px_rgba(0,0,0,0.3)] group-hover:block">
         <button

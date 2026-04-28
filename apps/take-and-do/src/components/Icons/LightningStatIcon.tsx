@@ -1,12 +1,5 @@
-interface LightningStatIconProps {
-  size?: number;
-  className?: string;
-}
-
-export function LightningStatIcon({
-  size = 24,
-  className,
-}: LightningStatIconProps) {
+import type { SvgIconProps } from "./svgIconProps";
+export function LightningStatIcon({ size = 24, className }: SvgIconProps) {
   return (
     <svg
       width={size}

@@ -27,6 +27,12 @@ export type TaskUpdate = Partial<
   estimation?: number | null;
   scheduleDate?: Date | null;
   isPublic?: boolean;
+  /**
+   * Re-parent the task. `null` detaches it back to top-level on its current board.
+   * A task id makes the task a subtask of that target. The target must be a
+   * top-level task and the task being moved must not have its own subtasks.
+   */
+  parentTaskId?: string | null;
 };
 
 export function toTaskStatus(status: unknown): TaskStatus {

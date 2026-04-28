@@ -1,9 +1,5 @@
-interface DashboardIconProps {
-  size?: number;
-  className?: string;
-}
-
-export function DashboardIcon({ size = 14, className }: DashboardIconProps) {
+import type { SvgIconProps } from "./svgIconProps";
+export function DashboardIcon({ size = 14, className }: SvgIconProps) {
   return (
     <svg
       width={size}

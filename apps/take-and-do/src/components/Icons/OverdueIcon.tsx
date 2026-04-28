@@ -1,9 +1,5 @@
-interface OverdueIconProps {
-  size?: number;
-  className?: string;
-}
-
-export function OverdueIcon({ size = 24, className }: OverdueIconProps) {
+import type { SvgIconProps } from "./svgIconProps";
+export function OverdueIcon({ size = 24, className }: SvgIconProps) {
   return (
     <svg
       width={size}

@@ -1,4 +1,5 @@
-export function RulerIcon({ size = 14, className }: RulerIconProps) {
+import type { SvgIconProps } from "./svgIconProps";
+export function RulerIcon({ size = 14, className }: SvgIconProps) {
   return (
     <svg
       width={size}
@@ -16,9 +17,4 @@ export function RulerIcon({ size = 14, className }: RulerIconProps) {
       />
     </svg>
   );
-}
-
-interface RulerIconProps {
-  size?: number;
-  className?: string;
 }

@@ -272,13 +272,15 @@ export function SingleKanbanBoard({
         toast.error("Can't create task");
         return;
       }
-      setTasksByStatus((prev) => ({
-        ...prev,
-        [created.status]: [...prev[created.status], created],
-      }));
+      if (!isAnonymous) {
+        setTasksByStatus((prev) => ({
+          ...prev,
+          [created.status]: [...prev[created.status], created],
+        }));
+      }
       toast.success(`Task “${created.summary}” created`);
     },
-    [createTask, boardName],
+    [createTask, boardName, isAnonymous],
   );
 
   const handleNavigateToParentTask = useCallback(() => {

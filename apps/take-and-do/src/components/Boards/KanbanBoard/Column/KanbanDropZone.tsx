@@ -22,12 +22,18 @@ interface KanbanDropZoneProps {
    *            the end of the list.
    */
   variant?: "between" | "empty" | "fill";
+  /**
+   * When true, the zone sits under a block above (e.g. quick-create) and must
+   * not use a negative top margin, which would pull the list into that block.
+   */
+  snugUnderTopSlot?: boolean;
 }
 
 export function KanbanDropZone({
   status,
   index,
   variant = "between",
+  snugUnderTopSlot = false,
 }: KanbanDropZoneProps) {
   const data: KanbanReorderDroppableData = { type: "reorder", status, index };
   const { setNodeRef, isOver, active } = useDroppable({
@@ -62,7 +68,7 @@ export function KanbanDropZone({
         ref={setNodeRef}
         aria-hidden
         className={cn(
-          "relative -mt-1.5 min-h-[80px] flex-1 rounded-xl transition-colors duration-150",
+          "relative mt-1 min-h-[80px] flex-1 rounded-xl transition-colors duration-150",
           showIndicator && "bg-focus-ring/[0.04]",
         )}
       >
@@ -73,23 +79,17 @@ export function KanbanDropZone({
     );
   }
 
-  // The wrapper keeps the visual gap at ~12px (h-3) while extending its
-  // bounding rect 6px into the cards above and below via negative margin —
-  // this gives the droppable a forgiving 24px hit area for dnd-kit's
-  // `pointerWithin` collision check without changing the layout. Cards are
-  // draggables, not droppables, so the overlap doesn't interfere with their
-  // own collision logic.
+  // Positive margins + fixed height keep cards from overlapping while the strip
+  // stays tall enough for `pointerWithin` collision checks. (Negative margins
+  // pulled siblings together and made stacked cards visually collide.)
   return (
     <div
       ref={setNodeRef}
       aria-hidden
       className={cn(
-        "pointer-events-none relative w-full transition-[height,margin] duration-150",
-        // Default gap: visually ~12px, but hit rect is ~24px via -my.
-        "h-6 -my-1.5",
-        // When actively hovered, expand the gap so surrounding cards shift and
-        // the user gets the expected \"items move out of the way\" behaviour.
-        showIndicator && "h-12 -my-3",
+        "pointer-events-none relative w-full shrink-0 transition-[height,margin] duration-150",
+        snugUnderTopSlot ? "mt-w mb-1.5 h-3" : "my-0 h-3",
+        showIndicator && (snugUnderTopSlot ? "mt-3 mb-3 h-8" : "my-2.5 h-8"),
       )}
     >
       {showIndicator ? (

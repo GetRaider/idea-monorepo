@@ -1,12 +1,5 @@
-interface CalendarMonthIconProps {
-  size?: number;
-  className?: string;
-}
-
-export function CalendarMonthIcon({
-  size = 20,
-  className,
-}: CalendarMonthIconProps) {
+import type { SvgIconProps } from "./svgIconProps";
+export function CalendarMonthIcon({ size = 20, className }: SvgIconProps) {
   return (
     <svg
       width={size}

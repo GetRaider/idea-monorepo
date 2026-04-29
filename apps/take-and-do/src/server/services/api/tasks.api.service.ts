@@ -20,6 +20,7 @@ import {
   extractNumericPortion,
 } from "@/helpers/task-key.helper";
 import { genericHelper } from "@/helpers/generic.helper";
+import { BadRequestError, NotFoundError } from "@/lib/api/errors";
 
 export class TasksApiService extends BaseApiService {
   constructor(
@@ -506,9 +507,105 @@ export class TasksApiService extends BaseApiService {
     }
   }
 
+  /**
+   * Move a task to be a subtask of `newParentTaskId`, or detach it back to
+   * top-level when `newParentTaskId === null`. Validates that the move is
+   * legal (no nested subtasks, no self-loops, target is top-level, etc.).
+   */
+  private async applyReparent(
+    taskId: string,
+    newParentTaskId: string | null,
+    access: DataAccess,
+  ): Promise<void> {
+    const accessCond = this.accessWhere(tasks, access);
+
+    const sourceRows = await this.db
+      .select()
+      .from(tasks)
+      .where(and(eq(tasks.id, taskId), accessCond));
+    if (sourceRows.length === 0) {
+      throw new NotFoundError("Task");
+    }
+    const source = sourceRows[0];
+
+    const sourceChildren = await this.db
+      .select()
+      .from(tasks)
+      .where(and(eq(tasks.parentTaskId, taskId), accessCond));
+    if (sourceChildren.length > 0) {
+      throw new BadRequestError(
+        "Cannot re-parent a task that has subtasks of its own.",
+      );
+    }
+
+    if (newParentTaskId === null) {
+      if (source.parentTaskId === null) return;
+      const newKey = await this.generateNextTaskKeyForBoard(
+        source.taskBoardId,
+        access,
+      );
+      await this.db
+        .update(tasks)
+        .set({
+          parentTaskId: null,
+          taskKey: newKey,
+          updatedAt: new Date(),
+        })
+        .where(eq(tasks.id, taskId));
+      return;
+    }
+
+    if (newParentTaskId === taskId) {
+      throw new BadRequestError("A task cannot be its own parent.");
+    }
+
+    const targetRows = await this.db
+      .select()
+      .from(tasks)
+      .where(and(eq(tasks.id, newParentTaskId), accessCond));
+    if (targetRows.length === 0) {
+      throw new NotFoundError("Parent task");
+    }
+    const target = targetRows[0];
+
+    if (target.parentTaskId !== null) {
+      throw new BadRequestError(
+        "A task can only be a subtask of a top-level task.",
+      );
+    }
+
+    if (source.parentTaskId === target.id) return;
+
+    const parentKey = target.taskKey;
+    const subtaskPrefix = deriveTaskKeyPrefix(parentKey);
+    const nextNum =
+      Math.max(
+        extractNumericPortion(parentKey ?? "") ?? 0,
+        await this.getMaxNumericAmongDirectSubtasks(target.id, access),
+      ) + 1;
+    const subtaskKey = `${subtaskPrefix}-${nextNum}`;
+
+    await this.db
+      .update(tasks)
+      .set({
+        parentTaskId: target.id,
+        taskBoardId: target.taskBoardId,
+        taskKey: subtaskKey,
+        updatedAt: new Date(),
+      })
+      .where(eq(tasks.id, taskId));
+  }
+
   async update(taskId: string, updates: TaskUpdate, access: DataAccess) {
     return this.handleOperation(async () => {
       const accessCond = this.accessWhere(tasks, access);
+
+      // Re-parenting changes the task's board, key, and parentTaskId. Apply it
+      // first so the rest of the update operates on the post-move row state.
+      if (updates.parentTaskId !== undefined) {
+        await this.applyReparent(taskId, updates.parentTaskId, access);
+      }
+
       const existingRows = await this.db
         .select()
         .from(tasks)

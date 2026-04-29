@@ -1,14 +1,9 @@
-interface ChevronRightIconProps {
-  size?: number;
-  className?: string;
-  style?: React.CSSProperties;
-}
-
+import type { SvgIconPropsWithStyle } from "./svgIconProps";
 export function ChevronRightIcon({
   size = 16,
   className,
   style,
-}: ChevronRightIconProps) {
+}: SvgIconPropsWithStyle) {
   return (
     <svg
       width={size}

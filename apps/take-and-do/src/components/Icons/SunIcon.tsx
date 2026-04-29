@@ -1,9 +1,5 @@
-interface SunIconProps {
-  size?: number;
-  className?: string;
-}
-
-export function SunIcon({ size = 20, className }: SunIconProps) {
+import type { SvgIconProps } from "./svgIconProps";
+export function SunIcon({ size = 20, className }: SvgIconProps) {
   return (
     <svg
       width={size}

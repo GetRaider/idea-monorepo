@@ -341,6 +341,12 @@
   margin: 0.5em 0;
 }
 
+/* Empty editor: match read-mode placeholder position (no extra paragraph margins). */
+.task-editor-root .ProseMirror p.is-editor-empty:first-child {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
 .task-editor-root .ProseMirror p:empty::before,
 .task-view-description p:empty::before {
   content: "\00a0";
@@ -487,4 +493,19 @@
 
 .task-editor-root .ProseMirror em {
   font-style: italic;
+}
+
+@keyframes quick-create-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.quick-create-appear {
+  animation: quick-create-fade-in 220ms ease-out both;
 }

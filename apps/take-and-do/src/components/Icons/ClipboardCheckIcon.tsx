@@ -1,12 +1,5 @@
-interface ClipboardCheckIconProps {
-  size?: number;
-  className?: string;
-}
-
-export function ClipboardCheckIcon({
-  size = 20,
-  className,
-}: ClipboardCheckIconProps) {
+import type { SvgIconProps } from "./svgIconProps";
+export function ClipboardCheckIcon({ size = 20, className }: SvgIconProps) {
   return (
     <svg
       width={size}

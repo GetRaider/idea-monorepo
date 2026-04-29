@@ -29,9 +29,10 @@ import {
   FooterActions,
   CreateTaskButton,
 } from "./TaskView.ui";
-import { TaskMetadata } from "./TaskMetadata/TaskMetadata";
 import { TaskSubtasks } from "./TaskSubtasks/TaskSubtasks";
 import { TaskViewSidebar } from "./TaskViewSidebar/TaskViewSidebar";
+
+const DESCRIPTION_PLACEHOLDER = "No description yet — type / for formatting";
 
 /** TipTap / rich HTML with no visible text (e.g. `<p></p>`) should behave like empty. */
 function isDescriptionHtmlEmpty(html: string): boolean {
@@ -81,6 +82,9 @@ export function TaskView({
     if (initialTask) {
       isClosingRef.current = false;
     }
+    // If we just opened the manual create flow (a "template" task with no id),
+    // force title edit mode so the input + placeholder are always visible.
+    setIsEditingTitle(!initialTask || !initialTask.id);
     setTask(initialTask);
     if (initialTask) {
       setTitleValue(initialTask.summary);
@@ -156,7 +160,11 @@ export function TaskView({
 
   const handleTitleClick = () => setIsEditingTitle(true);
   const handleTitleBlur = async () => {
-    setIsEditingTitle(false);
+    // While creating a brand-new task, keep the input visible so the placeholder
+    // ("Untitled Task") communicates intent instead of falling back to static text.
+    if (!isCreating) {
+      setIsEditingTitle(false);
+    }
     const nextTitle = titleValue.trim();
     if (shouldCreateTask || !nextTitle || nextTitle === task?.summary) return;
     await handleUpdateTask({ summary: nextTitle });
@@ -324,11 +332,13 @@ export function TaskView({
                   onBlur={handleTitleBlur}
                   onKeyDown={handleTitleKeyDown}
                   autoFocus
-                  placeholder="Enter task summary..."
+                  placeholder={
+                    isCreating ? "Untitled Task" : "Enter task summary..."
+                  }
                 />
               ) : (
                 <TaskTitle onClick={handleTitleClick}>
-                  {titleValue || displayTask.summary || "Untitled Task"}
+                  {titleValue || displayTask.summary}
                 </TaskTitle>
               )}
             </TaskTitleSection>
@@ -338,7 +348,7 @@ export function TaskView({
                 className="min-h-[260px] flex-1"
                 content={descriptionValue}
                 editable={isEditingDescription}
-                placeholder="No description"
+                placeholder={DESCRIPTION_PLACEHOLDER}
                 onUpdate={handleDescriptionUpdate}
                 onBlur={handleDescriptionBlur}
               />
@@ -356,7 +366,9 @@ export function TaskView({
                     }}
                   />
                 ) : (
-                  <NoDescriptionText>No description</NoDescriptionText>
+                  <NoDescriptionText>
+                    {DESCRIPTION_PLACEHOLDER}
+                  </NoDescriptionText>
                 )}
               </TaskDescriptionMarkdown>
             )}
@@ -373,24 +385,15 @@ export function TaskView({
           </TaskViewLeftPanel>
 
           <TaskViewRightPanel>
-            {isCreating ? (
-              <TaskMetadata
-                task={displayTask}
-                initialTask={initialTask}
-                isCreating={isCreating}
-                onTaskChange={setTask}
-              />
-            ) : (
-              <TaskViewSidebar
-                task={displayTask}
-                initialTask={initialTask}
-                isCreating={isCreating}
-                onTaskChange={setTask}
-                onPendingMetadataUpdates={handleMetadataAutoSave}
-                onStatusSelect={handleStatusSelect}
-                onPrioritySelect={handlePrioritySelect}
-              />
-            )}
+            <TaskViewSidebar
+              task={displayTask}
+              initialTask={initialTask}
+              isCreating={isCreating}
+              onTaskChange={setTask}
+              onPendingMetadataUpdates={handleMetadataAutoSave}
+              onStatusSelect={handleStatusSelect}
+              onPrioritySelect={handlePrioritySelect}
+            />
           </TaskViewRightPanel>
         </TaskViewBody>
 

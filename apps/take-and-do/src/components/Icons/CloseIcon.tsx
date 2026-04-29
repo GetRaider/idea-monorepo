@@ -1,9 +1,5 @@
-interface CloseIconProps {
-  size?: number;
-  className?: string;
-}
-
-export function CloseIcon({ size = 16, className }: CloseIconProps) {
+import type { SvgIconProps } from "./svgIconProps";
+export function CloseIcon({ size = 16, className }: SvgIconProps) {
   return (
     <svg
       width={size}

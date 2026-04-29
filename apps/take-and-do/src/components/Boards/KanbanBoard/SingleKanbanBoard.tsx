@@ -1,18 +1,23 @@
 "use client";
 
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useState, useEffect, useCallback, useMemo } from "react";
+import {
+  type ReactNode,
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+} from "react";
 import { useRouter } from "next/navigation";
 import {
   BoardContainer,
   Board,
   LoadingContainer,
   KanbanSpinner,
-  EmptyStateWrapper,
 } from "./KanbanBoard.ui";
 import { Toolbar } from "./shared/Toolbar";
 import { KanbanColumns } from "./shared/KanbanColumns";
-import { TaskStatus, Task, emptyTaskColumns } from "./types";
+import { TaskStatus, Task, TaskUpdate, emptyTaskColumns } from "./types";
 import { handleSingleBoardTaskStatusChange } from "./shared/taskStatusHandlers";
 import {
   composedDataToTask,
@@ -28,13 +33,33 @@ import { guestStoreHelper } from "@/stores/guest";
 import { guestTasksForBoard } from "@/stores/guest/guest-task-filters";
 import { TaskView } from "../../TaskView/TaskView";
 import {
+  applyOptimisticPatch,
+  applyOptimisticReparent,
   removeTaskFromColumns,
   updateTaskInColumns,
 } from "@/hooks/tasks/useTaskBoardState";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { findTaskStatusInColumns } from "@/helpers/task-board-lookup.helper";
+import { sortTaskColumnsForList } from "@/helpers/list-sort.helper";
+import {
+  isCompletingTaskTransition,
+  runAsyncWithOptionalCompletionLayout,
+  runSyncWithOptionalCompletionLayout,
+} from "@/helpers/task-completion-ui.helper";
 import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
-import { EmptyState } from "../../EmptyState";
+import { BoardTasksEmptyState } from "../shared/BoardTasksEmptyState";
 import { AIComposeDialog } from "./shared/AIComposeDialog";
+import { ListBoard } from "../ListBoard";
+import {
+  QuickCreateTaskRow,
+  type QuickCreateTaskInput,
+} from "../shared/QuickCreateTaskRow";
+import { useBoardViewMode } from "@/hooks/tasks/useBoardViewMode";
+import {
+  useBoardListSubmode,
+  type BoardListSubmode,
+} from "@/hooks/tasks/useBoardListSubmode";
+import { useBoardListSort } from "@/hooks/tasks/useBoardListSort";
 import { queryKeys } from "@/lib/query-keys";
 import { clientServices } from "@/services";
 import { toast } from "sonner";
@@ -76,8 +101,11 @@ export function SingleKanbanBoard({
   const router = useRouter();
   const isAnonymous = useIsAnonymous();
   const { tasks: guestTasks } = useGuestTasks();
-  const { updateTask } = useTaskActions();
+  const { createTask, updateTask } = useTaskActions();
   const { taskBoards } = useWorkspace();
+  const [viewMode, setViewMode] = useBoardViewMode(boardId);
+  const [listSubmode, setListSubmode] = useBoardListSubmode(boardId);
+  const [listSort, setListSort] = useBoardListSort(boardId);
   const boardOptions = useMemo(
     () => taskBoards.map((b) => ({ id: b.id, name: b.name })),
     [taskBoards],
@@ -146,6 +174,19 @@ export function SingleKanbanBoard({
     onTaskOpen,
   });
 
+  const fetchTasks = useCallback(async () => {
+    if (!boardId) return;
+    if (isAnonymous) {
+      setTasksByStatus(
+        tasksToColumns(
+          guestTasksForBoard(guestStoreHelper.getTasks(), boardId),
+        ),
+      );
+      return;
+    }
+    await tasksQuery.refetch();
+  }, [boardId, isAnonymous, tasksQuery]);
+
   const persistTaskStatus = useCallback(
     async (taskId: string, newStatus: TaskStatus) => {
       const updated = await updateTask(taskId, { status: newStatus });
@@ -156,16 +197,88 @@ export function SingleKanbanBoard({
 
   const handleTaskStatusChange = useCallback(
     async (taskId: string, newStatus: TaskStatus, targetIndex?: number) => {
-      await handleSingleBoardTaskStatusChange(
-        tasksByStatus,
-        setTasksByStatus,
-        taskId,
+      const previousStatus = findTaskStatusInColumns(tasksByStatus, taskId);
+      const isCompleting = isCompletingTaskTransition(
+        previousStatus,
         newStatus,
-        targetIndex,
-        persistTaskStatus,
+      );
+      await runAsyncWithOptionalCompletionLayout(isCompleting, () =>
+        handleSingleBoardTaskStatusChange(
+          tasksByStatus,
+          setTasksByStatus,
+          taskId,
+          newStatus,
+          targetIndex,
+          persistTaskStatus,
+        ),
       );
     },
     [tasksByStatus, persistTaskStatus],
+  );
+
+  const handleTaskFieldUpdate = useCallback(
+    async (taskId: string, patch: TaskUpdate) => {
+      const isReparent = patch.parentTaskId !== undefined;
+      const previousStatus = findTaskStatusInColumns(tasksByStatus, taskId);
+      const isCompleting =
+        patch.status === TaskStatus.DONE &&
+        isCompletingTaskTransition(previousStatus, patch.status);
+
+      const applyOptimistic = () => {
+        if (isReparent) {
+          setTasksByStatus((prev) =>
+            applyOptimisticReparent(prev, taskId, patch),
+          );
+        } else {
+          setTasksByStatus((prev) => applyOptimisticPatch(prev, taskId, patch));
+        }
+      };
+      runSyncWithOptionalCompletionLayout(isCompleting, applyOptimistic);
+
+      const updated = await updateTask(taskId, patch);
+      if (!updated) {
+        toast.error("Can't update task");
+        // Refetch to roll back any optimistic change that the server rejected.
+        void fetchTasks();
+        return;
+      }
+      if (isReparent) {
+        // Re-parenting may re-key/re-board the task; refetch to reconcile.
+        void fetchTasks();
+      } else {
+        setTasksByStatus((prev) => updateTaskInColumns(prev, updated));
+      }
+      if (selectedTask?.id === updated.id) {
+        setSelectedTask(updated);
+      }
+    },
+    [updateTask, selectedTask, setSelectedTask, fetchTasks, tasksByStatus],
+  );
+
+  const handleQuickCreate = useCallback(
+    async (input: QuickCreateTaskInput) => {
+      const created = await createTask({
+        taskBoardId: input.taskBoardId,
+        taskBoardName: boardName,
+        summary: input.summary,
+        description: "",
+        status: input.status,
+        priority: input.priority,
+        ...(input.scheduleDate && { scheduleDate: input.scheduleDate }),
+        ...(input.dueDate && { dueDate: input.dueDate }),
+        ...(input.estimation != null && { estimation: input.estimation }),
+      });
+      if (!created) {
+        toast.error("Can't create task");
+        return;
+      }
+      setTasksByStatus((prev) => ({
+        ...prev,
+        [created.status]: [...prev[created.status], created],
+      }));
+      toast.success(`Task “${created.summary}” created`);
+    },
+    [createTask, boardName],
   );
 
   const handleNavigateToParentTask = useCallback(() => {
@@ -244,19 +357,6 @@ export function SingleKanbanBoard({
     [boardId, composeMutation, setSelectedTask],
   );
 
-  const fetchTasks = useCallback(async () => {
-    if (!boardId) return;
-    if (isAnonymous) {
-      setTasksByStatus(
-        tasksToColumns(
-          guestTasksForBoard(guestStoreHelper.getTasks(), boardId),
-        ),
-      );
-      return;
-    }
-    await tasksQuery.refetch();
-  }, [boardId, isAnonymous, tasksQuery]);
-
   const handleTaskCreated = useCallback(
     (createdTask: Task) => {
       void fetchTasks();
@@ -275,6 +375,11 @@ export function SingleKanbanBoard({
     tasksByStatus[TaskStatus.IN_PROGRESS].length +
     tasksByStatus[TaskStatus.DONE].length;
 
+  const sortedTasksByStatus = useMemo(
+    () => sortTaskColumnsForList(tasksByStatus, listSort),
+    [tasksByStatus, listSort],
+  );
+
   return (
     <>
       <BoardContainer>
@@ -284,9 +389,15 @@ export function SingleKanbanBoard({
           onCreateTask={handleCreateTask}
           onCreateTaskWithAI={handleCreateTaskWithAI}
           boardId={boardId}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+          listSubmode={listSubmode}
+          onListSubmodeChange={setListSubmode}
+          sort={listSort}
+          onSortChange={setListSort}
         />
 
-        <Board fillHeight>
+        <Board fillHeight={viewMode === "kanban"} viewMode={viewMode}>
           {isLoading ? (
             <LoadingContainer>
               <KanbanSpinner />
@@ -294,10 +405,23 @@ export function SingleKanbanBoard({
           ) : (
             <BoardContent
               totalTasksLength={totalTasksLength}
-              tasksByStatus={tasksByStatus}
+              tasksByStatus={sortedTasksByStatus}
+              viewMode={viewMode}
+              listSubmode={listSubmode}
               handleTaskStatusChange={handleTaskStatusChange}
               handleTaskClick={handleTaskClick}
+              handleSubtaskClick={handleSubtaskClick}
+              handleTaskFieldUpdate={handleTaskFieldUpdate}
               boardName={boardName}
+              quickCreateRow={
+                <QuickCreateTaskRow
+                  taskBoardId={boardId}
+                  onCreate={handleQuickCreate}
+                  triggerLabel={
+                    totalTasksLength === 0 ? "Add your first task" : undefined
+                  }
+                />
+              }
             />
           )}
         </Board>
@@ -326,20 +450,44 @@ export function SingleKanbanBoard({
 function BoardContent({
   totalTasksLength,
   tasksByStatus,
+  viewMode,
+  listSubmode,
   handleTaskStatusChange,
   handleTaskClick,
+  handleSubtaskClick,
+  handleTaskFieldUpdate,
   boardName,
+  quickCreateRow,
 }: BoardContentProps) {
-  return totalTasksLength === 0 ? (
-    <EmptyStateWrapper>
-      <EmptyState
-        title="No tasks"
-        message={`No tasks in the '${boardName}' board`}
+  if (totalTasksLength === 0) {
+    return (
+      <BoardTasksEmptyState
+        boardName={boardName}
+        quickCreateSlot={quickCreateRow}
       />
-    </EmptyStateWrapper>
-  ) : (
+    );
+  }
+
+  if (viewMode === "list") {
+    return (
+      <ListBoard
+        tasksByStatus={tasksByStatus}
+        submode={listSubmode}
+        topSlot={quickCreateRow}
+        onTaskClick={handleTaskClick}
+        onSubtaskClick={handleSubtaskClick}
+        onTaskStatusChange={(taskId, newStatus, targetIndex) =>
+          handleTaskStatusChange(taskId, newStatus, targetIndex)
+        }
+        onTaskFieldUpdate={handleTaskFieldUpdate}
+      />
+    );
+  }
+
+  return (
     <KanbanColumns
       tasksByStatus={tasksByStatus}
+      todoTopSlot={quickCreateRow}
       onTaskDrop={handleTaskStatusChange}
       onTaskClick={handleTaskClick}
     />
@@ -349,11 +497,16 @@ function BoardContent({
 interface BoardContentProps {
   totalTasksLength: number;
   tasksByStatus: Record<TaskStatus, Task[]>;
+  viewMode: "kanban" | "list";
+  listSubmode: BoardListSubmode;
   handleTaskStatusChange: (
     taskId: string,
     newStatus: TaskStatus,
     targetIndex?: number,
   ) => void;
   handleTaskClick: (task: Task) => void;
+  handleSubtaskClick: (subtask: Task) => void;
+  handleTaskFieldUpdate: (taskId: string, patch: TaskUpdate) => void;
   boardName: string;
+  quickCreateRow?: ReactNode;
 }

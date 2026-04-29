@@ -97,14 +97,8 @@ function notifyGuestStoreChanged() {
 function parseSidebarOrder(raw: unknown): GuestSidebarOrder | undefined {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return undefined;
   const record = raw as Record<string, unknown>;
-  const folderIds = Array.isArray(record.folderIds)
-    ? record.folderIds.filter((id): id is string => typeof id === "string")
-    : [];
-  const rootBoardIds = Array.isArray(record.rootBoardIds)
-    ? record.rootBoardIds.filter((id): id is string => typeof id === "string")
-    : [];
-  const boardsInFolderRaw = record.boardsInFolder;
   const boardsInFolder: Record<string, string[]> = {};
+  const boardsInFolderRaw = record.boardsInFolder;
   if (boardsInFolderRaw && typeof boardsInFolderRaw === "object") {
     for (const [key, value] of Object.entries(boardsInFolderRaw)) {
       if (Array.isArray(value)) {
@@ -114,7 +108,24 @@ function parseSidebarOrder(raw: unknown): GuestSidebarOrder | undefined {
       }
     }
   }
-  return { folderIds, rootBoardIds, boardsInFolder };
+  if (Array.isArray(record.topLevelIds)) {
+    return {
+      topLevelIds: record.topLevelIds.filter(
+        (id): id is string => typeof id === "string",
+      ),
+      boardsInFolder,
+    };
+  }
+  const folderIds = Array.isArray(record.folderIds)
+    ? record.folderIds.filter((id): id is string => typeof id === "string")
+    : [];
+  const rootBoardIds = Array.isArray(record.rootBoardIds)
+    ? record.rootBoardIds.filter((id): id is string => typeof id === "string")
+    : [];
+  return {
+    topLevelIds: [...folderIds, ...rootBoardIds],
+    boardsInFolder,
+  };
 }
 
 function parseStore(raw: string): GuestStore | null {

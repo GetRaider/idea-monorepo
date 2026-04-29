@@ -1,12 +1,5 @@
-interface ClockCircleIconProps {
-  size?: number;
-  className?: string;
-}
-
-export function ClockCircleIcon({
-  size = 20,
-  className,
-}: ClockCircleIconProps) {
+import type { SvgIconProps } from "./svgIconProps";
+export function ClockCircleIcon({ size = 20, className }: SvgIconProps) {
   return (
     <svg
       width={size}

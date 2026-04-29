@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/styles/utils";
+import { Check } from "lucide-react";
 import type { UiProps } from "@/lib/styles/ui-props";
 
 export function SelectableListTitle({
@@ -69,20 +70,44 @@ export function TaskSelectionSection({
 
 export function TaskCheckbox({
   className,
-  type = "checkbox",
-  ref,
+  checked,
+  onChange,
   ...props
-}: UiProps<"input">) {
+}: Omit<UiProps<"input">, "type"> & { checked?: boolean }) {
   return (
-    <input
-      ref={ref}
-      type={type}
-      className={cn(
-        "h-[18px] w-[18px] cursor-pointer accent-[#7255c1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring",
-        className,
-      )}
-      {...props}
-    />
+    <label
+      className="relative inline-flex cursor-pointer items-center"
+      onClick={(event) => event.stopPropagation()}
+      onMouseDown={(event) => event.stopPropagation()}
+    >
+      <input
+        type="checkbox"
+        className="peer sr-only"
+        checked={checked}
+        onChange={onChange}
+        {...props}
+      />
+      <div
+        className={cn(
+          "relative h-[18px] w-[18px] rounded-[5px] border-2 transition-all duration-200",
+          "border-gray-600 bg-gray-800/50",
+          "peer-hover:border-[#8b73d6] peer-hover:bg-gray-700/50",
+          "peer-checked:border-[#7255c1] peer-checked:bg-[#7255c1]",
+          "peer-checked:shadow-[0_0_12px_rgba(114,85,193,0.4)]",
+          "peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[#7255c1]",
+          "group",
+          className,
+        )}
+      >
+        <Check
+          className={cn(
+            "absolute left-1/2 top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 text-white transition-all duration-200",
+            checked ? "scale-100 opacity-100" : "scale-50 opacity-0",
+          )}
+          strokeWidth={3}
+        />
+      </div>
+    </label>
   );
 }
 

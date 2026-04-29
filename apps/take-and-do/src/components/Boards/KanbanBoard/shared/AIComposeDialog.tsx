@@ -10,7 +10,7 @@ import {
   DialogHeader,
   DialogOverlay,
   DialogTitle,
-} from "@repo/ui/components/Dialog";
+} from "@/components/Dialogs";
 import { StepProgressSegments } from "@/components/StepProgressSegments";
 
 interface AIComposeDialogProps {

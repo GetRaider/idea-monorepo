@@ -11,6 +11,9 @@ import {
 } from "../KanbanBoard.ui";
 import { CreateTaskButton } from "./CreateTaskButton";
 import { WorkspaceSettings } from "./WorkspaceSettings";
+import type { BoardViewMode } from "@/hooks/tasks/useBoardViewMode";
+import type { BoardListSubmode } from "@/hooks/tasks/useBoardListSubmode";
+import type { ListSortState } from "@/helpers/list-sort.helper";
 
 interface ToolbarProps {
   workspaceTitle: string;
@@ -20,6 +23,13 @@ interface ToolbarProps {
   onCreateTaskWithAI?: () => void;
   /** Single-board view: board id for workspace visibility settings (omitted for schedule / multi-board toolbars). */
   boardId?: string;
+  /** When provided, renders a settings popover with the Kanban/List toggle. */
+  viewMode?: BoardViewMode;
+  onViewModeChange?: (next: BoardViewMode) => void;
+  listSubmode?: BoardListSubmode;
+  onListSubmodeChange?: (next: BoardListSubmode) => void;
+  sort?: ListSortState;
+  onSortChange?: (next: ListSortState) => void;
 }
 
 export function Toolbar({
@@ -28,7 +38,15 @@ export function Toolbar({
   onCreateTask,
   onCreateTaskWithAI,
   boardId,
+  viewMode,
+  onViewModeChange,
+  listSubmode,
+  onListSubmodeChange,
+  sort,
+  onSortChange,
 }: ToolbarProps) {
+  const showSettings = !!viewMode && !!onViewModeChange;
+
   return (
     <ToolbarBar>
       <WorkspacePath>
@@ -48,7 +66,17 @@ export function Toolbar({
           onManualCreate={onCreateTask}
           onAICreate={onCreateTaskWithAI}
         />
-        {boardId ? <WorkspaceSettings boardId={boardId} /> : null}
+        {showSettings ? (
+          <WorkspaceSettings
+            boardId={boardId}
+            viewMode={viewMode}
+            onViewModeChange={onViewModeChange}
+            listSubmode={listSubmode}
+            onListSubmodeChange={onListSubmodeChange}
+            sort={sort}
+            onSortChange={onSortChange}
+          />
+        ) : null}
       </Actions>
     </ToolbarBar>
   );

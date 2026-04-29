@@ -282,7 +282,7 @@ export function DropdownContainer({
     <div
       ref={ref}
       className={cn(
-        "absolute left-0 top-full z-[1200] mt-1.5 min-w-[180px] rounded-xl border border-white/10 bg-[#1c1c1e] shadow-[0_8px_24px_rgba(0,0,0,0.5)]",
+        "absolute left-0 top-full z-[1200] mt-1.5 min-w-[180px] rounded-xl border border-white/10 bg-background-primary shadow-[0_8px_24px_rgba(0,0,0,0.5)]",
         isOpen ? "block" : "hidden",
         className,
       )}
@@ -466,7 +466,7 @@ export function NoDescriptionText({
     <span
       ref={ref}
       className={cn(
-        "text-[13px] font-normal not-italic leading-relaxed text-[#666]",
+        "block text-sm font-normal not-italic leading-[1.6] text-text-tertiary",
         className,
       )}
       {...props}

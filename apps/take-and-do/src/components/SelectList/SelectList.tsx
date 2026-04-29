@@ -56,7 +56,6 @@ export function SelectList({
           tasks.map((task) => (
             <TaskLabel key={task.id}>
               <TaskCheckbox
-                type="checkbox"
                 checked={selectedIds.has(task.id)}
                 onChange={() => toggleTask(task.id)}
               />

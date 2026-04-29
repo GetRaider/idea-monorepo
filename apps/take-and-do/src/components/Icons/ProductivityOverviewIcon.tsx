@@ -1,7 +1,8 @@
+import type { SvgIconProps } from "./svgIconProps";
 export function ProductivityOverviewIcon({
   size = 14,
   className,
-}: ProductivityOverviewIconProps) {
+}: SvgIconProps) {
   return (
     <svg
       width={size}
@@ -19,9 +20,4 @@ export function ProductivityOverviewIcon({
       ></path>
     </svg>
   );
-}
-
-interface ProductivityOverviewIconProps {
-  size?: number;
-  className?: string;
 }

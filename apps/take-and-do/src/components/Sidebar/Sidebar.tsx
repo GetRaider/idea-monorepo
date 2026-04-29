@@ -65,7 +65,9 @@ export function Sidebar({ onNavigationChange }: SidebarProps) {
         {buttonsSet.map((button) => (
           <AppTooltip
             key={button.label}
-            content={button.path ? button.label : "Coming Soon"}
+            content={
+              button.path ? button.label : `${button.label} - Coming Soon`
+            }
             side="right"
           >
             <span className="inline-flex">

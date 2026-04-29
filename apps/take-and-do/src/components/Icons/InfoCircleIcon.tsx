@@ -1,10 +1,10 @@
-import type { CSSProperties } from "react";
+import type { SvgIconPropsWithStyle } from "./svgIconProps";
 
 export function InfoCircleIcon({
   size = 16,
   className,
   style,
-}: InfoCircleIconProps) {
+}: SvgIconPropsWithStyle) {
   return (
     <svg
       width={size}
@@ -31,10 +31,4 @@ export function InfoCircleIcon({
       <circle cx="12" cy="8" r="0.9" fill="currentColor" />
     </svg>
   );
-}
-
-interface InfoCircleIconProps {
-  size?: number;
-  className?: string;
-  style?: CSSProperties;
 }

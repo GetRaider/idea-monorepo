@@ -1,9 +1,5 @@
-interface LinkIconProps {
-  size?: number;
-  className?: string;
-}
-
-export function LinkIcon({ size = 16, className }: LinkIconProps) {
+import type { SvgIconProps } from "./svgIconProps";
+export function LinkIcon({ size = 16, className }: SvgIconProps) {
   return (
     <svg
       width={size}

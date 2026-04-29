@@ -12,6 +12,7 @@ import { guestStoreHelper } from "@/stores/guest";
 import { queryKeys } from "@/lib/query-keys";
 import { clientServices } from "@/services";
 import { ScheduleType, tasksHelper } from "@/helpers/task.helper";
+import { TaskStatusGlyph } from "@/components/TaskStatusGlyph";
 import { AiGate } from "@/components/ai-gate";
 import { AIPlanningOptimizationDialog } from "./AIPlanningOptimizationDialog/AIPlanningOptimizationDialog";
 import {
@@ -190,7 +191,7 @@ export function TimelinePlanning({
                   </TaskCellMuted>
                   <StatusContainer>
                     <StatusIcon status={task.status}>
-                      {tasksHelper.status.getIcon(task.status)}
+                      <TaskStatusGlyph status={task.status} size={14} />
                     </StatusIcon>
                     <StatusText status={task.status}>{task.status}</StatusText>
                   </StatusContainer>

@@ -1,4 +1,5 @@
-export function AIIcon({ size = 14, className }: AIIconProps) {
+import type { SvgIconProps } from "./svgIconProps";
+export function AIIcon({ size = 14, className }: SvgIconProps) {
   return (
     <svg
       width={size}
@@ -16,9 +17,4 @@ export function AIIcon({ size = 14, className }: AIIconProps) {
       ></path>
     </svg>
   );
-}
-
-interface AIIconProps {
-  size?: number;
-  className?: string;
 }

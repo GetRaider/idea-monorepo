@@ -1,9 +1,5 @@
-interface SearchIconProps {
-  size?: number;
-  className?: string;
-}
-
-export function SearchIcon({ size = 16, className }: SearchIconProps) {
+import type { SvgIconProps } from "./svgIconProps";
+export function SearchIcon({ size = 16, className }: SvgIconProps) {
   return (
     <svg
       width={size}

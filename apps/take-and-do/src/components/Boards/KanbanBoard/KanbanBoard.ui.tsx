@@ -1,7 +1,5 @@
 "use client";
 
-import type { ReactNode } from "react";
-
 import { cn } from "@/lib/styles/utils";
 import type { UiProps } from "@/lib/styles/ui-props";
 
@@ -230,14 +228,36 @@ export function Footer({ className, ref, ...props }: UiProps<"div">) {
   );
 }
 
-type BoardProps = UiProps<"div"> & { fillHeight?: boolean };
+type BoardProps = UiProps<"div"> & {
+  fillHeight?: boolean;
+  viewMode?: "kanban" | "list";
+};
 
-export function Board({ className, fillHeight, ref, ...props }: BoardProps) {
+export function Board({
+  className,
+  fillHeight,
+  viewMode = "kanban",
+  ref,
+  ...props
+}: BoardProps) {
+  if (viewMode === "list") {
+    return (
+      <div
+        ref={ref}
+        className={cn(
+          "flex min-h-0 flex-1 flex-col gap-4 overflow-hidden p-6",
+          className,
+        )}
+        {...props}
+      />
+    );
+  }
+
   return (
     <div
       ref={ref}
       className={cn(
-        "grid min-h-0 flex-1 grid-cols-3 gap-x-6 gap-y-4 overflow-auto p-6",
+        "grid min-h-0 flex-1 grid-cols-[repeat(3,320px)] gap-x-6 gap-y-4 overflow-auto p-6",
         fillHeight ? "auto-rows-[minmax(0,1fr)]" : "auto-rows-min",
         className,
       )}
@@ -282,7 +302,7 @@ export function MultiBoardColumnsGrid({
     <div
       ref={ref}
       className={cn(
-        "grid grid-cols-3 grid-rows-[min-content] gap-x-6 px-4",
+        "grid grid-cols-[repeat(3,320px)] grid-rows-[min-content] gap-x-6 px-4",
         className,
       )}
       {...props}
@@ -290,22 +310,35 @@ export function MultiBoardColumnsGrid({
   );
 }
 
-type WorkspaceSeparatorProps = UiProps<"button"> & {
-  children?: ReactNode;
-};
+export function MultiBoardScroller({
+  className,
+  ref,
+  ...props
+}: UiProps<"div">) {
+  return (
+    <div
+      ref={ref}
+      className={cn(
+        "w-full overflow-x-auto pb-1 [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-sm [&::-webkit-scrollbar-thumb]:bg-[#2a2a2a] hover:[&::-webkit-scrollbar-thumb]:bg-[#3a3a3a]",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
 
-export function WorkspaceSeparator({
+export function BoardSectionToggle({
   className,
   type = "button",
   ref,
   ...props
-}: WorkspaceSeparatorProps) {
+}: UiProps<"button">) {
   return (
     <button
       ref={ref}
       type={type}
       className={cn(
-        "col-span-full box-border flex max-h-11 min-h-11 cursor-pointer appearance-none items-center justify-start gap-2 rounded-lg border-0 bg-white/5 px-4 py-3 text-xs font-semibold text-white",
+        "box-border flex max-h-11 min-h-11 w-full cursor-pointer appearance-none items-center justify-start gap-2 rounded-lg border-0 bg-white/5 px-4 py-3 text-xs font-semibold text-white transition-colors duration-150 hover:bg-white/[0.07]",
         className,
       )}
       {...props}

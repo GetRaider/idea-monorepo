@@ -1,9 +1,5 @@
-interface RootPageIconProps {
-  size?: number;
-  className?: string;
-}
-
-export function ListsIcon({ size = 20, className }: RootPageIconProps) {
+import type { SvgIconProps } from "./svgIconProps";
+export function ListsIcon({ size = 20, className }: SvgIconProps) {
   return (
     <svg
       width={size}

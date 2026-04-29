@@ -1,12 +1,5 @@
-interface CircleCheckIconProps {
-  size?: number;
-  className?: string;
-}
-
-export function CircleCheckIcon({
-  size = 24,
-  className,
-}: CircleCheckIconProps) {
+import type { SvgIconProps } from "./svgIconProps";
+export function CircleCheckIcon({ size = 24, className }: SvgIconProps) {
   return (
     <svg
       width={size}

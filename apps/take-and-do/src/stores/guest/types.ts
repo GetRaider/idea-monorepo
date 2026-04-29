@@ -1,10 +1,9 @@
 import type { Task } from "@/components/Boards/KanbanBoard/types";
 import type { Folder, TaskBoard } from "@/types/workspace";
 
-/** Matches `OrderState` in `useTasksSidebarOrder` — persisted for guest users. */
+/** Matches persisted order in `useTasksSidebarOrder` — guest users. */
 export type GuestSidebarOrder = {
-  folderIds: string[];
-  rootBoardIds: string[];
+  topLevelIds: string[];
   boardsInFolder: Record<string, string[]>;
 };
 

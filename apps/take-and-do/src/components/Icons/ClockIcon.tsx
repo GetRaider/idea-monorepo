@@ -1,9 +1,5 @@
-interface ClockIconProps {
-  size?: number;
-  className?: string;
-}
-
-export function ClockIcon({ size = 24, className }: ClockIconProps) {
+import type { SvgIconProps } from "./svgIconProps";
+export function ClockIcon({ size = 24, className }: SvgIconProps) {
   return (
     <svg
       width={size}

@@ -1,4 +1,6 @@
-export function GuestAvatarIcon({ size = 160 }: { size?: number }) {
+import type { SvgIconProps } from "./svgIconProps";
+
+export function GuestAvatarIcon({ size = 160 }: Pick<SvgIconProps, "size">) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"

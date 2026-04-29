@@ -1,9 +1,5 @@
-interface ListBoardIconProps {
-  size?: number;
-  className?: string;
-}
-
-export function ListBoardIcon({ size = 14, className }: ListBoardIconProps) {
+import type { SvgIconProps } from "./svgIconProps";
+export function ListBoardIcon({ size = 14, className }: SvgIconProps) {
   return (
     <svg
       width={size}

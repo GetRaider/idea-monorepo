@@ -127,7 +127,7 @@ export function LabelDropdown({
   return (
     <div
       className={joinClassNames(
-        "absolute left-[var(--label-menu-left,0px)] right-auto z-[1300] box-border max-h-60 w-[200px] max-w-[min(200px,calc(100vw-48px))] overflow-y-auto rounded-xl border border-white/10 bg-[#1c1c1e] shadow-[0_8px_24px_rgba(0,0,0,0.5)]",
+        "absolute left-[var(--label-menu-left,0px)] right-auto z-[1300] box-border max-h-60 w-[200px] max-w-[min(200px,calc(100vw-48px))] overflow-y-auto rounded-xl border border-white/10 bg-background-primary shadow-[0_8px_24px_rgba(0,0,0,0.5)]",
         position,
         isOpen ? "block" : "hidden",
         className,

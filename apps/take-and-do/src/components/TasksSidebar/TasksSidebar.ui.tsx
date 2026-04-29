@@ -172,9 +172,9 @@ export function WorkspaceList({
     <div
       ref={ref}
       className={cn(
-        "flex flex-1 flex-col gap-2 rounded-lg border border-dashed transition-[border-color,background] duration-150",
+        "flex flex-1 flex-col gap-1 rounded-lg border border-dashed transition-[border-color,background-color,box-shadow] duration-150",
         isDragOver
-          ? "border-[#7255c1] bg-[rgba(114,85,193,0.12)]"
+          ? "border-[#7255c1] bg-[rgba(114,85,193,0.14)] shadow-[inset_0_0_0_2px_var(--focus-ring)]"
           : "border-transparent bg-transparent",
         className,
       )}
@@ -249,13 +249,20 @@ export function WorkspaceRowActions({
 type BoardRowProps = UiProps<"div"> & {
   isActive?: boolean;
   isSelected?: boolean;
+  /** In-folder reorder: full row tint (column-like). */
+  isDropSlotActive?: boolean;
+  /** Root list reorder: insertion line only (avoids “drop into board” misread). */
+  showDropInsertLine?: boolean;
 };
 
 export function BoardRow({
   className,
   isActive,
   isSelected,
+  isDropSlotActive,
+  showDropInsertLine,
   ref,
+  children,
   ...props
 }: BoardRowProps) {
   const highlighted = isActive || isSelected;
@@ -263,16 +270,26 @@ export function BoardRow({
     <div
       ref={ref}
       className={cn(
-        "group/board-row relative flex w-full items-center rounded-lg transition-colors duration-150 hover:bg-[#2a2a2a]",
+        "group/board-row relative flex w-full min-h-[36px] items-center rounded-xl transition-[background-color,box-shadow] duration-150 hover:bg-[#2a2a2a]",
         highlighted ? "bg-[#2a2a2a]" : "bg-transparent",
         highlighted && "[&_[data-workspace-row-actions]]:opacity-100",
         highlighted && "[&_button]:text-white",
         "hover:[&_button]:text-white",
         "[&[data-selected]_button]:cursor-default",
+        isDropSlotActive &&
+          "z-[1] bg-[rgba(114,85,193,0.16)] shadow-[inset_0_0_0_2px_var(--focus-ring)]",
         className,
       )}
       {...props}
-    />
+    >
+      {showDropInsertLine ? (
+        <span
+          className="pointer-events-none absolute inset-x-2 top-0 z-[1] h-0.5 rounded-full bg-focus-ring shadow-[0_0_0_2px_rgba(114,85,193,0.28)]"
+          aria-hidden
+        />
+      ) : null}
+      {children}
+    </div>
   );
 }
 
@@ -449,11 +466,21 @@ export function FolderChevron({
   );
 }
 
-export function SubItems({ className, ref, ...props }: UiProps<"div">) {
+export function SubItems({
+  className,
+  isDropActive,
+  ref,
+  ...props
+}: UiProps<"div"> & { isDropActive?: boolean }) {
   return (
     <div
       ref={ref}
-      className={cn("mt-0.5 flex flex-col gap-0 pl-2.5", className)}
+      className={cn(
+        "mt-0.5 flex min-h-0 flex-col gap-1 rounded-r-xl py-0.5 pl-2 transition-[background-color,box-shadow] duration-150",
+        isDropActive &&
+          "bg-[rgba(114,85,193,0.14)] shadow-[inset_0_0_0_2px_var(--focus-ring)]",
+        className,
+      )}
       {...props}
     />
   );
@@ -530,26 +557,11 @@ export function FolderDropTarget({
     <div
       ref={ref}
       className={cn(
-        "rounded-lg transition-[border-color,background] duration-150 hover:[&_[data-workspace-toggle]]:bg-[#2a2a2a] hover:[&_[data-workspace-toggle]]:text-white",
-        isDragOver
-          ? "border border-[#7255c1] bg-[rgba(114,85,193,0.15)]"
-          : "border-0 bg-transparent",
+        "flex min-h-0 w-full min-w-0 flex-col gap-0 rounded-xl transition-[background-color,box-shadow] duration-150",
+        isDragOver &&
+          "bg-[rgba(114,85,193,0.16)] shadow-[inset_0_0_0_2px_var(--focus-ring)]",
         className,
       )}
-      {...props}
-    />
-  );
-}
-
-export function RootBoardsDropZone({
-  className,
-  ref,
-  ...props
-}: UiProps<"div">) {
-  return (
-    <div
-      ref={ref}
-      className={cn("flex min-h-0 flex-col gap-2", className)}
       {...props}
     />
   );

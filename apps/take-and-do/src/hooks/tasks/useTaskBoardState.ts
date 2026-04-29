@@ -1,5 +1,9 @@
 import { useState, useCallback } from "react";
-import { Task, TaskStatus } from "@/components/Boards/KanbanBoard/types";
+import {
+  Task,
+  TaskStatus,
+  TaskUpdate,
+} from "@/components/Boards/KanbanBoard/types";
 
 interface UseTaskBoardStateReturn {
   selectedTask: Task | null;
@@ -84,6 +88,125 @@ export function updateTaskInColumns(
   }
 
   return newTasks;
+}
+
+/**
+ * Apply a non-structural patch (status, priority, schedule, etc.) optimistically
+ * to a task in the local tree. Returns the input untouched if the task can't be
+ * found. Re-parent patches must use {@link applyOptimisticReparent} instead.
+ */
+export function applyOptimisticPatch(
+  tasks: Record<TaskStatus, Task[]>,
+  taskId: string,
+  patch: Omit<TaskUpdate, "parentTaskId">,
+): Record<TaskStatus, Task[]> {
+  const located = locateTask(tasks, taskId);
+  if (!located) return tasks;
+  const merged: Task = {
+    ...located.task,
+    ...(patch.summary !== undefined && { summary: patch.summary }),
+    ...(patch.description !== undefined && { description: patch.description }),
+    ...(patch.status !== undefined && { status: patch.status }),
+    ...(patch.priority !== undefined && { priority: patch.priority }),
+    ...(patch.labels !== undefined && { labels: patch.labels }),
+    ...(patch.dueDate !== undefined && {
+      dueDate: patch.dueDate ?? undefined,
+    }),
+    ...(patch.estimation !== undefined && {
+      estimation: patch.estimation ?? undefined,
+    }),
+    ...(patch.scheduleDate !== undefined && {
+      scheduleDate: patch.scheduleDate ?? undefined,
+    }),
+  };
+  return updateTaskInColumns(tasks, merged);
+}
+
+/**
+ * Apply a re-parent optimistically to the local task tree. Locates the task
+ * (top-level or subtask), removes it from its current spot, applies the patch,
+ * and inserts it into the new spot:
+ *  - `parentTaskId === null` → top-level of its (possibly new) status.
+ *  - `parentTaskId === someId` → appended to that target's `subtasks`.
+ *
+ * Returns the original tree unchanged if the source task can't be found or the
+ * target parent isn't visible. Callers should refetch on API failure to make
+ * sure the local tree reconciles with the server.
+ */
+export function applyOptimisticReparent(
+  tasks: Record<TaskStatus, Task[]>,
+  taskId: string,
+  patch: TaskUpdate,
+): Record<TaskStatus, Task[]> {
+  const located = locateTask(tasks, taskId);
+  if (!located) return tasks;
+
+  const { task: source } = located;
+  const updatedTask: Task = {
+    ...source,
+    ...(patch.summary !== undefined && { summary: patch.summary }),
+    ...(patch.description !== undefined && { description: patch.description }),
+    ...(patch.status !== undefined && { status: patch.status }),
+    ...(patch.priority !== undefined && { priority: patch.priority }),
+    ...(patch.labels !== undefined && { labels: patch.labels }),
+    ...(patch.dueDate !== undefined && {
+      dueDate: patch.dueDate ?? undefined,
+    }),
+    ...(patch.estimation !== undefined && {
+      estimation: patch.estimation ?? undefined,
+    }),
+    ...(patch.scheduleDate !== undefined && {
+      scheduleDate: patch.scheduleDate ?? undefined,
+    }),
+  };
+
+  const stripped = removeTaskFromColumns(tasks, taskId);
+  if (patch.parentTaskId === null) {
+    return {
+      ...stripped,
+      [updatedTask.status]: [...stripped[updatedTask.status], updatedTask],
+    };
+  }
+  const targetParentId = patch.parentTaskId;
+  const next: Record<TaskStatus, Task[]> = {
+    [TaskStatus.TODO]: stripped[TaskStatus.TODO],
+    [TaskStatus.IN_PROGRESS]: stripped[TaskStatus.IN_PROGRESS],
+    [TaskStatus.DONE]: stripped[TaskStatus.DONE],
+  };
+  let attached = false;
+  for (const status of Object.values(TaskStatus)) {
+    next[status] = next[status].map((parent) => {
+      if (parent.id !== targetParentId) return parent;
+      attached = true;
+      return {
+        ...parent,
+        subtasks: [...(parent.subtasks ?? []), updatedTask],
+      };
+    });
+  }
+  // Target parent not visible — fall back to returning the original tree so the
+  // refetch (kicked off by the caller) is the source of truth.
+  return attached ? next : tasks;
+}
+
+interface LocatedTask {
+  task: Task;
+  parentId: string | null;
+  status: TaskStatus;
+}
+
+function locateTask(
+  tasks: Record<TaskStatus, Task[]>,
+  taskId: string,
+): LocatedTask | null {
+  for (const status of Object.values(TaskStatus)) {
+    for (const t of tasks[status]) {
+      if (t.id === taskId) return { task: t, parentId: null, status };
+      const sub = t.subtasks?.find((s) => s.id === taskId);
+      if (sub) return { task: sub, parentId: t.id, status };
+    }
+  }
+  return null;
 }
 
 export function removeTaskFromColumns(

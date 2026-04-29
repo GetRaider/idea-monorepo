@@ -1,9 +1,5 @@
-interface PlusIconProps {
-  size?: number;
-  className?: string;
-}
-
-export function PlusIcon({ size = 16, className }: PlusIconProps) {
+import type { SvgIconProps } from "./svgIconProps";
+export function PlusIcon({ size = 16, className }: SvgIconProps) {
   return (
     <svg
       width={size}

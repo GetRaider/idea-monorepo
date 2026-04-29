@@ -227,7 +227,7 @@ export function Dropdown<T extends string = string>({
           <ul
             ref={menuRef}
             data-dropdown-portal
-            className="fixed z-[1100] m-0 flex max-h-[60vh] w-max list-none flex-col gap-0.5 overflow-y-auto rounded-md border border-input-border bg-input-bg p-1 shadow-dropdown [-webkit-overflow-scrolling:touch]"
+            className="fixed z-[1100] m-0 flex max-h-[60vh] w-max list-none flex-col gap-0.5 overflow-y-auto rounded-md border border-input-border bg-background-primary p-1 shadow-dropdown [-webkit-overflow-scrolling:touch]"
             style={{
               ...(menuRect.vertical === "below"
                 ? { top: menuRect.top }

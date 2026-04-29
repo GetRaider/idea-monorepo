@@ -1,12 +1,5 @@
-interface DotsVerticalIconProps {
-  size?: number;
-  className?: string;
-}
-
-export function DotsVerticalIcon({
-  size = 16,
-  className,
-}: DotsVerticalIconProps) {
+import type { SvgIconProps } from "./svgIconProps";
+export function DotsVerticalIcon({ size = 16, className }: SvgIconProps) {
   return (
     <svg
       width={size}

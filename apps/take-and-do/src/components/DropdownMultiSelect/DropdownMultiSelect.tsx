@@ -175,7 +175,6 @@ export function DropdownMultiSelect<T extends string = string>({
                   return (
                     <TaskLabel key={option.value}>
                       <TaskCheckbox
-                        type="checkbox"
                         checked={checked}
                         onChange={() => toggle(option.value)}
                       />

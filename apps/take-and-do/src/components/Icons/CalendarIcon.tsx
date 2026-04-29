@@ -1,14 +1,9 @@
-interface CalendarIconProps {
-  size?: number;
-  className?: string;
-  showDot?: boolean;
-}
-
+import type { SvgIconWithDotProps } from "./svgIconProps";
 export function CalendarIcon({
   size = 14,
   className,
   showDot = false,
-}: CalendarIconProps) {
+}: SvgIconWithDotProps) {
   return (
     <svg
       width={size}

@@ -1,10 +1,5 @@
-interface OverviewIconProps {
-  size?: number;
-  className?: string;
-  showDot?: boolean;
-}
-
-export function OverviewIcon({ size = 15, className }: OverviewIconProps) {
+import type { SvgIconProps } from "./svgIconProps";
+export function OverviewIcon({ size = 15, className }: SvgIconProps) {
   return (
     <svg
       width={size}

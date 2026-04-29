@@ -5,7 +5,7 @@ import { useState } from "react";
 import { GhostLink, OutlinedButton, PrimaryLink } from "@/components/buttons";
 import { ContactCvDialog } from "@/components/ContactCvDialog";
 import { SocialLinksRow } from "@/components/SocialLinksRow";
-import { portfolioCta } from "@/constants/cta";
+import { personalWebsiteCta } from "@/constants/cta";
 
 export function IntroPrimaryActions() {
   const [contactOpen, setContactOpen] = useState(false);
@@ -20,10 +20,10 @@ export function IntroPrimaryActions() {
       </div>
 
       <div className="mt-10 flex flex-wrap items-center justify-center gap-4 lg:justify-start">
-        <PrimaryLink href="/home">{portfolioCta.explore}</PrimaryLink>
-        <GhostLink href="/projects">{portfolioCta.seeProjects}</GhostLink>
+        <PrimaryLink href="/home">{personalWebsiteCta.explore}</PrimaryLink>
+        <GhostLink href="/projects">{personalWebsiteCta.seeProjects}</GhostLink>
         <OutlinedButton type="button" onClick={() => setContactOpen(true)}>
-          {portfolioCta.requestCv}
+          {personalWebsiteCta.requestCv}
         </OutlinedButton>
       </div>
 

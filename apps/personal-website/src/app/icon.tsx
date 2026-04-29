@@ -13,7 +13,7 @@ export const size = {
 export const contentType = "image/png";
 
 export default async function Icon() {
-  const filePath = join(process.cwd(), "src/images/portfolio-logo.png");
+  const filePath = join(process.cwd(), "src/images/personal-website-logo.png");
   const buffer = await readFile(filePath);
   const dataUrl = `data:image/png;base64,${buffer.toString("base64")}`;
 

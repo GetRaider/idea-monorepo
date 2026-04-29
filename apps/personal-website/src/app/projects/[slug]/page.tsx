@@ -6,7 +6,7 @@ import {
   primaryButtonClassCompact,
 } from "@/components/buttons";
 import { ProjectBrandMark } from "@/components/ProjectBrandMark";
-import { portfolioCta } from "@/constants/cta";
+import { personalWebsiteCta } from "@/constants/cta";
 import { ResourcesSection } from "@/components/ResourcesSection";
 import { SectionRichText } from "@/components/SectionRichText";
 import {
@@ -89,7 +89,7 @@ export default async function ProjectDetailPage({ params }: PageProps) {
                     rel="noreferrer"
                     className={primaryButtonClassCompact}
                   >
-                    {portfolioCta.openProduction}
+                    {personalWebsiteCta.openProduction}
                   </a>
                 ) : (
                   <span
@@ -101,7 +101,7 @@ export default async function ProjectDetailPage({ params }: PageProps) {
                       disabled
                       className="pointer-events-none rounded-full border border-white/10 bg-zinc-900/80 px-6 py-2.5 text-sm font-semibold tracking-tight text-zinc-500"
                     >
-                      {portfolioCta.openProduction}
+                      {personalWebsiteCta.openProduction}
                     </button>
                   </span>
                 )}
@@ -111,7 +111,7 @@ export default async function ProjectDetailPage({ params }: PageProps) {
                   rel="noreferrer"
                   className={ghostButtonClassCompact}
                 >
-                  {portfolioCta.repository}
+                  {personalWebsiteCta.repository}
                 </a>
               </div>
               <div

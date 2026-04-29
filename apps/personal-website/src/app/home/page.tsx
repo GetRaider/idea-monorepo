@@ -7,7 +7,7 @@ import { ContactCvDialog } from "@/components/ContactCvDialog";
 import { PillarIcon } from "@/components/PillarIcons";
 import { GhostLink, PrimaryButton } from "@/components/buttons";
 import { ResourcesSection } from "@/components/ResourcesSection";
-import { portfolioCta } from "@/constants/cta";
+import { personalWebsiteCta } from "@/constants/cta";
 import { profile } from "@/content/profile";
 
 export default function HomePage() {
@@ -16,7 +16,7 @@ export default function HomePage() {
   return (
     <>
       <main className="mx-auto max-w-6xl px-6 pb-24 pt-12">
-        <div className="mx-auto max-w-3xl text-center">
+        <div className="mx-auto max-w-4xl text-center">
           <p className="mb-5 inline-flex rounded-full border border-violet-500/30 bg-violet-950/25 px-3 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.28em] text-violet-200/90">
             {profile.badgeLabel}
           </p>
@@ -32,9 +32,11 @@ export default function HomePage() {
 
           <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
             <PrimaryButton onClick={() => setContactOpen(true)}>
-              {portfolioCta.requestCv}
+              {personalWebsiteCta.requestCv}
             </PrimaryButton>
-            <GhostLink href="/projects">{portfolioCta.seeProjects}</GhostLink>
+            <GhostLink href="/projects">
+              {personalWebsiteCta.seeProjects}
+            </GhostLink>
           </div>
         </div>
 

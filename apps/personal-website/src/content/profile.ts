@@ -18,7 +18,7 @@ export const profile = {
     {
       title: "Full-stack Depth",
       icon: "stack" as const,
-      body: "Comfortable across Node.js, React, Next.js, Nest.js, PostgreSQL, MongoDB, and pragmatic cloud deployment.",
+      body: "Comfortable across TypeScript, JavaScript, Node.js, Nest.js, PostgreSQL, MongoDB, React, Next.js, and pragmatic cloud deployment.",
     },
     {
       title: "Quality Bar",
@@ -28,7 +28,7 @@ export const profile = {
     {
       title: "Collaboration",
       icon: "collaboration" as const,
-      body: "Clear RFCs, readable PRs, and pairing when things get fuzzy, high-stakes, or worth talking through together",
+      body: "Clear communication, readable PRs, and focused pairing to unblock ambiguity and keep teams moving.",
     },
   ],
   email: getPortfolioContactEmail(),

@@ -21,10 +21,12 @@ export const projects: PortfolioProject[] = [
     title: "Take & Do",
     tagline: "AI Productivity Manager",
     summary:
-      "Take & Do is a modern AI productivity manager: task workspaces with Kanban and list views, calendar events, and documents that build shared context so everyone stays aligned. AI-assisted flows reduce friction-from capturing work to finishing it-while the same surface holds code, delivery, and everyday life so nothing fragments across a dozen tools.",
-    why: `Most people do not fail because they lack an app-they fail because their commitments live in disconnected surfaces. A release checklist sits in Jira, the dentist sits in Apple Calendar, the talk outline lives in Notion, and the weekend errands live in a phone reminder. Popular “GTD” and “inbox zero” products optimize a single list metaphor, but they rarely preserve the *relationship* between a task, the calendar block that protects it, and the document that proves the spec.
+      "Take & Do is a modern AI productivity manager: task workspaces with Kanban and list views, calendar events, and documents that build shared context so everyone stays aligned. AI-assisted flows reduce friction-from capturing work to finishing it - while the same surface holds code, delivery, and everyday life so nothing fragments across a dozen tools.",
+    why: `Most people don't fail because they lack an app - they fail because context doesn't travel with their work. A task lives in Jira, the spec in Notion, the meeting in Google Calendar - but the reason, decision, and state tying them together are missing.
 
-That fracture is painful in software development *and* in real life: you context-switch between “shipping mode” and “life admin” without a single trustworthy graph of what is blocked, what is time-bound, and what is merely aspirational. Take & Do exists to tighten that loop-one workspace where boards, timelines, and notes can evolve together instead of constantly being re-synced in your head.`,
+Modern tools optimize for isolated surfaces (lists, docs, calendars) - not for the relationship between them. As a result, people constantly reconstruct context: why this task exists, what it depends on, and when it actually matters.
+
+That fracture shows up everywhere - from software delivery to everyday life. Work becomes a series of disconnected snapshots instead of a continuous flow. Take & Do exists to close that gap: a system where tasks, time, and knowledge stay linked, and context evolves with the work instead of being rebuilt in your head.`,
     how: `**Stack -** Next.js 15 (App Router) with Turbopack in development, React 19, strict TypeScript, and a hybrid styling model: styled-components for feature UI, Radix Themes / primitives for accessible controls, and Tailwind where utility-first wins (shared dialog chrome from \`@repo/ui\`).
 
 **Data & auth -** Drizzle ORM against PostgreSQL for durable workspace, board, task, and schedule data; Better Auth with email/password plus optional Google, anonymous “guest” sessions where appropriate, and server-enforced access rules so workspaces stay isolated.
@@ -131,7 +133,7 @@ AI fills in what static dictionaries miss: natural examples, short explanations,
     repoUrl: "https://github.com/GetRaider/idea-monorepo",
   },
   {
-    slug: "portfolio",
+    slug: "personal-website",
     title: "Personal Website",
     tagline: "Personal landing page",
     summary:
@@ -145,7 +147,7 @@ AI fills in what static dictionaries miss: natural examples, short explanations,
     prodUrl: null,
     stage: "Public Access",
     repoUrl:
-      "https://github.com/GetRaider/idea-monorepo/tree/main/apps/portfolio",
+      "https://github.com/GetRaider/idea-monorepo/tree/main/apps/personal-website",
   },
 ];
 

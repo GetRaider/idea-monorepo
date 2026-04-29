@@ -16,7 +16,7 @@
     "NEXT_PUBLIC_GOOGLE_CLIENT_ID",
     "NEXT_PUBLIC_MIXPANEL_TOKEN",
     "NEXT_PUBLIC_WHITELIST_CONTACT_EMAIL",
-    "NEXT_PUBLIC_PORTFOLIO_CONTACT_EMAIL",
+    "NEXT_PUBLIC_PERSONAL_WEBSITE_CONTACT_EMAIL",
     "NODE_ENV",
     "VERCEL",
     "VERCEL_ENV",
@@ -58,8 +58,8 @@
       "cache": false,
       "persistent": true
     },
-    "dev:portfolio": {
-      "inputs": ["^dev:portfolio"],
+    "dev:personal-website": {
+      "inputs": ["^dev:personal-website"],
       "env": ["NODE_ENV=development"],
       "cache": false,
       "persistent": true

@@ -13,9 +13,9 @@ export default function IntroPage() {
           {profile.name}
         </h1>
         <p className="mt-5 text-lg leading-relaxed text-zinc-400 sm:text-xl">
-          Portfolio website - product engineering, full-stack delivery, and
-          selected work.
+          Product engineering, full-stack, and featured projects.
         </p>
+   
 
         <IntroPrimaryActions />
       </div>

@@ -52,7 +52,7 @@ Format:
   - `GEN` — general / repo-wide
   - `TAD` — take&do
   - `DVN` — devinity
-  - `PRT` — portfolio
+  - `PRT` — personal website
 - After `<SCOPE>-`, use a short slug: a descriptive name, a version (e.g. `v1`, `1.2.0`), or both (e.g. `1.2.0-changelog`). The segment starts with a letter or digit; the rest may use letters, digits, hyphens, and dots.
 
 **Other rules**
@@ -98,7 +98,7 @@ All production builds go through **Turborepo** from the repository root (depende
 pnpm run build
 
 # Build a single app (runs that app’s `build` plus upstream `^build` deps)
-pnpm run build:portfolio
+pnpm run build:personal-website
 pnpm run build:take-and-do
 pnpm run build:devinity-web
 pnpm run build:devinity-api
@@ -124,8 +124,8 @@ pnpm run dev:devinity
 # Start only Take&Do (+ required packages)
 pnpm run dev:take-and-do
 
-# Start only Portfolio website (+ required packages)
-pnpm run dev:portfolio
+# Start only Personal Website (+ required packages)
+pnpm run dev:personal-website
 
 # Run in production mode
 pnpm run prod

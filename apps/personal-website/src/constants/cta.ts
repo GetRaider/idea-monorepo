@@ -1,5 +1,5 @@
-/** Single source for repeated CTA copy across the portfolio app. */
-export const portfolioCta = {
+/** Single source for repeated CTA copy across the personal-website app. */
+export const personalWebsiteCta = {
   seeProjects: "See Projects",
   requestCv: "Request CV",
   explore: "Explore",

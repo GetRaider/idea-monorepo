@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import portfolioLogo from "@/images/portfolio-logo.png";
+import personalWebsiteLogo from "@/images/personal-website-logo.png";
 
 const linkClass =
   "text-sm text-zinc-400 transition-colors hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-cyan-400/80";
@@ -21,9 +21,9 @@ export function SiteHeader() {
           aria-label="Intro"
         >
           <img
-            src={portfolioLogo.src}
-            width={portfolioLogo.width}
-            height={portfolioLogo.height}
+            src={personalWebsiteLogo.src}
+            width={personalWebsiteLogo.width}
+            height={personalWebsiteLogo.height}
             alt=""
             className="h-9 w-9 rounded-[0.5rem] object-contain"
             decoding="async"

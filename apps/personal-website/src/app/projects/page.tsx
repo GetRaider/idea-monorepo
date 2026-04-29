@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { ProjectBrandMark } from "@/components/ProjectBrandMark";
 import { ResourcesSection } from "@/components/ResourcesSection";
-import { portfolioCta } from "@/constants/cta";
+import { personalWebsiteCta } from "@/constants/cta";
 import { projects } from "@/content/projects";
 import {
   getProjectBrandImage,
@@ -64,7 +64,7 @@ export default function ProjectsPage() {
                     {project.tagline}
                   </p>
                   <p className="mt-4 text-sm font-semibold tracking-tight text-violet-300/90">
-                    {portfolioCta.viewCase} →
+                    {personalWebsiteCta.viewCase} →
                   </p>
                 </div>
               </Link>

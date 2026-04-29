@@ -108,6 +108,8 @@ The pain intensifies when work spans multiple teams and vendors-you need a livin
 AI fills in what static dictionaries miss: natural examples, short explanations, and context so a word sticks beyond a single translation line. The goal is a calm, repeatable habit - open a deck, snap through cards, and leave with clearer recall than another abandoned word list.`,
     how: `**Client -** A focused mobile-first experience around decks and sessions; flash cards are the primary surface, with room to add spaced repetition and alternate drills without rewriting the core model.
 
+**Stack -** React Native for the mobile client (mobile-first), with a Next.js web app planned on the same core model. A lightweight API backed by MongoDB via Mongoose keeps deck/card schemas flexible as the learning model evolves.
+
 **AI -** Prompted generation of examples and explanations per word, with guardrails so output stays concise and appropriate for study. The pipeline is built so providers can evolve as models and pricing change.
 
 **Translations -** DeepL is used for reliable, high-quality translation between your working languages so you spend time learning, not copy-pasting into separate tools.

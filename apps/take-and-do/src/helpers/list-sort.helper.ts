@@ -1,5 +1,5 @@
-import { Task, TaskPriority, TaskStatus } from "../KanbanBoard/types";
 import { tasksHelper } from "@/helpers/task.helper";
+import { TaskPriority, TaskStatus, type Task } from "@/types/task";
 
 export type ListSortField = "title" | "schedule" | "priority";
 export type ListSortDirection = "asc" | "desc";
@@ -48,8 +48,16 @@ export function sortTasksForList(tasks: Task[], state: ListSortState): Task[] {
   return [...tasks].sort((a, b) => direction * compare(a, b));
 }
 
-export function countDoneSubtasks(task: Task): number {
-  if (!task.subtasks?.length) return 0;
-  return task.subtasks.filter((subtask) => subtask.status === TaskStatus.DONE)
-    .length;
+export function sortTaskColumnsForList(
+  tasksByStatus: Record<TaskStatus, Task[]>,
+  sort: ListSortState,
+): Record<TaskStatus, Task[]> {
+  return {
+    [TaskStatus.TODO]: sortTasksForList(tasksByStatus[TaskStatus.TODO], sort),
+    [TaskStatus.IN_PROGRESS]: sortTasksForList(
+      tasksByStatus[TaskStatus.IN_PROGRESS],
+      sort,
+    ),
+    [TaskStatus.DONE]: sortTasksForList(tasksByStatus[TaskStatus.DONE], sort),
+  };
 }

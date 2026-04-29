@@ -1,15 +1,27 @@
-import type { Collision, CollisionDetection } from "@dnd-kit/core";
+import type {
+  Collision,
+  CollisionDetection,
+  UniqueIdentifier,
+} from "@dnd-kit/core";
 import { pointerWithin, rectIntersection } from "@dnd-kit/core";
 
 import type { ListDroppableData, ReorderDroppableData } from "./list";
+
+function listDroppableDataAt(
+  args: Parameters<CollisionDetection>[0],
+  id: UniqueIdentifier,
+): ListDroppableData | undefined {
+  return args.droppableContainers.find((d) => d.id === id)?.data.current as
+    | ListDroppableData
+    | undefined;
+}
 
 function getReorderData(
   args: Parameters<CollisionDetection>[0],
   hit: Collision,
 ): ReorderDroppableData | undefined {
-  return args.droppableContainers.find((d) => d.id === hit.id)?.data.current as
-    | ReorderDroppableData
-    | undefined;
+  const data = listDroppableDataAt(args, hit.id);
+  return data?.type === "reorder" ? data : undefined;
 }
 
 /** Squared distance from point to axis-aligned rect (0 if the point is inside). */
@@ -81,11 +93,9 @@ export const listBoardCollisionDetection: CollisionDetection = (args) => {
   if (pointerHits.length === 0) {
     return rectIntersection(args);
   }
-  const reorderHits = pointerHits.filter((c) => {
-    const data = args.droppableContainers.find((d) => d.id === c.id)?.data
-      .current as ListDroppableData | undefined;
-    return data?.type === "reorder";
-  });
+  const reorderHits = pointerHits.filter(
+    (c) => listDroppableDataAt(args, c.id)?.type === "reorder",
+  );
   if (reorderHits.length === 0) {
     return pointerHits;
   }

@@ -2,6 +2,10 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+/**
+ * List layout preference: three status sections vs. merged “Tasks + Done”.
+ * Section structure and drop mapping live in `@/helpers/list-board.helper`.
+ */
 export type BoardListSubmode = "grouped" | "single";
 
 const STORAGE_KEY = "take-and-do:board-list-submode:v1";

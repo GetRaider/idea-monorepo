@@ -38,16 +38,18 @@ import {
   removeTaskFromColumns,
   updateTaskInColumns,
 } from "@/hooks/tasks/useTaskBoardState";
-import {
-  playCompletionChime,
-  withSmoothLayout,
-} from "@/lib/effects/completion";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { findTaskStatusInColumns } from "@/helpers/task-board-lookup.helper";
+import { sortTaskColumnsForList } from "@/helpers/list-sort.helper";
+import {
+  isCompletingTaskTransition,
+  runAsyncWithOptionalCompletionLayout,
+  runSyncWithOptionalCompletionLayout,
+} from "@/helpers/task-completion-ui.helper";
 import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
 import { BoardTasksEmptyState } from "../shared/BoardTasksEmptyState";
 import { AIComposeDialog } from "./shared/AIComposeDialog";
 import { ListBoard } from "../ListBoard";
-import { sortTasksForList } from "../ListBoard/listSort";
 import {
   QuickCreateTaskRow,
   type QuickCreateTaskInput,
@@ -195,11 +197,12 @@ export function SingleKanbanBoard({
 
   const handleTaskStatusChange = useCallback(
     async (taskId: string, newStatus: TaskStatus, targetIndex?: number) => {
-      const previousStatus = findStatusOfTask(tasksByStatus, taskId);
-      const isCompleting =
-        newStatus === TaskStatus.DONE && previousStatus !== TaskStatus.DONE;
-      if (isCompleting) playCompletionChime();
-      const run = () =>
+      const previousStatus = findTaskStatusInColumns(tasksByStatus, taskId);
+      const isCompleting = isCompletingTaskTransition(
+        previousStatus,
+        newStatus,
+      );
+      await runAsyncWithOptionalCompletionLayout(isCompleting, () =>
         handleSingleBoardTaskStatusChange(
           tasksByStatus,
           setTasksByStatus,
@@ -207,16 +210,8 @@ export function SingleKanbanBoard({
           newStatus,
           targetIndex,
           persistTaskStatus,
-        );
-      if (isCompleting) {
-        // The View Transitions API cleanly cross-fades the card between
-        // columns; falls back to a normal call when unsupported.
-        withSmoothLayout(() => {
-          void run();
-        });
-      } else {
-        await run();
-      }
+        ),
+      );
     },
     [tasksByStatus, persistTaskStatus],
   );
@@ -224,13 +219,11 @@ export function SingleKanbanBoard({
   const handleTaskFieldUpdate = useCallback(
     async (taskId: string, patch: TaskUpdate) => {
       const isReparent = patch.parentTaskId !== undefined;
-      // Was-not-done → done: trigger the completion flourish (chime + smooth
-      // view transition). Anything else just patches in place.
-      const previousStatus = findStatusOfTask(tasksByStatus, taskId);
+      const previousStatus = findTaskStatusInColumns(tasksByStatus, taskId);
       const isCompleting =
-        patch.status === TaskStatus.DONE && previousStatus !== TaskStatus.DONE;
+        patch.status === TaskStatus.DONE &&
+        isCompletingTaskTransition(previousStatus, patch.status);
 
-      // Optimistic local update so the row reflects the change immediately.
       const applyOptimistic = () => {
         if (isReparent) {
           setTasksByStatus((prev) =>
@@ -240,12 +233,7 @@ export function SingleKanbanBoard({
           setTasksByStatus((prev) => applyOptimisticPatch(prev, taskId, patch));
         }
       };
-      if (isCompleting) {
-        playCompletionChime();
-        withSmoothLayout(applyOptimistic);
-      } else {
-        applyOptimistic();
-      }
+      runSyncWithOptionalCompletionLayout(isCompleting, applyOptimistic);
 
       const updated = await updateTask(taskId, patch);
       if (!updated) {
@@ -387,21 +375,8 @@ export function SingleKanbanBoard({
     tasksByStatus[TaskStatus.IN_PROGRESS].length +
     tasksByStatus[TaskStatus.DONE].length;
 
-  const sortedTasksByStatus = useMemo<Record<TaskStatus, Task[]>>(
-    () => ({
-      [TaskStatus.TODO]: sortTasksForList(
-        tasksByStatus[TaskStatus.TODO],
-        listSort,
-      ),
-      [TaskStatus.IN_PROGRESS]: sortTasksForList(
-        tasksByStatus[TaskStatus.IN_PROGRESS],
-        listSort,
-      ),
-      [TaskStatus.DONE]: sortTasksForList(
-        tasksByStatus[TaskStatus.DONE],
-        listSort,
-      ),
-    }),
+  const sortedTasksByStatus = useMemo(
+    () => sortTaskColumnsForList(tasksByStatus, listSort),
     [tasksByStatus, listSort],
   );
 
@@ -534,17 +509,4 @@ interface BoardContentProps {
   handleTaskFieldUpdate: (taskId: string, patch: TaskUpdate) => void;
   boardName: string;
   quickCreateRow?: ReactNode;
-}
-
-function findStatusOfTask(
-  tasksByStatus: Record<TaskStatus, Task[]>,
-  taskId: string,
-): TaskStatus | null {
-  for (const status of Object.values(TaskStatus)) {
-    if (tasksByStatus[status].some((t) => t.id === taskId)) return status;
-    for (const t of tasksByStatus[status]) {
-      if (t.subtasks?.some((s) => s.id === taskId)) return t.status;
-    }
-  }
-  return null;
 }

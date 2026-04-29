@@ -32,7 +32,7 @@ import type {
   ListSortDirection,
   ListSortField,
   ListSortState,
-} from "@/components/Boards/ListBoard/listSort";
+} from "@/helpers/list-sort.helper";
 
 import { PopoverContainer, Popover, SettingsButton } from "../KanbanBoard.ui";
 import { cn } from "@/lib/styles/utils";

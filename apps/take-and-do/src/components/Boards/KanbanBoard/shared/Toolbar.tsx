@@ -13,7 +13,7 @@ import { CreateTaskButton } from "./CreateTaskButton";
 import { WorkspaceSettings } from "./WorkspaceSettings";
 import type { BoardViewMode } from "@/hooks/tasks/useBoardViewMode";
 import type { BoardListSubmode } from "@/hooks/tasks/useBoardListSubmode";
-import type { ListSortState } from "@/components/Boards/ListBoard/listSort";
+import type { ListSortState } from "@/helpers/list-sort.helper";
 
 interface ToolbarProps {
   workspaceTitle: string;

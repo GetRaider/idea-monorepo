@@ -41,25 +41,30 @@ import {
   applyOptimisticReparent,
   updateTaskInColumns,
 } from "@/hooks/tasks/useTaskBoardState";
-import {
-  playCompletionChime,
-  withSmoothLayout,
-} from "@/lib/effects/completion";
 import { EmptyState } from "../../EmptyState";
 import { TasksWorkspaceEmptyState } from "../../TasksWorkspaceEmptyState";
 import { AIComposeDialog } from "./shared/AIComposeDialog";
 import { ScheduleBoardPickerDialog } from "./shared/ScheduleBoardPickerDialog";
 import { ListBoard } from "../ListBoard";
-import { sortTasksForList } from "../ListBoard/listSort";
 import {
   QuickCreateTaskRow,
   type QuickCreateTaskInput,
 } from "../shared/QuickCreateTaskRow";
 import { clientServices } from "@/services";
 import { toast } from "sonner";
-import type { TaskBoardWithTasks } from "@/types/workspace";
+import {
+  getScheduleEmptyStateCopy,
+  getTaskWorkspaceTitle,
+} from "@/helpers/schedule-workspace-board.helper";
+import { sortTaskColumnsForList } from "@/helpers/list-sort.helper";
+import {
+  isCompletingTaskTransition,
+  runAsyncWithOptionalCompletionLayout,
+  runSyncWithOptionalCompletionLayout,
+} from "@/helpers/task-completion-ui.helper";
 import { tasksUrlHelper, type ScheduleDate } from "@/helpers/tasks-url.helper";
 import { tasksHelper } from "@/helpers/task.helper";
+import { findTaskStatusAcrossBoards } from "@/helpers/task-board-lookup.helper";
 
 export function MultipleKanbanBoard({
   scheduleDate,
@@ -129,11 +134,15 @@ export function MultipleKanbanBoard({
 
   const handleTaskStatusChange = useCallback(
     async (taskId: string, newStatus: TaskStatus, targetIndex?: number) => {
-      const previousStatus = findStatusInBoards(boardsWithTasks, taskId);
-      const isCompleting =
-        newStatus === TaskStatus.DONE && previousStatus !== TaskStatus.DONE;
-      if (isCompleting) playCompletionChime();
-      const run = () =>
+      const previousStatus = findTaskStatusAcrossBoards(
+        boardsWithTasks,
+        taskId,
+      );
+      const isCompleting = isCompletingTaskTransition(
+        previousStatus,
+        newStatus,
+      );
+      await runAsyncWithOptionalCompletionLayout(isCompleting, () =>
         handleMultipleBoardsTaskStatusChange(
           boardsWithTasks,
           setBoardsWithTasks,
@@ -141,14 +150,8 @@ export function MultipleKanbanBoard({
           newStatus,
           targetIndex,
           persistTaskStatus,
-        );
-      if (isCompleting) {
-        withSmoothLayout(() => {
-          void run();
-        });
-      } else {
-        await run();
-      }
+        ),
+      );
     },
     [boardsWithTasks, setBoardsWithTasks, persistTaskStatus],
   );
@@ -156,9 +159,13 @@ export function MultipleKanbanBoard({
   const handleTaskFieldUpdate = useCallback(
     async (taskId: string, patch: TaskUpdate) => {
       const isReparent = patch.parentTaskId !== undefined;
-      const previousStatus = findStatusInBoards(boardsWithTasks, taskId);
+      const previousStatus = findTaskStatusAcrossBoards(
+        boardsWithTasks,
+        taskId,
+      );
       const isCompleting =
-        patch.status === TaskStatus.DONE && previousStatus !== TaskStatus.DONE;
+        patch.status === TaskStatus.DONE &&
+        isCompletingTaskTransition(previousStatus, patch.status);
 
       const applyOptimistic = () => {
         if (isReparent) {
@@ -177,12 +184,7 @@ export function MultipleKanbanBoard({
           );
         }
       };
-      if (isCompleting) {
-        playCompletionChime();
-        withSmoothLayout(applyOptimistic);
-      } else {
-        applyOptimistic();
-      }
+      runSyncWithOptionalCompletionLayout(isCompleting, applyOptimistic);
 
       const updated = await updateTask(taskId, patch);
       if (!updated) {
@@ -487,7 +489,7 @@ export function MultipleKanbanBoard({
               {boardsWithTasks.map((board) => {
                 const isExpanded = expandedBoardIds.has(board.id);
                 const sortedTasksByStatus = isScheduleDay
-                  ? sortTasksByStatus(board.tasks, listSort)
+                  ? sortTaskColumnsForList(board.tasks, listSort)
                   : board.tasks;
                 return (
                   <MultiBoardSection key={board.id}>
@@ -590,68 +592,6 @@ export function MultipleKanbanBoard({
       />
     </>
   );
-}
-
-function sortTasksByStatus(
-  tasksByStatus: Record<TaskStatus, Task[]>,
-  sort: Parameters<typeof sortTasksForList>[1],
-): Record<TaskStatus, Task[]> {
-  return {
-    [TaskStatus.TODO]: sortTasksForList(tasksByStatus[TaskStatus.TODO], sort),
-    [TaskStatus.IN_PROGRESS]: sortTasksForList(
-      tasksByStatus[TaskStatus.IN_PROGRESS],
-      sort,
-    ),
-    [TaskStatus.DONE]: sortTasksForList(tasksByStatus[TaskStatus.DONE], sort),
-  };
-}
-
-function findStatusInBoards(
-  boards: TaskBoardWithTasks[],
-  taskId: string,
-): TaskStatus | null {
-  for (const board of boards) {
-    for (const status of Object.values(TaskStatus)) {
-      if (board.tasks[status].some((t) => t.id === taskId)) return status;
-      for (const t of board.tasks[status]) {
-        if (t.subtasks?.some((s) => s.id === taskId)) return t.status;
-      }
-    }
-  }
-  return null;
-}
-
-function getTaskWorkspaceTitle(
-  task: Task | null,
-  boardsWithTasks: TaskBoardWithTasks[],
-  workspaceName: string,
-): string {
-  if (!task) return workspaceName;
-  const board = boardsWithTasks.find((board) => board.id === task.taskBoardId);
-  return board?.name || workspaceName;
-}
-
-function getScheduleEmptyStateCopy(
-  schedule: ScheduleDate | undefined,
-  workspaceName: string,
-  scheduleDate: Date | undefined,
-): { title: string; message: string } {
-  if (schedule === "today" || schedule === "tomorrow") {
-    return {
-      title: `No tasks scheduled for ${schedule}`,
-      message: `When you schedule tasks, they will appear here grouped by board.`,
-    };
-  }
-  if (scheduleDate) {
-    return {
-      title: "You have no tasks",
-      message: `No tasks scheduled for ${scheduleDate.toLocaleDateString()}`,
-    };
-  }
-  return {
-    title: "You have no tasks",
-    message: `No tasks available for ${workspaceName}`,
-  };
 }
 
 interface MultipleKanbanBoardProps {

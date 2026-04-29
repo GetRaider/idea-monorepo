@@ -6,7 +6,7 @@ import type {
   ListSortDirection,
   ListSortField,
   ListSortState,
-} from "@/components/Boards/ListBoard/listSort";
+} from "@/helpers/list-sort.helper";
 
 const STORAGE_KEY = "take-and-do:board-list-sort:v1";
 

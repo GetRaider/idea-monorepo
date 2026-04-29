@@ -95,6 +95,14 @@ export const tasksHelper = {
         return Number.isNaN(copy.getTime()) ? undefined : copy;
       }
       if (typeof raw === "string" || typeof raw === "number") {
+        if (typeof raw === "string") {
+          const trimmed = raw.trim();
+          if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+            return this.parseCalendarDay(trimmed);
+          }
+          const date = new Date(trimmed);
+          return Number.isNaN(date.getTime()) ? undefined : date;
+        }
         const date = new Date(raw);
         return Number.isNaN(date.getTime()) ? undefined : date;
       }
@@ -330,7 +338,6 @@ export const tasksHelper = {
 
     createTask(body: unknown): Omit<Task, "id"> {
       const full = tasksHelper.fromJson.task(body);
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { id: _, ...rest } = full;
       return rest;
     },

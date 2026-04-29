@@ -8,6 +8,8 @@ export interface ReorderDroppableData {
   type: "reorder";
   status: TaskStatus;
   index: number;
+  /** List board: drop target on a collapsed section header (resolve above following zones). */
+  collapsedSectionHeader?: boolean;
 }
 
 export interface SubtaskDroppableData {
@@ -35,6 +37,10 @@ export type ListDraggableData = TaskDraggableData | SubtaskDraggableData;
 
 export const reorderDroppableId = (status: TaskStatus, index: number): string =>
   `list-reorder:${status}:${index}`;
+
+/** Collapsed list section header — separate id so it never conflicts with `reorderDroppableId(status, tasks.length)` when expanding/collapsing. */
+export const collapsedSectionDroppableId = (status: TaskStatus): string =>
+  `list-reorder-collapsed:${status}`;
 
 export const subtaskDroppableId = (taskId: string): string =>
   `list-subtask-of:${taskId}`;

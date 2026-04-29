@@ -16,7 +16,8 @@ interface DropZoneBetweenProps {
   /** Where the dragged task should be inserted in the target status array. */
   index: number;
   /**
-   * "default": a thin between-row strip with a horizontal indicator line.
+   * "default": a thin between-row strip with a horizontal indicator line (also
+   * used after the last task — same rhythm as gaps between rows).
    * "empty-section": a larger drop area used when a section has no rows.
    */
   variant?: "default" | "empty-section";
@@ -42,12 +43,15 @@ export function DropZoneBetween({
       <div
         ref={setNodeRef}
         className={cn(
-          "rounded-2xl px-1 py-1 transition-colors",
-          showIndicator &&
-            "bg-focus-ring/[0.08] ring-2 ring-inset ring-focus-ring/50",
+          // The parent `ListSection` draws the active purple ring; keep this
+          // drop target visually neutral to avoid a "double highlight" effect.
+          "relative rounded-2xl px-1 py-1",
         )}
       >
         {children}
+        {showIndicator ? (
+          <span className="pointer-events-none absolute inset-x-3 top-1/2 h-[2px] -translate-y-1/2 rounded-full bg-focus-ring shadow-[0_0_0_2px_rgba(114,85,193,0.18)]" />
+        ) : null}
       </div>
     );
   }
@@ -61,7 +65,14 @@ export function DropZoneBetween({
     <div
       ref={setNodeRef}
       aria-hidden
-      className="pointer-events-none relative -my-1 h-5 w-full"
+      className={cn(
+        "pointer-events-none relative w-full transition-[height,margin] duration-150",
+        // Default: small visual gap but forgiving hit rect via -my.
+        "h-6 -my-1.5",
+        // While hovered, expand so surrounding rows shift and the user gets
+        // predictable before/after placement.
+        showIndicator && "h-12 -my-3",
+      )}
     >
       {showIndicator ? (
         <span className="absolute inset-x-2 top-1/2 h-[2px] -translate-y-1/2 rounded-full bg-focus-ring shadow-[0_0_0_2px_rgba(114,85,193,0.18)]" />

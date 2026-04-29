@@ -515,8 +515,16 @@ export function MultipleKanbanBoard({
                             submode={listSubmode}
                             onTaskClick={handleTaskClick}
                             onSubtaskClick={handleSubtaskClick}
-                            onTaskStatusChange={(taskId, newStatus) =>
-                              handleTaskStatusChange(taskId, newStatus)
+                            onTaskStatusChange={(
+                              taskId,
+                              newStatus,
+                              targetIndex,
+                            ) =>
+                              handleTaskStatusChange(
+                                taskId,
+                                newStatus,
+                                targetIndex,
+                              )
                             }
                             onTaskFieldUpdate={handleTaskFieldUpdate}
                           />

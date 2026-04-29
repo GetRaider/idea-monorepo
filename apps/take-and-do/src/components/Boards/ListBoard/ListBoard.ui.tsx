@@ -34,7 +34,7 @@ export function ListSection({
     <section
       ref={ref}
       className={cn(
-        "flex w-full min-w-[560px] flex-col border-b border-border-app pb-3 transition-[background-color,box-shadow] duration-150 last:border-b-0 last:pb-0",
+        "flex w-full min-w-[560px] flex-col border-b border-border-app pb-1 transition-[background-color,box-shadow] duration-150 last:border-b-0 last:pb-0",
         isActiveDrop &&
           "rounded-3xl bg-focus-ring/[0.06] shadow-[inset_0_0_0_2px_var(--focus-ring)]",
         className,

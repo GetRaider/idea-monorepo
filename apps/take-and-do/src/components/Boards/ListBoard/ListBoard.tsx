@@ -8,7 +8,10 @@ import {
   type DragOverEvent,
   type ListDraggableData,
   type ListDroppableData,
+  collapsedSectionDroppableId,
   listBoardCollisionDetection,
+  type ReorderDroppableData,
+  useDroppable,
   useBoardPointerSensors,
 } from "@/lib/board-dnd";
 import {
@@ -44,6 +47,7 @@ import {
 import { TaskListRow } from "./TaskListRow";
 import { DropZoneBetween } from "./DropZoneBetween";
 import type { BoardListSubmode } from "@/hooks/tasks/useBoardListSubmode";
+import { cn } from "@/lib/styles/utils";
 
 const STATUS_ORDER: TaskStatus[] = [
   TaskStatus.TODO,
@@ -264,13 +268,21 @@ export function ListBoard({
 
       // Drop on a between-zone → reorder / move-status / detach.
       if (dropData.type === "reorder") {
-        const { index: targetIndex } = dropData;
-        const targetStatus =
-          submode === "single" &&
-          dropData.status === TaskStatus.TODO &&
-          dragData.currentStatus !== TaskStatus.DONE
-            ? dragData.currentStatus
-            : dropData.status;
+        const { index: rawTargetIndex } = dropData;
+        const todoLen = tasksByStatus[TaskStatus.TODO]?.length ?? 0;
+        const inProgressLen =
+          tasksByStatus[TaskStatus.IN_PROGRESS]?.length ?? 0;
+        const { targetStatus, targetIndex } =
+          submode === "single" && dropData.status === TaskStatus.TODO
+            ? resolveSingleListTasksSectionDrop(
+                rawTargetIndex,
+                todoLen,
+                inProgressLen,
+              )
+            : {
+                targetStatus: dropData.status,
+                targetIndex: rawTargetIndex,
+              };
         if (dragData.type === "subtask") {
           // Detach to top-level + change status. Index isn't honored for
           // detached subtasks because the optimistic flow elsewhere relies on
@@ -284,7 +296,7 @@ export function ListBoard({
         onTaskStatusChange?.(dragData.taskId, targetStatus, targetIndex);
       }
     },
-    [onTaskFieldUpdate, onTaskStatusChange, submode],
+    [onTaskFieldUpdate, onTaskStatusChange, submode, tasksByStatus],
   );
 
   const isSingleList = submode === "single";
@@ -329,24 +341,33 @@ export function ListBoard({
                       key={typeof entry === "string" ? entry : entry.key}
                       isActiveDrop={isSectionActiveDrop}
                     >
-                      <SectionHeader
+                      <CollapsedSectionDropHeader
                         status={status}
-                        aria-expanded={isExpanded}
-                        onClick={() => handleToggleSection(status, isExpanded)}
+                        insertIndex={tasks.length}
+                        enabled={!isExpanded}
                       >
-                        <ChevronWrapper isExpanded={isExpanded}>
-                          <ChevronRightIcon size={14} />
-                        </ChevronWrapper>
-                        <SectionHeaderTitle>
-                          <StatusIcon status={status}>
-                            <TaskStatusGlyph status={status} size={14} />
-                          </StatusIcon>
-                          <span>
-                            {label ?? tasksHelper.status.getName(status)}
-                          </span>
-                          <SectionCount>{tasks.length}</SectionCount>
-                        </SectionHeaderTitle>
-                      </SectionHeader>
+                        <SectionHeader
+                          status={status}
+                          className="w-full max-w-none self-stretch"
+                          aria-expanded={isExpanded}
+                          onClick={() =>
+                            handleToggleSection(status, isExpanded)
+                          }
+                        >
+                          <ChevronWrapper isExpanded={isExpanded}>
+                            <ChevronRightIcon size={14} />
+                          </ChevronWrapper>
+                          <SectionHeaderTitle>
+                            <StatusIcon status={status}>
+                              <TaskStatusGlyph status={status} size={14} />
+                            </StatusIcon>
+                            <span>
+                              {label ?? tasksHelper.status.getName(status)}
+                            </span>
+                            <SectionCount>{tasks.length}</SectionCount>
+                          </SectionHeaderTitle>
+                        </SectionHeader>
+                      </CollapsedSectionDropHeader>
                       <SectionBody isExpanded={isExpanded}>
                         {tasks.length === 0 ? (
                           <DropZoneBetween
@@ -398,12 +419,18 @@ export function ListBoard({
                                       : undefined
                                   }
                                 />
-                                <DropZoneBetween
-                                  status={status}
-                                  index={idx + 1}
-                                />
+                                {idx < tasks.length - 1 ? (
+                                  <DropZoneBetween
+                                    status={status}
+                                    index={idx + 1}
+                                  />
+                                ) : null}
                               </Fragment>
                             ))}
+                            <DropZoneBetween
+                              status={status}
+                              index={tasks.length}
+                            />
                           </>
                         )}
                       </SectionBody>
@@ -415,6 +442,68 @@ export function ListBoard({
           </HorizontalScroller>
         </ListBoardRoot>
       </DndContext>
+    </div>
+  );
+}
+
+/**
+ * Single-list "Tasks" section merges TODO then IN_PROGRESS but droppables still
+ * report {@link TaskStatus.TODO}. Map a merged insertion index (0 … todo+inProg)
+ * to the real column + index — same idea as grouped list, but one visual stack.
+ */
+function resolveSingleListTasksSectionDrop(
+  rawIndex: number,
+  todoCount: number,
+  inProgressCount: number,
+): { targetStatus: TaskStatus; targetIndex: number } {
+  const T = todoCount;
+  const P = inProgressCount;
+
+  if (rawIndex <= T) {
+    if (P > 0 && rawIndex === T) {
+      return { targetStatus: TaskStatus.IN_PROGRESS, targetIndex: 0 };
+    }
+    return {
+      targetStatus: TaskStatus.TODO,
+      targetIndex: Math.max(0, Math.min(rawIndex, T)),
+    };
+  }
+
+  return {
+    targetStatus: TaskStatus.IN_PROGRESS,
+    targetIndex: Math.max(0, Math.min(rawIndex - T, P)),
+  };
+}
+
+function CollapsedSectionDropHeader({
+  status,
+  insertIndex,
+  enabled,
+  children,
+}: {
+  status: TaskStatus;
+  insertIndex: number;
+  enabled: boolean;
+  children: ReactNode;
+}) {
+  const data: ReorderDroppableData = {
+    type: "reorder",
+    status,
+    index: insertIndex,
+    collapsedSectionHeader: true,
+  };
+  const { setNodeRef } = useDroppable({
+    id: collapsedSectionDroppableId(status),
+    data,
+    disabled: !enabled,
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={cn("relative z-20 w-full min-w-0", enabled && "min-h-[44px]")}
+    >
+      {children}
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
 
 import { Task, TaskUpdate } from "@/components/Boards/KanbanBoard/types";
+import { tasksHelper } from "@/helpers/task.helper";
 import { invalidateTaskDataQueries } from "@/lib/invalidate-app-queries";
 import { queryKeys } from "@/lib/query-keys";
 import { useIsAnonymous } from "@/hooks/auth/use-is-anonymous";
@@ -47,7 +48,7 @@ export function useTasks({
 
   const dateKey =
     dateTimestamp !== undefined
-      ? new Date(dateTimestamp).toISOString().slice(0, 10)
+      ? tasksHelper.date.formatForAPI(new Date(dateTimestamp))
       : undefined;
 
   const listQuery = useQuery({

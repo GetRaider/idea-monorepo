@@ -58,13 +58,17 @@ export const Column = ({
         bodyScrolls={bodyScrolls}
         contentMinHeightPx={contentMinHeightPx}
       >
-        {topSlot ? topSlot : null}
+        {topSlot ? <div className="shrink-0">{topSlot}</div> : null}
 
         {tasks.length === 0 ? (
           <KanbanDropZone status={status} index={0} variant="empty" />
         ) : (
           <>
-            <KanbanDropZone status={status} index={0} />
+            <KanbanDropZone
+              status={status}
+              index={0}
+              snugUnderTopSlot={!!topSlot}
+            />
             {tasks.map((task, index) => (
               <Fragment key={task.id}>
                 <TaskCard task={task} onTaskClick={onTaskClick} />

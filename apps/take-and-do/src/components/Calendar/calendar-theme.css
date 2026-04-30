@@ -1,0 +1,49 @@
+/* FullCalendar dark theme alignment with app shell */
+.take-and-do-calendar .fc {
+  --fc-border-color: rgba(255, 255, 255, 0.12);
+  --fc-button-bg-color: rgba(114, 85, 193, 0.35);
+  --fc-button-border-color: rgba(114, 85, 193, 0.55);
+  --fc-button-hover-bg-color: rgba(114, 85, 193, 0.55);
+  --fc-button-hover-border-color: rgba(114, 85, 193, 0.75);
+  --fc-button-active-bg-color: rgba(114, 85, 193, 0.65);
+  --fc-button-active-border-color: rgba(114, 85, 193, 0.85);
+  --fc-today-bg-color: rgba(114, 85, 193, 0.12);
+  --fc-page-bg-color: transparent;
+  --fc-neutral-bg-color: rgba(255, 255, 255, 0.04);
+  --fc-list-event-hover-bg-color: rgba(255, 255, 255, 0.06);
+  color: #f4f4f5;
+}
+
+.take-and-do-calendar .fc .fc-col-header-cell-cushion,
+.take-and-do-calendar .fc .fc-daygrid-day-number,
+.take-and-do-calendar .fc .fc-timegrid-axis-cushion {
+  color: #e4e4e7;
+}
+
+.take-and-do-calendar .fc .fc-scrollgrid {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.take-and-do-calendar .fc .fc-toolbar-title {
+  color: #fafafa;
+  font-size: 1.1rem;
+}
+
+.take-and-do-calendar .fc .fc-event {
+  border-width: 0;
+  font-weight: 500;
+}
+
+.take-and-do-calendar .fc .fc-event .fc-event-main {
+  color: #fafafa;
+}
+
+.take-and-do-calendar .fc .fc-list-event:hover td {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.take-and-do-calendar .fc .fc-list-day-cushion {
+  background: rgba(255, 255, 255, 0.06);
+  color: #fafafa;
+}

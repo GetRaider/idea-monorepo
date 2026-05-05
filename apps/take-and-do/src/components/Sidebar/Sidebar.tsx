@@ -38,7 +38,7 @@ const buttonsSet: Array<{
   {
     label: "Calendar",
     icon: "/calendar.svg",
-    path: null,
+    path: Route.CALENDAR,
   },
   {
     label: "Docs",

@@ -149,7 +149,7 @@ export function DropdownMultiSelect<T extends string = string>({
             ref={panelRef}
             role="listbox"
             aria-multiselectable="true"
-            className="fixed z-[1100] box-border rounded-lg border border-input-border bg-input-bg p-3 shadow-dropdown"
+            className="fixed z-[5200] box-border rounded-lg border border-input-border bg-input-bg p-3 shadow-dropdown"
             style={{
               top: panelRect.top,
               left: panelRect.left,

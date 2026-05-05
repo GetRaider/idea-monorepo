@@ -4,6 +4,7 @@ export enum Route {
   FORBIDDEN = "/forbidden",
   AUTH = "/auth",
   OVERVIEW = "/overview",
+  CALENDAR = "/calendar",
   TASKS = "/tasks",
   TASK_BOARDS = "/task-boards",
   FOLDERS = "/folders",

@@ -14,10 +14,6 @@ import { useTasks } from "@/hooks/tasks/useTasks";
 
 type ScopeToken = string;
 
-function boardToken(boardId: string): ScopeToken {
-  return `board:${boardId}`;
-}
-
 function taskToken(boardId: string, taskId: string): ScopeToken {
   return `task:${boardId}:${taskId}`;
 }
@@ -67,7 +63,7 @@ function displayLabelForToken(
 }
 
 interface CalendarTaskScopeSelectorProps {
-  /** Stored in CalendarScheduledEvent.taskScope / CalendarBacklogItem.taskScope */
+  /** Stored in CalendarEvent.taskScope / CalendarBacklogItem.taskScope */
   value: string[];
   onChange: (next: string[]) => void;
   disabled?: boolean;
@@ -105,19 +101,17 @@ export function CalendarTaskScopeSelector({
     return m;
   }, [boardsQuery.data]);
 
-  const boardScopeTokens = useMemo(
-    () => value.filter((t) => t.startsWith("board:")),
-    [value],
-  );
-
   const taskScopeTokens = useMemo(
     () => value.filter((t) => t.startsWith("task:")),
     [value],
   );
 
   const migratedValue = useMemo(() => {
-    if (!value.some(isLegacyTextToken)) return value;
-    return value.map((t) => (isLegacyTextToken(t) ? toTextToken(t) : t));
+    const normalized = value.map((t) =>
+      isLegacyTextToken(t) ? toTextToken(t) : t,
+    );
+    // Legacy UI allowed selecting whole boards; remove those tokens (scope is tasks-only now).
+    return normalized.filter((t) => !t.startsWith("board:"));
   }, [value]);
 
   const { tasks, isLoading: tasksLoading } = useTasks({
@@ -144,15 +138,6 @@ export function CalendarTaskScopeSelector({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [migratedValue]);
 
-  const boardScopeOptions: DropdownOption<string>[] = useMemo(
-    () =>
-      boardOptions.map((opt) => ({
-        value: boardToken(opt.value),
-        label: opt.label,
-      })),
-    [boardOptions],
-  );
-
   const taskOptionsInBoard = taskOptions;
 
   const combinedLabel = (token: string) =>
@@ -162,29 +147,6 @@ export function CalendarTaskScopeSelector({
 
   return (
     <div className={cn("flex flex-col gap-3", className)}>
-      <DialogFormGroup>
-        <DialogFormLabel>Task scope</DialogFormLabel>
-        <DropdownMultiSelect<string>
-          options={boardScopeOptions}
-          value={boardScopeTokens}
-          onChange={(nextBoards) => {
-            const rest = allTokens.filter((t) => !t.startsWith("board:"));
-            onChange([...rest, ...nextBoards]);
-          }}
-          placeholder="Boards (optional)"
-          listTitle="Boards"
-          emptyMessage={disabled ? "Sign in to browse boards" : "No boards"}
-          id="calendar-scope-boards"
-          className="w-full"
-          onOpenChange={() => {
-            /* keep stable */
-          }}
-        />
-        <p className="m-0 mt-1 text-xs text-zinc-500">
-          Pick boards and tasks you want to work on during this event.
-        </p>
-      </DialogFormGroup>
-
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <DialogFormGroup>
           <DialogFormLabel>Add tasks from board</DialogFormLabel>
@@ -199,7 +161,7 @@ export function CalendarTaskScopeSelector({
         </DialogFormGroup>
 
         <DialogFormGroup>
-          <DialogFormLabel>Tasks</DialogFormLabel>
+          <DialogFormLabel>Tasks (optional)</DialogFormLabel>
           <DropdownMultiSelect<string>
             options={taskOptionsInBoard}
             value={taskScopeTokens.filter((t) =>

@@ -2,13 +2,18 @@
 
 import { useCallback, useEffect, useLayoutEffect, useState } from "react";
 
+import { defaultAxisTimeZones } from "@/components/Calendar/calendar-axis-time";
+
 import type {
-  CalendarBacklogItem,
+  CalendarAxisTimeZone,
+  CalendarBacklogEvent,
   CalendarPersistedState,
-  CalendarScheduledEvent,
+  CalendarEvent,
 } from "@/types/calendar.types";
 
 import { readCalendarState, writeCalendarState } from "./calendar-storage";
+
+const GCAL_PREFIX = "gcal:";
 
 export function useCalendarStore() {
   const [state, setState] = useState<CalendarPersistedState | null>(null);
@@ -22,27 +27,62 @@ export function useCalendarStore() {
     writeCalendarState(state);
   }, [state]);
 
-  const addScheduled = useCallback((event: CalendarScheduledEvent) => {
+  const addScheduled = useCallback((event: CalendarEvent) => {
     setState((prev) => {
       if (!prev) return prev;
       return { ...prev, events: [...prev.events, event] };
     });
   }, []);
 
-  const updateScheduled = useCallback(
-    (id: string, patch: Partial<CalendarScheduledEvent>) => {
+  type CalendarEventPatch = Partial<{
+    title: string;
+    start: string;
+    end: string;
+    allDay: boolean;
+    reminderMinutes: number;
+    timeZone: string;
+    repeat: CalendarEvent["repeat"];
+    meetingUrl: string;
+    participants: string[];
+    notes: string;
+    description: string;
+    taskSummarySnapshot: string;
+    rsvpStatus: "yes" | "no" | "maybe";
+    rsvpDeclineReason: string;
+  }>;
+
+  const patchScheduled = useCallback(
+    (id: string, patch: CalendarEventPatch) => {
       setState((prev) => {
         if (!prev) return prev;
         return {
           ...prev,
-          events: prev.events.map((e) =>
-            e.id === id ? { ...e, ...patch } : e,
-          ),
+          events: prev.events.map((e) => {
+            if (e.id !== id) return e;
+            const next = { ...e, ...patch };
+            if (e.type !== "common") {
+              // Strip common-only fields if they got patched in
+              delete (next as { rsvpStatus?: unknown }).rsvpStatus;
+              delete (next as { rsvpDeclineReason?: unknown })
+                .rsvpDeclineReason;
+            }
+            return next;
+          }),
         };
       });
     },
     [],
   );
+
+  const replaceScheduled = useCallback((event: CalendarEvent) => {
+    setState((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        events: prev.events.map((e) => (e.id === event.id ? event : e)),
+      };
+    });
+  }, []);
 
   const removeScheduled = useCallback((id: string) => {
     setState((prev) => {
@@ -51,7 +91,7 @@ export function useCalendarStore() {
     });
   }, []);
 
-  const addBacklogItem = useCallback((item: CalendarBacklogItem) => {
+  const addBacklogItem = useCallback((item: CalendarBacklogEvent) => {
     setState((prev) => {
       if (!prev) return prev;
       return { ...prev, backlog: [...prev.backlog, item] };
@@ -66,7 +106,7 @@ export function useCalendarStore() {
   }, []);
 
   const updateBacklogItem = useCallback(
-    (id: string, patch: Partial<CalendarBacklogItem>) => {
+    (id: string, patch: Partial<CalendarBacklogEvent>) => {
       setState((prev) => {
         if (!prev) return prev;
         return {
@@ -80,13 +120,43 @@ export function useCalendarStore() {
     [],
   );
 
+  const mergeScheduledEvents = useCallback((events: CalendarEvent[]) => {
+    setState((prev) => {
+      if (!prev) return prev;
+      const byId = new Map(prev.events.map((e) => [e.id, e]));
+      for (const ev of events) byId.set(ev.id, ev);
+      return { ...prev, events: Array.from(byId.values()) };
+    });
+  }, []);
+
+  const removeGoogleImportedEvents = useCallback(() => {
+    setState((prev) => {
+      if (!prev) return prev;
+      const filtered = prev.events.filter((e) => !e.id.startsWith(GCAL_PREFIX));
+      if (filtered.length === prev.events.length) return prev;
+      return { ...prev, events: filtered };
+    });
+  }, []);
+
+  const setAxisTimeZones = useCallback((next: CalendarAxisTimeZone[]) => {
+    setState((prev) => {
+      if (!prev) return prev;
+      const zones = next.length > 0 ? next : defaultAxisTimeZones();
+      return { ...prev, axisTimeZones: zones };
+    });
+  }, []);
+
   return {
     state,
     addScheduled,
-    updateScheduled,
+    patchScheduled,
+    replaceScheduled,
     removeScheduled,
     addBacklogItem,
     removeBacklogItem,
     updateBacklogItem,
+    mergeScheduledEvents,
+    removeGoogleImportedEvents,
+    setAxisTimeZones,
   };
 }

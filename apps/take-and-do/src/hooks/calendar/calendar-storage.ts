@@ -1,63 +1,73 @@
+import { normalizeAxisTimeZones } from "@/components/Calendar/calendar-axis-time";
+
 import type {
-  CalendarBacklogItem,
-  CalendarBacklogKind,
-  CalendarEventKind,
+  CalendarBacklogEvent,
+  CalendarBacklogType,
+  CalendarEvent,
+  CalendarEventType,
+  CalendarRepeatRule,
   CalendarPersistedState,
   CalendarRsvpStatus,
-  CalendarScheduledEvent,
 } from "@/types/calendar.types";
 
 export const CALENDAR_STORAGE_KEY = "take-and-do:calendar:v1";
 
-const DEFAULT_BACKLOG: CalendarBacklogItem[] = [
+const DEFAULT_BACKLOG: CalendarBacklogEvent[] = [
   {
     id: "seed-block-gym",
-    kind: "time_block",
+    type: "timeBlock",
     title: "Gym Training",
-    defaultDurationMinutes: 90,
+    durationMinutes: 90,
     taskScope: ["Warm-up", "Main lifts", "Cooldown"],
   },
   {
     id: "seed-block-engineering",
-    kind: "time_block",
+    type: "timeBlock",
     title: "Engineering Session",
-    defaultDurationMinutes: 120,
+    durationMinutes: 120,
     taskScope: ["Review PRs", "Implement feature"],
   },
   {
     id: "seed-block-focus",
-    kind: "time_block",
+    type: "timeBlock",
     title: "Work Focus",
-    defaultDurationMinutes: 60,
+    durationMinutes: 60,
   },
   {
     id: "seed-general-sync",
-    kind: "general",
+    type: "common",
     title: "Team sync",
-    defaultDurationMinutes: 30,
-    attendeesNote: "Core team",
+    durationMinutes: 30,
   },
 ];
 
 function defaultState(): CalendarPersistedState {
-  return { version: 1, events: [], backlog: DEFAULT_BACKLOG };
+  return {
+    version: 1,
+    events: [],
+    backlog: DEFAULT_BACKLOG,
+    axisTimeZones: normalizeAxisTimeZones(undefined),
+  };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function migrateEventKind(value: unknown): CalendarEventKind | null {
-  if (value === "time_block" || value === "general" || value === "task_event") {
+function migrateEventType(value: unknown): CalendarEventType | null {
+  if (value === "timeBlock" || value === "common" || value === "task") {
     return value;
   }
-  if (value === "mutual") return "general";
+  // Back-compat for old persisted values.
+  if (value === "time_block") return "timeBlock";
+  if (value === "general" || value === "mutual") return "common";
+  if (value === "task_event") return "task";
   return null;
 }
 
-function migrateBacklogKind(value: unknown): CalendarBacklogKind | null {
-  const k = migrateEventKind(value);
-  if (k === "time_block" || k === "general") return k;
+function migrateBacklogKind(value: unknown): CalendarBacklogType | null {
+  const k = migrateEventType(value);
+  if (k === "timeBlock" || k === "common") return k;
   return null;
 }
 
@@ -65,53 +75,52 @@ function isRsvp(value: unknown): value is CalendarRsvpStatus {
   return value === "yes" || value === "no" || value === "maybe";
 }
 
-function normalizeBacklogItem(raw: unknown): CalendarBacklogItem | null {
+function isRepeatRule(value: unknown): value is CalendarRepeatRule {
+  return value === "daily" || value === "weekly" || value === "monthly";
+}
+
+function normalizeBacklogItem(raw: unknown): CalendarBacklogEvent | null {
   if (!isRecord(raw)) return null;
   const id = raw.id;
   const title = raw.title;
-  const kindRaw = raw.kind;
-  const defaultDurationMinutes = raw.defaultDurationMinutes;
+  const kindRaw = raw.type ?? raw.kind;
+  const durationMinutesRaw = raw.durationMinutes ?? raw.defaultDurationMinutes;
   if (typeof id !== "string" || !id) return null;
   if (typeof title !== "string" || !title) return null;
-  const kind = migrateBacklogKind(kindRaw);
-  if (!kind) return null;
-  if (
-    typeof defaultDurationMinutes !== "number" ||
-    defaultDurationMinutes <= 0
-  ) {
+  const type = migrateBacklogKind(kindRaw);
+  if (!type) return null;
+  if (typeof durationMinutesRaw !== "number" || durationMinutesRaw <= 0) {
     return null;
   }
   const taskScope = raw.taskScope;
-  const attendeesNote = raw.attendeesNote;
+  const description = raw.description;
   return {
     id,
-    kind,
+    type,
     title,
-    defaultDurationMinutes,
+    durationMinutes: durationMinutesRaw,
+    ...(typeof description === "string" ? { description } : {}),
     ...(Array.isArray(taskScope) &&
     taskScope.every((l) => typeof l === "string")
       ? { taskScope: taskScope as string[] }
       : {}),
-    ...(typeof attendeesNote === "string" ? { attendeesNote } : {}),
   };
 }
 
-function normalizeScheduledEvent(raw: unknown): CalendarScheduledEvent | null {
+function normalizeScheduledEvent(raw: unknown): CalendarEvent | null {
   if (!isRecord(raw)) return null;
   const id = raw.id;
   const title = raw.title;
-  const kind = migrateEventKind(raw.kind);
+  const type = migrateEventType(raw.type ?? raw.kind);
   const start = raw.start;
   const end = raw.end;
   const allDay = raw.allDay;
   if (typeof id !== "string" || !id) return null;
   if (typeof title !== "string" || !title) return null;
-  if (!kind) return null;
+  if (!type) return null;
   if (typeof start !== "string" || typeof end !== "string") return null;
   if (typeof allDay !== "boolean") return null;
   const taskScope = raw.taskScope;
-  const attendeesNote = raw.attendeesNote;
-  const linkedTaskSummary = raw.linkedTaskSummary;
   const taskBoardId = raw.taskBoardId;
   const taskId = raw.taskId;
   const taskSummarySnapshot = raw.taskSummarySnapshot;
@@ -122,34 +131,60 @@ function normalizeScheduledEvent(raw: unknown): CalendarScheduledEvent | null {
   const repeat = raw.repeat;
   const meetingUrl = raw.meetingUrl;
   const participants = raw.participants;
-  const notesAndDocs = raw.notesAndDocs;
-  return {
+  const notes = raw.notes ?? raw.notesAndDocs;
+  const reminderMinutes = raw.reminderMinutes;
+  const base = {
     id,
-    kind,
+    type,
     title,
     start,
     end,
     allDay,
     ...(typeof timeZone === "string" && timeZone ? { timeZone } : {}),
-    ...(typeof repeat === "string" && repeat ? { repeat } : {}),
+    ...(isRepeatRule(repeat) ? { repeat } : {}),
     ...(typeof meetingUrl === "string" && meetingUrl ? { meetingUrl } : {}),
+    ...(typeof reminderMinutes === "number" && reminderMinutes >= 0
+      ? { reminderMinutes }
+      : {}),
     ...(Array.isArray(participants) &&
     participants.every((p) => typeof p === "string")
       ? { participants: participants as string[] }
       : {}),
-    ...(typeof notesAndDocs === "string" ? { notesAndDocs } : {}),
-    ...(Array.isArray(taskScope) &&
-    taskScope.every((l) => typeof l === "string")
-      ? { taskScope: taskScope as string[] }
-      : {}),
-    ...(typeof attendeesNote === "string" ? { attendeesNote } : {}),
-    ...(typeof linkedTaskSummary === "string" ? { linkedTaskSummary } : {}),
-    ...(typeof taskBoardId === "string" && taskBoardId ? { taskBoardId } : {}),
-    ...(typeof taskId === "string" && taskId ? { taskId } : {}),
-    ...(typeof taskSummarySnapshot === "string" ? { taskSummarySnapshot } : {}),
+    ...(typeof notes === "string" ? { notes } : {}),
+    ...(typeof description === "string" ? { description } : {}),
+  } as const;
+
+  if (type === "task") {
+    if (typeof taskBoardId !== "string" || !taskBoardId) return null;
+    if (typeof taskId !== "string" || !taskId) return null;
+    return {
+      ...base,
+      type: "task",
+      taskBoardId,
+      taskId,
+      ...(typeof taskSummarySnapshot === "string" && taskSummarySnapshot
+        ? { taskSummarySnapshot }
+        : {}),
+    };
+  }
+
+  if (type === "timeBlock") {
+    return {
+      ...base,
+      type: "timeBlock",
+      ...(Array.isArray(taskScope) &&
+      taskScope.every((l) => typeof l === "string")
+        ? { taskScope: taskScope as string[] }
+        : {}),
+    };
+  }
+
+  // Common event
+  return {
+    ...base,
+    type: "common",
     ...(isRsvp(rsvpStatus) ? { rsvpStatus } : {}),
     ...(typeof rsvpDeclineReason === "string" ? { rsvpDeclineReason } : {}),
-    ...(typeof description === "string" ? { description } : {}),
   };
 }
 
@@ -167,12 +202,13 @@ export function readCalendarState(): CalendarPersistedState {
     }
     const events = eventsRaw
       .map(normalizeScheduledEvent)
-      .filter((e): e is CalendarScheduledEvent => e !== null);
+      .filter((e): e is CalendarEvent => e !== null);
     const backlogParsed = backlogRaw
       .map(normalizeBacklogItem)
-      .filter((b): b is CalendarBacklogItem => b !== null);
+      .filter((b): b is CalendarBacklogEvent => b !== null);
     const backlog = backlogParsed.length > 0 ? backlogParsed : DEFAULT_BACKLOG;
-    return { version: 1, events, backlog };
+    const axisTimeZones = normalizeAxisTimeZones(parsed.axisTimeZones);
+    return { version: 1, events, backlog, axisTimeZones };
   } catch {
     return defaultState();
   }
@@ -185,4 +221,27 @@ export function writeCalendarState(next: CalendarPersistedState) {
   } catch {
     /* storage may be unavailable */
   }
+}
+
+const GCAL_PREFIX = "gcal:";
+
+export function mergeImportedGoogleCalendarEvents(
+  imported: CalendarEvent[],
+): void {
+  if (typeof window === "undefined") return;
+  const current = readCalendarState();
+  const byId = new Map(current.events.map((e) => [e.id, e]));
+  for (const ev of imported) {
+    byId.set(ev.id, ev);
+  }
+  const merged = Array.from(byId.values());
+  writeCalendarState({ ...current, events: merged });
+}
+
+export function removeImportedGoogleCalendarEvents(): void {
+  if (typeof window === "undefined") return;
+  const current = readCalendarState();
+  const filtered = current.events.filter((e) => !e.id.startsWith(GCAL_PREFIX));
+  if (filtered.length === current.events.length) return;
+  writeCalendarState({ ...current, events: filtered });
 }

@@ -33,6 +33,8 @@ export const auth = betterAuth({
           google: {
             clientId: envServer.auth.google.clientId,
             clientSecret: envServer.auth.google.clientSecret,
+            accessType: "offline",
+            prompt: "select_account consent",
             ...(envServer.nodeEnv === "production"
               ? { disableSignUp: true }
               : {}),

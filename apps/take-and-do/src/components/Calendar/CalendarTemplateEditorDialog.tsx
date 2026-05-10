@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import {
   ConfirmDangerBtn,
+  ConfirmDialog,
   Dialog,
   DialogActions,
   DialogBody,
@@ -14,8 +15,8 @@ import {
 import { Dropdown } from "@/components/Dropdown";
 import { Input } from "@/components/Input";
 import type {
-  CalendarBacklogItem,
-  CalendarBacklogKind,
+  CalendarBacklogEvent,
+  CalendarBacklogType,
 } from "@/types/calendar.types";
 
 import { CalendarEventTaskScopeSection } from "./CalendarEventTaskScopeSection";
@@ -24,53 +25,53 @@ import { kindLabel } from "./calendar-event-mapper";
 interface CalendarTemplateEditorDialogProps {
   open: boolean;
   mode: "create" | "edit";
-  initial: CalendarBacklogItem | null;
+  initial: CalendarBacklogEvent | null;
   onClose: () => void;
-  onSave: (item: CalendarBacklogItem) => void;
+  onSave: (item: CalendarBacklogEvent) => void;
   onDelete?: (id: string) => void;
 }
 
 interface Draft {
   title: string;
-  kind: CalendarBacklogKind;
+  type: CalendarBacklogType;
   minutes: number;
   taskScope: string[];
-  attendeesNote: string;
+  descriptionText: string;
 }
 
 function emptyDraft(): Draft {
   return {
     title: "",
-    kind: "time_block",
+    type: "timeBlock",
     minutes: 60,
     taskScope: [],
-    attendeesNote: "",
+    descriptionText: "",
   };
 }
 
-function fromItem(item: CalendarBacklogItem): Draft {
+function fromItem(item: CalendarBacklogEvent): Draft {
   return {
     title: item.title,
-    kind: item.kind,
-    minutes: item.defaultDurationMinutes,
+    type: item.type,
+    minutes: item.durationMinutes,
     taskScope: item.taskScope ?? [],
-    attendeesNote: item.attendeesNote ?? "",
+    descriptionText: item.description ?? "",
   };
 }
 
-function toItem(draft: Draft, id: string): CalendarBacklogItem | null {
+function toItem(draft: Draft, id: string): CalendarBacklogEvent | null {
   const title = draft.title.trim();
   if (!title || draft.minutes <= 0) return null;
   const taskScopeLines = draft.taskScope.map((t) => t.trim()).filter(Boolean);
   return {
     id,
-    kind: draft.kind,
+    type: draft.type,
     title,
-    defaultDurationMinutes: draft.minutes,
-    ...(taskScopeLines.length ? { taskScope: taskScopeLines } : {}),
-    ...(draft.attendeesNote.trim()
-      ? { attendeesNote: draft.attendeesNote.trim() }
+    durationMinutes: draft.minutes,
+    ...(draft.descriptionText.trim()
+      ? { description: draft.descriptionText.trim() }
       : {}),
+    ...(taskScopeLines.length ? { taskScope: taskScopeLines } : {}),
   };
 }
 
@@ -83,6 +84,7 @@ export function CalendarTemplateEditorDialog({
   onDelete,
 }: CalendarTemplateEditorDialogProps) {
   const [draft, setDraft] = useState<Draft>(emptyDraft);
+  const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -108,8 +110,8 @@ export function CalendarTemplateEditorDialog({
 
   return (
     <Dialog
-      title={mode === "create" ? "New backlog template" : "Edit template"}
-      subtitle="Reusable blocks you drag onto the calendar. Templates cannot be task-type — link tasks when scheduling on the calendar."
+      title={mode === "create" ? "Create backlog event" : "Edit backlog event"}
+      subtitle="Reusable events you can drag onto the calendar to schedule."
       onClose={onClose}
       maxWidth={480}
     >
@@ -125,13 +127,13 @@ export function CalendarTemplateEditorDialog({
 
         <DialogFormGroup>
           <DialogFormLabel>Type</DialogFormLabel>
-          <Dropdown<CalendarBacklogKind>
+          <Dropdown<CalendarBacklogType>
             options={[
-              { value: "time_block", label: kindLabel("time_block") },
-              { value: "general", label: kindLabel("general") },
+              { value: "timeBlock", label: kindLabel("timeBlock") },
+              { value: "common", label: kindLabel("common") },
             ]}
-            value={draft.kind}
-            onChange={(kind) => setDraft((d) => ({ ...d, kind }))}
+            value={draft.type}
+            onChange={(type) => setDraft((d) => ({ ...d, type }))}
             fullWidth
           />
         </DialogFormGroup>
@@ -156,29 +158,32 @@ export function CalendarTemplateEditorDialog({
           />
         </DialogFormGroup>
 
-        {draft.kind === "time_block" ? (
-          <CalendarEventTaskScopeSection
-            value={draft.taskScope}
-            onChange={(next) => setDraft((d) => ({ ...d, taskScope: next }))}
+        <DialogFormGroup>
+          <DialogFormLabel>Description</DialogFormLabel>
+          <textarea
+            className="w-full min-h-[80px] resize-y rounded-lg border border-white/15 bg-input-bg px-3 py-2 text-sm text-white outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+            value={draft.descriptionText}
+            onChange={(e) =>
+              setDraft((d) => ({ ...d, descriptionText: e.target.value }))
+            }
+            placeholder="Optional"
           />
-        ) : (
-          <DialogFormGroup>
-            <DialogFormLabel>People / notes</DialogFormLabel>
-            <Input
-              value={draft.attendeesNote}
-              onChange={(e) =>
-                setDraft((d) => ({ ...d, attendeesNote: e.target.value }))
-              }
-              placeholder="Who or what this template is for"
-            />
-          </DialogFormGroup>
-        )}
+        </DialogFormGroup>
+
+        <CalendarEventTaskScopeSection
+          value={draft.taskScope}
+          onChange={(next) => setDraft((d) => ({ ...d, taskScope: next }))}
+          disabled={draft.type !== "timeBlock"}
+        />
       </DialogBody>
 
       <DialogActions className="flex flex-wrap justify-between gap-3">
         <div>
           {mode === "edit" && onDelete ? (
-            <ConfirmDangerBtn type="button" onClick={handleDelete}>
+            <ConfirmDangerBtn
+              type="button"
+              onClick={() => setShowRemoveConfirm(true)}
+            >
               Remove template
             </ConfirmDangerBtn>
           ) : null}
@@ -192,6 +197,17 @@ export function CalendarTemplateEditorDialog({
           </DialogFormButton>
         </div>
       </DialogActions>
+
+      {showRemoveConfirm && initial && onDelete ? (
+        <ConfirmDialog
+          title="Remove backlog event?"
+          description="This will permanently delete this backlog event. This action cannot be undone."
+          confirmLabel="Remove"
+          onConfirm={handleDelete}
+          onClose={() => setShowRemoveConfirm(false)}
+          maxWidth={480}
+        />
+      ) : null}
     </Dialog>
   );
 }

@@ -1,17 +1,14 @@
 import type { EventApi, EventInput } from "@fullcalendar/core";
 
-import type {
-  CalendarEventKind,
-  CalendarScheduledEvent,
-} from "@/types/calendar.types";
+import type { CalendarEvent, CalendarEventType } from "@/types/calendar.types";
 
-export function kindLabel(kind: CalendarEventKind): string {
+export function kindLabel(kind: CalendarEventType): string {
   switch (kind) {
-    case "time_block":
+    case "timeBlock":
       return "Time block";
-    case "general":
-      return "General";
-    case "task_event":
+    case "common":
+      return "Common";
+    case "task":
       return "Task";
     default: {
       const _exhaustive: never = kind;
@@ -20,14 +17,30 @@ export function kindLabel(kind: CalendarEventKind): string {
   }
 }
 
-export function kindColor(kind: CalendarEventKind): string {
+/** Short label for compact timed events (single-line layout). */
+export function kindTag(kind: CalendarEventType): string {
   switch (kind) {
-    case "time_block":
-      return "#5b4dba";
-    case "general":
-      return "#0d9488";
-    case "task_event":
-      return "#d97706";
+    case "timeBlock":
+      return "Block";
+    case "common":
+      return "Common";
+    case "task":
+      return "Task";
+    default: {
+      const _exhaustive: never = kind;
+      return _exhaustive;
+    }
+  }
+}
+
+export function kindColor(kind: CalendarEventType): string {
+  switch (kind) {
+    case "timeBlock":
+      return "#4f46b8";
+    case "common":
+      return "#0f766e";
+    case "task":
+      return "#b45309";
     default: {
       const _exhaustive: never = kind;
       return _exhaustive;
@@ -37,7 +50,7 @@ export function kindColor(kind: CalendarEventKind): string {
 
 export function fcEventRangeToScheduledPatch(
   event: EventApi,
-): Pick<CalendarScheduledEvent, "start" | "end" | "allDay"> | null {
+): Pick<CalendarEvent, "start" | "end" | "allDay"> | null {
   const start = event.start;
   const end = event.end;
   if (!start || !end) return null;
@@ -82,61 +95,70 @@ function fcExclusiveEndDate(isoDateOnly: string): string {
   return d.toISOString().slice(0, 10);
 }
 
-function migrateKindProp(kind: unknown): CalendarEventKind {
-  if (kind === "time_block" || kind === "general" || kind === "task_event") {
-    return kind;
-  }
-  if (kind === "mutual") return "general";
-  return "time_block";
+function migrateKindProp(kind: unknown): CalendarEventType {
+  if (kind === "timeBlock" || kind === "common" || kind === "task") return kind;
+  // Back-compat for older persisted / imported values.
+  if (kind === "time_block") return "timeBlock";
+  if (kind === "general" || kind === "mutual") return "common";
+  if (kind === "task_event") return "task";
+  return "timeBlock";
 }
 
-export function scheduledToEventInput(
-  event: CalendarScheduledEvent,
-): EventInput {
+export function scheduledToEventInput(event: CalendarEvent): EventInput {
   const startDay = event.start.slice(0, 10);
   const endDay = event.end.slice(0, 10);
   if (event.allDay) {
+    const taskScope = event.type === "timeBlock" ? event.taskScope : undefined;
+    const taskBoardId = event.type === "task" ? event.taskBoardId : undefined;
+    const taskId = event.type === "task" ? event.taskId : undefined;
+    const taskSummarySnapshot =
+      event.type === "task" ? event.taskSummarySnapshot : undefined;
+    const rsvpStatus = event.type === "common" ? event.rsvpStatus : undefined;
     return {
       id: event.id,
       title: event.title,
       allDay: true,
       start: startDay,
       end: fcExclusiveEndDate(endDay),
-      backgroundColor: kindColor(event.kind),
-      borderColor: kindColor(event.kind),
+      backgroundColor: kindColor(event.type),
+      borderColor: kindColor(event.type),
       extendedProps: {
-        kind: event.kind,
-        taskScope: event.taskScope,
-        attendeesNote: event.attendeesNote,
-        linkedTaskSummary: event.linkedTaskSummary,
-        taskBoardId: event.taskBoardId,
-        taskId: event.taskId,
-        taskSummarySnapshot: event.taskSummarySnapshot,
-        rsvpStatus: event.rsvpStatus,
+        kind: event.type,
+        taskScope,
+        taskBoardId,
+        taskId,
+        taskSummarySnapshot,
+        rsvpStatus,
+        reminderMinutes: event.reminderMinutes,
       },
     };
   }
+  const taskScope = event.type === "timeBlock" ? event.taskScope : undefined;
+  const taskBoardId = event.type === "task" ? event.taskBoardId : undefined;
+  const taskId = event.type === "task" ? event.taskId : undefined;
+  const taskSummarySnapshot =
+    event.type === "task" ? event.taskSummarySnapshot : undefined;
+  const rsvpStatus = event.type === "common" ? event.rsvpStatus : undefined;
   return {
     id: event.id,
     title: event.title,
     start: event.start,
     end: event.end,
     allDay: false,
-    backgroundColor: kindColor(event.kind),
-    borderColor: kindColor(event.kind),
+    backgroundColor: kindColor(event.type),
+    borderColor: kindColor(event.type),
     extendedProps: {
-      kind: event.kind,
-      taskScope: event.taskScope,
-      attendeesNote: event.attendeesNote,
-      linkedTaskSummary: event.linkedTaskSummary,
-      taskBoardId: event.taskBoardId,
-      taskId: event.taskId,
-      taskSummarySnapshot: event.taskSummarySnapshot,
-      rsvpStatus: event.rsvpStatus,
+      kind: event.type,
+      taskScope,
+      taskBoardId,
+      taskId,
+      taskSummarySnapshot,
+      rsvpStatus,
+      reminderMinutes: event.reminderMinutes,
     },
   };
 }
 
-export function extendedPropsToKind(kind: unknown): CalendarEventKind {
+export function extendedPropsToKind(kind: unknown): CalendarEventType {
   return migrateKindProp(kind);
 }

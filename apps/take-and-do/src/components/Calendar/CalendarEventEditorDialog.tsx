@@ -5,6 +5,7 @@ import { toast } from "sonner";
 
 import {
   ConfirmDangerBtn,
+  ConfirmDialog,
   Dialog,
   DialogActions,
   DialogBody,
@@ -17,8 +18,10 @@ import { Input } from "@/components/Input";
 import { useIsAnonymous } from "@/hooks/auth/use-is-anonymous";
 import type {
   CalendarCreatePrefill,
-  CalendarEventKind,
-  CalendarScheduledEvent,
+  CalendarEvent,
+  CalendarEventType,
+  CalendarRepeatValue,
+  CalendarTimeZone,
 } from "@/types/calendar.types";
 
 import { CalendarEventTaskSection } from "./CalendarEventTaskSection";
@@ -36,28 +39,27 @@ type EditorMode = "create" | "edit";
 interface CalendarEventEditorDialogProps {
   open: boolean;
   mode: EditorMode;
-  initial: CalendarScheduledEvent | null;
+  initial: CalendarEvent | null;
   createRange?: { start: Date; end: Date; allDay: boolean } | null;
   createPrefill?: CalendarCreatePrefill | null;
   onClose: () => void;
-  onSave: (event: CalendarScheduledEvent) => void;
+  onSave: (event: CalendarEvent) => void;
   onDelete?: (id: string) => void;
 }
 
 interface Draft {
   title: string;
-  kind: CalendarEventKind;
+  type: CalendarEventType;
   start: string;
   end: string;
   allDay: boolean;
+  reminderMinutes: string;
   taskScope: string[];
-  attendeesNote: string;
-  linkedTaskSummary: string;
   descriptionText: string;
-  notesAndDocsText: string;
+  notesText: string;
   participantsText: string;
-  timeZone: string;
-  repeat: string;
+  timeZone: CalendarTimeZone;
+  repeat: CalendarRepeatValue;
   meetingUrlText: string;
   taskBoardId: string;
   taskId: string;
@@ -68,15 +70,14 @@ function emptyDraft(now: Date): Draft {
   const end = new Date(now.getTime() + 60 * 60 * 1000);
   return {
     title: "",
-    kind: "time_block",
+    type: "timeBlock",
     start: toDatetimeLocalValue(now),
     end: toDatetimeLocalValue(end),
     allDay: false,
+    reminderMinutes: "",
     taskScope: [],
-    attendeesNote: "",
-    linkedTaskSummary: "",
     descriptionText: "",
-    notesAndDocsText: "",
+    notesText: "",
     participantsText: "",
     timeZone: "",
     repeat: "",
@@ -87,12 +88,12 @@ function emptyDraft(now: Date): Draft {
   };
 }
 
-function fromScheduled(e: CalendarScheduledEvent): Draft {
+function fromScheduled(e: CalendarEvent): Draft {
   const start = new Date(e.start);
   const end = new Date(e.end);
   return {
     title: e.title,
-    kind: e.kind,
+    type: e.type,
     start: e.allDay
       ? `${toLocalDateInputValue(start)}T00:00`
       : toDatetimeLocalValue(start),
@@ -100,28 +101,29 @@ function fromScheduled(e: CalendarScheduledEvent): Draft {
       ? `${toLocalDateInputValue(end)}T00:00`
       : toDatetimeLocalValue(end),
     allDay: e.allDay,
-    taskScope: e.taskScope ?? [],
-    attendeesNote: e.attendeesNote ?? "",
-    linkedTaskSummary: e.linkedTaskSummary ?? "",
+    reminderMinutes:
+      typeof e.reminderMinutes === "number" ? String(e.reminderMinutes) : "",
+    taskScope: e.type === "timeBlock" ? (e.taskScope ?? []) : [],
     descriptionText: e.description ?? "",
-    notesAndDocsText: e.notesAndDocs ?? "",
-    participantsText: (e.participants ?? []).join(", "),
+    notesText: e.type !== "task" ? (e.notes ?? "") : "",
+    participantsText:
+      e.type !== "task" ? (e.participants ?? []).join(", ") : "",
     timeZone: e.timeZone ?? "",
     repeat: e.repeat ?? "",
-    meetingUrlText: e.meetingUrl ?? "",
-    taskBoardId: e.taskBoardId ?? "",
-    taskId: e.taskId ?? "",
-    taskSummarySnapshot: e.taskSummarySnapshot ?? "",
+    meetingUrlText: e.type !== "task" ? (e.meetingUrl ?? "") : "",
+    taskBoardId: e.type === "task" ? e.taskBoardId : "",
+    taskId: e.type === "task" ? e.taskId : "",
+    taskSummarySnapshot: e.type === "task" ? (e.taskSummarySnapshot ?? "") : "",
   };
 }
 
 function draftToScheduled(
   draft: Draft,
   id: string | undefined,
-  preserve: CalendarScheduledEvent | null,
-): CalendarScheduledEvent | null {
+  preserve: CalendarEvent | null,
+): CalendarEvent | null {
   if (!draft.title.trim()) return null;
-  if (draft.kind === "task_event") {
+  if (draft.type === "task") {
     if (!draft.taskBoardId.trim() || !draft.taskId.trim()) {
       return null;
     }
@@ -161,50 +163,68 @@ function draftToScheduled(
     endIso = end.toISOString();
   }
 
-  const base: CalendarScheduledEvent = {
+  const base = {
     id: id ?? crypto.randomUUID(),
-    kind: draft.kind,
     title: draft.title.trim().slice(0, 200),
     start: startIso,
     end: endIso,
     allDay: draft.allDay,
+    ...(draft.reminderMinutes.trim() &&
+    !Number.isNaN(Number(draft.reminderMinutes)) &&
+    Number(draft.reminderMinutes) >= 0
+      ? { reminderMinutes: Number(draft.reminderMinutes) }
+      : {}),
     ...(draft.timeZone.trim() ? { timeZone: draft.timeZone.trim() } : {}),
-    ...(draft.repeat.trim() ? { repeat: draft.repeat.trim() } : {}),
+    ...(draft.repeat ? { repeat: draft.repeat } : {}),
     ...(draft.meetingUrlText.trim()
       ? { meetingUrl: draft.meetingUrlText.trim() }
       : {}),
     ...(participants.length ? { participants } : {}),
-    ...(draft.notesAndDocsText.trim()
-      ? { notesAndDocs: draft.notesAndDocsText.trim() }
-      : {}),
-    ...(taskScopeLines.length ? { taskScope: taskScopeLines } : {}),
-    ...(draft.attendeesNote.trim()
-      ? { attendeesNote: draft.attendeesNote.trim() }
-      : {}),
-    ...(draft.kind === "task_event"
+    ...(draft.notesText.trim() ? { notes: draft.notesText.trim() } : {}),
+    description: draft.descriptionText.trim() || undefined,
+  } as const;
+
+  const event: CalendarEvent =
+    draft.type === "task"
       ? {
+          ...base,
+          type: "task",
           taskBoardId: draft.taskBoardId.trim(),
           taskId: draft.taskId.trim(),
           ...(draft.taskSummarySnapshot.trim()
             ? { taskSummarySnapshot: draft.taskSummarySnapshot.trim() }
             : {}),
         }
-      : {}),
-    ...(draft.kind !== "task_event" && draft.linkedTaskSummary.trim()
-      ? { linkedTaskSummary: draft.linkedTaskSummary.trim() }
-      : {}),
-    description: draft.descriptionText.trim() || undefined,
-  };
+      : draft.type === "timeBlock"
+        ? {
+            ...base,
+            type: "timeBlock",
+            ...(taskScopeLines.length ? { taskScope: taskScopeLines } : {}),
+            ...(draft.notesText.trim()
+              ? { notes: draft.notesText.trim() }
+              : {}),
+          }
+        : {
+            ...base,
+            type: "common",
+            ...(draft.notesText.trim()
+              ? { notes: draft.notesText.trim() }
+              : {}),
+          };
 
   if (preserve) {
     return {
-      ...base,
-      rsvpStatus: preserve.rsvpStatus,
-      rsvpDeclineReason: preserve.rsvpDeclineReason,
+      ...event,
+      ...(preserve.type === "common"
+        ? {
+            rsvpStatus: preserve.rsvpStatus,
+            rsvpDeclineReason: preserve.rsvpDeclineReason,
+          }
+        : {}),
     };
   }
 
-  return base;
+  return event;
 }
 
 export function CalendarEventEditorDialog({
@@ -219,13 +239,14 @@ export function CalendarEventEditorDialog({
 }: CalendarEventEditorDialogProps) {
   const isGuest = useIsAnonymous();
   const [draft, setDraft] = useState<Draft>(() => emptyDraft(new Date()));
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     if (mode === "create" && createRange) {
       setDraft({
         title: createPrefill?.title ?? "",
-        kind: createPrefill?.kind ?? "time_block",
+        type: createPrefill?.type ?? "timeBlock",
         start: createRange.allDay
           ? `${toLocalDateInputValue(createRange.start)}T00:00`
           : toDatetimeLocalValue(createRange.start),
@@ -233,11 +254,10 @@ export function CalendarEventEditorDialog({
           ? `${toLocalDateInputValue(createRange.end)}T00:00`
           : toDatetimeLocalValue(createRange.end),
         allDay: createRange.allDay,
+        reminderMinutes: "",
         taskScope: [],
-        attendeesNote: "",
-        linkedTaskSummary: "",
         descriptionText: createPrefill?.description ?? "",
-        notesAndDocsText: "",
+        notesText: "",
         participantsText: "",
         timeZone: "",
         repeat: "",
@@ -253,7 +273,7 @@ export function CalendarEventEditorDialog({
       setDraft({
         ...emptyDraft(now),
         title: createPrefill.title ?? "",
-        kind: createPrefill.kind ?? "time_block",
+        type: createPrefill.type ?? "timeBlock",
         descriptionText: createPrefill.description ?? "",
       });
       return;
@@ -267,7 +287,7 @@ export function CalendarEventEditorDialog({
   const handleSave = () => {
     const next = draftToScheduled(draft, initial?.id, initial);
     if (!next) {
-      if (draft.kind === "task_event") {
+      if (draft.type === "task") {
         toast.error(
           "Pick a board and a task, or create one with quick-create.",
         );
@@ -310,29 +330,17 @@ export function CalendarEventEditorDialog({
 
         <DialogFormGroup>
           <DialogFormLabel>Type</DialogFormLabel>
-          <Dropdown<CalendarEventKind>
+          <Dropdown<CalendarEventType>
             options={[
-              { value: "time_block", label: kindLabel("time_block") },
-              { value: "general", label: kindLabel("general") },
-              { value: "task_event", label: kindLabel("task_event") },
+              { value: "timeBlock", label: kindLabel("timeBlock") },
+              { value: "common", label: kindLabel("common") },
+              { value: "task", label: kindLabel("task") },
             ]}
-            value={draft.kind}
-            onChange={(kind) => setDraft((d) => ({ ...d, kind }))}
+            value={draft.type}
+            onChange={(type) => setDraft((d) => ({ ...d, type }))}
             fullWidth
           />
         </DialogFormGroup>
-
-        <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-300">
-          <input
-            type="checkbox"
-            checked={draft.allDay}
-            onChange={(ev) =>
-              setDraft((d) => ({ ...d, allDay: ev.target.checked }))
-            }
-            className="h-4 w-4 rounded border-white/20 bg-input-bg"
-          />
-          All-day
-        </label>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <DialogFormGroup>
@@ -367,68 +375,6 @@ export function CalendarEventEditorDialog({
           </DialogFormGroup>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <DialogFormGroup>
-            <DialogFormLabel>Time zone</DialogFormLabel>
-            <Dropdown<string>
-              options={timeZoneOptions()}
-              value={draft.timeZone}
-              onChange={(timeZone) => setDraft((d) => ({ ...d, timeZone }))}
-              fullWidth
-            />
-          </DialogFormGroup>
-          <DialogFormGroup>
-            <DialogFormLabel>Repeat</DialogFormLabel>
-            <Dropdown<string>
-              options={[
-                { value: "", label: "Does not repeat" },
-                { value: "daily", label: "Daily" },
-                { value: "weekly", label: "Weekly" },
-                { value: "monthly", label: "Monthly" },
-              ]}
-              value={draft.repeat}
-              onChange={(repeat) => setDraft((d) => ({ ...d, repeat }))}
-              fullWidth
-            />
-          </DialogFormGroup>
-        </div>
-
-        <DialogFormGroup>
-          <DialogFormLabel>Participants</DialogFormLabel>
-          <Input
-            value={draft.participantsText}
-            onChange={(e) =>
-              setDraft((d) => ({ ...d, participantsText: e.target.value }))
-            }
-            placeholder="Add participants (comma-separated)"
-            maxLength={128}
-          />
-        </DialogFormGroup>
-
-        <DialogFormGroup>
-          <DialogFormLabel>Meeting URL</DialogFormLabel>
-          <Input
-            value={draft.meetingUrlText}
-            onChange={(e) =>
-              setDraft((d) => ({ ...d, meetingUrlText: e.target.value }))
-            }
-            placeholder="Add meeting link"
-            maxLength={256}
-          />
-        </DialogFormGroup>
-
-        <DialogFormGroup>
-          <DialogFormLabel>Notes &amp; Docs</DialogFormLabel>
-          <Input
-            value={draft.notesAndDocsText}
-            onChange={(e) =>
-              setDraft((d) => ({ ...d, notesAndDocsText: e.target.value }))
-            }
-            placeholder="Add link or note"
-            maxLength={256}
-          />
-        </DialogFormGroup>
-
         <DialogFormGroup>
           <DialogFormLabel>Description</DialogFormLabel>
           <textarea
@@ -437,64 +383,169 @@ export function CalendarEventEditorDialog({
             onChange={(ev) =>
               setDraft((d) => ({ ...d, descriptionText: ev.target.value }))
             }
-            placeholder="Add details"
+            placeholder="Feel free to mention task or docs by @"
           />
         </DialogFormGroup>
 
-        {draft.kind === "time_block" && (
-          <CalendarEventTaskScopeSection
-            value={draft.taskScope}
-            onChange={(next) => setDraft((d) => ({ ...d, taskScope: next }))}
-            disabled={isGuest}
-          />
-        )}
+        <details className="rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2">
+          <summary className="cursor-pointer select-none text-sm font-medium text-zinc-200">
+            Details
+          </summary>
 
-        {draft.kind === "general" && (
-          <DialogFormGroup>
-            <DialogFormLabel>People / notes</DialogFormLabel>
-            <input
-              className={inputClass}
-              value={draft.attendeesNote}
-              onChange={(ev) =>
-                setDraft((d) => ({ ...d, attendeesNote: ev.target.value }))
-              }
-              placeholder="Who is involved?"
-            />
-          </DialogFormGroup>
-        )}
+          <div className="mt-3 flex flex-col gap-4">
+            <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-300">
+              <input
+                type="checkbox"
+                checked={draft.allDay}
+                onChange={(ev) =>
+                  setDraft((d) => ({ ...d, allDay: ev.target.checked }))
+                }
+                className="h-4 w-4 rounded border-white/20 bg-input-bg"
+              />
+              All-day
+            </label>
 
-        {draft.kind === "task_event" && (
-          <CalendarEventTaskSection
-            taskBoardId={draft.taskBoardId}
-            taskId={draft.taskId}
-            isGuest={isGuest}
-            inputClass={inputClass}
-            onBoardChange={(boardId) =>
-              setDraft((d) => ({
-                ...d,
-                taskBoardId: boardId,
-                taskId: "",
-                taskSummarySnapshot: "",
-              }))
-            }
-            onTaskChange={(tid, snap) =>
-              setDraft((d) => ({
-                ...d,
-                taskId: tid,
-                taskSummarySnapshot: snap,
-              }))
-            }
-            onTitleSync={(summary) =>
-              setDraft((d) => (!d.title.trim() ? { ...d, title: summary } : d))
-            }
-          />
-        )}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <DialogFormGroup>
+                <DialogFormLabel>Time zone</DialogFormLabel>
+                <Dropdown<CalendarTimeZone>
+                  options={timeZoneOptions()}
+                  value={draft.timeZone}
+                  onChange={(timeZone) => setDraft((d) => ({ ...d, timeZone }))}
+                  fullWidth
+                />
+              </DialogFormGroup>
+              <DialogFormGroup>
+                <DialogFormLabel>Repeat</DialogFormLabel>
+                <Dropdown<CalendarRepeatValue>
+                  options={[
+                    { value: "", label: "Does not repeat" },
+                    { value: "daily", label: "Daily" },
+                    { value: "weekly", label: "Weekly" },
+                    { value: "monthly", label: "Monthly" },
+                  ]}
+                  value={draft.repeat}
+                  onChange={(repeat) => setDraft((d) => ({ ...d, repeat }))}
+                  fullWidth
+                />
+              </DialogFormGroup>
+            </div>
+
+            <DialogFormGroup>
+              <DialogFormLabel>Reminder</DialogFormLabel>
+              <Dropdown<string>
+                options={[
+                  { value: "", label: "None" },
+                  { value: "5", label: "5 min before" },
+                  { value: "10", label: "10 min before" },
+                  { value: "30", label: "30 min before" },
+                  { value: "60", label: "1 hour before" },
+                ]}
+                value={draft.reminderMinutes}
+                onChange={(reminderMinutes) =>
+                  setDraft((d) => ({ ...d, reminderMinutes }))
+                }
+                fullWidth
+              />
+            </DialogFormGroup>
+
+            {draft.type !== "task" ? (
+              <>
+                <DialogFormGroup>
+                  <DialogFormLabel>Participants</DialogFormLabel>
+                  <Input
+                    value={draft.participantsText}
+                    onChange={(e) =>
+                      setDraft((d) => ({
+                        ...d,
+                        participantsText: e.target.value,
+                      }))
+                    }
+                    placeholder="Add participants (comma-separated)"
+                    maxLength={128}
+                  />
+                </DialogFormGroup>
+
+                <DialogFormGroup>
+                  <DialogFormLabel>Meeting URL</DialogFormLabel>
+                  <Input
+                    value={draft.meetingUrlText}
+                    onChange={(e) =>
+                      setDraft((d) => ({
+                        ...d,
+                        meetingUrlText: e.target.value,
+                      }))
+                    }
+                    placeholder="Add meeting link"
+                    maxLength={256}
+                  />
+                </DialogFormGroup>
+
+                <DialogFormGroup>
+                  <DialogFormLabel>Notes</DialogFormLabel>
+                  <Input
+                    value={draft.notesText}
+                    onChange={(e) =>
+                      setDraft((d) => ({ ...d, notesText: e.target.value }))
+                    }
+                    placeholder="Add a note"
+                    maxLength={256}
+                  />
+                </DialogFormGroup>
+              </>
+            ) : null}
+
+            {draft.type === "timeBlock" ? (
+              <CalendarEventTaskScopeSection
+                value={draft.taskScope}
+                onChange={(next) =>
+                  setDraft((d) => ({ ...d, taskScope: next }))
+                }
+                disabled={isGuest}
+              />
+            ) : null}
+
+            {draft.type === "task" ? (
+              <CalendarEventTaskSection
+                taskBoardId={draft.taskBoardId}
+                taskId={draft.taskId}
+                isGuest={isGuest}
+                inputClass={inputClass}
+                onBoardChange={(boardId) =>
+                  setDraft((d) => ({
+                    ...d,
+                    taskBoardId: boardId,
+                    taskId: "",
+                    taskSummarySnapshot: "",
+                  }))
+                }
+                onTaskChange={(tid, snap) =>
+                  setDraft((d) => ({
+                    ...d,
+                    taskId: tid,
+                    taskSummarySnapshot: snap,
+                  }))
+                }
+                onTitleSync={(summary) =>
+                  setDraft((d) =>
+                    !d.title.trim() ? { ...d, title: summary } : d,
+                  )
+                }
+              />
+            ) : null}
+          </div>
+        </details>
+
+        {/* attendeesNote removed */}
       </DialogBody>
 
-      <DialogActions className="flex flex-wrap justify-between gap-3">
+      <DialogActions className="flex flex-wrap justify-center gap-3">
         <div className="flex gap-2">
           {mode === "edit" && onDelete ? (
-            <ConfirmDangerBtn type="button" onClick={handleDelete}>
+            <ConfirmDangerBtn
+              type="button"
+              onClick={() => setShowDeleteConfirm(true)}
+            >
               Delete
             </ConfirmDangerBtn>
           ) : null}
@@ -508,6 +559,17 @@ export function CalendarEventEditorDialog({
           </DialogFormButton>
         </div>
       </DialogActions>
+
+      {showDeleteConfirm && initial && onDelete ? (
+        <ConfirmDialog
+          title="Delete event?"
+          description="This will permanently delete this event. This action cannot be undone."
+          confirmLabel="Delete"
+          onConfirm={handleDelete}
+          onClose={() => setShowDeleteConfirm(false)}
+          maxWidth={520}
+        />
+      ) : null}
     </Dialog>
   );
 }

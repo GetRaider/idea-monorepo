@@ -11,4 +11,5 @@ export enum Route {
   LABELS = "/labels",
   STATS = "/stats",
   ANALYTICS = "/analytics",
+  SETTINGS = "/settings",
 }

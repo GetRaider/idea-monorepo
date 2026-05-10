@@ -34,6 +34,7 @@ export { SearchIcon } from "./SearchIcon";
 export { SingleListIcon } from "./SingleListIcon";
 export { SortIcon } from "./SortIcon";
 export { ShieldCheckIcon } from "./ShieldCheckIcon";
+export { SettingsIcon } from "./SettingsIcon";
 export { SunIcon } from "./SunIcon";
 export { TrashIcon } from "./TrashIcon";
 export { ViewIcon } from "./ViewIcon";

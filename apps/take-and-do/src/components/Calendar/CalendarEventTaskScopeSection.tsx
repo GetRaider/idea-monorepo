@@ -22,6 +22,7 @@ export function CalendarEventTaskScopeSection({
         className,
       )}
     >
+      <div className="mb-2 text-sm font-semibold text-white">Task Scope</div>
       <CalendarTaskScopeSelector
         value={value}
         onChange={onChange}

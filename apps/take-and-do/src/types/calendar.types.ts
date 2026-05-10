@@ -1,66 +1,98 @@
-export type CalendarEventKind = "time_block" | "general" | "task_event";
+export type CalendarEventType = "common" | "timeBlock" | "task";
 
-/** Sidebar toggles for which event kinds appear on the grid. */
+/** IANA time zone, e.g. "Europe/Warsaw". */
+export type CalendarTimeZone = string;
+
+/** Repeat rules supported by the UI (no RRULE yet). */
+export type CalendarRepeatRule = "daily" | "weekly" | "monthly";
+
+/** UI value type for dropdowns that include “does not repeat”. */
+export type CalendarRepeatValue = "" | CalendarRepeatRule;
+
 export interface CalendarKindVisibility {
-  time_block: boolean;
-  general: boolean;
-  task_event: boolean;
+  common: boolean;
+  timeBlock: boolean;
+  task: boolean;
 }
 
-/** Backlog templates: only time blocks and general events (not tasks). */
-export type CalendarBacklogKind = "time_block" | "general";
+export type CalendarBacklogType = "timeBlock" | "common";
 
 export type CalendarRsvpStatus = "yes" | "no" | "maybe";
 
-export interface CalendarBacklogItem {
+export interface CalendarBacklogEvent {
   id: string;
-  kind: CalendarBacklogKind;
+  type: CalendarBacklogType;
   title: string;
-  defaultDurationMinutes: number;
+  durationMinutes: number;
+  description?: string;
   taskScope?: string[];
-  attendeesNote?: string;
 }
 
-export interface CalendarScheduledEvent {
+export interface BaseCalendarEvent {
   id: string;
-  kind: CalendarEventKind;
+  type: CalendarEventType;
   title: string;
   start: string;
   end: string;
   allDay: boolean;
-  /** IANA time zone, e.g. "Europe/Warsaw". */
-  timeZone?: string;
-  /** Simple repeat label for now (e.g. "daily", "weekly"). */
-  repeat?: string;
-  /** Meeting URL / conference link. */
+  reminderMinutes?: number;
+  timeZone?: CalendarTimeZone;
+  repeat?: CalendarRepeatRule;
+}
+
+export interface CommonCalendarEvent extends BaseCalendarEvent {
+  type: "common";
   meetingUrl?: string;
   /** Selected participants (emails / names). */
   participants?: string[];
   /** Freeform notes or link placeholder. */
-  notesAndDocs?: string;
-  taskScope?: string[];
-  /** Formerly "mutual"; general events (meetings, shared time). */
-  attendeesNote?: string;
-  /** @deprecated Prefer taskBoardId + taskId for task_event */
-  linkedTaskSummary?: string;
-  taskBoardId?: string;
-  taskId?: string;
-  /** Cached task title when linked to a board task */
-  taskSummarySnapshot?: string;
+  notes?: string;
   /** Longer notes shown in quick actions / full editor */
   description?: string;
   rsvpStatus?: CalendarRsvpStatus;
   rsvpDeclineReason?: string;
 }
 
+export interface TimeBlockCalendarEvent extends BaseCalendarEvent {
+  type: "timeBlock";
+  taskScope?: string[];
+  meetingUrl?: string;
+  participants?: string[];
+  notes?: string;
+  description?: string;
+}
+
+export interface TaskCalendarEvent extends BaseCalendarEvent {
+  type: "task";
+  taskBoardId: string;
+  taskId: string;
+  taskSummarySnapshot?: string;
+  description?: string;
+}
+
+export type CalendarEvent =
+  | CommonCalendarEvent
+  | TimeBlockCalendarEvent
+  | TaskCalendarEvent;
+
 export interface CalendarCreatePrefill {
   title?: string;
   description?: string;
-  kind?: CalendarEventKind;
+  type?: CalendarEventType;
+}
+
+/** One column in the planning calendar time axis (slot labels + header). */
+export interface CalendarAxisTimeZone {
+  id: string;
+  /** Use `__local__` for the device timezone (updates if the user moves). */
+  iana: string;
+  /** Optional short header label (e.g. "EU"); when empty, an abbreviation is derived. */
+  label?: string | null;
 }
 
 export interface CalendarPersistedState {
   version: 1;
-  events: CalendarScheduledEvent[];
-  backlog: CalendarBacklogItem[];
+  events: CalendarEvent[];
+  backlog: CalendarBacklogEvent[];
+  axisTimeZones?: CalendarAxisTimeZone[];
 }

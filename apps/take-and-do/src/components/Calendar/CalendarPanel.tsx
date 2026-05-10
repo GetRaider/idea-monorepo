@@ -4,32 +4,39 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  LayoutGrid,
   Pencil,
   Search,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import { PlusIcon } from "@/components/Icons";
+import { InfoCircleIcon, PlusIcon } from "@/components/Icons";
+import { ConfirmDialog } from "@/components/Dialogs";
+import { AppTooltip } from "@/components/Tooltip/AppTooltip";
 import { cn } from "@/lib/styles/utils";
 import type {
-  CalendarBacklogItem,
-  CalendarEventKind,
+  CalendarBacklogEvent,
+  CalendarEventType,
   CalendarKindVisibility,
 } from "@/types/calendar.types";
 
+import { CalendarKindIcon } from "./CalendarKindIcon";
 import { kindColor, kindLabel } from "./calendar-event-mapper";
 
 const WEEK_LETTERS = ["M", "T", "W", "T", "F", "S", "S"] as const;
 
 interface CalendarPanelProps {
   containerRef: React.RefObject<HTMLDivElement | null>;
-  items: CalendarBacklogItem[];
+  items: CalendarBacklogEvent[];
   onRequestNewTemplate: () => void;
-  onEditTemplate: (item: CalendarBacklogItem) => void;
+  onEditTemplate: (item: CalendarBacklogEvent) => void;
   onRemoveItem: (id: string) => void;
   kindVisibility: CalendarKindVisibility;
   onKindVisibilityChange: (next: CalendarKindVisibility) => void;
   onPickCalendarDay: (date: Date) => void;
+  showGoogleCalendar: boolean;
+  onShowGoogleCalendarChange: (next: boolean) => void;
+  googleCalendarLabel?: string | null;
 }
 
 function startOfDay(d: Date) {
@@ -86,10 +93,10 @@ function monthGrid(visibleMonth: Date) {
   return rows;
 }
 
-const CALENDAR_ROWS: { kind: CalendarEventKind; label: string }[] = [
-  { kind: "time_block", label: "Time blocks" },
-  { kind: "general", label: "General" },
-  { kind: "task_event", label: "Task windows" },
+const CALENDAR_ROWS: { kind: CalendarEventType; label: string }[] = [
+  { kind: "timeBlock", label: "Time blocks" },
+  { kind: "common", label: "Common" },
+  { kind: "task", label: "Task windows" },
 ];
 
 export function CalendarPanel({
@@ -101,28 +108,32 @@ export function CalendarPanel({
   kindVisibility,
   onKindVisibilityChange,
   onPickCalendarDay,
+  showGoogleCalendar,
+  onShowGoogleCalendarChange,
+  googleCalendarLabel,
 }: CalendarPanelProps) {
+  const [monthOpen, setMonthOpen] = useState(true);
   const [pickerMonth, setPickerMonth] = useState(() => {
     const t = new Date();
     return new Date(t.getFullYear(), t.getMonth(), 1);
   });
   const [selectedDay, setSelectedDay] = useState(() => startOfDay(new Date()));
   const [calendarsOpen, setCalendarsOpen] = useState(true);
+  const [eventTypesOpen, setEventTypesOpen] = useState(true);
   const [backlogOpen, setBacklogOpen] = useState(true);
+  const [confirmRemove, setConfirmRemove] =
+    useState<CalendarBacklogEvent | null>(null);
 
   const rows = useMemo(() => monthGrid(pickerMonth), [pickerMonth]);
 
   const allKindsOn =
-    kindVisibility.time_block &&
-    kindVisibility.general &&
-    kindVisibility.task_event;
+    kindVisibility.timeBlock && kindVisibility.common && kindVisibility.task;
 
   const monthTitle = pickerMonth.toLocaleDateString(undefined, {
     month: "long",
-    year: "numeric",
   });
 
-  const toggleKind = (kind: CalendarEventKind) => {
+  const toggleKind = (kind: CalendarEventType) => {
     onKindVisibilityChange({
       ...kindVisibility,
       [kind]: !kindVisibility[kind],
@@ -130,7 +141,10 @@ export function CalendarPanel({
   };
 
   return (
-    <aside className="calendar-surface flex min-h-0 w-full max-w-[300px] shrink-0 flex-col gap-5 overflow-y-auto rounded-xl border border-white/10 bg-background-primary/85 p-4 shadow-[0_8px_32px_rgba(0,0,0,0.25)] backdrop-blur-md max-[900px]:max-w-none">
+    <aside
+      className="calendar-surface flex min-h-0 w-full max-w-[260px] shrink-0 flex-col gap-4 overflow-y-auto rounded-xl border border-white/10 bg-background-primary/85 p-3.5 shadow-[0_8px_32px_rgba(0,0,0,0.25)] backdrop-blur-md max-[900px]:max-w-none"
+      style={{ scrollbarGutter: "stable" }}
+    >
       <div className="relative">
         <Search
           size={16}
@@ -146,93 +160,122 @@ export function CalendarPanel({
       </div>
 
       <section className="space-y-2">
-        <div className="flex items-center justify-between gap-2">
-          <h2 className="m-0 text-sm font-semibold text-white">{monthTitle}</h2>
-          <div className="flex items-center gap-0.5">
+        <button
+          type="button"
+          className="flex w-full items-center gap-2 rounded-lg border-0 bg-transparent px-2 py-2 text-left transition-colors hover:bg-white/[0.06]"
+          onClick={() => setMonthOpen((o) => !o)}
+          aria-expanded={monthOpen}
+        >
+          <div className="flex shrink-0 items-center gap-2">
+            <span className="text-sm font-semibold text-white">Month</span>
+            <AppTooltip content="Pick a day to jump the main calendar.">
+              <span className="inline-flex">
+                <InfoCircleIcon size={16} className="text-zinc-500" />
+              </span>
+            </AppTooltip>
+          </div>
+          <div className="flex min-w-0 flex-1 items-center justify-start gap-1.5 pl-1">
             <button
               type="button"
-              className="flex h-8 w-8 items-center justify-center rounded-lg border-0 bg-transparent text-zinc-400 hover:bg-white/[0.06] hover:text-white"
+              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border-0 bg-transparent text-zinc-400 hover:bg-white/[0.06] hover:text-white"
               aria-label="Previous month"
-              onClick={() =>
+              onClick={(e) => {
+                e.stopPropagation();
                 setPickerMonth(
                   (d) => new Date(d.getFullYear(), d.getMonth() - 1, 1),
-                )
-              }
+                );
+              }}
             >
-              <ChevronLeft size={18} aria-hidden />
+              <ChevronLeft size={14} aria-hidden />
             </button>
+            <span className="min-w-0 max-w-[5.5rem] truncate text-[10px] font-medium leading-tight text-zinc-400">
+              {monthTitle}
+            </span>
             <button
               type="button"
-              className="flex h-8 w-8 items-center justify-center rounded-lg border-0 bg-transparent text-zinc-400 hover:bg-white/[0.06] hover:text-white"
+              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border-0 bg-transparent text-zinc-400 hover:bg-white/[0.06] hover:text-white"
               aria-label="Next month"
-              onClick={() =>
+              onClick={(e) => {
+                e.stopPropagation();
                 setPickerMonth(
                   (d) => new Date(d.getFullYear(), d.getMonth() + 1, 1),
-                )
-              }
+                );
+              }}
             >
-              <ChevronRight size={18} aria-hidden />
+              <ChevronRight size={14} aria-hidden />
             </button>
           </div>
-        </div>
+          <ChevronDown
+            size={18}
+            className={cn(
+              "ml-auto shrink-0 text-zinc-500 transition-transform",
+              monthOpen ? "rotate-0" : "-rotate-90",
+            )}
+            aria-hidden
+          />
+        </button>
 
-        <div className="flex gap-0 overflow-hidden rounded-lg border border-white/[0.08] bg-black/20">
-          <div className="flex w-7 shrink-0 flex-col border-r border-white/[0.06] bg-white/[0.03] py-1">
-            <div className="h-6 shrink-0" aria-hidden />
-            {rows.map((week, ri) => (
-              <div
-                key={ri}
-                className="flex h-7 items-center justify-center text-[10px] font-medium tabular-nums text-zinc-500"
-              >
-                {isoWeekNumber(week[0].date)}
+        {monthOpen ? (
+          <>
+            <div className="mx-auto flex max-w-[268px] gap-0 overflow-hidden rounded-lg border border-white/[0.08] bg-black/20">
+              <div className="flex w-6 shrink-0 flex-col border-r border-white/[0.06] bg-white/[0.03] py-1">
+                <div className="h-6 shrink-0" aria-hidden />
+                {rows.map((week, ri) => (
+                  <div
+                    key={ri}
+                    className="flex h-7 items-center justify-center text-[10px] font-medium tabular-nums text-zinc-500"
+                  >
+                    {isoWeekNumber(week[0].date)}
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-          <div className="min-w-0 flex-1 py-1 pr-1">
-            <div className="grid grid-cols-7 gap-0 px-1">
-              {WEEK_LETTERS.map((l, i) => (
-                <div
-                  key={`${l}-${i}`}
-                  className="flex h-6 items-center justify-center text-[10px] font-semibold text-zinc-500"
-                >
-                  {l}
-                </div>
-              ))}
-            </div>
-            <div className="grid grid-cols-7 gap-0 px-1">
-              {rows.flatMap((week) =>
-                week.map(({ date, inMonth }) => {
-                  const sel = sameDay(date, selectedDay);
-                  return (
-                    <button
-                      key={date.toISOString()}
-                      type="button"
-                      className={cn(
-                        "flex h-7 items-center justify-center rounded-md text-[11px] font-medium tabular-nums transition-colors",
-                        !inMonth && "text-zinc-600",
-                        inMonth &&
-                          !sel &&
-                          "text-zinc-200 hover:bg-white/[0.08]",
-                        sel &&
-                          "bg-[#7255c1] text-white shadow-sm hover:bg-[#6346b0]",
-                      )}
-                      onClick={() => {
-                        const d = startOfDay(date);
-                        setSelectedDay(d);
-                        setPickerMonth(
-                          new Date(d.getFullYear(), d.getMonth(), 1),
-                        );
-                        onPickCalendarDay(d);
-                      }}
+              <div className="min-w-0 flex-1 py-1 pr-1">
+                <div className="grid grid-cols-7 gap-0 px-1">
+                  {WEEK_LETTERS.map((l, i) => (
+                    <div
+                      key={`${l}-${i}`}
+                      className="flex h-6 items-center justify-center text-[10px] font-semibold text-zinc-500"
                     >
-                      {date.getDate()}
-                    </button>
-                  );
-                }),
-              )}
+                      {l}
+                    </div>
+                  ))}
+                </div>
+                <div className="grid grid-cols-7 gap-0 px-1">
+                  {rows.flatMap((week) =>
+                    week.map(({ date, inMonth }) => {
+                      const sel = sameDay(date, selectedDay);
+                      return (
+                        <button
+                          key={date.toISOString()}
+                          type="button"
+                          className={cn(
+                            "flex h-7 items-center justify-center rounded-md text-[11px] font-medium tabular-nums transition-colors",
+                            !inMonth && "text-zinc-600",
+                            inMonth &&
+                              !sel &&
+                              "text-zinc-200 hover:bg-white/[0.08]",
+                            sel &&
+                              "bg-[#7255c1] text-white shadow-sm hover:bg-[#6346b0]",
+                          )}
+                          onClick={() => {
+                            const d = startOfDay(date);
+                            setSelectedDay(d);
+                            setPickerMonth(
+                              new Date(d.getFullYear(), d.getMonth(), 1),
+                            );
+                            onPickCalendarDay(d);
+                          }}
+                        >
+                          {date.getDate()}
+                        </button>
+                      );
+                    }),
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
+          </>
+        ) : null}
       </section>
 
       <section className="border-t border-white/[0.08] pt-3">
@@ -242,7 +285,14 @@ export function CalendarPanel({
           onClick={() => setCalendarsOpen((o) => !o)}
           aria-expanded={calendarsOpen}
         >
-          <span className="text-sm font-semibold text-white">Calendars</span>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold text-white">Calendars</span>
+            <AppTooltip content="Show or hide external calendars.">
+              <span className="inline-flex">
+                <InfoCircleIcon size={16} className="text-zinc-500" />
+              </span>
+            </AppTooltip>
+          </div>
           <ChevronDown
             size={18}
             className={cn(
@@ -254,6 +304,63 @@ export function CalendarPanel({
         </button>
         {calendarsOpen ? (
           <ul className="mt-2 space-y-2">
+            <li className="flex items-center gap-2.5 pl-1">
+              <input
+                id="cal-google"
+                type="checkbox"
+                checked={showGoogleCalendar}
+                onChange={(e) => onShowGoogleCalendarChange(e.target.checked)}
+                className="h-4 w-4 rounded border-white/20 bg-transparent accent-[#4285F4]"
+              />
+              <label
+                htmlFor="cal-google"
+                className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 text-sm text-zinc-200"
+              >
+                <span
+                  className="h-2 w-2 shrink-0 rounded-sm"
+                  style={{ backgroundColor: "#0d9488" }}
+                  aria-hidden
+                />
+                <span className="truncate">
+                  {googleCalendarLabel
+                    ? `${googleCalendarLabel}`
+                    : "Google Calendar"}
+                </span>
+              </label>
+            </li>
+          </ul>
+        ) : null}
+      </section>
+
+      <section className="border-t border-white/[0.08] pt-3">
+        <button
+          type="button"
+          className="flex w-full items-center justify-between gap-2 rounded-lg border-0 bg-transparent px-2 py-2 text-left transition-colors hover:bg-white/[0.06]"
+          onClick={() => setEventTypesOpen((o) => !o)}
+          aria-expanded={eventTypesOpen}
+        >
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold text-white">
+              Event Types
+            </span>
+            <AppTooltip content="Filter which event types show on the calendar.">
+              <span className="inline-flex">
+                <InfoCircleIcon size={16} className="text-zinc-500" />
+              </span>
+            </AppTooltip>
+          </div>
+          <ChevronDown
+            size={18}
+            className={cn(
+              "shrink-0 text-zinc-500 transition-transform",
+              eventTypesOpen ? "rotate-0" : "-rotate-90",
+            )}
+            aria-hidden
+          />
+        </button>
+
+        {eventTypesOpen ? (
+          <ul className="mt-2 space-y-2">
             <li className="flex items-center gap-2.5">
               <input
                 id="cal-all"
@@ -262,22 +369,28 @@ export function CalendarPanel({
                 onChange={(e) => {
                   const on = e.target.checked;
                   onKindVisibilityChange({
-                    time_block: on,
-                    general: on,
-                    task_event: on,
+                    timeBlock: on,
+                    common: on,
+                    task: on,
                   });
                 }}
                 className="h-4 w-4 rounded border-white/20 bg-transparent accent-[#7255c1]"
               />
               <label
                 htmlFor="cal-all"
-                className="truncate text-sm text-zinc-200"
+                className="flex min-w-0 cursor-pointer items-center gap-2 truncate text-sm text-zinc-200"
               >
+                <LayoutGrid
+                  size={16}
+                  className="shrink-0 text-zinc-400"
+                  strokeWidth={2}
+                  aria-hidden
+                />
                 All
               </label>
             </li>
             {CALENDAR_ROWS.map(({ kind, label }) => (
-              <li key={kind} className="flex items-center gap-2.5 pl-1">
+              <li key={kind} className="flex items-center gap-2.5">
                 <input
                   id={`cal-${kind}`}
                   type="checkbox"
@@ -290,11 +403,7 @@ export function CalendarPanel({
                   htmlFor={`cal-${kind}`}
                   className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 text-sm text-zinc-200"
                 >
-                  <span
-                    className="h-2 w-2 shrink-0 rounded-sm"
-                    style={{ backgroundColor: kindColor(kind) }}
-                    aria-hidden
-                  />
+                  <CalendarKindIcon kind={kind} size={16} aria-hidden />
                   <span className="truncate">{label}</span>
                 </label>
               </li>
@@ -310,24 +419,42 @@ export function CalendarPanel({
           onClick={() => setBacklogOpen((o) => !o)}
           aria-expanded={backlogOpen}
         >
-          <span className="text-sm font-semibold text-white">
-            Events Backlog
-          </span>
-          <ChevronDown
-            size={18}
-            className={cn(
-              "shrink-0 text-zinc-500 transition-transform",
-              backlogOpen ? "rotate-0" : "-rotate-90",
-            )}
-            aria-hidden
-          />
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold text-white">
+              Events Backlog
+            </span>
+            <AppTooltip content="Reusable backlog events you can drag onto the calendar">
+              <span className="inline-flex">
+                <InfoCircleIcon size={16} className="text-zinc-500" />
+              </span>
+            </AppTooltip>
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onRequestNewTemplate();
+              }}
+              className="flex h-8 w-8 items-center justify-center rounded-lg border-0 bg-transparent text-zinc-400 hover:bg-white/[0.06] hover:text-white"
+              aria-label="Add backlog template"
+              title="Add backlog template"
+            >
+              <PlusIcon size={16} aria-hidden />
+            </button>
+            <ChevronDown
+              size={18}
+              className={cn(
+                "shrink-0 text-zinc-500 transition-transform",
+                backlogOpen ? "rotate-0" : "-rotate-90",
+              )}
+              aria-hidden
+            />
+          </div>
         </button>
 
         {backlogOpen ? (
           <div className="mt-2 space-y-2">
-            <p className="m-0 px-2 text-xs leading-relaxed text-zinc-500">
-              Reusable templates — drag onto the calendar.
-            </p>
             <div
               ref={containerRef as React.LegacyRef<HTMLDivElement>}
               className="flex max-h-[220px] min-h-[100px] flex-col gap-2 overflow-y-auto px-2"
@@ -346,16 +473,22 @@ export function CalendarPanel({
                       className="min-w-0 flex-1 cursor-grab text-left"
                     >
                       <div
-                        className="mb-0.5 inline-block rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white"
-                        style={{ backgroundColor: kindColor(item.kind) }}
+                        className="mb-0.5 inline-flex h-6 w-6 items-center justify-center rounded"
+                        style={{ backgroundColor: kindColor(item.type) }}
+                        title={kindLabel(item.type)}
+                        aria-label={kindLabel(item.type)}
                       >
-                        {kindLabel(item.kind)}
+                        <CalendarKindIcon
+                          kind={item.type}
+                          size={14}
+                          color="#fafafa"
+                        />
                       </div>
                       <div className="truncate text-sm font-medium text-white">
                         {item.title}
                       </div>
                       <div className="text-xs text-zinc-500">
-                        {item.defaultDurationMinutes} min
+                        {item.durationMinutes} min
                       </div>
                     </button>
                     <div className="flex shrink-0 flex-col gap-0.5">
@@ -373,7 +506,7 @@ export function CalendarPanel({
                         className="rounded-md border-0 bg-transparent px-1 py-0.5 text-lg leading-none text-zinc-500 hover:bg-zinc-800 hover:text-white"
                         title="Remove template"
                         onPointerDown={(e) => e.stopPropagation()}
-                        onClick={() => onRemoveItem(item.id)}
+                        onClick={() => setConfirmRemove(item)}
                       >
                         ×
                       </button>
@@ -382,24 +515,19 @@ export function CalendarPanel({
                 </div>
               ))}
             </div>
-            <div className="px-2">
-              <button
-                type="button"
-                onClick={onRequestNewTemplate}
-                className={cn(
-                  "quick-create-appear group flex w-full cursor-pointer items-center gap-2 rounded-lg border border-dashed border-input-border bg-transparent px-4 py-3 text-left text-sm text-text-tertiary transition-colors duration-200 hover:border-focus-ring hover:bg-focus-ring/[0.06] hover:text-focus-ring focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring",
-                )}
-              >
-                <PlusIcon
-                  size={16}
-                  className="text-text-tertiary transition-colors group-hover:text-focus-ring"
-                />
-                <span>Add backlog template</span>
-              </button>
-            </div>
           </div>
         ) : null}
       </section>
+
+      {confirmRemove ? (
+        <ConfirmDialog
+          title="Remove from backlog?"
+          description={`This will permanently delete "${confirmRemove.title}" from the Events Backlog. This action cannot be undone.`}
+          confirmLabel="Remove"
+          onConfirm={() => onRemoveItem(confirmRemove.id)}
+          onClose={() => setConfirmRemove(null)}
+        />
+      ) : null}
     </aside>
   );
 }

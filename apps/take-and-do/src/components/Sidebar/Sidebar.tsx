@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { UserWithAnonymous } from "better-auth/plugins";
 
 import { Dropdown } from "@/components/Dropdown";
-import { OverviewIcon, SunIcon } from "@/components/Icons";
+import { OverviewIcon, SettingsIcon, SunIcon } from "@/components/Icons";
 import { signOutAndClear, useSession } from "@/auth/client";
 import { AppTooltip } from "@/components/Tooltip/AppTooltip";
 import {
@@ -101,6 +101,18 @@ export function Sidebar({ onNavigationChange }: SidebarProps) {
           <SunIcon size={20} />
         </NavButton>
 
+        <AppTooltip content="Settings" side="right">
+          <span className="inline-flex">
+            <NavButton
+              title="Settings"
+              isActive={pathname.startsWith(Route.SETTINGS)}
+              onClick={() => handleNavClick("Settings", Route.SETTINGS)}
+            >
+              <SettingsIcon size={20} className="text-white" />
+            </NavButton>
+          </span>
+        </AppTooltip>
+
         <Dropdown
           className="mt-2"
           menuOpensTo="right"
@@ -124,7 +136,7 @@ function getAvatarIcon(user: UserWithAnonymous | undefined): React.ReactNode {
   if (user?.image) {
     return <Avatar src={user.image} alt={user.name ?? "Account"} />;
   }
-  if (!user) return <DefaultAvatarIcon size={36} />;
+  return <DefaultAvatarIcon size={36} />;
 }
 
 interface SidebarProps {

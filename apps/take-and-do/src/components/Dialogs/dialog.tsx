@@ -234,6 +234,7 @@ export function Dialog({
   onClose,
   children,
   showCloseButton = true,
+  headerBeforeClose,
   maxWidth = 500,
   minHeight,
 }: DialogProps) {
@@ -345,9 +346,12 @@ export function Dialog({
               <DialogSubtitle id={subtitleId}>{subtitle}</DialogSubtitle>
             )}
           </div>
-          {showCloseButton && (
-            <DialogCloseButton onClick={onClose} aria-label="Close dialog" />
-          )}
+          <div className="flex shrink-0 items-center gap-1">
+            {headerBeforeClose}
+            {showCloseButton && (
+              <DialogCloseButton onClick={onClose} aria-label="Close dialog" />
+            )}
+          </div>
         </DialogHeader>
         <DialogBody>{children}</DialogBody>
       </DialogContainer>
@@ -365,6 +369,8 @@ interface DialogProps {
   onClose: () => void;
   children: ReactNode;
   showCloseButton?: boolean;
+  /** Rendered immediately before the close control (e.g. delete icon). */
+  headerBeforeClose?: ReactNode;
   maxWidth?: number;
   minHeight?: number;
 }

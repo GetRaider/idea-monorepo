@@ -11,9 +11,11 @@ import {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
-import { ChevronDown, MoreVertical, PanelRight, X } from "lucide-react";
+import { ChevronDown, MoreVertical, X } from "lucide-react";
 
+import { ConfirmDialog } from "@/components/Dialogs";
 import { Dropdown } from "@/components/Dropdown";
+import { FullScreenIcon } from "@/components/Icons/FullScreenIcon";
 import { Input } from "@/components/Input";
 import { useIsAnonymous } from "@/hooks/auth/use-is-anonymous";
 import { useTasks } from "@/hooks/tasks/useTasks";
@@ -161,6 +163,7 @@ export function CalendarEventQuickMenu({
   const { data: session } = useSession();
   const isGuest = useIsAnonymous();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const allDay =
     payload.mode === "existing" ? payload.event.allDay : payload.allDay;
@@ -830,571 +833,595 @@ export function CalendarEventQuickMenu({
   };
 
   const section = "px-4 py-4";
+  const sectionTitleClass = "m-0 mb-2 text-sm font-medium text-zinc-200";
 
-  return createPortal(
-    <div
-      className="calendar-quick-menu pointer-events-none absolute inset-0 z-[4500]"
-      role="presentation"
-      aria-hidden
-    >
-      <div
-        ref={panelRef}
-        role="dialog"
-        aria-labelledby={kindSelectId}
-        className={cn(
-          "pointer-events-auto absolute flex max-h-[min(560px,calc(100%-24px))] flex-col overflow-hidden rounded-2xl border border-white/[0.07] bg-gradient-to-b from-[rgba(44,40,58,0.94)] via-[rgba(26,24,36,0.97)] to-[rgba(18,16,26,0.98)] shadow-[0_28px_90px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-xl",
-        )}
-        style={{
-          left: pos?.left ?? pad,
-          top: pos?.top ?? pad,
-          width: pos?.width ?? desiredWidth,
-        }}
-      >
+  const handleConfirmDelete = () => {
+    if (payload.mode !== "existing" || !onDelete) return;
+    onDelete(payload.event.id);
+    window.setTimeout(() => onClose(), 0);
+  };
+
+  return (
+    <>
+      {createPortal(
         <div
-          className={cn(
-            "flex items-center justify-between gap-2 border-b border-white/[0.06] bg-white/[0.02] px-3.5 py-3",
-          )}
+          className="calendar-quick-menu pointer-events-none absolute inset-0 z-[4500]"
+          role="presentation"
+          aria-hidden
         >
-          <div className="min-w-0 flex-1">
-            <Dropdown<CalendarEventType>
-              id={kindSelectId}
-              options={[
-                { value: "timeBlock", label: kindLabel("timeBlock") },
-                { value: "common", label: kindLabel("common") },
-                { value: "task", label: kindLabel("task") },
-              ]}
-              value={kind}
-              onChange={setKind}
-              fullWidth={false}
-              disabled={lockImportedCommonKind}
-            />
-          </div>
-          <div className="relative flex items-center gap-1">
-            {payload.mode === "existing" && (onDuplicate || onDelete) ? (
-              <div className="relative">
-                <button
-                  type="button"
-                  title="More"
-                  className="flex h-9 w-9 items-center justify-center rounded-xl border-0 bg-transparent text-zinc-500 transition-colors hover:bg-white/[0.07] hover:text-white"
-                  onClick={() => setMenuOpen((v) => !v)}
-                >
-                  <MoreVertical size={18} strokeWidth={1.75} aria-hidden />
-                </button>
-                {menuOpen ? (
-                  <div className="absolute right-0 top-10 z-[1] min-w-[140px] overflow-hidden rounded-xl border border-white/[0.08] bg-[#1e1e26] shadow-[0_16px_48px_rgba(0,0,0,0.5)]">
-                    {onDuplicate ? (
-                      <button
-                        type="button"
-                        className="block w-full px-3 py-2 text-left text-xs font-medium text-zinc-200 hover:bg-white/[0.06]"
-                        onClick={() => {
-                          onDuplicate(payload.event);
-                          setMenuOpen(false);
-                          onClose();
-                        }}
-                      >
-                        Duplicate
-                      </button>
-                    ) : null}
-                    {onDelete ? (
-                      <button
-                        type="button"
-                        className="block w-full px-3 py-2 text-left text-xs font-medium text-red-300 hover:bg-red-500/10"
-                        onClick={() => {
-                          onDelete(payload.event.id);
-                          setMenuOpen(false);
-                          onClose();
-                        }}
-                      >
-                        Delete
-                      </button>
+          <div
+            ref={panelRef}
+            role="dialog"
+            aria-labelledby={kindSelectId}
+            className={cn(
+              "pointer-events-auto absolute flex max-h-[min(560px,calc(100%-24px))] flex-col overflow-hidden rounded-2xl border border-white/[0.07] bg-gradient-to-b from-[rgba(44,40,58,0.94)] via-[rgba(26,24,36,0.97)] to-[rgba(18,16,26,0.98)] shadow-[0_28px_90px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-xl",
+            )}
+            style={{
+              left: pos?.left ?? pad,
+              top: pos?.top ?? pad,
+              width: pos?.width ?? desiredWidth,
+            }}
+          >
+            <div
+              className={cn(
+                "flex items-center justify-between gap-2 border-b border-white/[0.06] bg-white/[0.02] px-3.5 py-3",
+              )}
+            >
+              <div className="min-w-0 flex-1">
+                <Dropdown<CalendarEventType>
+                  id={kindSelectId}
+                  options={[
+                    { value: "timeBlock", label: kindLabel("timeBlock") },
+                    { value: "common", label: kindLabel("common") },
+                    { value: "task", label: kindLabel("task") },
+                  ]}
+                  value={kind}
+                  onChange={setKind}
+                  fullWidth={false}
+                  disabled={lockImportedCommonKind}
+                />
+              </div>
+              <div className="relative flex items-center gap-1">
+                {payload.mode === "existing" && (onDuplicate || onDelete) ? (
+                  <div className="relative">
+                    <button
+                      type="button"
+                      title="More"
+                      className="flex h-9 w-9 items-center justify-center rounded-xl border-0 bg-transparent text-zinc-500 transition-colors hover:bg-white/[0.07] hover:text-white"
+                      onClick={() => setMenuOpen((v) => !v)}
+                    >
+                      <MoreVertical size={18} strokeWidth={1.75} aria-hidden />
+                    </button>
+                    {menuOpen ? (
+                      <div className="absolute right-0 top-10 z-[1] min-w-[140px] overflow-hidden rounded-xl border border-white/[0.08] bg-[#1e1e26] shadow-[0_16px_48px_rgba(0,0,0,0.5)]">
+                        {onDuplicate ? (
+                          <button
+                            type="button"
+                            className="block w-full px-3 py-2 text-left text-xs font-medium text-zinc-200 hover:bg-white/[0.06]"
+                            onClick={() => {
+                              onDuplicate(payload.event);
+                              setMenuOpen(false);
+                              onClose();
+                            }}
+                          >
+                            Duplicate
+                          </button>
+                        ) : null}
+                        {onDelete ? (
+                          <button
+                            type="button"
+                            className="block w-full px-3 py-2 text-left text-xs font-medium text-red-300 hover:bg-red-500/10"
+                            onClick={() => {
+                              setShowDeleteConfirm(true);
+                              setMenuOpen(false);
+                            }}
+                          >
+                            Delete
+                          </button>
+                        ) : null}
+                      </div>
                     ) : null}
                   </div>
                 ) : null}
+                {onDisplayTimes24hChange ? (
+                  <div
+                    className="mr-0.5 flex shrink-0 items-center rounded-lg border border-white/[0.08] bg-black/25 p-0.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
+                    role="group"
+                    aria-label="Time display format"
+                  >
+                    <button
+                      type="button"
+                      className={cn(
+                        "rounded-md px-2 py-1.5 text-[11px] font-semibold transition-colors",
+                        !slotPreview24h
+                          ? "bg-white/[0.1] text-white"
+                          : "text-zinc-500 hover:bg-white/[0.06] hover:text-zinc-200",
+                      )}
+                      onClick={() => onDisplayTimes24hChange(false)}
+                    >
+                      12h
+                    </button>
+                    <button
+                      type="button"
+                      className={cn(
+                        "rounded-md px-2 py-1.5 text-[11px] font-semibold transition-colors",
+                        slotPreview24h
+                          ? "bg-white/[0.1] text-white"
+                          : "text-zinc-500 hover:bg-white/[0.06] hover:text-zinc-200",
+                      )}
+                      onClick={() => onDisplayTimes24hChange(true)}
+                    >
+                      24h
+                    </button>
+                  </div>
+                ) : null}
+                <button
+                  type="button"
+                  title="Open full editor"
+                  className="flex h-9 w-9 items-center justify-center rounded-xl border-0 bg-transparent text-zinc-400 transition-colors hover:bg-white/[0.07] hover:text-white"
+                  onClick={handleOpenFull}
+                >
+                  <FullScreenIcon
+                    size={18}
+                    className="text-current"
+                    aria-hidden
+                  />
+                </button>
+                <button
+                  type="button"
+                  title="Close"
+                  className="flex h-9 w-9 items-center justify-center rounded-xl border-0 bg-transparent text-zinc-500 transition-colors hover:bg-white/[0.07] hover:text-white"
+                  onClick={onClose}
+                >
+                  <X size={20} strokeWidth={1.75} aria-hidden />
+                </button>
               </div>
-            ) : null}
-            {onDisplayTimes24hChange ? (
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-y-auto [-webkit-overflow-scrolling:touch]">
+              {!isTask ? (
+                <div className={cn(section, "border-b border-white/[0.05]")}>
+                  <p className={sectionTitleClass}>Title</p>
+                  <Input
+                    className="rounded-xl border-white/[0.08] bg-white/[0.04] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] placeholder:text-zinc-600"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="Title"
+                    aria-label="Title"
+                    maxLength={200}
+                  />
+                </div>
+              ) : null}
+
+              {isTask ? (
+                <div className={cn(section, "border-b border-white/[0.05]")}>
+                  <p className={sectionTitleClass}>Task</p>
+                  <CalendarEventTaskSection
+                    taskBoardId={taskBoardId}
+                    taskId={taskId}
+                    isGuest={isGuest}
+                    inputClass=""
+                    onBoardChange={(boardId) => {
+                      setTaskBoardId(boardId);
+                      setTaskId("");
+                      setTaskSummarySnapshot("");
+                    }}
+                    onTaskChange={(tid, snap) => {
+                      setTaskId(tid);
+                      setTaskSummarySnapshot(snap);
+                    }}
+                    onTitleSync={(summary) =>
+                      setTitle((t) => (!t.trim() ? summary : t))
+                    }
+                  />
+                </div>
+              ) : null}
+
               <div
-                className="mr-0.5 flex shrink-0 items-center rounded-lg border border-white/[0.08] bg-black/25 p-0.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
-                role="group"
-                aria-label="Time display format"
+                className={cn(
+                  section,
+                  "border-b border-white/[0.05] space-y-2",
+                )}
               >
-                <button
-                  type="button"
-                  className={cn(
-                    "rounded-md px-2 py-1.5 text-[11px] font-semibold transition-colors",
-                    !slotPreview24h
-                      ? "bg-white/[0.1] text-white"
-                      : "text-zinc-500 hover:bg-white/[0.06] hover:text-zinc-200",
-                  )}
-                  onClick={() => onDisplayTimes24hChange(false)}
-                >
-                  12h
-                </button>
-                <button
-                  type="button"
-                  className={cn(
-                    "rounded-md px-2 py-1.5 text-[11px] font-semibold transition-colors",
-                    slotPreview24h
-                      ? "bg-white/[0.1] text-white"
-                      : "text-zinc-500 hover:bg-white/[0.06] hover:text-zinc-200",
-                  )}
-                  onClick={() => onDisplayTimes24hChange(true)}
-                >
-                  24h
-                </button>
-              </div>
-            ) : null}
-            <button
-              type="button"
-              title="Open full editor"
-              className="flex h-9 w-9 items-center justify-center rounded-xl border-0 bg-transparent text-zinc-400 transition-colors hover:bg-white/[0.07] hover:text-white"
-              onClick={handleOpenFull}
-            >
-              <PanelRight size={20} strokeWidth={1.75} aria-hidden />
-            </button>
-            <button
-              type="button"
-              title="Close"
-              className="flex h-9 w-9 items-center justify-center rounded-xl border-0 bg-transparent text-zinc-500 transition-colors hover:bg-white/[0.07] hover:text-white"
-              onClick={onClose}
-            >
-              <X size={20} strokeWidth={1.75} aria-hidden />
-            </button>
-          </div>
-        </div>
-
-        <div className="min-h-0 flex-1 overflow-y-auto [-webkit-overflow-scrolling:touch]">
-          {!isTask ? (
-            <div className={cn(section, "border-b border-white/[0.05]")}>
-              <p className="m-0 mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-500">
-                Title
-              </p>
-              <Input
-                className="rounded-xl border-white/[0.08] bg-white/[0.04] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] placeholder:text-zinc-600"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Title"
-                aria-label="Title"
-                maxLength={200}
-              />
-            </div>
-          ) : null}
-
-          {isTask ? (
-            <div className={cn(section, "border-b border-white/[0.05]")}>
-              <p className="m-0 mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-500">
-                Task
-              </p>
-              <CalendarEventTaskSection
-                taskBoardId={taskBoardId}
-                taskId={taskId}
-                isGuest={isGuest}
-                inputClass=""
-                onBoardChange={(boardId) => {
-                  setTaskBoardId(boardId);
-                  setTaskId("");
-                  setTaskSummarySnapshot("");
-                }}
-                onTaskChange={(tid, snap) => {
-                  setTaskId(tid);
-                  setTaskSummarySnapshot(snap);
-                }}
-                onTitleSync={(summary) =>
-                  setTitle((t) => (!t.trim() ? summary : t))
-                }
-              />
-            </div>
-          ) : null}
-
-          <div
-            className={cn(section, "border-b border-white/[0.05] space-y-2")}
-          >
-            <div className="min-w-0">
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-500">
-                    Start
-                  </p>
-                  {allDay ? (
-                    <input
-                      type="date"
-                      className="w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2.5 text-sm text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
-                      value={startValue.slice(0, 10)}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        setStartValue(`${v}T00:00`);
-                      }}
-                    />
-                  ) : (
-                    <>
-                      <input
-                        type="date"
-                        className="w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2.5 text-sm text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
-                        value={splitDatetimeLocalParts(startValue).date}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          setStartValue((prev) =>
-                            joinDatetimeLocalParts(
-                              v,
-                              splitDatetimeLocalParts(prev).time,
-                            ),
-                          );
-                        }}
-                      />
-                      <input
-                        type="time"
-                        step={900}
-                        className="w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2.5 text-sm text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
-                        value={splitDatetimeLocalParts(startValue).time}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          setStartValue((prev) =>
-                            joinDatetimeLocalParts(
-                              splitDatetimeLocalParts(prev).date,
-                              v,
-                            ),
-                          );
-                        }}
-                      />
-                    </>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-500">
-                    End
-                  </p>
-                  {allDay ? (
-                    <input
-                      type="date"
-                      className="w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2.5 text-sm text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
-                      value={endValue.slice(0, 10)}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        setEndValue(`${v}T00:00`);
-                      }}
-                    />
-                  ) : (
-                    <>
-                      <input
-                        type="date"
-                        className="w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2.5 text-sm text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
-                        value={splitDatetimeLocalParts(endValue).date}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          setEndValue((prev) =>
-                            joinDatetimeLocalParts(
-                              v,
-                              splitDatetimeLocalParts(prev).time,
-                            ),
-                          );
-                        }}
-                      />
-                      <input
-                        type="time"
-                        step={900}
-                        className="w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2.5 text-sm text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
-                        value={splitDatetimeLocalParts(endValue).time}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          setEndValue((prev) =>
-                            joinDatetimeLocalParts(
-                              splitDatetimeLocalParts(prev).date,
-                              v,
-                            ),
-                          );
-                        }}
-                      />
-                    </>
-                  )}
-                </div>
-              </div>
-              <p className="m-0 mt-3 inline-flex max-w-full flex-wrap items-center gap-x-2 gap-y-1 rounded-xl bg-white/[0.04] px-3 py-2 text-xs leading-snug text-zinc-400 ring-1 ring-white/[0.06]">
-                <span className="font-medium text-zinc-200">{timeRow}</span>
-                {duration ? (
-                  <>
+                <div className="min-w-0">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <p className={sectionTitleClass}>Start</p>
+                      {allDay ? (
+                        <input
+                          type="date"
+                          className="w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2.5 text-sm text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+                          value={startValue.slice(0, 10)}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            setStartValue(`${v}T00:00`);
+                          }}
+                        />
+                      ) : (
+                        <>
+                          <input
+                            type="date"
+                            className="w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2.5 text-sm text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+                            value={splitDatetimeLocalParts(startValue).date}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              setStartValue((prev) =>
+                                joinDatetimeLocalParts(
+                                  v,
+                                  splitDatetimeLocalParts(prev).time,
+                                ),
+                              );
+                            }}
+                          />
+                          <input
+                            type="time"
+                            step={900}
+                            className="w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2.5 text-sm text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+                            value={splitDatetimeLocalParts(startValue).time}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              setStartValue((prev) =>
+                                joinDatetimeLocalParts(
+                                  splitDatetimeLocalParts(prev).date,
+                                  v,
+                                ),
+                              );
+                            }}
+                          />
+                        </>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <p className={sectionTitleClass}>End</p>
+                      {allDay ? (
+                        <input
+                          type="date"
+                          className="w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2.5 text-sm text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+                          value={endValue.slice(0, 10)}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            setEndValue(`${v}T00:00`);
+                          }}
+                        />
+                      ) : (
+                        <>
+                          <input
+                            type="date"
+                            className="w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2.5 text-sm text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+                            value={splitDatetimeLocalParts(endValue).date}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              setEndValue((prev) =>
+                                joinDatetimeLocalParts(
+                                  v,
+                                  splitDatetimeLocalParts(prev).time,
+                                ),
+                              );
+                            }}
+                          />
+                          <input
+                            type="time"
+                            step={900}
+                            className="w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2.5 text-sm text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+                            value={splitDatetimeLocalParts(endValue).time}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              setEndValue((prev) =>
+                                joinDatetimeLocalParts(
+                                  splitDatetimeLocalParts(prev).date,
+                                  v,
+                                ),
+                              );
+                            }}
+                          />
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  <p className="m-0 mt-3 inline-flex max-w-full flex-wrap items-center gap-x-2 gap-y-1 rounded-xl bg-white/[0.04] px-3 py-2 text-xs leading-snug text-zinc-400 ring-1 ring-white/[0.06]">
+                    <span className="font-medium text-zinc-200">{timeRow}</span>
+                    {duration ? (
+                      <>
+                        <span className="text-zinc-600" aria-hidden>
+                          ·
+                        </span>
+                        <span>{duration}</span>
+                      </>
+                    ) : null}
                     <span className="text-zinc-600" aria-hidden>
                       ·
                     </span>
-                    <span>{duration}</span>
-                  </>
-                ) : null}
-                <span className="text-zinc-600" aria-hidden>
-                  ·
-                </span>
-                <span>{dateLine}</span>
-              </p>
-            </div>
-          </div>
+                    <span>{dateLine}</span>
+                  </p>
+                </div>
+              </div>
 
-          {!isTask ? (
-            <div className={cn(section, "border-b border-white/[0.05]")}>
-              <p className="m-0 mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-500">
-                Description
-              </p>
-              <textarea
-                className="min-h-[88px] w-full resize-y rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2.5 text-sm leading-relaxed text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] outline-none placeholder:text-zinc-600 focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Feel free to mention task or docs by @"
-              />
-            </div>
-          ) : null}
-
-          {!isTask ? (
-            <div className={cn(section, "space-y-3 pb-5")}>
-              <details className="group overflow-hidden rounded-xl border border-white/[0.07] bg-white/[0.02] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3.5 py-3 text-sm font-medium text-zinc-200 transition-colors hover:bg-white/[0.04]">
-                  <span>Details</span>
-                  <ChevronDown
-                    size={18}
-                    className="shrink-0 text-zinc-500 transition-transform group-open:rotate-180"
-                    aria-hidden
+              {!isTask ? (
+                <div className={cn(section, "border-b border-white/[0.05]")}>
+                  <p className={sectionTitleClass}>Description</p>
+                  <textarea
+                    className="min-h-[88px] w-full resize-y rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2.5 text-sm leading-relaxed text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] outline-none placeholder:text-zinc-600 focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Feel free to mention task or docs by @"
                   />
-                </summary>
-                <div className="space-y-3 border-t border-white/[0.05] px-3.5 pb-3.5 pt-3">
-                  <>
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                      <div>
-                        <p className="m-0 mb-1.5 text-xs font-medium text-zinc-500">
-                          Time zone
-                        </p>
-                        <Dropdown<string>
-                          options={timeZoneOptions()}
-                          value={timeZone}
-                          onChange={setTimeZone}
-                          fullWidth
-                        />
-                      </div>
-                      <div>
-                        <p className="m-0 mb-1.5 text-xs font-medium text-zinc-500">
-                          Repeat
-                        </p>
-                        <Dropdown<CalendarRepeatValue>
-                          options={[
-                            { value: "", label: "Does not repeat" },
-                            { value: "daily", label: "Daily" },
-                            { value: "weekly", label: "Weekly" },
-                            { value: "monthly", label: "Monthly" },
-                          ]}
-                          value={repeat}
-                          onChange={setRepeat}
-                          fullWidth
-                        />
-                      </div>
-                    </div>
+                </div>
+              ) : null}
 
-                    <div className="min-w-0 space-y-1">
-                      <p className="m-0 text-xs font-medium text-zinc-500">
-                        Participants
-                      </p>
-                      <Input
-                        value={participantsText}
-                        onChange={(e) => setParticipantsText(e.target.value)}
-                        onFocus={() => setParticipantsFocused(true)}
-                        onBlur={() => {
-                          window.setTimeout(
-                            () => setParticipantsFocused(false),
-                            120,
-                          );
-                        }}
-                        placeholder="Add participants (comma-separated)"
-                        className="rounded-xl border-white/[0.08] bg-white/[0.04] text-sm text-zinc-200 placeholder:text-zinc-600"
-                        maxLength={128}
+              {!isTask ? (
+                <div className={cn(section, "space-y-3 pb-5")}>
+                  <details className="group overflow-hidden rounded-xl border border-white/[0.07] bg-white/[0.02] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+                    <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3.5 py-3 text-sm font-medium text-zinc-200 transition-colors hover:bg-white/[0.04]">
+                      <span>Details</span>
+                      <ChevronDown
+                        size={18}
+                        className="shrink-0 text-zinc-500 transition-transform group-open:rotate-180"
+                        aria-hidden
                       />
-                      {participantsFocused && participantSuggest.list.length ? (
-                        <div className="mt-1 overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.04]">
-                          {participantSuggest.list.map((p) => (
-                            <button
-                              key={p}
-                              type="button"
-                              className="block w-full truncate px-3 py-2 text-left text-xs text-zinc-200 hover:bg-white/[0.06]"
-                              onMouseDown={(e) => e.preventDefault()}
-                              onClick={() => {
-                                const existing =
-                                  parseParticipants(participantsText);
-                                if (existing.includes(p)) return;
-                                const next = existing.length
-                                  ? `${existing.join(", ")}, ${p}`
-                                  : p;
-                                setParticipantsText(next);
-                              }}
-                            >
-                              {p}
-                            </button>
-                          ))}
-                        </div>
-                      ) : null}
-                    </div>
-
-                    <div className="min-w-0 space-y-1">
-                      <p className="m-0 text-xs font-medium text-zinc-500">
-                        Meeting URL
-                      </p>
-                      <Input
-                        value={meetingUrl}
-                        onChange={(e) => setMeetingUrl(e.target.value)}
-                        placeholder="Paste a link"
-                        className="rounded-xl border-white/[0.08] bg-white/[0.04] text-sm text-zinc-200 placeholder:text-zinc-600"
-                        maxLength={256}
-                      />
-                    </div>
-
-                    <div className="min-w-0 space-y-1">
-                      <p className="m-0 text-xs font-medium text-zinc-500">
-                        Notes
-                      </p>
-                      <Input
-                        value={notes}
-                        onChange={(e) => setNotes(e.target.value)}
-                        placeholder="Add notes"
-                        className="rounded-xl border-white/[0.08] bg-white/[0.04] text-sm text-zinc-200 placeholder:text-zinc-600"
-                        maxLength={256}
-                      />
-                    </div>
-
-                    {isGoogleImported ? (
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-white" />
-                          <span className="truncate text-sm text-zinc-200">
-                            {email ?? "Not signed in"}
-                          </span>
-                        </div>
-                        <p className="m-0 text-xs text-zinc-500">
-                          <span className="text-zinc-400">Busy</span>
-                          {" · "}
-                          <span>Default visibility</span>
-                        </p>
-                      </div>
-                    ) : null}
-
-                    {payload.mode === "existing" ? (
-                      <div className="space-y-3">
+                    </summary>
+                    <div className="space-y-3 border-t border-white/[0.05] px-3.5 pb-3.5 pt-3">
+                      <>
                         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                           <div>
                             <p className="m-0 mb-1.5 text-xs font-medium text-zinc-500">
-                              Reminders
+                              Time zone
                             </p>
                             <Dropdown<string>
-                              options={[
-                                { value: "", label: "None" },
-                                { value: "5", label: "5 min before" },
-                                { value: "10", label: "10 min before" },
-                                { value: "30", label: "30 min before" },
-                                { value: "60", label: "1 hour before" },
-                              ]}
-                              value={reminderMinutes}
-                              onChange={setReminderMinutes}
+                              options={timeZoneOptions()}
+                              value={timeZone}
+                              onChange={setTimeZone}
                               fullWidth
                             />
                           </div>
+                          <div>
+                            <p className="m-0 mb-1.5 text-xs font-medium text-zinc-500">
+                              Repeat
+                            </p>
+                            <Dropdown<CalendarRepeatValue>
+                              options={[
+                                { value: "", label: "Does not repeat" },
+                                { value: "daily", label: "Daily" },
+                                { value: "weekly", label: "Weekly" },
+                                { value: "monthly", label: "Monthly" },
+                              ]}
+                              value={repeat}
+                              onChange={setRepeat}
+                              fullWidth
+                            />
+                          </div>
+                        </div>
 
-                          {onRsvpChange ? (
-                            <div>
-                              <p className="m-0 mb-1.5 text-xs font-medium text-zinc-500">
-                                Your RSVP
-                              </p>
-                              <div className="flex flex-wrap gap-2">
-                                {(
-                                  [
-                                    { v: "yes" as const, label: "Yes" },
-                                    { v: "maybe" as const, label: "Maybe" },
-                                    { v: "no" as const, label: "No" },
-                                  ] as const
-                                ).map(({ v, label }) => (
-                                  <button
-                                    key={v}
-                                    type="button"
-                                    className={cn(
-                                      "rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors",
-                                      payload.event.type === "common" &&
-                                        payload.event.rsvpStatus === v
-                                        ? "border-[#7255c1] bg-[#7255c1]/30 text-white"
-                                        : "border-white/15 bg-transparent text-zinc-300 hover:border-white/25",
-                                    )}
-                                    onClick={() => {
-                                      if (v === "no") {
-                                        setShowDeclineField(true);
-                                        return;
-                                      }
-                                      applyRsvp(v);
-                                    }}
-                                  >
-                                    {label}
-                                  </button>
-                                ))}
-                              </div>
+                        <div className="min-w-0 space-y-1">
+                          <p className="m-0 text-xs font-medium text-zinc-500">
+                            Participants
+                          </p>
+                          <Input
+                            value={participantsText}
+                            onChange={(e) =>
+                              setParticipantsText(e.target.value)
+                            }
+                            onFocus={() => setParticipantsFocused(true)}
+                            onBlur={() => {
+                              window.setTimeout(
+                                () => setParticipantsFocused(false),
+                                120,
+                              );
+                            }}
+                            placeholder="Add participants (comma-separated)"
+                            className="rounded-xl border-white/[0.08] bg-white/[0.04] text-sm text-zinc-200 placeholder:text-zinc-600"
+                            maxLength={128}
+                          />
+                          {participantsFocused &&
+                          participantSuggest.list.length ? (
+                            <div className="mt-1 overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.04]">
+                              {participantSuggest.list.map((p) => (
+                                <button
+                                  key={p}
+                                  type="button"
+                                  className="block w-full truncate px-3 py-2 text-left text-xs text-zinc-200 hover:bg-white/[0.06]"
+                                  onMouseDown={(e) => e.preventDefault()}
+                                  onClick={() => {
+                                    const existing =
+                                      parseParticipants(participantsText);
+                                    if (existing.includes(p)) return;
+                                    const next = existing.length
+                                      ? `${existing.join(", ")}, ${p}`
+                                      : p;
+                                    setParticipantsText(next);
+                                  }}
+                                >
+                                  {p}
+                                </button>
+                              ))}
                             </div>
                           ) : null}
                         </div>
 
-                        {onRsvpChange && showDeclineField ? (
-                          <div className="space-y-2">
-                            <textarea
-                              className="w-full resize-none rounded-lg border border-white/12 bg-input-bg px-2 py-2 text-xs text-white outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
-                              rows={2}
-                              value={declineReason}
-                              onChange={(e) => setDeclineReason(e.target.value)}
-                              placeholder="Optional reason if you can’t attend"
-                            />
-                            <button
-                              type="button"
-                              className="w-full rounded-lg border-0 bg-[#7255c1] py-2 text-xs font-medium text-white hover:bg-[#6346b0]"
-                              onClick={() => applyRsvp("no")}
-                            >
-                              Save &quot;No&quot;
-                            </button>
+                        <div className="min-w-0 space-y-1">
+                          <p className="m-0 text-xs font-medium text-zinc-500">
+                            Meeting URL
+                          </p>
+                          <Input
+                            value={meetingUrl}
+                            onChange={(e) => setMeetingUrl(e.target.value)}
+                            placeholder="Paste a link"
+                            className="rounded-xl border-white/[0.08] bg-white/[0.04] text-sm text-zinc-200 placeholder:text-zinc-600"
+                            maxLength={256}
+                          />
+                        </div>
+
+                        <div className="min-w-0 space-y-1">
+                          <p className="m-0 text-xs font-medium text-zinc-500">
+                            Notes
+                          </p>
+                          <Input
+                            value={notes}
+                            onChange={(e) => setNotes(e.target.value)}
+                            placeholder="Add notes"
+                            className="rounded-xl border-white/[0.08] bg-white/[0.04] text-sm text-zinc-200 placeholder:text-zinc-600"
+                            maxLength={256}
+                          />
+                        </div>
+
+                        {isGoogleImported ? (
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-white" />
+                              <span className="truncate text-sm text-zinc-200">
+                                {email ?? "Not signed in"}
+                              </span>
+                            </div>
+                            <p className="m-0 text-xs text-zinc-500">
+                              <span className="text-zinc-400">Busy</span>
+                              {" · "}
+                              <span>Default visibility</span>
+                            </p>
                           </div>
                         ) : null}
-                      </div>
-                    ) : null}
-                  </>
-                </div>
-              </details>
-            </div>
-          ) : null}
-        </div>
 
-        <div className="shrink-0 border-t border-white/[0.06] bg-black/25 px-4 py-3.5 backdrop-blur-sm">
-          <div className="flex items-center justify-end gap-2.5">
-            <button
-              type="button"
-              className="rounded-xl border border-white/[0.12] bg-white/[0.04] px-4 py-2 text-xs font-semibold text-zinc-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition-colors hover:bg-white/[0.08]"
-              onClick={onClose}
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              disabled={
-                payload.mode === "existing"
-                  ? !isDirty
-                  : isTask &&
-                    (!taskBoardId.trim() ||
-                      !taskId.trim() ||
-                      !(
-                        linkedTask?.summary?.trim() ||
-                        taskSummarySnapshot.trim()
-                      ))
-              }
-              className={cn(
-                "rounded-xl border-0 px-4 py-2 text-xs font-semibold text-white shadow-[0_12px_28px_rgba(114,85,193,0.35),inset_0_1px_0_rgba(255,255,255,0.18)] transition-[filter,opacity]",
-                payload.mode === "existing"
-                  ? isDirty
-                    ? "bg-gradient-to-b from-[#8f73e8] to-[#6346c4] hover:brightness-105"
-                    : "cursor-not-allowed bg-gradient-to-b from-[#6b5a9e]/55 to-[#4f4278]/55 opacity-65 shadow-none"
-                  : "bg-gradient-to-b from-[#8f73e8] to-[#6346c4] hover:brightness-105",
-              )}
-              onClick={
-                payload.mode === "existing" ? handleSave : handleCreateInstant
-              }
-            >
-              {payload.mode === "existing" ? "Save" : "Create"}
-            </button>
+                        {payload.mode === "existing" ? (
+                          <div className="space-y-3">
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                              <div>
+                                <p className="m-0 mb-1.5 text-xs font-medium text-zinc-500">
+                                  Reminders
+                                </p>
+                                <Dropdown<string>
+                                  options={[
+                                    { value: "", label: "None" },
+                                    { value: "5", label: "5 min before" },
+                                    { value: "10", label: "10 min before" },
+                                    { value: "30", label: "30 min before" },
+                                    { value: "60", label: "1 hour before" },
+                                  ]}
+                                  value={reminderMinutes}
+                                  onChange={setReminderMinutes}
+                                  fullWidth
+                                />
+                              </div>
+
+                              {onRsvpChange ? (
+                                <div>
+                                  <p className="m-0 mb-1.5 text-xs font-medium text-zinc-500">
+                                    Your RSVP
+                                  </p>
+                                  <div className="flex flex-wrap gap-2">
+                                    {(
+                                      [
+                                        { v: "yes" as const, label: "Yes" },
+                                        { v: "maybe" as const, label: "Maybe" },
+                                        { v: "no" as const, label: "No" },
+                                      ] as const
+                                    ).map(({ v, label }) => (
+                                      <button
+                                        key={v}
+                                        type="button"
+                                        className={cn(
+                                          "rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors",
+                                          payload.event.type === "common" &&
+                                            payload.event.rsvpStatus === v
+                                            ? "border-[#7255c1] bg-[#7255c1]/30 text-white"
+                                            : "border-white/15 bg-transparent text-zinc-300 hover:border-white/25",
+                                        )}
+                                        onClick={() => {
+                                          if (v === "no") {
+                                            setShowDeclineField(true);
+                                            return;
+                                          }
+                                          applyRsvp(v);
+                                        }}
+                                      >
+                                        {label}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              ) : null}
+                            </div>
+
+                            {onRsvpChange && showDeclineField ? (
+                              <div className="space-y-2">
+                                <textarea
+                                  className="w-full resize-none rounded-lg border border-white/12 bg-input-bg px-2 py-2 text-xs text-white outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+                                  rows={2}
+                                  value={declineReason}
+                                  onChange={(e) =>
+                                    setDeclineReason(e.target.value)
+                                  }
+                                  placeholder="Optional reason if you can’t attend"
+                                />
+                                <button
+                                  type="button"
+                                  className="w-full rounded-lg border-0 bg-[#7255c1] py-2 text-xs font-medium text-white hover:bg-[#6346b0]"
+                                  onClick={() => applyRsvp("no")}
+                                >
+                                  Save &quot;No&quot;
+                                </button>
+                              </div>
+                            ) : null}
+                          </div>
+                        ) : null}
+                      </>
+                    </div>
+                  </details>
+                </div>
+              ) : null}
+            </div>
+
+            <div className="shrink-0 border-t border-white/[0.06] bg-black/25 px-4 py-3.5 backdrop-blur-sm">
+              <div className="flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  className="rounded-xl border border-white/[0.12] bg-white/[0.04] px-4 py-2 text-xs font-semibold text-zinc-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition-colors hover:bg-white/[0.08]"
+                  onClick={onClose}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={
+                    payload.mode === "existing"
+                      ? !isDirty
+                      : isTask &&
+                        (!taskBoardId.trim() ||
+                          !taskId.trim() ||
+                          !(
+                            linkedTask?.summary?.trim() ||
+                            taskSummarySnapshot.trim()
+                          ))
+                  }
+                  className={cn(
+                    "rounded-xl border-0 px-4 py-2 text-xs font-semibold text-white shadow-[0_12px_28px_rgba(114,85,193,0.35),inset_0_1px_0_rgba(255,255,255,0.18)] transition-[filter,opacity]",
+                    payload.mode === "existing"
+                      ? isDirty
+                        ? "bg-gradient-to-b from-[#8f73e8] to-[#6346c4] hover:brightness-105"
+                        : "cursor-not-allowed bg-gradient-to-b from-[#6b5a9e]/55 to-[#4f4278]/55 opacity-65 shadow-none"
+                      : "bg-gradient-to-b from-[#8f73e8] to-[#6346c4] hover:brightness-105",
+                  )}
+                  onClick={
+                    payload.mode === "existing"
+                      ? handleSave
+                      : handleCreateInstant
+                  }
+                >
+                  {payload.mode === "existing" ? "Save" : "Create"}
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
-    </div>,
-    scopeRef.current ?? document.body,
+        </div>,
+        scopeRef.current ?? document.body,
+      )}
+      {showDeleteConfirm && payload.mode === "existing" && onDelete ? (
+        <ConfirmDialog
+          title="Delete event?"
+          description="This will permanently delete this event. This action cannot be undone."
+          confirmLabel="Delete"
+          onConfirm={handleConfirmDelete}
+          onClose={() => setShowDeleteConfirm(false)}
+          maxWidth={520}
+        />
+      ) : null}
+    </>
   );
 }

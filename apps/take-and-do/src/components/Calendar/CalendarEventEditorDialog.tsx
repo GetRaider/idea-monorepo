@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import {
-  ConfirmDangerBtn,
   ConfirmDialog,
   Dialog,
   DialogActions,
@@ -13,6 +12,8 @@ import {
   DialogFormGroup,
   DialogFormLabel,
 } from "@/components/Dialogs";
+import { TrashIcon } from "@/components/Icons";
+import { DeleteButton } from "@/components/TaskView/TaskView.ui";
 import { Dropdown } from "@/components/Dropdown";
 import { Input } from "@/components/Input";
 import { useIsAnonymous } from "@/hooks/auth/use-is-anonymous";
@@ -313,6 +314,18 @@ export function CalendarEventEditorDialog({
       subtitle="Time blocks, general events, and task windows stay on this calendar."
       onClose={onClose}
       maxWidth={520}
+      headerBeforeClose={
+        mode === "edit" && onDelete ? (
+          <DeleteButton
+            type="button"
+            title="Delete event"
+            onClick={() => setShowDeleteConfirm(true)}
+            className="h-8 w-8 rounded-md"
+          >
+            <TrashIcon size={16} />
+          </DeleteButton>
+        ) : null
+      }
     >
       <DialogBody className="gap-4">
         <DialogFormGroup>
@@ -539,25 +552,13 @@ export function CalendarEventEditorDialog({
         {/* attendeesNote removed */}
       </DialogBody>
 
-      <DialogActions className="flex flex-wrap justify-center gap-3">
-        <div className="flex gap-2">
-          {mode === "edit" && onDelete ? (
-            <ConfirmDangerBtn
-              type="button"
-              onClick={() => setShowDeleteConfirm(true)}
-            >
-              Delete
-            </ConfirmDangerBtn>
-          ) : null}
-        </div>
-        <div className="flex gap-2">
-          <DialogFormButton type="button" onClick={onClose}>
-            Cancel
-          </DialogFormButton>
-          <DialogFormButton type="button" primary onClick={handleSave}>
-            Save
-          </DialogFormButton>
-        </div>
+      <DialogActions className="flex flex-wrap justify-end gap-3">
+        <DialogFormButton type="button" onClick={onClose}>
+          Cancel
+        </DialogFormButton>
+        <DialogFormButton type="button" primary onClick={handleSave}>
+          Save
+        </DialogFormButton>
       </DialogActions>
 
       {showDeleteConfirm && initial && onDelete ? (

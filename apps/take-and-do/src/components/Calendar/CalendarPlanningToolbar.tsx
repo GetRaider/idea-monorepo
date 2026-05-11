@@ -297,7 +297,7 @@ export function CalendarPlanningToolbar({
                       onMouseLeave={() => setSubSettings(false)}
                     >
                       <div className="px-3 py-2 text-xs text-zinc-500">
-                        Slots shown: 6:00–22:00 (app default)
+                        Slots shown: full day (0:00–24:00)
                       </div>
                       <div className="px-3 py-2 text-xs text-zinc-500">
                         First day of week: Monday

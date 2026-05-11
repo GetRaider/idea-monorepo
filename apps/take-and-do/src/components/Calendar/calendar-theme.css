@@ -376,6 +376,7 @@
 }
 
 .take-and-do-calendar .fc .fc-timegrid-col.fc-day-today {
+  overflow: visible !important;
   background: linear-gradient(
     180deg,
     rgba(124, 93, 250, 0.06) 0%,
@@ -399,10 +400,14 @@
 
 .take-and-do-calendar .fc .fc-timegrid-now-indicator-line {
   position: absolute;
-  left: 0 !important;
-  right: auto !important;
-  width: calc(var(--tad-now-line-span, 7) * 100%) !important;
+  inset-inline-start: 0 !important;
+  inset-inline-end: auto !important;
+  width: var(
+    --tad-now-line-width-px,
+    calc(100% * var(--tad-now-line-span, 1))
+  ) !important;
   max-width: none !important;
+  z-index: 24 !important;
   border-color: var(--fc-now-indicator-color);
   border-width: 1px 0 0;
   border-style: solid;

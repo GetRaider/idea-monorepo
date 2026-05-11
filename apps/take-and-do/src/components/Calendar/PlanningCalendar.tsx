@@ -9,6 +9,7 @@ import type {
   EventDropArg,
   EventInput,
   NowIndicatorContentArg,
+  NowIndicatorMountArg,
   SlotLabelContentArg,
   ViewMountArg,
 } from "@fullcalendar/core";
@@ -212,8 +213,10 @@ export const PlanningCalendar = forwardRef<
   /** Prevents `api.select()` from re-entering `select` → `onSelectRange` → setState loop. */
   const applyingProgrammaticSelectRef = useRef(false);
   const [activeViewType, setActiveViewType] = useState("timeGridWeek");
-  /** How many day columns the “now” line spans rightward from today’s column (FullCalendar draws it only in today’s cell). */
+  /** FC renders the line only in today’s cell; width = span × column so it reaches the rest of the view. */
   const [nowLineSpan, setNowLineSpan] = useState(7);
+  /** Pixel width avoids % resolution bugs (line starting one column late) inside table/positioned cells. */
+  const [nowLineWidthPx, setNowLineWidthPx] = useState<number | null>(null);
   const [toolbarMeta, setToolbarMeta] = useState<{
     headline: string;
     rangeLabel: string;
@@ -266,6 +269,10 @@ export const PlanningCalendar = forwardRef<
     (arg: SlotLabelContentArg) => {
       if (arg.level !== 0) return arg.text;
       const d = arg.date;
+      // No label on the day-start line (like no "24:00" at the bottom); grid line stays.
+      if (d.getHours() === 0 && d.getMinutes() === 0) {
+        return null;
+      }
       return (
         <div
           className="tad-slot-tz-row"
@@ -314,6 +321,78 @@ export const PlanningCalendar = forwardRef<
     renderAxisCornerIntoFrame();
   }, [renderAxisCornerIntoFrame]);
 
+  const measureNowLineGeometry = useCallback(
+    (viewType?: string) => {
+      const root = fcContainerRef.current;
+      const vt = viewType ?? activeViewType;
+      if (!vt.startsWith("timeGrid")) {
+        setNowLineSpan(1);
+        setNowLineWidthPx(null);
+        return;
+      }
+      if (!root) return;
+
+      const colsRoot = root.querySelector(".fc-timegrid-cols");
+      if (!colsRoot) {
+        setNowLineSpan(1);
+        setNowLineWidthPx(null);
+        return;
+      }
+
+      const lineEl = colsRoot.querySelector(".fc-timegrid-now-indicator-line");
+      const todayTd =
+        lineEl?.closest("td.fc-timegrid-col") ??
+        colsRoot.querySelector("td.fc-day-today.fc-timegrid-col");
+
+      if (!(todayTd instanceof HTMLElement)) {
+        setNowLineSpan(1);
+        setNowLineWidthPx(null);
+        return;
+      }
+
+      const row = todayTd.closest("tr");
+      if (!row) {
+        setNowLineSpan(1);
+        setNowLineWidthPx(null);
+        return;
+      }
+
+      const dayCells = Array.from(
+        row.querySelectorAll("td.fc-timegrid-col:not(.fc-timegrid-axis)"),
+      ) as HTMLElement[];
+      const idx = dayCells.indexOf(todayTd);
+      const n = dayCells.length;
+      const span = idx >= 0 && n > 0 ? n - idx : 1;
+      setNowLineSpan(span);
+
+      let totalWidthPx = 0;
+      if (idx >= 0) {
+        for (let i = idx; i < n; i++) {
+          totalWidthPx += dayCells[i].getBoundingClientRect().width;
+        }
+      } else {
+        const frame = todayTd.querySelector(".fc-timegrid-col-frame");
+        const w =
+          frame?.getBoundingClientRect().width ??
+          todayTd.getBoundingClientRect().width;
+        totalWidthPx = w * span;
+      }
+
+      setNowLineWidthPx(Math.round(totalWidthPx * 1000) / 1000);
+    },
+    [activeViewType],
+  );
+
+  const handleNowIndicatorDidMount = useCallback(
+    (arg: NowIndicatorMountArg) => {
+      if (arg.isAxis) return;
+      requestAnimationFrame(() => {
+        measureNowLineGeometry();
+      });
+    },
+    [measureNowLineGeometry],
+  );
+
   useLayoutEffect(() => {
     renderAxisCornerIntoFrame();
   }, [renderAxisCornerIntoFrame]);
@@ -331,9 +410,12 @@ export const PlanningCalendar = forwardRef<
       if (!arg.view.type.startsWith("timeGrid")) return;
       requestAnimationFrame(() => {
         syncTimeAxisCorner();
+        requestAnimationFrame(() => {
+          measureNowLineGeometry(arg.view.type);
+        });
       });
     },
-    [syncTimeAxisCorner],
+    [syncTimeAxisCorner, measureNowLineGeometry],
   );
 
   const handleViewWillUnmount = useCallback((arg: ViewMountArg) => {
@@ -415,30 +497,31 @@ export const PlanningCalendar = forwardRef<
       });
 
       if (arg.view.type.startsWith("timeGrid")) {
-        const dayMs = 86400000;
-        const dayCount = Math.max(
-          1,
-          Math.round(
-            (rangeEndExclusive.getTime() - rangeStart.getTime()) / dayMs,
-          ),
-        );
-        const idx = Math.floor(
-          (today.getTime() - rangeStart.getTime()) / dayMs,
-        );
-        const todayInView = idx >= 0 && idx < dayCount;
-        setNowLineSpan(todayInView ? dayCount - idx : 1);
-      } else {
-        setNowLineSpan(1);
-      }
-
-      if (arg.view.type.startsWith("timeGrid")) {
         requestAnimationFrame(() => {
           syncTimeAxisCorner();
+          requestAnimationFrame(() => {
+            measureNowLineGeometry(arg.view.type);
+          });
         });
+      } else {
+        setNowLineSpan(1);
+        setNowLineWidthPx(null);
       }
     },
-    [syncTimeAxisCorner],
+    [syncTimeAxisCorner, measureNowLineGeometry],
   );
+
+  useLayoutEffect(() => {
+    if (!activeViewType.startsWith("timeGrid")) return;
+    const root = fcContainerRef.current;
+    if (!root) return;
+    const ro = new ResizeObserver(() => {
+      measureNowLineGeometry();
+    });
+    ro.observe(root);
+    measureNowLineGeometry();
+    return () => ro.disconnect();
+  }, [activeViewType, toolbarMeta?.rangeLabel, measureNowLineGeometry]);
 
   const handleSelect = useCallback(
     (arg: DateSelectArg) => {
@@ -551,6 +634,9 @@ export const PlanningCalendar = forwardRef<
       style={
         {
           "--tad-now-line-span": String(nowLineSpan),
+          ...(nowLineWidthPx != null
+            ? { "--tad-now-line-width-px": `${nowLineWidthPx}px` }
+            : {}),
           "--tad-axis-zone-count": String(zoneCount),
           ...(draftSelectionKind
             ? { "--draft-kind-color": kindColor(draftSelectionKind) }
@@ -577,6 +663,7 @@ export const PlanningCalendar = forwardRef<
           views={CUSTOM_VIEWS}
           headerToolbar={false}
           initialView="timeGridWeek"
+          firstDay={1}
           editable
           eventResizableFromStart
           selectable
@@ -593,8 +680,9 @@ export const PlanningCalendar = forwardRef<
           droppable
           nowIndicator
           nowIndicatorContent={nowIndicatorContent}
-          slotMinTime="06:00:00"
-          slotMaxTime="22:00:00"
+          nowIndicatorDidMount={handleNowIndicatorDidMount}
+          slotMinTime="00:00:00"
+          slotMaxTime="24:00:00"
           scrollTime="08:00:00"
           dayHeaderContent={dayHeaderDayWeek}
           allDayText="All day"

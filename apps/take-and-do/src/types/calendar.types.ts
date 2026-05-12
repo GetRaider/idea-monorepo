@@ -19,6 +19,20 @@ export type CalendarBacklogType = "timeBlock" | "common";
 
 export type CalendarRsvpStatus = "yes" | "no" | "maybe";
 
+/** Edit scope for imported Google Calendar recurring events (API push only). */
+export type GoogleCalendarRecurrenceScope = "instance" | "series" | "following";
+
+/** Metadata from Google Calendar for recurring instances (`singleEvents=true`). */
+export interface GoogleCalendarRecurrenceMeta {
+  recurringEventId: string;
+  /**
+   * `originalStartTime` from Google when present. When omitted (some API rows),
+   * push/delete “following” uses this instance’s `start` / `allDay` as the anchor.
+   */
+  originalStart?: string;
+  originalAllDay?: boolean;
+}
+
 export interface CalendarBacklogEvent {
   id: string;
   type: CalendarBacklogType;
@@ -42,6 +56,7 @@ export interface BaseCalendarEvent {
 
 export interface CommonCalendarEvent extends BaseCalendarEvent {
   type: "common";
+  googleRecurrence?: GoogleCalendarRecurrenceMeta;
   meetingUrl?: string;
   /** Selected participants (emails / names). */
   participants?: string[];

@@ -11,8 +11,12 @@ export class GoogleCalendarIntegrationApiService extends BaseApiService {
   }
 
   async getStatus(userId: string): Promise<{
-    connected: boolean;
+    /** Google OAuth account linked (may still be used for sign-in). */
+    googleLinked: boolean;
+    /** Calendar import/push enabled in app settings. */
     enabled: boolean;
+    /** Calendar sync is active: Google linked and import enabled. */
+    connected: boolean;
     lastSyncAt: Date | null;
   }> {
     const [googleAccount] = await this.db
@@ -30,9 +34,13 @@ export class GoogleCalendarIntegrationApiService extends BaseApiService {
       .where(eq(googleCalendarIntegration.userId, userId))
       .limit(1);
 
+    const googleLinked = !!googleAccount;
+    const enabled = row?.enabled ?? false;
+
     return {
-      connected: !!googleAccount,
-      enabled: row?.enabled ?? false,
+      googleLinked,
+      enabled,
+      connected: googleLinked && enabled,
       lastSyncAt: row?.lastSyncAt ?? null,
     };
   }

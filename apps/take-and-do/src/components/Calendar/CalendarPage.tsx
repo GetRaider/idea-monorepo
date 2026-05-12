@@ -12,7 +12,17 @@ import {
 import { PrimaryButton } from "@/components/Buttons";
 import { PlusIcon } from "@/components/Icons";
 import { defaultAxisTimeZones } from "@/components/Calendar/calendar-axis-time";
+import { GOOGLE_CALENDAR_DISCONNECTED_EVENT } from "@/hooks/calendar/calendar-storage";
 import { useCalendarStore } from "@/hooks/calendar/use-calendar-store";
+import {
+  createConnectedGoogleCalendarEvent,
+  deleteConnectedGoogleCalendarEvent,
+} from "@/lib/google-calendar-mutations";
+import {
+  getEffectiveGoogleRecurrence,
+  needsGoogleCalendarRecurrenceScope,
+  pushConnectedGoogleCalendarEvent,
+} from "@/lib/push-google-calendar-event";
 import { Sidebar } from "@/components/Sidebar/Sidebar";
 import { Spinner } from "@/components/Spinner/Spinner";
 import type {
@@ -22,6 +32,7 @@ import type {
   CalendarEventType,
   CalendarKindVisibility,
   CalendarRsvpStatus,
+  GoogleCalendarRecurrenceScope,
 } from "@/types/calendar.types";
 
 import { CalendarPanel } from "./CalendarPanel";
@@ -36,6 +47,7 @@ import {
   PlanningCalendar,
   type PlanningCalendarHandle,
 } from "./PlanningCalendar";
+import { GoogleCalendarRecurrenceScopeDialog } from "./GoogleCalendarRecurrenceScopeDialog";
 
 function selectEndToInclusiveEnd(endExclusive: Date, allDay: boolean): Date {
   if (allDay) {
@@ -56,6 +68,20 @@ const DEFAULT_KIND_VISIBILITY: CalendarKindVisibility = {
 const GCAL_PREFIX = "gcal:";
 const SLOT_TIME_24H_KEY = "take-and-do:calendar-slot-24h";
 
+type GoogleScopePrompt =
+  | { kind: "editor"; event: CalendarEvent }
+  | {
+      kind: "quick";
+      id: string;
+      patch: Partial<
+        Omit<
+          CalendarEvent,
+          "id" | "type" | "taskBoardId" | "taskId" | "taskScope"
+        >
+      >;
+      merged: CalendarEvent;
+    };
+
 export function CalendarPage() {
   const planningCalendarRef = useRef<PlanningCalendarHandle>(null);
   const backlogContainerRef = useRef<HTMLDivElement | null>(null);
@@ -69,7 +95,9 @@ export function CalendarPage() {
     addBacklogItem,
     removeBacklogItem,
     updateBacklogItem,
-    mergeScheduledEvents,
+    mergeGoogleCalendarSync,
+    removeGoogleImportedEvents,
+    removeGoogleSeriesByMasterId,
     setAxisTimeZones,
   } = useCalendarStore();
 
@@ -102,6 +130,18 @@ export function CalendarPage() {
       /* ignore */
     }
   }, []);
+
+  useEffect(() => {
+    const onDisconnected = () => {
+      removeGoogleImportedEvents();
+    };
+    window.addEventListener(GOOGLE_CALENDAR_DISCONNECTED_EVENT, onDisconnected);
+    return () =>
+      window.removeEventListener(
+        GOOGLE_CALENDAR_DISCONNECTED_EVENT,
+        onDisconnected,
+      );
+  }, [removeGoogleImportedEvents]);
 
   const setSlotTime24hPersist = useCallback((next: boolean) => {
     setSlotTime24h(next);
@@ -146,6 +186,11 @@ export function CalendarPage() {
   const [googleCalendarLabel, setGoogleCalendarLabel] = useState<string | null>(
     null,
   );
+  const [googleCalendarConnected, setGoogleCalendarConnected] = useState(false);
+  const [googleScopePrompt, setGoogleScopePrompt] =
+    useState<GoogleScopePrompt | null>(null);
+  const [googleDeletePrompt, setGoogleDeletePrompt] =
+    useState<CalendarEvent | null>(null);
   const isSyncingRef = useRef(false);
   const didInitialGoogleSyncRef = useRef(false);
 
@@ -166,9 +211,10 @@ export function CalendarPage() {
 
         setGoogleCalendarLabel(status.email);
 
+        setGoogleCalendarConnected(!!status.connected);
+
         if (!(opts?.show ?? showGoogleCalendar)) return;
         if (!status.connected) return;
-        if (!status.enabled) return;
 
         const syncRes = await fetch("/api/integrations/google-calendar/sync", {
           method: "POST",
@@ -176,13 +222,26 @@ export function CalendarPage() {
         if (!syncRes.ok) return;
         const data = (await syncRes.json()) as {
           imported: CalendarEvent[];
+          incremental: boolean;
+          syncRange?: { timeMin: string; timeMax: string };
         };
-        mergeScheduledEvents(data.imported);
+        mergeGoogleCalendarSync(data.imported, {
+          incremental: data.incremental,
+          syncRange: data.syncRange,
+        });
       } finally {
         isSyncingRef.current = false;
       }
     },
-    [mergeScheduledEvents, showGoogleCalendar],
+    [mergeGoogleCalendarSync, showGoogleCalendar],
+  );
+
+  const pushGoogleThenSync = useCallback(
+    async (event: CalendarEvent, scope?: GoogleCalendarRecurrenceScope) => {
+      const ok = await pushConnectedGoogleCalendarEvent(event, scope);
+      if (ok) await syncGoogleIfEnabled({ show: showGoogleCalendar });
+    },
+    [syncGoogleIfEnabled, showGoogleCalendar],
   );
 
   useEffect(() => {
@@ -267,21 +326,153 @@ export function CalendarPage() {
   );
 
   const handleSaveEvent = useCallback(
-    (event: CalendarEvent) => {
+    (event: CalendarEvent, opts?: { saveToGoogle?: boolean }) => {
       if (editorMode === "create") {
+        if (opts?.saveToGoogle && event.type === "common") {
+          void (async () => {
+            const created = await createConnectedGoogleCalendarEvent(event);
+            if (created) {
+              addScheduled(created);
+              await syncGoogleIfEnabled({ show: showGoogleCalendar });
+            }
+          })();
+          return;
+        }
         addScheduled(event);
         return;
       }
+      if (needsGoogleCalendarRecurrenceScope(event)) {
+        setGoogleScopePrompt({ kind: "editor", event });
+        return;
+      }
       replaceScheduled(event);
+      void pushGoogleThenSync(event);
     },
-    [addScheduled, replaceScheduled, editorMode],
+    [
+      addScheduled,
+      replaceScheduled,
+      editorMode,
+      pushGoogleThenSync,
+      syncGoogleIfEnabled,
+      showGoogleCalendar,
+    ],
+  );
+
+  const applyGoogleScopeChoice = useCallback(
+    (scope: GoogleCalendarRecurrenceScope) => {
+      const prompt = googleScopePrompt;
+      setGoogleScopePrompt(null);
+      if (!prompt) return;
+      if (prompt.kind === "editor") {
+        replaceScheduled(prompt.event);
+        void pushGoogleThenSync(prompt.event, scope);
+        setEditorOpen(false);
+        setCreateRange(null);
+        setCreatePrefill(null);
+        return;
+      }
+      patchScheduled(prompt.id, prompt.patch);
+      void pushGoogleThenSync(prompt.merged, scope);
+    },
+    [googleScopePrompt, replaceScheduled, patchScheduled, pushGoogleThenSync],
+  );
+
+  const applyGoogleDeleteScopeChoice = useCallback(
+    (scope: GoogleCalendarRecurrenceScope) => {
+      const ev = googleDeletePrompt;
+      setGoogleDeletePrompt(null);
+      if (!ev) return;
+      if (ev.type !== "common" || !ev.id.startsWith(GCAL_PREFIX)) return;
+      const gr = getEffectiveGoogleRecurrence(ev);
+
+      void (async () => {
+        const ok = await deleteConnectedGoogleCalendarEvent({
+          id: ev.id,
+          recurrenceScope: scope,
+          start: ev.start,
+          allDay: ev.allDay,
+          ...(gr ? { googleRecurrence: gr } : {}),
+        });
+        if (!ok) return;
+        if (scope === "instance") {
+          removeScheduled(ev.id);
+        } else if (scope === "series" && gr?.recurringEventId) {
+          removeGoogleSeriesByMasterId(gr.recurringEventId);
+        } else {
+          removeScheduled(ev.id);
+        }
+        await syncGoogleIfEnabled({ show: showGoogleCalendar });
+      })();
+    },
+    [
+      googleDeletePrompt,
+      removeScheduled,
+      removeGoogleSeriesByMasterId,
+      syncGoogleIfEnabled,
+      showGoogleCalendar,
+    ],
+  );
+
+  const handleDeleteGoogleAware = useCallback(
+    (event: CalendarEvent) => {
+      if (event.type !== "common" || !event.id.startsWith(GCAL_PREFIX)) {
+        removeScheduled(event.id);
+        return;
+      }
+      setGoogleDeletePrompt(event);
+    },
+    [removeScheduled],
   );
 
   const handleEventTimesUpdated = useCallback(
-    (id: string, patch: Pick<CalendarEvent, "start" | "end" | "allDay">) => {
+    (
+      id: string,
+      patch: Pick<CalendarEvent, "start" | "end" | "allDay">,
+      revert: () => void,
+    ) => {
+      if (!state) {
+        revert();
+        return;
+      }
+      const ev = state.events.find((e) => e.id === id);
+      if (!ev) {
+        revert();
+        return;
+      }
+      const merged = { ...ev, ...patch } as CalendarEvent;
+      if (needsGoogleCalendarRecurrenceScope(merged)) {
+        revert();
+        setGoogleScopePrompt({ kind: "quick", id, patch, merged });
+        return;
+      }
       patchScheduled(id, patch);
+      void pushGoogleThenSync(merged);
     },
-    [patchScheduled],
+    [patchScheduled, state, pushGoogleThenSync],
+  );
+
+  const persistExistingAndMaybePush = useCallback(
+    (
+      id: string,
+      patch: Partial<
+        Omit<
+          CalendarEvent,
+          "id" | "type" | "taskBoardId" | "taskId" | "taskScope"
+        >
+      >,
+    ) => {
+      if (!state) return;
+      const ev = state.events.find((e) => e.id === id);
+      if (!ev) return;
+      const merged = { ...ev, ...patch } as CalendarEvent;
+      if (needsGoogleCalendarRecurrenceScope(merged)) {
+        setGoogleScopePrompt({ kind: "quick", id, patch, merged });
+        return;
+      }
+      patchScheduled(id, patch);
+      void pushGoogleThenSync(merged);
+    },
+    [patchScheduled, state, pushGoogleThenSync],
   );
 
   const handleDuplicateEvent = useCallback(
@@ -297,7 +488,11 @@ export function CalendarPage() {
         start: newStart.toISOString(),
         end: newEnd.toISOString(),
         ...(event.type === "common"
-          ? { rsvpStatus: undefined, rsvpDeclineReason: undefined }
+          ? {
+              rsvpStatus: undefined,
+              rsvpDeclineReason: undefined,
+              googleRecurrence: undefined,
+            }
           : {}),
       });
     },
@@ -426,9 +621,9 @@ export function CalendarPage() {
                 onCreateDraft={addScheduled}
                 onClose={handleCloseQuickMenu}
                 onOpenFullEditor={handleOpenFullEditorFromQuick}
-                onPersistExisting={(id, patch) => patchScheduled(id, patch)}
+                onPersistExisting={persistExistingAndMaybePush}
                 onDuplicate={handleDuplicateEvent}
-                onDelete={removeScheduled}
+                onDeleteEvent={handleDeleteGoogleAware}
                 onRsvpChange={handleRsvpChange}
                 onDraftSelectionBump={bumpDraftSelection}
                 onDraftKindChange={setDraftQuickKind}
@@ -443,13 +638,14 @@ export function CalendarPage() {
           initial={editorEvent}
           createRange={editorMode === "create" ? createRange : null}
           createPrefill={editorMode === "create" ? createPrefill : null}
+          googleCalendarConnected={googleCalendarConnected}
           onClose={() => {
             setEditorOpen(false);
             setCreateRange(null);
             setCreatePrefill(null);
           }}
           onSave={handleSaveEvent}
-          onDelete={removeScheduled}
+          onDeleteRequest={handleDeleteGoogleAware}
         />
 
         <CalendarTemplateEditorDialog
@@ -462,6 +658,24 @@ export function CalendarPage() {
           }}
           onSave={handleSaveTemplate}
           onDelete={templateMode === "edit" ? removeBacklogItem : undefined}
+        />
+
+        <GoogleCalendarRecurrenceScopeDialog
+          intent="edit"
+          open={googleScopePrompt !== null}
+          onClose={() => setGoogleScopePrompt(null)}
+          onChoose={applyGoogleScopeChoice}
+        />
+
+        <GoogleCalendarRecurrenceScopeDialog
+          intent="delete"
+          open={googleDeletePrompt !== null}
+          followingOptionDisabled={
+            googleDeletePrompt !== null &&
+            !getEffectiveGoogleRecurrence(googleDeletePrompt)
+          }
+          onClose={() => setGoogleDeletePrompt(null)}
+          onChoose={applyGoogleDeleteScopeChoice}
         />
       </HomeMainContent>
     </PageContainer>

@@ -5,9 +5,10 @@ import type {
   CalendarBacklogType,
   CalendarEvent,
   CalendarEventType,
-  CalendarRepeatRule,
   CalendarPersistedState,
+  CalendarRepeatRule,
   CalendarRsvpStatus,
+  GoogleCalendarRecurrenceMeta,
 } from "@/types/calendar.types";
 
 export const CALENDAR_STORAGE_KEY = "take-and-do:calendar:v1";
@@ -79,6 +80,25 @@ function isRepeatRule(value: unknown): value is CalendarRepeatRule {
   return value === "daily" || value === "weekly" || value === "monthly";
 }
 
+function normalizeGoogleRecurrence(
+  raw: unknown,
+): GoogleCalendarRecurrenceMeta | undefined {
+  if (!isRecord(raw)) return undefined;
+  const recurringEventId = raw.recurringEventId;
+  if (typeof recurringEventId !== "string" || !recurringEventId) {
+    return undefined;
+  }
+  const originalStart = raw.originalStart;
+  const originalAllDay = raw.originalAllDay;
+  if (typeof originalStart === "string" && originalStart.trim()) {
+    if (typeof originalAllDay === "boolean") {
+      return { recurringEventId, originalStart, originalAllDay };
+    }
+    return { recurringEventId, originalStart };
+  }
+  return { recurringEventId };
+}
+
 function normalizeBacklogItem(raw: unknown): CalendarBacklogEvent | null {
   if (!isRecord(raw)) return null;
   const id = raw.id;
@@ -133,6 +153,7 @@ function normalizeScheduledEvent(raw: unknown): CalendarEvent | null {
   const participants = raw.participants;
   const notes = raw.notes ?? raw.notesAndDocs;
   const reminderMinutes = raw.reminderMinutes;
+  const googleRecurrence = normalizeGoogleRecurrence(raw.googleRecurrence);
   const base = {
     id,
     type,
@@ -185,6 +206,7 @@ function normalizeScheduledEvent(raw: unknown): CalendarEvent | null {
     type: "common",
     ...(isRsvp(rsvpStatus) ? { rsvpStatus } : {}),
     ...(typeof rsvpDeclineReason === "string" ? { rsvpDeclineReason } : {}),
+    ...(googleRecurrence ? { googleRecurrence } : {}),
   };
 }
 
@@ -225,18 +247,8 @@ export function writeCalendarState(next: CalendarPersistedState) {
 
 const GCAL_PREFIX = "gcal:";
 
-export function mergeImportedGoogleCalendarEvents(
-  imported: CalendarEvent[],
-): void {
-  if (typeof window === "undefined") return;
-  const current = readCalendarState();
-  const byId = new Map(current.events.map((e) => [e.id, e]));
-  for (const ev of imported) {
-    byId.set(ev.id, ev);
-  }
-  const merged = Array.from(byId.values());
-  writeCalendarState({ ...current, events: merged });
-}
+export const GOOGLE_CALENDAR_DISCONNECTED_EVENT =
+  "take-and-do:google-calendar-disconnected";
 
 export function removeImportedGoogleCalendarEvents(): void {
   if (typeof window === "undefined") return;

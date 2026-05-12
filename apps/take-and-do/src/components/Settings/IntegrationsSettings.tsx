@@ -1,11 +1,19 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { authClient } from "@/auth/client";
+import {
+  GOOGLE_CALENDAR_DISCONNECTED_EVENT,
+  removeImportedGoogleCalendarEvents,
+} from "@/hooks/calendar/calendar-storage";
+
+const GCAL_OAUTH_CALLBACK_FLAG = "gcal";
+const CALENDAR_EVENTS_SCOPE = "https://www.googleapis.com/auth/calendar.events";
 
 type IntegrationStatus = {
   connected: boolean;
+  googleLinked: boolean;
   enabled: boolean;
   lastSyncAt: string | null;
 };
@@ -14,6 +22,7 @@ export function IntegrationsSettings() {
   const [status, setStatus] = useState<IntegrationStatus | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const handledOAuthReturnRef = useRef(false);
 
   const lastSyncLabel = useMemo(() => {
     if (!status?.lastSyncAt) return "Never";
@@ -49,17 +58,57 @@ export function IntegrationsSettings() {
     })();
   }, []);
 
-  const connected = !!status?.connected;
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get(GCAL_OAUTH_CALLBACK_FLAG) !== "1") return;
+    if (handledOAuthReturnRef.current) return;
+    handledOAuthReturnRef.current = true;
+
+    params.delete(GCAL_OAUTH_CALLBACK_FLAG);
+    const qs = params.toString();
+    window.history.replaceState(
+      null,
+      "",
+      `${window.location.pathname}${qs ? `?${qs}` : ""}`,
+    );
+
+    void (async () => {
+      try {
+        const res = await fetch("/api/integrations/google-calendar/toggle", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ enabled: true }),
+        });
+        if (!res.ok) {
+          const body = (await res.json().catch(() => null)) as {
+            error?: string;
+          } | null;
+          setError(
+            body?.error ??
+              "Google re-linked, but calendar sync could not be turned on. Try Disconnect, then connect again.",
+          );
+        }
+        await refreshStatus();
+      } catch (e) {
+        setError(
+          e instanceof Error ? e.message : "Failed to finish calendar setup.",
+        );
+      }
+    })();
+  }, []);
+
+  const calendarSyncOn = !!status?.connected;
 
   return (
     <div className="max-w-3xl rounded-xl border border-white/10 bg-white/5 p-5">
       <div className="flex items-start justify-between gap-6">
         <div>
           <div className="text-lg font-semibold text-white">
-            Google Calendar (import only)
+            Google Calendar
           </div>
           <div className="mt-1 text-sm text-slate-300">
-            One-way sync: Google Calendar → Take &amp; Do. Last sync:{" "}
+            Import from Google and push edits back for linked events. Last sync:{" "}
             <span className="text-slate-200">{lastSyncLabel}</span>
           </div>
           {error ? (
@@ -68,7 +117,7 @@ export function IntegrationsSettings() {
         </div>
 
         <div className="flex items-center gap-2">
-          {connected ? (
+          {calendarSyncOn ? (
             <span className="rounded-full bg-emerald-500/15 px-2 py-1 text-xs font-semibold text-emerald-200">
               Connected
             </span>
@@ -81,7 +130,7 @@ export function IntegrationsSettings() {
       </div>
 
       <div className="mt-5 flex flex-wrap items-center gap-3">
-        {!connected ? (
+        {!calendarSyncOn ? (
           <button
             type="button"
             className="rounded-lg bg-[#7255c1] px-3 py-2 text-sm font-semibold text-white hover:bg-[#5a42a1] disabled:opacity-60"
@@ -93,8 +142,8 @@ export function IntegrationsSettings() {
               try {
                 await authClient.linkSocial({
                   provider: "google",
-                  scopes: ["https://www.googleapis.com/auth/calendar.readonly"],
-                  callbackURL: "/settings",
+                  scopes: [CALENDAR_EVENTS_SCOPE],
+                  callbackURL: `/settings?${GCAL_OAUTH_CALLBACK_FLAG}=1`,
                 });
               } catch (e) {
                 setError(
@@ -102,11 +151,14 @@ export function IntegrationsSettings() {
                     ? e.message
                     : "Failed to start Google connection flow.",
                 );
+              } finally {
                 setLoading(false);
               }
             }}
           >
-            Connect Google Calendar
+            {status?.googleLinked
+              ? "Reconnect Google Calendar"
+              : "Connect Google Calendar"}
           </button>
         ) : (
           <button
@@ -128,6 +180,10 @@ export function IntegrationsSettings() {
                   } | null;
                   throw new Error(body?.error ?? "Disconnect failed.");
                 }
+                removeImportedGoogleCalendarEvents();
+                window.dispatchEvent(
+                  new CustomEvent(GOOGLE_CALENDAR_DISCONNECTED_EVENT),
+                );
                 await refreshStatus();
               } catch (e) {
                 setError(e instanceof Error ? e.message : "Disconnect failed.");
@@ -142,7 +198,10 @@ export function IntegrationsSettings() {
       </div>
 
       <div className="mt-4 text-xs text-slate-400">
-        When connected, events are auto-synced when you open the Calendar page.
+        Connecting opens Google so you can approve calendar access (required for
+        imports and edits). Disconnect only stops calendar sync in Take &amp;
+        Do; if you use Google to sign in, that login stays. Use Reconnect after
+        Disconnect so Google issues a token that includes calendar permissions.
       </div>
     </div>
   );

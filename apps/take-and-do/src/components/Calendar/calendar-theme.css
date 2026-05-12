@@ -347,7 +347,8 @@
 
 .take-and-do-calendar .fc .fc-scrollgrid {
   border-radius: 14px;
-  overflow: hidden;
+  /* Wider now-indicator line is positioned from “today”; overflow:hidden clips it short */
+  overflow: visible;
   background: rgba(0, 0, 0, 0.12);
 }
 

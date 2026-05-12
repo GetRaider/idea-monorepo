@@ -113,6 +113,7 @@ interface PlanningCalendarProps {
   onEventTimesUpdated: (
     id: string,
     patch: Pick<CalendarEvent, "start" | "end" | "allDay">,
+    revert: () => void,
   ) => void;
   /** While creating an event, keep FullCalendar’s selection highlight in sync. */
   draftSelectionHighlight?: {
@@ -208,6 +209,8 @@ export const PlanningCalendar = forwardRef<
 ) {
   const fcRef = useRef<FullCalendar>(null);
   const fcContainerRef = useRef<HTMLDivElement>(null);
+  /** FC’s mounted `.fc-timegrid-now-indicator-line` (avoids wrong match when multiple bodies exist, e.g. week). */
+  const nowIndicatorLineElRef = useRef<HTMLElement | null>(null);
   const axisCornerRootRef = useRef<Root | null>(null);
   const axisCornerHostRef = useRef<HTMLElement | null>(null);
   /** Prevents `api.select()` from re-entering `select` → `onSelectRange` → setState loop. */
@@ -321,6 +324,18 @@ export const PlanningCalendar = forwardRef<
     renderAxisCornerIntoFrame();
   }, [renderAxisCornerIntoFrame]);
 
+  const resolveMountedNowLineEl = useCallback(
+    (mounted: HTMLElement | null): HTMLElement | null => {
+      if (!mounted?.isConnected) return null;
+      if (mounted.classList.contains("fc-timegrid-now-indicator-line")) {
+        return mounted;
+      }
+      const inner = mounted.querySelector(".fc-timegrid-now-indicator-line");
+      return inner instanceof HTMLElement ? inner : null;
+    },
+    [],
+  );
+
   const measureNowLineGeometry = useCallback(
     (viewType?: string) => {
       const root = fcContainerRef.current;
@@ -332,22 +347,70 @@ export const PlanningCalendar = forwardRef<
       }
       if (!root) return;
 
-      const colsRoot = root.querySelector(".fc-timegrid-cols");
+      const mountedRaw = nowIndicatorLineElRef.current;
+      const mounted = resolveMountedNowLineEl(mountedRaw);
+      let todayTd: HTMLElement | null = null;
+      let lineEl: HTMLElement | null = null;
+
+      if (mounted) {
+        const td = mounted.closest("td.fc-timegrid-col");
+        if (
+          td instanceof HTMLElement &&
+          td.classList.contains("fc-day-today")
+        ) {
+          todayTd = td;
+          lineEl = mounted;
+        }
+      }
+
+      if (!(todayTd instanceof HTMLElement) || !lineEl) {
+        const todayCandidates = root.querySelectorAll(
+          "td.fc-day-today.fc-timegrid-col",
+        );
+        todayTd = null;
+        lineEl = null;
+        for (const td of todayCandidates) {
+          if (td.querySelector(".fc-timegrid-now-indicator-line")) {
+            todayTd = td as HTMLElement;
+            break;
+          }
+        }
+        if (!todayTd && todayCandidates.length > 0) {
+          todayTd = todayCandidates[0] as HTMLElement;
+        }
+        if (!(todayTd instanceof HTMLElement)) {
+          setNowLineSpan(1);
+          setNowLineWidthPx(null);
+          return;
+        }
+        const lineInToday = todayTd.querySelector(
+          ".fc-timegrid-now-indicator-line",
+        );
+        lineEl =
+          (lineInToday instanceof HTMLElement ? lineInToday : null) ??
+          (root.querySelector(
+            ".fc-timegrid-now-indicator-line",
+          ) as HTMLElement | null);
+      }
+
+      const colsRoot =
+        (todayTd.closest(".fc-timegrid-cols") as HTMLElement | null) ??
+        (root.querySelector(".fc-timegrid-cols") as HTMLElement | null);
       if (!colsRoot) {
         setNowLineSpan(1);
         setNowLineWidthPx(null);
         return;
       }
 
-      const lineEl = colsRoot.querySelector(".fc-timegrid-now-indicator-line");
-      const todayTd =
-        lineEl?.closest("td.fc-timegrid-col") ??
-        colsRoot.querySelector("td.fc-day-today.fc-timegrid-col");
-
-      if (!(todayTd instanceof HTMLElement)) {
-        setNowLineSpan(1);
-        setNowLineWidthPx(null);
-        return;
+      if (!lineEl) {
+        const lineInToday = todayTd.querySelector(
+          ".fc-timegrid-now-indicator-line",
+        );
+        lineEl =
+          (lineInToday instanceof HTMLElement ? lineInToday : null) ??
+          (colsRoot.querySelector(
+            ".fc-timegrid-now-indicator-line",
+          ) as HTMLElement | null);
       }
 
       const row = todayTd.closest("tr");
@@ -378,19 +441,61 @@ export const PlanningCalendar = forwardRef<
         totalWidthPx = w * span;
       }
 
-      setNowLineWidthPx(Math.round(totalWidthPx * 1000) / 1000);
+      const widthPx = Math.round(totalWidthPx * 1000) / 1000;
+      setNowLineWidthPx(widthPx);
+
+      const applyNowLineWidth = (el: HTMLElement) => {
+        if (widthPx > 0) {
+          el.style.setProperty("width", `${widthPx}px`, "important");
+        } else {
+          el.style.removeProperty("width");
+        }
+      };
+
+      const lineNodes = new Set<HTMLElement>();
+      root.querySelectorAll("td.fc-day-today.fc-timegrid-col").forEach((td) => {
+        td.querySelectorAll(".fc-timegrid-now-indicator-line").forEach((n) => {
+          if (n instanceof HTMLElement) lineNodes.add(n);
+        });
+      });
+      if (lineNodes.size === 0 && lineEl instanceof HTMLElement) {
+        lineNodes.add(lineEl);
+      }
+      lineNodes.forEach(applyNowLineWidth);
     },
-    [activeViewType],
+    [activeViewType, resolveMountedNowLineEl],
   );
 
   const handleNowIndicatorDidMount = useCallback(
     (arg: NowIndicatorMountArg) => {
       if (arg.isAxis) return;
+      const resolved = arg.el.classList.contains(
+        "fc-timegrid-now-indicator-line",
+      )
+        ? arg.el
+        : ((arg.el.querySelector(
+            ".fc-timegrid-now-indicator-line",
+          ) as HTMLElement | null) ?? arg.el);
+      nowIndicatorLineElRef.current = resolved;
       requestAnimationFrame(() => {
         measureNowLineGeometry();
+        requestAnimationFrame(() => {
+          measureNowLineGeometry();
+        });
       });
     },
     [measureNowLineGeometry],
+  );
+
+  const handleNowIndicatorWillUnmount = useCallback(
+    (arg: NowIndicatorMountArg) => {
+      if (arg.isAxis) return;
+      const r = nowIndicatorLineElRef.current;
+      if (r && (r === arg.el || arg.el.contains(r))) {
+        nowIndicatorLineElRef.current = null;
+      }
+    },
+    [],
   );
 
   useLayoutEffect(() => {
@@ -598,7 +703,7 @@ export const PlanningCalendar = forwardRef<
     (info: EventDropArg) => {
       const patch = fcEventRangeToScheduledPatch(info.event);
       if (!patch) return;
-      onEventTimesUpdated(info.event.id, patch);
+      onEventTimesUpdated(info.event.id, patch, info.revert);
     },
     [onEventTimesUpdated],
   );
@@ -607,7 +712,7 @@ export const PlanningCalendar = forwardRef<
     (info: EventResizeDoneArg) => {
       const patch = fcEventRangeToScheduledPatch(info.event);
       if (!patch) return;
-      onEventTimesUpdated(info.event.id, patch);
+      onEventTimesUpdated(info.event.id, patch, info.revert);
     },
     [onEventTimesUpdated],
   );
@@ -681,6 +786,7 @@ export const PlanningCalendar = forwardRef<
           nowIndicator
           nowIndicatorContent={nowIndicatorContent}
           nowIndicatorDidMount={handleNowIndicatorDidMount}
+          nowIndicatorWillUnmount={handleNowIndicatorWillUnmount}
           slotMinTime="00:00:00"
           slotMaxTime="24:00:00"
           scrollTime="08:00:00"

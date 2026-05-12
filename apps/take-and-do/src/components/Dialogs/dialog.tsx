@@ -237,6 +237,7 @@ export function Dialog({
   headerBeforeClose,
   maxWidth = 500,
   minHeight,
+  overlayClassName,
 }: DialogProps) {
   const titleId = useId();
   const subtitleId = useId();
@@ -327,7 +328,7 @@ export function Dialog({
   }, [focusSelectors]);
 
   const dialogTree = (
-    <DialogOverlay onClick={handleOverlayClick}>
+    <DialogOverlay onClick={handleOverlayClick} className={overlayClassName}>
       <DialogContainer
         ref={dialogRef}
         onClick={(e) => e.stopPropagation()}
@@ -373,4 +374,6 @@ interface DialogProps {
   headerBeforeClose?: ReactNode;
   maxWidth?: number;
   minHeight?: number;
+  /** Merged onto `DialogOverlay` (e.g. higher z-index when stacking above other overlays). */
+  overlayClassName?: string;
 }

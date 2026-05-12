@@ -85,7 +85,7 @@ interface CalendarEventQuickMenuProps {
     >,
   ) => void;
   onDuplicate?: (event: CalendarEvent) => void;
-  onDelete?: (id: string) => void;
+  onDeleteEvent?: (event: CalendarEvent) => void;
   onRsvpChange?: (
     id: string,
     rsvp: CalendarRsvpStatus,
@@ -151,7 +151,7 @@ export function CalendarEventQuickMenu({
   onOpenFullEditor,
   onPersistExisting,
   onDuplicate,
-  onDelete,
+  onDeleteEvent,
   onRsvpChange,
   onDraftSelectionBump,
   onDraftKindChange,
@@ -836,9 +836,9 @@ export function CalendarEventQuickMenu({
   const sectionTitleClass = "m-0 mb-2 text-sm font-medium text-zinc-200";
 
   const handleConfirmDelete = () => {
-    if (payload.mode !== "existing" || !onDelete) return;
-    onDelete(payload.event.id);
-    window.setTimeout(() => onClose(), 0);
+    if (payload.mode !== "existing" || !onDeleteEvent) return;
+    onDeleteEvent(payload.event);
+    onClose();
   };
 
   return (
@@ -882,7 +882,8 @@ export function CalendarEventQuickMenu({
                 />
               </div>
               <div className="relative flex items-center gap-1">
-                {payload.mode === "existing" && (onDuplicate || onDelete) ? (
+                {payload.mode === "existing" &&
+                (onDuplicate || onDeleteEvent) ? (
                   <div className="relative">
                     <button
                       type="button"
@@ -907,7 +908,7 @@ export function CalendarEventQuickMenu({
                             Duplicate
                           </button>
                         ) : null}
-                        {onDelete ? (
+                        {onDeleteEvent ? (
                           <button
                             type="button"
                             className="block w-full px-3 py-2 text-left text-xs font-medium text-red-300 hover:bg-red-500/10"
@@ -1412,11 +1413,12 @@ export function CalendarEventQuickMenu({
         </div>,
         scopeRef.current ?? document.body,
       )}
-      {showDeleteConfirm && payload.mode === "existing" && onDelete ? (
+      {showDeleteConfirm && payload.mode === "existing" && onDeleteEvent ? (
         <ConfirmDialog
           title="Delete event?"
           description="This will permanently delete this event. This action cannot be undone."
           confirmLabel="Delete"
+          overlayClassName="z-[4600]"
           onConfirm={handleConfirmDelete}
           onClose={() => setShowDeleteConfirm(false)}
           maxWidth={520}

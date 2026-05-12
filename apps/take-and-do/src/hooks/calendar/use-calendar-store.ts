@@ -12,6 +12,8 @@ import type {
 } from "@/types/calendar.types";
 
 import { readCalendarState, writeCalendarState } from "./calendar-storage";
+import { getEffectiveGoogleRecurrence } from "@/lib/push-google-calendar-event";
+import { mergeGoogleCalendarImportedEvents } from "./merge-google-calendar-import";
 
 const GCAL_PREFIX = "gcal:";
 
@@ -129,6 +131,29 @@ export function useCalendarStore() {
     });
   }, []);
 
+  const mergeGoogleCalendarSync = useCallback(
+    (
+      imported: CalendarEvent[],
+      opts: {
+        incremental: boolean;
+        syncRange?: { timeMin: string; timeMax: string };
+      },
+    ) => {
+      setState((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          events: mergeGoogleCalendarImportedEvents(
+            prev.events,
+            imported,
+            opts,
+          ),
+        };
+      });
+    },
+    [],
+  );
+
   const removeGoogleImportedEvents = useCallback(() => {
     setState((prev) => {
       if (!prev) return prev;
@@ -137,6 +162,25 @@ export function useCalendarStore() {
       return { ...prev, events: filtered };
     });
   }, []);
+
+  const removeGoogleSeriesByMasterId = useCallback(
+    (recurringMasterId: string) => {
+      setState((prev) => {
+        if (!prev) return prev;
+        const filtered = prev.events.filter((e) => {
+          if (!e.id.startsWith(GCAL_PREFIX)) return true;
+          if (e.type !== "common") return true;
+          return (
+            getEffectiveGoogleRecurrence(e)?.recurringEventId !==
+            recurringMasterId
+          );
+        });
+        if (filtered.length === prev.events.length) return prev;
+        return { ...prev, events: filtered };
+      });
+    },
+    [],
+  );
 
   const setAxisTimeZones = useCallback((next: CalendarAxisTimeZone[]) => {
     setState((prev) => {
@@ -156,7 +200,9 @@ export function useCalendarStore() {
     removeBacklogItem,
     updateBacklogItem,
     mergeScheduledEvents,
+    mergeGoogleCalendarSync,
     removeGoogleImportedEvents,
+    removeGoogleSeriesByMasterId,
     setAxisTimeZones,
   };
 }

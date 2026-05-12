@@ -35,6 +35,7 @@ export const auth = betterAuth({
             clientSecret: envServer.auth.google.clientSecret,
             accessType: "offline",
             prompt: "select_account consent",
+            scope: ["https://www.googleapis.com/auth/calendar.events"],
             ...(envServer.nodeEnv === "production"
               ? { disableSignUp: true }
               : {}),

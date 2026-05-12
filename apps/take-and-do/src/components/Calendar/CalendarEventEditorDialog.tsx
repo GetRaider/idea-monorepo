@@ -43,9 +43,11 @@ interface CalendarEventEditorDialogProps {
   initial: CalendarEvent | null;
   createRange?: { start: Date; end: Date; allDay: boolean } | null;
   createPrefill?: CalendarCreatePrefill | null;
+  /** When true, create flow can optionally save common events to the linked Google calendar. */
+  googleCalendarConnected?: boolean;
   onClose: () => void;
-  onSave: (event: CalendarEvent) => void;
-  onDelete?: (id: string) => void;
+  onSave: (event: CalendarEvent, opts?: { saveToGoogle?: boolean }) => void;
+  onDeleteRequest?: (event: CalendarEvent) => void;
 }
 
 interface Draft {
@@ -220,6 +222,9 @@ function draftToScheduled(
         ? {
             rsvpStatus: preserve.rsvpStatus,
             rsvpDeclineReason: preserve.rsvpDeclineReason,
+            ...(preserve.googleRecurrence
+              ? { googleRecurrence: preserve.googleRecurrence }
+              : {}),
           }
         : {}),
     };
@@ -234,13 +239,19 @@ export function CalendarEventEditorDialog({
   initial,
   createRange,
   createPrefill,
+  googleCalendarConnected,
   onClose,
   onSave,
-  onDelete,
+  onDeleteRequest,
 }: CalendarEventEditorDialogProps) {
   const isGuest = useIsAnonymous();
   const [draft, setDraft] = useState<Draft>(() => emptyDraft(new Date()));
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [saveToGoogle, setSaveToGoogle] = useState(false);
+
+  useEffect(() => {
+    if (open) setSaveToGoogle(false);
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -295,13 +306,19 @@ export function CalendarEventEditorDialog({
       }
       return;
     }
-    onSave(next);
+    onSave(next, {
+      saveToGoogle:
+        mode === "create" &&
+        saveToGoogle &&
+        next.type === "common" &&
+        !!googleCalendarConnected,
+    });
     onClose();
   };
 
   const handleDelete = () => {
-    if (!initial || !onDelete) return;
-    onDelete(initial.id);
+    if (!initial || !onDeleteRequest) return;
+    onDeleteRequest(initial);
     onClose();
   };
 
@@ -315,7 +332,7 @@ export function CalendarEventEditorDialog({
       onClose={onClose}
       maxWidth={520}
       headerBeforeClose={
-        mode === "edit" && onDelete ? (
+        mode === "edit" && onDeleteRequest ? (
           <DeleteButton
             type="button"
             title="Delete event"
@@ -350,10 +367,27 @@ export function CalendarEventEditorDialog({
               { value: "task", label: kindLabel("task") },
             ]}
             value={draft.type}
-            onChange={(type) => setDraft((d) => ({ ...d, type }))}
+            onChange={(type) => {
+              if (type !== "common") setSaveToGoogle(false);
+              setDraft((d) => ({ ...d, type }));
+            }}
             fullWidth
           />
         </DialogFormGroup>
+
+        {mode === "create" &&
+        googleCalendarConnected &&
+        draft.type === "common" ? (
+          <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-300">
+            <input
+              type="checkbox"
+              className="rounded border-white/20 bg-input-bg"
+              checked={saveToGoogle}
+              onChange={(ev) => setSaveToGoogle(ev.target.checked)}
+            />
+            Add to Google Calendar
+          </label>
+        ) : null}
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <DialogFormGroup>
@@ -561,7 +595,7 @@ export function CalendarEventEditorDialog({
         </DialogFormButton>
       </DialogActions>
 
-      {showDeleteConfirm && initial && onDelete ? (
+      {showDeleteConfirm && initial && onDeleteRequest ? (
         <ConfirmDialog
           title="Delete event?"
           description="This will permanently delete this event. This action cannot be undone."

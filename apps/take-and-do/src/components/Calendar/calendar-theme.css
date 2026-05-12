@@ -610,3 +610,28 @@
   align-items: center;
   gap: 0.35rem;
 }
+
+.take-and-do-calendar .tad-calendar-toolbar-nav-shell {
+  --tad-toolbar-nav-x: 0px;
+  transform-origin: 50% 40%;
+}
+
+.take-and-do-calendar
+  .tad-calendar-toolbar-nav-shell.tad-calendar-toolbar-nav-anim {
+  animation: tad-calendar-toolbar-nav-anim 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes tad-calendar-toolbar-nav-anim {
+  0% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+  42% {
+    opacity: 0.88;
+    transform: translateX(var(--tad-toolbar-nav-x, 0px)) scale(0.993);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}

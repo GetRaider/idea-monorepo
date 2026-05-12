@@ -59,6 +59,14 @@ import { CalendarKindIcon, calendarKindIconSizePx } from "./CalendarKindIcon";
 import "./calendar-theme.css";
 
 const CUSTOM_VIEWS = {
+  /** Seven days starting on the anchor date (use “today” so the current day is the left column). */
+  timeGridRollingWeek: {
+    type: "timeGrid" as const,
+    duration: { days: 7 },
+    dateIncrement: { days: 7 },
+    dateAlignment: "day" as const,
+    buttonText: "7d",
+  },
   timeGridTwoDay: {
     type: "timeGrid" as const,
     duration: { days: 2 },
@@ -87,9 +95,93 @@ const DEFAULT_KIND_VISIBILITY: CalendarKindVisibility = {
   task: true,
 };
 
+function findTimegridBodyScroller(fcRoot: HTMLElement): HTMLElement | null {
+  const body = fcRoot.querySelector(".fc-timegrid-body");
+  if (!body) return null;
+  const scrollers = body.querySelectorAll(".fc-scroller");
+  let best: HTMLElement | null = null;
+  let bestOverflow = 0;
+  for (const el of scrollers) {
+    if (!(el instanceof HTMLElement)) continue;
+    const overflow = el.scrollHeight - el.clientHeight;
+    if (overflow > bestOverflow) {
+      bestOverflow = overflow;
+      best = el;
+    }
+  }
+  if (best) return best;
+  const first = scrollers[0];
+  return first instanceof HTMLElement ? first : null;
+}
+
+/** Prefer the now line in today’s time column inside the slot body (not header / all-day). */
+function findTimegridNowLineEl(fcRoot: HTMLElement): HTMLElement | null {
+  const body = fcRoot.querySelector(".fc-timegrid-body");
+  if (!body) return null;
+  const inToday = body.querySelector(
+    ".fc-day-today .fc-timegrid-now-indicator-line",
+  ) as HTMLElement | null;
+  if (inToday) return inToday;
+  return body.querySelector(
+    ".fc-timegrid-now-indicator-line",
+  ) as HTMLElement | null;
+}
+
+/**
+ * Walks up from the now line to find the vertical scroll container that actually
+ * moves the slots (FC nests multiple `.fc-scroller` nodes — picking by overflow alone
+ * can target the wrong one, which leaves “now” pinned to the top after scrollToTime).
+ */
+function findSlotScrollParent(
+  fcRoot: HTMLElement,
+  from: HTMLElement,
+): HTMLElement | null {
+  let p: HTMLElement | null = from;
+  let best: HTMLElement | null = null;
+  let bestArea = 0;
+  while (p && fcRoot.contains(p)) {
+    const delta = p.scrollHeight - p.clientHeight;
+    if (delta > 2) {
+      const oy = getComputedStyle(p).overflowY;
+      const fcScroller = p.classList.contains("fc-scroller");
+      if (oy === "auto" || oy === "scroll" || fcScroller) {
+        const area = p.clientWidth * p.clientHeight;
+        if (area > bestArea) {
+          bestArea = area;
+          best = p;
+        }
+      }
+    }
+    p = p.parentElement;
+  }
+  return best;
+}
+
+/** Returns false if the now line is not in the DOM yet (retry on the next frame). */
+function alignNowLineToVerticalCenter(fcRoot: HTMLElement): boolean {
+  const nowLine = findTimegridNowLineEl(fcRoot);
+  if (!nowLine) return false;
+  const scroller =
+    findSlotScrollParent(fcRoot, nowLine) ?? findTimegridBodyScroller(fcRoot);
+  if (!scroller) return false;
+
+  for (let pass = 0; pass < 4; pass++) {
+    const sRect = scroller.getBoundingClientRect();
+    const nRect = nowLine.getBoundingClientRect();
+    const lineCenter = nRect.top + nRect.height / 2;
+    const scrollerCenter = sRect.top + scroller.clientHeight / 2;
+    const delta = lineCenter - scrollerCenter;
+    if (Math.abs(delta) < 3) return true;
+    scroller.scrollTop += delta;
+  }
+  return true;
+}
+
 export type PlanningCalendarHandle = {
   goToDate: (d: Date) => void;
   clearSelection: () => void;
+  /** Scroll the time grid so wall-clock “now” is near the vertical center of the slot area. */
+  scrollNowToCenter: () => void;
 };
 
 interface PlanningCalendarProps {
@@ -209,13 +301,20 @@ export const PlanningCalendar = forwardRef<
 ) {
   const fcRef = useRef<FullCalendar>(null);
   const fcContainerRef = useRef<HTMLDivElement>(null);
+  const toolbarNavShellRef = useRef<HTMLDivElement>(null);
   /** FC’s mounted `.fc-timegrid-now-indicator-line` (avoids wrong match when multiple bodies exist, e.g. week). */
   const nowIndicatorLineElRef = useRef<HTMLElement | null>(null);
   const axisCornerRootRef = useRef<Root | null>(null);
   const axisCornerHostRef = useRef<HTMLElement | null>(null);
   /** Prevents `api.select()` from re-entering `select` → `onSelectRange` → setState loop. */
   const applyingProgrammaticSelectRef = useRef(false);
-  const [activeViewType, setActiveViewType] = useState("timeGridWeek");
+  /**
+   * When true, the next time-grid `datesSet` should scroll the slot area to wall-clock “now”.
+   * Set false after doing so; set true again when leaving time-grid (e.g. month) so returning
+   * re-centers. Prev/next within the same view does not reset this, so vertical scroll is kept.
+   */
+  const shouldAutoScrollTimeGridToNowRef = useRef(true);
+  const [activeViewType, setActiveViewType] = useState("timeGridRollingWeek");
   /** FC renders the line only in today’s cell; width = span × column so it reaches the rest of the view. */
   const [nowLineSpan, setNowLineSpan] = useState(7);
   /** Pixel width avoids % resolution bugs (line starting one column late) inside table/positioned cells. */
@@ -423,14 +522,21 @@ export const PlanningCalendar = forwardRef<
       const dayCells = Array.from(
         row.querySelectorAll("td.fc-timegrid-col:not(.fc-timegrid-axis)"),
       ) as HTMLElement[];
-      const idx = dayCells.indexOf(todayTd);
+      let idx = dayCells.indexOf(todayTd);
+      if (idx < 0) {
+        idx = dayCells.findIndex((td) => td.classList.contains("fc-day-today"));
+      }
       const n = dayCells.length;
-      const span = idx >= 0 && n > 0 ? n - idx : 1;
-      setNowLineSpan(span);
+      const spanFromToday = idx >= 0 && n > 0 ? n - idx : 1;
+      setNowLineSpan(n > 0 ? n : spanFromToday);
 
+      let offsetBeforeTodayPx = 0;
       let totalWidthPx = 0;
-      if (idx >= 0) {
-        for (let i = idx; i < n; i++) {
+      if (idx >= 0 && n > 0) {
+        for (let i = 0; i < idx; i++) {
+          offsetBeforeTodayPx += dayCells[i].getBoundingClientRect().width;
+        }
+        for (let i = 0; i < n; i++) {
           totalWidthPx += dayCells[i].getBoundingClientRect().width;
         }
       } else {
@@ -438,17 +544,29 @@ export const PlanningCalendar = forwardRef<
         const w =
           frame?.getBoundingClientRect().width ??
           todayTd.getBoundingClientRect().width;
-        totalWidthPx = w * span;
+        totalWidthPx = w * spanFromToday;
       }
 
       const widthPx = Math.round(totalWidthPx * 1000) / 1000;
-      setNowLineWidthPx(widthPx);
+      // Avoid persisting 0: --tad-now-line-width-px would override the CSS fallback
+      // (calc(100% * span)) with 0px and hide the line until a full remount.
+      setNowLineWidthPx(widthPx > 0 ? widthPx : null);
 
-      const applyNowLineWidth = (el: HTMLElement) => {
+      const applyNowLinePlacement = (el: HTMLElement) => {
         if (widthPx > 0) {
           el.style.setProperty("width", `${widthPx}px`, "important");
+          if (offsetBeforeTodayPx > 0) {
+            el.style.setProperty(
+              "inset-inline-start",
+              `${-offsetBeforeTodayPx}px`,
+              "important",
+            );
+          } else {
+            el.style.removeProperty("inset-inline-start");
+          }
         } else {
           el.style.removeProperty("width");
+          el.style.removeProperty("inset-inline-start");
         }
       };
 
@@ -461,7 +579,7 @@ export const PlanningCalendar = forwardRef<
       if (lineNodes.size === 0 && lineEl instanceof HTMLElement) {
         lineNodes.add(lineEl);
       }
-      lineNodes.forEach(applyNowLineWidth);
+      lineNodes.forEach(applyNowLinePlacement);
     },
     [activeViewType, resolveMountedNowLineEl],
   );
@@ -530,16 +648,74 @@ export const PlanningCalendar = forwardRef<
     axisCornerHostRef.current = null;
   }, []);
 
-  useImperativeHandle(ref, () => ({
-    goToDate: (d: Date) => {
-      fcRef.current?.getApi().gotoDate(d);
-    },
-    clearSelection: () => {
-      fcRef.current?.getApi().unselect();
-    },
-  }));
-
   const getApi = useCallback(() => fcRef.current?.getApi() ?? null, []);
+
+  const playToolbarNavigateAnimation = useCallback(
+    (kind: "prev" | "next" | "neutral") => {
+      const el = toolbarNavShellRef.current;
+      if (!el) return;
+      el.style.setProperty(
+        "--tad-toolbar-nav-x",
+        kind === "prev" ? "-10px" : kind === "next" ? "10px" : "0px",
+      );
+      const onEnd = () => {
+        el.classList.remove("tad-calendar-toolbar-nav-anim");
+        el.removeEventListener("animationend", onEnd);
+      };
+      el.addEventListener("animationend", onEnd);
+      el.classList.remove("tad-calendar-toolbar-nav-anim");
+      void el.offsetWidth;
+      el.classList.add("tad-calendar-toolbar-nav-anim");
+    },
+    [],
+  );
+
+  const scrollTimeGridToNowCentered = useCallback(() => {
+    const api = fcRef.current?.getApi();
+    const root = fcContainerRef.current;
+    if (!api || !root) return;
+    if (!api.view.type.startsWith("timeGrid")) return;
+
+    const now = new Date();
+    api.scrollToTime({
+      hours: now.getHours(),
+      minutes: now.getMinutes(),
+      seconds: now.getSeconds(),
+    });
+
+    let attempts = 0;
+    const maxAttempts = 24;
+    const tick = () => {
+      attempts += 1;
+      const ok = alignNowLineToVerticalCenter(root);
+      if (ok || attempts >= maxAttempts) return;
+      requestAnimationFrame(tick);
+    };
+    queueMicrotask(() => {
+      requestAnimationFrame(() => {
+        tick();
+        requestAnimationFrame(() => {
+          alignNowLineToVerticalCenter(root);
+        });
+      });
+    });
+  }, []);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      goToDate: (d: Date) => {
+        fcRef.current?.getApi().gotoDate(d);
+      },
+      clearSelection: () => {
+        fcRef.current?.getApi().unselect();
+      },
+      scrollNowToCenter: () => {
+        scrollTimeGridToNowCentered();
+      },
+    }),
+    [scrollTimeGridToNowCentered],
+  );
 
   const fcEvents: EventInput[] = useMemo(() => {
     const filtered = events.filter((e) => visibleKinds[e.type]);
@@ -602,18 +778,26 @@ export const PlanningCalendar = forwardRef<
       });
 
       if (arg.view.type.startsWith("timeGrid")) {
+        const runAutoScrollToNow = shouldAutoScrollTimeGridToNowRef.current;
+        if (runAutoScrollToNow) {
+          shouldAutoScrollTimeGridToNowRef.current = false;
+        }
         requestAnimationFrame(() => {
           syncTimeAxisCorner();
           requestAnimationFrame(() => {
             measureNowLineGeometry(arg.view.type);
+            if (runAutoScrollToNow) {
+              scrollTimeGridToNowCentered();
+            }
           });
         });
       } else {
+        shouldAutoScrollTimeGridToNowRef.current = true;
         setNowLineSpan(1);
         setNowLineWidthPx(null);
       }
     },
-    [syncTimeAxisCorner, measureNowLineGeometry],
+    [syncTimeAxisCorner, measureNowLineGeometry, scrollTimeGridToNowCentered],
   );
 
   useLayoutEffect(() => {
@@ -739,7 +923,7 @@ export const PlanningCalendar = forwardRef<
       style={
         {
           "--tad-now-line-span": String(nowLineSpan),
-          ...(nowLineWidthPx != null
+          ...(nowLineWidthPx != null && nowLineWidthPx > 0
             ? { "--tad-now-line-width-px": `${nowLineWidthPx}px` }
             : {}),
           "--tad-axis-zone-count": String(zoneCount),
@@ -755,181 +939,189 @@ export const PlanningCalendar = forwardRef<
         toolbarMeta={toolbarMeta}
         slotTime24h={slotTime24h}
         onSlotTime24hChange={onSlotTime24hChange}
+        onAlignViewToNow={scrollTimeGridToNowCentered}
+        onToolbarNavigate={playToolbarNavigateAnimation}
       />
-      <div ref={fcContainerRef} className="min-h-0 flex-1 overflow-hidden">
-        <FullCalendar
-          ref={fcRef}
-          plugins={[
-            dayGridPlugin,
-            timeGridPlugin,
-            listPlugin,
-            interactionPlugin,
-          ]}
-          views={CUSTOM_VIEWS}
-          headerToolbar={false}
-          initialView="timeGridWeek"
-          firstDay={1}
-          editable
-          eventResizableFromStart
-          selectable
-          selectMirror={false}
-          selectLongPressDelay={0}
-          selectMinDistance={5}
-          slotDuration="00:15:00"
-          snapDuration="00:15:00"
-          slotLabelInterval="01:00:00"
-          slotLabelFormat={slotLabelFormat}
-          slotLabelContent={slotLabelContent}
-          slotEventOverlap
-          unselectCancel=".calendar-quick-menu,[data-dropdown-portal]"
-          droppable
-          nowIndicator
-          nowIndicatorContent={nowIndicatorContent}
-          nowIndicatorDidMount={handleNowIndicatorDidMount}
-          nowIndicatorWillUnmount={handleNowIndicatorWillUnmount}
-          slotMinTime="00:00:00"
-          slotMaxTime="24:00:00"
-          scrollTime="08:00:00"
-          dayHeaderContent={dayHeaderDayWeek}
-          allDayText="All day"
-          allDayContent={({ text }) => (
-            <span className="tad-all-day-label">{text}</span>
-          )}
-          viewDidMount={handleViewDidMount}
-          viewWillUnmount={handleViewWillUnmount}
-          height="100%"
-          events={fcEvents}
-          datesSet={handleDatesSet}
-          eventClick={handleEventClick}
-          select={handleSelect}
-          eventReceive={handleReceive}
-          eventDrop={handleDrop}
-          eventResize={handleResize}
-          eventContent={(arg: EventContentArg) => {
-            const isMirror = arg.isMirror;
-            const isExistingEventMirror =
-              isMirror && (arg.isDragging || arg.isResizing);
-            const draftMirrorKind: CalendarEventType | null =
-              isMirror && !isExistingEventMirror
-                ? (draftSelectionKind ?? "timeBlock")
-                : null;
+      <div
+        ref={toolbarNavShellRef}
+        className="tad-calendar-toolbar-nav-shell min-h-0 flex-1 overflow-hidden"
+      >
+        <div ref={fcContainerRef} className="h-full min-h-0 overflow-hidden">
+          <FullCalendar
+            ref={fcRef}
+            plugins={[
+              dayGridPlugin,
+              timeGridPlugin,
+              listPlugin,
+              interactionPlugin,
+            ]}
+            views={CUSTOM_VIEWS}
+            headerToolbar={false}
+            initialView="timeGridRollingWeek"
+            firstDay={1}
+            editable
+            eventResizableFromStart
+            selectable
+            selectMirror={false}
+            selectLongPressDelay={0}
+            selectMinDistance={5}
+            slotDuration="00:15:00"
+            snapDuration="00:15:00"
+            slotLabelInterval="01:00:00"
+            slotLabelFormat={slotLabelFormat}
+            slotLabelContent={slotLabelContent}
+            slotEventOverlap
+            unselectCancel=".calendar-quick-menu,[data-dropdown-portal]"
+            droppable
+            nowIndicator
+            nowIndicatorContent={nowIndicatorContent}
+            nowIndicatorDidMount={handleNowIndicatorDidMount}
+            nowIndicatorWillUnmount={handleNowIndicatorWillUnmount}
+            slotMinTime="00:00:00"
+            slotMaxTime="24:00:00"
+            scrollTimeReset={false}
+            dayHeaderContent={dayHeaderDayWeek}
+            allDayText="All day"
+            allDayContent={({ text }) => (
+              <span className="tad-all-day-label">{text}</span>
+            )}
+            viewDidMount={handleViewDidMount}
+            viewWillUnmount={handleViewWillUnmount}
+            height="100%"
+            events={fcEvents}
+            datesSet={handleDatesSet}
+            eventClick={handleEventClick}
+            select={handleSelect}
+            eventReceive={handleReceive}
+            eventDrop={handleDrop}
+            eventResize={handleResize}
+            eventContent={(arg: EventContentArg) => {
+              const isMirror = arg.isMirror;
+              const isExistingEventMirror =
+                isMirror && (arg.isDragging || arg.isResizing);
+              const draftMirrorKind: CalendarEventType | null =
+                isMirror && !isExistingEventMirror
+                  ? (draftSelectionKind ?? "timeBlock")
+                  : null;
 
-            const kind = isExistingEventMirror
-              ? extendedPropsToKind(arg.event.extendedProps.kind)
-              : draftMirrorKind
-                ? draftMirrorKind
-                : extendedPropsToKind(arg.event.extendedProps.kind);
-            const taskSnap = arg.event.extendedProps.taskSummarySnapshot as
-              | string
-              | undefined;
-            const start = arg.event.start;
-            const end = arg.event.end;
-            const durMs = start && end ? end.getTime() - start.getTime() : 0;
-            const compactTimed =
-              !arg.event.allDay && durMs > 0 && durMs <= 55 * 60 * 1000;
-            const shortOneLineTimed =
-              !arg.event.allDay &&
-              durMs > 0 &&
-              durMs <= SHORT_TIMED_ONE_LINE_MS;
-            const tip = draftMirrorKind
-              ? `${kindLabel(draftMirrorKind)} — New event`
-              : `${kindLabel(kind)} — ${arg.event.title}`;
-            const iconPx =
-              isMirror && !isExistingEventMirror
-                ? 10
-                : calendarKindIconSizePx(durMs, !!arg.event.allDay);
+              const kind = isExistingEventMirror
+                ? extendedPropsToKind(arg.event.extendedProps.kind)
+                : draftMirrorKind
+                  ? draftMirrorKind
+                  : extendedPropsToKind(arg.event.extendedProps.kind);
+              const taskSnap = arg.event.extendedProps.taskSummarySnapshot as
+                | string
+                | undefined;
+              const start = arg.event.start;
+              const end = arg.event.end;
+              const durMs = start && end ? end.getTime() - start.getTime() : 0;
+              const compactTimed =
+                !arg.event.allDay && durMs > 0 && durMs <= 55 * 60 * 1000;
+              const shortOneLineTimed =
+                !arg.event.allDay &&
+                durMs > 0 &&
+                durMs <= SHORT_TIMED_ONE_LINE_MS;
+              const tip = draftMirrorKind
+                ? `${kindLabel(draftMirrorKind)} — New event`
+                : `${kindLabel(kind)} — ${arg.event.title}`;
+              const iconPx =
+                isMirror && !isExistingEventMirror
+                  ? 10
+                  : calendarKindIconSizePx(durMs, !!arg.event.allDay);
 
-            const timeSubtitle =
-              !arg.event.allDay && start && end
-                ? formatEventTimeSubtitle(start, end, slotTime24h, durMs)
-                : "";
+              const timeSubtitle =
+                !arg.event.allDay && start && end
+                  ? formatEventTimeSubtitle(start, end, slotTime24h, durMs)
+                  : "";
 
-            const eventTitleBlock = (
-              primary: string,
-              secondary: string | null,
-              extra: string | null,
-              padY: "tight" | "normal",
-              timeBesideTitle: boolean,
-            ) => (
-              <div
-                className={cn(
-                  "fc-event-main-frame tad-planning-event-inner min-h-0 min-w-0",
-                  padY === "tight" ? "py-px" : "py-0.5",
-                )}
-                title={tip}
-              >
-                <span
-                  className="calendar-kind-icon-wrap flex shrink-0 items-center justify-center rounded bg-black/20 p-px"
-                  aria-hidden
-                >
-                  <CalendarKindIcon
-                    kind={draftMirrorKind ?? kind}
-                    size={Math.min(iconPx, compactTimed ? 10 : 11)}
-                    color="rgba(250,250,250,0.95)"
-                  />
-                </span>
-                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                  {timeBesideTitle && secondary ? (
-                    <div className="flex min-w-0 items-baseline gap-1">
-                      <span className="min-w-0 truncate text-[10px] font-medium leading-tight text-white">
-                        {primary}
-                      </span>
-                      <span className="shrink-0 text-[9px] font-normal leading-none tabular-nums text-zinc-400">
-                        {secondary}
-                      </span>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="truncate text-[10px] font-medium leading-tight text-white">
-                        {primary}
-                      </div>
-                      {secondary ? (
-                        <div className="truncate text-[9px] font-normal leading-tight tabular-nums text-zinc-400">
-                          {secondary}
-                        </div>
-                      ) : null}
-                    </>
+              const eventTitleBlock = (
+                primary: string,
+                secondary: string | null,
+                extra: string | null,
+                padY: "tight" | "normal",
+                timeBesideTitle: boolean,
+              ) => (
+                <div
+                  className={cn(
+                    "fc-event-main-frame tad-planning-event-inner min-h-0 min-w-0",
+                    padY === "tight" ? "py-px" : "py-0.5",
                   )}
-                  {extra ? (
-                    <div className="truncate text-[9px] font-normal leading-tight text-zinc-500">
-                      {extra}
-                    </div>
-                  ) : null}
+                  title={tip}
+                >
+                  <span
+                    className="calendar-kind-icon-wrap flex shrink-0 items-center justify-center rounded bg-black/20 p-px"
+                    aria-hidden
+                  >
+                    <CalendarKindIcon
+                      kind={draftMirrorKind ?? kind}
+                      size={Math.min(iconPx, compactTimed ? 10 : 11)}
+                      color="rgba(250,250,250,0.95)"
+                    />
+                  </span>
+                  <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                    {timeBesideTitle && secondary ? (
+                      <div className="flex min-w-0 items-baseline gap-1">
+                        <span className="min-w-0 truncate text-[10px] font-medium leading-tight text-white">
+                          {primary}
+                        </span>
+                        <span className="shrink-0 text-[9px] font-normal leading-none tabular-nums text-zinc-400">
+                          {secondary}
+                        </span>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="truncate text-[10px] font-medium leading-tight text-white">
+                          {primary}
+                        </div>
+                        {secondary ? (
+                          <div className="truncate text-[9px] font-normal leading-tight tabular-nums text-zinc-400">
+                            {secondary}
+                          </div>
+                        ) : null}
+                      </>
+                    )}
+                    {extra ? (
+                      <div className="truncate text-[9px] font-normal leading-tight text-zinc-500">
+                        {extra}
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
-              </div>
-            );
-
-            const timeBesideTitle = Boolean(timeSubtitle) && shortOneLineTimed;
-
-            if (draftMirrorKind) {
-              return eventTitleBlock(
-                kindLabel(draftMirrorKind),
-                timeSubtitle || null,
-                null,
-                compactTimed ? "tight" : "normal",
-                timeBesideTitle,
               );
-            }
 
-            if (compactTimed) {
+              const timeBesideTitle =
+                Boolean(timeSubtitle) && shortOneLineTimed;
+
+              if (draftMirrorKind) {
+                return eventTitleBlock(
+                  kindLabel(draftMirrorKind),
+                  timeSubtitle || null,
+                  null,
+                  compactTimed ? "tight" : "normal",
+                  timeBesideTitle,
+                );
+              }
+
+              if (compactTimed) {
+                return eventTitleBlock(
+                  arg.event.title,
+                  timeSubtitle || null,
+                  null,
+                  "tight",
+                  timeBesideTitle,
+                );
+              }
+
               return eventTitleBlock(
                 arg.event.title,
                 timeSubtitle || null,
-                null,
-                "tight",
+                taskSnap?.trim() ? taskSnap.trim() : null,
+                "normal",
                 timeBesideTitle,
               );
-            }
-
-            return eventTitleBlock(
-              arg.event.title,
-              timeSubtitle || null,
-              taskSnap?.trim() ? taskSnap.trim() : null,
-              "normal",
-              timeBesideTitle,
-            );
-          }}
-        />
+            }}
+          />
+        </div>
       </div>
     </div>
   );

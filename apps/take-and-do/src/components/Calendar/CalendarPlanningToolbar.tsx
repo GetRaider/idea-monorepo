@@ -8,6 +8,7 @@ import { cn } from "@/lib/styles/utils";
 
 const VIEW_LABELS: Record<string, string> = {
   timeGridDay: "Day",
+  timeGridRollingWeek: "Week",
   timeGridWeek: "Week",
   dayGridMonth: "Month",
   timeGridTwoDay: "2 days",
@@ -40,6 +41,10 @@ interface CalendarPlanningToolbarProps {
   toolbarMeta?: CalendarToolbarMeta | null;
   slotTime24h: boolean;
   onSlotTime24hChange: (next: boolean) => void;
+  /** After jumping to “today”, scroll the time grid so “now” is vertically centered. */
+  onAlignViewToNow?: () => void;
+  /** Short motion when using toolbar prev / next / today / view (not keyboard). */
+  onToolbarNavigate?: (kind: "prev" | "next" | "neutral") => void;
 }
 
 export function CalendarPlanningToolbar({
@@ -48,6 +53,8 @@ export function CalendarPlanningToolbar({
   toolbarMeta,
   slotTime24h,
   onSlotTime24hChange,
+  onAlignViewToNow,
+  onToolbarNavigate,
 }: CalendarPlanningToolbarProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
@@ -97,7 +104,7 @@ export function CalendarPlanningToolbar({
         closeAll();
       } else if (k === "w" || e.key === "0") {
         e.preventDefault();
-        api.changeView("timeGridWeek");
+        api.changeView("timeGridRollingWeek");
         closeAll();
       } else if (k === "m") {
         e.preventDefault();
@@ -110,21 +117,32 @@ export function CalendarPlanningToolbar({
   }, [getApi, closeAll]);
 
   const changeView = (name: string) => {
+    onToolbarNavigate?.("neutral");
     getApi()?.changeView(name);
     closeAll();
   };
 
   const goToday = () => {
-    getApi()?.today();
+    onToolbarNavigate?.("neutral");
+    const api = getApi();
+    if (!api) return;
+    api.today();
     closeAll();
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        onAlignViewToNow?.();
+      });
+    });
   };
 
   const goPrev = () => {
+    onToolbarNavigate?.("prev");
     getApi()?.prev();
     closeAll();
   };
 
   const goNext = () => {
+    onToolbarNavigate?.("next");
     getApi()?.next();
     closeAll();
   };
@@ -211,7 +229,7 @@ export function CalendarPlanningToolbar({
                   type="button"
                   role="menuitem"
                   className={menuItem}
-                  onClick={() => changeView("timeGridWeek")}
+                  onClick={() => changeView("timeGridRollingWeek")}
                 >
                   <span>Week</span>
                   <span className={menuHint}>0 or W</span>

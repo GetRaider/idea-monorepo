@@ -25,8 +25,10 @@ import type {
   CalendarTimeZone,
 } from "@/types/calendar.types";
 
+import { CalendarColorPickerPopover } from "./CalendarColorPickerPopover";
 import { CalendarEventTaskSection } from "./CalendarEventTaskSection";
 import { CalendarEventTaskScopeSection } from "./CalendarEventTaskScopeSection";
+import { effectiveKindColor, normalizeHexColor } from "./calendar-colors";
 import { kindLabel } from "./calendar-event-mapper";
 import {
   fromDatetimeLocalValue,
@@ -67,6 +69,7 @@ interface Draft {
   taskBoardId: string;
   taskId: string;
   taskSummarySnapshot: string;
+  colorHex: string;
 }
 
 function emptyDraft(now: Date): Draft {
@@ -88,6 +91,7 @@ function emptyDraft(now: Date): Draft {
     taskBoardId: "",
     taskId: "",
     taskSummarySnapshot: "",
+    colorHex: "",
   };
 }
 
@@ -117,6 +121,7 @@ function fromScheduled(e: CalendarEvent): Draft {
     taskBoardId: e.type === "task" ? e.taskBoardId : "",
     taskId: e.type === "task" ? e.taskId : "",
     taskSummarySnapshot: e.type === "task" ? (e.taskSummarySnapshot ?? "") : "",
+    colorHex: normalizeHexColor(e.color) ?? "",
   };
 }
 
@@ -215,9 +220,18 @@ function draftToScheduled(
               : {}),
           };
 
+  const pickedColor = normalizeHexColor(draft.colorHex);
+  const normalized: CalendarEvent = pickedColor
+    ? { ...event, color: pickedColor }
+    : (() => {
+        const copy = { ...event };
+        delete (copy as { color?: string }).color;
+        return copy as CalendarEvent;
+      })();
+
   if (preserve) {
     return {
-      ...event,
+      ...normalized,
       ...(preserve.type === "common"
         ? {
             rsvpStatus: preserve.rsvpStatus,
@@ -230,7 +244,7 @@ function draftToScheduled(
     };
   }
 
-  return event;
+  return normalized;
 }
 
 export function CalendarEventEditorDialog({
@@ -277,6 +291,7 @@ export function CalendarEventEditorDialog({
         taskBoardId: "",
         taskId: "",
         taskSummarySnapshot: "",
+        colorHex: normalizeHexColor(createPrefill?.color) ?? "",
       });
       return;
     }
@@ -287,6 +302,7 @@ export function CalendarEventEditorDialog({
         title: createPrefill.title ?? "",
         type: createPrefill.type ?? "timeBlock",
         descriptionText: createPrefill.description ?? "",
+        colorHex: normalizeHexColor(createPrefill.color) ?? "",
       });
       return;
     }
@@ -295,6 +311,10 @@ export function CalendarEventEditorDialog({
   }, [open, mode, initial, createRange, createPrefill]);
 
   if (!open) return null;
+
+  const editorFillPreview =
+    normalizeHexColor(draft.colorHex) ??
+    effectiveKindColor(draft.type, undefined);
 
   const handleSave = () => {
     const next = draftToScheduled(draft, initial?.id, initial);
@@ -432,6 +452,24 @@ export function CalendarEventEditorDialog({
             }
             placeholder="Feel free to mention task or docs by @"
           />
+        </DialogFormGroup>
+
+        <DialogFormGroup>
+          <DialogFormLabel>Color</DialogFormLabel>
+          <div className="flex items-center gap-2">
+            <CalendarColorPickerPopover
+              selectedHex={editorFillPreview}
+              onSelect={(hex) => setDraft((d) => ({ ...d, colorHex: hex }))}
+              onResetToDefault={() => setDraft((d) => ({ ...d, colorHex: "" }))}
+              trigger={
+                <span
+                  className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-white/[0.18] shadow-inner"
+                  style={{ backgroundColor: editorFillPreview }}
+                  aria-hidden
+                />
+              }
+            />
+          </div>
         </DialogFormGroup>
 
         <details className="rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2">

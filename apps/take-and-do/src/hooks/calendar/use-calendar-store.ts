@@ -4,11 +4,17 @@ import { useCallback, useEffect, useLayoutEffect, useState } from "react";
 
 import { defaultAxisTimeZones } from "@/components/Calendar/calendar-axis-time";
 
+import {
+  coerceHexToWhiteTextSafe,
+  normalizeHexColor,
+} from "@/components/Calendar/calendar-colors";
+
 import type {
   CalendarAxisTimeZone,
   CalendarBacklogEvent,
-  CalendarPersistedState,
   CalendarEvent,
+  CalendarEventType,
+  CalendarPersistedState,
 } from "@/types/calendar.types";
 
 import { readCalendarState, writeCalendarState } from "./calendar-storage";
@@ -30,9 +36,14 @@ export function useCalendarStore() {
   }, [state]);
 
   const addScheduled = useCallback((event: CalendarEvent) => {
+    const c = normalizeHexColor(event.color);
+    const ev =
+      c != null
+        ? ({ ...event, color: coerceHexToWhiteTextSafe(c) } as CalendarEvent)
+        : event;
     setState((prev) => {
       if (!prev) return prev;
-      return { ...prev, events: [...prev.events, event] };
+      return { ...prev, events: [...prev.events, ev] };
     });
   }, []);
 
@@ -51,6 +62,7 @@ export function useCalendarStore() {
     taskSummarySnapshot: string;
     rsvpStatus: "yes" | "no" | "maybe";
     rsvpDeclineReason: string;
+    color: string | null;
   }>;
 
   const patchScheduled = useCallback(
@@ -61,12 +73,25 @@ export function useCalendarStore() {
           ...prev,
           events: prev.events.map((e) => {
             if (e.id !== id) return e;
-            const next = { ...e, ...patch };
+            const next = { ...e, ...patch } as CalendarEvent;
             if (e.type !== "common") {
               // Strip common-only fields if they got patched in
               delete (next as { rsvpStatus?: unknown }).rsvpStatus;
               delete (next as { rsvpDeclineReason?: unknown })
                 .rsvpDeclineReason;
+            }
+            if ("color" in patch) {
+              if (patch.color === null || patch.color === "") {
+                delete (next as { color?: string }).color;
+              } else {
+                const hex = normalizeHexColor(patch.color);
+                if (hex) {
+                  (next as { color: string }).color =
+                    coerceHexToWhiteTextSafe(hex);
+                } else {
+                  delete (next as { color?: string }).color;
+                }
+              }
             }
             return next;
           }),
@@ -77,11 +102,16 @@ export function useCalendarStore() {
   );
 
   const replaceScheduled = useCallback((event: CalendarEvent) => {
+    const c = normalizeHexColor(event.color);
+    const ev =
+      c != null
+        ? ({ ...event, color: coerceHexToWhiteTextSafe(c) } as CalendarEvent)
+        : event;
     setState((prev) => {
       if (!prev) return prev;
       return {
         ...prev,
-        events: prev.events.map((e) => (e.id === event.id ? event : e)),
+        events: prev.events.map((e) => (e.id === ev.id ? ev : e)),
       };
     });
   }, []);
@@ -190,6 +220,40 @@ export function useCalendarStore() {
     });
   }, []);
 
+  const setKindColor = useCallback(
+    (kind: CalendarEventType, color: string | null) => {
+      setState((prev) => {
+        if (!prev) return prev;
+        const hex = color ? normalizeHexColor(color) : undefined;
+        const prevMap = prev.kindColors ?? {};
+        const nextMap = { ...prevMap };
+        if (!hex) {
+          delete nextMap[kind];
+        } else {
+          nextMap[kind] = coerceHexToWhiteTextSafe(hex);
+        }
+        const keys = Object.keys(nextMap);
+        return {
+          ...prev,
+          kindColors: keys.length > 0 ? nextMap : undefined,
+        };
+      });
+    },
+    [],
+  );
+
+  const setGoogleCalendarColor = useCallback((color: string | null) => {
+    setState((prev) => {
+      if (!prev) return prev;
+      const hex = color ? normalizeHexColor(color) : undefined;
+      if (!hex) {
+        const { googleCalendarColor: _, ...rest } = prev;
+        return rest;
+      }
+      return { ...prev, googleCalendarColor: coerceHexToWhiteTextSafe(hex) };
+    });
+  }, []);
+
   return {
     state,
     addScheduled,
@@ -204,5 +268,7 @@ export function useCalendarStore() {
     removeGoogleImportedEvents,
     removeGoogleSeriesByMasterId,
     setAxisTimeZones,
+    setKindColor,
+    setGoogleCalendarColor,
   };
 }

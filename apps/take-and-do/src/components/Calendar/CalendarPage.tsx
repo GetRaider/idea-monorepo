@@ -76,9 +76,9 @@ type GoogleScopePrompt =
       patch: Partial<
         Omit<
           CalendarEvent,
-          "id" | "type" | "taskBoardId" | "taskId" | "taskScope"
+          "id" | "type" | "taskBoardId" | "taskId" | "taskScope" | "color"
         >
-      >;
+      > & { color?: string | null };
       merged: CalendarEvent;
     };
 
@@ -99,6 +99,8 @@ export function CalendarPage() {
     removeGoogleImportedEvents,
     removeGoogleSeriesByMasterId,
     setAxisTimeZones,
+    setKindColor,
+    setGoogleCalendarColor,
   } = useCalendarStore();
 
   const [, setCurrentPage] = useState("calendar");
@@ -160,6 +162,17 @@ export function CalendarPage() {
       allDay: quickMenu.allDay,
     };
   }, [quickMenu]);
+
+  const calendarColorTheme = useMemo(
+    () =>
+      state
+        ? {
+            kindColors: state.kindColors,
+            googleCalendarColor: state.googleCalendarColor,
+          }
+        : undefined,
+    [state],
+  );
 
   const bumpDraftSelection = useCallback(() => {
     setDraftSelectionVersion((v) => v + 1);
@@ -315,6 +328,7 @@ export function CalendarPage() {
           title: ctx.quickFields.title.trim() || undefined,
           description: ctx.quickFields.description.trim() || undefined,
           type: ctx.quickFields.type,
+          color: ctx.quickFields.color,
         });
         setEditorMode("create");
         setEditorEvent(null);
@@ -457,9 +471,9 @@ export function CalendarPage() {
       patch: Partial<
         Omit<
           CalendarEvent,
-          "id" | "type" | "taskBoardId" | "taskId" | "taskScope"
+          "id" | "type" | "taskBoardId" | "taskId" | "taskScope" | "color"
         >
-      >,
+      > & { color?: string | null },
     ) => {
       if (!state) return;
       const ev = state.events.find((e) => e.id === id);
@@ -586,6 +600,10 @@ export function CalendarPage() {
               }
             }}
             googleCalendarLabel={googleCalendarLabel}
+            kindColors={state.kindColors}
+            googleCalendarColor={state.googleCalendarColor}
+            onKindColorChange={setKindColor}
+            onGoogleCalendarColorChange={setGoogleCalendarColor}
           />
           <div ref={calendarScopeRef} className="relative flex min-h-0 flex-1">
             <PlanningCalendar
@@ -611,6 +629,7 @@ export function CalendarPage() {
               }
               slotTime24h={slotTime24h}
               onSlotTime24hChange={setSlotTime24hPersist}
+              calendarColorTheme={calendarColorTheme}
             />
             {quickMenu ? (
               <CalendarEventQuickMenu
@@ -627,6 +646,7 @@ export function CalendarPage() {
                 onRsvpChange={handleRsvpChange}
                 onDraftSelectionBump={bumpDraftSelection}
                 onDraftKindChange={setDraftQuickKind}
+                calendarColorTheme={calendarColorTheme}
               />
             ) : null}
           </div>

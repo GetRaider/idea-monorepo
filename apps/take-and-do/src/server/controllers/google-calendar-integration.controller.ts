@@ -72,6 +72,11 @@ const ImportedGoogleCalendarEventSchema = z.object({
   description: z.string().optional(),
   rsvpStatus: z.enum(["yes", "no", "maybe"]).optional(),
   googleRecurrence: GoogleRecurrenceMetaDto.optional(),
+  /** Local UI override; ignored by Google push until mapped to colorId. */
+  color: z
+    .string()
+    .regex(/^#[0-9A-Fa-f]{6}$/)
+    .optional(),
 });
 
 const SyncResponseDto = z.object({

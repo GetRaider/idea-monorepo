@@ -2,6 +2,17 @@ import type { EventApi, EventInput } from "@fullcalendar/core";
 
 import type { CalendarEvent, CalendarEventType } from "@/types/calendar.types";
 
+import {
+  calendarStripeHex,
+  eventFillHex,
+  eventUsesCalendarStripe,
+} from "./calendar-colors";
+
+export type CalendarEventColorTheme = {
+  kindColors?: Partial<Record<CalendarEventType, string>>;
+  googleCalendarColor?: string;
+};
+
 export function kindLabel(kind: CalendarEventType): string {
   switch (kind) {
     case "timeBlock":
@@ -104,7 +115,14 @@ function migrateKindProp(kind: unknown): CalendarEventType {
   return "timeBlock";
 }
 
-export function scheduledToEventInput(event: CalendarEvent): EventInput {
+export function scheduledToEventInput(
+  event: CalendarEvent,
+  theme?: CalendarEventColorTheme,
+): EventInput {
+  const t = theme ?? {};
+  const fill = eventFillHex(event, t);
+  const stripe = calendarStripeHex(event, t);
+  const stripeActive = eventUsesCalendarStripe(event, t);
   const startDay = event.start.slice(0, 10);
   const endDay = event.end.slice(0, 10);
   if (event.allDay) {
@@ -120,8 +138,9 @@ export function scheduledToEventInput(event: CalendarEvent): EventInput {
       allDay: true,
       start: startDay,
       end: fcExclusiveEndDate(endDay),
-      backgroundColor: kindColor(event.type),
-      borderColor: kindColor(event.type),
+      backgroundColor: fill,
+      borderColor: fill,
+      classNames: stripeActive ? ["tad-event-calendar-stripe"] : undefined,
       extendedProps: {
         kind: event.type,
         taskScope,
@@ -130,6 +149,9 @@ export function scheduledToEventInput(event: CalendarEvent): EventInput {
         taskSummarySnapshot,
         rsvpStatus,
         reminderMinutes: event.reminderMinutes,
+        eventBodyFill: fill,
+        eventCalendarBaseColor: stripe,
+        useCalendarStripe: stripeActive,
       },
     };
   }
@@ -145,8 +167,9 @@ export function scheduledToEventInput(event: CalendarEvent): EventInput {
     start: event.start,
     end: event.end,
     allDay: false,
-    backgroundColor: kindColor(event.type),
-    borderColor: kindColor(event.type),
+    backgroundColor: fill,
+    borderColor: fill,
+    classNames: stripeActive ? ["tad-event-calendar-stripe"] : undefined,
     extendedProps: {
       kind: event.type,
       taskScope,
@@ -155,6 +178,9 @@ export function scheduledToEventInput(event: CalendarEvent): EventInput {
       taskSummarySnapshot,
       rsvpStatus,
       reminderMinutes: event.reminderMinutes,
+      eventBodyFill: fill,
+      eventCalendarBaseColor: stripe,
+      useCalendarStripe: stripeActive,
     },
   };
 }

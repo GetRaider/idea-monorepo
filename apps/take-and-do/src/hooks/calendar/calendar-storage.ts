@@ -1,10 +1,13 @@
 import { normalizeAxisTimeZones } from "@/components/Calendar/calendar-axis-time";
 
+import { normalizeHexColor } from "@/components/Calendar/calendar-colors";
+
 import type {
   CalendarBacklogEvent,
   CalendarBacklogType,
   CalendarEvent,
   CalendarEventType,
+  CalendarKindColorMap,
   CalendarPersistedState,
   CalendarRepeatRule,
   CalendarRsvpStatus,
@@ -154,6 +157,9 @@ function normalizeScheduledEvent(raw: unknown): CalendarEvent | null {
   const notes = raw.notes ?? raw.notesAndDocs;
   const reminderMinutes = raw.reminderMinutes;
   const googleRecurrence = normalizeGoogleRecurrence(raw.googleRecurrence);
+  const colorRaw = raw.color;
+  const color =
+    typeof colorRaw === "string" ? normalizeHexColor(colorRaw) : undefined;
   const base = {
     id,
     type,
@@ -173,6 +179,7 @@ function normalizeScheduledEvent(raw: unknown): CalendarEvent | null {
       : {}),
     ...(typeof notes === "string" ? { notes } : {}),
     ...(typeof description === "string" ? { description } : {}),
+    ...(color ? { color } : {}),
   } as const;
 
   if (type === "task") {
@@ -210,6 +217,18 @@ function normalizeScheduledEvent(raw: unknown): CalendarEvent | null {
   };
 }
 
+function normalizeKindColors(raw: unknown): CalendarKindColorMap | undefined {
+  if (!isRecord(raw)) return undefined;
+  const out: CalendarKindColorMap = {};
+  for (const kind of ["timeBlock", "common", "task"] as const) {
+    const v = raw[kind];
+    if (typeof v !== "string") continue;
+    const hex = normalizeHexColor(v);
+    if (hex) out[kind] = hex;
+  }
+  return Object.keys(out).length ? out : undefined;
+}
+
 export function readCalendarState(): CalendarPersistedState {
   if (typeof window === "undefined") return defaultState();
   try {
@@ -230,7 +249,16 @@ export function readCalendarState(): CalendarPersistedState {
       .filter((b): b is CalendarBacklogEvent => b !== null);
     const backlog = backlogParsed.length > 0 ? backlogParsed : DEFAULT_BACKLOG;
     const axisTimeZones = normalizeAxisTimeZones(parsed.axisTimeZones);
-    return { version: 1, events, backlog, axisTimeZones };
+    const kindColors = normalizeKindColors(parsed.kindColors);
+    const googleCalendarColor = normalizeHexColor(parsed.googleCalendarColor);
+    return {
+      version: 1,
+      events,
+      backlog,
+      axisTimeZones,
+      ...(kindColors ? { kindColors } : {}),
+      ...(googleCalendarColor ? { googleCalendarColor } : {}),
+    };
   } catch {
     return defaultState();
   }

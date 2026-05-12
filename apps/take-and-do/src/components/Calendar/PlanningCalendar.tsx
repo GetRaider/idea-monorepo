@@ -4,10 +4,12 @@ import type {
   DateSelectArg,
   DatesSetArg,
   DayHeaderContentArg,
+  EventApi,
   EventClickArg,
   EventContentArg,
   EventDropArg,
   EventInput,
+  EventMountArg,
   NowIndicatorContentArg,
   NowIndicatorMountArg,
   SlotLabelContentArg,
@@ -49,11 +51,17 @@ import { CalendarAxisCorner } from "./CalendarAxisCorner";
 import { formatAxisSlotTime } from "./calendar-axis-time";
 import { CalendarPlanningToolbar } from "./CalendarPlanningToolbar";
 import {
+  calendarStripeHex,
+  eventFillHex,
+  eventUsesCalendarStripe,
+} from "./calendar-colors";
+import {
   extendedPropsToKind,
   fcEventRangeToScheduledPatch,
   kindColor,
   kindLabel,
   scheduledToEventInput,
+  type CalendarEventColorTheme,
 } from "./calendar-event-mapper";
 import { CalendarKindIcon, calendarKindIconSizePx } from "./CalendarKindIcon";
 import "./calendar-theme.css";
@@ -220,6 +228,8 @@ interface PlanningCalendarProps {
   onSlotTime24hChange: (next: boolean) => void;
   axisTimeZones: CalendarAxisTimeZone[];
   onAxisTimeZonesChange: (next: CalendarAxisTimeZone[]) => void;
+  /** Local kind colors + Google chrome color for event fills / calendar stripes. */
+  calendarColorTheme?: CalendarEventColorTheme;
 }
 
 function isEventKind(value: unknown): value is CalendarEventType {
@@ -276,6 +286,48 @@ function dayHeaderDayWeek(arg: DayHeaderContentArg) {
   );
 }
 
+const TAD_EVENT_STRIPE_PX = 5;
+
+function applyTadEventStripeToEl(
+  el: HTMLElement,
+  opts: {
+    useStripe: boolean;
+    baseColor: string;
+    bodyFill: string;
+  },
+) {
+  const { useStripe, baseColor, bodyFill } = opts;
+  const on = useStripe && baseColor && bodyFill;
+  if (on) {
+    el.classList.add("tad-event-calendar-stripe");
+    el.style.setProperty("--tad-event-base-color", baseColor);
+    el.style.setProperty("--tad-event-body-fill", bodyFill);
+    el.style.setProperty("--tad-event-stripe-w", `${TAD_EVENT_STRIPE_PX}px`);
+  } else {
+    el.classList.remove("tad-event-calendar-stripe");
+    el.style.removeProperty("--tad-event-base-color");
+    el.style.removeProperty("--tad-event-body-fill");
+    el.style.removeProperty("--tad-event-stripe-w");
+  }
+}
+
+function scheduleTadEventStripePaint(
+  el: HTMLElement,
+  opts: { useStripe: boolean; baseColor: string; bodyFill: string },
+) {
+  const paint = () => applyTadEventStripeToEl(el, opts);
+  paint();
+  requestAnimationFrame(() => {
+    paint();
+    requestAnimationFrame(paint);
+  });
+  window.setTimeout(paint, 0);
+  window.setTimeout(paint, 32);
+  window.setTimeout(paint, 100);
+  /** FC may re-apply inline `backgroundColor` after `eventsSet` / layout; late pass restores CSS vars. */
+  window.setTimeout(paint, 220);
+}
+
 export const PlanningCalendar = forwardRef<
   PlanningCalendarHandle,
   PlanningCalendarProps
@@ -296,11 +348,18 @@ export const PlanningCalendar = forwardRef<
     onSlotTime24hChange,
     axisTimeZones,
     onAxisTimeZonesChange,
+    calendarColorTheme,
   },
   ref,
 ) {
   const fcRef = useRef<FullCalendar>(null);
   const fcContainerRef = useRef<HTMLDivElement>(null);
+  const eventsRef = useRef(events);
+  const calendarColorThemeRef = useRef(calendarColorTheme);
+  const visibleKindsRef = useRef(visibleKinds);
+  eventsRef.current = events;
+  calendarColorThemeRef.current = calendarColorTheme;
+  visibleKindsRef.current = visibleKinds;
   const toolbarNavShellRef = useRef<HTMLDivElement>(null);
   /** FC’s mounted `.fc-timegrid-now-indicator-line` (avoids wrong match when multiple bodies exist, e.g. week). */
   const nowIndicatorLineElRef = useRef<HTMLElement | null>(null);
@@ -719,8 +778,47 @@ export const PlanningCalendar = forwardRef<
 
   const fcEvents: EventInput[] = useMemo(() => {
     const filtered = events.filter((e) => visibleKinds[e.type]);
-    return filtered.map(scheduledToEventInput);
-  }, [events, visibleKinds]);
+    return filtered.map((e) => scheduledToEventInput(e, calendarColorTheme));
+  }, [events, visibleKinds, calendarColorTheme]);
+
+  /**
+   * FullCalendar often skips updating inline `backgroundColor` when only styling inputs change for
+   * an existing event id. Remount when computed fills or calendar chrome change so coerced colors
+   * and kind/google defaults appear without a full page reload.
+   */
+  const fcColorSignature = useMemo(() => {
+    const body = fcEvents
+      .map((ev) => `${String(ev.id)}:${String(ev.backgroundColor ?? "")}`)
+      .join("|");
+    const kindJson =
+      calendarColorTheme?.kindColors != null
+        ? JSON.stringify(calendarColorTheme.kindColors)
+        : "";
+    const google = calendarColorTheme?.googleCalendarColor ?? "";
+    return `${body}|${kindJson}|${google}`;
+  }, [fcEvents, calendarColorTheme]);
+
+  const prevFcColorSignatureRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const prev = prevFcColorSignatureRef.current;
+    prevFcColorSignatureRef.current = fcColorSignature;
+    if (prev === null || prev === fcColorSignature) return;
+    if (!activeViewType.startsWith("timeGrid")) return;
+    requestAnimationFrame(() => {
+      syncTimeAxisCorner();
+      requestAnimationFrame(() => {
+        measureNowLineGeometry(activeViewType);
+        scrollTimeGridToNowCentered();
+      });
+    });
+  }, [
+    fcColorSignature,
+    activeViewType,
+    syncTimeAxisCorner,
+    measureNowLineGeometry,
+    scrollTimeGridToNowCentered,
+  ]);
 
   const findBacklogItem = useCallback(
     (id: string | null) =>
@@ -901,6 +999,64 @@ export const PlanningCalendar = forwardRef<
     [onEventTimesUpdated],
   );
 
+  const handleEventDidMount = useCallback((info: EventMountArg) => {
+    const ep = info.event.extendedProps;
+    const baseColor = String(ep.eventCalendarBaseColor ?? "");
+    const bodyFill = String(ep.eventBodyFill ?? "");
+    const useStripe = Boolean(ep.useCalendarStripe);
+    scheduleTadEventStripePaint(info.el, {
+      useStripe,
+      baseColor,
+      bodyFill,
+    });
+  }, []);
+
+  const repaintMountedEventStripes = useCallback((eventApis: EventApi[]) => {
+    const t = calendarColorThemeRef.current ?? {};
+    const sourceEvents = eventsRef.current;
+    const vis = visibleKindsRef.current;
+    for (const ev of eventApis) {
+      const el = (ev as unknown as { el?: HTMLElement | null }).el;
+      if (!el || el.classList.contains("fc-event-mirror")) continue;
+      const found = sourceEvents.find((e) => e.id === ev.id);
+      if (!found || !vis[found.type]) continue;
+      scheduleTadEventStripePaint(el, {
+        useStripe: eventUsesCalendarStripe(found, t),
+        baseColor: calendarStripeHex(found, t),
+        bodyFill: eventFillHex(found, t),
+      });
+    }
+  }, []);
+
+  const handleEventsSet = useCallback(
+    (eventApis: EventApi[]) => {
+      repaintMountedEventStripes(eventApis);
+    },
+    [repaintMountedEventStripes],
+  );
+
+  /**
+   * FullCalendar reuses the same `.fc-event` node when `events` updates; `eventDidMount` does not
+   * run again. `eventsSet` (below) repaints after FC mutates the node; this covers the same tick as
+   * React commit for any ordering edge cases.
+   */
+  useLayoutEffect(() => {
+    const api = fcRef.current?.getApi();
+    if (!api) return;
+    repaintMountedEventStripes(api.getEvents());
+    let rafNested = 0;
+    const raf1 = requestAnimationFrame(() => {
+      repaintMountedEventStripes(api.getEvents());
+      rafNested = requestAnimationFrame(() =>
+        repaintMountedEventStripes(api.getEvents()),
+      );
+    });
+    return () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(rafNested);
+    };
+  }, [events, calendarColorTheme, visibleKinds, repaintMountedEventStripes]);
+
   useLayoutEffect(() => {
     const api = fcRef.current?.getApi();
     if (!api || !draftSelectionHighlight) return;
@@ -948,6 +1104,7 @@ export const PlanningCalendar = forwardRef<
       >
         <div ref={fcContainerRef} className="h-full min-h-0 overflow-hidden">
           <FullCalendar
+            key={fcColorSignature}
             ref={fcRef}
             plugins={[
               dayGridPlugin,
@@ -971,7 +1128,7 @@ export const PlanningCalendar = forwardRef<
             slotLabelFormat={slotLabelFormat}
             slotLabelContent={slotLabelContent}
             slotEventOverlap
-            unselectCancel=".calendar-quick-menu,[data-dropdown-portal]"
+            unselectCancel=".calendar-quick-menu,[data-dropdown-portal],[data-calendar-color-menu]"
             droppable
             nowIndicator
             nowIndicatorContent={nowIndicatorContent}
@@ -989,12 +1146,14 @@ export const PlanningCalendar = forwardRef<
             viewWillUnmount={handleViewWillUnmount}
             height="100%"
             events={fcEvents}
+            eventsSet={handleEventsSet}
             datesSet={handleDatesSet}
             eventClick={handleEventClick}
             select={handleSelect}
             eventReceive={handleReceive}
             eventDrop={handleDrop}
             eventResize={handleResize}
+            eventDidMount={handleEventDidMount}
             eventContent={(arg: EventContentArg) => {
               const isMirror = arg.isMirror;
               const isExistingEventMirror =

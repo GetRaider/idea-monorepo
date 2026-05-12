@@ -1,6 +1,17 @@
 import type { CalendarEvent } from "@/types/calendar.types";
 
+import {
+  coerceHexToWhiteTextSafe,
+  normalizeHexColor,
+} from "@/components/Calendar/calendar-colors";
+
 const GCAL_PREFIX = "gcal:";
+
+function withCoercedEventColor(ev: CalendarEvent): CalendarEvent {
+  const c = normalizeHexColor((ev as { color?: string }).color);
+  if (!c) return ev;
+  return { ...ev, color: coerceHexToWhiteTextSafe(c) } as CalendarEvent;
+}
 
 export type GoogleCalendarSyncRange = {
   timeMin: string;
@@ -99,6 +110,19 @@ export function mergeGoogleCalendarImportedEvents(
   });
 
   const byId = new Map(kept.map((ev) => [ev.id, ev]));
-  for (const ev of imported) byId.set(ev.id, ev);
+  for (const ev of imported) {
+    const prev = byId.get(ev.id);
+    const preservedColor =
+      prev &&
+      typeof (prev as { color?: string }).color === "string" &&
+      (prev as { color?: string }).color
+        ? (prev as { color: string }).color
+        : undefined;
+    const merged =
+      preservedColor && !(ev as { color?: string }).color
+        ? ({ ...ev, color: preservedColor } as CalendarEvent)
+        : ev;
+    byId.set(ev.id, withCoercedEventColor(merged));
+  }
   return Array.from(byId.values());
 }

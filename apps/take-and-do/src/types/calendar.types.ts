@@ -49,6 +49,8 @@ export interface BaseCalendarEvent {
   start: string;
   end: string;
   allDay: boolean;
+  /** Custom fill `#rrggbb`; parent calendar / type color appears as a left stripe when it differs. */
+  color?: string;
   reminderMinutes?: number;
   timeZone?: CalendarTimeZone;
   repeat?: CalendarRepeatRule;
@@ -94,6 +96,8 @@ export interface CalendarCreatePrefill {
   title?: string;
   description?: string;
   type?: CalendarEventType;
+  /** `#rrggbb` custom event fill */
+  color?: string;
 }
 
 /** One column in the planning calendar time axis (slot labels + header). */
@@ -105,9 +109,15 @@ export interface CalendarAxisTimeZone {
   label?: string | null;
 }
 
+/** Per–event-type default colors on the planning grid (local “calendars”). */
+export type CalendarKindColorMap = Partial<Record<CalendarEventType, string>>;
+
 export interface CalendarPersistedState {
   version: 1;
   events: CalendarEvent[];
   backlog: CalendarBacklogEvent[];
   axisTimeZones?: CalendarAxisTimeZone[];
+  kindColors?: CalendarKindColorMap;
+  /** Panel + stripe “parent” color for the linked Google Calendar. */
+  googleCalendarColor?: string;
 }

@@ -10,18 +10,24 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import { InfoCircleIcon, PlusIcon } from "@/components/Icons";
+import { InfoCircleIcon, PlusIcon, DotsVerticalIcon } from "@/components/Icons";
 import { ConfirmDialog } from "@/components/Dialogs";
 import { AppTooltip } from "@/components/Tooltip/AppTooltip";
 import { cn } from "@/lib/styles/utils";
 import type {
   CalendarBacklogEvent,
   CalendarEventType,
+  CalendarKindColorMap,
   CalendarKindVisibility,
 } from "@/types/calendar.types";
 
+import { CalendarColorPickerPopover } from "./CalendarColorPickerPopover";
 import { CalendarKindIcon } from "./CalendarKindIcon";
-import { kindColor, kindLabel } from "./calendar-event-mapper";
+import {
+  effectiveGoogleCalendarColor,
+  effectiveKindColor,
+} from "./calendar-colors";
+import { kindLabel } from "./calendar-event-mapper";
 
 const WEEK_LETTERS = ["M", "T", "W", "T", "F", "S", "S"] as const;
 
@@ -37,6 +43,10 @@ interface CalendarPanelProps {
   showGoogleCalendar: boolean;
   onShowGoogleCalendarChange: (next: boolean) => void;
   googleCalendarLabel?: string | null;
+  kindColors: CalendarKindColorMap | undefined;
+  googleCalendarColor: string | undefined;
+  onKindColorChange: (kind: CalendarEventType, color: string | null) => void;
+  onGoogleCalendarColorChange: (color: string | null) => void;
 }
 
 function startOfDay(d: Date) {
@@ -111,6 +121,10 @@ export function CalendarPanel({
   showGoogleCalendar,
   onShowGoogleCalendarChange,
   googleCalendarLabel,
+  kindColors,
+  googleCalendarColor,
+  onKindColorChange,
+  onGoogleCalendarColorChange,
 }: CalendarPanelProps) {
   const [monthOpen, setMonthOpen] = useState(true);
   const [pickerMonth, setPickerMonth] = useState(() => {
@@ -304,13 +318,13 @@ export function CalendarPanel({
         </button>
         {calendarsOpen ? (
           <ul className="mt-2 space-y-2">
-            <li className="flex items-center gap-2.5 pl-1">
+            <li className="group/calPanelGcal flex items-center gap-1 rounded-lg py-0.5 pl-1 pr-0.5 transition-colors hover:bg-white/[0.04]">
               <input
                 id="cal-google"
                 type="checkbox"
                 checked={showGoogleCalendar}
                 onChange={(e) => onShowGoogleCalendarChange(e.target.checked)}
-                className="h-4 w-4 rounded border-white/20 bg-transparent accent-[#4285F4]"
+                className="h-4 w-4 shrink-0 rounded border-white/20 bg-transparent accent-[#4285F4]"
               />
               <label
                 htmlFor="cal-google"
@@ -318,7 +332,10 @@ export function CalendarPanel({
               >
                 <span
                   className="h-2 w-2 shrink-0 rounded-sm"
-                  style={{ backgroundColor: "#0d9488" }}
+                  style={{
+                    backgroundColor:
+                      effectiveGoogleCalendarColor(googleCalendarColor),
+                  }}
                   aria-hidden
                 />
                 <span className="truncate">
@@ -327,6 +344,21 @@ export function CalendarPanel({
                     : "Google Calendar"}
                 </span>
               </label>
+              <div
+                className={cn(
+                  "inline-flex shrink-0 items-center justify-center text-zinc-500 opacity-0 transition-opacity duration-150",
+                  "group-hover/calPanelGcal:opacity-100",
+                )}
+              >
+                <CalendarColorPickerPopover
+                  selectedHex={effectiveGoogleCalendarColor(
+                    googleCalendarColor,
+                  )}
+                  onSelect={(hex) => onGoogleCalendarColorChange(hex)}
+                  onResetToDefault={() => onGoogleCalendarColorChange(null)}
+                  trigger={<DotsVerticalIcon size={14} />}
+                />
+              </div>
             </li>
           </ul>
         ) : null}
@@ -390,14 +422,19 @@ export function CalendarPanel({
               </label>
             </li>
             {CALENDAR_ROWS.map(({ kind, label }) => (
-              <li key={kind} className="flex items-center gap-2.5">
+              <li
+                key={kind}
+                className="group/calPanelKind flex items-center gap-1 rounded-lg py-0.5 pl-1 pr-0.5 transition-colors hover:bg-white/[0.04]"
+              >
                 <input
                   id={`cal-${kind}`}
                   type="checkbox"
                   checked={kindVisibility[kind]}
                   onChange={() => toggleKind(kind)}
-                  className="h-4 w-4 rounded border-white/20 bg-transparent"
-                  style={{ accentColor: kindColor(kind) }}
+                  className="h-4 w-4 shrink-0 rounded border-white/20 bg-transparent"
+                  style={{
+                    accentColor: effectiveKindColor(kind, kindColors),
+                  }}
                 />
                 <label
                   htmlFor={`cal-${kind}`}
@@ -406,6 +443,19 @@ export function CalendarPanel({
                   <CalendarKindIcon kind={kind} size={16} aria-hidden />
                   <span className="truncate">{label}</span>
                 </label>
+                <div
+                  className={cn(
+                    "inline-flex shrink-0 items-center justify-center text-zinc-500 opacity-0 transition-opacity duration-150",
+                    "group-hover/calPanelKind:opacity-100",
+                  )}
+                >
+                  <CalendarColorPickerPopover
+                    selectedHex={effectiveKindColor(kind, kindColors)}
+                    onSelect={(hex) => onKindColorChange(kind, hex)}
+                    onResetToDefault={() => onKindColorChange(kind, null)}
+                    trigger={<DotsVerticalIcon size={14} />}
+                  />
+                </div>
               </li>
             ))}
           </ul>
@@ -474,7 +524,12 @@ export function CalendarPanel({
                     >
                       <div
                         className="mb-0.5 inline-flex h-6 w-6 items-center justify-center rounded"
-                        style={{ backgroundColor: kindColor(item.type) }}
+                        style={{
+                          backgroundColor: effectiveKindColor(
+                            item.type,
+                            kindColors,
+                          ),
+                        }}
                         title={kindLabel(item.type)}
                         aria-label={kindLabel(item.type)}
                       >

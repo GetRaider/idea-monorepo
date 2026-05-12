@@ -28,8 +28,15 @@ import type {
   CalendarRsvpStatus,
 } from "@/types/calendar.types";
 
-import { CalendarEventTaskSection } from "./CalendarEventTaskSection";
+import { CalendarColorPickerPopover } from "./CalendarColorPickerPopover";
+import {
+  effectiveKindColor,
+  eventFillHex,
+  normalizeHexColor,
+} from "./calendar-colors";
+import type { CalendarEventColorTheme } from "./calendar-event-mapper";
 import { kindLabel } from "./calendar-event-mapper";
+import { CalendarEventTaskSection } from "./CalendarEventTaskSection";
 import {
   fromDatetimeLocalValue,
   toDatetimeLocalValue,
@@ -64,6 +71,7 @@ export type CalendarOpenFullEditorContext = {
     title: string;
     type: CalendarEventType;
     description: string;
+    color?: string;
   };
 };
 
@@ -80,9 +88,9 @@ interface CalendarEventQuickMenuProps {
     patch: Partial<
       Omit<
         CalendarEvent,
-        "id" | "type" | "taskBoardId" | "taskId" | "taskScope"
+        "id" | "type" | "taskBoardId" | "taskId" | "taskScope" | "color"
       >
-    >,
+    > & { color?: string | null },
   ) => void;
   onDuplicate?: (event: CalendarEvent) => void;
   onDeleteEvent?: (event: CalendarEvent) => void;
@@ -98,6 +106,7 @@ interface CalendarEventQuickMenuProps {
   /** Matches planning calendar slot labels and quick-menu summaries. */
   displayTimes24h?: boolean;
   onDisplayTimes24hChange?: (next: boolean) => void;
+  calendarColorTheme?: CalendarEventColorTheme;
 }
 
 function pad2(n: number) {
@@ -157,6 +166,7 @@ export function CalendarEventQuickMenu({
   onDraftKindChange,
   displayTimes24h,
   onDisplayTimes24hChange,
+  calendarColorTheme,
 }: CalendarEventQuickMenuProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const kindSelectId = useId();
@@ -219,6 +229,11 @@ export function CalendarEventQuickMenu({
     payload.mode === "existing" &&
     typeof payload.event.reminderMinutes === "number"
       ? String(payload.event.reminderMinutes)
+      : "",
+  );
+  const [eventColorHex, setEventColorHex] = useState(() =>
+    payload.mode === "existing"
+      ? (normalizeHexColor(payload.event.color) ?? "")
       : "",
   );
   const [startValue, setStartValue] = useState(() =>
@@ -296,6 +311,7 @@ export function CalendarEventQuickMenu({
         setTaskId("");
         setTaskSummarySnapshot("");
       }
+      setEventColorHex(normalizeHexColor(e.color) ?? "");
     } else {
       setTitle("");
       setKind("timeBlock");
@@ -321,6 +337,7 @@ export function CalendarEventQuickMenu({
       setTaskBoardId("");
       setTaskId("");
       setTaskSummarySnapshot("");
+      setEventColorHex("");
     }
   }, [payload]);
 
@@ -343,6 +360,7 @@ export function CalendarEventQuickMenu({
       const target = e.target as HTMLElement | null;
       // Dropdown menus are portaled to body; treat them as "inside" the quick menu.
       if (target?.closest?.("[data-dropdown-portal]")) return;
+      if (target?.closest?.("[data-calendar-color-menu]")) return;
       const el = panelRef.current;
       if (!el || el.contains(e.target as Node)) return;
       onClose();
@@ -486,14 +504,32 @@ export function CalendarEventQuickMenu({
     session?.user?.email ??
     (session?.user?.name ? String(session.user.name) : null);
 
+  const colorFillPreview = useMemo(() => {
+    const custom = normalizeHexColor(eventColorHex);
+    if (custom) return custom;
+    if (payload.mode === "existing") {
+      return eventFillHex(payload.event, calendarColorTheme ?? {});
+    }
+    return effectiveKindColor(kind, calendarColorTheme?.kindColors);
+  }, [eventColorHex, payload, kind, calendarColorTheme]);
+
   const quickFields = useMemo(() => {
+    const colorField = normalizeHexColor(eventColorHex);
+    const colorOpt = colorField ? { color: colorField } : {};
     if (kind === "task") {
       const summary = linkedTask?.summary?.trim() ?? taskSummarySnapshot.trim();
       const desc = linkedTask?.description?.trim() ?? "";
-      return { title: summary, type: kind, description: desc };
+      return { title: summary, type: kind, description: desc, ...colorOpt };
     }
-    return { title, type: kind, description };
-  }, [kind, linkedTask, taskSummarySnapshot, title, description]);
+    return { title, type: kind, description, ...colorOpt };
+  }, [
+    kind,
+    linkedTask,
+    taskSummarySnapshot,
+    title,
+    description,
+    eventColorHex,
+  ]);
 
   const parseParticipants = (raw: string) =>
     raw
@@ -592,9 +628,16 @@ export function CalendarEventQuickMenu({
                 timeZone: timeZone.trim() || undefined,
                 repeat: repeat || undefined,
               };
+      let mergedWithColor: CalendarEvent = merged;
+      const picked = normalizeHexColor(eventColorHex);
+      if (picked) mergedWithColor = { ...merged, color: picked };
+      else {
+        mergedWithColor = { ...merged };
+        delete (mergedWithColor as { color?: string }).color;
+      }
       onOpenFullEditor({
         mode: "existing",
-        event: merged,
+        event: mergedWithColor,
         quickFields,
       });
     } else {
@@ -647,6 +690,7 @@ export function CalendarEventQuickMenu({
         ? `${toLocalDateInputValue(new Date(e.end))}T00:00`
         : toDatetimeLocalValue(new Date(e.end)),
       allDay: e.allDay,
+      color: normalizeHexColor(e.color) ?? "",
       ...(e.type === "task"
         ? {
             taskBoardId: e.taskBoardId,
@@ -674,7 +718,9 @@ export function CalendarEventQuickMenu({
             participantsText !== initialSnapshot.participantsText ||
             timeZone !== initialSnapshot.timeZone ||
             repeat !== initialSnapshot.repeat ||
-            reminderMinutes !== initialSnapshot.reminderMinutes)));
+            reminderMinutes !== initialSnapshot.reminderMinutes)) ||
+      (normalizeHexColor(eventColorHex) ?? "") !==
+        (initialSnapshot.color ?? ""));
 
   const handleSave = () => {
     if (payload.mode !== "existing" || !onPersistExisting) return;
@@ -707,6 +753,15 @@ export function CalendarEventQuickMenu({
 
     const t = title.trim();
 
+    const nextColor = normalizeHexColor(eventColorHex);
+    const prevColor = normalizeHexColor(
+      initialSnapshot?.color ? initialSnapshot.color : undefined,
+    );
+    const colorPayload =
+      (nextColor ?? "") === (prevColor ?? "")
+        ? {}
+        : { color: nextColor ?? null };
+
     onPersistExisting(payload.event.id, {
       ...(kind === "task"
         ? {
@@ -731,6 +786,7 @@ export function CalendarEventQuickMenu({
           }),
       start: start.toISOString(),
       end: end.toISOString(),
+      ...colorPayload,
     });
 
     onClose();
@@ -760,6 +816,7 @@ export function CalendarEventQuickMenu({
         ? Number(reminderMinutes)
         : undefined;
 
+    const fillPick = normalizeHexColor(eventColorHex);
     const base = {
       id: crypto.randomUUID(),
       title: (kind === "task"
@@ -769,6 +826,7 @@ export function CalendarEventQuickMenu({
       start: start.toISOString(),
       end: end.toISOString(),
       allDay: payload.allDay,
+      ...(fillPick ? { color: fillPick } : {}),
     } as const;
 
     const event: CalendarEvent =
@@ -1367,6 +1425,24 @@ export function CalendarEventQuickMenu({
                   </details>
                 </div>
               ) : null}
+
+              <div className={cn(section, "border-b border-white/[0.06]")}>
+                <p className={sectionTitleClass}>Color</p>
+                <div className="flex items-center gap-2">
+                  <CalendarColorPickerPopover
+                    selectedHex={colorFillPreview}
+                    onSelect={(hex) => setEventColorHex(hex)}
+                    onResetToDefault={() => setEventColorHex("")}
+                    trigger={
+                      <span
+                        className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-white/[0.18] shadow-inner"
+                        style={{ backgroundColor: colorFillPreview }}
+                        aria-hidden
+                      />
+                    }
+                  />
+                </div>
+              </div>
             </div>
 
             <div className="shrink-0 border-t border-white/[0.06] bg-black/25 px-4 py-3.5 backdrop-blur-sm">

@@ -1,14 +1,14 @@
 "use client";
 
-import { CalendarIcon, ClockIcon } from "@/components/Icons";
+import { ClockIcon } from "@/components/Icons";
 import { tasksHelper } from "@/helpers/task.helper";
 import type { TaskMetadataModel } from "@/hooks/taskMetadata/useTaskMetadataModel";
+import { TaskSchedulePicker } from "../TaskSchedulePicker";
 
 import {
   EstimationInput,
   EstimationLabel,
   MetadataIcon,
-  MetadataInput,
   MetadataItem,
 } from "./TaskMetadata.ui";
 
@@ -21,16 +21,8 @@ export function TaskMetadataScheduleFields({
 }: TaskMetadataScheduleFieldsProps) {
   const {
     task,
-    isEditingScheduleDate,
-    scheduleDateValue,
-    handleScheduleDateClick,
-    handleScheduleDateChange,
-    handleScheduleDateBlur,
-    isEditingDueDate,
-    dueDateValue,
-    handleDueDateClick,
-    handleDueDateChange,
-    handleDueDateBlur,
+    commitDueDate,
+    commitScheduleDate,
     isEditingEstimation,
     estimationDays,
     estimationHours,
@@ -46,61 +38,22 @@ export function TaskMetadataScheduleFields({
 
   return (
     <>
-      {isEditingScheduleDate ? (
-        <MetadataInput
-          type="date"
-          value={scheduleDateValue}
-          onChange={handleScheduleDateChange}
-          onBlur={handleScheduleDateBlur}
-          onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) =>
-            e.key === "Enter" && e.currentTarget.blur()
-          }
-          autoFocus
-          width="130px"
-        />
-      ) : (
-        <MetadataItem
-          onClick={handleScheduleDateClick}
-          title="Click to edit schedule date"
-        >
-          <MetadataIcon>
-            <CalendarIcon size={14} showDot />
-          </MetadataIcon>
-          <span>
-            {task.scheduleDate
-              ? tasksHelper.date.formatForSchedule(task.scheduleDate)
-              : "Set schedule"}
-          </span>
-        </MetadataItem>
-      )}
+      <TaskSchedulePicker
+        value={task.scheduleDate}
+        onChange={commitScheduleDate}
+        variant="metadata"
+        emptyLabel="Set schedule"
+        emphasize
+        triggerTitle="Choose schedule date and time"
+      />
 
-      {isEditingDueDate ? (
-        <MetadataInput
-          type="date"
-          value={dueDateValue}
-          onChange={handleDueDateChange}
-          onBlur={handleDueDateBlur}
-          onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) =>
-            e.key === "Enter" && e.currentTarget.blur()
-          }
-          autoFocus
-          width="130px"
-        />
-      ) : (
-        <MetadataItem
-          onClick={handleDueDateClick}
-          title="Click to edit due date"
-        >
-          <MetadataIcon>
-            <CalendarIcon size={14} />
-          </MetadataIcon>
-          <span>
-            {task.dueDate
-              ? tasksHelper.date.formatForDisplay(task.dueDate)
-              : "Set due date"}
-          </span>
-        </MetadataItem>
-      )}
+      <TaskSchedulePicker
+        value={task.dueDate}
+        onChange={commitDueDate}
+        variant="metadata"
+        emptyLabel="Set due date"
+        triggerTitle="Choose due date and time"
+      />
 
       {isEditingEstimation ? (
         <div

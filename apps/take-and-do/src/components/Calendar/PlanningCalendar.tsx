@@ -831,8 +831,35 @@ export const PlanningCalendar = forwardRef<
     if (!el) return;
 
     const draggable = new Draggable(el, {
-      itemSelector: ".calendar-backlog-draggable",
+      itemSelector:
+        ".calendar-backlog-draggable, .calendar-panel-task-draggable",
       eventData: (dragEl) => {
+        const taskBoardId = dragEl.getAttribute("data-calendar-task-board-id");
+        const taskId = dragEl.getAttribute("data-calendar-task-id");
+        if (taskBoardId && taskId) {
+          const title =
+            dragEl.getAttribute("data-calendar-task-title")?.trim() || "Task";
+          const rawMin = dragEl.getAttribute(
+            "data-calendar-task-duration-minutes",
+          );
+          const parsed = rawMin ? Number(rawMin) : NaN;
+          const minutes =
+            Number.isFinite(parsed) && parsed > 0 ? Math.round(parsed) : 60;
+          const snapshot =
+            dragEl
+              .getAttribute("data-calendar-task-summary-snapshot")
+              ?.trim() || title;
+          return {
+            title,
+            duration: { minutes },
+            extendedProps: {
+              kind: "task",
+              taskBoardId,
+              taskId,
+              taskSummarySnapshot: snapshot,
+            },
+          };
+        }
         const id = dragEl.getAttribute("data-backlog-id");
         const item = findBacklogItem(id);
         if (!item) {
@@ -960,6 +987,37 @@ export const PlanningCalendar = forwardRef<
       const kind: CalendarEventType = isEventKind(rawKind)
         ? extendedPropsToKind(rawKind)
         : "timeBlock";
+      const taskBoardId = ev.extendedProps.taskBoardId;
+      const taskId = ev.extendedProps.taskId;
+      const isTaskLinkDrop =
+        kind === "task" &&
+        typeof taskBoardId === "string" &&
+        taskBoardId.length > 0 &&
+        typeof taskId === "string" &&
+        taskId.length > 0;
+
+      if (isTaskLinkDrop) {
+        const snapshotRaw = ev.extendedProps.taskSummarySnapshot;
+        const snapshot =
+          typeof snapshotRaw === "string" && snapshotRaw.trim().length > 0
+            ? snapshotRaw.trim()
+            : ev.title || "Task";
+        const scheduled: CalendarEvent = {
+          id: crypto.randomUUID(),
+          type: "task",
+          title: ev.title || snapshot,
+          start: start.toISOString(),
+          end: end.toISOString(),
+          allDay: ev.allDay,
+          taskBoardId,
+          taskId,
+          taskSummarySnapshot: snapshot,
+        };
+        ev.remove();
+        onEventReceive(scheduled);
+        return;
+      }
+
       const safeKind: Exclude<CalendarEventType, "task"> =
         kind === "task" ? "timeBlock" : kind;
       const taskScope = ev.extendedProps.taskScope;

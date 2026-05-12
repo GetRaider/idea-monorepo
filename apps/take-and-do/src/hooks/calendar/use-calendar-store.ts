@@ -18,6 +18,7 @@ import type {
 } from "@/types/calendar.types";
 
 import { readCalendarState, writeCalendarState } from "./calendar-storage";
+import { CALENDAR_STATE_EXTERNAL_UPDATE_EVENT } from "./task-calendar-local-sync";
 import { getEffectiveGoogleRecurrence } from "@/lib/push-google-calendar-event";
 import { mergeGoogleCalendarImportedEvents } from "./merge-google-calendar-import";
 
@@ -28,6 +29,16 @@ export function useCalendarStore() {
 
   useLayoutEffect(() => {
     setState(readCalendarState());
+  }, []);
+
+  useEffect(() => {
+    const onExternal = () => setState(readCalendarState());
+    window.addEventListener(CALENDAR_STATE_EXTERNAL_UPDATE_EVENT, onExternal);
+    return () =>
+      window.removeEventListener(
+        CALENDAR_STATE_EXTERNAL_UPDATE_EVENT,
+        onExternal,
+      );
   }, []);
 
   useEffect(() => {

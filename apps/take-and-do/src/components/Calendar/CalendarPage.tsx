@@ -14,6 +14,7 @@ import { PlusIcon } from "@/components/Icons";
 import { defaultAxisTimeZones } from "@/components/Calendar/calendar-axis-time";
 import { GOOGLE_CALENDAR_DISCONNECTED_EVENT } from "@/hooks/calendar/calendar-storage";
 import { useCalendarStore } from "@/hooks/calendar/use-calendar-store";
+import { useTaskActions } from "@/hooks/tasks/useTasks";
 import {
   createConnectedGoogleCalendarEvent,
   deleteConnectedGoogleCalendarEvent,
@@ -102,6 +103,8 @@ export function CalendarPage() {
     setKindColor,
     setGoogleCalendarColor,
   } = useCalendarStore();
+
+  const { updateTask } = useTaskActions();
 
   const [, setCurrentPage] = useState("calendar");
 
@@ -478,9 +481,14 @@ export function CalendarPage() {
         return;
       }
       patchScheduled(id, patch);
+      if (merged.type === "task") {
+        void updateTask(merged.taskId, {
+          scheduleDate: new Date(merged.start),
+        });
+      }
       void pushGoogleThenSync(merged);
     },
-    [patchScheduled, state, pushGoogleThenSync],
+    [patchScheduled, state, pushGoogleThenSync, updateTask],
   );
 
   const persistExistingAndMaybePush = useCallback(
@@ -502,9 +510,17 @@ export function CalendarPage() {
         return;
       }
       patchScheduled(id, patch);
+      if (
+        merged.type === "task" &&
+        ("start" in patch || "end" in patch || "allDay" in patch)
+      ) {
+        void updateTask(merged.taskId, {
+          scheduleDate: new Date(merged.start),
+        });
+      }
       void pushGoogleThenSync(merged);
     },
-    [patchScheduled, state, pushGoogleThenSync],
+    [patchScheduled, state, pushGoogleThenSync, updateTask],
   );
 
   const handleDuplicateEvent = useCallback(
@@ -540,6 +556,18 @@ export function CalendarPage() {
       });
     },
     [patchScheduled],
+  );
+
+  const handlePlanningEventReceive = useCallback(
+    (event: CalendarEvent) => {
+      if (event.type === "task") {
+        void updateTask(event.taskId, {
+          scheduleDate: new Date(event.start),
+        });
+      }
+      addScheduled(event);
+    },
+    [addScheduled, updateTask],
   );
 
   const openNewTemplate = useCallback(() => {
@@ -638,7 +666,7 @@ export function CalendarPage() {
               visibleKinds={kindVisibility}
               onSelectRange={handleSelectRange}
               onEventClick={handlePlanningEventClick}
-              onEventReceive={addScheduled}
+              onEventReceive={handlePlanningEventReceive}
               onEventTimesUpdated={handleEventTimesUpdated}
               draftSelectionHighlight={draftSelectionHighlight}
               draftSelectionVersion={draftSelectionVersion}

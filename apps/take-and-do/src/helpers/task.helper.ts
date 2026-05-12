@@ -146,6 +146,43 @@ export const tasksHelper = {
       return `${year}-${month}-${day}`;
     },
 
+    /** Local `HH:mm` for `<input type="time" />`. */
+    formatTimeHmForInput(rawDate: unknown): string {
+      const date = this.parse(rawDate);
+      if (!date) return "";
+      const pad = (n: number) => String(n).padStart(2, "0");
+      return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    },
+
+    /**
+     * Combines `yyyy-mm-dd` from a date input with `HH:mm` from a time input
+     * into a single local `Date` (midnight when time is missing/invalid).
+     */
+    mergeCalendarDayAndTime(
+      dayYyyyMmDd: string,
+      timeHm: string | undefined,
+    ): Date | undefined {
+      const day = this.parseCalendarDay(dayYyyyMmDd);
+      if (!day) return undefined;
+      const t = (timeHm ?? "").trim();
+      const m = /^(\d{1,2}):(\d{2})$/.exec(t);
+      if (!m) {
+        const midnight = new Date(day);
+        midnight.setHours(0, 0, 0, 0);
+        return midnight;
+      }
+      const hh = parseInt(m[1], 10);
+      const mm = parseInt(m[2], 10);
+      if (hh < 0 || hh > 23 || mm < 0 || mm > 59) {
+        const midnight = new Date(day);
+        midnight.setHours(0, 0, 0, 0);
+        return midnight;
+      }
+      const out = new Date(day);
+      out.setHours(hh, mm, 0, 0);
+      return out;
+    },
+
     formatForAPI(date: unknown): string {
       const d = this.parse(date);
       if (!d) return "";
@@ -171,6 +208,20 @@ export const tasksHelper = {
       if (schedule === "today") return "Today";
       if (schedule === "tomorrow") return "Tomorrow";
       return this.formatForDisplay(date);
+    },
+
+    /** Schedule line in task UI: day context plus clock time (local). */
+    formatScheduleWithTime(rawDate: unknown): string {
+      const date = this.parse(rawDate);
+      if (!date) return "";
+      const rel = this.getScheduleFromDate(date);
+      const timeStr = date.toLocaleTimeString(undefined, {
+        hour: "numeric",
+        minute: "2-digit",
+      });
+      if (rel === "today") return `Today, ${timeStr}`;
+      if (rel === "tomorrow") return `Tomorrow, ${timeStr}`;
+      return `${this.formatForDisplay(date)}, ${timeStr}`;
     },
 
     getScheduleFromDate(rawDate: unknown): "today" | "tomorrow" | null {

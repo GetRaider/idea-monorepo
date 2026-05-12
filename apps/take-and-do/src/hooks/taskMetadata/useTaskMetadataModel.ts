@@ -5,11 +5,11 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import type { Task, TaskUpdate } from "@/components/Boards/KanbanBoard/types";
+import type { TaskMetadataProps } from "@/components/TaskView/TaskMetadata/taskMetadata.types";
 import {
   LABEL_MENU_EDGE,
   LABEL_MENU_WIDTH,
 } from "@/constants/taskMetadata.constants";
-import type { TaskMetadataProps } from "@/components/TaskView/TaskMetadata/taskMetadata.types";
 import { tasksHelper } from "@/helpers/task.helper";
 import { queryKeys } from "@/lib/query-keys";
 import { clientServices } from "@/services";
@@ -47,10 +47,6 @@ export function useTaskMetadataModel({
   const updateTask = (updates: TaskUpdate) => {
     emitTaskUpdate({ ...task, ...toLocalTaskPatch(updates) } as Task, updates);
   };
-  const [isEditingDueDate, setIsEditingDueDate] = useState(false);
-  const [dueDateValue, setDueDateValue] = useState("");
-  const [isEditingScheduleDate, setIsEditingScheduleDate] = useState(false);
-  const [scheduleDateValue, setScheduleDateValue] = useState("");
   const [isEditingEstimation, setIsEditingEstimation] = useState(false);
   const [estimationDays, setEstimationDays] = useState(0);
   const [estimationHours, setEstimationHours] = useState(0);
@@ -122,16 +118,6 @@ export function useTaskMetadataModel({
       setEstimationHours(0);
       setEstimationMinutes(0);
     }
-    if (task?.dueDate) {
-      setDueDateValue(tasksHelper.date.formatForInput(task.dueDate));
-    } else {
-      setDueDateValue("");
-    }
-    if (task?.scheduleDate) {
-      setScheduleDateValue(tasksHelper.date.formatForInput(task.scheduleDate));
-    } else {
-      setScheduleDateValue("");
-    }
   }, [task]);
 
   useLayoutEffect(() => {
@@ -196,44 +182,14 @@ export function useTaskMetadataModel({
     return () => document.removeEventListener("mousedown", handleMouseDown);
   }, [isLabelDropdownOpen]);
 
-  const handleDueDateClick = () => {
-    setIsEditingDueDate(true);
+  const commitDueDate = (next: Date | null) => {
+    updateTask({ dueDate: next });
   };
-  const handleDueDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setDueDateValue(e.target.value);
+
+  const commitScheduleDate = (next: Date | null) => {
+    updateTask({ scheduleDate: next });
   };
-  const handleDueDateBlur = () => {
-    setIsEditingDueDate(false);
-    const currentValue = tasksHelper.date.formatForInput(task.dueDate);
-    if (dueDateValue === currentValue) return;
-    if (dueDateValue) {
-      const newDate = tasksHelper.date.parseCalendarDay(dueDateValue);
-      if (newDate) {
-        updateTask({ dueDate: newDate });
-      }
-    } else {
-      updateTask({ dueDate: null });
-    }
-  };
-  const handleScheduleDateClick = () => {
-    setIsEditingScheduleDate(true);
-  };
-  const handleScheduleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setScheduleDateValue(e.target.value);
-  };
-  const handleScheduleDateBlur = () => {
-    setIsEditingScheduleDate(false);
-    const currentValue = tasksHelper.date.formatForInput(task.scheduleDate);
-    if (scheduleDateValue === currentValue) return;
-    if (scheduleDateValue) {
-      const newDate = tasksHelper.date.parseCalendarDay(scheduleDateValue);
-      if (newDate) {
-        updateTask({ scheduleDate: newDate });
-      }
-    } else {
-      updateTask({ scheduleDate: null });
-    }
-  };
+
   const handleEstimationClick = () => {
     setIsEditingEstimation(true);
   };
@@ -350,12 +306,8 @@ export function useTaskMetadataModel({
 
   return {
     task,
-    isEditingDueDate,
-    dueDateValue,
-    setDueDateValue,
-    isEditingScheduleDate,
-    scheduleDateValue,
-    setScheduleDateValue,
+    commitDueDate,
+    commitScheduleDate,
     isEditingEstimation,
     estimationDays,
     estimationHours,
@@ -379,12 +331,6 @@ export function useTaskMetadataModel({
     labelPendingDelete,
     setLabelPendingDelete,
     filteredCatalogLabels,
-    handleDueDateClick,
-    handleDueDateChange,
-    handleDueDateBlur,
-    handleScheduleDateClick,
-    handleScheduleDateChange,
-    handleScheduleDateBlur,
     handleEstimationClick,
     handleEstimationSave,
     handleEstimationBlur,

@@ -2,11 +2,12 @@
 
 import { useCallback, useRef, useState } from "react";
 
-import { CalendarIcon, ClockIcon } from "@/components/Icons";
+import { ClockIcon } from "@/components/Icons";
 import { StatusIcon } from "@/components/Boards/KanbanBoard/Column/Column.ui";
 import { ConfirmDialog } from "@/components/Dialogs";
 import { useTaskMetadataModel } from "@/hooks/taskMetadata/useTaskMetadataModel";
 import { tasksHelper } from "@/helpers/task.helper";
+import { TaskSchedulePicker } from "@/components/TaskView/TaskSchedulePicker";
 import { TaskStatusGlyph } from "@/components/TaskStatusGlyph";
 import { TaskPriority, TaskStatus } from "../../Boards/KanbanBoard/types";
 import { useClickOutside } from "@/hooks/ui/useClickOutside";
@@ -17,7 +18,6 @@ import {
   PriorityIconSpan,
 } from "../TaskView.ui";
 import {
-  MetadataInput,
   EstimationInput,
   EstimationLabel,
 } from "../TaskMetadata/TaskMetadata.ui";
@@ -158,31 +158,13 @@ export function TaskViewSidebar({
       <SidebarPropertyRow>
         <SidebarPropertyLabel>Due date</SidebarPropertyLabel>
         <SidebarPropertyValue className="justify-start">
-          {model.isEditingDueDate ? (
-            <MetadataInput
-              type="date"
-              value={model.dueDateValue}
-              onChange={model.handleDueDateChange}
-              onBlur={model.handleDueDateBlur}
-              onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) =>
-                e.key === "Enter" && e.currentTarget.blur()
-              }
-              autoFocus
-              width="130px"
-            />
-          ) : (
-            <SidebarValueButton
-              onClick={model.handleDueDateClick}
-              title="Click to edit due date"
-            >
-              <CalendarIcon size={13} />
-              <span>
-                {task.dueDate
-                  ? tasksHelper.date.formatForDisplay(task.dueDate)
-                  : "Set due date"}
-              </span>
-            </SidebarValueButton>
-          )}
+          <TaskSchedulePicker
+            value={task.dueDate}
+            onChange={model.commitDueDate}
+            variant="sidebar"
+            emptyLabel="Set due date"
+            triggerTitle="Choose due date and time"
+          />
         </SidebarPropertyValue>
       </SidebarPropertyRow>
 
@@ -190,31 +172,14 @@ export function TaskViewSidebar({
       <SidebarPropertyRow>
         <SidebarPropertyLabel>Schedule</SidebarPropertyLabel>
         <SidebarPropertyValue className="justify-start">
-          {model.isEditingScheduleDate ? (
-            <MetadataInput
-              type="date"
-              value={model.scheduleDateValue}
-              onChange={model.handleScheduleDateChange}
-              onBlur={model.handleScheduleDateBlur}
-              onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) =>
-                e.key === "Enter" && e.currentTarget.blur()
-              }
-              autoFocus
-              width="130px"
-            />
-          ) : (
-            <SidebarValueButton
-              onClick={model.handleScheduleDateClick}
-              title="Click to edit schedule date"
-            >
-              <CalendarIcon size={13} showDot />
-              <span>
-                {task.scheduleDate
-                  ? tasksHelper.date.formatForSchedule(task.scheduleDate)
-                  : "Set schedule"}
-              </span>
-            </SidebarValueButton>
-          )}
+          <TaskSchedulePicker
+            value={task.scheduleDate}
+            onChange={model.commitScheduleDate}
+            variant="sidebar"
+            emptyLabel="Set schedule"
+            emphasize
+            triggerTitle="Choose schedule date and time"
+          />
         </SidebarPropertyValue>
       </SidebarPropertyRow>
 

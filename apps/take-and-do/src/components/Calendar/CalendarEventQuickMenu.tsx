@@ -35,7 +35,10 @@ import {
   normalizeHexColor,
 } from "./calendar-colors";
 import type { CalendarEventColorTheme } from "./calendar-event-mapper";
-import { kindLabel } from "./calendar-event-mapper";
+import {
+  kindLabel,
+  calendarCommonEventUsesGoogleCalendar,
+} from "./calendar-event-mapper";
 import { CalendarEventTaskSection } from "./CalendarEventTaskSection";
 import {
   fromDatetimeLocalValue,
@@ -72,6 +75,7 @@ export type CalendarOpenFullEditorContext = {
     type: CalendarEventType;
     description: string;
     color?: string;
+    saveToGoogle?: boolean;
   };
 };
 
@@ -79,7 +83,11 @@ interface CalendarEventQuickMenuProps {
   payload: CalendarQuickMenuPayload;
   /** DOM node that bounds the popup (calendar surface). */
   scopeRef: RefObject<HTMLElement | null>;
-  onCreateDraft?: (event: CalendarEvent) => void;
+  googleCalendarConnected?: boolean;
+  onCreateDraft?: (
+    event: CalendarEvent,
+    opts?: { saveToGoogle?: boolean },
+  ) => void;
   onClose: () => void;
   /** Opens the full Create / Edit event dialog. */
   onOpenFullEditor: (context: CalendarOpenFullEditorContext) => void;
@@ -152,9 +160,12 @@ function durationLabelMs(ms: number) {
   return `${m}min`;
 }
 
+type CommonCreateDestination = "internal" | "google";
+
 export function CalendarEventQuickMenu({
   payload,
   scopeRef,
+  googleCalendarConnected,
   onCreateDraft,
   onClose,
   onOpenFullEditor,
@@ -184,6 +195,8 @@ export function CalendarEventQuickMenu({
   const [kind, setKind] = useState<CalendarEventType>(() =>
     payload.mode === "existing" ? payload.event.type : "timeBlock",
   );
+  const [commonCreateDestination, setCommonCreateDestination] =
+    useState<CommonCreateDestination>("internal");
   const [description, setDescription] = useState(() =>
     payload.mode === "existing" ? (payload.event.description ?? "") : "",
   );
@@ -312,6 +325,7 @@ export function CalendarEventQuickMenu({
         setTaskSummarySnapshot("");
       }
       setEventColorHex(normalizeHexColor(e.color) ?? "");
+      setCommonCreateDestination("internal");
     } else {
       setTitle("");
       setKind("timeBlock");
@@ -338,6 +352,7 @@ export function CalendarEventQuickMenu({
       setTaskId("");
       setTaskSummarySnapshot("");
       setEventColorHex("");
+      setCommonCreateDestination("internal");
     }
   }, [payload]);
 
@@ -516,12 +531,18 @@ export function CalendarEventQuickMenu({
   const quickFields = useMemo(() => {
     const colorField = normalizeHexColor(eventColorHex);
     const colorOpt = colorField ? { color: colorField } : {};
+    const saveToGoogleOpt =
+      kind === "common" &&
+      googleCalendarConnected &&
+      commonCreateDestination === "google"
+        ? { saveToGoogle: true as const }
+        : {};
     if (kind === "task") {
       const summary = linkedTask?.summary?.trim() ?? taskSummarySnapshot.trim();
       const desc = linkedTask?.description?.trim() ?? "";
       return { title: summary, type: kind, description: desc, ...colorOpt };
     }
-    return { title, type: kind, description, ...colorOpt };
+    return { title, type: kind, description, ...colorOpt, ...saveToGoogleOpt };
   }, [
     kind,
     linkedTask,
@@ -529,6 +550,8 @@ export function CalendarEventQuickMenu({
     title,
     description,
     eventColorHex,
+    googleCalendarConnected,
+    commonCreateDestination,
   ]);
 
   const parseParticipants = (raw: string) =>
@@ -875,7 +898,12 @@ export function CalendarEventQuickMenu({
                 : {}),
             };
 
-    onCreateDraft(event);
+    onCreateDraft(event, {
+      saveToGoogle:
+        kind === "common" &&
+        !!googleCalendarConnected &&
+        commonCreateDestination === "google",
+    });
     onClose();
   };
 
@@ -934,7 +962,11 @@ export function CalendarEventQuickMenu({
                     { value: "task", label: kindLabel("task") },
                   ]}
                   value={kind}
-                  onChange={setKind}
+                  onChange={(next) => {
+                    if (next !== "common")
+                      setCommonCreateDestination("internal");
+                    setKind(next);
+                  }}
                   fullWidth={false}
                   disabled={lockImportedCommonKind}
                 />
@@ -1105,6 +1137,34 @@ export function CalendarEventQuickMenu({
                       />
                     </div>
                   </div>
+                </div>
+              ) : null}
+
+              {kind === "common" ? (
+                <div className={cn(section, "border-b border-white/[0.05]")}>
+                  <p className={sectionTitleClass}>Destination</p>
+                  <Dropdown<CommonCreateDestination>
+                    options={[
+                      {
+                        value: "internal",
+                        label: "Internal (this calendar)",
+                      },
+                      { value: "google", label: "Google Calendar" },
+                    ]}
+                    value={
+                      payload.mode === "existing"
+                        ? calendarCommonEventUsesGoogleCalendar(payload.event)
+                          ? "google"
+                          : "internal"
+                        : commonCreateDestination
+                    }
+                    onChange={setCommonCreateDestination}
+                    disabled={
+                      payload.mode === "existing" ||
+                      (payload.mode === "draft" && !googleCalendarConnected)
+                    }
+                    fullWidth
+                  />
                 </div>
               ) : null}
 

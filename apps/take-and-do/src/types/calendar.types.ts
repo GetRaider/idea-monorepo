@@ -98,6 +98,8 @@ export interface CalendarCreatePrefill {
   type?: CalendarEventType;
   /** `#rrggbb` custom event fill */
   color?: string;
+  /** When creating a common event, save to Google Calendar instead of local-only. */
+  saveToGoogle?: boolean;
 }
 
 /** One column in the planning calendar time axis (slot labels + header). */

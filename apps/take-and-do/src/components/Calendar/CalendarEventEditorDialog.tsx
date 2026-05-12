@@ -29,7 +29,10 @@ import { CalendarColorPickerPopover } from "./CalendarColorPickerPopover";
 import { CalendarEventTaskSection } from "./CalendarEventTaskSection";
 import { CalendarEventTaskScopeSection } from "./CalendarEventTaskScopeSection";
 import { effectiveKindColor, normalizeHexColor } from "./calendar-colors";
-import { kindLabel } from "./calendar-event-mapper";
+import {
+  calendarCommonEventUsesGoogleCalendar,
+  kindLabel,
+} from "./calendar-event-mapper";
 import {
   fromDatetimeLocalValue,
   toDatetimeLocalValue,
@@ -247,6 +250,8 @@ function draftToScheduled(
   return normalized;
 }
 
+type CommonCreateDestination = "internal" | "google";
+
 export function CalendarEventEditorDialog({
   open,
   mode,
@@ -261,11 +266,19 @@ export function CalendarEventEditorDialog({
   const isGuest = useIsAnonymous();
   const [draft, setDraft] = useState<Draft>(() => emptyDraft(new Date()));
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [saveToGoogle, setSaveToGoogle] = useState(false);
+  const [commonCreateDestination, setCommonCreateDestination] =
+    useState<CommonCreateDestination>("internal");
 
   useEffect(() => {
-    if (open) setSaveToGoogle(false);
-  }, [open]);
+    if (!open || mode !== "create") return;
+    setCommonCreateDestination(
+      googleCalendarConnected &&
+        createPrefill?.type === "common" &&
+        createPrefill?.saveToGoogle
+        ? "google"
+        : "internal",
+    );
+  }, [open, mode, createPrefill, googleCalendarConnected]);
 
   useEffect(() => {
     if (!open) return;
@@ -316,6 +329,19 @@ export function CalendarEventEditorDialog({
     normalizeHexColor(draft.colorHex) ??
     effectiveKindColor(draft.type, undefined);
 
+  const commonDestinationLocked = mode === "edit" && initial?.type === "common";
+  const commonDestinationDisplay: CommonCreateDestination =
+    commonDestinationLocked && initial && initial.type === "common"
+      ? calendarCommonEventUsesGoogleCalendar(initial)
+        ? "google"
+        : "internal"
+      : commonCreateDestination;
+
+  const showCommonDestination =
+    draft.type === "common" &&
+    (commonDestinationLocked ||
+      (mode === "create" && !!googleCalendarConnected));
+
   const handleSave = () => {
     const next = draftToScheduled(draft, initial?.id, initial);
     if (!next) {
@@ -329,7 +355,7 @@ export function CalendarEventEditorDialog({
     onSave(next, {
       saveToGoogle:
         mode === "create" &&
-        saveToGoogle &&
+        commonCreateDestination === "google" &&
         next.type === "common" &&
         !!googleCalendarConnected,
     });
@@ -402,25 +428,30 @@ export function CalendarEventEditorDialog({
             ]}
             value={draft.type}
             onChange={(type) => {
-              if (type !== "common") setSaveToGoogle(false);
+              if (type !== "common") setCommonCreateDestination("internal");
               setDraft((d) => ({ ...d, type }));
             }}
             fullWidth
           />
         </DialogFormGroup>
 
-        {mode === "create" &&
-        googleCalendarConnected &&
-        draft.type === "common" ? (
-          <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-300">
-            <input
-              type="checkbox"
-              className="rounded border-white/20 bg-input-bg"
-              checked={saveToGoogle}
-              onChange={(ev) => setSaveToGoogle(ev.target.checked)}
+        {showCommonDestination ? (
+          <DialogFormGroup>
+            <DialogFormLabel>Destination</DialogFormLabel>
+            <Dropdown<CommonCreateDestination>
+              options={[
+                {
+                  value: "internal",
+                  label: "Internal (this calendar)",
+                },
+                { value: "google", label: "Google Calendar" },
+              ]}
+              value={commonDestinationDisplay}
+              onChange={setCommonCreateDestination}
+              disabled={commonDestinationLocked}
+              fullWidth
             />
-            Add to Google Calendar
-          </label>
+          </DialogFormGroup>
         ) : null}
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

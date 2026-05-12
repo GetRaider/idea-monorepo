@@ -13,6 +13,15 @@ export type CalendarEventColorTheme = {
   googleCalendarColor?: string;
 };
 
+const GCAL_EVENT_ID_PREFIX = "gcal:";
+
+/** Common events created or synced via Google Calendar use `gcal:` ids. */
+export function calendarCommonEventUsesGoogleCalendar(
+  event: Pick<CalendarEvent, "id" | "type">,
+): boolean {
+  return event.type === "common" && event.id.startsWith(GCAL_EVENT_ID_PREFIX);
+}
+
 export function kindLabel(kind: CalendarEventType): string {
   switch (kind) {
     case "timeBlock":

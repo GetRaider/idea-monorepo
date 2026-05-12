@@ -329,6 +329,7 @@ export function CalendarPage() {
           description: ctx.quickFields.description.trim() || undefined,
           type: ctx.quickFields.type,
           color: ctx.quickFields.color,
+          ...(ctx.quickFields.saveToGoogle ? { saveToGoogle: true } : {}),
         });
         setEditorMode("create");
         setEditorEvent(null);
@@ -337,6 +338,23 @@ export function CalendarPage() {
       }
     },
     [replaceScheduled],
+  );
+
+  const handleCreateDraftFromQuick = useCallback(
+    (event: CalendarEvent, opts?: { saveToGoogle?: boolean }) => {
+      if (opts?.saveToGoogle && event.type === "common") {
+        void (async () => {
+          const created = await createConnectedGoogleCalendarEvent(event);
+          if (created) {
+            addScheduled(created);
+            await syncGoogleIfEnabled({ show: showGoogleCalendar });
+          }
+        })();
+        return;
+      }
+      addScheduled(event);
+    },
+    [addScheduled, syncGoogleIfEnabled, showGoogleCalendar],
   );
 
   const handleSaveEvent = useCallback(
@@ -637,7 +655,8 @@ export function CalendarPage() {
                 displayTimes24h={slotTime24h}
                 onDisplayTimes24hChange={setSlotTime24hPersist}
                 scopeRef={calendarScopeRef}
-                onCreateDraft={addScheduled}
+                googleCalendarConnected={googleCalendarConnected}
+                onCreateDraft={handleCreateDraftFromQuick}
                 onClose={handleCloseQuickMenu}
                 onOpenFullEditor={handleOpenFullEditorFromQuick}
                 onPersistExisting={persistExistingAndMaybePush}

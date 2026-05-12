@@ -367,15 +367,29 @@ export function CalendarEventEditorDialog({
       <DialogBody className="gap-4">
         <DialogFormGroup>
           <DialogFormLabel>Title</DialogFormLabel>
-          <Input
-            className="rounded-lg"
-            value={draft.title}
-            onChange={(ev) =>
-              setDraft((d) => ({ ...d, title: ev.target.value }))
-            }
-            placeholder="e.g. Gym Training, Team retro"
-            maxLength={200}
-          />
+          <div className="flex min-w-0 items-center gap-2">
+            <Input
+              className="min-w-0 flex-1 rounded-lg"
+              value={draft.title}
+              onChange={(ev) =>
+                setDraft((d) => ({ ...d, title: ev.target.value }))
+              }
+              placeholder="e.g. Gym Training, Team retro"
+              maxLength={200}
+            />
+            <CalendarColorPickerPopover
+              selectedHex={editorFillPreview}
+              onSelect={(hex) => setDraft((d) => ({ ...d, colorHex: hex }))}
+              onResetToDefault={() => setDraft((d) => ({ ...d, colorHex: "" }))}
+              trigger={
+                <span
+                  className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full border border-white/[0.18] shadow-inner"
+                  style={{ backgroundColor: editorFillPreview }}
+                  aria-label="Event color"
+                />
+              }
+            />
+          </div>
         </DialogFormGroup>
 
         <DialogFormGroup>
@@ -452,24 +466,6 @@ export function CalendarEventEditorDialog({
             }
             placeholder="Feel free to mention task or docs by @"
           />
-        </DialogFormGroup>
-
-        <DialogFormGroup>
-          <DialogFormLabel>Color</DialogFormLabel>
-          <div className="flex items-center gap-2">
-            <CalendarColorPickerPopover
-              selectedHex={editorFillPreview}
-              onSelect={(hex) => setDraft((d) => ({ ...d, colorHex: hex }))}
-              onResetToDefault={() => setDraft((d) => ({ ...d, colorHex: "" }))}
-              trigger={
-                <span
-                  className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-white/[0.18] shadow-inner"
-                  style={{ backgroundColor: editorFillPreview }}
-                  aria-hidden
-                />
-              }
-            />
-          </div>
         </DialogFormGroup>
 
         <details className="rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2">

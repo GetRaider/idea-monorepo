@@ -1041,38 +1041,70 @@ export function CalendarEventQuickMenu({
               {!isTask ? (
                 <div className={cn(section, "border-b border-white/[0.05]")}>
                   <p className={sectionTitleClass}>Title</p>
-                  <Input
-                    className="rounded-xl border-white/[0.08] bg-white/[0.04] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] placeholder:text-zinc-600"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="Title"
-                    aria-label="Title"
-                    maxLength={200}
-                  />
+                  <div className="flex min-w-0 items-center gap-2">
+                    <Input
+                      className="min-w-0 flex-1 rounded-xl border-white/[0.08] bg-white/[0.04] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] placeholder:text-zinc-600"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      placeholder="Title"
+                      aria-label="Title"
+                      maxLength={200}
+                    />
+                    <CalendarColorPickerPopover
+                      selectedHex={colorFillPreview}
+                      onSelect={(hex) => setEventColorHex(hex)}
+                      onResetToDefault={() => setEventColorHex("")}
+                      trigger={
+                        <span
+                          className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full border border-white/[0.18] shadow-inner"
+                          style={{ backgroundColor: colorFillPreview }}
+                          aria-label="Event color"
+                        />
+                      }
+                    />
+                  </div>
                 </div>
               ) : null}
 
               {isTask ? (
                 <div className={cn(section, "border-b border-white/[0.05]")}>
                   <p className={sectionTitleClass}>Task</p>
-                  <CalendarEventTaskSection
-                    taskBoardId={taskBoardId}
-                    taskId={taskId}
-                    isGuest={isGuest}
-                    inputClass=""
-                    onBoardChange={(boardId) => {
-                      setTaskBoardId(boardId);
-                      setTaskId("");
-                      setTaskSummarySnapshot("");
-                    }}
-                    onTaskChange={(tid, snap) => {
-                      setTaskId(tid);
-                      setTaskSummarySnapshot(snap);
-                    }}
-                    onTitleSync={(summary) =>
-                      setTitle((t) => (!t.trim() ? summary : t))
-                    }
-                  />
+                  <div className="flex min-w-0 items-start gap-2">
+                    <div className="shrink-0 pt-0.5">
+                      <CalendarColorPickerPopover
+                        selectedHex={colorFillPreview}
+                        onSelect={(hex) => setEventColorHex(hex)}
+                        onResetToDefault={() => setEventColorHex("")}
+                        trigger={
+                          <span
+                            className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-white/[0.18] shadow-inner"
+                            style={{ backgroundColor: colorFillPreview }}
+                            aria-label="Event color"
+                          />
+                        }
+                      />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <CalendarEventTaskSection
+                        taskBoardId={taskBoardId}
+                        taskId={taskId}
+                        isGuest={isGuest}
+                        inputClass=""
+                        onBoardChange={(boardId) => {
+                          setTaskBoardId(boardId);
+                          setTaskId("");
+                          setTaskSummarySnapshot("");
+                        }}
+                        onTaskChange={(tid, snap) => {
+                          setTaskId(tid);
+                          setTaskSummarySnapshot(snap);
+                        }}
+                        onTitleSync={(summary) =>
+                          setTitle((t) => (!t.trim() ? summary : t))
+                        }
+                      />
+                    </div>
+                  </div>
                 </div>
               ) : null}
 
@@ -1425,24 +1457,6 @@ export function CalendarEventQuickMenu({
                   </details>
                 </div>
               ) : null}
-
-              <div className={cn(section, "border-b border-white/[0.06]")}>
-                <p className={sectionTitleClass}>Color</p>
-                <div className="flex items-center gap-2">
-                  <CalendarColorPickerPopover
-                    selectedHex={colorFillPreview}
-                    onSelect={(hex) => setEventColorHex(hex)}
-                    onResetToDefault={() => setEventColorHex("")}
-                    trigger={
-                      <span
-                        className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-white/[0.18] shadow-inner"
-                        style={{ backgroundColor: colorFillPreview }}
-                        aria-hidden
-                      />
-                    }
-                  />
-                </div>
-              </div>
             </div>
 
             <div className="shrink-0 border-t border-white/[0.06] bg-black/25 px-4 py-3.5 backdrop-blur-sm">

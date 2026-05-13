@@ -8,7 +8,17 @@ import {
 import type { TaskPostPayload } from "@/helpers/task.helper";
 import type { ComposeTaskOutput } from "@/server/services/ai";
 import { Task, TaskPriority, TaskStatus, TaskUpdate } from "@/types/task";
-import { DB, lt, gte, isNull, and, eq, inArray, asc } from "@/db/client";
+import {
+  DB,
+  lt,
+  gte,
+  isNull,
+  and,
+  eq,
+  inArray,
+  asc,
+  isNotNull,
+} from "@/db/client";
 import { labelsTable, taskLabelsTable, tasks } from "@/db/schemas";
 import type { TaskStatsInput } from "@/db/dtos/analytics.dto";
 import { TaskBoardsApiService } from "./task-boards.api.service";
@@ -46,6 +56,37 @@ export class TasksApiService extends BaseApiService {
   async getByDate(date: Date, access: DataAccess) {
     return this.handleOperation(async () => {
       return this.loadAllTasksWithRelations(access, { date });
+    });
+  }
+
+  async getByScheduleRange(from: Date, to: Date, access: DataAccess) {
+    return this.handleOperation(async () => {
+      const accessCond = this.accessWhere(tasks, access);
+      const rows = await this.db
+        .select()
+        .from(tasks)
+        .where(
+          and(
+            accessCond,
+            isNotNull(tasks.scheduleDate),
+            gte(tasks.scheduleDate, from),
+            lt(tasks.scheduleDate, to),
+          ),
+        );
+      if (rows.length === 0) return [];
+      const boardIds = [...new Set(rows.map((r) => r.taskBoardId))];
+      const allBoardTasks = await this.db
+        .select()
+        .from(tasks)
+        .where(and(accessCond, inArray(tasks.taskBoardId, boardIds)));
+      const labelsByTaskId = await this.loadLabelNamesByTaskIds(
+        allBoardTasks.map((r) => r.id),
+      );
+      return Promise.all(
+        rows.map((row) =>
+          this.convertTaskRowToTask(row, allBoardTasks, labelsByTaskId),
+        ),
+      );
     });
   }
 

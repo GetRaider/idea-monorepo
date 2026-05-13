@@ -10,6 +10,7 @@ export async function invalidateTaskDataQueries(
     queryClient.invalidateQueries({ queryKey: ["stats"] }),
     queryClient.invalidateQueries({ queryKey: ["analytics"] }),
     queryClient.invalidateQueries({ queryKey: ["kanban-multi"] }),
+    queryClient.invalidateQueries({ queryKey: ["calendar"] }),
   ]);
 }
 

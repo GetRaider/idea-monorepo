@@ -230,6 +230,8 @@ interface PlanningCalendarProps {
   onAxisTimeZonesChange: (next: CalendarAxisTimeZone[]) => void;
   /** Local kind colors + Google chrome color for event fills / calendar stripes. */
   calendarColorTheme?: CalendarEventColorTheme;
+  /** Fired when the grid’s visible date range changes (e.g. navigation / view). */
+  onVisibleRangeChange?: (start: Date, endExclusive: Date) => void;
 }
 
 function isEventKind(value: unknown): value is CalendarEventType {
@@ -349,6 +351,7 @@ export const PlanningCalendar = forwardRef<
     axisTimeZones,
     onAxisTimeZonesChange,
     calendarColorTheme,
+    onVisibleRangeChange,
   },
   ref,
 ) {
@@ -921,8 +924,14 @@ export const PlanningCalendar = forwardRef<
         setNowLineSpan(1);
         setNowLineWidthPx(null);
       }
+      onVisibleRangeChange?.(rangeStart, rangeEndExclusive);
     },
-    [syncTimeAxisCorner, measureNowLineGeometry, scrollTimeGridToNowCentered],
+    [
+      syncTimeAxisCorner,
+      measureNowLineGeometry,
+      scrollTimeGridToNowCentered,
+      onVisibleRangeChange,
+    ],
   );
 
   useLayoutEffect(() => {

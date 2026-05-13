@@ -1,3 +1,4 @@
+export { CalendarEventsController } from "./calendar-events.controller";
 export { AnalyticsController } from "./analytics.controller";
 export { BaseController } from "./base.controller";
 export type { AppRouteHandler, NextAppRouteContext } from "./base.controller";

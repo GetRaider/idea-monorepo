@@ -5,6 +5,7 @@ export enum Route {
   AUTH = "/auth",
   OVERVIEW = "/overview",
   CALENDAR = "/calendar",
+  CALENDAR_EVENTS = "/calendar/events",
   TASKS = "/tasks",
   TASK_BOARDS = "/task-boards",
   FOLDERS = "/folders",

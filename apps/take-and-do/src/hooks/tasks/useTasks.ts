@@ -148,7 +148,7 @@ export function useTaskActions() {
         taskId,
         updates: patch,
       });
-      if (updated && "scheduleDate" in patch) {
+      if (updated && isAnonymous && "scheduleDate" in patch) {
         applyTaskScheduleToPersistedCalendar({
           taskId: updated.id,
           taskBoardId: updated.taskBoardId,

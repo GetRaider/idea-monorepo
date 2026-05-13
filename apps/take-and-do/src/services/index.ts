@@ -1,3 +1,4 @@
+import { CalendarEventsClientService } from "./calendar-events.client.service";
 import { AnalyticsClientService } from "./analytics.client.service";
 import { FoldersClientService } from "./folders.client.service";
 import { LabelsClientService } from "./labels.client.service";
@@ -12,6 +13,7 @@ const tasksClientService = new TasksClientService();
 const foldersClientService = new FoldersClientService();
 
 export const clientServices = {
+  calendarEvents: new CalendarEventsClientService(),
   tasks: tasksClientService,
   folders: foldersClientService,
   labels: new LabelsClientService(),

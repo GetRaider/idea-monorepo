@@ -1,5 +1,6 @@
 import { db } from "@/db/client";
 import { AnalyticsApiService } from "./analytics.api.service";
+import { CalendarEventsApiService } from "./calendar-events.api.service";
 import { FoldersApiService } from "./folders.api.service";
 import { LabelsApiService } from "./labels.api.service";
 import { StatsApiService } from "./stats.api.service";
@@ -13,8 +14,11 @@ const taskBoardsService = new TaskBoardsApiService(db, workspaceService);
 const labelsService = new LabelsApiService(db);
 const tasksService = new TasksApiService(db, taskBoardsService, labelsService);
 
+const calendarEventsService = new CalendarEventsApiService(db);
+
 export const apiServices = {
   tasks: tasksService,
+  calendarEvents: calendarEventsService,
   folders: new FoldersApiService(db, workspaceService),
   labels: labelsService,
   taskBoards: taskBoardsService,

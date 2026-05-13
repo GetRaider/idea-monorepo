@@ -29,10 +29,31 @@ const taskIdParamsSchema = z.object({ id: z.string() });
 
 const taskKeyParamsSchema = z.object({ taskKey: z.string() });
 
-const TaskListQueryDto = z.object({
-  taskBoardId: z.string().min(1).optional(),
-  date: z.string().min(1).optional(),
-});
+const TaskListQueryDto = z
+  .object({
+    taskBoardId: z.string().min(1).optional(),
+    date: z.string().min(1).optional(),
+    scheduleFrom: z.string().min(1).optional(),
+    scheduleTo: z.string().min(1).optional(),
+  })
+  .superRefine((q, ctx) => {
+    const hasSchedule = !!(q.scheduleFrom || q.scheduleTo);
+    if (!hasSchedule) return;
+    if (!q.scheduleFrom || !q.scheduleTo) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "scheduleFrom and scheduleTo must both be provided",
+      });
+      return;
+    }
+    if (q.taskBoardId || q.date) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          "scheduleFrom/scheduleTo cannot be combined with taskBoardId or date",
+      });
+    }
+  });
 
 const deleteTasksForBoardQuerySchema = z.object({
   taskBoardId: z.string().min(1),
@@ -45,7 +66,18 @@ export class TasksController extends BaseController {
     handler: async ({ query }) => {
       const auth = await requireAuth();
       const access = getAccessByAuth(auth);
-      const { taskBoardId, date } = query;
+      const { taskBoardId, date, scheduleFrom, scheduleTo } = query;
+      if (scheduleFrom && scheduleTo) {
+        const from = new Date(scheduleFrom);
+        const to = new Date(scheduleTo);
+        if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) {
+          throw new BadRequestError("Invalid scheduleFrom or scheduleTo");
+        }
+        if (from.getTime() >= to.getTime()) {
+          throw new BadRequestError("scheduleTo must be after scheduleFrom");
+        }
+        return apiServices.tasks.getByScheduleRange(from, to, access);
+      }
       if (taskBoardId) {
         return apiServices.tasks.getByBoardId(taskBoardId, access);
       }

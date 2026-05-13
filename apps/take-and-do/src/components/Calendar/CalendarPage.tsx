@@ -1,7 +1,10 @@
 "use client";
 
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 
+import type { CalendarEventPatchBody } from "@/db/dtos/calendar-events.dto";
 import {
   AppPageSubtitle,
   AppPageTitle,
@@ -12,6 +15,13 @@ import {
 import { PrimaryButton } from "@/components/Buttons";
 import { PlusIcon } from "@/components/Icons";
 import { defaultAxisTimeZones } from "@/components/Calendar/calendar-axis-time";
+import {
+  calendarEventUsesApiStorage,
+  userCalendarEventToCreateBody,
+  userCalendarEventToPatchBody,
+} from "@/helpers/calendar-grid-server.helper";
+import { buildVirtualTaskCalendarEvents } from "@/helpers/task-calendar-events.helper";
+import { useIsAnonymous } from "@/hooks/auth/use-is-anonymous";
 import { GOOGLE_CALENDAR_DISCONNECTED_EVENT } from "@/hooks/calendar/calendar-storage";
 import { useCalendarStore } from "@/hooks/calendar/use-calendar-store";
 import { useTaskActions } from "@/hooks/tasks/useTasks";
@@ -19,11 +29,13 @@ import {
   createConnectedGoogleCalendarEvent,
   deleteConnectedGoogleCalendarEvent,
 } from "@/lib/google-calendar-mutations";
+import { queryKeys } from "@/lib/query-keys";
 import {
   getEffectiveGoogleRecurrence,
   needsGoogleCalendarRecurrenceScope,
   pushConnectedGoogleCalendarEvent,
 } from "@/lib/push-google-calendar-event";
+import { clientServices } from "@/services";
 import { Sidebar } from "@/components/Sidebar/Sidebar";
 import { Spinner } from "@/components/Spinner/Spinner";
 import type {
@@ -102,9 +114,69 @@ export function CalendarPage() {
     setAxisTimeZones,
     setKindColor,
     setGoogleCalendarColor,
+    syncExternalGridEvents,
   } = useCalendarStore();
 
   const { updateTask } = useTaskActions();
+  const isGuest = useIsAnonymous();
+  const queryClient = useQueryClient();
+
+  const [calendarQueryRange, setCalendarQueryRange] = useState(() => {
+    const from = new Date();
+    from.setDate(from.getDate() - 21);
+    from.setHours(0, 0, 0, 0);
+    const to = new Date();
+    to.setDate(to.getDate() + 120);
+    return { from, to };
+  });
+
+  const fromIso = calendarQueryRange.from.toISOString();
+  const toIso = calendarQueryRange.to.toISOString();
+
+  const calendarEventsQuery = useQuery({
+    queryKey: queryKeys.calendar.events(fromIso, toIso),
+    queryFn: () =>
+      clientServices.calendarEvents.list(
+        calendarQueryRange.from,
+        calendarQueryRange.to,
+      ),
+    enabled: !isGuest,
+  });
+
+  const scheduledTasksQuery = useQuery({
+    queryKey: queryKeys.tasks.byScheduleRange(fromIso, toIso),
+    queryFn: () =>
+      clientServices.tasks.getByScheduleRange(
+        calendarQueryRange.from,
+        calendarQueryRange.to,
+      ),
+    enabled: !isGuest,
+  });
+
+  useEffect(() => {
+    if (isGuest) return;
+    const db = calendarEventsQuery.data ?? [];
+    const tasks = scheduledTasksQuery.data ?? [];
+    const virtual = buildVirtualTaskCalendarEvents(tasks);
+    syncExternalGridEvents([...db, ...virtual]);
+  }, [
+    isGuest,
+    syncExternalGridEvents,
+    calendarEventsQuery.data,
+    scheduledTasksQuery.data,
+  ]);
+
+  const bumpServerCalendar = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: ["calendar"] });
+    void queryClient.invalidateQueries({ queryKey: ["tasks"] });
+  }, [queryClient]);
+
+  const handleVisibleRangeChange = useCallback(
+    (start: Date, endExclusive: Date) => {
+      setCalendarQueryRange({ from: start, to: endExclusive });
+    },
+    [],
+  );
 
   const [, setCurrentPage] = useState("calendar");
 
@@ -355,9 +427,25 @@ export function CalendarPage() {
         })();
         return;
       }
+      if (!isGuest && (event.type === "common" || event.type === "timeBlock")) {
+        void (async () => {
+          const created = await clientServices.calendarEvents.create(
+            userCalendarEventToCreateBody(event),
+          );
+          if (!created) toast.error("Could not create calendar event");
+          else bumpServerCalendar();
+        })();
+        return;
+      }
       addScheduled(event);
     },
-    [addScheduled, syncGoogleIfEnabled, showGoogleCalendar],
+    [
+      addScheduled,
+      bumpServerCalendar,
+      isGuest,
+      syncGoogleIfEnabled,
+      showGoogleCalendar,
+    ],
   );
 
   const handleSaveEvent = useCallback(
@@ -373,6 +461,19 @@ export function CalendarPage() {
           })();
           return;
         }
+        if (
+          !isGuest &&
+          (event.type === "common" || event.type === "timeBlock")
+        ) {
+          void (async () => {
+            const created = await clientServices.calendarEvents.create(
+              userCalendarEventToCreateBody(event),
+            );
+            if (!created) toast.error("Could not create calendar event");
+            else bumpServerCalendar();
+          })();
+          return;
+        }
         addScheduled(event);
         return;
       }
@@ -380,14 +481,35 @@ export function CalendarPage() {
         setGoogleScopePrompt({ kind: "editor", event });
         return;
       }
+      if (
+        !isGuest &&
+        (event.type === "common" || event.type === "timeBlock") &&
+        calendarEventUsesApiStorage(event, false)
+      ) {
+        void (async () => {
+          const updated = await clientServices.calendarEvents.update(
+            event.id,
+            userCalendarEventToPatchBody(event),
+          );
+          if (!updated) {
+            toast.error("Could not save calendar event");
+            return;
+          }
+          replaceScheduled(updated);
+          bumpServerCalendar();
+        })();
+        return;
+      }
       replaceScheduled(event);
       void pushGoogleThenSync(event);
     },
     [
       addScheduled,
-      replaceScheduled,
+      bumpServerCalendar,
       editorMode,
+      isGuest,
       pushGoogleThenSync,
+      replaceScheduled,
       syncGoogleIfEnabled,
       showGoogleCalendar,
     ],
@@ -406,10 +528,32 @@ export function CalendarPage() {
         setCreatePrefill(null);
         return;
       }
+      if (!isGuest && calendarEventUsesApiStorage(prompt.merged, false)) {
+        void (async () => {
+          const updated = await clientServices.calendarEvents.update(
+            prompt.id,
+            prompt.patch as CalendarEventPatchBody,
+          );
+          if (!updated) {
+            toast.error("Could not update calendar event");
+            return;
+          }
+          patchScheduled(prompt.id, prompt.patch);
+          bumpServerCalendar();
+        })();
+        return;
+      }
       patchScheduled(prompt.id, prompt.patch);
       void pushGoogleThenSync(prompt.merged, scope);
     },
-    [googleScopePrompt, replaceScheduled, patchScheduled, pushGoogleThenSync],
+    [
+      googleScopePrompt,
+      replaceScheduled,
+      patchScheduled,
+      pushGoogleThenSync,
+      isGuest,
+      bumpServerCalendar,
+    ],
   );
 
   const applyGoogleDeleteScopeChoice = useCallback(
@@ -450,13 +594,25 @@ export function CalendarPage() {
 
   const handleDeleteGoogleAware = useCallback(
     (event: CalendarEvent) => {
-      if (event.type !== "common" || !event.id.startsWith(GCAL_PREFIX)) {
-        removeScheduled(event.id);
+      if (event.type === "common" && event.id.startsWith(GCAL_PREFIX)) {
+        setGoogleDeletePrompt(event);
         return;
       }
-      setGoogleDeletePrompt(event);
+      if (!isGuest && calendarEventUsesApiStorage(event, false)) {
+        void (async () => {
+          const ok = await clientServices.calendarEvents.remove(event.id);
+          if (!ok) {
+            toast.error("Could not delete calendar event");
+            return;
+          }
+          removeScheduled(event.id);
+          bumpServerCalendar();
+        })();
+        return;
+      }
+      removeScheduled(event.id);
     },
-    [removeScheduled],
+    [removeScheduled, isGuest, bumpServerCalendar],
   );
 
   const handleEventTimesUpdated = useCallback(
@@ -480,15 +636,46 @@ export function CalendarPage() {
         setGoogleScopePrompt({ kind: "quick", id, patch, merged });
         return;
       }
-      patchScheduled(id, patch);
       if (merged.type === "task") {
         void updateTask(merged.taskId, {
           scheduleDate: new Date(merged.start),
         });
+        if (isGuest) {
+          patchScheduled(id, patch);
+          void pushGoogleThenSync(merged);
+        } else {
+          bumpServerCalendar();
+        }
+        return;
       }
+      if (!isGuest && calendarEventUsesApiStorage(merged, false)) {
+        void (async () => {
+          const updated = await clientServices.calendarEvents.update(
+            id,
+            patch as CalendarEventPatchBody,
+          );
+          if (!updated) {
+            toast.error("Could not update calendar event");
+            revert();
+            return;
+          }
+          patchScheduled(id, patch);
+          bumpServerCalendar();
+        })();
+        void pushGoogleThenSync(merged);
+        return;
+      }
+      patchScheduled(id, patch);
       void pushGoogleThenSync(merged);
     },
-    [patchScheduled, state, pushGoogleThenSync, updateTask],
+    [
+      bumpServerCalendar,
+      isGuest,
+      patchScheduled,
+      pushGoogleThenSync,
+      state,
+      updateTask,
+    ],
   );
 
   const persistExistingAndMaybePush = useCallback(
@@ -509,7 +696,6 @@ export function CalendarPage() {
         setGoogleScopePrompt({ kind: "quick", id, patch, merged });
         return;
       }
-      patchScheduled(id, patch);
       if (
         merged.type === "task" &&
         ("start" in patch || "end" in patch || "allDay" in patch)
@@ -517,10 +703,41 @@ export function CalendarPage() {
         void updateTask(merged.taskId, {
           scheduleDate: new Date(merged.start),
         });
+        if (isGuest) {
+          patchScheduled(id, patch);
+          void pushGoogleThenSync(merged);
+        } else {
+          bumpServerCalendar();
+        }
+        return;
       }
+      if (!isGuest && calendarEventUsesApiStorage(merged, false)) {
+        void (async () => {
+          const updated = await clientServices.calendarEvents.update(
+            id,
+            patch as CalendarEventPatchBody,
+          );
+          if (!updated) {
+            toast.error("Could not update calendar event");
+            return;
+          }
+          patchScheduled(id, patch);
+          bumpServerCalendar();
+        })();
+        void pushGoogleThenSync(merged);
+        return;
+      }
+      patchScheduled(id, patch);
       void pushGoogleThenSync(merged);
     },
-    [patchScheduled, state, pushGoogleThenSync, updateTask],
+    [
+      bumpServerCalendar,
+      isGuest,
+      patchScheduled,
+      pushGoogleThenSync,
+      state,
+      updateTask,
+    ],
   );
 
   const handleDuplicateEvent = useCallback(
@@ -530,7 +747,7 @@ export function CalendarPage() {
       const duration = end.getTime() - start.getTime();
       const newStart = new Date(end.getTime());
       const newEnd = new Date(newStart.getTime() + duration);
-      addScheduled({
+      const dup = {
         ...event,
         id: crypto.randomUUID(),
         start: newStart.toISOString(),
@@ -542,20 +759,47 @@ export function CalendarPage() {
               googleRecurrence: undefined,
             }
           : {}),
-      });
+      } as CalendarEvent;
+      if (!isGuest && (event.type === "common" || event.type === "timeBlock")) {
+        void (async () => {
+          if (dup.type !== "common" && dup.type !== "timeBlock") return;
+          const created = await clientServices.calendarEvents.create(
+            userCalendarEventToCreateBody(dup),
+          );
+          if (!created) toast.error("Could not duplicate event");
+          else bumpServerCalendar();
+        })();
+        return;
+      }
+      addScheduled(dup);
     },
-    [addScheduled],
+    [addScheduled, bumpServerCalendar, isGuest],
   );
 
   const handleRsvpChange = useCallback(
     (id: string, rsvp: CalendarRsvpStatus, declineReason?: string) => {
-      patchScheduled(id, {
+      const rsvpPatch = {
         rsvpStatus: rsvp,
         rsvpDeclineReason:
           rsvp === "no" ? declineReason?.trim() || undefined : undefined,
-      });
+      };
+      if (!isGuest && state) {
+        const ev = state.events.find((e) => e.id === id);
+        if (ev && calendarEventUsesApiStorage(ev, false)) {
+          void (async () => {
+            const updated = await clientServices.calendarEvents.update(
+              id,
+              rsvpPatch,
+            );
+            if (!updated) toast.error("Could not update RSVP");
+            else bumpServerCalendar();
+          })();
+          return;
+        }
+      }
+      patchScheduled(id, rsvpPatch);
     },
-    [patchScheduled],
+    [bumpServerCalendar, isGuest, patchScheduled, state],
   );
 
   const handlePlanningEventReceive = useCallback(
@@ -564,10 +808,26 @@ export function CalendarPage() {
         void updateTask(event.taskId, {
           scheduleDate: new Date(event.start),
         });
+        if (isGuest) {
+          addScheduled(event);
+        } else {
+          bumpServerCalendar();
+        }
+        return;
+      }
+      if (!isGuest && (event.type === "common" || event.type === "timeBlock")) {
+        void (async () => {
+          const created = await clientServices.calendarEvents.create(
+            userCalendarEventToCreateBody(event),
+          );
+          if (!created) toast.error("Could not place calendar event");
+          else bumpServerCalendar();
+        })();
+        return;
       }
       addScheduled(event);
     },
-    [addScheduled, updateTask],
+    [addScheduled, bumpServerCalendar, isGuest, updateTask],
   );
 
   const openNewTemplate = useCallback(() => {
@@ -676,6 +936,9 @@ export function CalendarPage() {
               slotTime24h={slotTime24h}
               onSlotTime24hChange={setSlotTime24hPersist}
               calendarColorTheme={calendarColorTheme}
+              onVisibleRangeChange={
+                isGuest ? undefined : handleVisibleRangeChange
+              }
             />
             {quickMenu ? (
               <CalendarEventQuickMenu

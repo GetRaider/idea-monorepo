@@ -17,6 +17,8 @@ import type {
   CalendarPersistedState,
 } from "@/types/calendar.types";
 
+import { useIsAnonymous } from "@/hooks/auth/use-is-anonymous";
+
 import { readCalendarState, writeCalendarState } from "./calendar-storage";
 import { CALENDAR_STATE_EXTERNAL_UPDATE_EVENT } from "./task-calendar-local-sync";
 import { getEffectiveGoogleRecurrence } from "@/lib/push-google-calendar-event";
@@ -25,26 +27,64 @@ import { mergeGoogleCalendarImportedEvents } from "./merge-google-calendar-impor
 const GCAL_PREFIX = "gcal:";
 
 export function useCalendarStore() {
+  const isGuest = useIsAnonymous();
   const [state, setState] = useState<CalendarPersistedState | null>(null);
 
   useLayoutEffect(() => {
-    setState(readCalendarState());
-  }, []);
+    const raw = readCalendarState();
+    if (isGuest) {
+      setState(raw);
+    } else {
+      setState({
+        ...raw,
+        events: raw.events.filter((e) => e.id.startsWith(GCAL_PREFIX)),
+      });
+    }
+  }, [isGuest]);
 
   useEffect(() => {
-    const onExternal = () => setState(readCalendarState());
+    const onExternal = () => {
+      setState((prev) => {
+        const raw = readCalendarState();
+        if (isGuest) return raw;
+        if (!prev) {
+          return {
+            ...raw,
+            events: raw.events.filter((e) => e.id.startsWith(GCAL_PREFIX)),
+          };
+        }
+        const gcal = raw.events.filter((e) => e.id.startsWith(GCAL_PREFIX));
+        const user = prev.events.filter((e) => !e.id.startsWith(GCAL_PREFIX));
+        return { ...prev, ...raw, events: [...gcal, ...user] };
+      });
+    };
     window.addEventListener(CALENDAR_STATE_EXTERNAL_UPDATE_EVENT, onExternal);
     return () =>
       window.removeEventListener(
         CALENDAR_STATE_EXTERNAL_UPDATE_EVENT,
         onExternal,
       );
+  }, [isGuest]);
+
+  const syncExternalGridEvents = useCallback((blocks: CalendarEvent[]) => {
+    setState((prev) => {
+      if (!prev) return prev;
+      const gcal = prev.events.filter((e) => e.id.startsWith(GCAL_PREFIX));
+      return { ...prev, events: [...gcal, ...blocks] };
+    });
   }, []);
 
   useEffect(() => {
     if (!state) return;
-    writeCalendarState(state);
-  }, [state]);
+    if (isGuest) {
+      writeCalendarState(state);
+    } else {
+      writeCalendarState({
+        ...state,
+        events: state.events.filter((e) => e.id.startsWith(GCAL_PREFIX)),
+      });
+    }
+  }, [state, isGuest]);
 
   const addScheduled = useCallback((event: CalendarEvent) => {
     const c = normalizeHexColor(event.color);
@@ -281,5 +321,6 @@ export function useCalendarStore() {
     setAxisTimeZones,
     setKindColor,
     setGoogleCalendarColor,
+    syncExternalGridEvents,
   };
 }

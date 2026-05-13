@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -38,6 +39,8 @@ import {
 import { clientServices } from "@/services";
 import { Sidebar } from "@/components/Sidebar/Sidebar";
 import { Spinner } from "@/components/Spinner/Spinner";
+import { AppTooltip } from "@/components/Tooltip/AppTooltip";
+import { cn } from "@/lib/styles/utils";
 import type {
   CalendarBacklogEvent,
   CalendarCreatePrefill,
@@ -80,6 +83,13 @@ const DEFAULT_KIND_VISIBILITY: CalendarKindVisibility = {
 
 const GCAL_PREFIX = "gcal:";
 const SLOT_TIME_24H_KEY = "take-and-do:calendar-slot-24h";
+const CALENDAR_SIDEBAR_COLLAPSED_KEY = "take-and-do:calendar-sidebar-collapsed";
+
+const calendarSidebarEdgeToggleClass =
+  "group pointer-events-auto flex h-11 w-[1.125rem] shrink-0 items-center justify-center rounded-md border border-white/[0.08] bg-background-primary/85 text-zinc-500 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),2px_0_12px_rgba(0,0,0,0.25)] backdrop-blur-md transition-[color,box-shadow,background-color,border-color] duration-200 ease-out hover:border-[#7255c1]/35 hover:bg-background-primary/92 hover:text-zinc-100 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.08),2px_0_16px_rgba(114,85,193,0.14)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)] motion-reduce:transition-none";
+
+const calendarSidebarExpandClosedToggleClass =
+  "group pointer-events-auto flex h-11 w-[1.125rem] shrink-0 items-center justify-center rounded-md border border-white/[0.08] bg-background-primary/85 text-zinc-500 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_2px_14px_rgba(0,0,0,0.32)] backdrop-blur-md transition-[color,box-shadow,background-color,border-color] duration-200 ease-out hover:border-[#7255c1]/35 hover:bg-background-primary/92 hover:text-zinc-100 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_4px_16px_rgba(114,85,193,0.18)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)] motion-reduce:transition-none";
 
 type GoogleScopePrompt =
   | { kind: "editor"; event: CalendarEvent }
@@ -199,6 +209,8 @@ export function CalendarPage() {
     useState<CalendarEventType>("timeBlock");
 
   const [slotTime24h, setSlotTime24h] = useState(false);
+  const [calendarSidebarCollapsed, setCalendarSidebarCollapsed] =
+    useState(false);
 
   useEffect(() => {
     try {
@@ -207,6 +219,45 @@ export function CalendarPage() {
       /* ignore */
     }
   }, []);
+
+  useEffect(() => {
+    try {
+      setCalendarSidebarCollapsed(
+        window.localStorage.getItem(CALENDAR_SIDEBAR_COLLAPSED_KEY) === "1",
+      );
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const toggleCalendarSidebar = useCallback(() => {
+    setCalendarSidebarCollapsed((prev) => {
+      const next = !prev;
+      try {
+        window.localStorage.setItem(
+          CALENDAR_SIDEBAR_COLLAPSED_KEY,
+          next ? "1" : "0",
+        );
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    const bump = () => planningCalendarRef.current?.notifyLayoutResize();
+    bump();
+    const raf = requestAnimationFrame(() => {
+      bump();
+      requestAnimationFrame(bump);
+    });
+    const t = window.setTimeout(bump, 350);
+    return () => {
+      cancelAnimationFrame(raf);
+      clearTimeout(t);
+    };
+  }, [calendarSidebarCollapsed]);
 
   useEffect(() => {
     const onDisconnected = () => {
@@ -869,9 +920,9 @@ export function CalendarPage() {
       <Sidebar onNavigationChange={setCurrentPage} />
       <HomeMainContent
         withNavSidebar={false}
-        className="flex min-h-0 flex-col px-6 py-6 max-[600px]:px-4 max-[600px]:py-4"
+        className="flex min-h-0 flex-col px-6 py-6 max-[600px]:px-4 max-[600px]:py-4 max-lg:overflow-y-auto lg:overflow-hidden"
       >
-        <WelcomeSection className="mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-start sm:justify-between">
+        <WelcomeSection className="mb-6 flex shrink-0 flex-col gap-4 sm:mb-8 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0 flex-1">
             <AppPageTitle>Calendar</AppPageTitle>
             <AppPageSubtitle className="mt-2 max-w-[640px]">
@@ -888,30 +939,105 @@ export function CalendarPage() {
           </PrimaryButton>
         </WelcomeSection>
 
-        <div className="flex min-h-0 flex-1 flex-col gap-5 lg:flex-row lg:gap-6">
-          <CalendarPanel
-            containerRef={backlogContainerRef}
-            items={state.backlog}
-            kindVisibility={kindVisibility}
-            onKindVisibilityChange={setKindVisibility}
-            onPickCalendarDay={(d) => planningCalendarRef.current?.goToDate(d)}
-            onRequestNewTemplate={openNewTemplate}
-            onEditTemplate={openEditTemplate}
-            onRemoveItem={removeBacklogItem}
-            showGoogleCalendar={showGoogleCalendar}
-            onShowGoogleCalendarChange={(next) => {
-              setShowGoogleCalendar(next);
-              if (next) {
-                void syncGoogleIfEnabled({ show: true });
-              }
-            }}
-            googleCalendarLabel={googleCalendarLabel}
-            kindColors={state.kindColors}
-            googleCalendarColor={state.googleCalendarColor}
-            onKindColorChange={setKindColor}
-            onGoogleCalendarColorChange={setGoogleCalendarColor}
-          />
-          <div ref={calendarScopeRef} className="relative flex min-h-0 flex-1">
+        <div
+          className={cn(
+            "relative flex min-h-0 flex-1 flex-col gap-5 lg:flex-row lg:gap-6",
+          )}
+        >
+          <div
+            className={cn(
+              "relative flex w-full shrink-0 flex-col overflow-visible transition-[width,opacity,min-width] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] max-lg:opacity-100 motion-reduce:transition-none lg:min-h-0 lg:max-h-full lg:self-stretch",
+              calendarSidebarCollapsed
+                ? "lg:pointer-events-none lg:w-0 lg:min-w-0 lg:opacity-0"
+                : "lg:w-[260px] lg:opacity-100",
+            )}
+          >
+            <div
+              className={cn(
+                "flex min-h-0 w-full flex-1 flex-col overflow-hidden max-lg:min-h-0 max-lg:flex-none max-lg:overflow-visible motion-reduce:transition-none lg:min-h-0 lg:max-h-full",
+                calendarSidebarCollapsed && "lg:pointer-events-none",
+              )}
+            >
+              <div
+                id="calendar-planner-sidebar"
+                className="relative flex min-h-0 w-full min-w-[260px] max-w-[260px] flex-1 flex-col overflow-hidden max-lg:min-h-0 max-lg:max-w-none max-lg:flex-none lg:min-h-0 lg:max-h-full"
+              >
+                <CalendarPanel
+                  containerRef={backlogContainerRef}
+                  items={state.backlog}
+                  kindVisibility={kindVisibility}
+                  onKindVisibilityChange={setKindVisibility}
+                  onPickCalendarDay={(d) =>
+                    planningCalendarRef.current?.goToDate(d)
+                  }
+                  onRequestNewTemplate={openNewTemplate}
+                  onEditTemplate={openEditTemplate}
+                  onRemoveItem={removeBacklogItem}
+                  showGoogleCalendar={showGoogleCalendar}
+                  onShowGoogleCalendarChange={(next) => {
+                    setShowGoogleCalendar(next);
+                    if (next) {
+                      void syncGoogleIfEnabled({ show: true });
+                    }
+                  }}
+                  googleCalendarLabel={googleCalendarLabel}
+                  kindColors={state.kindColors}
+                  googleCalendarColor={state.googleCalendarColor}
+                  onKindColorChange={setKindColor}
+                  onGoogleCalendarColorChange={setGoogleCalendarColor}
+                />
+              </div>
+            </div>
+            {!calendarSidebarCollapsed ? (
+              <div className="pointer-events-none absolute inset-y-0 left-full z-30 hidden lg:flex lg:items-center">
+                <AppTooltip content="Hide panel" side="right">
+                  <button
+                    type="button"
+                    onClick={toggleCalendarSidebar}
+                    aria-expanded
+                    aria-controls="calendar-planner-sidebar"
+                    className={cn(
+                      calendarSidebarEdgeToggleClass,
+                      "rounded-l-none border-l-0 -translate-x-px",
+                    )}
+                  >
+                    <span className="sr-only">Hide calendar sidebar</span>
+                    <ChevronLeft
+                      size={13}
+                      strokeWidth={2.25}
+                      className="shrink-0 transition-colors group-hover:text-zinc-100"
+                      aria-hidden
+                    />
+                  </button>
+                </AppTooltip>
+              </div>
+            ) : null}
+          </div>
+          <div
+            ref={calendarScopeRef}
+            className="relative flex min-h-0 flex-1 overflow-visible"
+          >
+            {calendarSidebarCollapsed ? (
+              <div className="pointer-events-none absolute inset-y-0 z-30 hidden left-[calc(-1.5rem-1px)] lg:flex lg:items-center">
+                <AppTooltip content="Show panel" side="right">
+                  <button
+                    type="button"
+                    onClick={toggleCalendarSidebar}
+                    aria-expanded={false}
+                    aria-controls="calendar-planner-sidebar"
+                    className={calendarSidebarExpandClosedToggleClass}
+                  >
+                    <span className="sr-only">Show calendar sidebar</span>
+                    <ChevronRight
+                      size={13}
+                      strokeWidth={2.25}
+                      className="shrink-0 transition-colors group-hover:text-zinc-100"
+                      aria-hidden
+                    />
+                  </button>
+                </AppTooltip>
+              </div>
+            ) : null}
             <PlanningCalendar
               ref={planningCalendarRef}
               axisTimeZones={state?.axisTimeZones ?? defaultAxisTimeZones()}

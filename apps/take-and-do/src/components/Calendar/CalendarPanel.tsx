@@ -224,7 +224,7 @@ export function CalendarPanel({
 
   return (
     <aside
-      className="calendar-surface flex min-h-0 w-full max-w-[260px] shrink-0 flex-col gap-4 overflow-y-auto rounded-xl border border-white/10 bg-background-primary/85 p-3.5 shadow-[0_8px_32px_rgba(0,0,0,0.25)] backdrop-blur-md max-[900px]:max-w-none"
+      className="calendar-surface flex min-h-0 w-full max-w-[260px] flex-1 flex-col gap-4 overflow-y-auto overscroll-contain rounded-xl border border-white/10 bg-background-primary/85 p-3.5 shadow-[0_8px_32px_rgba(0,0,0,0.25)] backdrop-blur-md max-[900px]:max-w-none"
       style={{ scrollbarGutter: "stable" }}
     >
       <div

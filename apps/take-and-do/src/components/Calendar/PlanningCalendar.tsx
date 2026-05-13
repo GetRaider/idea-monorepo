@@ -190,6 +190,8 @@ export type PlanningCalendarHandle = {
   clearSelection: () => void;
   /** Scroll the time grid so wall-clock “now” is near the vertical center of the slot area. */
   scrollNowToCenter: () => void;
+  /** Re-measure the grid after the host width changes (e.g. sidebar toggle). */
+  notifyLayoutResize: () => void;
 };
 
 interface PlanningCalendarProps {
@@ -763,6 +765,18 @@ export const PlanningCalendar = forwardRef<
     });
   }, []);
 
+  const notifyLayoutResize = useCallback(() => {
+    const api = fcRef.current?.getApi();
+    if (!api) return;
+    api.updateSize();
+    requestAnimationFrame(() => {
+      syncTimeAxisCorner();
+      if (activeViewType.startsWith("timeGrid")) {
+        measureNowLineGeometry(activeViewType);
+      }
+    });
+  }, [activeViewType, measureNowLineGeometry, syncTimeAxisCorner]);
+
   useImperativeHandle(
     ref,
     () => ({
@@ -775,8 +789,9 @@ export const PlanningCalendar = forwardRef<
       scrollNowToCenter: () => {
         scrollTimeGridToNowCentered();
       },
+      notifyLayoutResize,
     }),
-    [scrollTimeGridToNowCentered],
+    [notifyLayoutResize, scrollTimeGridToNowCentered],
   );
 
   const fcEvents: EventInput[] = useMemo(() => {

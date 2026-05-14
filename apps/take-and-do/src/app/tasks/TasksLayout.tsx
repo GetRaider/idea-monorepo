@@ -26,6 +26,7 @@ import { WorkspaceProvider } from "@/contexts/WorkspaceContext";
 import { useTasksSidebarWidthPx } from "@/hooks/tasks/useTasksSidebarWidthPx";
 import { isDuplicateWorkspaceName } from "@/helpers/workspace-name.helper";
 import { invalidateWorkspaceQueries } from "@/lib/invalidate-app-queries";
+import { APP_CHROME_PADDING_X } from "@/helpers/app-chrome-layout";
 import { cn } from "@/lib/styles/utils";
 import { clientServices } from "@/services";
 import { toast } from "sonner";
@@ -243,12 +244,18 @@ export default function TasksLayout({
             className="flex min-h-0 flex-1 flex-col overflow-hidden max-lg:overflow-y-auto lg:overflow-hidden"
           >
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-              <div className="shrink-0 px-4 pb-3 pt-4 max-[600px]:px-3 max-[600px]:pt-3 lg:px-6 lg:pb-4 lg:pt-5">
+              <div
+                className={cn(
+                  "shrink-0 pb-4 pt-6 max-[600px]:pb-3 max-[600px]:pt-6",
+                  APP_CHROME_PADDING_X,
+                )}
+              >
                 <TasksAppChromeHeader />
               </div>
               <div
                 className={cn(
-                  "relative flex min-h-0 flex-1 flex-col gap-4 overflow-hidden px-4 pb-4 pt-3 max-[600px]:gap-3 max-[600px]:px-3 max-[600px]:pb-3 lg:flex-row lg:gap-6 lg:px-6 lg:pb-6 lg:pt-4",
+                  "relative flex min-h-0 flex-1 flex-col gap-4 overflow-hidden pb-6 pt-4 max-[600px]:gap-3 max-[600px]:pb-4 lg:flex-row lg:gap-6 lg:pb-6 lg:pt-4",
+                  APP_CHROME_PADDING_X,
                 )}
               >
                 <div

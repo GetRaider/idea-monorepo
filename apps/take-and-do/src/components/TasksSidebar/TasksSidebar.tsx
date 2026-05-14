@@ -53,12 +53,14 @@ export function TasksSidebar({
       <TasksSidebarContainer>
         <TasksSidebarSchedulesSection model={model} />
 
-        <TasksSidebarWorkspacesSection
-          model={model}
-          onCreateTaskBoard={onCreateTaskBoard}
-          isFoldersLoading={isFoldersLoading}
-          isBoardsLoading={isBoardsLoading}
-        />
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col border-t border-white/[0.08] pt-3">
+          <TasksSidebarWorkspacesSection
+            model={model}
+            onCreateTaskBoard={onCreateTaskBoard}
+            isFoldersLoading={isFoldersLoading}
+            isBoardsLoading={isBoardsLoading}
+          />
+        </div>
 
         {isOpen ? (
           <TasksSidebarResizeStrip

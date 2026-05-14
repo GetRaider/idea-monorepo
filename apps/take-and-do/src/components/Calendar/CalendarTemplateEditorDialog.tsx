@@ -184,7 +184,7 @@ export function CalendarTemplateEditorDialog({
               type="button"
               onClick={() => setShowRemoveConfirm(true)}
             >
-              Remove template
+              Remove event
             </ConfirmDangerBtn>
           ) : null}
         </div>

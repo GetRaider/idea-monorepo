@@ -2,7 +2,7 @@
 
 import { ChevronLeft, ChevronRight, LayoutGrid, Pencil } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
   InfoCircleIcon,
@@ -13,6 +13,7 @@ import {
 import { ConfirmDialog } from "@/components/Dialogs";
 import { Dropdown } from "@/components/Dropdown";
 import { AppTooltip } from "@/components/Tooltip/AppTooltip";
+import { TaskStatusGlyph } from "@/components/TaskStatusGlyph";
 import {
   FolderChevron,
   TASKS_SIDEBAR_SECTION_HEADER_TEXT_CLASS,
@@ -43,6 +44,9 @@ import { kindLabel } from "./calendar-event-mapper";
 import { tasksHelper } from "@/helpers/task.helper";
 
 const WEEK_LETTERS = ["M", "T", "W", "T", "F", "S", "S"] as const;
+
+/** Match section header `px-2` so body lines up with chevron leading edge. */
+const CAL_PANEL_BODY_GUTTER = "pl-2 pr-1" as const;
 
 interface CalendarPanelProps {
   containerRef: React.RefObject<HTMLDivElement | null>;
@@ -117,9 +121,9 @@ function monthGrid(visibleMonth: Date) {
 }
 
 const CALENDAR_ROWS: { kind: CalendarEventType; label: string }[] = [
-  { kind: "timeBlock", label: "Time blocks" },
+  { kind: "timeBlock", label: "Time Blocks" },
   { kind: "common", label: "Common" },
-  { kind: "task", label: "Task windows" },
+  { kind: "task", label: "Tasks" },
 ];
 
 const TASK_DRAG_DURATION_MINUTES = 60;
@@ -128,6 +132,24 @@ const TASK_STATUS_RANK: Record<TaskStatus, number> = {
   [TaskStatus.IN_PROGRESS]: 0,
   [TaskStatus.TODO]: 1,
   [TaskStatus.DONE]: 2,
+};
+
+const CAL_PANEL_SECTION_ORDER = [
+  "month",
+  "calendars",
+  "tasks",
+  "eventTypes",
+  "backlog",
+] as const;
+
+type CalPanelSectionId = (typeof CAL_PANEL_SECTION_ORDER)[number];
+
+const CAL_PANEL_DEFAULT_OPEN: Record<CalPanelSectionId, boolean> = {
+  month: true,
+  calendars: false,
+  tasks: false,
+  eventTypes: false,
+  backlog: false,
 };
 
 export function CalendarPanel({
@@ -147,16 +169,14 @@ export function CalendarPanel({
   onKindColorChange,
   onGoogleCalendarColorChange,
 }: CalendarPanelProps) {
-  const [monthOpen, setMonthOpen] = useState(true);
+  const [openSections, setOpenSections] = useState<
+    Record<CalPanelSectionId, boolean>
+  >(CAL_PANEL_DEFAULT_OPEN);
   const [pickerMonth, setPickerMonth] = useState(() => {
     const t = new Date();
     return new Date(t.getFullYear(), t.getMonth(), 1);
   });
   const [selectedDay, setSelectedDay] = useState(() => startOfDay(new Date()));
-  const [calendarsOpen, setCalendarsOpen] = useState(true);
-  const [eventTypesOpen, setEventTypesOpen] = useState(true);
-  const [backlogOpen, setBacklogOpen] = useState(true);
-  const [tasksPanelOpen, setTasksPanelOpen] = useState(true);
   const [selectedBoardId, setSelectedBoardId] = useState("");
   const [confirmRemove, setConfirmRemove] =
     useState<CalendarBacklogEvent | null>(null);
@@ -189,7 +209,9 @@ export function CalendarPanel({
   }, [guestTasks, isAnonymous, selectedBoardId, tasksQuery.data]);
 
   const sortedBoardTasks = useMemo(() => {
-    const list = [...boardTasks];
+    const list = boardTasks.filter(
+      (t) => !t.scheduleDate && t.status !== TaskStatus.DONE,
+    );
     list.sort((a, b) => {
       const ra = TASK_STATUS_RANK[a.status] ?? 9;
       const rb = TASK_STATUS_RANK[b.status] ?? 9;
@@ -224,9 +246,22 @@ export function CalendarPanel({
     });
   };
 
+  const toggleCalPanelSection = useCallback((id: CalPanelSectionId) => {
+    setOpenSections((prev) => {
+      if (prev[id]) return { ...prev, [id]: false };
+      let next = { ...prev, [id]: true };
+      while (CAL_PANEL_SECTION_ORDER.filter((k) => next[k]).length > 2) {
+        const victim = CAL_PANEL_SECTION_ORDER.find((k) => next[k] && k !== id);
+        if (!victim) break;
+        next = { ...next, [victim]: false };
+      }
+      return next;
+    });
+  }, []);
+
   return (
     <aside
-      className="calendar-surface flex min-h-0 w-full max-w-[260px] flex-1 flex-col gap-4 overflow-y-auto overscroll-contain rounded-xl border border-white/10 bg-background-primary/85 p-3.5 shadow-[0_8px_32px_rgba(0,0,0,0.25)] backdrop-blur-md max-[900px]:max-w-none"
+      className="calendar-surface flex h-full min-h-0 w-full max-w-[260px] flex-1 flex-col gap-4 overflow-y-auto overscroll-contain rounded-xl border border-white/10 bg-background-primary/85 p-3.5 shadow-[0_8px_32px_rgba(0,0,0,0.25)] backdrop-blur-md max-[900px]:max-w-none"
       style={{ scrollbarGutter: "stable" }}
     >
       <div
@@ -237,23 +272,18 @@ export function CalendarPanel({
           <button
             type="button"
             className="flex w-full min-w-0 items-center gap-1 rounded-lg border-0 bg-transparent px-2 py-2 text-left transition-colors hover:bg-white/[0.06]"
-            onClick={() => setMonthOpen((o) => !o)}
-            aria-expanded={monthOpen}
+            onClick={() => toggleCalPanelSection("month")}
+            aria-expanded={openSections.month}
           >
-            <FolderChevron isExpanded={monthOpen}>
+            <FolderChevron isExpanded={openSections.month}>
               <ChevronRightIcon size={11} />
             </FolderChevron>
-            <div className="flex shrink-0 items-center gap-2">
+            <div className="flex min-w-0 flex-1 items-center">
               <span className={TASKS_SIDEBAR_SECTION_HEADER_TEXT_CLASS}>
                 Month
               </span>
-              <AppTooltip content="Pick a day to jump the main calendar.">
-                <span className="inline-flex">
-                  <InfoCircleIcon size={16} className="text-zinc-500" />
-                </span>
-              </AppTooltip>
             </div>
-            <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5 pl-1">
+            <div className="flex shrink-0 items-center justify-end gap-1.5">
               <button
                 type="button"
                 className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border-0 bg-transparent text-zinc-400 hover:bg-white/[0.06] hover:text-white"
@@ -286,62 +316,64 @@ export function CalendarPanel({
             </div>
           </button>
 
-          {monthOpen ? (
+          {openSections.month ? (
             <>
-              <div className="mx-auto flex max-w-[268px] gap-0 overflow-hidden rounded-lg border border-white/[0.08] bg-black/20">
-                <div className="flex w-6 shrink-0 flex-col border-r border-white/[0.06] bg-white/[0.03] py-1">
-                  <div className="h-6 shrink-0" aria-hidden />
-                  {rows.map((week, ri) => (
-                    <div
-                      key={ri}
-                      className="flex h-7 items-center justify-center text-[10px] font-medium tabular-nums text-zinc-500"
-                    >
-                      {isoWeekNumber(week[0].date)}
-                    </div>
-                  ))}
-                </div>
-                <div className="min-w-0 flex-1 py-1 pr-1">
-                  <div className="grid grid-cols-7 gap-0 px-1">
-                    {WEEK_LETTERS.map((l, i) => (
+              <div className={CAL_PANEL_BODY_GUTTER}>
+                <div className="flex max-w-[268px] gap-0 overflow-hidden rounded-lg border border-white/[0.08] bg-black/20">
+                  <div className="flex w-6 shrink-0 flex-col border-r border-white/[0.06] bg-white/[0.03] py-1">
+                    <div className="h-6 shrink-0" aria-hidden />
+                    {rows.map((week, ri) => (
                       <div
-                        key={`${l}-${i}`}
-                        className="flex h-6 items-center justify-center text-[10px] font-semibold text-zinc-500"
+                        key={ri}
+                        className="flex h-7 items-center justify-center text-[10px] font-medium tabular-nums text-zinc-500"
                       >
-                        {l}
+                        {isoWeekNumber(week[0].date)}
                       </div>
                     ))}
                   </div>
-                  <div className="grid grid-cols-7 gap-0 px-1">
-                    {rows.flatMap((week) =>
-                      week.map(({ date, inMonth }) => {
-                        const sel = sameDay(date, selectedDay);
-                        return (
-                          <button
-                            key={date.toISOString()}
-                            type="button"
-                            className={cn(
-                              "flex h-7 items-center justify-center rounded-md text-[11px] font-medium tabular-nums transition-colors",
-                              !inMonth && "text-zinc-600",
-                              inMonth &&
-                                !sel &&
-                                "text-zinc-200 hover:bg-white/[0.08]",
-                              sel &&
-                                "bg-[#7255c1] text-white shadow-sm hover:bg-[#6346b0]",
-                            )}
-                            onClick={() => {
-                              const d = startOfDay(date);
-                              setSelectedDay(d);
-                              setPickerMonth(
-                                new Date(d.getFullYear(), d.getMonth(), 1),
-                              );
-                              onPickCalendarDay(d);
-                            }}
-                          >
-                            {date.getDate()}
-                          </button>
-                        );
-                      }),
-                    )}
+                  <div className="min-w-0 flex-1 py-1 pr-1">
+                    <div className="grid grid-cols-7 gap-0 px-1">
+                      {WEEK_LETTERS.map((l, i) => (
+                        <div
+                          key={`${l}-${i}`}
+                          className="flex h-6 items-center justify-center text-[10px] font-semibold text-zinc-500"
+                        >
+                          {l}
+                        </div>
+                      ))}
+                    </div>
+                    <div className="grid grid-cols-7 gap-0 px-1">
+                      {rows.flatMap((week) =>
+                        week.map(({ date, inMonth }) => {
+                          const sel = sameDay(date, selectedDay);
+                          return (
+                            <button
+                              key={date.toISOString()}
+                              type="button"
+                              className={cn(
+                                "flex h-7 items-center justify-center rounded-md text-[11px] font-medium tabular-nums transition-colors",
+                                !inMonth && "text-zinc-600",
+                                inMonth &&
+                                  !sel &&
+                                  "text-zinc-200 hover:bg-white/[0.08]",
+                                sel &&
+                                  "bg-[#7255c1] text-white shadow-sm hover:bg-[#6346b0]",
+                              )}
+                              onClick={() => {
+                                const d = startOfDay(date);
+                                setSelectedDay(d);
+                                setPickerMonth(
+                                  new Date(d.getFullYear(), d.getMonth(), 1),
+                                );
+                                onPickCalendarDay(d);
+                              }}
+                            >
+                              {date.getDate()}
+                            </button>
+                          );
+                        }),
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -353,26 +385,21 @@ export function CalendarPanel({
           <button
             type="button"
             className="flex w-full min-w-0 items-center gap-1 rounded-lg border-0 bg-transparent px-2 py-2 text-left transition-colors hover:bg-white/[0.06]"
-            onClick={() => setCalendarsOpen((o) => !o)}
-            aria-expanded={calendarsOpen}
+            onClick={() => toggleCalPanelSection("calendars")}
+            aria-expanded={openSections.calendars}
           >
-            <FolderChevron isExpanded={calendarsOpen}>
+            <FolderChevron isExpanded={openSections.calendars}>
               <ChevronRightIcon size={11} />
             </FolderChevron>
-            <div className="flex min-w-0 flex-1 items-center gap-2">
+            <div className="flex min-w-0 flex-1 items-center">
               <span className={TASKS_SIDEBAR_SECTION_HEADER_TEXT_CLASS}>
                 Calendars
               </span>
-              <AppTooltip content="Show or hide external calendars.">
-                <span className="inline-flex">
-                  <InfoCircleIcon size={16} className="text-zinc-500" />
-                </span>
-              </AppTooltip>
             </div>
           </button>
-          {calendarsOpen ? (
-            <ul className="mt-2 space-y-2">
-              <li className="group/calPanelGcal flex items-center gap-1 rounded-lg py-0.5 pl-1 pr-0.5 transition-colors hover:bg-white/[0.04]">
+          {openSections.calendars ? (
+            <ul className={cn("mt-2 space-y-2", CAL_PANEL_BODY_GUTTER)}>
+              <li className="group/calPanelGcal flex items-center gap-2 rounded-lg py-0.5 pr-0.5 transition-colors hover:bg-white/[0.04]">
                 <input
                   id="cal-google"
                   type="checkbox"
@@ -422,10 +449,102 @@ export function CalendarPanel({
           <button
             type="button"
             className="flex w-full min-w-0 items-center gap-1 rounded-lg border-0 bg-transparent px-2 py-2 text-left transition-colors hover:bg-white/[0.06]"
-            onClick={() => setEventTypesOpen((o) => !o)}
-            aria-expanded={eventTypesOpen}
+            onClick={() => toggleCalPanelSection("tasks")}
+            aria-expanded={openSections.tasks}
           >
-            <FolderChevron isExpanded={eventTypesOpen}>
+            <FolderChevron isExpanded={openSections.tasks}>
+              <ChevronRightIcon size={11} />
+            </FolderChevron>
+            <div className="flex min-w-0 flex-1 items-center">
+              <span className={TASKS_SIDEBAR_SECTION_HEADER_TEXT_CLASS}>
+                Tasks
+              </span>
+            </div>
+          </button>
+
+          {openSections.tasks ? (
+            <div className={cn("mt-2 space-y-2", CAL_PANEL_BODY_GUTTER)}>
+              <Dropdown
+                fullWidth
+                options={boardOptions}
+                value={selectedBoardId || undefined}
+                onChange={(id) => setSelectedBoardId(id)}
+                placeholder={
+                  isBoardsLoading ? "Loading boards…" : "Select a board…"
+                }
+                disabled={isBoardsLoading || boardOptions.length === 0}
+              />
+              {!selectedBoardId ? (
+                <p className="text-xs leading-snug text-zinc-500">
+                  Choose a board to list tasks you can drag to the grid.
+                </p>
+              ) : isBoardsLoading || tasksLoading ? (
+                <p className="text-xs text-zinc-500">Loading tasks…</p>
+              ) : sortedBoardTasks.length === 0 ? (
+                <p className="text-xs text-zinc-500">
+                  {boardTasks.length > 0
+                    ? "No tasks to drag (scheduled or completed tasks are hidden)."
+                    : "No tasks on this board."}
+                </p>
+              ) : (
+                <ul className="flex max-h-[220px] min-h-[60px] flex-col gap-2 overflow-y-auto pr-0.5">
+                  {sortedBoardTasks.map((task: Task) => (
+                    <li key={task.id}>
+                      <div
+                        className="calendar-panel-task-draggable cursor-grab rounded-lg border border-white/10 bg-input-bg/90 px-3 py-2 transition-colors hover:border-white/18 active:cursor-grabbing"
+                        data-calendar-task-board-id={task.taskBoardId}
+                        data-calendar-task-id={task.id}
+                        data-calendar-task-title={task.summary}
+                        data-calendar-task-summary-snapshot={task.summary}
+                        data-calendar-task-duration-minutes={String(
+                          TASK_DRAG_DURATION_MINUTES,
+                        )}
+                        title={`${task.status} · ${tasksHelper.priority.getName(
+                          tasksHelper.priority.format(task.priority),
+                        )}`}
+                      >
+                        <div className="flex min-w-0 items-center gap-2">
+                          <span
+                            className="inline-flex shrink-0 items-center justify-center"
+                            aria-hidden
+                          >
+                            <TaskStatusGlyph status={task.status} size={14} />
+                          </span>
+                          <span
+                            className="flex shrink-0 items-center justify-center text-[13px] leading-none"
+                            aria-hidden
+                          >
+                            {tasksHelper.priority.getIconLabel(
+                              tasksHelper.priority.format(task.priority),
+                            )}
+                          </span>
+                          <div className="min-w-0 flex-1 truncate text-sm font-medium text-white">
+                            {task.summary}
+                          </div>
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {!isBoardsLoading && boardOptions.length === 0 ? (
+                <p className="text-xs leading-snug text-zinc-500">
+                  Create a task board under Tasks to drag work onto the
+                  calendar.
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+        </section>
+
+        <section className="border-t border-white/[0.08] pt-3">
+          <button
+            type="button"
+            className="flex w-full min-w-0 items-center gap-1 rounded-lg border-0 bg-transparent px-2 py-2 text-left transition-colors hover:bg-white/[0.06]"
+            onClick={() => toggleCalPanelSection("eventTypes")}
+            aria-expanded={openSections.eventTypes}
+          >
+            <FolderChevron isExpanded={openSections.eventTypes}>
               <ChevronRightIcon size={11} />
             </FolderChevron>
             <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -440,9 +559,9 @@ export function CalendarPanel({
             </div>
           </button>
 
-          {eventTypesOpen ? (
-            <ul className="mt-2 space-y-2">
-              <li className="flex items-center gap-2.5">
+          {openSections.eventTypes ? (
+            <ul className={cn("mt-2 space-y-2", CAL_PANEL_BODY_GUTTER)}>
+              <li className="flex items-center gap-2">
                 <input
                   id="cal-all"
                   type="checkbox"
@@ -473,7 +592,7 @@ export function CalendarPanel({
               {CALENDAR_ROWS.map(({ kind, label }) => (
                 <li
                   key={kind}
-                  className="group/calPanelKind flex items-center gap-1 rounded-lg py-0.5 pl-1 pr-0.5 transition-colors hover:bg-white/[0.04]"
+                  className="group/calPanelKind flex items-center gap-2 rounded-lg py-0.5 pr-0.5 transition-colors hover:bg-white/[0.04]"
                 >
                   <input
                     id={`cal-${kind}`}
@@ -511,105 +630,26 @@ export function CalendarPanel({
           ) : null}
         </section>
 
-        <section className="border-t border-white/[0.08] pt-3">
+        <section
+          className={cn(
+            "border-t border-white/[0.08] pt-3",
+            openSections.backlog && "flex min-h-0 flex-1 flex-col",
+          )}
+        >
           <button
             type="button"
-            className="flex w-full min-w-0 items-center gap-1 rounded-lg border-0 bg-transparent px-2 py-2 text-left transition-colors hover:bg-white/[0.06]"
-            onClick={() => setTasksPanelOpen((o) => !o)}
-            aria-expanded={tasksPanelOpen}
+            className="flex w-full shrink-0 min-w-0 items-center gap-1 rounded-lg border-0 bg-transparent px-2 py-2 text-left transition-colors hover:bg-white/[0.06]"
+            onClick={() => toggleCalPanelSection("backlog")}
+            aria-expanded={openSections.backlog}
           >
-            <FolderChevron isExpanded={tasksPanelOpen}>
-              <ChevronRightIcon size={11} />
-            </FolderChevron>
-            <div className="flex min-w-0 flex-1 items-center gap-2">
-              <span className={TASKS_SIDEBAR_SECTION_HEADER_TEXT_CLASS}>
-                Tasks
-              </span>
-              <AppTooltip content="Pick a board, then drag a task onto the calendar to schedule it and create a task window.">
-                <span className="inline-flex">
-                  <InfoCircleIcon size={16} className="text-zinc-500" />
-                </span>
-              </AppTooltip>
-            </div>
-          </button>
-
-          {tasksPanelOpen ? (
-            <div className="mt-2 space-y-2 px-2">
-              <Dropdown
-                fullWidth
-                options={boardOptions}
-                value={selectedBoardId || undefined}
-                onChange={(id) => setSelectedBoardId(id)}
-                placeholder={
-                  isBoardsLoading ? "Loading boards…" : "Select a board…"
-                }
-                disabled={isBoardsLoading || boardOptions.length === 0}
-              />
-              {!selectedBoardId ? (
-                <p className="text-xs leading-snug text-zinc-500">
-                  Choose a board to list tasks you can drag to the grid.
-                </p>
-              ) : isBoardsLoading || tasksLoading ? (
-                <p className="text-xs text-zinc-500">Loading tasks…</p>
-              ) : sortedBoardTasks.length === 0 ? (
-                <p className="text-xs text-zinc-500">No tasks on this board.</p>
-              ) : (
-                <ul className="flex max-h-[220px] min-h-[60px] flex-col gap-2 overflow-y-auto pr-0.5">
-                  {sortedBoardTasks.map((task: Task) => (
-                    <li key={task.id}>
-                      <div
-                        className={cn(
-                          "calendar-panel-task-draggable cursor-grab rounded-lg border border-white/10 bg-input-bg/90 px-3 py-2 transition-colors hover:border-white/18 active:cursor-grabbing",
-                          task.status === TaskStatus.DONE &&
-                            "opacity-60 saturate-75",
-                        )}
-                        data-calendar-task-board-id={task.taskBoardId}
-                        data-calendar-task-id={task.id}
-                        data-calendar-task-title={task.summary}
-                        data-calendar-task-summary-snapshot={task.summary}
-                        data-calendar-task-duration-minutes={String(
-                          TASK_DRAG_DURATION_MINUTES,
-                        )}
-                      >
-                        <div className="truncate text-sm font-medium text-white">
-                          {task.summary}
-                        </div>
-                        <div className="mt-0.5 text-[11px] text-zinc-500">
-                          {task.status}
-                          {task.scheduleDate
-                            ? ` · ${tasksHelper.date.formatForSchedule(task.scheduleDate)}`
-                            : ""}
-                        </div>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {!isBoardsLoading && boardOptions.length === 0 ? (
-                <p className="text-xs leading-snug text-zinc-500">
-                  Create a task board under Tasks to drag work onto the
-                  calendar.
-                </p>
-              ) : null}
-            </div>
-          ) : null}
-        </section>
-
-        <section className="border-t border-white/[0.08] pt-3">
-          <button
-            type="button"
-            className="flex w-full min-w-0 items-center gap-1 rounded-lg border-0 bg-transparent px-2 py-2 text-left transition-colors hover:bg-white/[0.06]"
-            onClick={() => setBacklogOpen((o) => !o)}
-            aria-expanded={backlogOpen}
-          >
-            <FolderChevron isExpanded={backlogOpen}>
+            <FolderChevron isExpanded={openSections.backlog}>
               <ChevronRightIcon size={11} />
             </FolderChevron>
             <div className="flex min-w-0 flex-1 items-center gap-2">
               <span className={TASKS_SIDEBAR_SECTION_HEADER_TEXT_CLASS}>
                 Events Backlog
               </span>
-              <AppTooltip content="Reusable backlog events you can drag onto the calendar">
+              <AppTooltip content="Reusable backlog events">
                 <span className="inline-flex">
                   <InfoCircleIcon size={16} className="text-zinc-500" />
                 </span>
@@ -631,9 +671,14 @@ export function CalendarPanel({
             </div>
           </button>
 
-          {backlogOpen ? (
-            <div className="mt-2 space-y-2">
-              <div className="flex max-h-[220px] min-h-[100px] flex-col gap-2 overflow-y-auto px-2">
+          {openSections.backlog ? (
+            <div className="mt-2 flex min-h-0 flex-1 flex-col space-y-2">
+              <div
+                className={cn(
+                  "flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto",
+                  CAL_PANEL_BODY_GUTTER,
+                )}
+              >
                 {items.map((item) => (
                   <div
                     key={item.id}
@@ -684,7 +729,7 @@ export function CalendarPanel({
                         <button
                           type="button"
                           className="rounded-md border-0 bg-transparent px-1 py-0.5 text-lg leading-none text-zinc-500 hover:bg-zinc-800 hover:text-white"
-                          title="Remove template"
+                          title="Remove event"
                           onPointerDown={(e) => e.stopPropagation()}
                           onClick={() => setConfirmRemove(item)}
                         >

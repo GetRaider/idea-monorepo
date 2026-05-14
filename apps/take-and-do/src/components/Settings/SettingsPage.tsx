@@ -9,6 +9,12 @@ import {
   WelcomeSection,
 } from "@/app/shell.ui";
 import { Sidebar } from "@/components/Sidebar/Sidebar";
+import { SettingsIcon } from "@/components/Icons";
+import {
+  APP_CHROME_MAIN_INSET,
+  APP_CHROME_NAV_ICON_PX,
+} from "@/helpers/app-chrome-layout";
+import { cn } from "@/lib/styles/utils";
 import { MenuRowButton } from "@/components/MenuRowButton/MenuRowButton";
 
 import { IntegrationsSettings } from "./IntegrationsSettings";
@@ -29,10 +35,19 @@ export function SettingsPage() {
       <Sidebar onNavigationChange={setCurrentPage} />
       <HomeMainContent
         withNavSidebar={false}
-        className="flex min-h-0 flex-col px-6 py-6 max-[600px]:px-4 max-[600px]:py-4"
+        className={cn("flex min-h-0 flex-col", APP_CHROME_MAIN_INSET)}
       >
         <WelcomeSection className="mb-6 flex flex-col gap-2 sm:mb-8">
-          <AppPageTitle>Settings</AppPageTitle>
+          <AppPageTitle
+            icon={
+              <SettingsIcon
+                size={APP_CHROME_NAV_ICON_PX}
+                className="shrink-0 text-white"
+              />
+            }
+          >
+            Settings
+          </AppPageTitle>
         </WelcomeSection>
 
         <div className="flex min-h-0 flex-1 flex-col gap-5 lg:flex-row lg:gap-6">

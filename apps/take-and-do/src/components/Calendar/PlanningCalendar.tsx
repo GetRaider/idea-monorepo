@@ -1353,10 +1353,15 @@ export const PlanningCalendar = forwardRef<
                 );
               }
 
+              const titleTrim = (arg.event.title ?? "").trim();
+              const snapTrim = (taskSnap ?? "").trim();
+              const extraSubtitle =
+                snapTrim.length > 0 && snapTrim !== titleTrim ? snapTrim : null;
+
               return eventTitleBlock(
                 arg.event.title,
                 timeSubtitle || null,
-                taskSnap?.trim() ? taskSnap.trim() : null,
+                extraSubtitle,
                 "normal",
                 timeBesideTitle,
               );

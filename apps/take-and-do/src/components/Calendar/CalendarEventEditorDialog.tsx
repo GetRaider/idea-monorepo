@@ -443,7 +443,7 @@ export function CalendarEventEditorDialog({
               options={[
                 {
                   value: "internal",
-                  label: "Internal (this calendar)",
+                  label: "Internal (Only this calendar)",
                 },
                 { value: "google", label: "Google Calendar" },
               ]}

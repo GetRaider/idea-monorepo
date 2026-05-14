@@ -80,7 +80,9 @@ export function TaskSearchHeader({
 
   useEffect(() => {
     if (!expanded) return;
-    const id = requestAnimationFrame(() => inputRef.current?.focus());
+    const id = requestAnimationFrame(() => {
+      inputRef.current?.focus({ preventScroll: true });
+    });
     return () => cancelAnimationFrame(id);
   }, [expanded]);
 
@@ -97,13 +99,23 @@ export function TaskSearchHeader({
   const onQueryChange: ChangeEventHandler<HTMLInputElement> = (e) =>
     setQuery(e.target.value);
 
+  const expandButtonClass =
+    "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-input-border bg-input-bg text-[#888] transition-colors hover:text-[var(--text-secondary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]";
+
+  /** Same width collapsed vs expanded so the chrome row does not reflow. */
+  const searchSlotClass = cn(
+    "relative flex h-10 min-w-0 w-72 max-w-full shrink-0 items-center justify-end lg:w-80",
+    className,
+  );
+
   if (!expanded) {
     return (
-      <div className={cn("shrink-0", className)}>
+      <div className={searchSlotClass}>
         <button
           type="button"
           aria-label="Search tasks"
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-input-border bg-input-bg text-[#888] transition-colors hover:text-[var(--text-secondary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
+          aria-expanded={false}
+          className={expandButtonClass}
           onClick={() => setExpanded(true)}
         >
           <SearchIcon size={18} className="opacity-90" />
@@ -113,11 +125,11 @@ export function TaskSearchHeader({
   }
 
   return (
-    <div className={cn("relative min-h-10 min-w-0 shrink-0", className)}>
+    <div className={searchSlotClass}>
       <div
         className={cn(
-          "flex min-h-10 shrink-0 items-center overflow-hidden rounded-lg border border-input-border bg-input-bg text-[#888] transition-[width,max-width] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]",
-          "min-w-0 gap-2 px-2 py-px sm:w-64 sm:max-w-[18rem] sm:flex-none lg:w-72 lg:max-w-[20rem]",
+          "flex h-10 w-full shrink-0 items-center overflow-hidden rounded-lg border border-input-border bg-input-bg text-[#888]",
+          "gap-2 px-2",
         )}
       >
         <SearchIcon size={16} className="shrink-0 opacity-80" />
@@ -134,7 +146,7 @@ export function TaskSearchHeader({
           }}
           placeholder="Search tasks"
           autoComplete="off"
-          className="min-w-0 flex-1"
+          className="h-full min-h-0 min-w-0 flex-1 px-0 py-0 leading-snug"
         />
       </div>
 

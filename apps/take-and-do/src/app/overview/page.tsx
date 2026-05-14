@@ -20,6 +20,12 @@ import {
   WelcomeSection,
   AppPageTitle,
 } from "../shell.ui";
+import { OverviewIcon } from "@/components/Icons";
+import {
+  APP_CHROME_MAIN_INSET,
+  APP_CHROME_NAV_ICON_PX,
+} from "@/helpers/app-chrome-layout";
+import { cn } from "@/lib/styles/utils";
 
 function OverviewPage() {
   const isAnonymous = useIsAnonymous();
@@ -97,7 +103,10 @@ function OverviewPage() {
     return (
       <PageContainer>
         <Sidebar onNavigationChange={handleNavigationToTasksPage} />
-        <HomeMainContent withNavSidebar={false}>
+        <HomeMainContent
+          withNavSidebar={false}
+          className={cn("flex min-h-0 flex-col", APP_CHROME_MAIN_INSET)}
+        >
           <Spinner className="h-full min-h-[240px] flex-1" />
         </HomeMainContent>
       </PageContainer>
@@ -107,9 +116,21 @@ function OverviewPage() {
   return (
     <PageContainer>
       <Sidebar onNavigationChange={handleNavigationToTasksPage} />
-      <HomeMainContent withNavSidebar={false}>
+      <HomeMainContent
+        withNavSidebar={false}
+        className={cn("flex min-h-0 flex-col", APP_CHROME_MAIN_INSET)}
+      >
         <WelcomeSection>
-          <AppPageTitle>Overview</AppPageTitle>
+          <AppPageTitle
+            icon={
+              <OverviewIcon
+                size={APP_CHROME_NAV_ICON_PX}
+                className="shrink-0 text-white"
+              />
+            }
+          >
+            Overview
+          </AppPageTitle>
         </WelcomeSection>
 
         <ProductivityOverview hasWorkspaceTaskData={hasWorkspaceTaskData} />

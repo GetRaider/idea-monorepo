@@ -3,6 +3,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import { toast } from "sonner";
 
 import type { CalendarEventPatchBody } from "@/db/dtos/calendar-events.dto";
@@ -39,6 +40,11 @@ import { clientServices } from "@/services";
 import { Sidebar } from "@/components/Sidebar/Sidebar";
 import { Spinner } from "@/components/Spinner/Spinner";
 import { AppTooltip } from "@/components/Tooltip/AppTooltip";
+import {
+  APP_CHROME_MAIN_INSET,
+  APP_CHROME_NAV_ICON_PX,
+  APP_CHROME_TITLE_ACTION_ROW,
+} from "@/helpers/app-chrome-layout";
 import { cn } from "@/lib/styles/utils";
 import type {
   CalendarBacklogEvent,
@@ -902,7 +908,10 @@ export function CalendarPage() {
     return (
       <PageContainer>
         <Sidebar onNavigationChange={setCurrentPage} />
-        <HomeMainContent withNavSidebar={false}>
+        <HomeMainContent
+          withNavSidebar={false}
+          className={cn("flex min-h-0 flex-col", APP_CHROME_MAIN_INSET)}
+        >
           <Spinner className="h-full min-h-[240px] flex-1" />
         </HomeMainContent>
       </PageContainer>
@@ -914,11 +923,31 @@ export function CalendarPage() {
       <Sidebar onNavigationChange={setCurrentPage} />
       <HomeMainContent
         withNavSidebar={false}
-        className="flex min-h-0 flex-col px-6 py-6 max-[600px]:px-4 max-[600px]:py-4 max-lg:overflow-y-auto lg:overflow-hidden"
+        className={cn(
+          "flex min-h-0 flex-col max-lg:overflow-y-auto lg:overflow-hidden",
+          APP_CHROME_MAIN_INSET,
+        )}
       >
-        <WelcomeSection className="mb-6 flex shrink-0 flex-col gap-4 sm:mb-8 sm:flex-row sm:items-start sm:justify-between">
+        <WelcomeSection
+          className={cn(
+            "mb-6 flex shrink-0 flex-col gap-4 sm:mb-8",
+            APP_CHROME_TITLE_ACTION_ROW,
+          )}
+        >
           <div className="min-w-0 flex-1">
-            <AppPageTitle>Calendar</AppPageTitle>
+            <AppPageTitle
+              icon={
+                <Image
+                  width={APP_CHROME_NAV_ICON_PX}
+                  height={APP_CHROME_NAV_ICON_PX}
+                  src="/calendar.svg"
+                  alt=""
+                  className="shrink-0 opacity-95"
+                />
+              }
+            >
+              Calendar
+            </AppPageTitle>
           </div>
           <PrimaryButton
             size="sm"
@@ -981,7 +1010,7 @@ export function CalendarPage() {
             </div>
             {!calendarSidebarCollapsed ? (
               <div className="pointer-events-none absolute inset-y-0 left-full z-30 hidden lg:flex lg:items-center">
-                <AppTooltip content="Hide panel" side="right">
+                <AppTooltip content="Hide Panel" side="right">
                   <button
                     type="button"
                     onClick={toggleCalendarSidebar}
@@ -1010,7 +1039,7 @@ export function CalendarPage() {
           >
             {calendarSidebarCollapsed ? (
               <div className="pointer-events-none absolute inset-y-0 z-30 hidden left-[calc(-1.5rem-1px)] lg:flex lg:items-center">
-                <AppTooltip content="Show panel" side="right">
+                <AppTooltip content="Show Panel" side="right">
                   <button
                     type="button"
                     onClick={toggleCalendarSidebar}

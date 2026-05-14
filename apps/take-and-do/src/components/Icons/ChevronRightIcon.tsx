@@ -1,9 +1,16 @@
 import type { SvgIconPropsWithStyle } from "./svgIconProps";
+
+type ChevronRightIconProps = SvgIconPropsWithStyle & {
+  /** Stroke width for the chevron path (default matches previous 1.5). */
+  strokeWidth?: number;
+};
+
 export function ChevronRightIcon({
   size = 16,
   className,
   style,
-}: SvgIconPropsWithStyle) {
+  strokeWidth = 1.5,
+}: ChevronRightIconProps) {
   return (
     <svg
       width={size}
@@ -16,7 +23,7 @@ export function ChevronRightIcon({
       <path
         d="M6 4l4 4-4 4"
         stroke="currentColor"
-        strokeWidth="1.5"
+        strokeWidth={strokeWidth}
         strokeLinecap="round"
         strokeLinejoin="round"
       />

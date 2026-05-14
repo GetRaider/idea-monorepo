@@ -100,6 +100,8 @@ export interface CalendarCreatePrefill {
   color?: string;
   /** When creating a common event, save to Google Calendar instead of local-only. */
   saveToGoogle?: boolean;
+  /** Time blocks only; carried from quick create into the full editor. */
+  taskScope?: string[];
 }
 
 /** One column in the planning calendar time axis (slot labels + header). */

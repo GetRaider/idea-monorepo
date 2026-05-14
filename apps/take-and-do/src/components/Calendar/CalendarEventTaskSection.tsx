@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 
@@ -15,6 +16,7 @@ import { toast } from "sonner";
 
 import { DialogFormGroup, DialogFormLabel } from "@/components/Dialogs";
 import { Dropdown } from "@/components/Dropdown";
+import { cn } from "@/lib/styles/utils";
 
 interface CalendarEventTaskSectionProps {
   taskBoardId: string;
@@ -24,6 +26,10 @@ interface CalendarEventTaskSectionProps {
   onBoardChange: (boardId: string) => void;
   onTaskChange: (taskId: string, summarySnapshot: string) => void;
   onTitleSync?: (summary: string) => void;
+  /** Renders to the right of the Board dropdown (e.g. color picker); other rows stay full width. */
+  boardTrailing?: ReactNode;
+  /** Merged onto the outer column (e.g. `gap-2` for compact quick-menu spacing). */
+  sectionClassName?: string;
 }
 
 export function CalendarEventTaskSection({
@@ -34,6 +40,8 @@ export function CalendarEventTaskSection({
   onBoardChange,
   onTaskChange,
   onTitleSync,
+  boardTrailing,
+  sectionClassName,
 }: CalendarEventTaskSectionProps) {
   const boardsQuery = useQuery({
     queryKey: queryKeys.taskBoards.all,
@@ -71,21 +79,28 @@ export function CalendarEventTaskSection({
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className={cn("flex flex-col gap-4", sectionClassName)}>
       <DialogFormGroup>
         <DialogFormLabel>Board</DialogFormLabel>
-        <Dropdown<string>
-          options={[
-            { value: "", label: "Select a board…" },
-            ...boardOptions.map((b) => ({
-              value: b.id,
-              label: `${b.emoji ? `${b.emoji} ` : ""}${b.name}`,
-            })),
-          ]}
-          value={taskBoardId}
-          onChange={onBoardChange}
-          fullWidth
-        />
+        <div className="flex min-w-0 items-center gap-2">
+          <div className="min-w-0 flex-1">
+            <Dropdown<string>
+              options={[
+                { value: "", label: "Select a board…" },
+                ...boardOptions.map((b) => ({
+                  value: b.id,
+                  label: `${b.emoji ? `${b.emoji} ` : ""}${b.name}`,
+                })),
+              ]}
+              value={taskBoardId}
+              onChange={onBoardChange}
+              fullWidth
+            />
+          </div>
+          {boardTrailing ? (
+            <div className="flex shrink-0 items-center">{boardTrailing}</div>
+          ) : null}
+        </div>
       </DialogFormGroup>
 
       {taskBoardId ? (

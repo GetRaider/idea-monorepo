@@ -6,7 +6,6 @@ import {
   ChevronRight,
   LayoutGrid,
   Pencil,
-  Search,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
@@ -231,20 +230,6 @@ export function CalendarPanel({
         ref={containerRef as React.LegacyRef<HTMLDivElement>}
         className="contents"
       >
-        <div className="relative">
-          <Search
-            size={16}
-            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500"
-            aria-hidden
-          />
-          <input
-            type="search"
-            className="w-full rounded-xl border border-white/10 bg-input-bg/80 py-2.5 pl-10 pr-3 text-sm text-zinc-200 outline-none placeholder:text-zinc-500 focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
-            placeholder="Search events & people"
-            aria-label="Search events & people"
-          />
-        </div>
-
         <section className="space-y-2">
           <button
             type="button"

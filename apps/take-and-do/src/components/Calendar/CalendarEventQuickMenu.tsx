@@ -40,6 +40,7 @@ import {
   calendarCommonEventUsesGoogleCalendar,
 } from "./calendar-event-mapper";
 import { CalendarEventTaskSection } from "./CalendarEventTaskSection";
+import { CalendarEventTaskScopeSection } from "./CalendarEventTaskScopeSection";
 import {
   fromDatetimeLocalValue,
   toDatetimeLocalValue,
@@ -76,6 +77,7 @@ export type CalendarOpenFullEditorContext = {
     description: string;
     color?: string;
     saveToGoogle?: boolean;
+    taskScope?: string[];
   };
 };
 
@@ -94,10 +96,7 @@ interface CalendarEventQuickMenuProps {
   onPersistExisting?: (
     id: string,
     patch: Partial<
-      Omit<
-        CalendarEvent,
-        "id" | "type" | "taskBoardId" | "taskId" | "taskScope" | "color"
-      >
+      Omit<CalendarEvent, "id" | "type" | "taskBoardId" | "taskId" | "color">
     > & { color?: string | null },
   ) => void;
   onDuplicate?: (event: CalendarEvent) => void;
@@ -232,6 +231,11 @@ export function CalendarEventQuickMenu({
       ? (payload.event.taskSummarySnapshot ?? "")
       : "",
   );
+  const [taskScope, setTaskScope] = useState<string[]>(() =>
+    payload.mode === "existing" && payload.event.type === "timeBlock"
+      ? [...(payload.event.taskScope ?? [])]
+      : [],
+  );
   const [timeZone, setTimeZone] = useState<CalendarTimeZone>(() =>
     payload.mode === "existing" ? (payload.event.timeZone ?? "") : "",
   );
@@ -324,6 +328,7 @@ export function CalendarEventQuickMenu({
         setTaskId("");
         setTaskSummarySnapshot("");
       }
+      setTaskScope(e.type === "timeBlock" ? [...(e.taskScope ?? [])] : []);
       setEventColorHex(normalizeHexColor(e.color) ?? "");
       setCommonCreateDestination("internal");
     } else {
@@ -351,6 +356,7 @@ export function CalendarEventQuickMenu({
       setTaskBoardId("");
       setTaskId("");
       setTaskSummarySnapshot("");
+      setTaskScope([]);
       setEventColorHex("");
       setCommonCreateDestination("internal");
     }
@@ -542,7 +548,19 @@ export function CalendarEventQuickMenu({
       const desc = linkedTask?.description?.trim() ?? "";
       return { title: summary, type: kind, description: desc, ...colorOpt };
     }
-    return { title, type: kind, description, ...colorOpt, ...saveToGoogleOpt };
+    const taskScopeLines = taskScope.map((t) => t.trim()).filter(Boolean);
+    const taskScopeOpt =
+      kind === "timeBlock" && taskScopeLines.length
+        ? { taskScope: taskScopeLines }
+        : {};
+    return {
+      title,
+      type: kind,
+      description,
+      ...colorOpt,
+      ...saveToGoogleOpt,
+      ...taskScopeOpt,
+    };
   }, [
     kind,
     linkedTask,
@@ -552,6 +570,7 @@ export function CalendarEventQuickMenu({
     eventColorHex,
     googleCalendarConnected,
     commonCreateDestination,
+    taskScope,
   ]);
 
   const parseParticipants = (raw: string) =>
@@ -637,6 +656,7 @@ export function CalendarEventQuickMenu({
                 participants: participants.length ? participants : undefined,
                 timeZone: timeZone.trim() || undefined,
                 repeat: repeat || undefined,
+                taskScope: taskScope.map((t) => t.trim()).filter(Boolean),
               }
             : {
                 ...payload.event,
@@ -714,6 +734,7 @@ export function CalendarEventQuickMenu({
         : toDatetimeLocalValue(new Date(e.end)),
       allDay: e.allDay,
       color: normalizeHexColor(e.color) ?? "",
+      taskScope: e.type === "timeBlock" ? [...(e.taskScope ?? [])] : [],
       ...(e.type === "task"
         ? {
             taskBoardId: e.taskBoardId,
@@ -741,7 +762,10 @@ export function CalendarEventQuickMenu({
             participantsText !== initialSnapshot.participantsText ||
             timeZone !== initialSnapshot.timeZone ||
             repeat !== initialSnapshot.repeat ||
-            reminderMinutes !== initialSnapshot.reminderMinutes)) ||
+            reminderMinutes !== initialSnapshot.reminderMinutes ||
+            (kind === "timeBlock" &&
+              JSON.stringify(taskScope) !==
+                JSON.stringify(initialSnapshot.taskScope)))) ||
       (normalizeHexColor(eventColorHex) ?? "") !==
         (initialSnapshot.color ?? ""));
 
@@ -806,6 +830,11 @@ export function CalendarEventQuickMenu({
             timeZone: timeZone.trim() || undefined,
             repeat: repeat || undefined,
             reminderMinutes: reminder,
+            ...(kind === "timeBlock"
+              ? {
+                  taskScope: taskScope.map((x) => x.trim()).filter(Boolean),
+                }
+              : {}),
           }),
       start: start.toISOString(),
       end: end.toISOString(),
@@ -838,6 +867,8 @@ export function CalendarEventQuickMenu({
       reminderMinutes.trim() && !Number.isNaN(Number(reminderMinutes))
         ? Number(reminderMinutes)
         : undefined;
+
+    const taskScopeCreateLines = taskScope.map((t) => t.trim()).filter(Boolean);
 
     const fillPick = normalizeHexColor(eventColorHex);
     const base = {
@@ -880,6 +911,9 @@ export function CalendarEventQuickMenu({
               ...(repeat ? { repeat } : {}),
               ...(typeof reminder === "number"
                 ? { reminderMinutes: reminder }
+                : {}),
+              ...(taskScopeCreateLines.length
+                ? { taskScope: taskScopeCreateLines }
                 : {}),
             }
           : {
@@ -965,6 +999,7 @@ export function CalendarEventQuickMenu({
                   onChange={(next) => {
                     if (next !== "common")
                       setCommonCreateDestination("internal");
+                    if (next === "task") setTaskScope([]);
                     setKind(next);
                   }}
                   fullWidth={false}
@@ -1101,41 +1136,40 @@ export function CalendarEventQuickMenu({
               {isTask ? (
                 <div className={cn(section, "border-b border-white/[0.05]")}>
                   <p className={sectionTitleClass}>Task</p>
-                  <div className="flex min-w-0 items-start gap-2">
-                    <div className="shrink-0 pt-0.5">
-                      <CalendarColorPickerPopover
-                        selectedHex={colorFillPreview}
-                        onSelect={(hex) => setEventColorHex(hex)}
-                        onResetToDefault={() => setEventColorHex("")}
-                        trigger={
-                          <span
-                            className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-white/[0.18] shadow-inner"
-                            style={{ backgroundColor: colorFillPreview }}
-                            aria-label="Event color"
-                          />
-                        }
-                      />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <CalendarEventTaskSection
-                        taskBoardId={taskBoardId}
-                        taskId={taskId}
-                        isGuest={isGuest}
-                        inputClass=""
-                        onBoardChange={(boardId) => {
-                          setTaskBoardId(boardId);
-                          setTaskId("");
-                          setTaskSummarySnapshot("");
-                        }}
-                        onTaskChange={(tid, snap) => {
-                          setTaskId(tid);
-                          setTaskSummarySnapshot(snap);
-                        }}
-                        onTitleSync={(summary) =>
-                          setTitle((t) => (!t.trim() ? summary : t))
-                        }
-                      />
-                    </div>
+                  <div className="min-w-0">
+                    <CalendarEventTaskSection
+                      taskBoardId={taskBoardId}
+                      taskId={taskId}
+                      isGuest={isGuest}
+                      inputClass=""
+                      sectionClassName="gap-2"
+                      boardTrailing={
+                        <CalendarColorPickerPopover
+                          selectedHex={colorFillPreview}
+                          onSelect={(hex) => setEventColorHex(hex)}
+                          onResetToDefault={() => setEventColorHex("")}
+                          trigger={
+                            <span
+                              className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full border border-white/[0.18] shadow-inner"
+                              style={{ backgroundColor: colorFillPreview }}
+                              aria-label="Event color"
+                            />
+                          }
+                        />
+                      }
+                      onBoardChange={(boardId) => {
+                        setTaskBoardId(boardId);
+                        setTaskId("");
+                        setTaskSummarySnapshot("");
+                      }}
+                      onTaskChange={(tid, snap) => {
+                        setTaskId(tid);
+                        setTaskSummarySnapshot(snap);
+                      }}
+                      onTitleSync={(summary) =>
+                        setTitle((t) => (!t.trim() ? summary : t))
+                      }
+                    />
                   </div>
                 </div>
               ) : null}
@@ -1413,6 +1447,15 @@ export function CalendarEventQuickMenu({
                             maxLength={256}
                           />
                         </div>
+
+                        {kind === "timeBlock" ? (
+                          <CalendarEventTaskScopeSection
+                            value={taskScope}
+                            onChange={setTaskScope}
+                            disabled={isGuest}
+                            className="p-3"
+                          />
+                        ) : null}
 
                         {isGoogleImported ? (
                           <div className="space-y-1">

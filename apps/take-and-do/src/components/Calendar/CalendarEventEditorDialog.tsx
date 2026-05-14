@@ -294,7 +294,7 @@ export function CalendarEventEditorDialog({
           : toDatetimeLocalValue(createRange.end),
         allDay: createRange.allDay,
         reminderMinutes: "",
-        taskScope: [],
+        taskScope: [...(createPrefill?.taskScope ?? [])],
         descriptionText: createPrefill?.description ?? "",
         notesText: "",
         participantsText: "",
@@ -315,6 +315,7 @@ export function CalendarEventEditorDialog({
         title: createPrefill.title ?? "",
         type: createPrefill.type ?? "timeBlock",
         descriptionText: createPrefill.description ?? "",
+        taskScope: [...(createPrefill.taskScope ?? [])],
         colorHex: normalizeHexColor(createPrefill.color) ?? "",
       });
       return;

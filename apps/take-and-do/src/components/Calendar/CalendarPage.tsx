@@ -97,10 +97,7 @@ type GoogleScopePrompt =
       kind: "quick";
       id: string;
       patch: Partial<
-        Omit<
-          CalendarEvent,
-          "id" | "type" | "taskBoardId" | "taskId" | "taskScope" | "color"
-        >
+        Omit<CalendarEvent, "id" | "type" | "taskBoardId" | "taskId" | "color">
       > & { color?: string | null };
       merged: CalendarEvent;
     };
@@ -455,6 +452,9 @@ export function CalendarPage() {
           description: ctx.quickFields.description.trim() || undefined,
           type: ctx.quickFields.type,
           color: ctx.quickFields.color,
+          ...(ctx.quickFields.taskScope?.length
+            ? { taskScope: ctx.quickFields.taskScope }
+            : {}),
           ...(ctx.quickFields.saveToGoogle ? { saveToGoogle: true } : {}),
         });
         setEditorMode("create");
@@ -733,10 +733,7 @@ export function CalendarPage() {
     (
       id: string,
       patch: Partial<
-        Omit<
-          CalendarEvent,
-          "id" | "type" | "taskBoardId" | "taskId" | "taskScope" | "color"
-        >
+        Omit<CalendarEvent, "id" | "type" | "taskBoardId" | "taskId" | "color">
       > & { color?: string | null },
     ) => {
       if (!state) return;

@@ -1,7 +1,7 @@
 export const TASKS_SIDEBAR_NAV_RAIL_PX = 60;
 export const TASKS_SIDEBAR_MIN_WIDTH_PX = 200;
 export const TASKS_SIDEBAR_MAX_WIDTH_PX = 350;
-export const TASKS_SIDEBAR_DEFAULT_WIDTH_PX = 280;
+export const TASKS_SIDEBAR_DEFAULT_WIDTH_PX = 220;
 export const TASKS_SIDEBAR_WIDTH_STORAGE_KEY =
   "take-and-do.tasks-sidebar-width-px";
 

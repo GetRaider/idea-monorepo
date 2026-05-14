@@ -3,8 +3,9 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   type ReactNode,
-  useState,
   useEffect,
+  useLayoutEffect,
+  useState,
   useCallback,
   useMemo,
 } from "react";
@@ -16,6 +17,7 @@ import {
   KanbanSpinner,
 } from "./KanbanBoard.ui";
 import { Toolbar } from "./shared/Toolbar";
+import { WorkspaceSettings } from "./shared/WorkspaceSettings";
 import { KanbanColumns } from "./shared/KanbanColumns";
 import { TaskStatus, Task, TaskUpdate, emptyTaskColumns } from "./types";
 import { handleSingleBoardTaskStatusChange } from "./shared/taskStatusHandlers";
@@ -38,7 +40,7 @@ import {
   removeTaskFromColumns,
   updateTaskInColumns,
 } from "@/hooks/tasks/useTaskBoardState";
-import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { useWorkspace, useTasksShellHeaderExtras } from "@/contexts";
 import { findTaskStatusInColumns } from "@/helpers/task-board-lookup.helper";
 import { sortTaskColumnsForList } from "@/helpers/list-sort.helper";
 import {
@@ -47,6 +49,7 @@ import {
   runSyncWithOptionalCompletionLayout,
 } from "@/helpers/task-completion-ui.helper";
 import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
+import { TASKS_HEADER_CREATE_TASK_EVENT } from "@/app/tasks/tasks-header-events";
 import { BoardTasksEmptyState } from "../shared/BoardTasksEmptyState";
 import { AIComposeDialog } from "./shared/AIComposeDialog";
 import { ListBoard } from "../ListBoard";
@@ -85,6 +88,8 @@ interface SingleKanbanBoardProps {
   boardId: string;
   boardName: string;
   boardEmoji?: string | null;
+  /** Renders under Tasks route shell; app header supplies search, create, and settings. */
+  embedInTasksShell?: boolean;
   onTaskOpen?: (task: Task) => void;
   onTaskClose?: () => void;
   onSubtaskOpen?: (parentTask: Task, subtask: Task) => void;
@@ -94,6 +99,7 @@ export function SingleKanbanBoard({
   boardId,
   boardName,
   boardEmoji,
+  embedInTasksShell = false,
   onTaskOpen,
   onTaskClose,
   onSubtaskOpen,
@@ -103,6 +109,7 @@ export function SingleKanbanBoard({
   const { tasks: guestTasks } = useGuestTasks();
   const { createTask, updateTask } = useTaskActions();
   const { taskBoards } = useWorkspace();
+  const { setSettingsSlot } = useTasksShellHeaderExtras();
   const [viewMode, setViewMode] = useBoardViewMode(boardId);
   const [listSubmode, setListSubmode] = useBoardListSubmode(boardId);
   const [listSort, setListSort] = useBoardListSort(boardId);
@@ -329,6 +336,44 @@ export function SingleKanbanBoard({
     setSelectedTask(createNewTaskTemplate({ taskBoardId: boardId }));
   }, [boardId, setSelectedTask]);
 
+  useEffect(() => {
+    if (!embedInTasksShell) return;
+    const handler = () => {
+      handleCreateTask();
+    };
+    window.addEventListener(TASKS_HEADER_CREATE_TASK_EVENT, handler);
+    return () =>
+      window.removeEventListener(TASKS_HEADER_CREATE_TASK_EVENT, handler);
+  }, [embedInTasksShell, handleCreateTask]);
+
+  useLayoutEffect(() => {
+    if (!embedInTasksShell) return;
+    setSettingsSlot(
+      <WorkspaceSettings
+        boardId={boardId}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        listSubmode={listSubmode}
+        onListSubmodeChange={setListSubmode}
+        sort={listSort}
+        onSortChange={setListSort}
+      />,
+    );
+    return () => {
+      setSettingsSlot(null);
+    };
+  }, [
+    embedInTasksShell,
+    setSettingsSlot,
+    boardId,
+    viewMode,
+    setViewMode,
+    listSubmode,
+    setListSubmode,
+    listSort,
+    setListSort,
+  ]);
+
   const handleCreateTaskWithAI = useCallback(() => {
     setIsAIComposeDialogOpen(true);
   }, []);
@@ -384,20 +429,22 @@ export function SingleKanbanBoard({
 
   return (
     <>
-      <BoardContainer>
-        <Toolbar
-          workspaceTitle={boardName}
-          workspaceEmoji={boardEmoji}
-          onCreateTask={handleCreateTask}
-          onCreateTaskWithAI={handleCreateTaskWithAI}
-          boardId={boardId}
-          viewMode={viewMode}
-          onViewModeChange={setViewMode}
-          listSubmode={listSubmode}
-          onListSubmodeChange={setListSubmode}
-          sort={listSort}
-          onSortChange={setListSort}
-        />
+      <BoardContainer embed={embedInTasksShell}>
+        {!embedInTasksShell ? (
+          <Toolbar
+            workspaceTitle={boardName}
+            workspaceEmoji={boardEmoji}
+            onCreateTask={handleCreateTask}
+            onCreateTaskWithAI={handleCreateTaskWithAI}
+            boardId={boardId}
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            listSubmode={listSubmode}
+            onListSubmodeChange={setListSubmode}
+            sort={listSort}
+            onSortChange={setListSort}
+          />
+        ) : null}
 
         <Board fillHeight={viewMode === "kanban"} viewMode={viewMode}>
           {isLoading ? (

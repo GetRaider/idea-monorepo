@@ -13,6 +13,9 @@ import { useBoardTaskUrlSync } from "@/hooks/tasks/useKanbanTaskUrlSync";
 import { useWorkspaceInitialLoadReady } from "@/hooks/tasks/useWorkspaceInitialLoadReady";
 import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
 
+import { TasksRouteRootShell } from "../../TasksRootShell";
+import { TasksSubpageShell } from "../../TasksSubpageShell";
+
 export default function BoardPage({ params }: BoardPageProps) {
   const { boardPath } = use(params);
   const { taskBoards } = useWorkspace();
@@ -27,10 +30,14 @@ export default function BoardPage({ params }: BoardPageProps) {
 
   if (!isBoardReady) {
     return (
-      <LoadingContainer className="flex flex-col gap-3">
-        <KanbanSpinner />
-        <span className="text-sm text-[#888]">Loading board...</span>
-      </LoadingContainer>
+      <TasksRouteRootShell>
+        <TasksSubpageShell>
+          <LoadingContainer className="flex flex-col gap-3">
+            <KanbanSpinner />
+            <span className="text-sm text-[#888]">Loading board...</span>
+          </LoadingContainer>
+        </TasksSubpageShell>
+      </TasksRouteRootShell>
     );
   }
 
@@ -38,21 +45,30 @@ export default function BoardPage({ params }: BoardPageProps) {
 
   if (!currentBoard) {
     return (
-      <div className="p-10 text-[#888]">
-        Board &quot;{boardName}&quot; not found.
-      </div>
+      <TasksRouteRootShell>
+        <TasksSubpageShell>
+          <div className="p-10 text-[#888]">
+            Board &quot;{boardName}&quot; not found.
+          </div>
+        </TasksSubpageShell>
+      </TasksRouteRootShell>
     );
   }
 
   return (
-    <SingleKanbanBoard
-      boardName={boardName}
-      boardId={currentBoard.id}
-      boardEmoji={currentBoard.emoji}
-      onTaskOpen={onTaskOpen}
-      onTaskClose={onTaskClose}
-      onSubtaskOpen={onSubtaskOpen}
-    />
+    <TasksRouteRootShell>
+      <TasksSubpageShell>
+        <SingleKanbanBoard
+          boardName={boardName}
+          boardId={currentBoard.id}
+          boardEmoji={currentBoard.emoji}
+          embedInTasksShell
+          onTaskOpen={onTaskOpen}
+          onTaskClose={onTaskClose}
+          onSubtaskOpen={onSubtaskOpen}
+        />
+      </TasksSubpageShell>
+    </TasksRouteRootShell>
   );
 }
 

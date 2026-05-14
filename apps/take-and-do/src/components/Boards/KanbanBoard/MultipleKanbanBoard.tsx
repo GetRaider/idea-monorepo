@@ -1,7 +1,13 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
-import { useState, useCallback, useMemo } from "react";
+import {
+  useState,
+  useCallback,
+  useMemo,
+  useEffect,
+  useLayoutEffect,
+} from "react";
 import {
   ChevronRightIcon,
   ClockCircleIcon,
@@ -21,6 +27,7 @@ import {
   BoardTitleEmoji,
 } from "./KanbanBoard.ui";
 import { Toolbar } from "./shared/Toolbar";
+import { WorkspaceSettings } from "./shared/WorkspaceSettings";
 import { KanbanColumns } from "./shared/KanbanColumns";
 import { TaskStatus, Task, TaskUpdate } from "./types";
 import { handleMultipleBoardsTaskStatusChange } from "./shared/taskStatusHandlers";
@@ -35,7 +42,7 @@ import { useBoardViewMode } from "@/hooks/tasks/useBoardViewMode";
 import { useBoardListSubmode } from "@/hooks/tasks/useBoardListSubmode";
 import { useBoardListSort } from "@/hooks/tasks/useBoardListSort";
 import { TaskView } from "../../TaskView/TaskView";
-import { useWorkspace } from "@/contexts";
+import { useWorkspace, useTasksShellHeaderExtras } from "@/contexts";
 import {
   applyOptimisticPatch,
   applyOptimisticReparent,
@@ -63,6 +70,7 @@ import {
   runSyncWithOptionalCompletionLayout,
 } from "@/helpers/task-completion-ui.helper";
 import { tasksUrlHelper, type ScheduleDate } from "@/helpers/tasks-url.helper";
+import { TASKS_HEADER_CREATE_TASK_EVENT } from "@/app/tasks/tasks-header-events";
 import { tasksHelper } from "@/helpers/task.helper";
 import { findTaskStatusAcrossBoards } from "@/helpers/task-board-lookup.helper";
 
@@ -71,12 +79,14 @@ export function MultipleKanbanBoard({
   schedule,
   workspaceName,
   folderId,
+  embedInTasksShell = false,
   onTaskOpen,
   onTaskClose,
   onSubtaskOpen,
 }: MultipleKanbanBoardProps) {
   const { createTask, updateTask } = useTaskActions();
   const { taskBoards, isBoardsLoading, openCreateWorkspace } = useWorkspace();
+  const { setSettingsSlot } = useTasksShellHeaderExtras();
   const {
     boardsWithTasks,
     setBoardsWithTasks,
@@ -332,6 +342,47 @@ export function MultipleKanbanBoard({
     scheduleDate,
   ]);
 
+  useEffect(() => {
+    if (!embedInTasksShell) return;
+    const handler = () => {
+      handleCreateTask();
+    };
+    window.addEventListener(TASKS_HEADER_CREATE_TASK_EVENT, handler);
+    return () =>
+      window.removeEventListener(TASKS_HEADER_CREATE_TASK_EVENT, handler);
+  }, [embedInTasksShell, handleCreateTask]);
+
+  useLayoutEffect(() => {
+    if (!embedInTasksShell) return;
+    if (!isScheduleDay) {
+      setSettingsSlot(null);
+      return;
+    }
+    setSettingsSlot(
+      <WorkspaceSettings
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        listSubmode={listSubmode}
+        onListSubmodeChange={setListSubmode}
+        sort={listSort}
+        onSortChange={setListSort}
+      />,
+    );
+    return () => {
+      setSettingsSlot(null);
+    };
+  }, [
+    embedInTasksShell,
+    isScheduleDay,
+    setSettingsSlot,
+    viewMode,
+    setViewMode,
+    listSubmode,
+    setListSubmode,
+    listSort,
+    setListSort,
+  ]);
+
   const handleCreateTaskWithAI = useCallback(() => {
     if (taskBoards.length === 0) {
       toast.error("Create a board first");
@@ -439,27 +490,29 @@ export function MultipleKanbanBoard({
 
   return (
     <>
-      <BoardContainer>
-        <Toolbar
-          workspaceTitle={workspaceName}
-          workspaceEmoji={
-            workspaceName === "Today" ? (
-              <ClockNavIcon size={20} />
-            ) : workspaceName === "Tomorrow" ? (
-              <ClockCircleIcon size={20} />
-            ) : (
-              (boardsWithTasks[0]?.emoji ?? null)
-            )
-          }
-          onCreateTask={handleCreateTask}
-          onCreateTaskWithAI={handleCreateTaskWithAI}
-          viewMode={isScheduleDay ? viewMode : undefined}
-          onViewModeChange={isScheduleDay ? setViewMode : undefined}
-          listSubmode={isScheduleDay ? listSubmode : undefined}
-          onListSubmodeChange={isScheduleDay ? setListSubmode : undefined}
-          sort={isScheduleDay ? listSort : undefined}
-          onSortChange={isScheduleDay ? setListSort : undefined}
-        />
+      <BoardContainer embed={embedInTasksShell}>
+        {!embedInTasksShell ? (
+          <Toolbar
+            workspaceTitle={workspaceName}
+            workspaceEmoji={
+              workspaceName === "Today" ? (
+                <ClockNavIcon size={20} />
+              ) : workspaceName === "Tomorrow" ? (
+                <ClockCircleIcon size={20} />
+              ) : (
+                (boardsWithTasks[0]?.emoji ?? null)
+              )
+            }
+            onCreateTask={handleCreateTask}
+            onCreateTaskWithAI={handleCreateTaskWithAI}
+            viewMode={isScheduleDay ? viewMode : undefined}
+            onViewModeChange={isScheduleDay ? setViewMode : undefined}
+            listSubmode={isScheduleDay ? listSubmode : undefined}
+            onListSubmodeChange={isScheduleDay ? setListSubmode : undefined}
+            sort={isScheduleDay ? listSort : undefined}
+            onSortChange={isScheduleDay ? setListSort : undefined}
+          />
+        ) : null}
 
         <BoardMultiLayout>
           {!isBoardsLoading && taskBoards.length === 0 ? (
@@ -599,6 +652,7 @@ interface MultipleKanbanBoardProps {
   schedule?: ScheduleDate;
   workspaceName: string;
   folderId?: string;
+  embedInTasksShell?: boolean;
   onTaskOpen?: (task: Task) => void;
   onTaskClose?: () => void;
   onSubtaskOpen?: (parentTask: Task, subtask: Task) => void;

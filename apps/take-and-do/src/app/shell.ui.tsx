@@ -154,16 +154,6 @@ export function AppPageTitle({ className, ref, ...props }: UiProps<"h1">) {
   );
 }
 
-export function AppPageSubtitle({ className, ref, ...props }: UiProps<"p">) {
-  return (
-    <p
-      ref={ref}
-      className={cn("m-0 text-l text-slate-300", className)}
-      {...props}
-    />
-  );
-}
-
 export function HomeLoadingContainer({
   className,
   ref,

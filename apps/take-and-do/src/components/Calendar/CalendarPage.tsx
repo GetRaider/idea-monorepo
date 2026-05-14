@@ -7,7 +7,6 @@ import { toast } from "sonner";
 
 import type { CalendarEventPatchBody } from "@/db/dtos/calendar-events.dto";
 import {
-  AppPageSubtitle,
   AppPageTitle,
   HomeMainContent,
   PageContainer,
@@ -52,6 +51,10 @@ import type {
 } from "@/types/calendar.types";
 
 import { CalendarPanel } from "./CalendarPanel";
+import {
+  tasksSidebarEdgeHideToggleClass as calendarSidebarEdgeToggleClass,
+  tasksSidebarEdgeShowToggleClass as calendarSidebarExpandClosedToggleClass,
+} from "@/components/TasksSidebar/tasks-sidebar-edge-toggle-classes";
 import { CalendarEventEditorDialog } from "./CalendarEventEditorDialog";
 import {
   CalendarEventQuickMenu,
@@ -84,12 +87,6 @@ const DEFAULT_KIND_VISIBILITY: CalendarKindVisibility = {
 const GCAL_PREFIX = "gcal:";
 const SLOT_TIME_24H_KEY = "take-and-do:calendar-slot-24h";
 const CALENDAR_SIDEBAR_COLLAPSED_KEY = "take-and-do:calendar-sidebar-collapsed";
-
-const calendarSidebarEdgeToggleClass =
-  "group pointer-events-auto flex h-11 w-[1.125rem] shrink-0 items-center justify-center rounded-md border border-white/[0.08] bg-background-primary/85 text-zinc-500 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),2px_0_12px_rgba(0,0,0,0.25)] backdrop-blur-md transition-[color,box-shadow,background-color,border-color] duration-200 ease-out hover:border-[#7255c1]/35 hover:bg-background-primary/92 hover:text-zinc-100 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.08),2px_0_16px_rgba(114,85,193,0.14)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)] motion-reduce:transition-none";
-
-const calendarSidebarExpandClosedToggleClass =
-  "group pointer-events-auto flex h-11 w-[1.125rem] shrink-0 items-center justify-center rounded-md border border-white/[0.08] bg-background-primary/85 text-zinc-500 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_2px_14px_rgba(0,0,0,0.32)] backdrop-blur-md transition-[color,box-shadow,background-color,border-color] duration-200 ease-out hover:border-[#7255c1]/35 hover:bg-background-primary/92 hover:text-zinc-100 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_4px_16px_rgba(114,85,193,0.18)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)] motion-reduce:transition-none";
 
 type GoogleScopePrompt =
   | { kind: "editor"; event: CalendarEvent }
@@ -922,9 +919,6 @@ export function CalendarPage() {
         <WelcomeSection className="mb-6 flex shrink-0 flex-col gap-4 sm:mb-8 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0 flex-1">
             <AppPageTitle>Calendar</AppPageTitle>
-            <AppPageSubtitle className="mt-2 max-w-[640px]">
-              Plan time blocks, common events, and task windows.
-            </AppPageSubtitle>
           </div>
           <PrimaryButton
             size="sm"

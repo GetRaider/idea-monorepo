@@ -3,8 +3,7 @@
 import { ConfirmDialog } from "@/components/Dialogs";
 
 import { TasksSidebarContainer } from "./TasksSidebar.ui";
-import { TasksSidebarResizeHandle } from "./TasksSidebarResizeHandle";
-import { TasksSidebarTaskSearch } from "./TasksSidebarTaskSearch";
+import { TasksSidebarResizeStrip } from "./TasksSidebarResizeStrip";
 import { TasksSidebarSchedulesSection } from "./TasksSidebarSchedulesSection";
 import { TasksSidebarWorkspacesSection } from "./TasksSidebarWorkspacesSection";
 import { useTasksSidebarModel } from "@/hooks/tasksSidebar/useTasksSidebarModel";
@@ -51,9 +50,7 @@ export function TasksSidebar({
 
   return (
     <>
-      <TasksSidebarContainer isOpen={isOpen} widthPx={widthPx}>
-        <TasksSidebarTaskSearch taskBoards={taskBoards} />
-
+      <TasksSidebarContainer>
         <TasksSidebarSchedulesSection model={model} />
 
         <TasksSidebarWorkspacesSection
@@ -64,7 +61,7 @@ export function TasksSidebar({
         />
 
         {isOpen ? (
-          <TasksSidebarResizeHandle
+          <TasksSidebarResizeStrip
             widthPx={widthPx}
             onWidthPxChange={onWidthPxChange}
           />

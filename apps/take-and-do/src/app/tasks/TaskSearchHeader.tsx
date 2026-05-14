@@ -1,11 +1,18 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEventHandler,
+  type KeyboardEventHandler,
+} from "react";
 import { useRouter } from "next/navigation";
 
 import type { Task } from "@/components/Boards/KanbanBoard/types";
-import { Search, SearchInput } from "@/components/TasksSidebar/TasksSidebar.ui";
+import { SearchInput } from "@/components/TasksSidebar/TasksSidebar.ui";
 import { SearchIcon } from "@/components/Icons";
 import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
 import { tasksHelper } from "@/helpers/task.helper";
@@ -16,17 +23,21 @@ import { cn } from "@/lib/styles/utils";
 import { clientServices } from "@/services";
 import type { TaskBoard } from "@/types/workspace";
 
-type TasksSidebarTaskSearchProps = {
+type TaskSearchHeaderProps = {
   taskBoards: TaskBoard[];
+  className?: string;
 };
 
-export function TasksSidebarTaskSearch({
+export function TaskSearchHeader({
   taskBoards,
-}: TasksSidebarTaskSearchProps) {
+  className,
+}: TaskSearchHeaderProps) {
   const router = useRouter();
   const isAnonymous = useIsAnonymous();
   const { tasks: guestTasks } = useGuestTasks();
+  const inputRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState("");
+  const [expanded, setExpanded] = useState(false);
 
   const allTasksQuery = useQuery({
     queryKey: queryKeys.tasks.all,
@@ -52,6 +63,8 @@ export function TasksSidebarTaskSearch({
   const boardNameFor = (taskBoardId: string) =>
     taskBoards.find((board) => board.id === taskBoardId)?.name ?? "Board";
 
+  const clear = () => setQuery("");
+
   const openTask = (task: Task) => {
     const boardName = boardNameFor(task.taskBoardId);
     const href = tasksUrlHelper.routing.buildBoardUrl(
@@ -59,35 +72,85 @@ export function TasksSidebarTaskSearch({
       task.taskKey ?? undefined,
     );
     router.push(href);
-    setQuery("");
+    clear();
+    setExpanded(false);
   };
 
-  const showPopover = normalizedQuery.length > 0;
+  const showTaskPopover = expanded && normalizedQuery.length > 0;
+
+  useEffect(() => {
+    if (!expanded) return;
+    const id = requestAnimationFrame(() => inputRef.current?.focus());
+    return () => cancelAnimationFrame(id);
+  }, [expanded]);
+
+  const handleSearchKeyDown: KeyboardEventHandler<HTMLInputElement> = (
+    event,
+  ) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      clear();
+      setExpanded(false);
+    }
+  };
+
+  const onQueryChange: ChangeEventHandler<HTMLInputElement> = (e) =>
+    setQuery(e.target.value);
+
+  if (!expanded) {
+    return (
+      <div className={cn("shrink-0", className)}>
+        <button
+          type="button"
+          aria-label="Search tasks"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-input-border bg-input-bg text-[#888] transition-colors hover:text-[var(--text-secondary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
+          onClick={() => setExpanded(true)}
+        >
+          <SearchIcon size={18} className="opacity-90" />
+        </button>
+      </div>
+    );
+  }
 
   return (
-    <div className="relative">
-      <Search>
-        <SearchIcon size={16} />
+    <div className={cn("relative min-h-10 min-w-0 shrink-0", className)}>
+      <div
+        className={cn(
+          "flex min-h-10 shrink-0 items-center overflow-hidden rounded-lg border border-input-border bg-input-bg text-[#888] transition-[width,max-width] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]",
+          "min-w-0 gap-2 px-2 py-px sm:w-64 sm:max-w-[18rem] sm:flex-none lg:w-72 lg:max-w-[20rem]",
+        )}
+      >
+        <SearchIcon size={16} className="shrink-0 opacity-80" />
         <SearchInput
+          ref={inputRef}
           type="search"
           value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search tasks..."
+          onChange={onQueryChange}
+          onKeyDown={handleSearchKeyDown}
+          onBlur={() => {
+            window.setTimeout(() => {
+              if (!query.trim()) setExpanded(false);
+            }, 120);
+          }}
+          placeholder="Search tasks"
           autoComplete="off"
+          className="min-w-0 flex-1"
         />
-      </Search>
+      </div>
 
-      {showPopover ? (
+      {showTaskPopover ? (
         <div
           className={cn(
-            "absolute left-0 right-0 top-full z-[100] mt-1 max-h-64 overflow-y-auto overflow-x-hidden rounded-lg border border-border-app bg-background-primary py-1 shadow-lg",
+            "absolute right-0 top-full z-[100] mt-1 w-[min(100vw-2rem,24rem)] max-h-64 overflow-y-auto overflow-x-hidden rounded-lg border border-border-app bg-background-primary py-1 shadow-lg sm:left-0 sm:right-auto sm:w-full",
           )}
           aria-label="Task search results"
         >
           {!loaded ? (
             <div className="px-3 py-2 text-sm text-[#888]">Loading…</div>
           ) : matches.length === 0 ? (
-            <div className="px-3 py-2 text-sm text-[#888]">No tasks found</div>
+            <div className="px-3 py-2 text-sm text-[#888]">
+              No matching tasks.
+            </div>
           ) : (
             matches.map((task) => (
               <button

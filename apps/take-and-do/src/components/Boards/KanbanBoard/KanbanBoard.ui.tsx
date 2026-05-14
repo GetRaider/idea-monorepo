@@ -3,12 +3,19 @@
 import { cn } from "@/lib/styles/utils";
 import type { UiProps } from "@/lib/styles/ui-props";
 
-export function BoardContainer({ className, ref, ...props }: UiProps<"div">) {
+export function BoardContainer({
+  className,
+  ref,
+  embed = false,
+  ...props
+}: UiProps<"div"> & { embed?: boolean }) {
   return (
     <div
       ref={ref}
       className={cn(
-        "flex h-screen min-h-screen flex-col bg-gradient-to-br from-[#1a1a1a] to-[#3c2856] supports-[height:100dvh]:h-[100dvh] supports-[height:100dvh]:min-h-[100dvh]",
+        embed
+          ? "flex min-h-0 flex-1 flex-col overflow-hidden bg-transparent"
+          : "flex h-screen min-h-screen flex-col bg-gradient-to-br from-[#1a1a1a] to-[#3c2856] supports-[height:100dvh]:h-[100dvh] supports-[height:100dvh]:min-h-[100dvh]",
         className,
       )}
       {...props}

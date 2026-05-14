@@ -1,40 +1,28 @@
 "use client";
 
-import {
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ChangeEventHandler,
-  type KeyboardEventHandler,
-  type ReactNode,
-} from "react";
+import { useLayoutEffect, useMemo, useState, type ReactNode } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 
-import { AppPageSubtitle, AppPageTitle } from "@/app/shell.ui";
 import {
   ChevronRightIcon,
-  PlusIcon,
   PrivateWorkspaceIcon,
   PublicWorkspaceIcon,
-  SearchIcon,
 } from "@/components/Icons";
 import { Spinner } from "@/components/Spinner/Spinner";
 import {
   FolderChevron,
-  SearchInput,
   SidebarChevronGutter,
 } from "@/components/TasksSidebar/TasksSidebar.ui";
 import { BoardHealthPanel } from "@/components/BoardHealthPanel";
-import { PrimaryButton } from "@/components/Buttons";
 import { TasksWorkspaceEmptyState } from "@/components/TasksWorkspaceEmptyState";
 import { useWorkspace } from "@/contexts";
 import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
 import { cn } from "@/lib/styles/utils";
-import type { UiProps } from "@/lib/styles/ui-props";
 import type { Folder, TaskBoard } from "@/types/workspace";
+
+import { TasksMainWorkArea } from "./TasksMainWorkArea";
+import { TasksRouteRootShell } from "./TasksRootShell";
 
 export default function TasksPage() {
   const router = useRouter();
@@ -45,12 +33,9 @@ export default function TasksPage() {
     isBoardsLoading,
     openCreateWorkspace,
   } = useWorkspace();
-  const [query, setQuery] = useState("");
   const [expandedFolderIds, setExpandedFolderIds] = useState<Set<string>>(
     () => new Set(),
   );
-
-  const queryLower = query.trim().toLowerCase();
 
   useLayoutEffect(() => {
     setExpandedFolderIds((previous) => {
@@ -65,65 +50,13 @@ export default function TasksPage() {
     });
   }, [folders]);
 
-  useEffect(() => {
-    if (!queryLower) return;
-    setExpandedFolderIds((previous) => {
-      const next = new Set(previous);
-      for (const folder of folders) {
-        const boardsInFolder = taskBoards.filter(
-          (board) => board.folderId === folder.id,
-        );
-        if (folder.name.toLowerCase().includes(queryLower)) {
-          next.add(folder.id);
-          continue;
-        }
-        if (
-          boardsInFolder.some((board) =>
-            board.name.toLowerCase().includes(queryLower),
-          )
-        )
-          next.add(folder.id);
-      }
-      return next;
-    });
-  }, [queryLower, folders, taskBoards]);
-
-  const visibleFolders = useMemo(() => {
-    if (!queryLower) return folders;
-    return folders.filter((folder) => {
-      const boardsInFolder = taskBoards.filter(
-        (board) => board.folderId === folder.id,
-      );
-      if (folder.name.toLowerCase().includes(queryLower)) return true;
-      return boardsInFolder.some((board) =>
-        board.name.toLowerCase().includes(queryLower),
-      );
-    });
-  }, [folders, taskBoards, queryLower]);
-
   const rootBoards = useMemo(
     () => taskBoards.filter((board) => !board.folderId),
     [taskBoards],
   );
 
-  const visibleRootBoards = useMemo(() => {
-    if (!queryLower) return rootBoards;
-    return rootBoards.filter((board) =>
-      board.name.toLowerCase().includes(queryLower),
-    );
-  }, [rootBoards, queryLower]);
-
-  const boardsVisibleInFolder = (folderId: string): TaskBoard[] => {
-    const boardsInFolder = taskBoards.filter(
-      (board) => board.folderId === folderId,
-    );
-    const folder = folders.find((item) => item.id === folderId);
-    if (!queryLower || !folder) return boardsInFolder;
-    if (folder.name.toLowerCase().includes(queryLower)) return boardsInFolder;
-    return boardsInFolder.filter((board) =>
-      board.name.toLowerCase().includes(queryLower),
-    );
-  };
+  const boardsInFolder = (folderId: string): TaskBoard[] =>
+    taskBoards.filter((board) => board.folderId === folderId);
 
   const toggleFolderExpanded = (folderId: string) => {
     setExpandedFolderIds((previous) => {
@@ -142,81 +75,60 @@ export default function TasksPage() {
 
   if (isLoading) {
     return (
-      <RootShell>
-        <WorkspacesRootLayout
-          query={query}
-          onQueryChange={(event) => setQuery(event.target.value)}
-          onCreateWorkspace={openCreateWorkspace}
-        >
-          <Spinner className="h-full min-h-[240px] flex-1" />
+      <TasksRouteRootShell>
+        <WorkspacesRootLayout>
+          <TasksMainWorkArea>
+            <Spinner className="h-full min-h-[240px] flex-1" />
+          </TasksMainWorkArea>
         </WorkspacesRootLayout>
-      </RootShell>
+      </TasksRouteRootShell>
     );
   }
 
   if (folders.length === 0 && taskBoards.length === 0) {
     return (
-      <RootShell>
-        <WorkspacesRootLayout
-          variant="centeredEmpty"
-          query={query}
-          onQueryChange={(event) => setQuery(event.target.value)}
-          onCreateWorkspace={openCreateWorkspace}
-        >
+      <TasksRouteRootShell>
+        <WorkspacesRootLayout variant="centeredEmpty">
           <TasksWorkspaceEmptyState
             className="min-h-0 justify-center py-8"
             onCreateWorkspace={openCreateWorkspace}
           />
         </WorkspacesRootLayout>
-      </RootShell>
+      </TasksRouteRootShell>
     );
   }
 
-  const listHasNoSearchHits =
-    queryLower.length > 0 &&
-    visibleFolders.length === 0 &&
-    visibleRootBoards.length === 0;
-
   return (
-    <RootShell>
+    <TasksRouteRootShell>
       <WorkspacesRootLayout
-        query={query}
-        onQueryChange={(event) => setQuery(event.target.value)}
-        onCreateWorkspace={openCreateWorkspace}
         sidePanel={
           taskBoards.length > 0 ? (
             <BoardHealthPanel boards={taskBoards} />
-          ) : null
+          ) : undefined
         }
       >
-        {listHasNoSearchHits ? (
-          <p className="py-10 text-center text-sm text-[var(--text-secondary)]">
-            No workspaces match your search.
-          </p>
-        ) : (
-          <div className="flex flex-col gap-3">
-            {visibleFolders.map((folder) => (
-              <FolderSection
-                key={folder.id}
-                folder={folder}
-                boards={boardsVisibleInFolder(folder.id)}
-                isExpanded={expandedFolderIds.has(folder.id)}
-                onToggleExpanded={() => toggleFolderExpanded(folder.id)}
-                onOpenBoard={handleOpenBoard}
-              />
-            ))}
-            {visibleRootBoards.map((board) => (
-              <WorkspaceBoardCard
-                key={board.id}
-                board={board}
-                onOpen={() => handleOpenBoard(board)}
-                showChevronGutter
-              />
-            ))}
-          </div>
-        )}
+        <div className="flex flex-col gap-3">
+          {folders.map((folder) => (
+            <FolderSection
+              key={folder.id}
+              folder={folder}
+              boards={boardsInFolder(folder.id)}
+              isExpanded={expandedFolderIds.has(folder.id)}
+              onToggleExpanded={() => toggleFolderExpanded(folder.id)}
+              onOpenBoard={handleOpenBoard}
+            />
+          ))}
+          {rootBoards.map((board) => (
+            <WorkspaceBoardCard
+              key={board.id}
+              board={board}
+              onOpen={() => handleOpenBoard(board)}
+              showChevronGutter
+            />
+          ))}
+        </div>
       </WorkspacesRootLayout>
-    </RootShell>
+    </TasksRouteRootShell>
   );
 }
 
@@ -343,122 +255,37 @@ function VisibilityBadge({ isPublic }: { isPublic: boolean }) {
 }
 
 function WorkspacesRootLayout({
-  query,
-  onQueryChange,
-  onCreateWorkspace,
   children,
   variant = "default",
   sidePanel,
 }: WorkspacesRootLayoutProps) {
-  const [searchExpanded, setSearchExpanded] = useState(false);
-  const searchInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (!searchExpanded) return;
-    const frameId = requestAnimationFrame(() =>
-      searchInputRef.current?.focus(),
-    );
-    return () => cancelAnimationFrame(frameId);
-  }, [searchExpanded]);
-
-  const handleSearchKeyDown: KeyboardEventHandler<HTMLInputElement> = (
-    event,
-  ) => {
-    if (event.key === "Escape") {
-      event.preventDefault();
-      setSearchExpanded(false);
-    }
-  };
-
-  return (
-    <div className="box-border flex w-full min-h-0 flex-1 flex-col px-6 pt-[18px] pb-6">
-      <div className="grid w-full grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:gap-x-8 md:gap-y-4">
-        <div className="min-w-0 text-left">
-          <AppPageTitle className="text-left">Tasks</AppPageTitle>
-          <AppPageSubtitle className="text-balance text-left">
-            Manage your tasks, boards, and schedules in one place.
-          </AppPageSubtitle>
-        </div>
-        <div className="flex w-full min-w-0 flex-row flex-wrap items-center justify-end gap-3 md:w-auto md:shrink-0">
-          <div
-            className={cn(
-              "flex min-h-10 shrink-0 items-center overflow-hidden rounded-lg border border-input-border bg-input-bg text-[#888] transition-[width,max-width,opacity] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] will-change-[width,max-width]",
-              searchExpanded
-                ? "min-w-0 flex-1 gap-2 px-2 py-px opacity-100 md:w-64 md:max-w-[18rem] md:flex-none lg:w-72 lg:max-w-[20rem]"
-                : "h-10 w-10 max-w-[2.5rem] justify-center px-0 py-0 opacity-95",
-            )}
-          >
-            {searchExpanded ? (
-              <>
-                <SearchIcon size={16} className="shrink-0 opacity-80" />
-                <SearchInput
-                  ref={searchInputRef}
-                  type="search"
-                  value={query}
-                  onChange={onQueryChange}
-                  onKeyDown={handleSearchKeyDown}
-                  onBlur={() => {
-                    window.setTimeout(() => {
-                      if (!query.trim()) setSearchExpanded(false);
-                    }, 120);
-                  }}
-                  placeholder="Search workspaces by name"
-                  autoComplete="off"
-                  className="min-w-0 flex-1"
-                />
-              </>
-            ) : (
-              <button
-                type="button"
-                aria-label="Search workspaces"
-                className="flex h-full w-full min-h-10 items-center justify-center rounded-lg border-0 bg-transparent p-0 text-inherit transition-colors hover:text-[var(--text-secondary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
-                onClick={() => setSearchExpanded(true)}
-              >
-                <SearchIcon size={18} className="opacity-90" />
-              </button>
-            )}
-          </div>
-          <PrimaryButton
-            size="sm"
-            onClick={onCreateWorkspace}
-            className="shrink-0 font-medium"
-          >
-            <PlusIcon size={18} className="shrink-0 text-white" />
-            Create Workspace
-          </PrimaryButton>
-        </div>
-      </div>
-
-      {variant === "centeredEmpty" ? (
+  if (variant === "centeredEmpty") {
+    return (
+      <div className="flex min-h-0 flex-1 flex-col">
         <div className="flex min-h-[min(60vh,560px)] flex-1 flex-col items-center justify-center px-2 py-12">
           {children}
         </div>
-      ) : sidePanel ? (
-        <div className="mt-4 grid min-h-0 w-full grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_min(100%,300px)] lg:items-start lg:gap-x-8">
-          <div className="flex min-w-0 flex-col gap-3">{children}</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      {sidePanel ? (
+        <div className="grid min-h-0 w-full flex-1 grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_min(100%,300px)] lg:items-start lg:gap-x-8">
+          <div className="flex min-h-0 min-w-0 flex-col">
+            <TasksMainWorkArea>{children}</TasksMainWorkArea>
+          </div>
           <div className="min-w-0">{sidePanel}</div>
         </div>
       ) : (
-        <div className="mt-4 flex min-w-0 flex-col gap-3">{children}</div>
+        <TasksMainWorkArea>{children}</TasksMainWorkArea>
       )}
     </div>
   );
 }
 
-function RootShell({ className, ref, ...props }: UiProps<"div">) {
-  return (
-    <div
-      ref={ref}
-      className={cn("flex min-h-0 flex-1 flex-col overflow-y-auto", className)}
-      {...props}
-    />
-  );
-}
-
 interface WorkspacesRootLayoutProps {
-  query: string;
-  onQueryChange: ChangeEventHandler<HTMLInputElement>;
-  onCreateWorkspace: () => void;
   children: ReactNode;
   variant?: "default" | "centeredEmpty";
   sidePanel?: ReactNode;
@@ -475,8 +302,6 @@ interface FolderSectionProps {
 interface WorkspaceBoardCardProps {
   board: TaskBoard;
   onOpen: () => void;
-  /** Aligns emoji column with folder rows that use a chevron. */
   showChevronGutter?: boolean;
-  /** Slightly inset styling when rendered under an expanded folder. */
   nested?: boolean;
 }

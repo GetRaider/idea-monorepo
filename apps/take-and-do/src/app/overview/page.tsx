@@ -9,7 +9,6 @@ import type { TaskStats } from ".";
 import { Spinner } from "@/components/Spinner/Spinner";
 import { useIsAnonymous } from "@/hooks/auth/use-is-anonymous";
 import { useGuestTasks } from "@/hooks/tasks/use-guest-store";
-import { useTasksSidebarWidthPx } from "@/hooks/tasks/useTasksSidebarWidthPx";
 import { queryKeys } from "@/lib/query-keys";
 import { guestTasksBySchedule } from "@/stores/guest/guest-task-filters";
 import { clientServices } from "@/services";
@@ -20,15 +19,12 @@ import {
   HomeMainContent,
   WelcomeSection,
   AppPageTitle,
-  AppPageSubtitle,
 } from "../shell.ui";
 
 function OverviewPage() {
   const isAnonymous = useIsAnonymous();
   const { tasks: guestTasks } = useGuestTasks();
   const [, setCurrentPage] = useState("overview");
-  const [isTasksSidebarOpen, setIsTasksSidebarOpen] = useState(false);
-  const [tasksSidebarWidthPx] = useTasksSidebarWidthPx();
 
   const scheduledAndStats = useQueries({
     queries: [
@@ -91,9 +87,6 @@ function OverviewPage() {
 
   const handleNavigationToTasksPage = (page: string) => {
     setCurrentPage(page);
-    if (page === "tasks") {
-      setIsTasksSidebarOpen(true);
-    }
   };
 
   const hasWorkspaceTaskData = isAnonymous
@@ -104,10 +97,7 @@ function OverviewPage() {
     return (
       <PageContainer>
         <Sidebar onNavigationChange={handleNavigationToTasksPage} />
-        <HomeMainContent
-          withNavSidebar={isTasksSidebarOpen}
-          tasksSidebarWidthPx={tasksSidebarWidthPx}
-        >
+        <HomeMainContent withNavSidebar={false}>
           <Spinner className="h-full min-h-[240px] flex-1" />
         </HomeMainContent>
       </PageContainer>
@@ -117,15 +107,9 @@ function OverviewPage() {
   return (
     <PageContainer>
       <Sidebar onNavigationChange={handleNavigationToTasksPage} />
-      <HomeMainContent
-        withNavSidebar={isTasksSidebarOpen}
-        tasksSidebarWidthPx={tasksSidebarWidthPx}
-      >
+      <HomeMainContent withNavSidebar={false}>
         <WelcomeSection>
           <AppPageTitle>Overview</AppPageTitle>
-          <AppPageSubtitle>
-            Supercharge your workflow with AI insights & modern planning
-          </AppPageSubtitle>
         </WelcomeSection>
 
         <ProductivityOverview hasWorkspaceTaskData={hasWorkspaceTaskData} />

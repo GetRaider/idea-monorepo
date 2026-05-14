@@ -1,19 +1,22 @@
 "use client";
 
-import {
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  LayoutGrid,
-  Pencil,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight, LayoutGrid, Pencil } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 
-import { InfoCircleIcon, PlusIcon, DotsVerticalIcon } from "@/components/Icons";
+import {
+  InfoCircleIcon,
+  PlusIcon,
+  DotsVerticalIcon,
+  ChevronRightIcon,
+} from "@/components/Icons";
 import { ConfirmDialog } from "@/components/Dialogs";
 import { Dropdown } from "@/components/Dropdown";
 import { AppTooltip } from "@/components/Tooltip/AppTooltip";
+import {
+  FolderChevron,
+  TASKS_SIDEBAR_SECTION_HEADER_TEXT_CLASS,
+} from "@/components/TasksSidebar/TasksSidebar.ui";
 import { TaskStatus } from "@/constants/tasks.constants";
 import { useIsAnonymous } from "@/hooks/auth/use-is-anonymous";
 import { useGuestTasks } from "@/hooks/tasks/use-guest-store";
@@ -233,19 +236,24 @@ export function CalendarPanel({
         <section className="space-y-2">
           <button
             type="button"
-            className="flex w-full items-center gap-2 rounded-lg border-0 bg-transparent px-2 py-2 text-left transition-colors hover:bg-white/[0.06]"
+            className="flex w-full min-w-0 items-center gap-1 rounded-lg border-0 bg-transparent px-2 py-2 text-left transition-colors hover:bg-white/[0.06]"
             onClick={() => setMonthOpen((o) => !o)}
             aria-expanded={monthOpen}
           >
+            <FolderChevron isExpanded={monthOpen}>
+              <ChevronRightIcon size={11} />
+            </FolderChevron>
             <div className="flex shrink-0 items-center gap-2">
-              <span className="text-sm font-semibold text-white">Month</span>
+              <span className={TASKS_SIDEBAR_SECTION_HEADER_TEXT_CLASS}>
+                Month
+              </span>
               <AppTooltip content="Pick a day to jump the main calendar.">
                 <span className="inline-flex">
                   <InfoCircleIcon size={16} className="text-zinc-500" />
                 </span>
               </AppTooltip>
             </div>
-            <div className="flex min-w-0 flex-1 items-center justify-start gap-1.5 pl-1">
+            <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5 pl-1">
               <button
                 type="button"
                 className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border-0 bg-transparent text-zinc-400 hover:bg-white/[0.06] hover:text-white"
@@ -276,14 +284,6 @@ export function CalendarPanel({
                 <ChevronRight size={14} aria-hidden />
               </button>
             </div>
-            <ChevronDown
-              size={18}
-              className={cn(
-                "ml-auto shrink-0 text-zinc-500 transition-transform",
-                monthOpen ? "rotate-0" : "-rotate-90",
-              )}
-              aria-hidden
-            />
           </button>
 
           {monthOpen ? (
@@ -352,12 +352,15 @@ export function CalendarPanel({
         <section className="border-t border-white/[0.08] pt-3">
           <button
             type="button"
-            className="flex w-full items-center justify-between gap-2 rounded-lg border-0 bg-transparent px-2 py-2 text-left transition-colors hover:bg-white/[0.06]"
+            className="flex w-full min-w-0 items-center gap-1 rounded-lg border-0 bg-transparent px-2 py-2 text-left transition-colors hover:bg-white/[0.06]"
             onClick={() => setCalendarsOpen((o) => !o)}
             aria-expanded={calendarsOpen}
           >
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-white">
+            <FolderChevron isExpanded={calendarsOpen}>
+              <ChevronRightIcon size={11} />
+            </FolderChevron>
+            <div className="flex min-w-0 flex-1 items-center gap-2">
+              <span className={TASKS_SIDEBAR_SECTION_HEADER_TEXT_CLASS}>
                 Calendars
               </span>
               <AppTooltip content="Show or hide external calendars.">
@@ -366,14 +369,6 @@ export function CalendarPanel({
                 </span>
               </AppTooltip>
             </div>
-            <ChevronDown
-              size={18}
-              className={cn(
-                "shrink-0 text-zinc-500 transition-transform",
-                calendarsOpen ? "rotate-0" : "-rotate-90",
-              )}
-              aria-hidden
-            />
           </button>
           {calendarsOpen ? (
             <ul className="mt-2 space-y-2">
@@ -426,12 +421,15 @@ export function CalendarPanel({
         <section className="border-t border-white/[0.08] pt-3">
           <button
             type="button"
-            className="flex w-full items-center justify-between gap-2 rounded-lg border-0 bg-transparent px-2 py-2 text-left transition-colors hover:bg-white/[0.06]"
+            className="flex w-full min-w-0 items-center gap-1 rounded-lg border-0 bg-transparent px-2 py-2 text-left transition-colors hover:bg-white/[0.06]"
             onClick={() => setEventTypesOpen((o) => !o)}
             aria-expanded={eventTypesOpen}
           >
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-white">
+            <FolderChevron isExpanded={eventTypesOpen}>
+              <ChevronRightIcon size={11} />
+            </FolderChevron>
+            <div className="flex min-w-0 flex-1 items-center gap-2">
+              <span className={TASKS_SIDEBAR_SECTION_HEADER_TEXT_CLASS}>
                 Event Types
               </span>
               <AppTooltip content="Filter which event types show on the calendar.">
@@ -440,14 +438,6 @@ export function CalendarPanel({
                 </span>
               </AppTooltip>
             </div>
-            <ChevronDown
-              size={18}
-              className={cn(
-                "shrink-0 text-zinc-500 transition-transform",
-                eventTypesOpen ? "rotate-0" : "-rotate-90",
-              )}
-              aria-hidden
-            />
           </button>
 
           {eventTypesOpen ? (
@@ -524,26 +514,23 @@ export function CalendarPanel({
         <section className="border-t border-white/[0.08] pt-3">
           <button
             type="button"
-            className="flex w-full items-center justify-between gap-2 rounded-lg border-0 bg-transparent px-2 py-2 text-left transition-colors hover:bg-white/[0.06]"
+            className="flex w-full min-w-0 items-center gap-1 rounded-lg border-0 bg-transparent px-2 py-2 text-left transition-colors hover:bg-white/[0.06]"
             onClick={() => setTasksPanelOpen((o) => !o)}
             aria-expanded={tasksPanelOpen}
           >
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-white">Tasks</span>
+            <FolderChevron isExpanded={tasksPanelOpen}>
+              <ChevronRightIcon size={11} />
+            </FolderChevron>
+            <div className="flex min-w-0 flex-1 items-center gap-2">
+              <span className={TASKS_SIDEBAR_SECTION_HEADER_TEXT_CLASS}>
+                Tasks
+              </span>
               <AppTooltip content="Pick a board, then drag a task onto the calendar to schedule it and create a task window.">
                 <span className="inline-flex">
                   <InfoCircleIcon size={16} className="text-zinc-500" />
                 </span>
               </AppTooltip>
             </div>
-            <ChevronDown
-              size={18}
-              className={cn(
-                "shrink-0 text-zinc-500 transition-transform",
-                tasksPanelOpen ? "rotate-0" : "-rotate-90",
-              )}
-              aria-hidden
-            />
           </button>
 
           {tasksPanelOpen ? (
@@ -611,12 +598,15 @@ export function CalendarPanel({
         <section className="border-t border-white/[0.08] pt-3">
           <button
             type="button"
-            className="flex w-full items-center justify-between gap-2 rounded-lg border-0 bg-transparent px-2 py-2 text-left transition-colors hover:bg-white/[0.06]"
+            className="flex w-full min-w-0 items-center gap-1 rounded-lg border-0 bg-transparent px-2 py-2 text-left transition-colors hover:bg-white/[0.06]"
             onClick={() => setBacklogOpen((o) => !o)}
             aria-expanded={backlogOpen}
           >
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-white">
+            <FolderChevron isExpanded={backlogOpen}>
+              <ChevronRightIcon size={11} />
+            </FolderChevron>
+            <div className="flex min-w-0 flex-1 items-center gap-2">
+              <span className={TASKS_SIDEBAR_SECTION_HEADER_TEXT_CLASS}>
                 Events Backlog
               </span>
               <AppTooltip content="Reusable backlog events you can drag onto the calendar">
@@ -625,7 +615,7 @@ export function CalendarPanel({
                 </span>
               </AppTooltip>
             </div>
-            <div className="flex items-center gap-1">
+            <div className="flex shrink-0 items-center gap-1">
               <button
                 type="button"
                 onClick={(e) => {
@@ -638,14 +628,6 @@ export function CalendarPanel({
               >
                 <PlusIcon size={16} aria-hidden />
               </button>
-              <ChevronDown
-                size={18}
-                className={cn(
-                  "shrink-0 text-zinc-500 transition-transform",
-                  backlogOpen ? "rotate-0" : "-rotate-90",
-                )}
-                aria-hidden
-              />
             </div>
           </button>
 

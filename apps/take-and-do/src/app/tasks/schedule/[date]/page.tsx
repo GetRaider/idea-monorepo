@@ -7,6 +7,9 @@ import { MultipleKanbanBoard } from "@/components/Boards/KanbanBoard/MultipleKan
 import { useScheduleTaskUrlSync } from "@/hooks/tasks/useKanbanTaskUrlSync";
 import { tasksUrlHelper, type ScheduleDate } from "@/helpers/tasks-url.helper";
 
+import { TasksRouteRootShell } from "../../TasksRootShell";
+import { TasksSubpageShell } from "../../TasksSubpageShell";
+
 interface SchedulePageProps {
   params: Promise<{ date: string }>;
 }
@@ -26,15 +29,22 @@ export default function SchedulePage({ params }: SchedulePageProps) {
     notFound();
   }
 
+  const title = getScheduleTitle(scheduleDate);
+
   return (
-    <MultipleKanbanBoard
-      scheduleDate={getScheduleDate(scheduleDate)}
-      schedule={scheduleDate}
-      workspaceName={getScheduleTitle(scheduleDate)}
-      onTaskOpen={onTaskOpen}
-      onTaskClose={onTaskClose}
-      onSubtaskOpen={onSubtaskOpen}
-    />
+    <TasksRouteRootShell>
+      <TasksSubpageShell>
+        <MultipleKanbanBoard
+          scheduleDate={getScheduleDate(scheduleDate)}
+          schedule={scheduleDate}
+          workspaceName={title}
+          embedInTasksShell
+          onTaskOpen={onTaskOpen}
+          onTaskClose={onTaskClose}
+          onSubtaskOpen={onSubtaskOpen}
+        />
+      </TasksSubpageShell>
+    </TasksRouteRootShell>
   );
 }
 

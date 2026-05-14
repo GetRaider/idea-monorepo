@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 
 import {
-  AppPageSubtitle,
   AppPageTitle,
   HomeMainContent,
   PageContainer,
@@ -34,9 +33,6 @@ export function SettingsPage() {
       >
         <WelcomeSection className="mb-6 flex flex-col gap-2 sm:mb-8">
           <AppPageTitle>Settings</AppPageTitle>
-          <AppPageSubtitle className="mt-1 max-w-[640px]">
-            Manage app preferences and integrations.
-          </AppPageSubtitle>
         </WelcomeSection>
 
         <div className="flex min-h-0 flex-1 flex-col gap-5 lg:flex-row lg:gap-6">

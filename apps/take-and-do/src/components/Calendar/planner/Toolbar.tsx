@@ -6,28 +6,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { cn } from "@/lib/styles/utils";
 
-const VIEW_LABELS: Record<string, string> = {
-  timeGridDay: "Day",
-  timeGridRollingWeek: "Week",
-  timeGridWeek: "Week",
-  dayGridMonth: "Month",
-  timeGridTwoDay: "2 days",
-  timeGridThreeDay: "3 days",
-  timeGridFourDay: "4 days",
-  timeGridFiveDay: "5 days",
-  listWeek: "Agenda",
-};
-
-function labelForViewType(type: string) {
-  return VIEW_LABELS[type] ?? "Week";
-}
-
-const menuItem =
-  "flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-zinc-100 transition-colors hover:bg-white/[0.06]";
-const menuHint = "text-xs tabular-nums text-zinc-500";
-const submenuPanel =
-  "absolute left-full top-0 z-10 ml-1 min-w-[160px] rounded-xl border border-white/10 bg-[#1c1c22] py-1 shadow-[0_12px_40px_rgba(0,0,0,0.45)]";
-
 export type CalendarToolbarMeta = {
   headline: string;
   rangeLabel: string;
@@ -389,3 +367,25 @@ export function CalendarPlanningToolbar({
     </div>
   );
 }
+
+const VIEW_LABELS: Record<string, string> = {
+  timeGridDay: "Day",
+  timeGridRollingWeek: "Week",
+  timeGridWeek: "Week",
+  dayGridMonth: "Month",
+  timeGridTwoDay: "2 days",
+  timeGridThreeDay: "3 days",
+  timeGridFourDay: "4 days",
+  timeGridFiveDay: "5 days",
+  listWeek: "Agenda",
+};
+
+function labelForViewType(type: string) {
+  return VIEW_LABELS[type] ?? "Week";
+}
+
+const menuItem =
+  "flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-zinc-100 transition-colors hover:bg-white/[0.06]";
+const menuHint = "text-xs tabular-nums text-zinc-500";
+const submenuPanel =
+  "absolute left-full top-0 z-10 ml-1 min-w-[160px] rounded-xl border border-white/10 bg-[#1c1c22] py-1 shadow-[0_12px_40px_rgba(0,0,0,0.45)]";

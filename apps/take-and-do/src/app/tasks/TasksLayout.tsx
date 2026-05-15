@@ -1,7 +1,6 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
@@ -9,11 +8,10 @@ import { Sidebar } from "@/components/Sidebar/Sidebar";
 import { TasksSidebar } from "@/components/TasksSidebar/TasksSidebar";
 import { CreateWorkspaceDialog } from "@/components/TasksSidebar/Workspaces/CreateWorkspace/CreateWorkspaceDialog";
 import {
-  tasksSidebarEdgeHideToggleClass as tasksNavPanelHideToggleClass,
-  tasksSidebarEdgeShowToggleClass as tasksNavPanelShowToggleClass,
-} from "@/components/TasksSidebar/tasks-sidebar-edge-toggle-classes";
-import { AppTooltip } from "@/components/Tooltip/AppTooltip";
-import "@/components/Calendar/calendar-theme.css";
+  CollapsibleSidePanel,
+  CollapsibleSidePanelMain,
+} from "@/components/Panel";
+import "@/components/Calendar/theme.css";
 import { TasksShellHeaderExtrasProvider } from "@/contexts";
 import { TasksAppChromeHeader } from "./TasksAppChromeHeader";
 import { PageContainer, TasksLayoutMain as Main } from "../shell.ui";
@@ -54,35 +52,18 @@ export default function TasksLayout({
   const [isNavSidebarOpen, setIsNavSidebarOpen] = useState(true);
 
   useEffect(() => {
-    try {
-      setIsNavSidebarOpen(
-        window.localStorage.getItem(TASKS_NAV_SIDEBAR_OPEN_KEY) !== "0",
-      );
-    } catch {
-      /* ignore */
-    }
+    setIsNavSidebarOpen(readTasksNavSidebarOpenPref());
   }, []);
 
   const persistNavSidebarOpen = useCallback((open: boolean) => {
     setIsNavSidebarOpen(open);
-    try {
-      window.localStorage.setItem(TASKS_NAV_SIDEBAR_OPEN_KEY, open ? "1" : "0");
-    } catch {
-      /* ignore */
-    }
+    writeTasksNavSidebarOpenPref(open);
   }, []);
 
   const toggleNavSidebar = useCallback(() => {
     setIsNavSidebarOpen((prev) => {
       const next = !prev;
-      try {
-        window.localStorage.setItem(
-          TASKS_NAV_SIDEBAR_OPEN_KEY,
-          next ? "1" : "0",
-        );
-      } catch {
-        /* ignore */
-      }
+      writeTasksNavSidebarOpenPref(next);
       return next;
     });
   }, []);
@@ -258,8 +239,13 @@ export default function TasksLayout({
                   APP_CHROME_PADDING_X,
                 )}
               >
-                <div
-                  className={cn(
+                <CollapsibleSidePanel
+                  expanded={isNavSidebarOpen}
+                  onRequestCollapse={toggleNavSidebar}
+                  panelId="take-and-do-tasks-sidebar"
+                  hideTooltip="Hide panel"
+                  hideSrLabel="Hide tasks navigation panel"
+                  columnClassName={cn(
                     "relative flex shrink-0 flex-col overflow-visible transition-[width,opacity,min-width,max-height] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none lg:min-h-0 lg:max-h-full lg:self-stretch",
                     !isNavSidebarOpen
                       ? "pointer-events-none max-h-0 min-w-0 w-0 overflow-hidden opacity-0 lg:max-h-none"
@@ -267,7 +253,7 @@ export default function TasksLayout({
                     isNavSidebarOpen &&
                       "max-lg:max-h-[min(40vh,420px)] max-lg:w-full lg:opacity-100",
                   )}
-                  style={
+                  columnStyle={
                     isNavSidebarOpen
                       ? {
                           width: `min(${navPanelWidth}px, 100%)`,
@@ -277,88 +263,37 @@ export default function TasksLayout({
                           minWidth: 0,
                         }
                   }
+                  contentClassName="relative flex h-full min-h-0 w-full min-w-0 max-w-full flex-1 flex-col overflow-hidden lg:min-h-0 lg:max-h-full"
                 >
-                  <div
-                    className={cn(
-                      "flex min-h-0 w-full flex-1 flex-col overflow-hidden max-lg:min-h-0 max-lg:flex-none max-lg:overflow-visible motion-reduce:transition-none lg:min-h-0 lg:max-h-full",
-                      !isNavSidebarOpen && "lg:pointer-events-none",
-                    )}
-                  >
-                    <div className="relative flex h-full min-h-0 w-full min-w-0 max-w-full flex-1 flex-col overflow-hidden lg:min-h-0 lg:max-h-full">
-                      <TasksSidebar
-                        isOpen={isNavSidebarOpen}
-                        widthPx={tasksSidebarWidthPx}
-                        onWidthPxChange={setTasksSidebarWidthPx}
-                        activeView={activeView}
-                        onViewChange={handleViewChange}
-                        onCreateTaskBoard={() =>
-                          setIsWorkspaceCreateDialogOpen(true)
-                        }
-                        folders={folders}
-                        taskBoards={taskBoards}
-                        setTaskBoards={setTaskBoards}
-                        setFolders={setFolders}
-                        isFoldersLoading={isFoldersLoading}
-                        isBoardsLoading={isBoardsLoading}
-                      />
-                    </div>
-                  </div>
-                  {isNavSidebarOpen ? (
-                    <div className="pointer-events-none absolute inset-y-0 left-full z-30 hidden lg:flex lg:items-center">
-                      <AppTooltip content="Hide panel" side="right">
-                        <button
-                          type="button"
-                          onClick={toggleNavSidebar}
-                          aria-expanded
-                          aria-controls="take-and-do-tasks-sidebar"
-                          className={cn(
-                            tasksNavPanelHideToggleClass,
-                            "rounded-l-none border-l-0 -translate-x-px",
-                          )}
-                        >
-                          <span className="sr-only">
-                            Hide tasks navigation panel
-                          </span>
-                          <ChevronLeft
-                            size={13}
-                            strokeWidth={2.25}
-                            className="shrink-0 transition-colors group-hover:text-zinc-100"
-                            aria-hidden
-                          />
-                        </button>
-                      </AppTooltip>
-                    </div>
-                  ) : null}
-                </div>
+                  <TasksSidebar
+                    isOpen={isNavSidebarOpen}
+                    widthPx={tasksSidebarWidthPx}
+                    onWidthPxChange={setTasksSidebarWidthPx}
+                    activeView={activeView}
+                    onViewChange={handleViewChange}
+                    onCreateTaskBoard={() =>
+                      setIsWorkspaceCreateDialogOpen(true)
+                    }
+                    folders={folders}
+                    taskBoards={taskBoards}
+                    setTaskBoards={setTaskBoards}
+                    setFolders={setFolders}
+                    isFoldersLoading={isFoldersLoading}
+                    isBoardsLoading={isBoardsLoading}
+                  />
+                </CollapsibleSidePanel>
 
-                <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-visible">
-                  {!isNavSidebarOpen ? (
-                    <div className="pointer-events-none absolute inset-y-0 z-30 hidden left-[calc(-1.5rem-1px)] lg:flex lg:items-center">
-                      <AppTooltip content="Show panel" side="right">
-                        <button
-                          type="button"
-                          onClick={() => persistNavSidebarOpen(true)}
-                          aria-expanded={false}
-                          aria-controls="take-and-do-tasks-sidebar"
-                          className={tasksNavPanelShowToggleClass}
-                        >
-                          <span className="sr-only">
-                            Show tasks navigation panel
-                          </span>
-                          <ChevronRight
-                            size={13}
-                            strokeWidth={2.25}
-                            className="shrink-0 transition-colors group-hover:text-zinc-100"
-                            aria-hidden
-                          />
-                        </button>
-                      </AppTooltip>
-                    </div>
-                  ) : null}
-                  <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-                    {children}
-                  </div>
-                </div>
+                <CollapsibleSidePanelMain
+                  collapsed={!isNavSidebarOpen}
+                  onRequestExpand={() => persistNavSidebarOpen(true)}
+                  panelId="take-and-do-tasks-sidebar"
+                  showTooltip="Show panel"
+                  showSrLabel="Show tasks navigation panel"
+                  rootClassName="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-visible"
+                  bodyClassName="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
+                >
+                  {children}
+                </CollapsibleSidePanelMain>
               </div>
             </div>
           </Main>
@@ -376,4 +311,20 @@ export default function TasksLayout({
       </PageContainer>
     </WorkspaceProvider>
   );
+}
+
+function writeTasksNavSidebarOpenPref(open: boolean) {
+  try {
+    window.localStorage.setItem(TASKS_NAV_SIDEBAR_OPEN_KEY, open ? "1" : "0");
+  } catch {
+    /* ignore */
+  }
+}
+
+function readTasksNavSidebarOpenPref(): boolean {
+  try {
+    return window.localStorage.getItem(TASKS_NAV_SIDEBAR_OPEN_KEY) !== "0";
+  } catch {
+    return true;
+  }
 }

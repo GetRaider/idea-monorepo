@@ -5,8 +5,7 @@ import dynamic from "next/dynamic";
 import { Spinner } from "@/components/Spinner/Spinner";
 
 const CalendarPage = dynamic(
-  () =>
-    import("@/components/Calendar/CalendarPage").then((m) => m.CalendarPage),
+  () => import("@/components/Calendar").then((m) => m.CalendarPage),
   {
     ssr: false,
     loading: () => (

@@ -1,5 +1,7 @@
 import type { CalendarEvent, CalendarEventType } from "@/types/calendar.types";
 
+import { GOOGLE_CALENDAR_EVENT_ID_PREFIX } from "@/constants/calendar.constants";
+
 function builtInKindColor(kind: CalendarEventType): string {
   switch (kind) {
     case "timeBlock":
@@ -159,7 +161,7 @@ export function calendarStripeHex(
     googleCalendarColor?: string;
   },
 ): string {
-  if (event.id.startsWith("gcal:")) {
+  if (event.id.startsWith(GOOGLE_CALENDAR_EVENT_ID_PREFIX)) {
     return effectiveGoogleCalendarColor(opts.googleCalendarColor);
   }
   return effectiveKindColor(event.type, opts.kindColors);

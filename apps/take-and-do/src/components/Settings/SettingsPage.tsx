@@ -8,15 +8,15 @@ import {
   PageContainer,
   WelcomeSection,
 } from "@/app/shell.ui";
-import { Sidebar } from "@/components/Sidebar/Sidebar";
 import { SettingsIcon } from "@/components/Icons";
+import { MenuRowButton } from "@/components/MenuRowButton/MenuRowButton";
+import { Sidebar } from "@/components/Sidebar/Sidebar";
+import { env } from "@/env/client";
 import {
   APP_CHROME_MAIN_INSET,
   APP_CHROME_NAV_ICON_PX,
 } from "@/helpers/app-chrome-layout";
 import { cn } from "@/lib/styles/utils";
-import { isCalendarFeatureEnabled } from "@/lib/feature-flags";
-import { MenuRowButton } from "@/components/MenuRowButton/MenuRowButton";
 
 import { IntegrationsSettings } from "./IntegrationsSettings";
 
@@ -25,7 +25,7 @@ type SettingsSection = "integrations";
 export function SettingsPage() {
   const [, setCurrentPage] = useState("settings");
   const [section, setSection] = useState<SettingsSection>("integrations");
-  const calendarEnabled = isCalendarFeatureEnabled();
+  const calendarEnabled = env.features.calendar;
 
   const content = useMemo(() => {
     if (!calendarEnabled) {

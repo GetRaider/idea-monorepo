@@ -19,8 +19,8 @@ import type {
   CalendarBacklogType,
 } from "@/types/calendar.types";
 
-import { CalendarEventTaskScopeSection } from "./CalendarEventTaskScopeSection";
-import { kindLabel } from "./calendar-event-mapper";
+import { CalendarEventTaskScopeSection } from "../shared/TaskScopeSection";
+import { kindLabel } from "@/helpers/calendar/calendar-event-mapper";
 
 interface CalendarTemplateEditorDialogProps {
   open: boolean;
@@ -37,42 +37,6 @@ interface Draft {
   minutes: number;
   taskScope: string[];
   descriptionText: string;
-}
-
-function emptyDraft(): Draft {
-  return {
-    title: "",
-    type: "timeBlock",
-    minutes: 60,
-    taskScope: [],
-    descriptionText: "",
-  };
-}
-
-function fromItem(item: CalendarBacklogEvent): Draft {
-  return {
-    title: item.title,
-    type: item.type,
-    minutes: item.durationMinutes,
-    taskScope: item.taskScope ?? [],
-    descriptionText: item.description ?? "",
-  };
-}
-
-function toItem(draft: Draft, id: string): CalendarBacklogEvent | null {
-  const title = draft.title.trim();
-  if (!title || draft.minutes <= 0) return null;
-  const taskScopeLines = draft.taskScope.map((t) => t.trim()).filter(Boolean);
-  return {
-    id,
-    type: draft.type,
-    title,
-    durationMinutes: draft.minutes,
-    ...(draft.descriptionText.trim()
-      ? { description: draft.descriptionText.trim() }
-      : {}),
-    ...(taskScopeLines.length ? { taskScope: taskScopeLines } : {}),
-  };
 }
 
 export function CalendarTemplateEditorDialog({
@@ -210,4 +174,40 @@ export function CalendarTemplateEditorDialog({
       ) : null}
     </Dialog>
   );
+}
+
+function emptyDraft(): Draft {
+  return {
+    title: "",
+    type: "timeBlock",
+    minutes: 60,
+    taskScope: [],
+    descriptionText: "",
+  };
+}
+
+function fromItem(item: CalendarBacklogEvent): Draft {
+  return {
+    title: item.title,
+    type: item.type,
+    minutes: item.durationMinutes,
+    taskScope: item.taskScope ?? [],
+    descriptionText: item.description ?? "",
+  };
+}
+
+function toItem(draft: Draft, id: string): CalendarBacklogEvent | null {
+  const title = draft.title.trim();
+  if (!title || draft.minutes <= 0) return null;
+  const taskScopeLines = draft.taskScope.map((t) => t.trim()).filter(Boolean);
+  return {
+    id,
+    type: draft.type,
+    title,
+    durationMinutes: draft.minutes,
+    ...(draft.descriptionText.trim()
+      ? { description: draft.descriptionText.trim() }
+      : {}),
+    ...(taskScopeLines.length ? { taskScope: taskScopeLines } : {}),
+  };
 }

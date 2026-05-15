@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { isCalendarFeatureEnabled } from "@/lib/feature-flags";
+import { isCalendarFeatureEnabled } from "@/helpers/feature-flags";
 
 const envSchema = z.object({
   NEXT_PUBLIC_GOOGLE_CLIENT_ID: z.string().min(1),

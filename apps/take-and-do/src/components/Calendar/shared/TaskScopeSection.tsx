@@ -2,19 +2,21 @@
 
 import { cn } from "@/lib/styles/utils";
 
-import { CalendarTaskScopeSelector } from "./CalendarTaskScopeSelector";
+import { CalendarTaskScopeSelector } from "./TaskScopeSelector";
+
+interface CalendarEventTaskScopeSectionProps {
+  value: string[];
+  onChange: (next: string[]) => void;
+  disabled?: boolean;
+  className?: string;
+}
 
 export function CalendarEventTaskScopeSection({
   value,
   onChange,
   disabled = false,
   className,
-}: {
-  value: string[];
-  onChange: (next: string[]) => void;
-  disabled?: boolean;
-  className?: string;
-}) {
+}: CalendarEventTaskScopeSectionProps) {
   return (
     <div
       className={cn(

@@ -5,17 +5,15 @@ import type { LucideProps } from "lucide-react";
 
 import type { CalendarEventType } from "@/types/calendar.types";
 
-import { kindColor } from "./calendar-event-mapper";
+import { kindColor } from "@/helpers/calendar/calendar-event-mapper";
 
-/** Pixel size for icons inside calendar cells — small, left-aligned. */
-export function calendarKindIconSizePx(
-  durationMs: number,
-  allDay: boolean,
-): number {
-  if (allDay) return 11;
-  if (!Number.isFinite(durationMs) || durationMs <= 0) return 10;
-  const minutes = durationMs / 60_000;
-  return Math.round(Math.min(12, Math.max(9, 8 + minutes * 0.08)));
+export interface CalendarKindIconProps {
+  kind: CalendarEventType;
+  size: number;
+  /** Defaults to the kind’s accent color (good on dark UI); use e.g. white on tinted event cells. */
+  color?: string;
+  className?: string;
+  "aria-hidden"?: boolean;
 }
 
 export function CalendarKindIcon({
@@ -24,14 +22,7 @@ export function CalendarKindIcon({
   color,
   className,
   "aria-hidden": ariaHidden = true,
-}: {
-  kind: CalendarEventType;
-  size: number;
-  /** Defaults to the kind’s accent color (good on dark UI); use e.g. white on tinted event cells. */
-  color?: string;
-  className?: string;
-  "aria-hidden"?: boolean;
-}) {
+}: CalendarKindIconProps) {
   const strokeColor = color ?? kindColor(kind);
   const common: LucideProps = {
     size,
@@ -53,4 +44,15 @@ export function CalendarKindIcon({
       return _exhaustive;
     }
   }
+}
+
+/** Pixel size for icons inside calendar cells — small, left-aligned. */
+export function calendarKindIconSizePx(
+  durationMs: number,
+  allDay: boolean,
+): number {
+  if (allDay) return 11;
+  if (!Number.isFinite(durationMs) || durationMs <= 0) return 10;
+  const minutes = durationMs / 60_000;
+  return Math.round(Math.min(12, Math.max(9, 8 + minutes * 0.08)));
 }

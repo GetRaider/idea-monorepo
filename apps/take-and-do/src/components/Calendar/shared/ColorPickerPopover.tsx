@@ -18,9 +18,9 @@ import {
   coerceHexToWhiteTextSafe,
   hexIsReadableWithWhiteText,
   normalizeHexColor,
-} from "./calendar-colors";
+} from "@/helpers/calendar/calendar-colors";
 
-type CalendarColorPickerPopoverProps = {
+export interface CalendarColorPickerPopoverProps {
   selectedHex: string;
   onSelect: (hex: string) => void;
   /** Clears override (e.g. event type → built-in default). */
@@ -29,7 +29,7 @@ type CalendarColorPickerPopoverProps = {
   /** Menu opens with its right edge at trigger (panel sits on the left). */
   menuOpensTo?: "left" | "right";
   align?: "below" | "auto";
-};
+}
 
 export function CalendarColorPickerPopover({
   selectedHex,

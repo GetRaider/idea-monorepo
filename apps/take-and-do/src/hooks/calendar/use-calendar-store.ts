@@ -2,12 +2,12 @@
 
 import { useCallback, useEffect, useLayoutEffect, useState } from "react";
 
-import { defaultAxisTimeZones } from "@/components/Calendar/calendar-axis-time";
-
+import { GOOGLE_CALENDAR_EVENT_ID_PREFIX } from "@/constants/calendar.constants";
+import { defaultAxisTimeZones } from "@/helpers/calendar/calendar-axis-time";
 import {
   coerceHexToWhiteTextSafe,
   normalizeHexColor,
-} from "@/components/Calendar/calendar-colors";
+} from "@/helpers/calendar/calendar-colors";
 
 import type {
   CalendarAxisTimeZone,
@@ -21,10 +21,8 @@ import { useIsAnonymous } from "@/hooks/auth/use-is-anonymous";
 
 import { readCalendarState, writeCalendarState } from "./calendar-storage";
 import { CALENDAR_STATE_EXTERNAL_UPDATE_EVENT } from "./task-calendar-local-sync";
-import { getEffectiveGoogleRecurrence } from "@/lib/push-google-calendar-event";
+import { getEffectiveGoogleRecurrence } from "@/helpers/calendar/google-calendar-recurrence.helper";
 import { mergeGoogleCalendarImportedEvents } from "./merge-google-calendar-import";
-
-const GCAL_PREFIX = "gcal:";
 
 export function useCalendarStore() {
   const isGuest = useIsAnonymous();
@@ -37,7 +35,9 @@ export function useCalendarStore() {
     } else {
       setState({
         ...raw,
-        events: raw.events.filter((e) => e.id.startsWith(GCAL_PREFIX)),
+        events: raw.events.filter((e) =>
+          e.id.startsWith(GOOGLE_CALENDAR_EVENT_ID_PREFIX),
+        ),
       });
     }
   }, [isGuest]);
@@ -50,11 +50,17 @@ export function useCalendarStore() {
         if (!prev) {
           return {
             ...raw,
-            events: raw.events.filter((e) => e.id.startsWith(GCAL_PREFIX)),
+            events: raw.events.filter((e) =>
+              e.id.startsWith(GOOGLE_CALENDAR_EVENT_ID_PREFIX),
+            ),
           };
         }
-        const gcal = raw.events.filter((e) => e.id.startsWith(GCAL_PREFIX));
-        const user = prev.events.filter((e) => !e.id.startsWith(GCAL_PREFIX));
+        const gcal = raw.events.filter((e) =>
+          e.id.startsWith(GOOGLE_CALENDAR_EVENT_ID_PREFIX),
+        );
+        const user = prev.events.filter(
+          (e) => !e.id.startsWith(GOOGLE_CALENDAR_EVENT_ID_PREFIX),
+        );
         return { ...prev, ...raw, events: [...gcal, ...user] };
       });
     };
@@ -69,7 +75,9 @@ export function useCalendarStore() {
   const syncExternalGridEvents = useCallback((blocks: CalendarEvent[]) => {
     setState((prev) => {
       if (!prev) return prev;
-      const gcal = prev.events.filter((e) => e.id.startsWith(GCAL_PREFIX));
+      const gcal = prev.events.filter((e) =>
+        e.id.startsWith(GOOGLE_CALENDAR_EVENT_ID_PREFIX),
+      );
       return { ...prev, events: [...gcal, ...blocks] };
     });
   }, []);
@@ -81,7 +89,9 @@ export function useCalendarStore() {
     } else {
       writeCalendarState({
         ...state,
-        events: state.events.filter((e) => e.id.startsWith(GCAL_PREFIX)),
+        events: state.events.filter((e) =>
+          e.id.startsWith(GOOGLE_CALENDAR_EVENT_ID_PREFIX),
+        ),
       });
     }
   }, [state, isGuest]);
@@ -238,7 +248,9 @@ export function useCalendarStore() {
   const removeGoogleImportedEvents = useCallback(() => {
     setState((prev) => {
       if (!prev) return prev;
-      const filtered = prev.events.filter((e) => !e.id.startsWith(GCAL_PREFIX));
+      const filtered = prev.events.filter(
+        (e) => !e.id.startsWith(GOOGLE_CALENDAR_EVENT_ID_PREFIX),
+      );
       if (filtered.length === prev.events.length) return prev;
       return { ...prev, events: filtered };
     });
@@ -249,7 +261,7 @@ export function useCalendarStore() {
       setState((prev) => {
         if (!prev) return prev;
         const filtered = prev.events.filter((e) => {
-          if (!e.id.startsWith(GCAL_PREFIX)) return true;
+          if (!e.id.startsWith(GOOGLE_CALENDAR_EVENT_ID_PREFIX)) return true;
           if (e.type !== "common") return true;
           return (
             getEffectiveGoogleRecurrence(e)?.recurringEventId !==

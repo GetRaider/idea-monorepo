@@ -1,12 +1,8 @@
-import { toast } from "sonner";
-
+import { GOOGLE_CALENDAR_EVENT_ID_PREFIX } from "@/constants/calendar.constants";
 import type {
   CalendarEvent,
   GoogleCalendarRecurrenceMeta,
-  GoogleCalendarRecurrenceScope,
 } from "@/types/calendar.types";
-
-const GCAL_PREFIX = "gcal:";
 
 function looksLikeGoogleOccurrenceSuffix(s: string): boolean {
   if (s.length < 7 || s.length > 56) return false;
@@ -17,7 +13,7 @@ function looksLikeGoogleOccurrenceSuffix(s: string): boolean {
 function inferGoogleRecurrenceFromGcalInstanceId(
   event: CalendarEvent & { type: "common" },
 ): GoogleCalendarRecurrenceMeta | undefined {
-  const raw = event.id.slice(GCAL_PREFIX.length);
+  const raw = event.id.slice(GOOGLE_CALENDAR_EVENT_ID_PREFIX.length);
   for (let i = raw.length - 1; i >= 0; i--) {
     if (raw[i] !== "_") continue;
     const suffix = raw.slice(i + 1);
@@ -40,7 +36,10 @@ function inferGoogleRecurrenceFromGcalInstanceId(
 export function getEffectiveGoogleRecurrence(
   event: CalendarEvent,
 ): GoogleCalendarRecurrenceMeta | undefined {
-  if (event.type !== "common" || !event.id.startsWith(GCAL_PREFIX))
+  if (
+    event.type !== "common" ||
+    !event.id.startsWith(GOOGLE_CALENDAR_EVENT_ID_PREFIX)
+  )
     return undefined;
   const gr = event.googleRecurrence;
   if (gr?.recurringEventId) {
@@ -58,49 +57,4 @@ export function needsGoogleCalendarRecurrenceScope(
   event: CalendarEvent,
 ): boolean {
   return !!getEffectiveGoogleRecurrence(event)?.recurringEventId;
-}
-
-export async function pushConnectedGoogleCalendarEvent(
-  event: CalendarEvent,
-  recurrenceScope?: GoogleCalendarRecurrenceScope,
-): Promise<boolean> {
-  if (event.type !== "common" || !event.id.startsWith(GCAL_PREFIX)) return true;
-
-  const body: Record<string, unknown> = {
-    id: event.id,
-    type: "common",
-    title: event.title,
-    start: event.start,
-    end: event.end,
-    allDay: event.allDay,
-    description: event.description ?? "",
-    notes: event.notes ?? "",
-    ...(event.timeZone?.trim() ? { timeZone: event.timeZone.trim() } : {}),
-  };
-
-  if (recurrenceScope) {
-    body.recurrenceScope = recurrenceScope;
-  }
-  const effectiveGr = getEffectiveGoogleRecurrence(event);
-  if (recurrenceScope && recurrenceScope !== "instance" && effectiveGr) {
-    body.googleRecurrence = effectiveGr;
-  }
-
-  const res = await fetch("/api/integrations/google-calendar/push", {
-    method: "POST",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-
-  if (res.ok) return true;
-
-  const parsed = (await res.json().catch(() => null)) as {
-    error?: string;
-  } | null;
-  toast.error(
-    parsed?.error ??
-      "Could not update Google Calendar. Try reconnecting in Settings.",
-  );
-  return false;
 }

@@ -34,21 +34,16 @@ import type {
   CalendarKindVisibility,
 } from "@/types/calendar.types";
 
-import { CalendarColorPickerPopover } from "./CalendarColorPickerPopover";
-import { CalendarKindIcon } from "./CalendarKindIcon";
+import { CalendarColorPickerPopover } from "../shared/ColorPickerPopover";
+import { CalendarKindIcon } from "../shared/KindIcon";
 import {
   effectiveGoogleCalendarColor,
   effectiveKindColor,
-} from "./calendar-colors";
-import { kindLabel } from "./calendar-event-mapper";
+} from "@/helpers/calendar/calendar-colors";
+import { kindLabel } from "@/helpers/calendar/calendar-event-mapper";
 import { tasksHelper } from "@/helpers/task.helper";
 
-const WEEK_LETTERS = ["M", "T", "W", "T", "F", "S", "S"] as const;
-
-/** Match section header `px-2` so body lines up with chevron leading edge. */
-const CAL_PANEL_BODY_GUTTER = "pl-2 pr-1" as const;
-
-interface CalendarPanelProps {
+export interface CalendarPanelProps {
   containerRef: React.RefObject<HTMLDivElement | null>;
   items: CalendarBacklogEvent[];
   onRequestNewTemplate: () => void;
@@ -65,92 +60,6 @@ interface CalendarPanelProps {
   onKindColorChange: (kind: CalendarEventType, color: string | null) => void;
   onGoogleCalendarColorChange: (color: string | null) => void;
 }
-
-function startOfDay(d: Date) {
-  const x = new Date(d);
-  x.setHours(0, 0, 0, 0);
-  return x;
-}
-
-function sameDay(a: Date, b: Date) {
-  return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
-  );
-}
-
-function mondayBefore(d: Date) {
-  const x = new Date(d);
-  const day = x.getDay();
-  const offset = day === 0 ? -6 : 1 - day;
-  x.setDate(x.getDate() + offset);
-  x.setHours(0, 0, 0, 0);
-  return x;
-}
-
-function isoWeekNumber(anchor: Date) {
-  const d = new Date(
-    Date.UTC(anchor.getFullYear(), anchor.getMonth(), anchor.getDate()),
-  );
-  const day = d.getUTCDay() || 7;
-  d.setUTCDate(d.getUTCDate() + 4 - day);
-  const y = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  return Math.ceil(((d.getTime() - y.getTime()) / 86400000 + 1) / 7);
-}
-
-function monthGrid(visibleMonth: Date) {
-  const y = visibleMonth.getFullYear();
-  const m = visibleMonth.getMonth();
-  const first = new Date(y, m, 1);
-  const gridStart = mondayBefore(first);
-  const cells: { date: Date; inMonth: boolean }[] = [];
-  const cur = new Date(gridStart);
-  for (let i = 0; i < 42; i++) {
-    cells.push({
-      date: new Date(cur),
-      inMonth: cur.getMonth() === m,
-    });
-    cur.setDate(cur.getDate() + 1);
-  }
-  const rows: (typeof cells)[] = [];
-  for (let r = 0; r < 6; r++) {
-    rows.push(cells.slice(r * 7, r * 7 + 7));
-  }
-  return rows;
-}
-
-const CALENDAR_ROWS: { kind: CalendarEventType; label: string }[] = [
-  { kind: "timeBlock", label: "Time Blocks" },
-  { kind: "common", label: "Common" },
-  { kind: "task", label: "Tasks" },
-];
-
-const TASK_DRAG_DURATION_MINUTES = 60;
-
-const TASK_STATUS_RANK: Record<TaskStatus, number> = {
-  [TaskStatus.IN_PROGRESS]: 0,
-  [TaskStatus.TODO]: 1,
-  [TaskStatus.DONE]: 2,
-};
-
-const CAL_PANEL_SECTION_ORDER = [
-  "month",
-  "calendars",
-  "tasks",
-  "eventTypes",
-  "backlog",
-] as const;
-
-type CalPanelSectionId = (typeof CAL_PANEL_SECTION_ORDER)[number];
-
-const CAL_PANEL_DEFAULT_OPEN: Record<CalPanelSectionId, boolean> = {
-  month: true,
-  calendars: false,
-  tasks: false,
-  eventTypes: false,
-  backlog: false,
-};
 
 export function CalendarPanel({
   containerRef,
@@ -757,3 +666,94 @@ export function CalendarPanel({
     </aside>
   );
 }
+
+const WEEK_LETTERS = ["M", "T", "W", "T", "F", "S", "S"] as const;
+
+/** Match section header `px-2` so body lines up with chevron leading edge. */
+const CAL_PANEL_BODY_GUTTER = "pl-2 pr-1" as const;
+
+function startOfDay(d: Date) {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  return x;
+}
+
+function sameDay(a: Date, b: Date) {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
+
+function mondayBefore(d: Date) {
+  const x = new Date(d);
+  const day = x.getDay();
+  const offset = day === 0 ? -6 : 1 - day;
+  x.setDate(x.getDate() + offset);
+  x.setHours(0, 0, 0, 0);
+  return x;
+}
+
+function isoWeekNumber(anchor: Date) {
+  const d = new Date(
+    Date.UTC(anchor.getFullYear(), anchor.getMonth(), anchor.getDate()),
+  );
+  const day = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - day);
+  const y = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil(((d.getTime() - y.getTime()) / 86400000 + 1) / 7);
+}
+
+function monthGrid(visibleMonth: Date) {
+  const y = visibleMonth.getFullYear();
+  const m = visibleMonth.getMonth();
+  const first = new Date(y, m, 1);
+  const gridStart = mondayBefore(first);
+  const cells: { date: Date; inMonth: boolean }[] = [];
+  const cur = new Date(gridStart);
+  for (let i = 0; i < 42; i++) {
+    cells.push({
+      date: new Date(cur),
+      inMonth: cur.getMonth() === m,
+    });
+    cur.setDate(cur.getDate() + 1);
+  }
+  const rows: (typeof cells)[] = [];
+  for (let r = 0; r < 6; r++) {
+    rows.push(cells.slice(r * 7, r * 7 + 7));
+  }
+  return rows;
+}
+
+const CALENDAR_ROWS: { kind: CalendarEventType; label: string }[] = [
+  { kind: "timeBlock", label: "Time Blocks" },
+  { kind: "common", label: "Common" },
+  { kind: "task", label: "Tasks" },
+];
+
+const TASK_DRAG_DURATION_MINUTES = 60;
+
+const TASK_STATUS_RANK: Record<TaskStatus, number> = {
+  [TaskStatus.IN_PROGRESS]: 0,
+  [TaskStatus.TODO]: 1,
+  [TaskStatus.DONE]: 2,
+};
+
+const CAL_PANEL_SECTION_ORDER = [
+  "month",
+  "calendars",
+  "tasks",
+  "eventTypes",
+  "backlog",
+] as const;
+
+type CalPanelSectionId = (typeof CAL_PANEL_SECTION_ORDER)[number];
+
+const CAL_PANEL_DEFAULT_OPEN: Record<CalPanelSectionId, boolean> = {
+  month: true,
+  calendars: false,
+  tasks: false,
+  eventTypes: false,
+  backlog: false,
+};

@@ -1,18 +1,17 @@
+import { GOOGLE_CALENDAR_EVENT_ID_PREFIX } from "@/constants/calendar.constants";
+import type { CalendarEventCreateBody } from "@/db/dtos/calendar-events.dto";
 import type {
   CalendarEvent,
   CommonCalendarEvent,
   TimeBlockCalendarEvent,
 } from "@/types/calendar.types";
-import type { CalendarEventCreateBody } from "@/db/dtos/calendar-events.dto";
-
-const GCAL_PREFIX = "gcal:";
 
 export function calendarEventUsesApiStorage(
   ev: CalendarEvent,
   isGuest: boolean,
 ): boolean {
   if (isGuest) return false;
-  if (ev.id.startsWith(GCAL_PREFIX)) return false;
+  if (ev.id.startsWith(GOOGLE_CALENDAR_EVENT_ID_PREFIX)) return false;
   if (ev.type === "task") return false;
   return ev.type === "common" || ev.type === "timeBlock";
 }

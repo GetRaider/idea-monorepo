@@ -19,9 +19,9 @@ import {
 import { GuestAvatarIcon } from "../Icons/GuestAvatarIcon";
 import { DefaultAvatarIcon } from "../Icons/DefaulAvatarIcon";
 import { Route } from "@/constants/route.constant";
-import { isCalendarFeatureEnabled } from "@/lib/feature-flags";
+import { env } from "@/env/client";
 
-const buttonsSet: Array<{
+const PRIMARY_NAV: Array<{
   label: string;
   icon: string | React.ReactNode;
   path: string | null;
@@ -52,10 +52,10 @@ export function Sidebar({ onNavigationChange }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { data: session } = useSession();
-  const navButtons = isCalendarFeatureEnabled()
-    ? buttonsSet
-    : buttonsSet.map((b) =>
-        b.path === Route.CALENDAR ? { ...b, path: null as string | null } : b,
+  const navButtons = env.features.calendar
+    ? PRIMARY_NAV
+    : PRIMARY_NAV.map((item) =>
+        item.path === Route.CALENDAR ? { ...item, path: null } : item,
       );
 
   const handleNavClick = (page: string, path: string) => {

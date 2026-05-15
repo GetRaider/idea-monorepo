@@ -2,6 +2,8 @@ import type { EventApi, EventInput } from "@fullcalendar/core";
 
 import type { CalendarEvent, CalendarEventType } from "@/types/calendar.types";
 
+import { GOOGLE_CALENDAR_EVENT_ID_PREFIX } from "@/constants/calendar.constants";
+
 import {
   calendarStripeHex,
   eventFillHex,
@@ -13,13 +15,14 @@ export type CalendarEventColorTheme = {
   googleCalendarColor?: string;
 };
 
-const GCAL_EVENT_ID_PREFIX = "gcal:";
-
 /** Common events created or synced via Google Calendar use `gcal:` ids. */
 export function calendarCommonEventUsesGoogleCalendar(
   event: Pick<CalendarEvent, "id" | "type">,
 ): boolean {
-  return event.type === "common" && event.id.startsWith(GCAL_EVENT_ID_PREFIX);
+  return (
+    event.type === "common" &&
+    event.id.startsWith(GOOGLE_CALENDAR_EVENT_ID_PREFIX)
+  );
 }
 
 export function kindLabel(kind: CalendarEventType): string {

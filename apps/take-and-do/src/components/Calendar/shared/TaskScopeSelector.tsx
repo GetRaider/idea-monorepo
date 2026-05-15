@@ -26,61 +26,18 @@ import { guestTasksForBoard } from "@/stores/guest/guest-task-filters";
 
 type ScopeToken = string;
 
-function taskToken(boardId: string, taskId: string): ScopeToken {
-  return `task:${boardId}:${taskId}`;
+interface CalendarTaskScopeSelectorProps {
+  /** Stored in CalendarEvent.taskScope / CalendarBacklogItem.taskScope */
+  value: string[];
+  onChange: (next: string[]) => void;
+  disabled?: boolean;
+  className?: string;
 }
 
-function parseTaskToken(
-  token: ScopeToken,
-): { boardId: string; taskId: string } | null {
-  if (!token.startsWith("task:")) return null;
-  const parts = token.split(":");
-  if (parts.length !== 3) return null;
-  const [, boardId, taskId] = parts;
-  if (!boardId || !taskId) return null;
-  return { boardId, taskId };
-}
-
-function isLegacyTextToken(token: ScopeToken) {
-  return (
-    !token.startsWith("board:") &&
-    !token.startsWith("task:") &&
-    !token.startsWith("text:")
-  );
-}
-
-function toTextToken(text: string): ScopeToken {
-  return `text:${text}`;
-}
-
-function displayLabelForToken(
-  token: ScopeToken,
-  boardsById: Map<string, { name: string; emoji?: string | null }>,
-  summaryByToken: Map<string, string>,
-): string {
-  if (token.startsWith("text:")) return token.slice("text:".length);
-  if (token.startsWith("board:")) {
-    const id = token.slice("board:".length);
-    const b = boardsById.get(id);
-    return b ? `${b.emoji ? `${b.emoji} ` : ""}${b.name}` : "Board";
-  }
-  const t = parseTaskToken(token);
-  if (t) {
-    const label = summaryByToken.get(token);
-    if (label) return label;
-    const b = boardsById.get(t.boardId);
-    return `${b ? `${b.emoji ? `${b.emoji} ` : ""}${b.name}: ` : ""}Task`;
-  }
-  return token;
-}
-
-function boardDisplayName(
-  boardId: string,
-  boardsById: Map<string, { name: string; emoji?: string | null }>,
-) {
-  const b = boardsById.get(boardId);
-  if (!b) return "Board";
-  return `${b.emoji ? `${b.emoji} ` : ""}${b.name}`;
+interface TaskScopeSelectedTaskRowProps {
+  task: Task;
+  boardLabel: string;
+  onRemove: () => void;
 }
 
 function TaskScopeTaskPickerRow({ task }: { task: Task }) {
@@ -118,11 +75,7 @@ function TaskScopeSelectedTaskRow({
   task,
   boardLabel,
   onRemove,
-}: {
-  task: Task;
-  boardLabel: string;
-  onRemove: () => void;
-}) {
+}: TaskScopeSelectedTaskRowProps) {
   return (
     <div className="flex items-start gap-3 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2.5">
       <div className="flex min-w-0 flex-1 flex-col gap-1">
@@ -158,14 +111,6 @@ function TaskScopeSelectedTaskRow({
       </button>
     </div>
   );
-}
-
-interface CalendarTaskScopeSelectorProps {
-  /** Stored in CalendarEvent.taskScope / CalendarBacklogItem.taskScope */
-  value: string[];
-  onChange: (next: string[]) => void;
-  disabled?: boolean;
-  className?: string;
 }
 
 export function CalendarTaskScopeSelector({
@@ -430,4 +375,61 @@ export function CalendarTaskScopeSelector({
       </div>
     </div>
   );
+}
+
+function taskToken(boardId: string, taskId: string): ScopeToken {
+  return `task:${boardId}:${taskId}`;
+}
+
+function parseTaskToken(
+  token: ScopeToken,
+): { boardId: string; taskId: string } | null {
+  if (!token.startsWith("task:")) return null;
+  const parts = token.split(":");
+  if (parts.length !== 3) return null;
+  const [, boardId, taskId] = parts;
+  if (!boardId || !taskId) return null;
+  return { boardId, taskId };
+}
+
+function isLegacyTextToken(token: ScopeToken) {
+  return (
+    !token.startsWith("board:") &&
+    !token.startsWith("task:") &&
+    !token.startsWith("text:")
+  );
+}
+
+function toTextToken(text: string): ScopeToken {
+  return `text:${text}`;
+}
+
+function displayLabelForToken(
+  token: ScopeToken,
+  boardsById: Map<string, { name: string; emoji?: string | null }>,
+  summaryByToken: Map<string, string>,
+): string {
+  if (token.startsWith("text:")) return token.slice("text:".length);
+  if (token.startsWith("board:")) {
+    const id = token.slice("board:".length);
+    const b = boardsById.get(id);
+    return b ? `${b.emoji ? `${b.emoji} ` : ""}${b.name}` : "Board";
+  }
+  const t = parseTaskToken(token);
+  if (t) {
+    const label = summaryByToken.get(token);
+    if (label) return label;
+    const b = boardsById.get(t.boardId);
+    return `${b ? `${b.emoji ? `${b.emoji} ` : ""}${b.name}: ` : ""}Task`;
+  }
+  return token;
+}
+
+function boardDisplayName(
+  boardId: string,
+  boardsById: Map<string, { name: string; emoji?: string | null }>,
+) {
+  const b = boardsById.get(boardId);
+  if (!b) return "Board";
+  return `${b.emoji ? `${b.emoji} ` : ""}${b.name}`;
 }

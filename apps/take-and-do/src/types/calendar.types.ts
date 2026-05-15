@@ -125,3 +125,9 @@ export interface CalendarPersistedState {
   /** Panel + stripe “parent” color for the linked Google Calendar. */
   googleCalendarColor?: string;
 }
+
+export const DEFAULT_CALENDAR_KIND_VISIBILITY: CalendarKindVisibility = {
+  timeBlock: true,
+  common: true,
+  task: true,
+};

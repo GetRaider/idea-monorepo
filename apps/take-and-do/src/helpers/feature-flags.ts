@@ -16,7 +16,3 @@ export function isCalendarFeatureEnabled(): boolean {
     true,
   );
 }
-
-export const featureFlags = {
-  calendar: isCalendarFeatureEnabled,
-} as const;

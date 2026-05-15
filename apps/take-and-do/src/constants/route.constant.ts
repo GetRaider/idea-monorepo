@@ -6,6 +6,7 @@ export enum Route {
   OVERVIEW = "/overview",
   CALENDAR = "/calendar",
   CALENDAR_EVENTS = "/calendar/events",
+  INTEGRATIONS_GOOGLE_CALENDAR = "/integrations/google-calendar",
   TASKS = "/tasks",
   TASK_BOARDS = "/task-boards",
   FOLDERS = "/folders",

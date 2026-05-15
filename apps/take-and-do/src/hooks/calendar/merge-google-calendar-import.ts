@@ -1,11 +1,10 @@
 import type { CalendarEvent } from "@/types/calendar.types";
 
+import { GOOGLE_CALENDAR_EVENT_ID_PREFIX } from "@/constants/calendar.constants";
 import {
   coerceHexToWhiteTextSafe,
   normalizeHexColor,
-} from "@/components/Calendar/calendar-colors";
-
-const GCAL_PREFIX = "gcal:";
+} from "@/helpers/calendar/calendar-colors";
 
 function withCoercedEventColor(ev: CalendarEvent): CalendarEvent {
   const c = normalizeHexColor((ev as { color?: string }).color);
@@ -29,7 +28,11 @@ function parseYmdPrefix(value: string): string | null {
  * changes (series split, etc.).
  */
 export function recurringOccurrenceDedupeKey(ev: CalendarEvent): string | null {
-  if (!ev.id.startsWith(GCAL_PREFIX) || ev.type !== "common") return null;
+  if (
+    !ev.id.startsWith(GOOGLE_CALENDAR_EVENT_ID_PREFIX) ||
+    ev.type !== "common"
+  )
+    return null;
   const gr = ev.googleRecurrence;
   if (!gr?.recurringEventId) return null;
   const anchorStart = gr.originalStart ?? ev.start;
@@ -94,7 +97,7 @@ export function mergeGoogleCalendarImportedEvents(
   const { incremental, syncRange } = opts;
 
   const kept = prevEvents.filter((e) => {
-    if (!e.id.startsWith(GCAL_PREFIX)) return true;
+    if (!e.id.startsWith(GOOGLE_CALENDAR_EVENT_ID_PREFIX)) return true;
 
     const occKey = recurringOccurrenceDedupeKey(e);
     if (occKey) {

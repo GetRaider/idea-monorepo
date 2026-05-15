@@ -7,19 +7,17 @@ import {
   GOOGLE_CALENDAR_DISCONNECTED_EVENT,
   removeImportedGoogleCalendarEvents,
 } from "@/hooks/calendar/calendar-storage";
+import { clientServices } from "@/services";
+import type { ApiResult } from "@/services/api-result.types";
+import type { GoogleCalendarIntegrationStatus } from "@/services/google-calendar-integration.client.service";
 
 const GCAL_OAUTH_CALLBACK_FLAG = "gcal";
 const CALENDAR_EVENTS_SCOPE = "https://www.googleapis.com/auth/calendar.events";
 
-type IntegrationStatus = {
-  connected: boolean;
-  googleLinked: boolean;
-  enabled: boolean;
-  lastSyncAt: string | null;
-};
-
 export function IntegrationsSettings() {
-  const [status, setStatus] = useState<IntegrationStatus | null>(null);
+  const [status, setStatus] = useState<GoogleCalendarIntegrationStatus | null>(
+    null,
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const handledOAuthReturnRef = useRef(false);
@@ -33,17 +31,13 @@ export function IntegrationsSettings() {
 
   async function refreshStatus() {
     setError(null);
-    const res = await fetch("/api/integrations/google-calendar", {
-      method: "GET",
-    });
-    if (!res.ok) {
-      const body = (await res.json().catch(() => null)) as {
-        error?: string;
-      } | null;
-      throw new Error(body?.error ?? "Failed to load integration status.");
+    const result = await clientServices.googleCalendarIntegration.getStatus();
+    if (!result.ok) {
+      throw new Error(
+        httpErrorMessage(result) ?? "Failed to load integration status.",
+      );
     }
-    const data = (await res.json()) as IntegrationStatus;
-    setStatus(data);
+    setStatus(result.data);
   }
 
   useEffect(() => {
@@ -75,17 +69,11 @@ export function IntegrationsSettings() {
 
     void (async () => {
       try {
-        const res = await fetch("/api/integrations/google-calendar/toggle", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ enabled: true }),
-        });
-        if (!res.ok) {
-          const body = (await res.json().catch(() => null)) as {
-            error?: string;
-          } | null;
+        const result =
+          await clientServices.googleCalendarIntegration.setToggleEnabled(true);
+        if (!result.ok) {
           setError(
-            body?.error ??
+            httpErrorMessage(result) ??
               "Google re-linked, but calendar sync could not be turned on. Try Disconnect, then connect again.",
           );
         }
@@ -170,15 +158,12 @@ export function IntegrationsSettings() {
               setLoading(true);
               setError(null);
               try {
-                const res = await fetch(
-                  "/api/integrations/google-calendar/disconnect",
-                  { method: "POST" },
-                );
-                if (!res.ok) {
-                  const body = (await res.json().catch(() => null)) as {
-                    error?: string;
-                  } | null;
-                  throw new Error(body?.error ?? "Disconnect failed.");
+                const result =
+                  await clientServices.googleCalendarIntegration.disconnect();
+                if (!result.ok) {
+                  throw new Error(
+                    httpErrorMessage(result) ?? "Disconnect failed.",
+                  );
                 }
                 removeImportedGoogleCalendarEvents();
                 window.dispatchEvent(
@@ -205,4 +190,17 @@ export function IntegrationsSettings() {
       </div>
     </div>
   );
+}
+
+function httpErrorMessage(result: ApiResult<unknown>): string | null {
+  if (result.ok) return null;
+  if (
+    result.kind === "http" &&
+    result.body &&
+    typeof result.body === "object"
+  ) {
+    const msg = (result.body as { error?: string }).error;
+    return typeof msg === "string" && msg.trim() ? msg : null;
+  }
+  return null;
 }

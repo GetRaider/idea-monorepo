@@ -1,6 +1,5 @@
-import { normalizeAxisTimeZones } from "@/components/Calendar/calendar-axis-time";
-
-import { normalizeHexColor } from "@/components/Calendar/calendar-colors";
+import { normalizeAxisTimeZones } from "@/helpers/calendar/calendar-axis-time";
+import { normalizeHexColor } from "@/helpers/calendar/calendar-colors";
 
 import type {
   CalendarBacklogEvent,

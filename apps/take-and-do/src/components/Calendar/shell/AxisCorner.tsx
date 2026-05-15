@@ -17,40 +17,14 @@ import type { CalendarAxisTimeZone } from "@/types/calendar.types";
 import {
   AXIS_TZ_LOCAL_SENTINEL,
   formatAxisHeaderLabel,
-} from "./calendar-axis-time";
-import { timeZoneOptions } from "./timezones";
+} from "@/helpers/calendar/calendar-axis-time";
+import { timeZoneOptions } from "../shared/timezones";
 
 type PanelMode = "menu" | "pick" | "rename" | "add";
 
 export interface CalendarAxisCornerProps {
   zones: CalendarAxisTimeZone[];
   onZonesChange: (next: CalendarAxisTimeZone[]) => void;
-}
-
-function zonePickChoices(): { value: string; label: string }[] {
-  const fromIntl = timeZoneOptions().filter((o) => o.value !== "");
-  return [
-    { value: AXIS_TZ_LOCAL_SENTINEL, label: "This device" },
-    ...fromIntl.map((o) => ({ value: o.value, label: o.label })),
-  ];
-}
-
-function clampPopover(
-  left: number,
-  top: number,
-  width: number,
-  height: number,
-) {
-  const pad = 8;
-  const l = Math.min(
-    Math.max(pad, left),
-    Math.max(pad, window.innerWidth - width - pad),
-  );
-  const t = Math.min(
-    Math.max(pad, top),
-    Math.max(pad, window.innerHeight - height - pad),
-  );
-  return { left: l, top: t };
 }
 
 export function CalendarAxisCorner({
@@ -458,4 +432,30 @@ export function CalendarAxisCorner({
         : null}
     </>
   );
+}
+
+function zonePickChoices(): { value: string; label: string }[] {
+  const fromIntl = timeZoneOptions().filter((o) => o.value !== "");
+  return [
+    { value: AXIS_TZ_LOCAL_SENTINEL, label: "This device" },
+    ...fromIntl.map((o) => ({ value: o.value, label: o.label })),
+  ];
+}
+
+function clampPopover(
+  left: number,
+  top: number,
+  width: number,
+  height: number,
+) {
+  const pad = 8;
+  const l = Math.min(
+    Math.max(pad, left),
+    Math.max(pad, window.innerWidth - width - pad),
+  );
+  const t = Math.min(
+    Math.max(pad, top),
+    Math.max(pad, window.innerHeight - height - pad),
+  );
+  return { left: l, top: t };
 }

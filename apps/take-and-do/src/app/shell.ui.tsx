@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import type { ComponentProps } from "react";
+import type { ComponentProps, ReactNode } from "react";
 
+import { appChromeHeadingCurrentClass } from "@/helpers/app-chrome-layout";
 import { TASKS_SIDEBAR_DEFAULT_WIDTH_PX } from "@/helpers/tasks-sidebar-layout";
 import { cn } from "@/lib/styles/utils";
 import type { UiProps } from "@/lib/styles/ui-props";
@@ -141,26 +142,36 @@ export function WelcomeSection({ className, ref, ...props }: UiProps<"div">) {
   return <div ref={ref} className={cn("mb-8", className)} {...props} />;
 }
 
-export function AppPageTitle({ className, ref, ...props }: UiProps<"h1">) {
+type AppPageTitleProps = UiProps<"h1"> & {
+  /** Outline-style icon before the title (breadcrumb-style page naming). */
+  icon?: ReactNode;
+};
+
+export function AppPageTitle({
+  icon,
+  className,
+  ref,
+  children,
+  ...props
+}: AppPageTitleProps) {
   return (
     <h1
       ref={ref}
-      className={cn(
-        "m-0 mb-2 bg-gradient-to-br from-white to-purple-400 bg-clip-text text-2xl font-bold text-transparent",
-        className,
-      )}
+      className={cn("m-0 flex min-w-0 items-center gap-2.5", className)}
       {...props}
-    />
-  );
-}
-
-export function AppPageSubtitle({ className, ref, ...props }: UiProps<"p">) {
-  return (
-    <p
-      ref={ref}
-      className={cn("m-0 text-l text-slate-300", className)}
-      {...props}
-    />
+    >
+      {icon ? (
+        <span
+          className="inline-flex shrink-0 items-center justify-center text-white/90 [&>svg]:shrink-0"
+          aria-hidden
+        >
+          {icon}
+        </span>
+      ) : null}
+      <span className={cn("min-w-0 truncate", appChromeHeadingCurrentClass)}>
+        {children}
+      </span>
+    </h1>
   );
 }
 

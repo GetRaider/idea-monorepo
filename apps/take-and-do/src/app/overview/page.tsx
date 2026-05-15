@@ -9,7 +9,6 @@ import type { TaskStats } from ".";
 import { Spinner } from "@/components/Spinner/Spinner";
 import { useIsAnonymous } from "@/hooks/auth/use-is-anonymous";
 import { useGuestTasks } from "@/hooks/tasks/use-guest-store";
-import { useTasksSidebarWidthPx } from "@/hooks/tasks/useTasksSidebarWidthPx";
 import { queryKeys } from "@/lib/query-keys";
 import { guestTasksBySchedule } from "@/stores/guest/guest-task-filters";
 import { clientServices } from "@/services";
@@ -20,15 +19,18 @@ import {
   HomeMainContent,
   WelcomeSection,
   AppPageTitle,
-  AppPageSubtitle,
 } from "../shell.ui";
+import { OverviewIcon } from "@/components/Icons";
+import {
+  APP_CHROME_MAIN_INSET,
+  APP_CHROME_NAV_ICON_PX,
+} from "@/helpers/app-chrome-layout";
+import { cn } from "@/lib/styles/utils";
 
 function OverviewPage() {
   const isAnonymous = useIsAnonymous();
   const { tasks: guestTasks } = useGuestTasks();
   const [, setCurrentPage] = useState("overview");
-  const [isTasksSidebarOpen, setIsTasksSidebarOpen] = useState(false);
-  const [tasksSidebarWidthPx] = useTasksSidebarWidthPx();
 
   const scheduledAndStats = useQueries({
     queries: [
@@ -91,9 +93,6 @@ function OverviewPage() {
 
   const handleNavigationToTasksPage = (page: string) => {
     setCurrentPage(page);
-    if (page === "tasks") {
-      setIsTasksSidebarOpen(true);
-    }
   };
 
   const hasWorkspaceTaskData = isAnonymous
@@ -105,8 +104,8 @@ function OverviewPage() {
       <PageContainer>
         <Sidebar onNavigationChange={handleNavigationToTasksPage} />
         <HomeMainContent
-          withNavSidebar={isTasksSidebarOpen}
-          tasksSidebarWidthPx={tasksSidebarWidthPx}
+          withNavSidebar={false}
+          className={cn("flex min-h-0 flex-col", APP_CHROME_MAIN_INSET)}
         >
           <Spinner className="h-full min-h-[240px] flex-1" />
         </HomeMainContent>
@@ -118,14 +117,20 @@ function OverviewPage() {
     <PageContainer>
       <Sidebar onNavigationChange={handleNavigationToTasksPage} />
       <HomeMainContent
-        withNavSidebar={isTasksSidebarOpen}
-        tasksSidebarWidthPx={tasksSidebarWidthPx}
+        withNavSidebar={false}
+        className={cn("flex min-h-0 flex-col", APP_CHROME_MAIN_INSET)}
       >
         <WelcomeSection>
-          <AppPageTitle>Overview</AppPageTitle>
-          <AppPageSubtitle>
-            Supercharge your workflow with AI insights & modern planning
-          </AppPageSubtitle>
+          <AppPageTitle
+            icon={
+              <OverviewIcon
+                size={APP_CHROME_NAV_ICON_PX}
+                className="shrink-0 text-white"
+              />
+            }
+          >
+            Overview
+          </AppPageTitle>
         </WelcomeSection>
 
         <ProductivityOverview hasWorkspaceTaskData={hasWorkspaceTaskData} />

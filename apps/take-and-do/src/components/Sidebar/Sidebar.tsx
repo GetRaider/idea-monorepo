@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { UserWithAnonymous } from "better-auth/plugins";
 
 import { Dropdown } from "@/components/Dropdown";
-import { OverviewIcon, SunIcon } from "@/components/Icons";
+import { OverviewIcon, SettingsIcon, SunIcon } from "@/components/Icons";
 import { signOutAndClear, useSession } from "@/auth/client";
 import { AppTooltip } from "@/components/Tooltip/AppTooltip";
 import {
@@ -19,8 +19,9 @@ import {
 import { GuestAvatarIcon } from "../Icons/GuestAvatarIcon";
 import { DefaultAvatarIcon } from "../Icons/DefaulAvatarIcon";
 import { Route } from "@/constants/route.constant";
+import { env } from "@/env/client";
 
-const buttonsSet: Array<{
+const PRIMARY_NAV: Array<{
   label: string;
   icon: string | React.ReactNode;
   path: string | null;
@@ -38,7 +39,7 @@ const buttonsSet: Array<{
   {
     label: "Calendar",
     icon: "/calendar.svg",
-    path: null,
+    path: Route.CALENDAR,
   },
   {
     label: "Docs",
@@ -51,6 +52,11 @@ export function Sidebar({ onNavigationChange }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { data: session } = useSession();
+  const navButtons = env.features.calendar
+    ? PRIMARY_NAV
+    : PRIMARY_NAV.map((item) =>
+        item.path === Route.CALENDAR ? { ...item, path: null } : item,
+      );
 
   const handleNavClick = (page: string, path: string) => {
     onNavigationChange(page);
@@ -62,7 +68,7 @@ export function Sidebar({ onNavigationChange }: SidebarProps) {
       <Logo src="/logo.svg" alt="Logo" />
 
       <Nav>
-        {buttonsSet.map((button) => (
+        {navButtons.map((button) => (
           <AppTooltip
             key={button.label}
             content={
@@ -101,6 +107,18 @@ export function Sidebar({ onNavigationChange }: SidebarProps) {
           <SunIcon size={20} />
         </NavButton>
 
+        <AppTooltip content="Settings" side="right">
+          <span className="inline-flex">
+            <NavButton
+              title="Settings"
+              isActive={pathname.startsWith(Route.SETTINGS)}
+              onClick={() => handleNavClick("Settings", Route.SETTINGS)}
+            >
+              <SettingsIcon size={20} className="text-white" />
+            </NavButton>
+          </span>
+        </AppTooltip>
+
         <Dropdown
           className="mt-2"
           menuOpensTo="right"
@@ -124,7 +142,7 @@ function getAvatarIcon(user: UserWithAnonymous | undefined): React.ReactNode {
   if (user?.image) {
     return <Avatar src={user.image} alt={user.name ?? "Account"} />;
   }
-  if (!user) return <DefaultAvatarIcon size={36} />;
+  return <DefaultAvatarIcon size={36} />;
 }
 
 interface SidebarProps {

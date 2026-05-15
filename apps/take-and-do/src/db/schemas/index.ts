@@ -1,5 +1,7 @@
 export * from "./auth.schema";
 export * from "./folder.schema";
+export * from "./googleCalendarIntegration.schema";
+export * from "./calendar-event.schema";
 export * from "./taskBoard.schema";
 export * from "./task.schema";
 export * from "./label.schema";

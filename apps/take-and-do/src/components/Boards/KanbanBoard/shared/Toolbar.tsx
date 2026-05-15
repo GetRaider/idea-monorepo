@@ -16,7 +16,7 @@ import type { BoardListSubmode } from "@/hooks/tasks/useBoardListSubmode";
 import type { ListSortState } from "@/helpers/list-sort.helper";
 
 interface ToolbarProps {
-  workspaceTitle: string;
+  workspaceTitle?: string;
   /** Emoji string or icon (e.g. sidebar clock icons for Today / Tomorrow). */
   workspaceEmoji?: ReactNode;
   onCreateTask?: () => void;
@@ -33,7 +33,7 @@ interface ToolbarProps {
 }
 
 export function Toolbar({
-  workspaceTitle,
+  workspaceTitle = "",
   workspaceEmoji,
   onCreateTask,
   onCreateTaskWithAI,

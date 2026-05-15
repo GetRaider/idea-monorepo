@@ -16,6 +16,7 @@ interface ConfirmDialogProps {
   maxWidth?: number;
   onConfirm: () => void | Promise<void>;
   onClose: () => void;
+  overlayClassName?: string;
 }
 
 export function ConfirmDialog({
@@ -26,6 +27,7 @@ export function ConfirmDialog({
   maxWidth,
   onConfirm,
   onClose,
+  overlayClassName,
 }: ConfirmDialogProps) {
   const handleConfirm = async () => {
     try {
@@ -36,7 +38,13 @@ export function ConfirmDialog({
   };
 
   return (
-    <Dialog title={title} onClose={onClose} showCloseButton maxWidth={maxWidth}>
+    <Dialog
+      title={title}
+      onClose={onClose}
+      showCloseButton
+      maxWidth={maxWidth}
+      overlayClassName={overlayClassName}
+    >
       <ConfirmBody>{description}</ConfirmBody>
       <ConfirmActions>
         <ConfirmCancelBtn type="button" onClick={onClose}>

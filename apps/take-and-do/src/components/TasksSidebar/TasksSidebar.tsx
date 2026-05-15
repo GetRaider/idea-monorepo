@@ -3,8 +3,7 @@
 import { ConfirmDialog } from "@/components/Dialogs";
 
 import { TasksSidebarContainer } from "./TasksSidebar.ui";
-import { TasksSidebarResizeHandle } from "./TasksSidebarResizeHandle";
-import { TasksSidebarTaskSearch } from "./TasksSidebarTaskSearch";
+import { TasksSidebarResizeStrip } from "./TasksSidebarResizeStrip";
 import { TasksSidebarSchedulesSection } from "./TasksSidebarSchedulesSection";
 import { TasksSidebarWorkspacesSection } from "./TasksSidebarWorkspacesSection";
 import { useTasksSidebarModel } from "@/hooks/tasksSidebar/useTasksSidebarModel";
@@ -51,20 +50,20 @@ export function TasksSidebar({
 
   return (
     <>
-      <TasksSidebarContainer isOpen={isOpen} widthPx={widthPx}>
-        <TasksSidebarTaskSearch taskBoards={taskBoards} />
-
+      <TasksSidebarContainer>
         <TasksSidebarSchedulesSection model={model} />
 
-        <TasksSidebarWorkspacesSection
-          model={model}
-          onCreateTaskBoard={onCreateTaskBoard}
-          isFoldersLoading={isFoldersLoading}
-          isBoardsLoading={isBoardsLoading}
-        />
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col border-t border-white/[0.08] pt-3">
+          <TasksSidebarWorkspacesSection
+            model={model}
+            onCreateTaskBoard={onCreateTaskBoard}
+            isFoldersLoading={isFoldersLoading}
+            isBoardsLoading={isBoardsLoading}
+          />
+        </div>
 
         {isOpen ? (
-          <TasksSidebarResizeHandle
+          <TasksSidebarResizeStrip
             widthPx={widthPx}
             onWidthPxChange={onWidthPxChange}
           />

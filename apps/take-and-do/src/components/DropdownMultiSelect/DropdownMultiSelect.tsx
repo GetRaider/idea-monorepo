@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { createPortal } from "react-dom";
 
 import type { DropdownOption } from "@/components/Dropdown";
@@ -27,6 +33,7 @@ export function DropdownMultiSelect<T extends string = string>({
   id,
   className,
   onOpenChange,
+  renderOption,
 }: DropdownMultiSelectProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
   const [panelRect, setPanelRect] = useState<{
@@ -147,9 +154,10 @@ export function DropdownMultiSelect<T extends string = string>({
         createPortal(
           <div
             ref={panelRef}
+            data-dropdown-portal
             role="listbox"
             aria-multiselectable="true"
-            className="fixed z-[1100] box-border rounded-lg border border-input-border bg-input-bg p-3 shadow-dropdown"
+            className="fixed z-[5200] box-border rounded-lg border border-input-border bg-input-bg p-3 shadow-dropdown"
             style={{
               top: panelRect.top,
               left: panelRect.left,
@@ -173,12 +181,18 @@ export function DropdownMultiSelect<T extends string = string>({
                 options.map((option) => {
                   const checked = selectedSet.has(option.value);
                   return (
-                    <TaskLabel key={option.value}>
+                    <TaskLabel key={option.value} aria-label={option.label}>
                       <TaskCheckbox
                         checked={checked}
                         onChange={() => toggle(option.value)}
                       />
-                      <span>{option.label}</span>
+                      {renderOption ? (
+                        <div className="min-w-0 flex-1">
+                          {renderOption(option)}
+                        </div>
+                      ) : (
+                        <span>{option.label}</span>
+                      )}
                     </TaskLabel>
                   );
                 })
@@ -202,4 +216,6 @@ interface DropdownMultiSelectProps<T extends string = string> {
   id?: string;
   className?: string;
   onOpenChange?: (isOpen: boolean) => void;
+  /** Rich row content; keep `option.label` meaningful for the closed trigger and a11y. */
+  renderOption?: (option: DropdownOption<T>) => ReactNode;
 }

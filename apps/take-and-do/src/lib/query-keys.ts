@@ -10,6 +10,12 @@ export const queryKeys = {
     byDate: (dateIso: string) => ["tasks", "date", dateIso] as const,
     schedule: ["tasks", "schedule"] as const,
     recent: (n: number) => ["tasks", "recent", n] as const,
+    byScheduleRange: (fromIso: string, toIso: string) =>
+      ["tasks", "schedule-range", fromIso, toIso] as const,
+  },
+  calendar: {
+    events: (fromIso: string, toIso: string) =>
+      ["calendar", "events", fromIso, toIso] as const,
   },
   labels: ["labels"] as const,
   stats: (timeframe: string) => ["stats", timeframe] as const,

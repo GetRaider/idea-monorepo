@@ -1,10 +1,22 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
-import { asc, eq, and, isNull, inArray, gte, lt, or } from "drizzle-orm";
+import {
+  asc,
+  eq,
+  and,
+  isNull,
+  inArray,
+  gte,
+  lt,
+  gt,
+  isNotNull,
+  or,
+} from "drizzle-orm";
 
 import { envServer } from "@/env";
 
-export { asc, eq, and, isNull, inArray, gte, lt, or };
+export { asc, eq, and, isNull, inArray, gte, lt, gt, isNotNull, or };
+
 const connectionString = envServer.db.connectionString;
 
 export const pool = new Pool({
@@ -28,7 +40,7 @@ function getHostName(connectionString: string): string {
     return hostname;
   } catch (error) {
     throw new Error(
-      `Invalid connection string format: ${error instanceof Error ? error.message : "unknown error"}`,
+      `Invalid connection string format: ${error instanceof Error ? error.message : "unknown"}`,
     );
   }
 }

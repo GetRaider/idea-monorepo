@@ -1,12 +1,42 @@
 import { Route } from "@/constants/route.constant";
+import { isCalendarFeatureEnabled } from "@/helpers/feature-flags";
 import { inMemoryRateLimiter } from "@/lib/rate-limit";
 import { getSessionCookie } from "better-auth/cookies";
 import { NextRequest, NextResponse } from "next/server";
 
 const PUBLIC_PATH_PREFIXES = ["/login", "/signup", "/auth", "/api/auth"];
 
+const CALENDAR_OFF_BLOCKED_API_PREFIXES = [
+  "/api/calendar",
+  "/api/integrations/google-calendar",
+] as const;
+
+function responseWhenCalendarFeatureDisabled(
+  request: NextRequest,
+  pathname: string,
+): NextResponse | null {
+  if (isCalendarFeatureEnabled()) return null;
+  if (
+    pathname === Route.CALENDAR ||
+    pathname.startsWith(`${Route.CALENDAR}/`)
+  ) {
+    return NextResponse.redirect(new URL(Route.TASKS, request.url));
+  }
+  if (
+    CALENDAR_OFF_BLOCKED_API_PREFIXES.some((prefix) =>
+      pathname.startsWith(prefix),
+    )
+  ) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+  return null;
+}
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  const calendarOff = responseWhenCalendarFeatureDisabled(request, pathname);
+  if (calendarOff) return calendarOff;
 
   if (pathname.startsWith("/api/")) {
     const rateLimitResponse = inMemoryRateLimiter.checkRateLimit(request);

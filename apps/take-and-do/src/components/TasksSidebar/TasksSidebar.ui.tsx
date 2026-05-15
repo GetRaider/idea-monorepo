@@ -2,39 +2,32 @@
 
 import type { ComponentProps } from "react";
 
+import { ChevronRightIcon } from "@/components/Icons";
 import { Input } from "@/components/Input";
-import {
-  TASKS_SIDEBAR_MAX_WIDTH_PX,
-  TASKS_SIDEBAR_MIN_WIDTH_PX,
-} from "@/helpers/tasks-sidebar-layout";
+import { TASKS_SIDEBAR_MAX_WIDTH_PX } from "@/helpers/tasks-sidebar-layout";
 import { cn } from "@/lib/styles/utils";
 import type { UiProps } from "@/lib/styles/ui-props";
 
-type AsideOpenProps = UiProps<"aside"> & {
-  isOpen: boolean;
-  widthPx: number;
-};
+type TasksSidebarPanelProps = UiProps<"aside">;
 
 export function TasksSidebarContainer({
   className,
-  isOpen,
-  widthPx,
   ref,
   style,
   ...props
-}: AsideOpenProps) {
+}: TasksSidebarPanelProps) {
   return (
     <aside
       ref={ref}
+      id="take-and-do-tasks-sidebar"
       style={{
-        width: widthPx,
-        minWidth: TASKS_SIDEBAR_MIN_WIDTH_PX,
+        width: "100%",
+        minWidth: 0,
         maxWidth: TASKS_SIDEBAR_MAX_WIDTH_PX,
         ...style,
       }}
       className={cn(
-        "fixed left-[60px] top-0 z-[90] flex h-screen flex-col gap-6 overflow-visible border-r border-border-app bg-background-primary p-4 transition-transform duration-300 ease-out",
-        isOpen ? "translate-x-0" : "-translate-x-full",
+        "calendar-surface relative z-0 flex min-h-0 w-full max-w-full flex-1 flex-col gap-4 overflow-y-auto overscroll-contain rounded-xl border border-white/10 bg-background-primary/85 p-3.5 shadow-[0_8px_32px_rgba(0,0,0,0.25)] backdrop-blur-md max-[900px]:max-w-none",
         className,
       )}
       {...props}
@@ -122,6 +115,9 @@ export function WorkspaceContainer({
   );
 }
 
+export const TASKS_SIDEBAR_SECTION_HEADER_TEXT_CLASS =
+  "text-sm font-extrabold tracking-wide text-[#666]";
+
 export function SideBarSectionHeader({
   className,
   ref,
@@ -131,11 +127,49 @@ export function SideBarSectionHeader({
     <div
       ref={ref}
       className={cn(
-        "flex items-center justify-between text-sm font-extrabold tracking-wide text-[#666]",
+        "flex items-center justify-between",
+        TASKS_SIDEBAR_SECTION_HEADER_TEXT_CLASS,
         className,
       )}
       {...props}
     />
+  );
+}
+
+export function SidebarCollapsibleSectionHeader({
+  isExpanded,
+  onToggle,
+  title,
+  className,
+  ref,
+}: UiProps<"button"> & {
+  isExpanded: boolean;
+  onToggle: () => void;
+  title: string;
+}) {
+  return (
+    <button
+      ref={ref}
+      type="button"
+      onClick={onToggle}
+      aria-expanded={isExpanded}
+      className={cn(
+        "flex min-w-0 items-center gap-1 rounded-lg border-0 bg-transparent py-1 pl-0 pr-1 text-left transition-colors hover:bg-white/[0.04]",
+        className,
+      )}
+    >
+      <FolderChevron isExpanded={isExpanded}>
+        <ChevronRightIcon size={11} />
+      </FolderChevron>
+      <span
+        className={cn(
+          "min-w-0 flex-1 truncate",
+          TASKS_SIDEBAR_SECTION_HEADER_TEXT_CLASS,
+        )}
+      >
+        {title}
+      </span>
+    </button>
   );
 }
 

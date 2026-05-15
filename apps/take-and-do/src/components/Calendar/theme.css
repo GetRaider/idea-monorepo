@@ -1,0 +1,669 @@
+/* FullCalendar — planning grid (dark, soft contrast) */
+.take-and-do-calendar .fc {
+  /* Zone count set on `.take-and-do-calendar` (inherits here). */
+  --tad-axis-zone-count: 1;
+  --tad-axis-gutter-width: calc(2.35rem + var(--tad-axis-zone-count) * 3.2rem);
+  --fc-now-indicator-color: #f97066;
+  --fc-highlight-color: rgba(124, 93, 250, 0.26);
+  --fc-default-mirror-bg: #4f46b8;
+  --fc-border-color: rgba(255, 255, 255, 0.045);
+  --fc-button-bg-color: rgba(124, 93, 250, 0.28);
+  --fc-button-border-color: rgba(124, 93, 250, 0.45);
+  --fc-button-hover-bg-color: rgba(124, 93, 250, 0.42);
+  --fc-button-hover-border-color: rgba(124, 93, 250, 0.62);
+  --fc-button-active-bg-color: rgba(124, 93, 250, 0.52);
+  --fc-button-active-border-color: rgba(124, 93, 250, 0.72);
+  --fc-today-bg-color: rgba(124, 93, 250, 0.07);
+  --fc-page-bg-color: transparent;
+  --fc-neutral-bg-color: rgba(255, 255, 255, 0.025);
+  --fc-list-event-hover-bg-color: rgba(255, 255, 255, 0.05);
+  color: #ececf1;
+  font-variant-numeric: tabular-nums;
+  /* Hour / axis numerals only (not the “now” pill — that lives in a tight column and would clip) */
+  --tad-time-axis-text-shift: 1px;
+  /* Time columns: fixed inset from day divider + right gutter to drag-select overlap slots */
+  --tad-time-col-pad-left: 0.3rem;
+  --tad-time-col-pad-right: 0.75rem;
+}
+
+.take-and-do-calendar .fc .fc-scrollgrid,
+.take-and-do-calendar .fc .fc-scrollgrid-section,
+.take-and-do-calendar .fc .fc-scrollgrid-section > td {
+  border-color: var(--fc-border-color);
+}
+
+.take-and-do-calendar .fc .fc-col-header-cell {
+  border-color: var(--fc-border-color);
+  background: rgba(255, 255, 255, 0.02);
+  vertical-align: middle;
+  text-align: center !important;
+}
+
+.take-and-do-calendar .fc .fc-col-header-cell .fc-scrollgrid-sync-inner {
+  display: flex;
+  justify-content: center;
+}
+
+.take-and-do-calendar .fc .fc-col-header-cell-cushion {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 4px 7px 4px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: rgba(228, 228, 231, 0.68);
+  border-radius: 999px;
+}
+
+.take-and-do-calendar .fc .fc-day-today .fc-col-header-cell-cushion {
+  color: #f4f4f5;
+  padding: 2px 5px 2px;
+  font-size: 0.62rem;
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.take-and-do-calendar .fc .fc-day-today .tad-day-header-inner {
+  gap: 0.15rem;
+}
+
+.take-and-do-calendar .fc .fc-daygrid-day-number,
+.take-and-do-calendar .fc .fc-timegrid-axis-cushion {
+  color: rgba(228, 228, 231, 0.78);
+}
+
+.take-and-do-calendar .fc .fc-timegrid-axis-cushion {
+  font-size: 9px;
+  font-weight: 500;
+  line-height: 1;
+  color: rgba(161, 161, 170, 0.88);
+  /* FullCalendar default caps the axis at 60px */
+  max-width: none !important;
+}
+
+.take-and-do-calendar .fc.fc-direction-ltr .fc-timegrid-axis-cushion {
+  transform: translateX(calc(-1 * var(--tad-time-axis-text-shift)));
+}
+
+.take-and-do-calendar .fc.fc-direction-rtl .fc-timegrid-axis-cushion {
+  transform: translateX(var(--tad-time-axis-text-shift));
+}
+
+/* Slot labels: extra horizontal inset so 12h strings (e.g. “10:00 am”) aren’t flush to edges */
+.take-and-do-calendar .fc .fc-timegrid-axis-cushion {
+  padding-left: 0.28rem !important;
+  padding-right: 0.38rem !important;
+}
+
+.take-and-do-calendar .fc .fc-timegrid-slot-label-cushion {
+  padding-left: 0.4rem !important;
+  padding-right: 0.5rem !important;
+  font-size: 9px;
+  font-weight: 500;
+  line-height: 1;
+  max-width: none !important;
+}
+
+.take-and-do-calendar .fc td.fc-timegrid-axis {
+  min-width: var(--tad-axis-gutter-width);
+}
+
+.take-and-do-calendar .fc .fc-timegrid-slot-label {
+  min-width: var(--tad-axis-gutter-width);
+}
+
+.take-and-do-calendar .fc .tad-slot-tz-row {
+  display: grid;
+  column-gap: 0.18rem;
+  justify-content: end;
+  justify-items: end;
+  width: max-content;
+  max-width: 100%;
+  margin-left: auto;
+  white-space: nowrap;
+  padding-inline: 0.1rem;
+  box-sizing: border-box;
+}
+
+.take-and-do-calendar .fc .tad-slot-tz-row__cell {
+  text-align: right;
+  font-size: 9px;
+  font-weight: 500;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: rgba(228, 228, 231, 0.78);
+  white-space: nowrap;
+  padding-inline: 0.06rem;
+}
+
+.take-and-do-calendar .fc .tad-slot-tz-row__cell--muted {
+  color: rgba(161, 161, 170, 0.72);
+}
+
+.take-and-do-calendar .fc .tad-axis-corner {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.22rem;
+  width: 100%;
+  min-height: 100%;
+  padding: 3px 5px 3px 6px;
+  box-sizing: border-box;
+}
+
+.take-and-do-calendar .fc .tad-axis-corner__add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 1.05rem;
+  height: 1.05rem;
+  margin-right: auto;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  color: rgba(228, 228, 231, 0.55);
+  background: rgba(255, 255, 255, 0.04);
+  cursor: default;
+}
+
+.take-and-do-calendar .fc .tad-axis-corner__add:hover {
+  color: rgba(228, 228, 231, 0.78);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.take-and-do-calendar .fc .tad-axis-corner__tz {
+  flex: 0 1 auto;
+  text-align: right;
+  font-size: 8px;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: 0.02em;
+  color: rgba(200, 200, 210, 0.82);
+  white-space: nowrap;
+}
+
+.take-and-do-calendar .fc .tad-axis-corner__tz--muted {
+  color: rgba(161, 161, 170, 0.75);
+}
+
+.take-and-do-calendar .fc .tad-all-day-label {
+  display: block;
+  font-size: 8px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0.03em;
+  color: rgba(161, 161, 170, 0.88);
+  white-space: nowrap;
+}
+
+.take-and-do-calendar .fc .fc-timegrid .fc-daygrid-body .fc-daygrid-day-frame {
+  min-height: 1.1rem !important;
+}
+
+.take-and-do-calendar .fc .fc-timegrid .fc-daygrid-body .fc-daygrid-day-events {
+  min-height: 0 !important;
+  margin-top: 0 !important;
+}
+
+.take-and-do-calendar
+  .fc
+  .fc-timegrid
+  .fc-daygrid-body-natural
+  .fc-daygrid-day-events {
+  margin-bottom: 0 !important;
+}
+
+.take-and-do-calendar .fc .fc-timegrid .fc-daygrid-body .fc-daygrid-day-bottom {
+  margin-top: 0 !important;
+}
+
+.take-and-do-calendar .fc .fc-timegrid-divider {
+  padding: 0 !important;
+}
+
+.take-and-do-calendar
+  .fc
+  .fc-scrollgrid-section-header
+  .fc-timegrid-axis-frame {
+  overflow: visible !important;
+}
+
+.take-and-do-calendar .fc .fc-timegrid-slot-label {
+  vertical-align: top !important;
+  overflow: visible;
+}
+
+.take-and-do-calendar .fc .fc-timegrid-slot-label-frame {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-end;
+  height: 100%;
+  padding-top: 0 !important;
+}
+
+.take-and-do-calendar .fc.fc-direction-rtl .fc-timegrid-slot-label-frame {
+  align-items: flex-start;
+}
+
+.take-and-do-calendar .fc .fc-timegrid-slot-label-cushion {
+  margin-top: 0;
+}
+
+.take-and-do-calendar .fc.fc-direction-ltr .fc-timegrid-slot-label-cushion {
+  transform: translate(calc(-1 * var(--tad-time-axis-text-shift)), -50%);
+}
+
+.take-and-do-calendar .fc.fc-direction-rtl .fc-timegrid-slot-label-cushion {
+  transform: translate(var(--tad-time-axis-text-shift), -50%);
+}
+
+.take-and-do-calendar .fc.fc-direction-ltr .fc-timegrid-slot-label-frame {
+  text-align: right;
+}
+
+/*
+ * Custom event body: icon + title row (FC injects column flex on .fc-event-main-frame).
+ * Any view that renders eventContent under .fc-event-main keeps row layout.
+ */
+.take-and-do-calendar
+  .fc
+  .fc-event-main
+  > .fc-event-main-frame.tad-planning-event-inner {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  align-items: flex-start !important;
+  justify-content: flex-start !important;
+  column-gap: 4px;
+  padding-left: 4px;
+  padding-right: 4px;
+}
+
+.take-and-do-calendar .fc .fc-timegrid-event .fc-v-event .fc-event-main-frame {
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  align-items: flex-start !important;
+  justify-content: flex-start !important;
+}
+
+.take-and-do-calendar
+  .fc
+  .fc-timegrid-event.fc-timegrid-event-short
+  .fc-v-event
+  .fc-event-main-frame,
+.take-and-do-calendar .fc .fc-timegrid-event-short .fc-event-main-frame {
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  align-items: flex-start !important;
+}
+
+.take-and-do-calendar
+  .fc
+  .fc-timegrid-event
+  .fc-v-event
+  .fc-event-title-container {
+  flex-grow: 1;
+  flex-shrink: 1;
+  min-width: 0;
+  min-height: 0;
+  text-align: left;
+}
+
+.take-and-do-calendar .fc .fc-timegrid-event.fc-v-event {
+  justify-content: flex-start !important;
+  align-items: flex-start !important;
+}
+
+.take-and-do-calendar .fc .fc-timegrid-event.fc-v-event .fc-event-main {
+  flex-direction: row !important;
+  justify-content: flex-start !important;
+  align-items: flex-start !important;
+}
+
+.take-and-do-calendar .fc .fc-timegrid-event .fc-event-main {
+  align-items: flex-start !important;
+}
+
+.take-and-do-calendar .fc .calendar-kind-icon-wrap {
+  align-self: flex-start;
+  flex-shrink: 0;
+  margin-top: 0;
+}
+
+.take-and-do-calendar .fc .fc-timegrid-event .fc-event-title,
+.take-and-do-calendar .fc .fc-timegrid-event .fc-event-title-container {
+  font-size: 10px !important;
+  line-height: 1.15 !important;
+}
+
+.take-and-do-calendar .fc .fc-scrollgrid {
+  border-radius: 14px;
+  /* Wider now-indicator line is positioned from “today”; overflow:hidden clips it short */
+  overflow: visible;
+  background: rgba(0, 0, 0, 0.12);
+}
+
+/*
+ * 15-minute row height — FullCalendar injects `height: 1.5em` on `.fc-timegrid-slot`,
+ * so this must win with !important.
+ */
+.take-and-do-calendar .fc .fc-timegrid-slot {
+  height: 5px !important;
+  min-height: 5px !important;
+  border-color: transparent;
+}
+
+/* Hour boundaries only: hide sub-hour lane dividers */
+.take-and-do-calendar .fc .fc-timegrid-slot-lane.fc-timegrid-slot-minor {
+  border-top-color: transparent !important;
+  border-top-width: 0 !important;
+}
+
+.take-and-do-calendar .fc .fc-timegrid-slot-lane:not(.fc-timegrid-slot-minor) {
+  border-top: 1px solid rgba(255, 255, 255, 0.055);
+}
+
+.take-and-do-calendar .fc .fc-timegrid-slot-label.fc-timegrid-slot-minor {
+  border-top-color: transparent !important;
+}
+
+.take-and-do-calendar .fc .fc-timegrid-col.fc-day-today {
+  overflow: visible !important;
+  background: linear-gradient(
+    180deg,
+    rgba(124, 93, 250, 0.06) 0%,
+    rgba(124, 93, 250, 0.02) 100%
+  );
+}
+
+.take-and-do-calendar .fc .fc-timegrid-now-indicator-container {
+  overflow: visible !important;
+  z-index: 8;
+  /*
+   * Full column-sized layer stacks above .fc-timegrid-col-events; without this, transparent
+   * areas steal mousedown/click so .fc-event never receives eventClick.
+   */
+  pointer-events: none;
+}
+
+.take-and-do-calendar .fc .fc-day-today .fc-timegrid-col-frame {
+  overflow: visible !important;
+}
+
+.take-and-do-calendar .fc .fc-timegrid-now-indicator-line {
+  position: absolute;
+  inset-inline-start: 0 !important;
+  inset-inline-end: auto !important;
+  width: var(
+    --tad-now-line-width-px,
+    calc(100% * var(--tad-now-line-span, 1))
+  ) !important;
+  max-width: none !important;
+  z-index: 24 !important;
+  border-color: var(--fc-now-indicator-color);
+  border-width: 1px 0 0;
+  border-style: solid;
+  opacity: 1;
+}
+
+.take-and-do-calendar .fc.fc-direction-ltr .fc-timegrid-now-indicator-arrow,
+.take-and-do-calendar .fc.fc-direction-rtl .fc-timegrid-now-indicator-arrow {
+  border: none;
+  margin-top: 0;
+  display: flex;
+  align-items: center;
+  background: transparent;
+  overflow: visible !important;
+  transform: translateY(-50%);
+}
+
+/* Match hour labels: same column edge as .fc-timegrid-slot-label-cushion (flush right in LTR) */
+.take-and-do-calendar .fc.fc-direction-ltr .fc-timegrid-now-indicator-arrow {
+  left: 0;
+  right: 0;
+  width: 100%;
+  justify-content: flex-end;
+  padding-left: 0.4rem;
+  padding-right: 0.5rem;
+  box-sizing: border-box;
+}
+
+.take-and-do-calendar .fc.fc-direction-rtl .fc-timegrid-now-indicator-arrow {
+  left: 0;
+  right: 0;
+  width: 100%;
+  justify-content: flex-start;
+  padding-right: 0.4rem;
+  padding-left: 0.5rem;
+  box-sizing: border-box;
+}
+
+.take-and-do-calendar .fc .fc-timegrid-axis-frame {
+  overflow: visible !important;
+}
+
+.take-and-do-calendar .fc .tad-now-indicator-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  padding: 1px 4px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+  color: #fff;
+  background: var(--fc-now-indicator-color);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.18);
+  pointer-events: auto;
+}
+
+.take-and-do-calendar .fc .fc-toolbar-title {
+  color: #fafafa;
+  font-size: 1.1rem;
+}
+
+.take-and-do-calendar .fc .fc-event {
+  border-width: 0;
+  font-weight: 600;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    0 2px 10px rgba(0, 0, 0, 0.28);
+  border-radius: 10px !important;
+  overflow: hidden;
+}
+
+/* FullCalendar sets inline background-color after eventDidMount; !important keeps base + fill split. */
+.take-and-do-calendar .fc .fc-event.tad-event-calendar-stripe,
+.take-and-do-calendar
+  .fc
+  .fc-timegrid-event.fc-v-event.tad-event-calendar-stripe,
+.take-and-do-calendar
+  .fc
+  .fc-daygrid-block-event.fc-h-event.tad-event-calendar-stripe {
+  background-color: transparent !important;
+  background-image: linear-gradient(
+    90deg,
+    var(--tad-event-base-color) 0 var(--tad-event-stripe-w, 5px),
+    var(--tad-event-body-fill) var(--tad-event-stripe-w, 5px),
+    var(--tad-event-body-fill) 100%
+  ) !important;
+  border-color: var(--tad-event-body-fill) !important;
+}
+
+.take-and-do-calendar
+  .fc
+  .fc-event.tad-event-calendar-stripe
+  .fc-event-main-frame.tad-planning-event-inner {
+  padding-left: 2px;
+}
+
+.take-and-do-calendar
+  .fc
+  .fc-event.tad-event-calendar-stripe
+  .calendar-kind-icon-wrap {
+  margin-left: 4px;
+}
+
+/* Column insets handle horizontal padding; extra per-event margin skews overlap geometry */
+.take-and-do-calendar .fc .fc-timegrid-event-harness .fc-v-event {
+  margin-inline: 0;
+}
+
+.take-and-do-calendar .fc.fc-direction-ltr .fc-timegrid-col-events {
+  margin-top: 0;
+  margin-bottom: 0;
+  margin-left: var(--tad-time-col-pad-left);
+  margin-right: var(--tad-time-col-pad-right);
+}
+
+.take-and-do-calendar .fc.fc-direction-rtl .fc-timegrid-col-events {
+  margin-top: 0;
+  margin-bottom: 0;
+  margin-right: var(--tad-time-col-pad-left);
+  margin-left: var(--tad-time-col-pad-right);
+}
+
+.take-and-do-calendar .fc.fc-media-screen .fc-timegrid-col-events {
+  position: relative;
+  z-index: 4;
+}
+
+/*
+ * Draft / selection mirrors only — keep event colors during drag & resize
+ * (.fc-event-dragging / .fc-event-resizing on the mirror preview).
+ */
+.take-and-do-calendar
+  .fc
+  .fc-event.fc-event-mirror:not(.fc-event-dragging):not(.fc-event-resizing),
+.take-and-do-calendar
+  .fc
+  .fc-event-mirror:not(.fc-event-dragging):not(.fc-event-resizing) {
+  background-color: var(--fc-default-mirror-bg) !important;
+  border-color: color-mix(
+    in srgb,
+    var(--fc-default-mirror-bg) 88%,
+    #000
+  ) !important;
+}
+
+.take-and-do-calendar .fc .fc-event .fc-event-main {
+  color: rgba(250, 250, 250, 0.96);
+}
+
+.take-and-do-calendar .fc .fc-highlight {
+  background: var(--fc-highlight-color);
+  pointer-events: none;
+}
+
+.take-and-do-calendar .fc .fc-timegrid .fc-highlight {
+  background: var(--fc-highlight-color);
+}
+
+/* Draft quick-create: selection + drag mirror match chosen kind */
+.take-and-do-calendar[data-draft-kind] .fc {
+  --fc-highlight-color: color-mix(
+    in srgb,
+    var(--draft-kind-color) 36%,
+    transparent
+  );
+}
+
+.take-and-do-calendar[data-draft-kind] .fc-daygrid .fc-highlight {
+  background: color-mix(in srgb, var(--draft-kind-color) 36%, transparent);
+}
+
+.take-and-do-calendar[data-draft-kind]
+  .fc
+  .fc-event.fc-event-mirror:not(.fc-event-dragging):not(.fc-event-resizing),
+.take-and-do-calendar[data-draft-kind]
+  .fc
+  .fc-event-mirror:not(.fc-event-dragging):not(.fc-event-resizing) {
+  background-color: var(--draft-kind-color) !important;
+  border-color: color-mix(
+    in srgb,
+    var(--draft-kind-color) 88%,
+    #000
+  ) !important;
+}
+
+.take-and-do-calendar .fc .fc-list-event:hover td {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.take-and-do-calendar .fc .fc-list-day-cushion {
+  background: rgba(255, 255, 255, 0.05);
+  color: #fafafa;
+}
+
+.calendar-surface {
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(30, 30, 30, 0.55);
+  padding: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.22);
+}
+
+.take-and-do-calendar.calendar-surface {
+  padding: 14px 16px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.065);
+  background: linear-gradient(
+    165deg,
+    rgba(32, 30, 42, 0.72) 0%,
+    rgba(20, 18, 28, 0.88) 48%,
+    rgba(14, 13, 20, 0.92) 100%
+  );
+  box-shadow:
+    0 20px 50px rgba(0, 0, 0, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+}
+
+.take-and-do-calendar .fc .fc-toolbar.fc-header-toolbar {
+  margin-bottom: 0.85em;
+  gap: 0.5rem;
+}
+
+.take-and-do-calendar .fc .fc-toolbar-chunk {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.take-and-do-calendar .tad-calendar-toolbar-nav-shell {
+  --tad-toolbar-nav-x: 0px;
+  transform-origin: 50% 40%;
+}
+
+.take-and-do-calendar
+  .tad-calendar-toolbar-nav-shell.tad-calendar-toolbar-nav-anim {
+  animation: tad-calendar-toolbar-nav-anim 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes tad-calendar-toolbar-nav-anim {
+  0% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+  42% {
+    opacity: 0.88;
+    transform: translateX(var(--tad-toolbar-nav-x, 0px)) scale(0.993);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}

@@ -5,6 +5,7 @@ import { useCallback, useMemo } from "react";
 
 import { Task, TaskUpdate } from "@/components/Boards/KanbanBoard/types";
 import { tasksHelper } from "@/helpers/task.helper";
+import { applyTaskScheduleToPersistedCalendar } from "@/hooks/calendar/task-calendar-local-sync";
 import { invalidateTaskDataQueries } from "@/lib/invalidate-app-queries";
 import { queryKeys } from "@/lib/query-keys";
 import { useIsAnonymous } from "@/hooks/auth/use-is-anonymous";
@@ -133,9 +134,29 @@ export function useTaskActions() {
     async (taskId: string, patch: TaskUpdate) => {
       if (isAnonymous) {
         const result = update(taskId, patch);
+        if (result && "scheduleDate" in patch) {
+          applyTaskScheduleToPersistedCalendar({
+            taskId: result.id,
+            taskBoardId: result.taskBoardId,
+            taskTitle: result.summary,
+            scheduleDate: result.scheduleDate,
+          });
+        }
         return result ?? null;
       }
-      return updateTaskMutation.mutateAsync({ taskId, updates: patch });
+      const updated = await updateTaskMutation.mutateAsync({
+        taskId,
+        updates: patch,
+      });
+      if (updated && isAnonymous && "scheduleDate" in patch) {
+        applyTaskScheduleToPersistedCalendar({
+          taskId: updated.id,
+          taskBoardId: updated.taskBoardId,
+          taskTitle: updated.summary,
+          scheduleDate: updated.scheduleDate,
+        });
+      }
+      return updated;
     },
     [isAnonymous, update, updateTaskMutation],
   );

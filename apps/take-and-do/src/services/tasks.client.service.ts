@@ -56,6 +56,17 @@ export class TasksClientService extends BaseClientService {
     return result.data;
   }
 
+  async getByScheduleRange(from: Date, to: Date): Promise<Task[]> {
+    const result = await this.get<Task[]>({
+      queries: {
+        scheduleFrom: from.toISOString(),
+        scheduleTo: to.toISOString(),
+      },
+    });
+    if (!this.isResultOk(result)) return [];
+    return result.data;
+  }
+
   async getRecent(days: number = 7): Promise<Task[]> {
     const now = new Date();
     now.setHours(0, 0, 0, 0);

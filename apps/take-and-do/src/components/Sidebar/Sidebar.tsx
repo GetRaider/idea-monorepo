@@ -19,6 +19,7 @@ import {
 import { GuestAvatarIcon } from "../Icons/GuestAvatarIcon";
 import { DefaultAvatarIcon } from "../Icons/DefaulAvatarIcon";
 import { Route } from "@/constants/route.constant";
+import { isCalendarFeatureEnabled } from "@/lib/feature-flags";
 
 const buttonsSet: Array<{
   label: string;
@@ -51,6 +52,11 @@ export function Sidebar({ onNavigationChange }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { data: session } = useSession();
+  const navButtons = isCalendarFeatureEnabled()
+    ? buttonsSet
+    : buttonsSet.map((b) =>
+        b.path === Route.CALENDAR ? { ...b, path: null as string | null } : b,
+      );
 
   const handleNavClick = (page: string, path: string) => {
     onNavigationChange(page);
@@ -62,7 +68,7 @@ export function Sidebar({ onNavigationChange }: SidebarProps) {
       <Logo src="/logo.svg" alt="Logo" />
 
       <Nav>
-        {buttonsSet.map((button) => (
+        {navButtons.map((button) => (
           <AppTooltip
             key={button.label}
             content={

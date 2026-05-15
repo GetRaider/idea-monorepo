@@ -15,6 +15,7 @@ import {
   APP_CHROME_NAV_ICON_PX,
 } from "@/helpers/app-chrome-layout";
 import { cn } from "@/lib/styles/utils";
+import { isCalendarFeatureEnabled } from "@/lib/feature-flags";
 import { MenuRowButton } from "@/components/MenuRowButton/MenuRowButton";
 
 import { IntegrationsSettings } from "./IntegrationsSettings";
@@ -24,11 +25,19 @@ type SettingsSection = "integrations";
 export function SettingsPage() {
   const [, setCurrentPage] = useState("settings");
   const [section, setSection] = useState<SettingsSection>("integrations");
+  const calendarEnabled = isCalendarFeatureEnabled();
 
   const content = useMemo(() => {
+    if (!calendarEnabled) {
+      return (
+        <p className="text-sm text-slate-400">
+          Integrations are not available in this environment.
+        </p>
+      );
+    }
     if (section === "integrations") return <IntegrationsSettings />;
     return null;
-  }, [section]);
+  }, [calendarEnabled, section]);
 
   return (
     <PageContainer>
@@ -50,20 +59,27 @@ export function SettingsPage() {
           </AppPageTitle>
         </WelcomeSection>
 
-        <div className="flex min-h-0 flex-1 flex-col gap-5 lg:flex-row lg:gap-6">
-          <div className="w-full shrink-0 rounded-xl border border-white/10 bg-white/5 p-2 lg:w-[320px]">
-            <MenuRowButton
-              rowTransition="colors"
-              className={
-                section === "integrations"
-                  ? "bg-[#3a3a3a] hover:bg-[#3a3a3a]"
-                  : ""
-              }
-              onClick={() => setSection("integrations")}
-            >
-              Integrations
-            </MenuRowButton>
-          </div>
+        <div
+          className={cn(
+            "flex min-h-0 flex-1 flex-col gap-5",
+            calendarEnabled && "lg:flex-row lg:gap-6",
+          )}
+        >
+          {calendarEnabled ? (
+            <div className="w-full shrink-0 rounded-xl border border-white/10 bg-white/5 p-2 lg:w-[320px]">
+              <MenuRowButton
+                rowTransition="colors"
+                className={
+                  section === "integrations"
+                    ? "bg-[#3a3a3a] hover:bg-[#3a3a3a]"
+                    : ""
+                }
+                onClick={() => setSection("integrations")}
+              >
+                Integrations
+              </MenuRowButton>
+            </div>
+          ) : null}
 
           <div className="min-h-0 flex-1">{content}</div>
         </div>

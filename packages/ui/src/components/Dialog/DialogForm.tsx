@@ -53,12 +53,12 @@ export function DialogFormButton({
       type={type}
       disabled={disabled}
       className={cn(
-        "cursor-pointer rounded-lg border-0 px-5 py-2.5 text-sm font-medium transition-all duration-200",
+        "cursor-pointer px-5 py-2.5 text-sm font-semibold transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2",
         primary
           ? disabled
-            ? "cursor-not-allowed bg-zinc-800 text-zinc-500"
-            : "bg-violet-600 text-white hover:bg-violet-700 hover:disabled:bg-zinc-800"
-          : "border border-zinc-600 bg-transparent text-zinc-400 hover:bg-zinc-800 hover:text-white",
+            ? "cursor-not-allowed rounded-xl border border-black/[0.08] bg-gradient-to-b from-zinc-200/35 to-zinc-400/35 text-zinc-600 opacity-90"
+            : "rounded-xl border border-black/[0.12] bg-gradient-to-b from-zinc-100 to-zinc-300 text-zinc-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)] hover:-translate-y-0.5 hover:brightness-[1.03] focus-visible:outline-zinc-400/50 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
+          : "rounded-lg border border-zinc-600 bg-transparent text-zinc-400 hover:bg-zinc-800 hover:text-white focus-visible:outline-zinc-400",
         className,
       )}
       {...props}

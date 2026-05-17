@@ -183,7 +183,7 @@ export function TasksSidebarWorkspacesSection({
                 type="button"
                 className={cn(
                   activeView === TASKS_ROOT_VIEW_ID &&
-                    "cursor-default bg-[#2a2a2a] text-white hover:bg-[#2a2a2a] hover:text-white",
+                    "cursor-default bg-surface-active text-text-primary hover:bg-surface-active hover:text-text-primary",
                 )}
                 onClick={() =>
                   activeView !== TASKS_ROOT_VIEW_ID &&
@@ -399,7 +399,7 @@ export function TasksSidebarWorkspacesSection({
 
           <DragOverlay dropAnimation={null}>
             {dragPreview?.kind === "board" ? (
-              <div className="flex w-[min(100%,var(--sidebar-drag-w,260px))] min-w-[200px] cursor-grabbing items-center gap-2 rounded-xl border border-border-app bg-[#1f1f1f] px-3 py-2.5 text-sm text-white shadow-[0_12px_40px_rgba(0,0,0,0.45)]">
+              <div className="flex w-[min(100%,var(--sidebar-drag-w,260px))] min-w-[200px] cursor-grabbing items-center gap-2 rounded-xl border border-border-app bg-background-primary px-3 py-2.5 text-sm text-text-primary shadow-dropdown">
                 <span className="text-lg leading-none">
                   {dragPreview.board.emoji ?? "📋"}
                 </span>
@@ -408,7 +408,7 @@ export function TasksSidebarWorkspacesSection({
                 </span>
               </div>
             ) : dragPreview?.kind === "folder" ? (
-              <div className="flex w-[min(100%,var(--sidebar-drag-w,260px))] min-w-[200px] cursor-grabbing items-center gap-2 rounded-xl border border-border-app bg-[#1f1f1f] px-3 py-2.5 text-sm text-white shadow-[0_12px_40px_rgba(0,0,0,0.45)]">
+              <div className="flex w-[min(100%,var(--sidebar-drag-w,260px))] min-w-[200px] cursor-grabbing items-center gap-2 rounded-xl border border-border-app bg-background-primary px-3 py-2.5 text-sm text-text-primary shadow-dropdown">
                 <span className="text-lg leading-none">
                   {dragPreview.folder.emoji ?? "📁"}
                 </span>

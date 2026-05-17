@@ -183,7 +183,7 @@ export function ConfirmCancelBtn({
       ref={ref}
       type={type}
       className={cn(
-        "cursor-pointer rounded-lg border border-zinc-600 bg-transparent px-5 py-2.5 text-sm font-medium text-zinc-400 transition-all duration-200 hover:bg-zinc-800 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 disabled:cursor-not-allowed disabled:opacity-60 hover:disabled:bg-transparent hover:disabled:text-zinc-400",
+        "cursor-pointer rounded-lg border border-zinc-600 bg-transparent px-5 py-2.5 text-sm font-medium text-zinc-400 transition-all duration-200 hover:bg-zinc-800 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-400 disabled:cursor-not-allowed disabled:opacity-60 hover:disabled:bg-transparent hover:disabled:text-zinc-400",
         className,
       )}
       {...props}
@@ -202,7 +202,7 @@ export function ConfirmDangerBtn({
       ref={ref}
       type={type}
       className={cn(
-        "cursor-pointer rounded-lg border-0 bg-red-500 px-5 py-2.5 text-sm font-medium text-white transition-colors duration-200 hover:bg-red-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 disabled:cursor-not-allowed disabled:opacity-60 hover:disabled:bg-red-500",
+        "cursor-pointer rounded-lg border-0 bg-red-900 px-5 py-2.5 text-sm font-medium text-white transition-colors duration-200 hover:bg-red-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-900/50 disabled:cursor-not-allowed disabled:opacity-60 hover:disabled:bg-red-900",
         className,
       )}
       {...props}

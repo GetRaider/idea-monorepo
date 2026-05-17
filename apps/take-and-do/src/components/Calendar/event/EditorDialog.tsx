@@ -163,12 +163,12 @@ export function CalendarEventEditorDialog({
   };
 
   const inputClass =
-    "w-full rounded-lg border border-white/15 bg-input-bg px-3 py-2 text-sm text-white outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]";
+    "w-full rounded-lg border border-white/15 bg-input-bg px-3 py-2 text-sm text-text-primary outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]";
 
   return (
     <Dialog
       title={mode === "create" ? "Create event" : "Edit event"}
-      subtitle="Time blocks, general events, and task windows stay on this calendar."
+      subtitle="Time blocks, general events, and tasks stay on calendar."
       onClose={onClose}
       maxWidth={520}
       headerBeforeClose={

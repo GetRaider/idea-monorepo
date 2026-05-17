@@ -162,7 +162,7 @@ export function TaskSchedulePicker({
   };
 
   const inputClass =
-    "min-w-0 rounded-md border border-input-border bg-input-bg px-2 py-1.5 text-xs text-white outline-none transition-[border-color] duration-200 focus:border-accent-primary";
+    "min-w-0 rounded-md border border-input-border bg-input-bg px-2 py-1.5 text-xs text-text-primary outline-none transition-[border-color] duration-200 focus:border-accent-primary";
 
   const triggerContent = (
     <>

@@ -94,7 +94,7 @@ function TaskScopeSelectedTaskRow({
           </TaskKey>
           <TaskSummary
             isDone={task.status === TaskStatus.DONE}
-            className="min-w-0 flex-1 font-semibold text-white"
+            className="min-w-0 flex-1 font-semibold text-text-primary"
           >
             {task.summary}
           </TaskSummary>

@@ -43,7 +43,7 @@ export function DropZoneBetween({
       <div
         ref={setNodeRef}
         className={cn(
-          // The parent `ListSection` draws the active purple ring; keep this
+          // The parent `ListSection` draws the active drop ring; keep this
           // drop target visually neutral to avoid a "double highlight" effect.
           "relative rounded-2xl px-1 py-1",
         )}

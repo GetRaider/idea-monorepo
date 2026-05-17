@@ -39,7 +39,7 @@ export function OptionToggleButton({
         "option-toggle flex cursor-pointer items-center justify-center rounded-lg border font-medium text-[#e0e0e0] transition-all duration-200",
         sizeClass[size],
         isSelected
-          ? "border-[#7255c1] bg-[#2a2540] hover:border-[#7255c1] hover:bg-[#2a2540]"
+          ? "border-white/35 bg-zinc-800/90 hover:border-white/40 hover:bg-zinc-800/90"
           : "border-border-app bg-background-primary hover:border-[#3a3a3a] hover:bg-[#252525]",
         className,
       )}

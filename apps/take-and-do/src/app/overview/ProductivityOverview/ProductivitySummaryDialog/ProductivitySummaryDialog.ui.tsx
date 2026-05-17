@@ -8,7 +8,7 @@ export function DialogContent({ className, ref, ...props }: UiProps<"div">) {
     <div
       ref={ref}
       className={cn(
-        "max-h-[90vh] min-h-[400px] w-full max-w-[800px] overflow-y-auto rounded-xl border border-border-app bg-[#1a1a1a] p-6 text-white",
+        "max-h-[90vh] min-h-[400px] w-full max-w-[800px] overflow-y-auto rounded-xl border border-border-app bg-background-primary p-6 text-text-primary",
         className,
       )}
       {...props}
@@ -84,7 +84,7 @@ export function AIBadge({ className, ref, ...props }: UiProps<"span">) {
     <span
       ref={ref}
       className={cn(
-        "rounded-xl bg-indigo-500 px-2 py-0.5 text-[11px] font-semibold uppercase",
+        "rounded-xl bg-zinc-600 px-2 py-0.5 text-[11px] font-semibold uppercase",
         className,
       )}
       {...props}

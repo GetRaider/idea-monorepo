@@ -471,7 +471,7 @@ function StatusPicker({ task, disabled, onPick }: StatusPickerProps) {
             aria-current={status === task.status ? "true" : undefined}
             className={
               status === task.status
-                ? "border-l-2 border-l-indigo-400/70 bg-white/[0.07] pl-2 text-white"
+                ? "border-l-2 border-l-white/35 bg-white/[0.07] pl-2 text-text-primary"
                 : undefined
             }
             onClick={(event) => {
@@ -533,7 +533,7 @@ function PriorityPicker({ task, disabled, onPick }: PriorityPickerProps) {
             aria-current={priority === task.priority ? "true" : undefined}
             className={
               priority === task.priority
-                ? "border-l-2 border-l-indigo-400/70 bg-white/[0.07] pl-2 text-white"
+                ? "border-l-2 border-l-white/35 bg-white/[0.07] pl-2 text-text-primary"
                 : undefined
             }
             onClick={(event) => {

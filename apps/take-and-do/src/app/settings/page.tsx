@@ -10,7 +10,7 @@ const SettingsPage = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#1a1a1a] to-[#3c2856]">
+      <div className="app-chrome-bg flex min-h-screen items-center justify-center">
         <Spinner className="min-h-[200px]" />
       </div>
     ),

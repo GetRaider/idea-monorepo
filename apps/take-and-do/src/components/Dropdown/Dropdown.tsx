@@ -207,7 +207,7 @@ export function Dropdown<T extends string = string>({
             id={id}
             disabled={disabled}
             className={cn(
-              "flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-md border border-input-border bg-input-bg px-3 py-1.5 text-sm text-white transition-[border-color] duration-200 hover:border-input-border-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring",
+              "flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-md border border-input-border bg-input-bg px-3 py-1.5 text-sm text-text-primary transition-[border-color] duration-200 hover:border-input-border-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring",
               fullWidth ? "w-full justify-between" : "w-auto justify-start",
               disabled &&
                 "cursor-not-allowed opacity-60 hover:border-input-border",
@@ -245,11 +245,11 @@ export function Dropdown<T extends string = string>({
                   "w-full cursor-pointer whitespace-nowrap rounded px-3 py-2 text-left text-sm transition-[background,color] duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:cursor-not-allowed disabled:opacity-60",
                   option.value === value
                     ? option.danger
-                      ? "bg-[#3a3a3a] text-red-500"
-                      : "bg-[#3a3a3a] text-white"
+                      ? "bg-zinc-700 text-red-600/85"
+                      : "bg-zinc-700 text-text-primary"
                     : option.danger
-                      ? "bg-transparent text-red-500 hover:bg-[#3a3a3a] hover:text-red-300"
-                      : "bg-transparent text-[#aaa] hover:bg-[#3a3a3a] hover:text-white",
+                      ? "bg-transparent text-red-600/85 hover:bg-zinc-700 hover:text-red-400/80"
+                      : "bg-transparent text-text-secondary hover:bg-zinc-700 hover:text-text-primary",
                 )}
                 onClick={() => {
                   onChange(option.value);

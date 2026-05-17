@@ -5,6 +5,7 @@ import { ChevronDown } from "lucide-react";
 import { Dropdown } from "@/components/Dropdown";
 import { Input } from "@/components/Input";
 import { cn } from "@/lib/styles/utils";
+import { chromePrimaryButtonClassName } from "@/lib/styles/chrome-primary-button-classes";
 import type {
   CalendarEventType,
   CalendarRepeatValue,
@@ -249,7 +250,7 @@ export function QuickMenuBody({
               {allDay ? (
                 <input
                   type="date"
-                  className="w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2.5 text-sm text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+                  className="w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2.5 text-sm text-text-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
                   value={startValue.slice(0, 10)}
                   onChange={(e) => {
                     const v = e.target.value;
@@ -260,7 +261,7 @@ export function QuickMenuBody({
                 <>
                   <input
                     type="date"
-                    className="w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2.5 text-sm text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+                    className="w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2.5 text-sm text-text-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
                     value={splitDatetimeLocalParts(startValue).date}
                     onChange={(e) => {
                       const v = e.target.value;
@@ -275,7 +276,7 @@ export function QuickMenuBody({
                   <input
                     type="time"
                     step={900}
-                    className="w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2.5 text-sm text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+                    className="w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2.5 text-sm text-text-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
                     value={splitDatetimeLocalParts(startValue).time}
                     onChange={(e) => {
                       const v = e.target.value;
@@ -295,7 +296,7 @@ export function QuickMenuBody({
               {allDay ? (
                 <input
                   type="date"
-                  className="w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2.5 text-sm text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+                  className="w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2.5 text-sm text-text-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
                   value={endValue.slice(0, 10)}
                   onChange={(e) => {
                     const v = e.target.value;
@@ -306,7 +307,7 @@ export function QuickMenuBody({
                 <>
                   <input
                     type="date"
-                    className="w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2.5 text-sm text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+                    className="w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2.5 text-sm text-text-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
                     value={splitDatetimeLocalParts(endValue).date}
                     onChange={(e) => {
                       const v = e.target.value;
@@ -321,7 +322,7 @@ export function QuickMenuBody({
                   <input
                     type="time"
                     step={900}
-                    className="w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2.5 text-sm text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+                    className="w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2.5 text-sm text-text-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
                     value={splitDatetimeLocalParts(endValue).time}
                     onChange={(e) => {
                       const v = e.target.value;
@@ -359,7 +360,7 @@ export function QuickMenuBody({
         <div className={cn(section, "border-b border-white/[0.05]")}>
           <p className={sectionTitleClass}>Description</p>
           <textarea
-            className="min-h-[88px] w-full resize-y rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2.5 text-sm leading-relaxed text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] outline-none placeholder:text-zinc-600 focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+            className="min-h-[88px] w-full resize-y rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2.5 text-sm leading-relaxed text-text-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] outline-none placeholder:text-zinc-600 focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Feel free to mention task or docs by @"
@@ -543,7 +544,7 @@ export function QuickMenuBody({
                                   "rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors",
                                   payload.event.type === "common" &&
                                     payload.event.rsvpStatus === v
-                                    ? "border-[#7255c1] bg-[#7255c1]/30 text-white"
+                                    ? "border-white/35 bg-white/15 text-text-primary"
                                     : "border-white/15 bg-transparent text-zinc-300 hover:border-white/25",
                                 )}
                                 onClick={() => {
@@ -565,7 +566,7 @@ export function QuickMenuBody({
                     {onRsvpChange && showDeclineField ? (
                       <div className="space-y-2">
                         <textarea
-                          className="w-full resize-none rounded-lg border border-white/12 bg-input-bg px-2 py-2 text-xs text-white outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+                          className="w-full resize-none rounded-lg border border-white/12 bg-input-bg px-2 py-2 text-xs text-text-primary outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
                           rows={2}
                           value={declineReason}
                           onChange={(e) => setDeclineReason(e.target.value)}
@@ -573,7 +574,10 @@ export function QuickMenuBody({
                         />
                         <button
                           type="button"
-                          className="w-full rounded-lg border-0 bg-[#7255c1] py-2 text-xs font-medium text-white hover:bg-[#6346b0]"
+                          className={cn(
+                            chromePrimaryButtonClassName,
+                            "w-full rounded-lg py-2 text-xs font-medium",
+                          )}
                           onClick={() => applyRsvp("no")}
                         >
                           Save &quot;No&quot;

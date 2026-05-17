@@ -28,7 +28,7 @@ const PRIMARY_NAV: Array<{
 }> = [
   {
     label: "Overview",
-    icon: <OverviewIcon size={24} className="text-white" />,
+    icon: <OverviewIcon size={24} className="text-text-primary" />,
     path: Route.OVERVIEW,
   },
   {
@@ -114,7 +114,7 @@ export function Sidebar({ onNavigationChange }: SidebarProps) {
               isActive={pathname.startsWith(Route.SETTINGS)}
               onClick={() => handleNavClick("Settings", Route.SETTINGS)}
             >
-              <SettingsIcon size={20} className="text-white" />
+              <SettingsIcon size={20} className="text-text-primary" />
             </NavButton>
           </span>
         </AppTooltip>

@@ -12,6 +12,8 @@ import {
 import { AuthSecondaryButton } from "@/components/auth/AuthButtons";
 import { mixpanelAnalytics } from "@/lib/analytics/maxpanel-analytics";
 import { sendJoinWhitelistFormSubmit } from "@/lib/analytics/form-submit-analytics";
+import { cn } from "@/lib/styles/utils";
+import { chromePrimaryButtonClassName } from "@/lib/styles/chrome-primary-button-classes";
 
 export function JoinWhitelistDialog({ onClose }: JoinWhitelistDialogProps) {
   const recipient = getWhitelistFormSubmitRecipientEmail();
@@ -75,7 +77,10 @@ export function JoinWhitelistDialog({ onClose }: JoinWhitelistDialogProps) {
           <button
             type="button"
             onClick={onClose}
-            className="mt-2 w-full rounded-lg border-0 bg-[#7255c1] px-5 py-2.5 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#5a42a1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-secondary)]"
+            className={cn(
+              chromePrimaryButtonClassName,
+              "mt-2 w-full px-5 py-2.5 text-sm font-semibold rounded-lg",
+            )}
           >
             Close
           </button>
@@ -95,7 +100,7 @@ export function JoinWhitelistDialog({ onClose }: JoinWhitelistDialogProps) {
                 htmlFor="join-whitelist-email"
                 className="mb-1 block text-left text-sm text-[var(--text-secondary)]"
               >
-                Email <span className="text-red-400">*</span>
+                Email <span className="text-red-500/65">*</span>
               </label>
               <input
                 id="join-whitelist-email"
@@ -114,7 +119,7 @@ export function JoinWhitelistDialog({ onClose }: JoinWhitelistDialogProps) {
                 htmlFor="join-whitelist-name"
                 className="mb-1 block text-left text-sm text-[var(--text-secondary)]"
               >
-                Full name <span className="text-red-400">*</span>
+                Full name <span className="text-red-500/65">*</span>
               </label>
               <input
                 id="join-whitelist-name"
@@ -147,7 +152,7 @@ export function JoinWhitelistDialog({ onClose }: JoinWhitelistDialogProps) {
             </div>
 
             {formError ? (
-              <p className="text-sm text-red-400" role="alert">
+              <p className="text-sm text-red-500/65" role="alert">
                 {formError}
               </p>
             ) : null}
@@ -164,10 +169,13 @@ export function JoinWhitelistDialog({ onClose }: JoinWhitelistDialogProps) {
               <button
                 type="submit"
                 disabled={submitting || !recipient}
-                className="flex min-w-[120px] items-center justify-center gap-2 rounded-lg border-0 bg-[#7255c1] px-5 py-2.5 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#5a42a1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-secondary)] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
+                className={cn(
+                  chromePrimaryButtonClassName,
+                  "flex min-w-[120px] items-center justify-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-lg",
+                )}
               >
                 {submitting ? (
-                  <SpinnerRing className="h-5 w-5 border-t-white" />
+                  <SpinnerRing className="h-5 w-5 border-t-chrome-cta-primary-fg" />
                 ) : null}
                 Submit
               </button>

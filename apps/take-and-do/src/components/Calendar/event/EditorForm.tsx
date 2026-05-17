@@ -178,7 +178,7 @@ export function EditorForm({
                 onChange={(ev) =>
                   setDraft((d) => ({ ...d, allDay: ev.target.checked }))
                 }
-                className="h-4 w-4 rounded border-white/20 bg-input-bg"
+                className="h-4 w-4 shrink-0 cursor-pointer rounded border border-white/25 bg-input-bg accent-zinc-200"
               />
               All-day
             </label>

@@ -30,7 +30,7 @@ export function ScheduleBoardPickerDialog({
             <button
               type="button"
               className={cn(
-                "flex w-full min-w-0 items-center gap-2 rounded-lg border border-transparent bg-transparent px-3 py-2.5 text-left text-sm text-white transition-colors",
+                "flex w-full min-w-0 items-center gap-2 rounded-lg border border-transparent bg-transparent px-3 py-2.5 text-left text-sm text-text-primary transition-colors",
                 "hover:border-border-app hover:bg-[#2a2a2a]",
               )}
               onClick={() => onSelect(board.id)}

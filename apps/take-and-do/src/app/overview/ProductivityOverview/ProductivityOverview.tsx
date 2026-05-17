@@ -113,7 +113,7 @@ export function ProductivityOverview({
           <SectionTitle>
             <ProductivityOverviewIcon
               size={20}
-              className="shrink-0 text-white"
+              className="shrink-0 text-text-primary"
               aria-hidden
             />
             <span>Productivity Overview</span>
@@ -185,7 +185,7 @@ function hasDashboardData(stats: AnalyticsStats): boolean {
 }
 
 const tremorChartSurfaceClassName =
-  "text-[var(--text-primary)] [&_.recharts-cartesian-axis-tick_text]:fill-[var(--text-secondary)] [&_.recharts-cartesian-axis-tick_line]:stroke-[var(--border-color)] [&_.recharts-cartesian-grid_line]:stroke-[var(--border-color)] [&_.recharts-legend-item-text]:fill-[var(--text-secondary)] [&_.recharts-legend-wrapper_.recharts-text]:fill-[var(--text-secondary)] [&_.recharts-label]:fill-[var(--text-secondary)] [&_text.recharts-text]:fill-[var(--text-secondary)] [&_.recharts-tooltip-cursor]:stroke-[var(--border-color)] [&_.recharts-active-dot]:fill-violet-500 [&_.recharts-dot]:stroke-[var(--border-color)]";
+  "text-[var(--text-primary)] [&_.recharts-cartesian-axis-tick_text]:fill-[var(--text-secondary)] [&_.recharts-cartesian-axis-tick_line]:stroke-[var(--border-color)] [&_.recharts-cartesian-grid_line]:stroke-[var(--border-color)] [&_.recharts-legend-item-text]:fill-[var(--text-secondary)] [&_.recharts-legend-wrapper_.recharts-text]:fill-[var(--text-secondary)] [&_.recharts-label]:fill-[var(--text-secondary)] [&_text.recharts-text]:fill-[var(--text-secondary)] [&_.recharts-tooltip-cursor]:stroke-[var(--border-color)] [&_.recharts-active-dot]:fill-zinc-500 [&_.recharts-dot]:stroke-[var(--border-color)]";
 
 function Charts({ stats }: ChartsProps) {
   const completionRatePercent =
@@ -222,7 +222,7 @@ function Charts({ stats }: ChartsProps) {
       <ChartCard>
         <ChartTitle>Completion Rate</ChartTitle>
         <div className="flex flex-col gap-2 pt-1">
-          <span className="text-4xl font-semibold tabular-nums text-white">
+          <span className="text-4xl font-semibold tabular-nums text-text-primary">
             {completionRatePercent.toFixed(0)}%
           </span>
           <WeekOverWeekCompletionComparison
@@ -268,7 +268,7 @@ function Charts({ stats }: ChartsProps) {
           data={avgCompletionAreaData}
           index="name"
           categories={["Average days"]}
-          colors={["violet"]}
+          colors={["slate"]}
           valueFormatter={(value) => String(Math.round(Number(value)))}
           allowDecimals={false}
           showAnimation={false}
@@ -295,13 +295,13 @@ function Charts({ stats }: ChartsProps) {
               <div key={key} className="flex flex-col gap-1">
                 <div className="flex justify-between text-[13px] text-slate-300">
                   <span>{label}</span>
-                  <span className="tabular-nums text-white">
+                  <span className="tabular-nums text-text-primary">
                     {bucket.total}
                   </span>
                 </div>
                 <div className="h-1.5 overflow-hidden rounded-sm bg-[var(--input-bg)]">
                   <div
-                    className="h-full rounded-sm bg-indigo-500 transition-[width] duration-300"
+                    className="h-full rounded-sm bg-zinc-500 transition-[width] duration-300"
                     style={{ width: `${widthPercent}%` }}
                   />
                 </div>
@@ -370,7 +370,7 @@ function WeekOverWeekCompletionComparison({
       <p
         className={cn(
           "m-0 text-sm font-medium",
-          isPositive ? "text-emerald-400" : "text-red-400",
+          isPositive ? "text-emerald-400" : "text-red-500/65",
         )}
       >
         {isPositive ? "↑" : "↓"} {magnitude.toFixed(1)} percentage points{" "}

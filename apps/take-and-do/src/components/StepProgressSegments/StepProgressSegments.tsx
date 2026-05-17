@@ -39,14 +39,14 @@ function StepProgressSegment({
   if (active) {
     return (
       <div
-        className={`${base} animate-segment-fill animate-shimmer bg-gradient-to-r from-indigo-500 to-purple-600 shadow-[0_0_12px_rgba(102,126,234,0.5)]`}
+        className={`${base} animate-segment-fill animate-shimmer bg-gradient-to-r from-zinc-500 to-zinc-300 shadow-[0_0_12px_rgba(255,255,255,0.12)]`}
       />
     );
   }
 
   return (
     <div
-      className={`${base} animate-segment-fill bg-gradient-to-r from-indigo-600 to-violet-700`}
+      className={`${base} animate-segment-fill bg-gradient-to-r from-zinc-600 to-zinc-400`}
     />
   );
 }

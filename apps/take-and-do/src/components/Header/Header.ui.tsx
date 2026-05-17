@@ -34,7 +34,7 @@ export function Title({ className, ref, ...props }: UiProps<"h1">) {
   return (
     <h1
       ref={ref}
-      className={cn("m-0 text-lg font-semibold text-white", className)}
+      className={cn("m-0 text-lg font-semibold text-text-primary", className)}
       {...props}
     />
   );

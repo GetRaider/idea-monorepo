@@ -17,7 +17,7 @@ export function Section({
     <div
       ref={ref}
       className={cn(
-        "rounded-xl border border-border-app bg-[#1a1a1a] p-6",
+        "rounded-xl border border-border-app bg-background-primary p-6",
         withBottomMargin && "mb-6",
         className,
       )}
@@ -41,7 +41,7 @@ export function SectionTitle({ className, ref, ...props }: UiProps<"h2">) {
     <h2
       ref={ref}
       className={cn(
-        "m-0 flex items-center gap-2 text-xl font-semibold text-white",
+        "m-0 flex items-center gap-2 text-xl font-semibold text-text-primary",
         className,
       )}
       {...props}
@@ -68,7 +68,7 @@ export function TimeframeSelect({
     <select
       ref={ref}
       className={cn(
-        "cursor-pointer rounded-md border border-input-border bg-input-bg px-3 py-1.5 text-sm text-white",
+        "cursor-pointer rounded-md border border-input-border bg-input-bg px-3 py-1.5 text-sm text-text-primary",
         className,
       )}
       {...props}
@@ -136,7 +136,7 @@ export function AIBadge({ className, ref, ...props }: UiProps<"span">) {
     <span
       ref={ref}
       className={cn(
-        "rounded-xl bg-indigo-500 px-2 py-0.5 text-[11px] font-semibold uppercase",
+        "rounded-xl bg-zinc-600 px-2 py-0.5 text-[11px] font-semibold uppercase",
         className,
       )}
       {...props}

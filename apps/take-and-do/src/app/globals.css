@@ -5,32 +5,51 @@
 @tailwind utilities;
 
 @layer base {
-  /* Login / brand — align with app theme; see Radix + shell.ui */
+  /* Tasks reference: true black canvas, #0D0D0D sidebar, #0A0A0A main panel, #262626 selection. */
   :root {
-    --brand-primary: #764ba2;
-    --brand-secondary: #a784d8;
-    --brand-gradient-from: #1a1035;
-    --brand-gradient-to: #0d2138;
+    --canvas-bg: #000000;
+    /* Neutral chrome only (no purple in product UI). */
+    --brand-primary: #525252;
+    --brand-secondary: #737373;
+    --brand-gradient-from: #141414;
+    --brand-gradient-to: #000000;
     --brand-text-on-gradient: #f4f4f5;
-    --background: #0f0f0f;
+    --shell-gradient-from: #121212;
+    --shell-gradient-to: #000000;
+    --app-chrome-gradient: radial-gradient(
+      120% 90% at 50% -8%,
+      #181818 0%,
+      #101010 38%,
+      #050505 72%,
+      #000000 100%
+    );
+    --background: #000000;
     --foreground: #ededed;
-    --sidebar-bg: #1a1a1a;
-    --nav-sidebar-bg: #1e1e1e;
-    --background-primary: #1e1e1e;
-    --background-login: rgb(18 19 26 / 0.95);
-    --border-color: #2a2a2a;
+    --sidebar-bg: #0d0d0d;
+    --nav-sidebar-bg: #000000;
+    --background-primary: #0a0a0a;
+    --surface-active: #262626;
+    --background-login: rgb(16 16 16 / 0.96);
+    --border-color: #1a1a1a;
     --text-primary: #ffffff;
-    --text-secondary: #888888;
-    --text-tertiary: #666666;
-    --accent-primary: #667eea;
-    --accent-secondary: #764ba2;
-    --input-login-bg: #212229;
+    --text-secondary: #a0a0a0;
+    --text-tertiary: #808080;
+    --accent-primary: #d4d4d4;
+    --accent-secondary: #a3a3a3;
+    --input-login-bg: #1a1a1a;
     --input-login-border: #2a2a2a;
     --input-login-border-hover: #555555;
-    --input-bg: #201f1f;
-    --input-border: #3a3a3a;
-    --input-border-hover: #666666;
-    --focus-ring: #7255c1;
+    --input-bg: #141414;
+    --input-border: #2a2a2a;
+    --input-border-hover: #404040;
+    --focus-ring: #c4c4c4;
+    /* Primary pill: soft off-white → muted gray, charcoal label (tasks reference). */
+    --chrome-cta-primary-from: #f0f0ef;
+    --chrome-cta-primary-to: #d4d4d2;
+    --chrome-cta-primary-fg: #2c2c2c;
+    --chrome-cta-inverted-bg: #ffffff;
+    --chrome-cta-inverted-fg: #111111;
+    --chrome-cta-inverted-hover: #ececec;
     --radius-sm: 4px;
     --radius-md: 6px;
     --radius-lg: 8px;
@@ -50,12 +69,8 @@
     @apply max-w-full overflow-x-hidden h-full;
     min-height: 100%;
     color-scheme: dark;
-    background-color: var(--sidebar-bg);
-    background-image: linear-gradient(
-      to bottom right,
-      var(--brand-gradient-from),
-      var(--brand-gradient-to)
-    );
+    background-color: var(--canvas-bg);
+    background-image: var(--app-chrome-gradient);
     background-attachment: fixed;
     background-size: cover;
   }
@@ -105,6 +120,26 @@
   }
 }
 
+/* Tasks list / board — subtle neutral vertical gradient on panel. */
+.tasks-work-surface {
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: linear-gradient(
+    180deg,
+    #121212 0%,
+    var(--background-primary) 45%,
+    #060606 100%
+  );
+}
+
+/* Full-screen neutral chrome (replaces purple loading / auth backdrops). */
+.app-chrome-bg {
+  background-color: var(--canvas-bg);
+  background-image: var(--app-chrome-gradient);
+  background-attachment: fixed;
+  background-size: cover;
+}
+
 /* Above modal overlays (e.g. z-[4000]); toaster is portaled to body in AppToaster */
 [data-sonner-toaster] {
   z-index: 100000 !important;
@@ -135,9 +170,9 @@
 
 [data-sonner-toaster][data-sonner-theme="dark"]
   [data-sonner-toast][data-type="error"] {
-  background: #2a0f0f !important;
-  border-color: #450a0a !important;
-  color: #fca5a5 !important;
+  background: #1a1212 !important;
+  border-color: #3d2424 !important;
+  color: #c49a9a !important;
 }
 
 [data-sonner-toast][data-styled="true"] [data-close-button] {
@@ -197,11 +232,11 @@
   display: flex;
   gap: 4px;
   align-items: center;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid color-mix(in srgb, var(--border-color) 70%, transparent);
   border-radius: 8px;
-  background: #1c1c1e;
+  background: var(--background-primary);
   padding: 4px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  box-shadow: var(--shadow-dropdown);
   z-index: 1400;
 }
 
@@ -237,11 +272,11 @@
   width: 240px;
   max-height: 320px;
   overflow-y: auto;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid color-mix(in srgb, var(--border-color) 70%, transparent);
   border-radius: 12px;
-  background: #1c1c1e;
+  background: var(--background-primary);
   padding: 6px;
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-dialog);
 }
 
 .editor-slash-menu.is-top {
@@ -466,8 +501,8 @@
   ul[data-type="taskList"]
   input[type="checkbox"]:checked,
 .task-view-description ul[data-type="taskList"] input[type="checkbox"]:checked {
-  border-color: var(--accent-primary, #6366f1);
-  background-color: var(--accent-primary, #6366f1);
+  border-color: var(--accent-primary, #d4d4d4);
+  background-color: var(--accent-primary, #d4d4d4);
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M2.5 6.2L4.8 8.5L9.5 3.5' stroke='white' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
 

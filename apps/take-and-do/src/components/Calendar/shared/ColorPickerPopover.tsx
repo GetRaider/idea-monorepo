@@ -137,7 +137,7 @@ export function CalendarColorPickerPopover({
       <div ref={wrapRef} className="relative inline-flex shrink-0">
         <button
           type="button"
-          className="inline-flex cursor-pointer items-center justify-center rounded border-0 bg-transparent p-1 text-zinc-400 transition-colors hover:bg-white/[0.08] hover:text-white"
+          className="inline-flex cursor-pointer items-center justify-center rounded border-0 bg-transparent p-1 text-zinc-400 transition-colors hover:bg-white/[0.08] hover:text-text-primary"
           aria-expanded={open}
           aria-haspopup="dialog"
           aria-label="Choose color"
@@ -165,7 +165,7 @@ export function CalendarColorPickerPopover({
               role="dialog"
               aria-label="Color"
               data-calendar-color-menu
-              className="fixed z-[5400] w-[200px] rounded-xl border border-white/[0.1] bg-gradient-to-b from-[rgba(40,38,52,0.98)] to-[rgba(22,20,32,0.99)] p-2.5 shadow-[0_20px_60px_rgba(0,0,0,0.55)] backdrop-blur-md"
+              className="fixed z-[5400] w-[200px] rounded-xl border border-white/[0.1] bg-gradient-to-b from-[rgba(28,28,30,0.98)] to-[rgba(14,14,16,0.99)] p-2.5 shadow-[0_20px_60px_rgba(0,0,0,0.55)] backdrop-blur-md"
               style={{
                 ...(menuPos.top != null
                   ? { top: menuPos.top }
@@ -185,7 +185,7 @@ export function CalendarColorPickerPopover({
                       className={cn(
                         "relative flex h-7 w-7 items-center justify-center rounded-full border border-white/[0.12] shadow-inner transition-transform hover:scale-105",
                         active &&
-                          "ring-2 ring-white/70 ring-offset-2 ring-offset-[rgba(22,20,32,0.99)]",
+                          "ring-2 ring-white/70 ring-offset-2 ring-offset-zinc-950",
                       )}
                       style={{ backgroundColor: hex }}
                       onClick={() => pick(hex)}
@@ -208,7 +208,7 @@ export function CalendarColorPickerPopover({
                 {onResetToDefault ? (
                   <button
                     type="button"
-                    className="rounded-lg border border-white/[0.1] bg-white/[0.04] px-2 py-1.5 text-[11px] font-medium text-zinc-300 transition-colors hover:bg-white/[0.08] hover:text-white"
+                    className="rounded-lg border border-white/[0.1] bg-white/[0.04] px-2 py-1.5 text-[11px] font-medium text-zinc-300 transition-colors hover:bg-white/[0.08] hover:text-text-primary"
                     onClick={() => {
                       onResetToDefault();
                       setOpen(false);
@@ -221,7 +221,7 @@ export function CalendarColorPickerPopover({
                 )}
                 <button
                   type="button"
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-dashed border-white/25 bg-white/[0.06] text-zinc-300 transition-colors hover:border-white/40 hover:bg-white/[0.1] hover:text-white"
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-dashed border-white/25 bg-white/[0.06] text-zinc-300 transition-colors hover:border-white/40 hover:bg-white/[0.1] hover:text-text-primary"
                   title="Custom color"
                   aria-label="Custom color"
                   onClick={() => fileRef.current?.click()}

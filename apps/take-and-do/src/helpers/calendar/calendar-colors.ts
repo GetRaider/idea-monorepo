@@ -72,7 +72,7 @@ export function coerceHexToWhiteTextSafe(hex: string): string {
 }
 
 const PRESET_CANDIDATE_HEXES: readonly string[] = [
-  "#ef4444",
+  "#b45353",
   "#f97316",
   "#eab308",
   "#84cc16",

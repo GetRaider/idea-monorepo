@@ -26,7 +26,7 @@ export function AIActionButton({
       disabled={isDisabled}
       className={cn(
         gradientActionButtonClass,
-        "relative inline-flex items-center justify-center gap-1.5 overflow-hidden rounded-md border-0 text-sm font-semibold text-white transition-colors duration-200",
+        "relative inline-flex items-center justify-center gap-1.5 overflow-hidden rounded-md border-0 text-sm font-semibold text-text-primary transition-colors duration-200",
         "enabled:cursor-pointer disabled:cursor-not-allowed disabled:opacity-60",
         sizeClasses[size],
         className,

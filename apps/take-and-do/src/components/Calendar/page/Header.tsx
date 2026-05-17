@@ -41,7 +41,7 @@ export function PageHeader({ onCreateEvent }: PageHeaderProps) {
         className="shrink-0 font-medium"
         onClick={onCreateEvent}
       >
-        <PlusIcon size={18} className="shrink-0 text-white" />
+        <PlusIcon size={18} className="shrink-0" />
         Create Event
       </PrimaryButton>
     </WelcomeSection>

@@ -42,7 +42,7 @@ export function TasksSidebarSchedulesSection({
               type="button"
               className={cn(
                 activeView === "today" &&
-                  "cursor-default bg-[#2a2a2a] text-white hover:bg-[#2a2a2a] hover:text-white",
+                  "cursor-default bg-surface-active text-text-primary hover:bg-surface-active hover:text-text-primary",
               )}
               onClick={() =>
                 activeView !== "today" && handleViewChange("today")
@@ -63,7 +63,7 @@ export function TasksSidebarSchedulesSection({
               type="button"
               className={cn(
                 activeView === "tomorrow" &&
-                  "cursor-default bg-[#2a2a2a] text-white hover:bg-[#2a2a2a] hover:text-white",
+                  "cursor-default bg-surface-active text-text-primary hover:bg-surface-active hover:text-text-primary",
               )}
               onClick={() =>
                 activeView !== "tomorrow" && handleViewChange("tomorrow")

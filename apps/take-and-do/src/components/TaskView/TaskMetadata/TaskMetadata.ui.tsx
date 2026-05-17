@@ -39,7 +39,7 @@ export function MetadataItem({
     <button
       type={type}
       className={joinClassNames(
-        "flex cursor-pointer items-center gap-1.5 rounded-md border border-transparent bg-transparent px-2 py-1 text-sm text-[#888] transition-all duration-200 hover:border-input-border hover:bg-[#2a2a2a]",
+        "flex cursor-pointer items-center gap-1.5 rounded-md border border-transparent bg-transparent px-2 py-1 text-sm text-text-secondary transition-all duration-200 hover:border-input-border hover:bg-zinc-800",
         className,
       )}
       {...props}
@@ -70,7 +70,10 @@ export function MetadataIcon({
 }: HTMLAttributes<HTMLSpanElement>) {
   return (
     <span
-      className={joinClassNames("flex items-center text-[#888]", className)}
+      className={joinClassNames(
+        "flex items-center text-text-secondary",
+        className,
+      )}
       {...props}
     />
   );
@@ -85,7 +88,7 @@ export function EstimationInput({
     <input
       type={type}
       className={joinClassNames(
-        "w-10 border-0 bg-transparent px-1.5 py-1 text-center text-[13px] text-white outline-none [-moz-appearance:textfield] focus:rounded focus:bg-white/5 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
+        "w-10 border-0 bg-transparent px-1.5 py-1 text-center text-[13px] text-text-primary outline-none [-moz-appearance:textfield] focus:rounded focus:bg-white/5 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
         className,
       )}
       {...props}
@@ -100,7 +103,7 @@ export function EstimationLabel({
   return (
     <span
       className={joinClassNames(
-        "min-w-[10px] text-[11px] text-[#666]",
+        "min-w-[10px] text-[11px] text-text-tertiary",
         className,
       )}
       {...props}
@@ -172,8 +175,8 @@ export function LabelDropdownRowToggle({
     <button
       type={type}
       className={joinClassNames(
-        "flex min-w-0 flex-1 cursor-pointer items-center gap-2 border-0 bg-transparent py-2.5 pl-0 pr-2 text-left text-[13px] transition-colors duration-150 hover:text-white",
-        onTask ? "text-gray-200" : "text-[#aaa]",
+        "flex min-w-0 flex-1 cursor-pointer items-center gap-2 border-0 bg-transparent py-2.5 pl-0 pr-2 text-left text-[13px] transition-colors duration-150 hover:text-text-primary",
+        onTask ? "text-gray-200" : "text-text-secondary",
         className,
       )}
       {...props}
@@ -203,7 +206,7 @@ export function LabelRowActions({
   return (
     <div
       className={joinClassNames(
-        "inline-flex shrink-0 items-center justify-center py-0 pl-1 pr-2 text-[#888] opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-data-[menu-open=true]:opacity-100 [&_[data-label-actions-trigger]]:inline-flex [&_[data-label-actions-trigger]]:items-center [&_[data-label-actions-trigger]]:justify-center [&_[data-label-actions-trigger]]:rounded [&_[data-label-actions-trigger]]:p-1",
+        "inline-flex shrink-0 items-center justify-center py-0 pl-1 pr-2 text-text-secondary opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-data-[menu-open=true]:opacity-100 [&_[data-label-actions-trigger]]:inline-flex [&_[data-label-actions-trigger]]:items-center [&_[data-label-actions-trigger]]:justify-center [&_[data-label-actions-trigger]]:rounded [&_[data-label-actions-trigger]]:p-1",
         className,
       )}
       {...props}
@@ -240,8 +243,8 @@ export function LabelDropdownItem({
     <button
       type={type}
       className={joinClassNames(
-        "flex w-full cursor-pointer items-center gap-2 border-0 px-3 py-2.5 text-left text-[13px] text-white transition-all duration-200 first:rounded-t-lg last:rounded-b-lg hover:bg-[#3a3a3a]",
-        isSelected ? "bg-[#3a3a3a]" : "bg-transparent",
+        "flex w-full cursor-pointer items-center gap-2 border-0 px-3 py-2.5 text-left text-[13px] text-text-primary transition-all duration-200 first:rounded-t-lg last:rounded-b-lg hover:bg-zinc-700",
+        isSelected ? "bg-zinc-700" : "bg-transparent",
         className,
       )}
       {...props}
@@ -256,7 +259,7 @@ export function LabelDropdownInput({
   return (
     <Input
       className={joinClassNames(
-        "w-full border-0 border-b border-input-border bg-transparent px-3 py-2.5 text-[13px] text-white outline-none placeholder:text-[#666]",
+        "w-full border-0 border-b border-input-border bg-transparent px-3 py-2.5 text-[13px] text-text-primary outline-none placeholder:text-text-tertiary",
         className,
       )}
       {...props}

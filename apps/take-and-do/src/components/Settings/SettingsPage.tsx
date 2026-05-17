@@ -51,7 +51,7 @@ export function SettingsPage() {
             icon={
               <SettingsIcon
                 size={APP_CHROME_NAV_ICON_PX}
-                className="shrink-0 text-white"
+                className="shrink-0 text-text-primary"
               />
             }
           >

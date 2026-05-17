@@ -31,7 +31,7 @@ export default function LoginPage() {
     >
       <div className="space-y-8">
         {urlError ? (
-          <p className="text-sm text-red-400" role="alert">
+          <p className="text-sm text-red-500/65" role="alert">
             {urlError}
           </p>
         ) : null}

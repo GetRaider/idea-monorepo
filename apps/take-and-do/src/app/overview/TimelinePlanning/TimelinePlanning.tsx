@@ -106,7 +106,7 @@ export function TimelinePlanning({
         <SectionTitle>
           <TimePlanningIcon
             size={20}
-            className="shrink-0 text-white"
+            className="shrink-0 text-text-primary"
             aria-hidden
           />
           <span>Timeline Planning</span>

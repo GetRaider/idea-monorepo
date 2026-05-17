@@ -9,7 +9,7 @@ export function DialogContent({ className, ref, ...props }: UiProps<"div">) {
     <div
       ref={ref}
       className={cn(
-        "flex max-h-[90vh] min-h-[400px] w-full max-w-[800px] flex-col overflow-y-auto rounded-xl border border-border-app bg-[#1a1a1a] p-8 text-white",
+        "flex max-h-[90vh] min-h-[400px] w-full max-w-[800px] flex-col overflow-y-auto rounded-xl border border-border-app bg-background-primary p-8 text-text-primary",
         className,
       )}
       {...props}
@@ -45,7 +45,7 @@ export function DialogDescription({ className, ref, ...props }: UiProps<"h3">) {
     <h3
       ref={ref}
       className={cn(
-        "m-0 text-sm font-normal leading-normal text-slate-300",
+        "m-0 text-sm font-normal leading-normal text-zinc-300",
         className,
       )}
       {...props}
@@ -79,18 +79,18 @@ export function OptionBlock({
     <div
       ref={ref}
       className={cn(
-        "relative cursor-pointer overflow-hidden rounded-lg border-2 p-6 transition-all duration-200 motion-reduce:!animate-none motion-reduce:!bg-[#7255c1]",
+        "relative cursor-pointer overflow-hidden rounded-lg border-2 p-6 transition-all duration-200 motion-reduce:!animate-none motion-reduce:!bg-brand-primary",
         isAi
           ? cn(
               gradientOptionSurfaceClass,
               "hover:animate-gradient-shift-fast",
-              isSelected ? "border-[#7255c1]" : "border-input-border",
+              isSelected ? "border-brand-primary" : "border-input-border",
             )
           : cn(
               "bg-input-bg",
               isSelected
-                ? "border-[#7255c1] hover:border-[#7255c1] hover:bg-input-bg"
-                : "border-input-border hover:border-[#4a4a4a] hover:bg-[#2f2f2f]",
+                ? "border-brand-primary hover:border-brand-primary hover:bg-input-bg"
+                : "border-input-border hover:border-input-border-hover hover:bg-zinc-800",
             ),
         className,
       )}
@@ -103,7 +103,10 @@ export function OptionTitle({ className, ref, ...props }: UiProps<"h3">) {
   return (
     <h3
       ref={ref}
-      className={cn("m-0 mb-2 text-lg font-semibold text-white", className)}
+      className={cn(
+        "m-0 mb-2 text-lg font-semibold text-text-primary",
+        className,
+      )}
       {...props}
     />
   );
@@ -113,7 +116,7 @@ export function OptionDescription({ className, ref, ...props }: UiProps<"p">) {
   return (
     <p
       ref={ref}
-      className={cn("m-0 text-sm leading-relaxed text-slate-300", className)}
+      className={cn("m-0 text-sm leading-relaxed text-zinc-300", className)}
       {...props}
     />
   );

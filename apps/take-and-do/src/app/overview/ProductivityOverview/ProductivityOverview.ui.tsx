@@ -102,7 +102,7 @@ export function MetricValue({
       ref={ref}
       className={cn(
         "text-sm font-semibold",
-        isWarning ? "text-amber-500" : "text-white",
+        isWarning ? "text-amber-500" : "text-text-primary",
         className,
       )}
       {...props}
@@ -143,7 +143,7 @@ export function ProgressBar({
       style={{ ...style, width: `${progress}%` }}
       className={cn(
         "h-full transition-[width] duration-300",
-        isWarning ? "bg-amber-500" : "bg-indigo-500",
+        isWarning ? "bg-amber-500" : "bg-zinc-600",
         className,
       )}
       {...props}

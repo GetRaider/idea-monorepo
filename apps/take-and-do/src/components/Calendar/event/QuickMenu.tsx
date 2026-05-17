@@ -745,7 +745,7 @@ export function CalendarEventQuickMenu({
             role="dialog"
             aria-labelledby={kindSelectId}
             className={cn(
-              "pointer-events-auto absolute flex max-h-[min(560px,calc(100%-24px))] flex-col overflow-hidden rounded-2xl border border-white/[0.07] bg-gradient-to-b from-[rgba(44,40,58,0.94)] via-[rgba(26,24,36,0.97)] to-[rgba(18,16,26,0.98)] shadow-[0_28px_90px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-xl",
+              "pointer-events-auto absolute flex max-h-[min(560px,calc(100%-24px))] flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-gradient-to-b from-[rgba(30,30,32,0.96)] via-[rgba(20,20,22,0.98)] to-[rgba(12,12,14,0.99)] shadow-[0_28px_90px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-xl",
             )}
             style={{
               left: pos?.left ?? pad,

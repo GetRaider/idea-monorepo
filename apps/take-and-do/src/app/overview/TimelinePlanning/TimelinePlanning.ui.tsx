@@ -158,7 +158,7 @@ export function TaskSummaryText({ className, ref, ...props }: UiProps<"span">) {
     <span
       ref={ref}
       className={cn(
-        "min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-sm font-medium text-white",
+        "min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-sm font-medium text-text-primary",
         className,
       )}
       {...props}
@@ -215,7 +215,7 @@ export function ViewAllLink({ className, href, ...props }: ViewAllLinkProps) {
     <Link
       href={href}
       className={cn(
-        "mt-3 inline-block text-indigo-500 no-underline hover:underline",
+        "mt-3 inline-block text-zinc-400 no-underline hover:underline",
         className,
       )}
       {...props}

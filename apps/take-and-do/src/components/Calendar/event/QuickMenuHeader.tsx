@@ -70,13 +70,13 @@ export function QuickMenuHeader({
             <button
               type="button"
               title="More"
-              className="flex h-9 w-9 items-center justify-center rounded-xl border-0 bg-transparent text-zinc-500 transition-colors hover:bg-white/[0.07] hover:text-white"
+              className="flex h-9 w-9 items-center justify-center rounded-xl border-0 bg-transparent text-zinc-500 transition-colors hover:bg-white/[0.07] hover:text-text-primary"
               onClick={() => setMenuOpen((v) => !v)}
             >
               <MoreVertical size={18} strokeWidth={1.75} aria-hidden />
             </button>
             {menuOpen ? (
-              <div className="absolute right-0 top-10 z-[1] min-w-[140px] overflow-hidden rounded-xl border border-white/[0.08] bg-[#1e1e26] shadow-[0_16px_48px_rgba(0,0,0,0.5)]">
+              <div className="absolute right-0 top-10 z-[1] min-w-[140px] overflow-hidden rounded-xl border border-border-app bg-background-primary shadow-dropdown">
                 {onDuplicate ? (
                   <button
                     type="button"
@@ -93,7 +93,7 @@ export function QuickMenuHeader({
                 {onDeleteEvent ? (
                   <button
                     type="button"
-                    className="block w-full px-3 py-2 text-left text-xs font-medium text-red-300 hover:bg-red-500/10"
+                    className="block w-full px-3 py-2 text-left text-xs font-medium text-red-500/65 hover:bg-red-950/35"
                     onClick={() => {
                       onShowDeleteConfirm();
                       setMenuOpen(false);
@@ -117,7 +117,7 @@ export function QuickMenuHeader({
               className={cn(
                 "rounded-md px-2 py-1.5 text-[11px] font-semibold transition-colors",
                 !slotPreview24h
-                  ? "bg-white/[0.1] text-white"
+                  ? "bg-white/[0.1] text-text-primary"
                   : "text-zinc-500 hover:bg-white/[0.06] hover:text-zinc-200",
               )}
               onClick={() => onDisplayTimes24hChange(false)}
@@ -129,7 +129,7 @@ export function QuickMenuHeader({
               className={cn(
                 "rounded-md px-2 py-1.5 text-[11px] font-semibold transition-colors",
                 slotPreview24h
-                  ? "bg-white/[0.1] text-white"
+                  ? "bg-white/[0.1] text-text-primary"
                   : "text-zinc-500 hover:bg-white/[0.06] hover:text-zinc-200",
               )}
               onClick={() => onDisplayTimes24hChange(true)}
@@ -141,7 +141,7 @@ export function QuickMenuHeader({
         <button
           type="button"
           title="Open full editor"
-          className="flex h-9 w-9 items-center justify-center rounded-xl border-0 bg-transparent text-zinc-400 transition-colors hover:bg-white/[0.07] hover:text-white"
+          className="flex h-9 w-9 items-center justify-center rounded-xl border-0 bg-transparent text-zinc-400 transition-colors hover:bg-white/[0.07] hover:text-text-primary"
           onClick={onOpenFullEditor}
         >
           <FullScreenIcon size={18} className="text-current" aria-hidden />
@@ -149,7 +149,7 @@ export function QuickMenuHeader({
         <button
           type="button"
           title="Close"
-          className="flex h-9 w-9 items-center justify-center rounded-xl border-0 bg-transparent text-zinc-500 transition-colors hover:bg-white/[0.07] hover:text-white"
+          className="flex h-9 w-9 items-center justify-center rounded-xl border-0 bg-transparent text-zinc-500 transition-colors hover:bg-white/[0.07] hover:text-text-primary"
           onClick={onClose}
         >
           <X size={20} strokeWidth={1.75} aria-hidden />

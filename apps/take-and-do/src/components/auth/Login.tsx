@@ -8,7 +8,6 @@ import { GOOGLE_SIGNUP_DISABLED_MESSAGE } from "@/constants/auth-restriction.con
 import { Route } from "@/constants/route.constant";
 import { ACCESS_RESTRICTED_NO_ACCOUNT_CODE } from "@/constants/whitelist.constant";
 import { authClient } from "@/auth/client";
-import { SpinnerRing } from "@/components/Spinner/Spinner";
 import { toast } from "sonner";
 
 import { AuthPrimaryButton } from "@/components/auth/AuthButtons";
@@ -139,20 +138,17 @@ export function Login() {
             />
           </div>
           {error ? (
-            <p className="text-sm text-red-400" role="alert">
+            <p className="text-sm text-red-500/65" role="alert">
               {error}
             </p>
           ) : null}
-          <button
-            type="submit"
+          <AuthPrimaryButton
+            nativeType="submit"
             disabled={!canSubmitEmailPassword}
-            className="flex w-full size-11 items-center justify-center gap-2 rounded-lg border-0 bg-[#7255c1] px-7 py-3.5 text-base font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#5a42a1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-secondary)] disabled:cursor-not-allowed disabled:opacity-50"
+            loading={loading === "email"}
           >
-            {loading === "email" ? (
-              <SpinnerRing className="h-5 w-5 border-t-white" />
-            ) : null}
             Sign In
-          </button>
+          </AuthPrimaryButton>
         </form>
       )}
     </div>

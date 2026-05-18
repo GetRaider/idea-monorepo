@@ -6,6 +6,10 @@ import { Input } from "@/components/Input";
 import { SecondaryButton } from "@/components/Buttons";
 import { MenuRowButton } from "@/components/MenuRowButton/MenuRowButton";
 import { cn } from "@/lib/styles/utils";
+import {
+  chromePrimaryButtonClassName,
+  chromePrimaryButtonDisabledClassName,
+} from "@/lib/styles/chrome-primary-button-classes";
 import type { UiProps } from "@/lib/styles/ui-props";
 
 export function TaskViewOverlay({ className, ref, ...props }: UiProps<"div">) {
@@ -79,7 +83,7 @@ export function StatusIconButton({
       ref={ref}
       type={type}
       className={cn(
-        "flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-md border-0 bg-transparent p-1.5 text-[#888] transition-colors duration-150 hover:bg-white/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/20 [&_svg]:h-[17px] [&_svg]:w-[17px]",
+        "flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-md border-0 bg-transparent p-1.5 text-[#888] transition-colors duration-150 hover:bg-white/[0.06] hover:text-text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/20 [&_svg]:h-[17px] [&_svg]:w-[17px]",
         className,
       )}
       {...props}
@@ -108,7 +112,7 @@ export function DeleteButton({
       ref={ref}
       type={type}
       className={cn(
-        "flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-md border-0 bg-transparent p-0 leading-none text-[#888] transition-colors duration-150 hover:bg-white/[0.06] hover:text-red-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/20 [&_svg]:m-0 [&_svg]:block [&_svg]:h-4 [&_svg]:w-4 [&_svg]:shrink-0",
+        "flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-md border-0 bg-transparent p-0 leading-none text-[#888] transition-colors duration-150 hover:bg-white/[0.06] hover:text-red-600/75 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/20 [&_svg]:m-0 [&_svg]:block [&_svg]:h-4 [&_svg]:w-4 [&_svg]:shrink-0",
         className,
       )}
       {...props}
@@ -153,7 +157,7 @@ export function TaskTitle({ className, ref, ...props }: UiProps<"h2">) {
     <h2
       ref={ref}
       className={cn(
-        "m-0 box-border flex-1 cursor-pointer rounded-md border border-transparent px-2 py-1 text-xl font-semibold leading-snug text-white transition-colors duration-150 hover:bg-white/[0.04]",
+        "m-0 box-border flex-1 cursor-pointer rounded-md border border-transparent px-2 py-1 text-xl font-semibold leading-snug text-text-primary transition-colors duration-150 hover:bg-white/[0.04]",
         className,
       )}
       {...props}
@@ -172,7 +176,7 @@ export function TaskTitleInput({
     <Input
       ref={ref}
       className={cn(
-        "m-0 min-w-0 flex-1 rounded-md border-transparent bg-transparent px-2 py-1 text-xl font-semibold leading-snug text-white focus:border-input-border",
+        "m-0 min-w-0 flex-1 rounded-md border-transparent bg-transparent px-2 py-1 text-xl font-semibold leading-snug text-text-primary focus:border-input-border",
         className,
       )}
       {...props}
@@ -214,7 +218,7 @@ export function SaveButton({ className, ref, ...props }: SaveButtonProps) {
     <SecondaryButton
       ref={ref}
       className={cn(
-        "rounded-md border-0 bg-indigo-500 px-4 py-1.5 text-sm font-medium text-white hover:border-transparent hover:bg-[#5568d3] active:bg-[#4a5bc4]",
+        "rounded-md border-0 bg-zinc-600 px-4 py-1.5 text-sm font-medium text-text-primary hover:border-transparent hover:bg-zinc-500 active:bg-zinc-700",
         className,
       )}
       {...props}
@@ -231,7 +235,7 @@ export function TaskDescriptionMarkdown({
     <div
       ref={ref}
       className={cn(
-        "task-view-description box-border max-w-none min-h-[140px] cursor-pointer overflow-y-auto rounded-md px-6 py-3 text-white transition-colors duration-150 hover:bg-white/[0.04]",
+        "task-view-description box-border max-w-none min-h-[140px] cursor-pointer overflow-y-auto rounded-md px-6 py-3 text-text-primary transition-colors duration-150 hover:bg-white/[0.04]",
         className,
       )}
       {...props}
@@ -260,7 +264,7 @@ export function StatusButton({
       ref={ref}
       type={type}
       className={cn(
-        "flex cursor-pointer items-center gap-1.5 rounded-md border border-indigo-500/30 bg-indigo-500/10 px-2.5 py-1 text-xs font-medium text-[#888] transition-all duration-200 hover:border-indigo-500/50 hover:bg-indigo-500/20",
+        "flex cursor-pointer items-center gap-1.5 rounded-md border border-white/15 bg-white/[0.06] px-2.5 py-1 text-xs font-medium text-[#888] transition-all duration-200 hover:border-white/25 hover:bg-white/[0.1]",
         className,
       )}
       {...props}
@@ -303,7 +307,7 @@ export function DropdownItem({
       type={type}
       rowTransition="colors"
       className={cn(
-        "py-2 text-[#ddd] hover:bg-white/[0.07] hover:text-white",
+        "py-2 text-[#ddd] hover:bg-white/[0.07] hover:text-text-primary",
         className,
       )}
       {...props}
@@ -387,7 +391,7 @@ export function SubtaskCheckbox({
     <div
       ref={ref}
       className={cn(
-        "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 text-xs text-white",
+        "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 text-xs text-text-primary",
         isCompleted
           ? "border-green-400 bg-green-400"
           : "border-[#666] bg-transparent",
@@ -406,7 +410,7 @@ export function HistoryHeader({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
-      className={cn("mb-3 text-sm font-medium text-white", className)}
+      className={cn("mb-3 text-sm font-medium text-text-primary", className)}
       {...props}
     />
   );
@@ -423,7 +427,7 @@ export function AttachIconButton({
       ref={ref}
       type={type}
       className={cn(
-        "flex cursor-pointer items-center justify-center rounded border-0 bg-transparent p-1 text-[#888] transition-all duration-200 hover:bg-[#3a3a3a] hover:text-white",
+        "flex cursor-pointer items-center justify-center rounded border-0 bg-transparent p-1 text-[#888] transition-all duration-200 hover:bg-[#3a3a3a] hover:text-text-primary",
         className,
       )}
       {...props}
@@ -580,7 +584,7 @@ export function SidebarValueButton({
       ref={ref}
       type={type}
       className={cn(
-        "flex min-h-[32px] min-w-0 max-w-full cursor-pointer items-center gap-1.5 rounded-md border border-transparent bg-transparent px-2 py-1 text-sm text-[#bbb] transition-colors duration-150 hover:border-white/10 hover:bg-white/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/15",
+        "flex min-h-[32px] min-w-0 max-w-full cursor-pointer items-center gap-1.5 rounded-md border border-transparent bg-transparent px-2 py-1 text-sm text-[#bbb] transition-colors duration-150 hover:border-white/10 hover:bg-white/[0.06] hover:text-text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/15",
         className,
       )}
       {...props}
@@ -644,7 +648,7 @@ export function CommentTextInput({
     <textarea
       ref={ref}
       className={cn(
-        "min-h-[60px] w-full resize-none rounded-lg border border-input-border bg-transparent px-3 py-2 text-sm text-[#aaa] outline-none placeholder:text-[#555] focus:border-[#4a4a4a] focus:text-white",
+        "min-h-[60px] w-full resize-none rounded-lg border border-input-border bg-transparent px-3 py-2 text-sm text-[#aaa] outline-none placeholder:text-[#555] focus:border-[#4a4a4a] focus:text-text-primary",
         className,
       )}
       {...props}
@@ -692,7 +696,7 @@ export function CommentSubmitButton({
       ref={ref}
       type={type}
       className={cn(
-        "cursor-pointer rounded-md border border-input-border bg-transparent px-3 py-1.5 text-xs font-medium text-[#888] transition-all duration-150 hover:border-[#4a4a4a] hover:bg-[#2a2a2a] hover:text-white",
+        "cursor-pointer rounded-md border border-input-border bg-transparent px-3 py-1.5 text-xs font-medium text-[#888] transition-all duration-150 hover:border-[#4a4a4a] hover:bg-[#2a2a2a] hover:text-text-primary",
         className,
       )}
       {...props}
@@ -785,7 +789,7 @@ export function DeleteTaskFooterButton({
       ref={ref}
       type={type}
       className={cn(
-        "flex cursor-pointer items-center gap-1.5 rounded-md border-0 bg-transparent px-2 py-1.5 text-sm text-[#666] transition-colors duration-150 hover:text-red-500",
+        "flex cursor-pointer items-center gap-1.5 rounded-md border-0 bg-transparent px-2 py-1.5 text-sm text-[#666] transition-colors duration-150 hover:text-red-600/75",
         className,
       )}
       {...props}
@@ -812,10 +816,10 @@ export function CreateTaskButton({
       type={type}
       disabled={isDisabled}
       className={cn(
-        "rounded-md border px-4 py-2 text-sm font-medium transition-colors duration-150",
         isDisabled
-          ? "cursor-not-allowed border-white/[0.08] bg-[#242426] text-[#8c8c8c]"
-          : "cursor-pointer border-transparent bg-[#7255c1] text-white hover:bg-[#5a42a1]",
+          ? chromePrimaryButtonDisabledClassName
+          : chromePrimaryButtonClassName,
+        "rounded-md px-4 py-2 text-sm font-medium",
         className,
       )}
       {...props}
@@ -842,10 +846,10 @@ export function TaskSaveButton({
       type={type}
       disabled={isDisabled}
       className={cn(
-        "rounded-lg border px-5 py-2.5 text-sm font-medium transition-colors duration-150",
         isDisabled
-          ? "cursor-not-allowed border-white/[0.08] bg-[#242426] text-[#8c8c8c]"
-          : "cursor-pointer border-transparent bg-[#7255c1] text-white hover:bg-[#5a42a1]",
+          ? chromePrimaryButtonDisabledClassName
+          : chromePrimaryButtonClassName,
+        "rounded-lg px-5 py-2.5 text-sm font-medium",
         className,
       )}
       {...props}

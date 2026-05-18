@@ -2,10 +2,12 @@
 
 import {
   Section as ProductivitySection,
-  SectionHeader,
   SectionTitle,
   Controls,
   TimeframeSelect,
+  SectionHeadBand,
+  SectionDivider,
+  SectionBody,
 } from "../productivity-blocks";
 import { cn } from "@/lib/styles/utils";
 import type { UiProps } from "@/lib/styles/ui-props";
@@ -14,14 +16,21 @@ export function Section({ className, ref, ...props }: UiProps<"div">) {
   return (
     <ProductivitySection
       ref={ref}
-      withBottomMargin
+      withBottomMargin={false}
       className={className}
       {...props}
     />
   );
 }
 
-export { SectionHeader, SectionTitle, Controls, TimeframeSelect };
+export {
+  SectionTitle,
+  Controls,
+  TimeframeSelect,
+  SectionHeadBand,
+  SectionDivider,
+  SectionBody,
+};
 
 export function ChartsGrid({ className, ref, ...props }: UiProps<"div">) {
   return (
@@ -41,7 +50,7 @@ export function ChartCard({ className, ref, ...props }: UiProps<"div">) {
     <div
       ref={ref}
       className={cn(
-        "rounded-lg border border-[#333] bg-input-bg p-4",
+        "rounded-lg border border-[#333] bg-input-bg p-3 sm:p-4",
         className,
       )}
       {...props}
@@ -53,7 +62,7 @@ export function ChartTitle({ className, ref, ...props }: UiProps<"h4">) {
   return (
     <h4
       ref={ref}
-      className={cn("m-0 mb-3 text-sm font-semibold text-[#888]", className)}
+      className={cn("m-0 mb-3 text-xs font-semibold text-[#888]", className)}
       {...props}
     />
   );
@@ -83,7 +92,7 @@ export function MetricLabel({ className, ref, ...props }: UiProps<"span">) {
   return (
     <span
       ref={ref}
-      className={cn("text-[13px] text-slate-300", className)}
+      className={cn("text-xs text-slate-300", className)}
       {...props}
     />
   );
@@ -101,8 +110,8 @@ export function MetricValue({
     <span
       ref={ref}
       className={cn(
-        "text-sm font-semibold",
-        isWarning ? "text-amber-500" : "text-white",
+        "text-xs font-semibold",
+        isWarning ? "text-amber-500" : "text-text-primary",
         className,
       )}
       {...props}
@@ -143,7 +152,7 @@ export function ProgressBar({
       style={{ ...style, width: `${progress}%` }}
       className={cn(
         "h-full transition-[width] duration-300",
-        isWarning ? "bg-amber-500" : "bg-indigo-500",
+        isWarning ? "bg-amber-500" : "bg-zinc-600",
         className,
       )}
       {...props}

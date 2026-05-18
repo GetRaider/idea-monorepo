@@ -135,11 +135,11 @@ export function BoardHealthPanel({ boards }: { boards: TaskBoard[] }) {
                     style={{ width: pct(todo) }}
                   />
                   <span
-                    className="h-full bg-[#7255c1]"
+                    className="h-full bg-zinc-500"
                     style={{ width: pct(progress) }}
                   />
                   <span
-                    className="h-full bg-emerald-500/90"
+                    className="h-full bg-zinc-300/90"
                     style={{ width: pct(done) }}
                   />
                 </div>
@@ -153,14 +153,14 @@ export function BoardHealthPanel({ boards }: { boards: TaskBoard[] }) {
                   </span>
                   <span className="inline-flex items-center gap-1.5">
                     <span
-                      className="inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-[#7255c1]"
+                      className="inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-zinc-500"
                       aria-hidden
                     />
                     In progress {progress}
                   </span>
                   <span className="inline-flex items-center gap-1.5">
                     <span
-                      className="inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500/90"
+                      className="inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-zinc-300/90"
                       aria-hidden
                     />
                     Done {done}

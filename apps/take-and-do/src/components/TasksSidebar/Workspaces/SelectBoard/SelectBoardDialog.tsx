@@ -125,7 +125,7 @@ function Select({ className, ref, ...props }: UiProps<"select">) {
     <select
       ref={ref}
       className={cn(
-        "w-full cursor-pointer rounded-lg border border-input-border bg-input-bg px-3 py-2.5 text-sm text-white outline-none transition-all duration-200 focus:border-[#7255c1] focus:bg-[#252525] [&_option]:bg-input-bg [&_option]:text-white",
+        "w-full cursor-pointer rounded-lg border border-input-border bg-input-bg px-3 py-2.5 text-sm text-text-primary outline-none transition-all duration-200 focus:border-white/35 focus:bg-[#252525] [&_option]:bg-input-bg [&_option]:text-text-primary",
         className,
       )}
       {...props}

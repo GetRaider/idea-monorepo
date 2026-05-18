@@ -125,7 +125,7 @@ export function CalendarTemplateEditorDialog({
         <DialogFormGroup>
           <DialogFormLabel>Description</DialogFormLabel>
           <textarea
-            className="w-full min-h-[80px] resize-y rounded-lg border border-white/15 bg-input-bg px-3 py-2 text-sm text-white outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+            className="w-full min-h-[80px] resize-y rounded-lg border border-white/15 bg-input-bg px-3 py-2 text-sm text-text-primary outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
             value={draft.descriptionText}
             onChange={(e) =>
               setDraft((d) => ({ ...d, descriptionText: e.target.value }))

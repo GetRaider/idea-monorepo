@@ -10,6 +10,8 @@ import {
 import { clientServices } from "@/services";
 import type { ApiResult } from "@/services/api-result.types";
 import type { GoogleCalendarIntegrationStatus } from "@/services/google-calendar-integration.client.service";
+import { cn } from "@/lib/styles/utils";
+import { chromePrimaryButtonClassName } from "@/lib/styles/chrome-primary-button-classes";
 
 const GCAL_OAUTH_CALLBACK_FLAG = "gcal";
 const CALENDAR_EVENTS_SCOPE = "https://www.googleapis.com/auth/calendar.events";
@@ -92,7 +94,7 @@ export function IntegrationsSettings() {
     <div className="max-w-3xl rounded-xl border border-white/10 bg-white/5 p-5">
       <div className="flex items-start justify-between gap-6">
         <div>
-          <div className="text-lg font-semibold text-white">
+          <div className="text-lg font-semibold text-text-primary">
             Google Calendar
           </div>
           <div className="mt-1 text-sm text-slate-300">
@@ -100,7 +102,7 @@ export function IntegrationsSettings() {
             <span className="text-slate-200">{lastSyncLabel}</span>
           </div>
           {error ? (
-            <div className="mt-2 text-sm text-red-300">{error}</div>
+            <div className="mt-2 text-sm text-red-500/60">{error}</div>
           ) : null}
         </div>
 
@@ -121,7 +123,10 @@ export function IntegrationsSettings() {
         {!calendarSyncOn ? (
           <button
             type="button"
-            className="rounded-lg bg-[#7255c1] px-3 py-2 text-sm font-semibold text-white hover:bg-[#5a42a1] disabled:opacity-60"
+            className={cn(
+              chromePrimaryButtonClassName,
+              "px-3 py-2 text-sm font-semibold rounded-lg",
+            )}
             disabled={loading || !status}
             onClick={async () => {
               if (!status) return;
@@ -151,7 +156,7 @@ export function IntegrationsSettings() {
         ) : (
           <button
             type="button"
-            className="rounded-lg border border-red-300/40 bg-transparent px-3 py-2 text-sm font-semibold text-red-200 hover:bg-red-500/10 disabled:opacity-60"
+            className="rounded-lg border border-red-900/35 bg-transparent px-3 py-2 text-sm font-semibold text-red-400/70 hover:bg-red-950/35 disabled:opacity-60"
             disabled={loading}
             onClick={async () => {
               if (!status) return;

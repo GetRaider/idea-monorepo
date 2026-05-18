@@ -43,7 +43,7 @@ export function ColumnTitle({ className, ref, ...props }: UiProps<"div">) {
     <div
       ref={ref}
       className={cn(
-        "flex items-center gap-2 text-sm font-semibold text-white",
+        "flex items-center gap-2 text-sm font-semibold text-text-primary",
         className,
       )}
       {...props}

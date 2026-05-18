@@ -60,7 +60,7 @@ export function SectionHeader({
       ref={ref}
       type={type}
       className={cn(
-        "flex cursor-pointer items-center gap-2 self-start rounded-md border-0 bg-transparent px-1 py-2 text-left text-sm font-semibold text-white transition-colors duration-150 hover:bg-white/[0.04]",
+        "flex cursor-pointer items-center gap-2 self-start rounded-md border-0 bg-transparent px-1 py-2 text-left text-sm font-semibold text-text-primary transition-colors duration-150 hover:bg-white/[0.04]",
         className,
       )}
       {...props}
@@ -164,7 +164,7 @@ export function TaskRow({ className, isDone, ref, ...props }: TaskRowProps) {
       ref={ref}
       className={cn(
         // Note: suppress the browser-default (blue) focus outline; keyboard
-        // focus is shown via a focus-visible purple ring instead.
+        // focus is shown via a focus-visible ring instead.
         "group/row grid w-full cursor-pointer items-center gap-2.5 rounded-lg border-0 bg-transparent px-1 py-1.5 text-left text-sm outline-none transition-colors duration-150 hover:bg-white/[0.04] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus-ring/70",
         ROW_GRID_COLUMNS,
         isDone ? "text-text-tertiary" : "text-text-primary",
@@ -237,7 +237,7 @@ export function TaskRowExpandButton({
       ref={ref}
       type={type}
       className={cn(
-        "flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center rounded-full border-0 bg-transparent p-0 text-text-secondary transition-colors duration-150 hover:bg-white/[0.08] hover:text-white",
+        "flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center rounded-full border-0 bg-transparent p-0 text-text-secondary transition-colors duration-150 hover:bg-white/[0.08] hover:text-text-primary",
         className,
       )}
       {...props}

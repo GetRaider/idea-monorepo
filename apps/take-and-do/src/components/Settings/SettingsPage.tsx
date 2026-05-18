@@ -15,6 +15,7 @@ import { env } from "@/env/client";
 import {
   APP_CHROME_MAIN_INSET,
   APP_CHROME_NAV_ICON_PX,
+  APP_CHROME_PAGE_BLOCK_GAP,
 } from "@/helpers/app-chrome-layout";
 import { cn } from "@/lib/styles/utils";
 
@@ -46,12 +47,12 @@ export function SettingsPage() {
         withNavSidebar={false}
         className={cn("flex min-h-0 flex-col", APP_CHROME_MAIN_INSET)}
       >
-        <WelcomeSection className="mb-6 flex flex-col gap-2 sm:mb-8">
+        <WelcomeSection className="flex flex-col gap-2">
           <AppPageTitle
             icon={
               <SettingsIcon
                 size={APP_CHROME_NAV_ICON_PX}
-                className="shrink-0 text-white"
+                className="shrink-0 text-text-primary"
               />
             }
           >
@@ -61,8 +62,9 @@ export function SettingsPage() {
 
         <div
           className={cn(
-            "flex min-h-0 flex-1 flex-col gap-5",
-            calendarEnabled && "lg:flex-row lg:gap-6",
+            "flex min-h-0 flex-1 flex-col",
+            APP_CHROME_PAGE_BLOCK_GAP,
+            calendarEnabled && "lg:flex-row",
           )}
         >
           {calendarEnabled ? (

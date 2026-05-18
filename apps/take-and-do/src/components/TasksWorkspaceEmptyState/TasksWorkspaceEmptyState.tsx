@@ -22,7 +22,7 @@ export function TasksWorkspaceEmptyState({
           You can create a new workspace and manage your tasks.
         </Subtitle>
         <PrimaryButton size="sm" onClick={onCreateWorkspace}>
-          <PlusIcon size={16} className="shrink-0 text-white" />
+          <PlusIcon size={16} className="shrink-0" />
           Create Workspace
         </PrimaryButton>
       </Inner>

@@ -48,7 +48,7 @@ export function Button({
         ...(backgroundStyle ? { background: backgroundStyle } : {}),
       }}
       className={cn(
-        "cursor-pointer rounded-md border border-[#3a3a3a] bg-transparent px-5 py-2.5 text-sm font-semibold text-white transition-all duration-200 hover:border-[#4a4a4a] hover:bg-[#2a2a2a]",
+        "cursor-pointer rounded-md border border-[#3a3a3a] bg-transparent px-5 py-2.5 text-sm font-semibold text-text-primary transition-all duration-200 hover:border-[#4a4a4a] hover:bg-[#2a2a2a]",
         isDisabled && "cursor-not-allowed",
         className,
       )}

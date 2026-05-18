@@ -189,7 +189,7 @@ function SubtasksHeaderButton({
       ref={ref}
       type={type}
       className={cn(
-        "flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border-0 bg-transparent p-1 text-[#666] transition-colors duration-150 hover:bg-white/[0.06] hover:text-white",
+        "flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border-0 bg-transparent p-1 text-[#666] transition-colors duration-150 hover:bg-white/[0.06] hover:text-text-primary",
         className,
       )}
       {...props}
@@ -277,7 +277,7 @@ function SubtaskContent({ className, ref, ...props }: UiProps<"div">) {
     <div
       ref={ref}
       className={cn(
-        "line-clamp-2 overflow-hidden text-ellipsis text-sm leading-snug text-white [-webkit-box-orient:vertical] [-webkit-line-clamp:2] [display:-webkit-box]",
+        "line-clamp-2 overflow-hidden text-ellipsis text-sm leading-snug text-text-primary [-webkit-box-orient:vertical] [-webkit-line-clamp:2] [display:-webkit-box]",
         className,
       )}
       {...props}

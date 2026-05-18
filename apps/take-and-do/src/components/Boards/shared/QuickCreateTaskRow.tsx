@@ -20,6 +20,7 @@ import {
 import { Dropdown } from "@/components/Dropdown";
 import { tasksHelper } from "@/helpers/task.helper";
 import { useClickOutside } from "@/hooks/ui/useClickOutside";
+import { chromePrimaryButtonClassName } from "@/lib/styles/chrome-primary-button-classes";
 import { TaskStatusGlyph } from "@/components/TaskStatusGlyph";
 import {
   EstimationInput,
@@ -428,7 +429,10 @@ export function QuickCreateTaskRow({
           <button
             type="submit"
             disabled={!title.trim() || !resolvedBoardId || isSubmitting}
-            className="cursor-pointer rounded-md border-0 bg-[#7255c1] px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-[#6346b0] disabled:cursor-not-allowed disabled:opacity-50"
+            className={cn(
+              chromePrimaryButtonClassName,
+              "cursor-pointer rounded-md px-3 py-1 text-xs font-medium",
+            )}
           >
             {isSubmitting ? "Creating…" : "Create"}
           </button>
@@ -477,7 +481,7 @@ function StatusChip({ value, onChange, disabled }: StatusChipProps) {
             aria-current={option === value ? "true" : undefined}
             className={
               option === value
-                ? "border-l-2 border-l-indigo-400/70 bg-white/[0.07] pl-2 text-white"
+                ? "border-l-2 border-l-white/35 bg-white/[0.07] pl-2 text-text-primary"
                 : undefined
             }
             onClick={(event) => {
@@ -528,7 +532,7 @@ function PriorityChip({ value, onChange, disabled }: PriorityChipProps) {
             aria-current={option === value ? "true" : undefined}
             className={
               option === value
-                ? "border-l-2 border-l-indigo-400/70 bg-white/[0.07] pl-2 text-white"
+                ? "border-l-2 border-l-white/35 bg-white/[0.07] pl-2 text-text-primary"
                 : undefined
             }
             onClick={(event) => {

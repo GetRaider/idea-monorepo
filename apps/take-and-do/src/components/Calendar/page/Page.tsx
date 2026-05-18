@@ -19,7 +19,10 @@ import { useTaskActions } from "@/hooks/tasks/useTasks";
 import { getEffectiveGoogleRecurrence } from "@/helpers/calendar/google-calendar-recurrence.helper";
 import { Sidebar } from "@/components/Sidebar/Sidebar";
 import { Spinner } from "@/components/Spinner/Spinner";
-import { APP_CHROME_MAIN_INSET } from "@/helpers/app-chrome-layout";
+import {
+  APP_CHROME_MAIN_INSET,
+  APP_CHROME_PAGE_BLOCK_GAP,
+} from "@/helpers/app-chrome-layout";
 import { cn } from "@/lib/styles/utils";
 import {
   type CalendarBacklogEvent,
@@ -276,7 +279,8 @@ export function CalendarPage() {
 
         <div
           className={cn(
-            "relative flex min-h-0 flex-1 flex-col gap-5 lg:flex-row lg:gap-6",
+            "relative flex min-h-0 flex-1 flex-col lg:flex-row",
+            APP_CHROME_PAGE_BLOCK_GAP,
           )}
         >
           <CalendarPlannerSidebarColumn

@@ -60,7 +60,7 @@ export function OtherActionsPanel({
           />
         </div>
         {guestError ? (
-          <p className="mt-2 text-sm text-red-400" role="alert">
+          <p className="mt-2 text-sm text-red-500/65" role="alert">
             {guestError}
           </p>
         ) : null}

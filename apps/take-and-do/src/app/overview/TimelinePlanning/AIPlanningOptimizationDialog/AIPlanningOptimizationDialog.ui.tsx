@@ -8,7 +8,7 @@ export function DialogContent({ className, ref, ...props }: UiProps<"div">) {
     <div
       ref={ref}
       className={cn(
-        "flex max-h-[90vh] min-h-[400px] w-full max-w-[800px] flex-col overflow-y-auto rounded-xl border border-border-app bg-[#1a1a1a] p-8 text-white",
+        "flex max-h-[90vh] min-h-[400px] w-full max-w-[800px] flex-col overflow-y-auto rounded-xl border border-border-app bg-background-primary p-8 text-text-primary",
         className,
       )}
       {...props}
@@ -120,7 +120,7 @@ export function WorkloadValue({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
-      className={cn("text-2xl font-semibold text-white", className)}
+      className={cn("text-2xl font-semibold text-text-primary", className)}
       {...props}
     />
   );
@@ -144,7 +144,7 @@ export function SectionTitle({ className, ref, ...props }: UiProps<"h3">) {
   return (
     <h3
       ref={ref}
-      className={cn("m-0 text-base font-semibold text-white", className)}
+      className={cn("m-0 text-base font-semibold text-text-primary", className)}
       {...props}
     />
   );
@@ -171,7 +171,7 @@ export function TaskName({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
-      className={cn("mb-2 text-sm font-semibold text-white", className)}
+      className={cn("mb-2 text-sm font-semibold text-text-primary", className)}
       {...props}
     />
   );
@@ -192,7 +192,7 @@ export function ScheduleChange({ className, ref, ...props }: UiProps<"div">) {
 
 export function ArrowIcon({ className, ref, ...props }: UiProps<"span">) {
   return (
-    <span ref={ref} className={cn("text-indigo-500", className)} {...props} />
+    <span ref={ref} className={cn("text-zinc-400", className)} {...props} />
   );
 }
 
@@ -242,7 +242,7 @@ export function ErrorState({ className, ref, ...props }: UiProps<"div">) {
     <div
       ref={ref}
       className={cn(
-        "mt-4 rounded-lg bg-red-500/10 p-5 text-center text-sm text-red-500",
+        "mt-4 rounded-lg bg-red-950/45 p-5 text-center text-sm text-red-500/70",
         className,
       )}
       {...props}

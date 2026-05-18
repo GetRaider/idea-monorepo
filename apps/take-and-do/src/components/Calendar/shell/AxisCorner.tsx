@@ -244,7 +244,7 @@ export function CalendarAxisCorner({
               "px-3 py-2 text-left hover:bg-white/10",
               zones.length <= 1
                 ? "cursor-not-allowed text-zinc-600"
-                : "text-red-400",
+                : "text-red-500/65",
             )}
             onClick={handleRemove}
           >
@@ -342,7 +342,7 @@ export function CalendarAxisCorner({
               className={cn(
                 "rounded-md px-2.5 py-1 font-medium",
                 addSelectedIana
-                  ? "bg-violet-600 text-white hover:bg-violet-500"
+                  ? "bg-zinc-600 text-text-primary hover:bg-zinc-500"
                   : "cursor-not-allowed bg-zinc-700 text-zinc-500",
               )}
               onClick={commitAdd}
@@ -382,7 +382,7 @@ export function CalendarAxisCorner({
             </button>
             <button
               type="button"
-              className="rounded-md bg-violet-600 px-2 py-1 text-white hover:bg-violet-500"
+              className="rounded-md bg-zinc-600 px-2 py-1 text-text-primary hover:bg-zinc-500"
               onClick={applyRename}
             >
               Save

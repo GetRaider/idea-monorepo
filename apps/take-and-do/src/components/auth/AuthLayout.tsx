@@ -1,17 +1,23 @@
 import Image from "next/image";
+import Link from "next/link";
 import { FiAlertTriangle } from "react-icons/fi";
 
 export function AuthLayout({
   title,
   children,
   subtitle = "",
+  backHref,
+  backLabel = "Back",
 }: {
   title: string;
   children: React.ReactNode;
   subtitle?: string;
+  /** When set, shows a link above the title (e.g. return to login from sign-up). */
+  backHref?: string;
+  backLabel?: string;
 }) {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-[#1a1a1a] to-[#3c2856] p-4">
+    <div className="app-chrome-bg flex min-h-screen flex-col items-center justify-center p-4">
       <div className="absolute left-6 top-6 flex items-center gap-3">
         <Image
           src="/logo.svg"
@@ -25,7 +31,18 @@ export function AuthLayout({
           Take &amp; Do
         </h1>
       </div>
-      <div className="w-full max-w-[440px] rounded-2xl border border-[#282930] bg-background-login px-8 py-11 shadow-[var(--shadow-dialog)] backdrop-blur-md">
+      <div className="relative w-full max-w-[440px] rounded-2xl border border-[#282930] bg-background-login px-8 py-11 shadow-[var(--shadow-dialog)] backdrop-blur-md">
+        {backHref ? (
+          <Link
+            href={backHref}
+            className="absolute left-8 top-8 z-10 inline-flex items-center gap-1.5 text-sm font-medium text-[var(--text-secondary)] no-underline transition-colors hover:text-[var(--text-primary)]"
+          >
+            <span aria-hidden className="text-base leading-none">
+              ←
+            </span>
+            {backLabel}
+          </Link>
+        ) : null}
         <div className="text-center">
           <p className="m-0 text-2xl font-semibold text-[var(--text-primary)]">
             {title}

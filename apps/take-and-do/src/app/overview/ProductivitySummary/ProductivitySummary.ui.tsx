@@ -2,7 +2,9 @@
 
 import {
   Section,
-  SectionHeader,
+  SectionHeadBand,
+  SectionDivider,
+  SectionBody,
   SectionTitle,
   Controls,
   TimeframeSelect,
@@ -19,7 +21,9 @@ import type { UiProps } from "@/lib/styles/ui-props";
 
 export {
   Section,
-  SectionHeader,
+  SectionHeadBand,
+  SectionDivider,
+  SectionBody,
   SectionTitle,
   Controls,
   TimeframeSelect,
@@ -69,7 +73,7 @@ export function DropdownItem({
       ref={ref}
       type={type}
       className={cn(
-        "w-full cursor-pointer border-0 bg-transparent px-3 py-2.5 text-left text-sm text-white transition-colors duration-200 hover:bg-[#3a3a3a]",
+        "w-full cursor-pointer border-0 bg-transparent px-4 py-3 text-left text-sm text-text-primary transition-colors duration-300 ease-out hover:bg-[#3a3a3a]",
         hasBorder && "border-t border-input-border",
         className,
       )}

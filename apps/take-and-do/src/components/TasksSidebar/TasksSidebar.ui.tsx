@@ -27,7 +27,7 @@ export function TasksSidebarContainer({
         ...style,
       }}
       className={cn(
-        "calendar-surface relative z-0 flex min-h-0 w-full max-w-full flex-1 flex-col gap-4 overflow-y-auto overscroll-contain rounded-xl border border-white/10 bg-background-primary/85 p-3.5 shadow-[0_8px_32px_rgba(0,0,0,0.25)] backdrop-blur-md max-[900px]:max-w-none",
+        "relative z-0 flex min-h-0 w-full max-w-full flex-1 flex-col gap-4 overflow-y-auto overscroll-contain rounded-xl border border-white/[0.06] bg-sidebar-bg p-3.5 max-[900px]:max-w-none",
         className,
       )}
       {...props}
@@ -40,7 +40,7 @@ export function Search({ className, ref, ...props }: UiProps<"div">) {
     <div
       ref={ref}
       className={cn(
-        "flex items-center gap-2 rounded-lg border border-input-border bg-input-bg px-2 py-px text-[#888]",
+        "flex items-center gap-2 rounded-lg border border-input-border bg-input-bg px-2 py-px text-text-secondary",
         className,
       )}
       {...props}
@@ -61,7 +61,7 @@ export function SearchInput({
       ref={ref}
       maxLength={maxLength}
       className={cn(
-        "flex-1 border-0 bg-transparent text-sm text-white outline-none placeholder:text-[#666]",
+        "flex-1 border-0 bg-transparent text-sm text-text-primary outline-none placeholder:text-text-tertiary",
         className,
       )}
       {...props}
@@ -85,10 +85,10 @@ export function NavItem({
       ref={ref}
       type={type}
       className={cn(
-        "flex w-full min-w-0 items-center gap-3 rounded-lg border-0 px-3 py-2 text-left text-sm transition-all duration-200 hover:bg-[#2a2a2a] hover:text-white",
+        "flex w-full min-w-0 items-center gap-3 rounded-lg border-0 px-3 py-2 text-left text-sm transition-all duration-200 hover:bg-[#1a1a1a] hover:text-text-primary",
         isActive
-          ? "cursor-default bg-[#2a2a2a] text-white"
-          : "cursor-pointer bg-transparent text-[#888]",
+          ? "cursor-default bg-surface-active text-text-primary"
+          : "cursor-pointer bg-transparent text-text-secondary",
         className,
       )}
       {...props}
@@ -116,7 +116,7 @@ export function WorkspaceContainer({
 }
 
 export const TASKS_SIDEBAR_SECTION_HEADER_TEXT_CLASS =
-  "text-sm font-extrabold tracking-wide text-[#666]";
+  "text-sm font-extrabold tracking-wide text-text-tertiary";
 
 export function SideBarSectionHeader({
   className,
@@ -184,7 +184,7 @@ export function AddButton({
       ref={ref}
       type={type}
       className={cn(
-        "flex h-5 w-5 cursor-pointer items-center justify-center rounded border-0 bg-transparent p-0 text-[#666] transition-all duration-200 hover:bg-[#2a2a2a] hover:text-white",
+        "flex h-5 w-5 cursor-pointer items-center justify-center rounded border-0 bg-transparent p-0 text-text-tertiary transition-all duration-200 hover:bg-[#1a1a1a] hover:text-text-primary",
         className,
       )}
       {...props}
@@ -208,7 +208,7 @@ export function WorkspaceList({
       className={cn(
         "flex flex-1 flex-col gap-1 rounded-lg border border-dashed transition-[border-color,background-color,box-shadow] duration-150",
         isDragOver
-          ? "border-[#7255c1] bg-[rgba(114,85,193,0.14)] shadow-[inset_0_0_0_2px_var(--focus-ring)]"
+          ? "border-white/30 bg-[rgba(255,255,255,0.08)] shadow-[inset_0_0_0_2px_rgba(255,255,255,0.35)]"
           : "border-transparent bg-transparent",
         className,
       )}
@@ -235,7 +235,7 @@ export function WorkspaceToggle({
       type={type}
       data-workspace-toggle
       className={cn(
-        "flex w-full min-w-0 cursor-pointer items-center gap-0 rounded-lg border-0 bg-transparent py-1.5 pl-1 pr-3 text-left text-sm leading-5 text-[#888] transition-[background,color] duration-150 hover:bg-[#2a2a2a] hover:text-white",
+        "flex w-full min-w-0 cursor-pointer items-center gap-0 rounded-lg border-0 bg-transparent py-1.5 pl-1 pr-3 text-left text-sm leading-5 text-text-secondary transition-[background,color] duration-150 hover:bg-[#1a1a1a] hover:text-text-primary",
         className,
       )}
       {...props}
@@ -254,7 +254,7 @@ export function BoardToggle({
       ref={ref}
       type={type}
       className={cn(
-        "flex min-w-0 flex-1 cursor-pointer items-center gap-0 rounded-lg border-0 bg-transparent py-1.5 pl-1 pr-3 text-left text-sm leading-5 text-[#888] transition-colors duration-200",
+        "flex min-w-0 flex-1 cursor-pointer items-center gap-0 rounded-lg border-0 bg-transparent py-1.5 pl-1 pr-3 text-left text-sm leading-5 text-text-secondary transition-colors duration-200",
         className,
       )}
       {...props}
@@ -272,7 +272,7 @@ export function WorkspaceRowActions({
       ref={ref}
       data-workspace-row-actions
       className={cn(
-        "inline-flex shrink-0 items-center justify-center py-0 pl-0 pr-2 text-[#888] opacity-0 transition-opacity duration-150 group-hover/board-row:opacity-100 group-hover/folder-row:opacity-100 [&_[data-board-actions-trigger]]:inline-flex [&_[data-board-actions-trigger]]:items-center [&_[data-board-actions-trigger]]:justify-center [&_[data-board-actions-trigger]]:rounded [&_[data-board-actions-trigger]]:p-1 [&_[data-folder-actions-trigger]]:inline-flex [&_[data-folder-actions-trigger]]:items-center [&_[data-folder-actions-trigger]]:justify-center [&_[data-folder-actions-trigger]]:rounded [&_[data-folder-actions-trigger]]:p-1",
+        "inline-flex shrink-0 items-center justify-center py-0 pl-0 pr-2 text-text-secondary opacity-0 transition-opacity duration-150 group-hover/board-row:opacity-100 group-hover/folder-row:opacity-100 [&_[data-board-actions-trigger]]:inline-flex [&_[data-board-actions-trigger]]:items-center [&_[data-board-actions-trigger]]:justify-center [&_[data-board-actions-trigger]]:rounded [&_[data-board-actions-trigger]]:p-1 [&_[data-folder-actions-trigger]]:inline-flex [&_[data-folder-actions-trigger]]:items-center [&_[data-folder-actions-trigger]]:justify-center [&_[data-folder-actions-trigger]]:rounded [&_[data-folder-actions-trigger]]:p-1",
         className,
       )}
       {...props}
@@ -304,21 +304,21 @@ export function BoardRow({
     <div
       ref={ref}
       className={cn(
-        "group/board-row relative flex w-full min-h-[36px] items-center rounded-xl transition-[background-color,box-shadow] duration-150 hover:bg-[#2a2a2a]",
-        highlighted ? "bg-[#2a2a2a]" : "bg-transparent",
+        "group/board-row relative flex w-full min-h-[36px] items-center rounded-xl transition-[background-color,box-shadow] duration-150 hover:bg-[#1a1a1a]",
+        highlighted ? "bg-surface-active" : "bg-transparent",
         highlighted && "[&_[data-workspace-row-actions]]:opacity-100",
-        highlighted && "[&_button]:text-white",
-        "hover:[&_button]:text-white",
+        highlighted && "[&_button]:text-text-primary",
+        "hover:[&_button]:text-text-primary",
         "[&[data-selected]_button]:cursor-default",
         isDropSlotActive &&
-          "z-[1] bg-[rgba(114,85,193,0.16)] shadow-[inset_0_0_0_2px_var(--focus-ring)]",
+          "z-[1] bg-[rgba(255,255,255,0.08)] shadow-[inset_0_0_0_2px_rgba(255,255,255,0.35)]",
         className,
       )}
       {...props}
     >
       {showDropInsertLine ? (
         <span
-          className="pointer-events-none absolute inset-x-2 top-0 z-[1] h-0.5 rounded-full bg-focus-ring shadow-[0_0_0_2px_rgba(114,85,193,0.28)]"
+          className="pointer-events-none absolute inset-x-2 top-0 z-[1] h-0.5 rounded-full bg-white/70 shadow-[0_0_0_2px_rgba(255,255,255,0.2)]"
           aria-hidden
         />
       ) : null}
@@ -389,8 +389,8 @@ export function EmojiButton({
       ref={ref}
       type={type}
       className={cn(
-        "flex h-7 w-7 cursor-pointer items-center justify-center rounded-lg border border-input-border bg-input-bg transition-[background,border-color,color] duration-150 hover:border-[#4a4a4a] hover:bg-[#2f2f2f] hover:text-white",
-        hasEmoji ? "text-white" : "text-[#888]",
+        "flex h-7 w-7 cursor-pointer items-center justify-center rounded-lg border border-input-border bg-input-bg transition-[background,border-color,color] duration-150 hover:border-input-border-hover hover:bg-[#1f1f1f] hover:text-text-primary",
+        hasEmoji ? "text-text-primary" : "text-text-secondary",
         className,
       )}
       {...props}
@@ -439,7 +439,7 @@ export function EmojiClearButton({
       ref={ref}
       type={type}
       className={cn(
-        "w-full cursor-pointer border-0 border-t border-border-app bg-transparent px-3 py-2.5 text-[#888] hover:bg-[#2a2a2a] hover:text-white",
+        "w-full cursor-pointer border-0 border-t border-border-app bg-transparent px-3 py-2.5 text-text-secondary hover:bg-[#1a1a1a] hover:text-text-primary",
         className,
       )}
       {...props}
@@ -487,7 +487,7 @@ export function FolderChevron({
     <span
       ref={ref}
       className={cn(
-        "inline-flex items-center justify-start text-[#888]",
+        "inline-flex items-center justify-start text-text-secondary",
         instant
           ? "transition-none"
           : "transition-transform duration-200 ease-out",
@@ -512,7 +512,7 @@ export function SubItems({
       className={cn(
         "mt-0.5 flex min-h-0 flex-col gap-1 rounded-r-xl py-0.5 pl-2 transition-[background-color,box-shadow] duration-150",
         isDropActive &&
-          "bg-[rgba(114,85,193,0.14)] shadow-[inset_0_0_0_2px_var(--focus-ring)]",
+          "bg-[rgba(255,255,255,0.08)] shadow-[inset_0_0_0_2px_rgba(255,255,255,0.35)]",
         className,
       )}
       {...props}
@@ -565,7 +565,7 @@ export function FolderRow({
     <div
       ref={ref}
       className={cn(
-        "group/folder-row flex w-full items-center rounded-lg transition-colors duration-150 hover:bg-[#2a2a2a] [&:hover_[data-workspace-toggle]]:text-white",
+        "group/folder-row flex w-full items-center rounded-lg transition-colors duration-150 hover:bg-[#1a1a1a] [&:hover_[data-workspace-toggle]]:text-text-primary",
         isActive && "[&_[data-workspace-row-actions]]:opacity-100",
         "[&_[data-folder-edit-wrap]]:min-w-0 [&_[data-folder-edit-wrap]]:flex-1",
         "[&_[data-folder-name-input]]:min-w-0 [&_[data-folder-name-input]]:flex-1",
@@ -593,7 +593,7 @@ export function FolderDropTarget({
       className={cn(
         "flex min-h-0 w-full min-w-0 flex-col gap-0 rounded-xl transition-[background-color,box-shadow] duration-150",
         isDragOver &&
-          "bg-[rgba(114,85,193,0.16)] shadow-[inset_0_0_0_2px_var(--focus-ring)]",
+          "bg-[rgba(255,255,255,0.1)] shadow-[inset_0_0_0_2px_rgba(255,255,255,0.35)]",
         className,
       )}
       {...props}

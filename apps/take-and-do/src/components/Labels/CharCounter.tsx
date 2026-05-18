@@ -17,7 +17,7 @@ export function CharCounter({
     <div
       className={cn(
         "-mt-4 mb-5 text-right text-xs",
-        isNearLimit ? "text-red-500" : "text-text-tertiary",
+        isNearLimit ? "text-red-600/75" : "text-text-tertiary",
         className,
       )}
       {...props}

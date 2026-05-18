@@ -34,7 +34,7 @@ export function AiGate({
         </Tooltip.Trigger>
         <Tooltip.Portal>
           <Tooltip.Content
-            className="z-[10050] max-w-xs rounded-md border border-white/10 bg-gray-900 px-3 py-2 text-center text-xs text-white shadow-lg"
+            className="z-[10050] max-w-xs rounded-md border border-white/10 bg-gray-900 px-3 py-2 text-center text-xs text-text-primary shadow-lg"
             sideOffset={6}
           >
             {message}

@@ -1,6 +1,10 @@
 "use client";
 
 import { cn } from "@/lib/styles/utils";
+import {
+  chromePrimaryButtonClassName,
+  chromePrimaryButtonDisabledClassName,
+} from "@/lib/styles/chrome-primary-button-classes";
 import type { CalendarQuickMenuPayload } from "./quickMenu.types";
 import type { Task } from "@/components/Boards/KanbanBoard/types";
 
@@ -29,6 +33,14 @@ export function QuickMenuFooter({
   onSaveExisting,
   onCreateDraft,
 }: QuickMenuFooterProps) {
+  const isPrimaryInactive =
+    payload.mode === "existing"
+      ? !isDirty
+      : isTask &&
+        (!taskBoardId.trim() ||
+          !taskId.trim() ||
+          !(linkedTask?.summary?.trim() || taskSummarySnapshot.trim()));
+
   return (
     <div className="shrink-0 border-t border-white/[0.06] bg-black/25 px-4 py-3.5 backdrop-blur-sm">
       <div className="flex items-center justify-end gap-2.5">
@@ -41,21 +53,17 @@ export function QuickMenuFooter({
         </button>
         <button
           type="button"
-          disabled={
-            payload.mode === "existing"
-              ? !isDirty
-              : isTask &&
-                (!taskBoardId.trim() ||
-                  !taskId.trim() ||
-                  !(linkedTask?.summary?.trim() || taskSummarySnapshot.trim()))
-          }
+          disabled={isPrimaryInactive}
           className={cn(
-            "rounded-xl border-0 px-4 py-2 text-xs font-semibold text-white shadow-[0_12px_28px_rgba(114,85,193,0.35),inset_0_1px_0_rgba(255,255,255,0.18)] transition-[filter,opacity]",
-            payload.mode === "existing"
-              ? isDirty
-                ? "bg-gradient-to-b from-[#8f73e8] to-[#6346c4] hover:brightness-105"
-                : "cursor-not-allowed bg-gradient-to-b from-[#6b5a9e]/55 to-[#4f4278]/55 opacity-65 shadow-none"
-              : "bg-gradient-to-b from-[#8f73e8] to-[#6346c4] hover:brightness-105",
+            isPrimaryInactive
+              ? cn(
+                  chromePrimaryButtonDisabledClassName,
+                  "px-4 py-2 text-xs font-semibold opacity-65 shadow-none",
+                )
+              : cn(
+                  chromePrimaryButtonClassName,
+                  "px-4 py-2 text-xs font-semibold shadow-[0_12px_28px_rgba(0,0,0,0.35)] transition-[filter,opacity]",
+                ),
           )}
           onClick={payload.mode === "existing" ? onSaveExisting : onCreateDraft}
         >

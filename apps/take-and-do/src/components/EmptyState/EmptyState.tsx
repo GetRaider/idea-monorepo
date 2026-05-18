@@ -47,7 +47,10 @@ function EmptyStateTitle({ className, ref, ...props }: UiProps<"p">) {
   return (
     <p
       ref={ref}
-      className={cn("m-0 mb-2 text-lg font-semibold text-white", className)}
+      className={cn(
+        "m-0 mb-2 text-lg font-semibold text-text-primary",
+        className,
+      )}
       {...props}
     />
   );

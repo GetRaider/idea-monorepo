@@ -107,7 +107,7 @@ export function TaskCardView({
       onClick={onClick}
       className={cn(
         // `outline-none` suppresses the user-agent focus outline (often blue
-        // on macOS / Chrome) — our own purple ring is applied via classes when
+        // on macOS / Chrome) — our own focus ring is applied via classes when
         // the card is focused or hovered as a drag preview.
         "flex flex-col gap-3 rounded-xl border border-border-app bg-background-primary p-4 outline-none transition-[border-color] duration-200 ease-out hover:border-[#3a3a3a]",
         className,
@@ -140,7 +140,7 @@ export function TaskCardView({
           "m-0 text-sm font-medium leading-snug",
           status === TaskStatus.DONE
             ? "text-[#888] line-through"
-            : "text-white no-underline",
+            : "text-text-primary no-underline",
         )}
       >
         {summary}

@@ -1,5 +1,11 @@
 "use client";
 
+import {
+  APP_CHROME_HEADER_CONTROL_GAP,
+  APP_CHROME_SECTION_BODY_PADDING,
+  APP_CHROME_SECTION_HEAD_PADDING,
+  APP_CHROME_SECTION_TITLE_SIZE,
+} from "@/helpers/app-chrome-layout";
 import { cn } from "@/lib/styles/utils";
 import type { UiProps } from "@/lib/styles/ui-props";
 
@@ -17,7 +23,7 @@ export function Section({
     <div
       ref={ref}
       className={cn(
-        "rounded-xl border border-border-app bg-[#1a1a1a] p-6",
+        "overflow-hidden rounded-xl border border-border-app bg-background-primary",
         withBottomMargin && "mb-6",
         className,
       )}
@@ -26,11 +32,50 @@ export function Section({
   );
 }
 
+/** Legacy stacked header (e.g. forms with margin below). Prefer `SectionHeadBand` for cards. */
 export function SectionHeader({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
-      className={cn("mb-4 flex items-center justify-between", className)}
+      className={cn(
+        "mb-4 flex w-full min-w-0 items-center justify-between gap-3 sm:gap-4",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+export function SectionHeadBand({ className, ref, ...props }: UiProps<"div">) {
+  return (
+    <div
+      ref={ref}
+      className={cn(
+        "flex w-full min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-3 sm:flex-nowrap",
+        APP_CHROME_SECTION_HEAD_PADDING,
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+export function SectionDivider({ className, ref, ...props }: UiProps<"div">) {
+  return (
+    <div
+      ref={ref}
+      role="presentation"
+      className={cn("h-px w-full shrink-0 bg-border-app", className)}
+      {...props}
+    />
+  );
+}
+
+export function SectionBody({ className, ref, ...props }: UiProps<"div">) {
+  return (
+    <div
+      ref={ref}
+      className={cn(APP_CHROME_SECTION_BODY_PADDING, className)}
       {...props}
     />
   );
@@ -41,7 +86,8 @@ export function SectionTitle({ className, ref, ...props }: UiProps<"h2">) {
     <h2
       ref={ref}
       className={cn(
-        "m-0 flex items-center gap-2 text-xl font-semibold text-white",
+        "m-0 flex min-w-0 flex-1 items-center gap-2",
+        APP_CHROME_SECTION_TITLE_SIZE,
         className,
       )}
       {...props}
@@ -53,7 +99,11 @@ export function Controls({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
-      className={cn("flex items-center gap-3", className)}
+      className={cn(
+        "flex min-w-0 shrink-0 flex-wrap items-center justify-end",
+        APP_CHROME_HEADER_CONTROL_GAP,
+        className,
+      )}
       {...props}
     />
   );
@@ -68,7 +118,7 @@ export function TimeframeSelect({
     <select
       ref={ref}
       className={cn(
-        "cursor-pointer rounded-md border border-input-border bg-input-bg px-3 py-1.5 text-sm text-white",
+        "cursor-pointer rounded-md border border-input-border bg-input-bg px-4 py-2.5 text-sm text-text-primary",
         className,
       )}
       {...props}
@@ -81,7 +131,7 @@ export function AISection({ className, ref, ...props }: UiProps<"div">) {
     <div
       ref={ref}
       className={cn(
-        "grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-4",
+        "grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-5",
         className,
       )}
       {...props}
@@ -94,7 +144,7 @@ export function AICard({ className, ref, ...props }: UiProps<"div">) {
     <div
       ref={ref}
       className={cn(
-        "rounded-lg border border-[#333] bg-input-bg p-4",
+        "rounded-lg border border-[#333] bg-input-bg p-5 sm:p-6",
         className,
       )}
       {...props}
@@ -124,7 +174,7 @@ export function CardTitle({
   return (
     <h3
       ref={ref}
-      style={{ ...style, color: accentColor ?? "#fff" }}
+      style={{ ...style, color: accentColor ?? "var(--text-primary)" }}
       className={cn("m-0 text-base font-semibold", className)}
       {...props}
     />
@@ -136,7 +186,7 @@ export function AIBadge({ className, ref, ...props }: UiProps<"span">) {
     <span
       ref={ref}
       className={cn(
-        "rounded-xl bg-indigo-500 px-2 py-0.5 text-[11px] font-semibold uppercase",
+        "rounded-xl bg-zinc-600 px-2 py-0.5 text-[11px] font-semibold uppercase",
         className,
       )}
       {...props}

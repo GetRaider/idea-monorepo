@@ -8,7 +8,7 @@ export function SpinnerRing({ className, ref, ...props }: UiProps<"div">) {
     <div
       ref={ref}
       className={cn(
-        "h-10 w-10 shrink-0 animate-spin rounded-full border-4 border-zinc-700 border-t-indigo-500",
+        "h-10 w-10 shrink-0 animate-spin rounded-full border-4 border-white/[0.12] border-t-zinc-200",
         className,
       )}
       {...props}

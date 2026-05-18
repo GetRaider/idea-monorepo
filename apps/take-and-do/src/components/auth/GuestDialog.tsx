@@ -1,6 +1,8 @@
 "use client";
 
 import { Dialog } from "@/components/Dialogs";
+import { cn } from "@/lib/styles/utils";
+import { chromePrimaryButtonClassName } from "@/lib/styles/chrome-primary-button-classes";
 
 export function GuestDialog({
   guestIntent,
@@ -77,7 +79,7 @@ export function GuestDialog({
             value={guestOtherText}
             onChange={(event) => onOtherTextChange(event.target.value)}
             disabled={isBusy}
-            className="w-full rounded-lg border border-[var(--input-login-border)] bg-[var(--input-login-bg)] px-3 py-2 text-sm text-[var(--foreground)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-primary)]"
+            className="w-full rounded-lg border border-[var(--input-login-border)] bg-[var(--input-login-bg)] px-3 py-2 text-sm text-[var(--foreground)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
           />
         </div>
       ) : null}
@@ -95,8 +97,10 @@ export function GuestDialog({
           type="button"
           onClick={onConfirm}
           disabled={isBusy || !canConfirm}
-          className="rounded-lg px-4 py-2 text-sm font-medium text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-secondary)] disabled:cursor-not-allowed disabled:opacity-50"
-          style={{ backgroundColor: "var(--brand-primary)" }}
+          className={cn(
+            chromePrimaryButtonClassName,
+            "rounded-lg px-4 py-2 text-sm font-medium",
+          )}
         >
           Continue
         </button>
@@ -117,9 +121,9 @@ function IntentOption({
       type="button"
       onClick={onSelect}
       disabled={disabled}
-      className={`w-full rounded-lg border p-3 text-left text-sm transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-primary)] disabled:opacity-50 ${
+      className={`w-full rounded-lg border p-3 text-left text-sm transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:opacity-50 ${
         selected
-          ? "border-[var(--brand-primary)] bg-[var(--input-login-bg)]"
+          ? "border-white/35 bg-[var(--input-login-bg)]"
           : "border-[var(--border-color)] hover:border-[var(--input-login-border-hover)]"
       }`}
     >

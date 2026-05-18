@@ -7,7 +7,7 @@ export function DefaultAvatarIcon({ size = 160 }: Pick<SvgIconProps, "size">) {
       width={size}
       height={size}
       viewBox="0 0 160 160"
-      className="h-9 w-9 cursor-pointer rounded-full border-2 border-border-app transition-transform duration-200 hover:scale-105 hover:border-indigo-500"
+      className="h-9 w-9 cursor-pointer rounded-full border-2 border-border-app transition-transform duration-200 hover:scale-105 hover:border-zinc-500"
     >
       <defs>
         <clipPath id="clip">

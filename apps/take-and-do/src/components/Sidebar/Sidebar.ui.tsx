@@ -15,7 +15,7 @@ export function SidebarContainer({
     <aside
       ref={ref}
       className={cn(
-        "fixed left-0 top-0 z-[100] flex h-screen w-[60px] flex-col items-center border-r border-border-app bg-background-primary py-4",
+        "fixed left-0 top-0 z-[100] flex h-screen w-[60px] flex-col items-center border-r border-border-app bg-nav-sidebar-bg py-4",
         className,
       )}
       {...props}
@@ -81,10 +81,12 @@ export function NavButton({
         disabled
           ? "cursor-not-allowed opacity-30"
           : "cursor-pointer opacity-100",
-        isActive ? "bg-[#2a2a2a] text-indigo-500" : "text-[#888]",
+        isActive
+          ? "bg-surface-active text-text-primary"
+          : "text-text-secondary",
         isActive &&
-          "before:absolute before:left-[-8px] before:top-1/2 before:h-5 before:w-[3px] before:-translate-y-1/2 before:rounded-sm before:bg-indigo-500 before:content-['']",
-        !disabled && "hover:bg-[#2a2a2a] hover:text-white",
+          "before:absolute before:left-[-8px] before:top-1/2 before:h-5 before:w-[3px] before:-translate-y-1/2 before:rounded-sm before:bg-[color:var(--app-ui-white)] before:content-['']",
+        !disabled && "hover:bg-surface-active hover:text-text-primary",
         className,
       )}
       {...props}
@@ -121,7 +123,7 @@ export function Avatar({
       width={width}
       height={height}
       className={cn(
-        "h-9 w-9 cursor-pointer rounded-full border-2 border-border-app transition-transform duration-200 hover:scale-105 hover:border-indigo-500",
+        "h-9 w-9 cursor-pointer rounded-full border-2 border-border-app transition-transform duration-200 hover:scale-105 hover:border-white/25",
         className,
       )}
       {...props}

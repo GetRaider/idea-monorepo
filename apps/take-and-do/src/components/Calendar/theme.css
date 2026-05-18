@@ -3,17 +3,17 @@
   /* Zone count set on `.take-and-do-calendar` (inherits here). */
   --tad-axis-zone-count: 1;
   --tad-axis-gutter-width: calc(2.35rem + var(--tad-axis-zone-count) * 3.2rem);
-  --fc-now-indicator-color: #f97066;
-  --fc-highlight-color: rgba(124, 93, 250, 0.26);
-  --fc-default-mirror-bg: #4f46b8;
+  --fc-now-indicator-color: #b3443f;
+  --fc-highlight-color: rgba(255, 255, 255, 0.12);
+  --fc-default-mirror-bg: #525252;
   --fc-border-color: rgba(255, 255, 255, 0.045);
-  --fc-button-bg-color: rgba(124, 93, 250, 0.28);
-  --fc-button-border-color: rgba(124, 93, 250, 0.45);
-  --fc-button-hover-bg-color: rgba(124, 93, 250, 0.42);
-  --fc-button-hover-border-color: rgba(124, 93, 250, 0.62);
-  --fc-button-active-bg-color: rgba(124, 93, 250, 0.52);
-  --fc-button-active-border-color: rgba(124, 93, 250, 0.72);
-  --fc-today-bg-color: rgba(124, 93, 250, 0.07);
+  --fc-button-bg-color: rgba(255, 255, 255, 0.1);
+  --fc-button-border-color: rgba(255, 255, 255, 0.18);
+  --fc-button-hover-bg-color: rgba(255, 255, 255, 0.16);
+  --fc-button-hover-border-color: rgba(255, 255, 255, 0.28);
+  --fc-button-active-bg-color: rgba(255, 255, 255, 0.22);
+  --fc-button-active-border-color: rgba(255, 255, 255, 0.35);
+  --fc-today-bg-color: rgba(255, 255, 255, 0.06);
   --fc-page-bg-color: transparent;
   --fc-neutral-bg-color: rgba(255, 255, 255, 0.025);
   --fc-list-event-hover-bg-color: rgba(255, 255, 255, 0.05);
@@ -380,8 +380,8 @@
   overflow: visible !important;
   background: linear-gradient(
     180deg,
-    rgba(124, 93, 250, 0.06) 0%,
-    rgba(124, 93, 250, 0.02) 100%
+    rgba(255, 255, 255, 0.05) 0%,
+    rgba(255, 255, 255, 0.02) 100%
   );
 }
 
@@ -464,7 +464,7 @@
   line-height: 1.15;
   white-space: nowrap;
   letter-spacing: 0.01em;
-  color: #fff;
+  color: var(--text-primary);
   background: var(--fc-now-indicator-color);
   box-shadow: 0 1px 0 rgba(0, 0, 0, 0.18);
   pointer-events: auto;
@@ -621,9 +621,9 @@
   border: 1px solid rgba(255, 255, 255, 0.065);
   background: linear-gradient(
     165deg,
-    rgba(32, 30, 42, 0.72) 0%,
-    rgba(20, 18, 28, 0.88) 48%,
-    rgba(14, 13, 20, 0.92) 100%
+    rgba(28, 28, 28, 0.92) 0%,
+    rgba(14, 14, 14, 0.95) 52%,
+    rgba(6, 6, 6, 0.98) 100%
   );
   box-shadow:
     0 20px 50px rgba(0, 0, 0, 0.42),

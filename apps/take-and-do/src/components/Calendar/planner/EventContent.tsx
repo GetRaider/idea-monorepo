@@ -159,7 +159,7 @@ function EventTitleBlock({
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         {timeBesideTitle && secondary ? (
           <div className="flex min-w-0 items-baseline gap-1">
-            <span className="min-w-0 truncate text-[10px] font-medium leading-tight text-white">
+            <span className="min-w-0 truncate text-[10px] font-medium leading-tight text-text-primary">
               {primary}
             </span>
             <span className="shrink-0 text-[9px] font-normal leading-none tabular-nums text-zinc-400">
@@ -168,7 +168,7 @@ function EventTitleBlock({
           </div>
         ) : (
           <>
-            <div className="truncate text-[10px] font-medium leading-tight text-white">
+            <div className="truncate text-[10px] font-medium leading-tight text-text-primary">
               {primary}
             </div>
             {secondary ? (

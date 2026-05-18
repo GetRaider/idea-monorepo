@@ -3,7 +3,9 @@
 import { useRef, useState, useEffect } from "react";
 import {
   Section,
-  SectionHeader,
+  SectionHeadBand,
+  SectionDivider,
+  SectionBody,
   SectionTitle,
   Controls,
   TimeframeSelect,
@@ -53,8 +55,8 @@ export function ProductivitySummary({
   };
 
   return (
-    <Section>
-      <SectionHeader>
+    <Section withBottomMargin={false}>
+      <SectionHeadBand>
         <SectionTitle>⚡ Explore AI Productivity</SectionTitle>
         <Controls>
           <TimeframeSelect
@@ -77,7 +79,7 @@ export function ProductivitySummary({
                 size={16}
                 style={{
                   transform: isDropdownOpen ? "rotate(180deg)" : "none",
-                  transition: "transform 0.2s",
+                  transition: "transform 0.35s ease-out",
                 }}
               />
             </AIActionButton>
@@ -93,52 +95,54 @@ export function ProductivitySummary({
             )}
           </DropdownContainer>
         </Controls>
-      </SectionHeader>
-
-      {analytics ? (
-        <AISection>
-          <AICard>
-            <CardHeader>
-              <CardTitle>Description</CardTitle>
-              {analytics.aiGenerated && <AIBadge>AI</AIBadge>}
-            </CardHeader>
-            <CardContent>{analytics.summary}</CardContent>
-          </AICard>
-
-          <AICard>
-            <CardTitle>Insights</CardTitle>
-            <CardList>
-              {analytics.insights.map((insight, idx) => (
-                <li key={idx}>{insight}</li>
-              ))}
-            </CardList>
-          </AICard>
-
-          {analytics.risks.length > 0 && (
+      </SectionHeadBand>
+      <SectionDivider />
+      <SectionBody>
+        {analytics ? (
+          <AISection>
             <AICard>
-              <CardTitle accentColor="#f59e0b">Risks</CardTitle>
+              <CardHeader>
+                <CardTitle>Description</CardTitle>
+                {analytics.aiGenerated && <AIBadge>AI</AIBadge>}
+              </CardHeader>
+              <CardContent>{analytics.summary}</CardContent>
+            </AICard>
+
+            <AICard>
+              <CardTitle>Insights</CardTitle>
               <CardList>
-                {analytics.risks.map((risk, idx) => (
-                  <li key={idx}>{risk}</li>
+                {analytics.insights.map((insight, idx) => (
+                  <li key={idx}>{insight}</li>
                 ))}
               </CardList>
             </AICard>
-          )}
 
-          <AICard>
-            <CardTitle accentColor="#10b981">Recommendations</CardTitle>
-            <CardList>
-              {analytics.recommendations.map((rec, idx) => (
-                <li key={idx}>{rec}</li>
-              ))}
-            </CardList>
-          </AICard>
-        </AISection>
-      ) : (
-        <EmptyState>
-          Click &quot;Generate&quot; to create an analytics summary
-        </EmptyState>
-      )}
+            {analytics.risks.length > 0 && (
+              <AICard>
+                <CardTitle accentColor="#f59e0b">Risks</CardTitle>
+                <CardList>
+                  {analytics.risks.map((risk, idx) => (
+                    <li key={idx}>{risk}</li>
+                  ))}
+                </CardList>
+              </AICard>
+            )}
+
+            <AICard>
+              <CardTitle accentColor="#10b981">Recommendations</CardTitle>
+              <CardList>
+                {analytics.recommendations.map((rec, idx) => (
+                  <li key={idx}>{rec}</li>
+                ))}
+              </CardList>
+            </AICard>
+          </AISection>
+        ) : (
+          <EmptyState>
+            Click &quot;Generate&quot; to create an analytics summary
+          </EmptyState>
+        )}
+      </SectionBody>
     </Section>
   );
 }

@@ -12,6 +12,8 @@ import {
   DialogTitle,
 } from "@/components/Dialogs";
 import { StepProgressSegments } from "@/components/StepProgressSegments";
+import { cn } from "@/lib/styles/utils";
+import { chromePrimaryButtonClassName } from "@/lib/styles/chrome-primary-button-classes";
 
 interface AIComposeDialogProps {
   isOpen: boolean;
@@ -108,7 +110,7 @@ export function AIComposeDialog({
                   "Describe your task in natural language...\n\nExample:\nBuy groceries for New Year celebration, high priority, due tomorrow, estimate 2 hours"
                 }
                 autoFocus
-                className="mb-5 min-h-[200px] w-full resize-y rounded-lg border border-input-border bg-input-bg p-3 font-inherit text-sm text-white outline-none transition-[border-color] placeholder:text-text-tertiary placeholder:whitespace-pre-line focus:border-accent-primary disabled:cursor-not-allowed disabled:opacity-60"
+                className="mb-5 min-h-[200px] w-full resize-y rounded-lg border border-input-border bg-input-bg p-3 font-inherit text-sm text-text-primary outline-none transition-[border-color] placeholder:text-text-tertiary placeholder:whitespace-pre-line focus:border-accent-primary disabled:cursor-not-allowed disabled:opacity-60"
               />
               <CharCounter isNearLimit={text.length > 600}>
                 {text.length} / {700}
@@ -119,7 +121,10 @@ export function AIComposeDialog({
                   type="button"
                   onClick={handleCreate}
                   disabled={!text.trim()}
-                  className="cursor-pointer rounded-lg border-0 bg-[#7255c1] px-5 py-2.5 text-sm font-medium text-white transition-all duration-200 hover:-translate-y-px hover:bg-[#5a42a1] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50"
+                  className={cn(
+                    chromePrimaryButtonClassName,
+                    "cursor-pointer rounded-lg px-5 py-2.5 text-sm font-medium",
+                  )}
                 >
                   Compose
                 </button>

@@ -60,7 +60,7 @@ export function WhitelistRestrictedAuthPanel({
           <FiUser className="size-5" /> Continue as Guest
         </AuthSecondaryButton>
         {guestError ? (
-          <p className="text-center text-sm text-red-400" role="alert">
+          <p className="text-center text-sm text-red-500/65" role="alert">
             {guestError}
           </p>
         ) : null}

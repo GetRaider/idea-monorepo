@@ -168,7 +168,7 @@ export function TaskSearchHeader({
               <button
                 key={task.id}
                 type="button"
-                className="flex w-full min-w-0 flex-col items-start gap-0.5 px-3 py-2 text-left text-sm text-white transition-colors hover:bg-[#2a2a2a]"
+                className="flex w-full min-w-0 flex-col items-start gap-0.5 px-3 py-2 text-left text-sm text-text-primary transition-colors hover:bg-zinc-800"
                 onClick={() => openTask(task)}
               >
                 <span className="flex w-full min-w-0 items-start gap-1.5 leading-snug">

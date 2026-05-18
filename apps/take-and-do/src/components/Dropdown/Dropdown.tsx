@@ -17,7 +17,7 @@ export function DropdownChevron({
   return (
     <span
       className={cn(
-        "text-[10px] text-text-secondary transition-transform duration-200",
+        "text-[10px] text-text-secondary transition-transform duration-700 ease-out",
         open ? "rotate-180" : "rotate-0",
         className,
       )}
@@ -51,6 +51,8 @@ interface DropdownProps<T extends string = string> {
   menuMinWidth?: number;
   fullWidth?: boolean;
   id?: string;
+  /** Match adjacent `AIActionButton` sizing (`compact` on overview modules). */
+  size?: "compact" | "default" | "comfortable";
 }
 
 export function Dropdown<T extends string = string>({
@@ -66,6 +68,7 @@ export function Dropdown<T extends string = string>({
   menuMinWidth,
   fullWidth = false,
   id,
+  size = "default",
 }: DropdownProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
   const [menuRect, setMenuRect] = useState<{
@@ -81,6 +84,13 @@ export function Dropdown<T extends string = string>({
 
   const selectedLabel =
     options.find((option) => option.value === value)?.label ?? placeholder;
+
+  const triggerSizeClass =
+    size === "comfortable"
+      ? "min-h-11 px-6 py-3 text-sm leading-none"
+      : size === "compact"
+        ? "min-h-8 px-3 py-1.5 text-xs leading-none"
+        : "min-h-10 px-5 py-2.5 text-sm leading-none";
 
   const updateOpen = useCallback(
     (next: boolean) => {
@@ -101,7 +111,7 @@ export function Dropdown<T extends string = string>({
         : rect.width;
     const gap = 4;
     const estimatedMenuHeight = Math.min(
-      options.length * 44 + 16,
+      options.length * 48 + 16,
       window.innerHeight * 0.55,
     );
     const spaceBelow = window.innerHeight - rect.bottom - gap;
@@ -207,7 +217,8 @@ export function Dropdown<T extends string = string>({
             id={id}
             disabled={disabled}
             className={cn(
-              "flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-md border border-input-border bg-input-bg px-3 py-1.5 text-sm text-white transition-[border-color] duration-200 hover:border-input-border-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring",
+              "inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-md border border-input-border bg-input-bg font-semibold text-text-primary transition-[border-color,background-color] duration-700 ease-out hover:border-input-border-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring",
+              triggerSizeClass,
               fullWidth ? "w-full justify-between" : "w-auto justify-start",
               disabled &&
                 "cursor-not-allowed opacity-60 hover:border-input-border",
@@ -227,7 +238,7 @@ export function Dropdown<T extends string = string>({
           <ul
             ref={menuRef}
             data-dropdown-portal
-            className="fixed z-[5200] m-0 flex max-h-[60vh] w-max list-none flex-col gap-0.5 overflow-y-auto rounded-md border border-input-border bg-background-primary p-1 shadow-dropdown [-webkit-overflow-scrolling:touch]"
+            className="fixed z-[5200] m-0 flex max-h-[60vh] w-max origin-top list-none flex-col gap-0.5 overflow-y-auto rounded-md border border-input-border bg-background-primary p-1 shadow-dropdown motion-safe:animate-dropdown-panel-in [-webkit-overflow-scrolling:touch]"
             style={{
               ...(menuRect.vertical === "below"
                 ? { top: menuRect.top }
@@ -242,14 +253,14 @@ export function Dropdown<T extends string = string>({
                 key={String(option.value)}
                 type="button"
                 className={cn(
-                  "w-full cursor-pointer whitespace-nowrap rounded px-3 py-2 text-left text-sm transition-[background,color] duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:cursor-not-allowed disabled:opacity-60",
+                  "w-full cursor-pointer whitespace-nowrap rounded px-3 py-2.5 text-left text-sm transition-[background,color] duration-700 ease-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:cursor-not-allowed disabled:opacity-60",
                   option.value === value
                     ? option.danger
-                      ? "bg-[#3a3a3a] text-red-500"
-                      : "bg-[#3a3a3a] text-white"
+                      ? "bg-zinc-700 text-red-600/85"
+                      : "bg-zinc-700 text-text-primary"
                     : option.danger
-                      ? "bg-transparent text-red-500 hover:bg-[#3a3a3a] hover:text-red-300"
-                      : "bg-transparent text-[#aaa] hover:bg-[#3a3a3a] hover:text-white",
+                      ? "bg-transparent text-red-600/85 hover:bg-zinc-700 hover:text-red-400/80"
+                      : "bg-transparent text-text-secondary hover:bg-zinc-700 hover:text-text-primary",
                 )}
                 onClick={() => {
                   onChange(option.value);

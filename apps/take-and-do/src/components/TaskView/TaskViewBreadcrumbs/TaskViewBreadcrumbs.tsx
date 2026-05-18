@@ -129,7 +129,7 @@ function BoardTrigger({
       ref={ref}
       type={type}
       className={cn(
-        "m-0 max-w-[200px] cursor-pointer overflow-hidden text-ellipsis whitespace-nowrap rounded-md border-0 bg-transparent px-1.5 py-1 font-inherit text-sm text-[#888] transition-colors hover:bg-white/[0.06] hover:text-white disabled:cursor-default disabled:opacity-70 hover:disabled:bg-transparent hover:disabled:text-[#888]",
+        "m-0 max-w-[200px] cursor-pointer overflow-hidden text-ellipsis whitespace-nowrap rounded-md border-0 bg-transparent px-1.5 py-1 font-inherit text-sm text-[#888] transition-colors hover:bg-white/[0.06] hover:text-text-primary disabled:cursor-default disabled:opacity-70 hover:disabled:bg-transparent hover:disabled:text-[#888]",
         className,
       )}
       {...props}
@@ -198,7 +198,7 @@ function ParentTaskButton({
       ref={ref}
       type={type}
       className={cn(
-        "m-0 cursor-pointer rounded-md border-0 bg-transparent px-1.5 py-1 font-inherit text-sm text-[#888] transition-colors hover:bg-white/[0.06] hover:text-white",
+        "m-0 cursor-pointer rounded-md border-0 bg-transparent px-1.5 py-1 font-inherit text-sm text-[#888] transition-colors hover:bg-white/[0.06] hover:text-text-primary",
         className,
       )}
       {...props}

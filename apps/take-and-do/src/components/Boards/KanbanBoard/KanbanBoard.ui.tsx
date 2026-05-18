@@ -15,7 +15,7 @@ export function BoardContainer({
       className={cn(
         embed
           ? "flex min-h-0 flex-1 flex-col overflow-hidden bg-transparent"
-          : "flex h-screen min-h-screen flex-col bg-gradient-to-br from-[#1a1a1a] to-[#3c2856] supports-[height:100dvh]:h-[100dvh] supports-[height:100dvh]:min-h-[100dvh]",
+          : "flex h-screen min-h-screen flex-col bg-background supports-[height:100dvh]:h-[100dvh] supports-[height:100dvh]:min-h-[100dvh]",
         className,
       )}
       {...props}
@@ -41,7 +41,7 @@ export function WorkspacePath({ className, ref, ...props }: UiProps<"h1">) {
     <h1
       ref={ref}
       className={cn(
-        "m-0 flex items-center gap-2 text-lg font-semibold text-white",
+        "m-0 flex items-center gap-2 text-lg font-semibold text-text-primary",
         className,
       )}
       {...props}
@@ -114,7 +114,7 @@ export function Popover({ className, ref, ...props }: UiProps<"div">) {
     <div
       ref={ref}
       className={cn(
-        "absolute right-0 top-[50px] z-[200] w-[420px] rounded-xl border border-border-app bg-[#1f1f1f] p-[18px] text-gray-200 shadow-[0_10px_30px_rgba(0,0,0,0.4)]",
+        "absolute right-0 top-[50px] z-[200] w-[420px] rounded-xl border border-border-app bg-background-primary p-[18px] text-gray-200 shadow-dropdown",
         className,
       )}
       {...props}
@@ -158,8 +158,8 @@ export function SegmentBtn({
       ref={ref}
       type={type}
       className={cn(
-        "flex cursor-pointer items-center gap-2.5 rounded-xl border border-[#333] px-[18px] py-3.5 text-gray-200 transition-colors duration-200 hover:bg-[#2a2a2a]",
-        isActive ? "bg-[#2a2a2a]" : "bg-transparent",
+        "flex cursor-pointer items-center gap-2.5 rounded-xl border border-border-app px-[18px] py-3.5 text-gray-200 transition-colors duration-200 hover:bg-input-bg",
+        isActive ? "bg-nav-sidebar-bg" : "bg-transparent",
         className,
       )}
       {...props}
@@ -195,7 +195,7 @@ export function Select({ className, ref, ...props }: UiProps<"select">) {
     <select
       ref={ref}
       className={cn(
-        "rounded-[10px] border border-[#333] bg-[#1b1b1b] px-3 py-2.5 text-gray-200",
+        "rounded-[10px] border border-border-app bg-input-bg px-3 py-2.5 text-gray-200",
         className,
       )}
       {...props}
@@ -214,7 +214,7 @@ export function IconBtn({
       ref={ref}
       type={type}
       className={cn(
-        "inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-[10px] border border-[#333] bg-[#1b1b1b] text-gray-200",
+        "inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-[10px] border border-border-app bg-input-bg text-gray-200",
         className,
       )}
       {...props}
@@ -227,7 +227,7 @@ export function Footer({ className, ref, ...props }: UiProps<"div">) {
     <div
       ref={ref}
       className={cn(
-        "flex justify-end pt-2 font-medium text-slate-300",
+        "flex justify-end pt-2 font-medium text-zinc-300",
         className,
       )}
       {...props}
@@ -326,7 +326,7 @@ export function MultiBoardScroller({
     <div
       ref={ref}
       className={cn(
-        "w-full overflow-x-auto pb-1 [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-sm [&::-webkit-scrollbar-thumb]:bg-[#2a2a2a] hover:[&::-webkit-scrollbar-thumb]:bg-[#3a3a3a]",
+        "w-full overflow-x-auto pb-1 [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-sm [&::-webkit-scrollbar-thumb]:bg-zinc-800 hover:[&::-webkit-scrollbar-thumb]:bg-zinc-700",
         className,
       )}
       {...props}
@@ -345,7 +345,7 @@ export function BoardSectionToggle({
       ref={ref}
       type={type}
       className={cn(
-        "box-border flex max-h-11 min-h-11 w-full cursor-pointer appearance-none items-center justify-start gap-2 rounded-lg border-0 bg-white/5 px-4 py-3 text-xs font-semibold text-white transition-colors duration-150 hover:bg-white/[0.07]",
+        "box-border flex max-h-11 min-h-11 w-full cursor-pointer appearance-none items-center justify-start gap-2 rounded-lg border-0 bg-white/5 px-4 py-3 text-xs font-semibold text-text-primary transition-colors duration-150 hover:bg-white/[0.07]",
         className,
       )}
       {...props}
@@ -384,7 +384,7 @@ export function EmptyStateMessage({
   return (
     <div
       ref={ref}
-      className={cn("col-span-full p-6 text-white", className)}
+      className={cn("col-span-full p-6 text-text-primary", className)}
       {...props}
     />
   );
@@ -441,7 +441,7 @@ export function LoadingContainer({ className, ref, ...props }: UiProps<"div">) {
     <div
       ref={ref}
       className={cn(
-        "col-span-full flex min-h-[200px] items-center justify-center px-6 py-12 text-white",
+        "col-span-full flex min-h-[200px] items-center justify-center px-6 py-12 text-text-primary",
         className,
       )}
       {...props}
@@ -454,7 +454,7 @@ export function KanbanSpinner({ className, ref, ...props }: UiProps<"div">) {
     <div
       ref={ref}
       className={cn(
-        "h-12 w-12 animate-spin rounded-full border-4 border-white/10 border-t-[#7255c1] border-r-[#7255c1]",
+        "h-12 w-12 animate-spin rounded-full border-4 border-white/[0.12] border-t-zinc-200",
         className,
       )}
       {...props}

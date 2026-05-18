@@ -139,7 +139,7 @@ export function CalendarPlanningToolbar({
               <span className="text-[10px] font-bold leading-none tracking-[0.12em] text-zinc-400">
                 {toolbarMeta.badgeMonth}
               </span>
-              <span className="mt-1.5 text-[1.35rem] font-bold tabular-nums leading-none tracking-tight text-white">
+              <span className="mt-1.5 text-[1.35rem] font-bold tabular-nums leading-none tracking-tight text-text-primary">
                 {toolbarMeta.badgeDay}
               </span>
             </div>
@@ -147,7 +147,7 @@ export function CalendarPlanningToolbar({
           <div className="min-w-0 pb-0.5">
             {toolbarMeta ? (
               <>
-                <p className="m-0 text-lg font-semibold tracking-tight text-white sm:text-xl">
+                <p className="m-0 text-lg font-semibold tracking-tight text-text-primary sm:text-xl">
                   {toolbarMeta.headline}
                 </p>
                 <p className="m-0 mt-1 text-sm text-zinc-500">
@@ -192,7 +192,7 @@ export function CalendarPlanningToolbar({
             {open ? (
               <div
                 role="menu"
-                className="absolute right-0 top-[calc(100%+6px)] z-20 min-w-[240px] rounded-xl border border-white/[0.08] bg-[#1c1c22] py-1 shadow-[0_16px_48px_rgba(0,0,0,0.5)] sm:left-0 sm:right-auto"
+                className="absolute right-0 top-[calc(100%+6px)] z-20 min-w-[240px] rounded-xl border border-border-app bg-background-primary py-1 shadow-dropdown sm:left-0 sm:right-auto"
               >
                 <button
                   type="button"
@@ -308,7 +308,7 @@ export function CalendarPlanningToolbar({
           <div className="flex items-center rounded-xl border border-white/[0.08] bg-black/25 p-0.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
             <button
               type="button"
-              className="rounded-lg px-3.5 py-2 text-sm font-medium text-zinc-200 transition-colors hover:bg-white/[0.07] hover:text-white"
+              className="rounded-lg px-3.5 py-2 text-sm font-medium text-zinc-200 transition-colors hover:bg-white/[0.07] hover:text-text-primary"
               onClick={goToday}
             >
               Today
@@ -316,7 +316,7 @@ export function CalendarPlanningToolbar({
             <div className="mx-0.5 h-6 w-px bg-white/10" aria-hidden />
             <button
               type="button"
-              className="flex h-9 w-9 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-white/[0.07] hover:text-white"
+              className="flex h-9 w-9 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-white/[0.07] hover:text-text-primary"
               aria-label="Previous period"
               onClick={goPrev}
             >
@@ -324,7 +324,7 @@ export function CalendarPlanningToolbar({
             </button>
             <button
               type="button"
-              className="flex h-9 w-9 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-white/[0.07] hover:text-white"
+              className="flex h-9 w-9 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-white/[0.07] hover:text-text-primary"
               aria-label="Next period"
               onClick={goNext}
             >
@@ -342,7 +342,7 @@ export function CalendarPlanningToolbar({
               className={cn(
                 "rounded-lg px-2.5 py-2 text-xs font-semibold transition-colors",
                 !slotTime24h
-                  ? "bg-white/[0.1] text-white"
+                  ? "bg-white/[0.1] text-text-primary"
                   : "text-zinc-400 hover:bg-white/[0.06] hover:text-zinc-200",
               )}
               onClick={() => onSlotTime24hChange(false)}
@@ -354,7 +354,7 @@ export function CalendarPlanningToolbar({
               className={cn(
                 "rounded-lg px-2.5 py-2 text-xs font-semibold transition-colors",
                 slotTime24h
-                  ? "bg-white/[0.1] text-white"
+                  ? "bg-white/[0.1] text-text-primary"
                   : "text-zinc-400 hover:bg-white/[0.06] hover:text-zinc-200",
               )}
               onClick={() => onSlotTime24hChange(true)}
@@ -388,4 +388,4 @@ const menuItem =
   "flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-zinc-100 transition-colors hover:bg-white/[0.06]";
 const menuHint = "text-xs tabular-nums text-zinc-500";
 const submenuPanel =
-  "absolute left-full top-0 z-10 ml-1 min-w-[160px] rounded-xl border border-white/10 bg-[#1c1c22] py-1 shadow-[0_12px_40px_rgba(0,0,0,0.45)]";
+  "absolute left-full top-0 z-10 ml-1 min-w-[160px] rounded-xl border border-border-app bg-background-primary py-1 shadow-dropdown";

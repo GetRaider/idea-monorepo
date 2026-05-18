@@ -17,7 +17,9 @@ import { AiGate } from "@/components/ai-gate";
 import { AIPlanningOptimizationDialog } from "./AIPlanningOptimizationDialog/AIPlanningOptimizationDialog";
 import {
   Section,
-  SectionHeader,
+  SectionHeadBand,
+  SectionDivider,
+  SectionBody,
   SectionTitle,
   DateInput,
   DateInputWrapper,
@@ -48,6 +50,7 @@ import { Route } from "@/constants/route.constant";
 import { AIIcon } from "@/components/Icons/AIIcon";
 import { OverviewEmptyStateBackdrop } from "@/app/overview/OverviewEmptyStateBackdrop";
 import { RulerIcon } from "@/components/Icons/RulerIcon";
+import { APP_CHROME_SECTION_MODULE_ICON_PX } from "@/helpers/app-chrome-layout";
 
 export function TimelinePlanning({
   todayTasks,
@@ -101,116 +104,122 @@ export function TimelinePlanning({
   };
 
   return (
-    <Section>
-      <SectionHeader className="mb-0 pb-4">
-        <SectionTitle>
-          <TimePlanningIcon
-            size={20}
-            className="shrink-0 text-white"
-            aria-hidden
-          />
-          <span>Timeline Planning</span>
-        </SectionTitle>
-        <ScheduleSelectContainer>
-          {schedule === "custom" && (
-            <DateInputWrapper>
-              <DateInput
-                type="date"
-                value={customDate}
-                disabled={controlsDisabled}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  setCustomDate(e.target.value)
-                }
-                onFocus={(e: React.FocusEvent<HTMLInputElement>) =>
-                  e.currentTarget.showPicker?.()
-                }
-              />
-            </DateInputWrapper>
-          )}
-          <Dropdown
-            options={[
-              { label: "New", value: "new" },
-              { label: "Today", value: "today" },
-              { label: "Tomorrow", value: "tomorrow" },
-              { label: "Custom Date", value: "custom" },
-            ]}
-            value={schedule}
-            onChange={(value) => setSchedule(value as ScheduleType)}
-            disabled={controlsDisabled}
-          />
-          <AiGate>
-            <AIActionButton
-              size="comfortable"
-              onClick={handleOpenOptimizationDialog}
+    <>
+      <Section>
+        <SectionHeadBand>
+          <SectionTitle>
+            <TimePlanningIcon
+              size={APP_CHROME_SECTION_MODULE_ICON_PX}
+              className="shrink-0 text-text-primary"
+              aria-hidden
+            />
+            <span>Timeline Planning</span>
+          </SectionTitle>
+          <ScheduleSelectContainer>
+            {schedule === "custom" && (
+              <DateInputWrapper>
+                <DateInput
+                  type="date"
+                  value={customDate}
+                  disabled={controlsDisabled}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setCustomDate(e.target.value)
+                  }
+                  onFocus={(e: React.FocusEvent<HTMLInputElement>) =>
+                    e.currentTarget.showPicker?.()
+                  }
+                />
+              </DateInputWrapper>
+            )}
+            <Dropdown
+              size="compact"
+              options={[
+                { label: "New", value: "new" },
+                { label: "Today", value: "today" },
+                { label: "Tomorrow", value: "tomorrow" },
+                { label: "Custom Date", value: "custom" },
+              ]}
+              value={schedule}
+              onChange={(value) => setSchedule(value as ScheduleType)}
               disabled={controlsDisabled}
-            >
-              <AIIcon size={16} /> Explore AI Optimization
-            </AIActionButton>
-          </AiGate>
-        </ScheduleSelectContainer>
-      </SectionHeader>
-      <div className="-mx-6 border-t border-border-app px-6 pt-6">
-        {isLoading ? (
-          <LoadingStackContainer>
-            <SpinnerRing />
-          </LoadingStackContainer>
-        ) : firstFiveTasks.length > 0 ? (
-          <>
-            <TaskList>
-              <TaskListHeader>
-                <HeaderCell>Task</HeaderCell>
-                <HeaderCell>Schedule</HeaderCell>
-                <HeaderCell>Due Date</HeaderCell>
-                <HeaderCell>Est.</HeaderCell>
-                <HeaderCell>Status</HeaderCell>
-              </TaskListHeader>
-              {firstFiveTasks.map((task: Task) => (
-                <TaskItem key={task.id} onClick={() => handleTaskClick(task)}>
-                  <TaskContent>
-                    <TaskLeft>
-                      <PriorityIcon>
-                        {tasksHelper.priority.getIconLabel(task.priority)}
-                      </PriorityIcon>
-                      <TaskSummaryText>{task.summary}</TaskSummaryText>
-                    </TaskLeft>
-                  </TaskContent>
-                  <TaskCell>
-                    {task.scheduleDate
-                      ? tasksHelper.date.formatForSchedule(task.scheduleDate)
-                      : "—"}
-                  </TaskCell>
-                  <TaskCell>
-                    {task.dueDate
-                      ? tasksHelper.date.formatForSchedule(task.dueDate)
-                      : "—"}
-                  </TaskCell>
-                  <TaskCellMuted>
-                    {task.estimation
-                      ? tasksHelper.estimation.hours(task.estimation)
-                      : "—"}
-                  </TaskCellMuted>
-                  <StatusContainer>
-                    <StatusIcon status={task.status}>
-                      <TaskStatusGlyph status={task.status} size={14} />
-                    </StatusIcon>
-                    <StatusText status={task.status}>{task.status}</StatusText>
-                  </StatusContainer>
-                </TaskItem>
-              ))}
-            </TaskList>
-            <ViewAllLink href={Route.TASKS}>View all tasks →</ViewAllLink>
-          </>
-        ) : (
-          <TimelinePlanningEmptyState />
-        )}
-      </div>
+            />
+            <AiGate>
+              <AIActionButton
+                size="compact"
+                onClick={handleOpenOptimizationDialog}
+                disabled={controlsDisabled}
+              >
+                <AIIcon size={14} /> Explore AI Optimization
+              </AIActionButton>
+            </AiGate>
+          </ScheduleSelectContainer>
+        </SectionHeadBand>
+        <SectionDivider />
+        <SectionBody>
+          {isLoading ? (
+            <LoadingStackContainer>
+              <SpinnerRing />
+            </LoadingStackContainer>
+          ) : firstFiveTasks.length > 0 ? (
+            <>
+              <TaskList>
+                <TaskListHeader>
+                  <HeaderCell>Task</HeaderCell>
+                  <HeaderCell>Schedule</HeaderCell>
+                  <HeaderCell>Due Date</HeaderCell>
+                  <HeaderCell>Est.</HeaderCell>
+                  <HeaderCell>Status</HeaderCell>
+                </TaskListHeader>
+                {firstFiveTasks.map((task: Task) => (
+                  <TaskItem key={task.id} onClick={() => handleTaskClick(task)}>
+                    <TaskContent>
+                      <TaskLeft>
+                        <PriorityIcon>
+                          {tasksHelper.priority.getIconLabel(task.priority)}
+                        </PriorityIcon>
+                        <TaskSummaryText>{task.summary}</TaskSummaryText>
+                      </TaskLeft>
+                    </TaskContent>
+                    <TaskCell>
+                      {task.scheduleDate
+                        ? tasksHelper.date.formatForSchedule(task.scheduleDate)
+                        : "—"}
+                    </TaskCell>
+                    <TaskCell>
+                      {task.dueDate
+                        ? tasksHelper.date.formatForSchedule(task.dueDate)
+                        : "—"}
+                    </TaskCell>
+                    <TaskCellMuted>
+                      {task.estimation
+                        ? tasksHelper.estimation.hours(task.estimation)
+                        : "—"}
+                    </TaskCellMuted>
+                    <StatusContainer>
+                      <StatusIcon status={task.status}>
+                        <TaskStatusGlyph status={task.status} size={14} />
+                      </StatusIcon>
+                      <StatusText status={task.status}>
+                        {task.status}
+                      </StatusText>
+                    </StatusContainer>
+                  </TaskItem>
+                ))}
+              </TaskList>
+              <ViewAllLink href={Route.TASKS}>View all tasks →</ViewAllLink>
+            </>
+          ) : (
+            <TimelinePlanningEmptyState />
+          )}
+        </SectionBody>
+      </Section>
 
       {isOptimizationDialogOpen && (
         <AIPlanningOptimizationDialog
           onClose={() => setIsOptimizationDialogOpen(false)}
         />
       )}
-    </Section>
+    </>
   );
 }
 

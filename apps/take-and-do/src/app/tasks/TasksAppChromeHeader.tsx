@@ -106,7 +106,7 @@ export function TasksAppChromeHeader() {
           onClick={onPrimary}
           className="shrink-0 font-medium"
         >
-          <PlusIcon size={18} className="shrink-0 text-white" />
+          <PlusIcon size={18} className="shrink-0" />
           {isRoot ? "Create Workspace" : "Create Task"}
         </PrimaryButton>
         {!isRoot && settingsSlot ? (

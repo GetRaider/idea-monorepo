@@ -1,21 +1,28 @@
 import { cn } from "@/lib/styles/utils";
+import { chromePrimaryButtonClassName } from "@/lib/styles/chrome-primary-button-classes";
 import { SpinnerRing } from "../Spinner";
 
 export function AuthPrimaryButton({
+  nativeType = "button",
   onClick,
   disabled,
   loading,
   children,
-}: AuthButtonProps) {
+  className,
+}: AuthPrimaryButtonProps) {
   return (
     <button
-      type="button"
-      onClick={onClick}
+      type={nativeType}
+      onClick={nativeType === "submit" ? undefined : onClick}
       disabled={disabled}
-      className="flex h-12 w-full items-center justify-center gap-2 rounded-lg border border-[#2A2B32] bg-[#212229] px-4 py-0 text-sm font-medium text-[var(--foreground)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#25262d] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-primary)] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
+      className={cn(
+        chromePrimaryButtonClassName,
+        "flex h-12 w-full items-center justify-center gap-2 px-4 py-0 text-sm font-semibold",
+        className,
+      )}
     >
       {loading ? (
-        <SpinnerRing className="h-5 w-5 border-t-[var(--brand-primary)]" />
+        <SpinnerRing className="h-5 w-5 border-t-chrome-cta-primary-fg" />
       ) : null}
       {children}
     </button>
@@ -35,7 +42,7 @@ export function AuthSecondaryButton({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "flex h-12 w-full items-center justify-center gap-2 rounded-lg border border-[#1F2027] bg-[#181920] px-4 py-0 text-sm font-medium text-[var(--foreground)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#1c1d24] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-primary)] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0",
+        "flex h-12 w-full items-center justify-center gap-2 rounded-lg border border-input-login-border bg-background-primary px-4 py-0 text-sm font-medium text-foreground transition-all duration-200 hover:-translate-y-0.5 hover:bg-input-bg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0",
         className,
       )}
     >
@@ -49,6 +56,15 @@ export function AuthSecondaryButton({
 
 type AuthButtonProps = {
   onClick: () => void;
+  disabled: boolean;
+  loading: boolean;
+  children: React.ReactNode;
+  className?: string;
+};
+
+type AuthPrimaryButtonProps = {
+  nativeType?: "button" | "submit";
+  onClick?: () => void;
   disabled: boolean;
   loading: boolean;
   children: React.ReactNode;

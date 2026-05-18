@@ -1,3 +1,6 @@
+import { cn } from "@/lib/styles/utils";
+import { chromePrimaryButtonClassName } from "@/lib/styles/chrome-primary-button-classes";
+
 export default function ForbiddenPage() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-[var(--background)] p-6 text-[var(--foreground)]">
@@ -11,7 +14,10 @@ export default function ForbiddenPage() {
         </p>
         <a
           href="/overview"
-          className="mt-5 inline-flex rounded-lg bg-[var(--brand-primary)] px-4 py-2 text-sm font-medium text-center text-white justify-center"
+          className={cn(
+            chromePrimaryButtonClassName,
+            "mt-5 inline-flex justify-center px-4 py-2 text-center text-sm font-semibold no-underline rounded-lg",
+          )}
         >
           Go to overview
         </a>

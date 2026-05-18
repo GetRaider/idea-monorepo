@@ -205,7 +205,7 @@ function Input({ className, ref, ...props }: InputProps) {
     <BaseInput
       ref={ref}
       className={cn(
-        "rounded-lg transition-all duration-200 focus:border-[#7255c1] focus:bg-[#252525]",
+        "rounded-lg transition-all duration-200 focus:border-white/35 focus:bg-[#252525]",
         className,
       )}
       {...props}

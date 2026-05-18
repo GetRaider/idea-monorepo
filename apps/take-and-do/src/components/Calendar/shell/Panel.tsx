@@ -195,7 +195,7 @@ export function CalendarPanel({
             <div className="flex shrink-0 items-center justify-end gap-1.5">
               <button
                 type="button"
-                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border-0 bg-transparent text-zinc-400 hover:bg-white/[0.06] hover:text-white"
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border-0 bg-transparent text-zinc-400 hover:bg-white/[0.06] hover:text-text-primary"
                 aria-label="Previous month"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -211,7 +211,7 @@ export function CalendarPanel({
               </span>
               <button
                 type="button"
-                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border-0 bg-transparent text-zinc-400 hover:bg-white/[0.06] hover:text-white"
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border-0 bg-transparent text-zinc-400 hover:bg-white/[0.06] hover:text-text-primary"
                 aria-label="Next month"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -266,7 +266,7 @@ export function CalendarPanel({
                                   !sel &&
                                   "text-zinc-200 hover:bg-white/[0.08]",
                                 sel &&
-                                  "bg-[#7255c1] text-white shadow-sm hover:bg-[#6346b0]",
+                                  "bg-zinc-600 text-text-primary shadow-sm hover:bg-zinc-500",
                               )}
                               onClick={() => {
                                 const d = startOfDay(date);
@@ -314,7 +314,7 @@ export function CalendarPanel({
                   type="checkbox"
                   checked={showGoogleCalendar}
                   onChange={(e) => onShowGoogleCalendarChange(e.target.checked)}
-                  className="h-4 w-4 shrink-0 rounded border-white/20 bg-transparent accent-[#4285F4]"
+                  className="h-4 w-4 shrink-0 cursor-pointer rounded border border-white/25 bg-input-bg/80 accent-zinc-200"
                 />
                 <label
                   htmlFor="cal-google"
@@ -427,7 +427,7 @@ export function CalendarPanel({
                               tasksHelper.priority.format(task.priority),
                             )}
                           </span>
-                          <div className="min-w-0 flex-1 truncate text-sm font-medium text-white">
+                          <div className="min-w-0 flex-1 truncate text-sm font-medium text-text-primary">
                             {task.summary}
                           </div>
                         </div>
@@ -483,7 +483,7 @@ export function CalendarPanel({
                       task: on,
                     });
                   }}
-                  className="h-4 w-4 rounded border-white/20 bg-transparent accent-[#7255c1]"
+                  className="h-4 w-4 cursor-pointer rounded border border-white/25 bg-input-bg/80 accent-zinc-200"
                 />
                 <label
                   htmlFor="cal-all"
@@ -508,7 +508,7 @@ export function CalendarPanel({
                     type="checkbox"
                     checked={kindVisibility[kind]}
                     onChange={() => toggleKind(kind)}
-                    className="h-4 w-4 shrink-0 rounded border-white/20 bg-transparent"
+                    className="h-4 w-4 shrink-0 cursor-pointer rounded border border-white/25 bg-input-bg/80 accent-zinc-200"
                     style={{
                       accentColor: effectiveKindColor(kind, kindColors),
                     }}
@@ -571,7 +571,7 @@ export function CalendarPanel({
                   e.stopPropagation();
                   onRequestNewTemplate();
                 }}
-                className="flex h-8 w-8 items-center justify-center rounded-lg border-0 bg-transparent text-zinc-400 hover:bg-white/[0.06] hover:text-white"
+                className="flex h-8 w-8 items-center justify-center rounded-lg border-0 bg-transparent text-zinc-400 hover:bg-white/[0.06] hover:text-text-primary"
                 aria-label="Add backlog template"
                 title="Add backlog template"
               >
@@ -618,7 +618,7 @@ export function CalendarPanel({
                             color="#fafafa"
                           />
                         </div>
-                        <div className="truncate text-sm font-medium text-white">
+                        <div className="truncate text-sm font-medium text-text-primary">
                           {item.title}
                         </div>
                         <div className="text-xs text-zinc-500">
@@ -628,7 +628,7 @@ export function CalendarPanel({
                       <div className="flex shrink-0 flex-col gap-0.5">
                         <button
                           type="button"
-                          className="rounded-md border-0 bg-transparent p-1 text-zinc-400 opacity-80 transition-all hover:bg-zinc-800 hover:text-white group-hover:opacity-100"
+                          className="rounded-md border-0 bg-transparent p-1 text-zinc-400 opacity-80 transition-all hover:bg-zinc-800 hover:text-text-primary group-hover:opacity-100"
                           title="Edit template"
                           onPointerDown={(e) => e.stopPropagation()}
                           onClick={() => onEditTemplate(item)}
@@ -637,7 +637,7 @@ export function CalendarPanel({
                         </button>
                         <button
                           type="button"
-                          className="rounded-md border-0 bg-transparent px-1 py-0.5 text-lg leading-none text-zinc-500 hover:bg-zinc-800 hover:text-white"
+                          className="rounded-md border-0 bg-transparent px-1 py-0.5 text-lg leading-none text-zinc-500 hover:bg-zinc-800 hover:text-text-primary"
                           title="Remove event"
                           onPointerDown={(e) => e.stopPropagation()}
                           onClick={() => setConfirmRemove(item)}

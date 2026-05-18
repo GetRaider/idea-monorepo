@@ -3,9 +3,14 @@
 import Link from "next/link";
 import type { ComponentProps, ReactNode } from "react";
 
-import { appChromeHeadingCurrentClass } from "@/helpers/app-chrome-layout";
+import {
+  appChromeHeadingCurrentClass,
+  APP_CHROME_PAGE_TITLE_ICON_GAP,
+  APP_CHROME_WELCOME_SECTION_MARGIN,
+} from "@/helpers/app-chrome-layout";
 import { TASKS_SIDEBAR_DEFAULT_WIDTH_PX } from "@/helpers/tasks-sidebar-layout";
 import { cn } from "@/lib/styles/utils";
+import { chromePrimaryButtonClassName } from "@/lib/styles/chrome-primary-button-classes";
 import type { UiProps } from "@/lib/styles/ui-props";
 
 export function PageContainer({ className, ref, ...props }: UiProps<"div">) {
@@ -13,7 +18,7 @@ export function PageContainer({ className, ref, ...props }: UiProps<"div">) {
     <div
       ref={ref}
       className={cn(
-        "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-gradient-to-br from-[#1a1a1a] to-[#3c2856]",
+        "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background",
         className,
       )}
       {...props}
@@ -41,7 +46,7 @@ export function TasksLayoutMain({
       ref={ref}
       style={{ marginLeft: marginLeftPx, ...style }}
       className={cn(
-        "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-gradient-to-br from-[#1a1a1a] to-[#3c2856]",
+        "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background",
         className,
       )}
       {...props}
@@ -63,7 +68,7 @@ export function HomeMainContent({
       ref={ref}
       style={{ marginLeft: marginLeftPx, ...style }}
       className={cn(
-        "flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto bg-gradient-to-br from-[#1a1a1a] to-[#3c2856] p-8 text-white",
+        "flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto bg-background p-8 text-text-primary",
         className,
       )}
       {...props}
@@ -76,7 +81,7 @@ export function LandingPageRoot({ className, ref, ...props }: UiProps<"div">) {
     <div
       ref={ref}
       className={cn(
-        "flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-[#1a1a1a] to-[#3c2856] p-6",
+        "flex min-h-screen flex-col items-center justify-center bg-background p-6",
         className,
       )}
       {...props}
@@ -88,7 +93,7 @@ export function LandingContent({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
-      className={cn("text-center text-white", className)}
+      className={cn("text-center text-text-primary", className)}
       {...props}
     />
   );
@@ -99,7 +104,7 @@ export function LandingTitle({ className, ref, ...props }: UiProps<"h1">) {
     <h1
       ref={ref}
       className={cn(
-        "mb-4 bg-gradient-to-br from-white to-purple-400 bg-clip-text text-5xl font-bold text-transparent",
+        "mb-4 bg-gradient-to-br from-white to-zinc-400 bg-clip-text text-5xl font-bold text-transparent",
         className,
       )}
       {...props}
@@ -111,7 +116,7 @@ export function LandingSubtitle({ className, ref, ...props }: UiProps<"p">) {
   return (
     <p
       ref={ref}
-      className={cn("mb-8 text-lg text-slate-300", className)}
+      className={cn("mb-8 text-lg text-zinc-300", className)}
       {...props}
     />
   );
@@ -130,7 +135,8 @@ export function GetStartedLink({
       ref={ref}
       href={href}
       className={cn(
-        "inline-block rounded-lg border-0 bg-[#7255c1] px-7 py-3.5 text-base font-semibold text-white no-underline transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#5a42a1]",
+        chromePrimaryButtonClassName,
+        "inline-block px-7 py-3.5 text-base font-semibold no-underline",
         className,
       )}
       {...props}
@@ -139,7 +145,13 @@ export function GetStartedLink({
 }
 
 export function WelcomeSection({ className, ref, ...props }: UiProps<"div">) {
-  return <div ref={ref} className={cn("mb-8", className)} {...props} />;
+  return (
+    <div
+      ref={ref}
+      className={cn(APP_CHROME_WELCOME_SECTION_MARGIN, className)}
+      {...props}
+    />
+  );
 }
 
 type AppPageTitleProps = UiProps<"h1"> & {
@@ -157,12 +169,16 @@ export function AppPageTitle({
   return (
     <h1
       ref={ref}
-      className={cn("m-0 flex min-w-0 items-center gap-2.5", className)}
+      className={cn(
+        "m-0 flex min-w-0 items-center",
+        APP_CHROME_PAGE_TITLE_ICON_GAP,
+        className,
+      )}
       {...props}
     >
       {icon ? (
         <span
-          className="inline-flex shrink-0 items-center justify-center text-white/90 [&>svg]:shrink-0"
+          className="inline-flex shrink-0 items-center justify-center text-text-primary/90 [&>svg]:shrink-0"
           aria-hidden
         >
           {icon}

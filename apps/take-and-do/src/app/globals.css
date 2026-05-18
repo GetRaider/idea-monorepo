@@ -13,7 +13,7 @@
     --brand-secondary: #737373;
     --brand-gradient-from: #141414;
     --brand-gradient-to: #000000;
-    --brand-text-on-gradient: #f4f4f5;
+    --brand-text-on-gradient: #e5e5e5;
     --shell-gradient-from: #121212;
     --shell-gradient-to: #000000;
     --app-chrome-gradient: radial-gradient(
@@ -24,14 +24,16 @@
       #000000 100%
     );
     --background: #000000;
-    --foreground: #ededed;
+    /* Softer than pure #fff — primary light for text / inverted surfaces (less glare). */
+    --app-ui-white: #e5e5e5;
+    --foreground: #e5e5e5;
     --sidebar-bg: #0d0d0d;
     --nav-sidebar-bg: #000000;
     --background-primary: #0a0a0a;
     --surface-active: #262626;
     --background-login: rgb(16 16 16 / 0.96);
     --border-color: #1a1a1a;
-    --text-primary: #ffffff;
+    --text-primary: var(--app-ui-white);
     --text-secondary: #a0a0a0;
     --text-tertiary: #808080;
     --accent-primary: #d4d4d4;
@@ -47,7 +49,7 @@
     --chrome-cta-primary-from: #f0f0ef;
     --chrome-cta-primary-to: #d4d4d2;
     --chrome-cta-primary-fg: #2c2c2c;
-    --chrome-cta-inverted-bg: #ffffff;
+    --chrome-cta-inverted-bg: var(--app-ui-white);
     --chrome-cta-inverted-fg: #111111;
     --chrome-cta-inverted-hover: #ececec;
     --radius-sm: 4px;
@@ -503,7 +505,7 @@
 .task-view-description ul[data-type="taskList"] input[type="checkbox"]:checked {
   border-color: var(--accent-primary, #d4d4d4);
   background-color: var(--accent-primary, #d4d4d4);
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M2.5 6.2L4.8 8.5L9.5 3.5' stroke='white' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M2.5 6.2L4.8 8.5L9.5 3.5' stroke='%23e5e5e5' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
 
 .task-view-description ul[data-type="taskList"] input[type="checkbox"] {

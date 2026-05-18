@@ -8,7 +8,9 @@ import { AIActionButton, PrimaryButton } from "@/components/Buttons";
 import { Spinner } from "@/components/Spinner/Spinner";
 import {
   Section,
-  SectionHeader,
+  SectionHeadBand,
+  SectionDivider,
+  SectionBody,
   SectionTitle,
   Controls,
   ChartsGrid,
@@ -29,6 +31,7 @@ import { ProductivityOverviewIcon } from "@/components/Icons/ProductivityOvervie
 import { AIIcon } from "@/components/Icons/AIIcon";
 import { OverviewEmptyStateBackdrop } from "@/app/overview/OverviewEmptyStateBackdrop";
 import { LightningIcon } from "@/components/Icons/LightningIcon";
+import { APP_CHROME_SECTION_MODULE_ICON_PX } from "@/helpers/app-chrome-layout";
 
 export function ProductivityOverview({
   hasWorkspaceTaskData,
@@ -109,10 +112,10 @@ export function ProductivityOverview({
   return (
     <>
       <Section>
-        <SectionHeader className="mb-0 pb-4">
+        <SectionHeadBand>
           <SectionTitle>
             <ProductivityOverviewIcon
-              size={20}
+              size={APP_CHROME_SECTION_MODULE_ICON_PX}
               className="shrink-0 text-text-primary"
               aria-hidden
             />
@@ -120,6 +123,7 @@ export function ProductivityOverview({
           </SectionTitle>
           <Controls>
             <Dropdown
+              size="compact"
               options={[
                 { label: "All", value: "all" },
                 { label: "Week", value: "week" },
@@ -131,14 +135,16 @@ export function ProductivityOverview({
               disabled={controlsDisabled}
             />
             <AIActionButton
+              size="compact"
               onClick={handleOpenSelectionDialog}
               inactive={controlsDisabled || generateSummaryMutation.isPending}
             >
-              <AIIcon size={16} /> Explore AI Summary
+              <AIIcon size={14} /> Explore AI Summary
             </AIActionButton>
           </Controls>
-        </SectionHeader>
-        <div className="-mx-6 border-t border-border-app px-6 pt-6">
+        </SectionHeadBand>
+        <SectionDivider />
+        <SectionBody>
           {isLoading ? (
             <Spinner />
           ) : stats && hasDashboardData(stats) ? (
@@ -148,7 +154,7 @@ export function ProductivityOverview({
           ) : (
             <ProductivityMetricsEmptyState variant="encourage" />
           )}
-        </div>
+        </SectionBody>
       </Section>
 
       {isSelectionDialogOpen && (

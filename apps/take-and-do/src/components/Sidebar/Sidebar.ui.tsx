@@ -85,7 +85,7 @@ export function NavButton({
           ? "bg-surface-active text-text-primary"
           : "text-text-secondary",
         isActive &&
-          "before:absolute before:left-[-8px] before:top-1/2 before:h-5 before:w-[3px] before:-translate-y-1/2 before:rounded-sm before:bg-white before:content-['']",
+          "before:absolute before:left-[-8px] before:top-1/2 before:h-5 before:w-[3px] before:-translate-y-1/2 before:rounded-sm before:bg-[color:var(--app-ui-white)] before:content-['']",
         !disabled && "hover:bg-surface-active hover:text-text-primary",
         className,
       )}

@@ -23,7 +23,8 @@ import {
 import { OverviewIcon } from "@/components/Icons";
 import {
   APP_CHROME_MAIN_INSET,
-  APP_CHROME_NAV_ICON_PX,
+  APP_CHROME_PAGE_BLOCK_GAP,
+  APP_CHROME_PAGE_TITLE_ICON_PX,
 } from "@/helpers/app-chrome-layout";
 import { cn } from "@/lib/styles/utils";
 
@@ -124,7 +125,7 @@ function OverviewPage() {
           <AppPageTitle
             icon={
               <OverviewIcon
-                size={APP_CHROME_NAV_ICON_PX}
+                size={APP_CHROME_PAGE_TITLE_ICON_PX}
                 className="shrink-0 text-text-primary"
               />
             }
@@ -133,15 +134,17 @@ function OverviewPage() {
           </AppPageTitle>
         </WelcomeSection>
 
-        <ProductivityOverview hasWorkspaceTaskData={hasWorkspaceTaskData} />
+        <div className={cn("flex min-w-0 flex-col", APP_CHROME_PAGE_BLOCK_GAP)}>
+          <ProductivityOverview hasWorkspaceTaskData={hasWorkspaceTaskData} />
 
-        <TimelinePlanning
-          todayTasks={todayTasks}
-          tomorrowTasks={tomorrowTasks}
-          hasWorkspaceTaskData={hasWorkspaceTaskData}
-        />
+          <TimelinePlanning
+            todayTasks={todayTasks}
+            tomorrowTasks={tomorrowTasks}
+            hasWorkspaceTaskData={hasWorkspaceTaskData}
+          />
 
-        {taskStats && <StatsCards stats={taskStats} />}
+          {taskStats && <StatsCards stats={taskStats} />}
+        </div>
       </HomeMainContent>
     </PageContainer>
   );

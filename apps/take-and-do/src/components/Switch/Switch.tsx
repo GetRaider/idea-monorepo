@@ -89,8 +89,8 @@ export function Switch({
               ? "bg-[#b0b0b8] shadow-none"
               : "bg-[#6b6b74] shadow-none"
             : checked
-              ? "bg-white shadow-sm"
-              : "bg-white shadow-[0_1px_3px_rgba(0,0,0,0.35)]",
+              ? "bg-[color:var(--app-ui-white)] shadow-sm"
+              : "bg-[color:var(--app-ui-white)] shadow-[0_1px_3px_rgba(0,0,0,0.35)]",
         )}
       />
     </button>

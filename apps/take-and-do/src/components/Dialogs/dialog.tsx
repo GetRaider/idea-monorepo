@@ -220,7 +220,7 @@ export function ConfirmDangerBtn({
       ref={ref}
       type={type}
       className={cn(
-        "cursor-pointer rounded-lg border-0 bg-red-900 px-5 py-2.5 text-sm font-medium text-white transition-colors duration-200 hover:bg-red-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-900/50 disabled:cursor-not-allowed disabled:opacity-60 hover:disabled:bg-red-900",
+        "cursor-pointer rounded-lg border-0 bg-red-900 px-5 py-2.5 text-sm font-medium text-text-primary transition-colors duration-200 hover:bg-red-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-900/50 disabled:cursor-not-allowed disabled:opacity-60 hover:disabled:bg-red-900",
         className,
       )}
       {...props}

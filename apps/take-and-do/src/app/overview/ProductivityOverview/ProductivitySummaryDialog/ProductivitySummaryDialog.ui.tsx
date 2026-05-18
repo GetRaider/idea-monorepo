@@ -72,7 +72,7 @@ export function CardTitle({
   return (
     <h3
       ref={ref}
-      style={{ ...style, color: accentColor ?? "#fff" }}
+      style={{ ...style, color: accentColor ?? "var(--text-primary)" }}
       className={cn("m-0 text-base font-semibold", className)}
       {...props}
     />

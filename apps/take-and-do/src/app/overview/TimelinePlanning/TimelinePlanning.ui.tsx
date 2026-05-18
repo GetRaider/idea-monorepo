@@ -6,9 +6,12 @@ import type { ComponentProps } from "react";
 import { Input } from "@/components/Input";
 import {
   Section as ProductivitySection,
-  SectionHeader,
   SectionTitle,
+  SectionHeadBand,
+  SectionDivider,
+  SectionBody,
 } from "../productivity-blocks";
+import { APP_CHROME_HEADER_CONTROL_GAP } from "@/helpers/app-chrome-layout";
 import { cn } from "@/lib/styles/utils";
 import type { UiProps } from "@/lib/styles/ui-props";
 
@@ -16,14 +19,14 @@ export function Section({ className, ref, ...props }: UiProps<"div">) {
   return (
     <ProductivitySection
       ref={ref}
-      withBottomMargin
+      withBottomMargin={false}
       className={className}
       {...props}
     />
   );
 }
 
-export { SectionHeader, SectionTitle };
+export { SectionTitle, SectionHeadBand, SectionDivider, SectionBody };
 
 export function DateInputWrapper({ className, ref, ...props }: UiProps<"div">) {
   return (
@@ -44,7 +47,7 @@ export function DateInput({
       ref={ref}
       type={type}
       className={cn(
-        "w-auto cursor-pointer px-3 py-1.5 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:invert",
+        "w-auto min-h-8 cursor-pointer px-3 py-1.5 text-xs font-semibold leading-none [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:invert",
         className,
       )}
       {...props}
@@ -63,7 +66,7 @@ export function TaskListHeader({ className, ref, ...props }: UiProps<"div">) {
     <div
       ref={ref}
       className={cn(
-        "mb-1 grid grid-cols-[1fr_120px_100px_80px_100px] gap-3 px-3 py-2",
+        "mb-1.5 grid grid-cols-[1fr_120px_100px_80px_100px] gap-2 px-2 py-2.5",
         className,
       )}
       {...props}
@@ -89,7 +92,7 @@ export function TaskItem({ className, ref, ...props }: UiProps<"div">) {
     <div
       ref={ref}
       className={cn(
-        "mb-1.5 grid cursor-pointer grid-cols-[1fr_120px_100px_80px_100px] items-center gap-3 rounded-md bg-input-bg px-3 py-2.5 transition-all duration-200 last:mb-0 hover:bg-[#333]",
+        "mb-1.5 grid cursor-pointer grid-cols-[1fr_120px_100px_80px_100px] items-center gap-2 rounded-md bg-input-bg px-2 py-2.5 transition-all duration-200 last:mb-0 hover:bg-[#333]",
         className,
       )}
       {...props}
@@ -145,11 +148,7 @@ export function TaskCellMuted({ className, ref, ...props }: UiProps<"div">) {
 
 export function PriorityIcon({ className, ref, ...props }: UiProps<"span">) {
   return (
-    <span
-      ref={ref}
-      className={cn("shrink-0 text-base", className)}
-      {...props}
-    />
+    <span ref={ref} className={cn("shrink-0 text-sm", className)} {...props} />
   );
 }
 
@@ -158,7 +157,7 @@ export function TaskSummaryText({ className, ref, ...props }: UiProps<"span">) {
     <span
       ref={ref}
       className={cn(
-        "min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-sm font-medium text-text-primary",
+        "min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-[13px] font-medium text-text-primary",
         className,
       )}
       {...props}
@@ -231,7 +230,11 @@ export function ScheduleSelectContainer({
   return (
     <div
       ref={ref}
-      className={cn("flex items-center gap-3", className)}
+      className={cn(
+        "flex min-w-0 flex-1 flex-wrap items-center justify-end sm:flex-nowrap",
+        APP_CHROME_HEADER_CONTROL_GAP,
+        className,
+      )}
       {...props}
     />
   );

@@ -56,7 +56,7 @@ function StatsGrid({ className, ref, ...props }: UiProps<"div">) {
     <div
       ref={ref}
       className={cn(
-        "mb-10 grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-5",
+        "grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-5",
         className,
       )}
       {...props}

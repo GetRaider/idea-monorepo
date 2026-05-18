@@ -196,7 +196,7 @@ export function CalendarColorPickerPopover({
                           className="drop-shadow-[0_1px_1px_rgba(0,0,0,0.85)]"
                           strokeWidth={2.5}
                           color={
-                            hexIsReadableWithWhiteText(hex) ? "#fff" : "#111"
+                            hexIsReadableWithWhiteText(hex) ? "#e5e5e5" : "#111"
                           }
                         />
                       ) : null}

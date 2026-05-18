@@ -490,7 +490,7 @@ export function QuickMenuBody({
                 {isGoogleImported ? (
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                      <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-white" />
+                      <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-[color:var(--app-ui-white)]" />
                       <span className="truncate text-sm text-zinc-200">
                         {email ?? "Not signed in"}
                       </span>

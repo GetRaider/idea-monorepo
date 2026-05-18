@@ -58,7 +58,7 @@ export function DialogFormButton({
           ? disabled
             ? "cursor-not-allowed rounded-xl border border-black/[0.08] bg-gradient-to-b from-zinc-200/35 to-zinc-400/35 text-zinc-600 opacity-90"
             : "rounded-xl border border-black/[0.12] bg-gradient-to-b from-zinc-100 to-zinc-300 text-zinc-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)] hover:-translate-y-0.5 hover:brightness-[1.03] focus-visible:outline-zinc-400/50 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
-          : "rounded-lg border border-zinc-600 bg-transparent text-zinc-400 hover:bg-zinc-800 hover:text-white focus-visible:outline-zinc-400",
+          : "rounded-lg border border-zinc-600 bg-transparent text-zinc-400 hover:bg-zinc-800 hover:text-[color:var(--text-primary,#e5e5e5)] focus-visible:outline-zinc-400",
         className,
       )}
       {...props}

@@ -76,6 +76,10 @@ const config: Config = {
           "0%": { opacity: "0", transform: "scale(0.97) translateY(-5px)" },
           "100%": { opacity: "1", transform: "scale(1) translateY(0)" },
         },
+        "dropdown-panel-in": {
+          "0%": { opacity: "0" },
+          "100%": { opacity: "1" },
+        },
       },
       animation: {
         "gradient-shift": "gradient-shift 15s ease infinite",
@@ -83,6 +87,7 @@ const config: Config = {
         "segment-fill": "segment-fill 0.35s ease-out forwards",
         shimmer: "shimmer 1.2s ease-in-out infinite",
         "task-drop-in": "task-drop-in 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
+        "dropdown-panel-in": "dropdown-panel-in 700ms ease-out both",
       },
     },
   },

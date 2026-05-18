@@ -48,7 +48,7 @@ function DialogCloseButton({
       ref={ref}
       type={type}
       className={cn(
-        "flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-md border-0 bg-transparent p-0 text-[28px] leading-none text-zinc-400 transition-all duration-200 hover:bg-zinc-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-50 hover:disabled:bg-transparent hover:disabled:text-zinc-400",
+        "flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-md border-0 bg-transparent p-0 text-[28px] leading-none text-zinc-400 transition-all duration-200 hover:bg-zinc-800 hover:text-[color:var(--text-primary,#e5e5e5)] disabled:cursor-not-allowed disabled:opacity-50 hover:disabled:bg-transparent hover:disabled:text-zinc-400",
         className,
       )}
       {...props}
@@ -113,7 +113,10 @@ export function DialogTitle({ className, ref, ...props }: UiProps<"h2">) {
   return (
     <h2
       ref={ref}
-      className={cn("m-0 text-xl font-semibold text-white", className)}
+      className={cn(
+        "m-0 text-xl font-semibold text-[color:var(--text-primary,#e5e5e5)]",
+        className,
+      )}
       {...props}
     />
   );
@@ -183,7 +186,7 @@ export function ConfirmCancelBtn({
       ref={ref}
       type={type}
       className={cn(
-        "cursor-pointer rounded-lg border border-zinc-600 bg-transparent px-5 py-2.5 text-sm font-medium text-zinc-400 transition-all duration-200 hover:bg-zinc-800 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-400 disabled:cursor-not-allowed disabled:opacity-60 hover:disabled:bg-transparent hover:disabled:text-zinc-400",
+        "cursor-pointer rounded-lg border border-zinc-600 bg-transparent px-5 py-2.5 text-sm font-medium text-zinc-400 transition-all duration-200 hover:bg-zinc-800 hover:text-[color:var(--text-primary,#e5e5e5)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-400 disabled:cursor-not-allowed disabled:opacity-60 hover:disabled:bg-transparent hover:disabled:text-zinc-400",
         className,
       )}
       {...props}
@@ -202,7 +205,7 @@ export function ConfirmDangerBtn({
       ref={ref}
       type={type}
       className={cn(
-        "cursor-pointer rounded-lg border-0 bg-red-900 px-5 py-2.5 text-sm font-medium text-white transition-colors duration-200 hover:bg-red-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-900/50 disabled:cursor-not-allowed disabled:opacity-60 hover:disabled:bg-red-900",
+        "cursor-pointer rounded-lg border-0 bg-red-900 px-5 py-2.5 text-sm font-medium text-[color:var(--text-primary,#e5e5e5)] transition-colors duration-200 hover:bg-red-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-900/50 disabled:cursor-not-allowed disabled:opacity-60 hover:disabled:bg-red-900",
         className,
       )}
       {...props}

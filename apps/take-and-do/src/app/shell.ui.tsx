@@ -3,7 +3,11 @@
 import Link from "next/link";
 import type { ComponentProps, ReactNode } from "react";
 
-import { appChromeHeadingCurrentClass } from "@/helpers/app-chrome-layout";
+import {
+  appChromeHeadingCurrentClass,
+  APP_CHROME_PAGE_TITLE_ICON_GAP,
+  APP_CHROME_WELCOME_SECTION_MARGIN,
+} from "@/helpers/app-chrome-layout";
 import { TASKS_SIDEBAR_DEFAULT_WIDTH_PX } from "@/helpers/tasks-sidebar-layout";
 import { cn } from "@/lib/styles/utils";
 import { chromePrimaryButtonClassName } from "@/lib/styles/chrome-primary-button-classes";
@@ -141,7 +145,13 @@ export function GetStartedLink({
 }
 
 export function WelcomeSection({ className, ref, ...props }: UiProps<"div">) {
-  return <div ref={ref} className={cn("mb-8", className)} {...props} />;
+  return (
+    <div
+      ref={ref}
+      className={cn(APP_CHROME_WELCOME_SECTION_MARGIN, className)}
+      {...props}
+    />
+  );
 }
 
 type AppPageTitleProps = UiProps<"h1"> & {
@@ -159,7 +169,11 @@ export function AppPageTitle({
   return (
     <h1
       ref={ref}
-      className={cn("m-0 flex min-w-0 items-center gap-2.5", className)}
+      className={cn(
+        "m-0 flex min-w-0 items-center",
+        APP_CHROME_PAGE_TITLE_ICON_GAP,
+        className,
+      )}
       {...props}
     >
       {icon ? (

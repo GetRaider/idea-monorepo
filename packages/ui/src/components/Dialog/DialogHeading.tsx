@@ -7,7 +7,10 @@ export function DialogHeading({ className, ref, ...props }: UiProps<"h2">) {
   return (
     <h2
       ref={ref}
-      className={cn("m-0 text-2xl font-semibold text-white", className)}
+      className={cn(
+        "m-0 text-2xl font-semibold text-[color:var(--text-primary,#e5e5e5)]",
+        className,
+      )}
       {...props}
     />
   );

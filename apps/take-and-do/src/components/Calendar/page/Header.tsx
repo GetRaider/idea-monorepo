@@ -17,7 +17,7 @@ export function PageHeader({ onCreateEvent }: PageHeaderProps) {
   return (
     <WelcomeSection
       className={cn(
-        "mb-6 flex shrink-0 flex-col gap-4 sm:mb-8",
+        "flex shrink-0 flex-col gap-4",
         APP_CHROME_TITLE_ACTION_ROW,
       )}
     >

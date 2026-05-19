@@ -1,6 +1,10 @@
 import type { z } from "zod";
 
 import { HttpError } from "@/lib/api/errors";
+import {
+  calendarRepeatToGoogleRecurrence,
+  parseGoogleRecurrenceToCalendarRepeat,
+} from "@/helpers/calendar/google-calendar-repeat.helper";
 import type { GoogleCalendarEventItem } from "@/server/services/google/google-calendar.client";
 import type {
   CalendarEvent,
@@ -90,6 +94,8 @@ export function mapGoogleEventToCalendarEvent(
   });
   if (!normalizedRange) return null;
 
+  const repeat = parseGoogleRecurrenceToCalendarRepeat(e.recurrence);
+
   return {
     id,
     type: "common",
@@ -102,6 +108,7 @@ export function mapGoogleEventToCalendarEvent(
     ...(participants.length ? { participants } : {}),
     ...(description ? { description } : {}),
     ...(rsvpStatus ? { rsvpStatus } : {}),
+    ...(repeat ? { repeat } : {}),
     ...(googleRecurrence ? { googleRecurrence } : {}),
   };
 }
@@ -249,6 +256,9 @@ export function mapPushBodyToGooglePatch(
   const base: Record<string, unknown> = {
     summary,
     description,
+    ...(body.repeat
+      ? { recurrence: calendarRepeatToGoogleRecurrence(body.repeat) }
+      : {}),
   };
 
   if (body.allDay) {

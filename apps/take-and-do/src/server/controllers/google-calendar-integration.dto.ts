@@ -6,6 +6,8 @@ export const GoogleRecurrenceMetaDto = z.object({
   originalAllDay: z.boolean().optional(),
 });
 
+const CalendarRepeatRuleDto = z.enum(["daily", "weekly", "monthly"]);
+
 export const ImportedGoogleCalendarEventSchema = z.object({
   id: z.string(),
   type: z.literal("common"),
@@ -18,6 +20,7 @@ export const ImportedGoogleCalendarEventSchema = z.object({
   participants: z.array(z.string()).optional(),
   description: z.string().optional(),
   rsvpStatus: z.enum(["yes", "no", "maybe"]).optional(),
+  repeat: CalendarRepeatRuleDto.optional(),
   googleRecurrence: GoogleRecurrenceMetaDto.optional(),
   /** Local UI override; ignored by Google push until mapped to colorId. */
   color: z
@@ -62,6 +65,7 @@ export const PushEventBodyDto = z
     timeZone: z.string().optional(),
     description: z.string().optional(),
     notes: z.string().optional(),
+    repeat: CalendarRepeatRuleDto.optional(),
     recurrenceScope: z.enum(["instance", "series", "following"]).optional(),
     googleRecurrence: GoogleRecurrenceMetaDto.optional(),
   })
@@ -119,6 +123,7 @@ export const CreateEventBodyDto = z.object({
   timeZone: z.string().optional(),
   description: z.string().optional(),
   notes: z.string().optional(),
+  repeat: CalendarRepeatRuleDto.optional(),
 });
 
 export const CreateEventResponseDto = z.object({

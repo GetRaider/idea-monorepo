@@ -37,6 +37,7 @@ const GoogleCalendarEventsListResponseSchema = z.object({
           )
           .optional(),
         recurringEventId: z.string().optional(),
+        recurrence: z.array(z.string()).optional(),
         originalStartTime: z
           .object({
             date: z.string().optional(),

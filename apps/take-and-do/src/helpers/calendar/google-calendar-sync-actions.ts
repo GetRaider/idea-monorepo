@@ -62,6 +62,7 @@ export async function createConnectedGoogleCalendarEvent(
     ...(event.timeZone?.trim() ? { timeZone: event.timeZone.trim() } : {}),
     description: event.description ?? "",
     notes: event.notes ?? "",
+    ...(event.repeat ? { repeat: event.repeat } : {}),
   };
 
   const result =
@@ -91,6 +92,7 @@ export async function pushConnectedGoogleCalendarEvent(
     description: event.description ?? "",
     notes: event.notes ?? "",
     ...(event.timeZone?.trim() ? { timeZone: event.timeZone.trim() } : {}),
+    ...(event.repeat ? { repeat: event.repeat } : {}),
   };
 
   if (recurrenceScope) {

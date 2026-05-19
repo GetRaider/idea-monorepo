@@ -216,14 +216,14 @@ export function QuickMenuBody({
 
       {kind === "common" ? (
         <div className={cn(section, "border-b border-white/[0.05]")}>
-          <p className={sectionTitleClass}>Destination</p>
+          <p className={sectionTitleClass}>Calendar</p>
           <Dropdown<CommonCreateDestination>
             options={[
               {
                 value: "internal",
-                label: "Internal (this calendar)",
+                label: "Internal ",
               },
-              { value: "google", label: "Google Calendar" },
+              { value: "google", label: "Google" },
             ]}
             value={
               payload.mode === "existing"

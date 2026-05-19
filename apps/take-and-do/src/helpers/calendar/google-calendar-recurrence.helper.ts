@@ -2,6 +2,7 @@ import { GOOGLE_CALENDAR_EVENT_ID_PREFIX } from "@/constants/calendar.constants"
 import type {
   CalendarEvent,
   GoogleCalendarRecurrenceMeta,
+  GoogleCalendarRecurrenceScope,
 } from "@/types/calendar.types";
 
 function looksLikeGoogleOccurrenceSuffix(s: string): boolean {
@@ -57,4 +58,44 @@ export function needsGoogleCalendarRecurrenceScope(
   event: CalendarEvent,
 ): boolean {
   return !!getEffectiveGoogleRecurrence(event)?.recurringEventId;
+}
+
+export function googleEventMatchesRecurrenceScope(
+  event: CalendarEvent,
+  anchor: CalendarEvent,
+  scope: GoogleCalendarRecurrenceScope,
+): boolean {
+  if (scope === "instance") return event.id === anchor.id;
+
+  const anchorMeta = getEffectiveGoogleRecurrence(anchor);
+  const masterId = anchorMeta?.recurringEventId;
+  if (!masterId) return event.id === anchor.id;
+
+  const eventMeta = getEffectiveGoogleRecurrence(event);
+  if (eventMeta?.recurringEventId !== masterId) return false;
+  if (scope === "series") return true;
+
+  const anchorStart = anchorMeta.originalStart ?? anchor.start;
+  const eventStart = eventMeta.originalStart ?? event.start;
+  const anchorMs = new Date(anchorStart).getTime();
+  const eventMs = new Date(eventStart).getTime();
+  if (Number.isNaN(anchorMs) || Number.isNaN(eventMs)) return false;
+  return eventMs >= anchorMs;
+}
+
+/** Fields safe to mirror across recurring instances (not start/end). */
+export function googleRecurrenceSeriesLocalPatchKeys(): ReadonlySet<string> {
+  return new Set([
+    "title",
+    "description",
+    "notes",
+    "meetingUrl",
+    "participants",
+    "timeZone",
+    "repeat",
+    "reminderMinutes",
+    "rsvpStatus",
+    "rsvpDeclineReason",
+    "color",
+  ]);
 }

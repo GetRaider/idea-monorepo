@@ -38,7 +38,10 @@ import {
   DEFAULT_CALENDAR_KIND_VISIBILITY,
 } from "@/types/calendar.types";
 
-import { CalendarPlanningToolbar } from "./Toolbar";
+import {
+  CalendarPlanningToolbar,
+  type PlanningTimeGridSlotMinutes,
+} from "./Toolbar";
 import { formatAxisSlotTime } from "@/helpers/calendar/calendar-axis-time";
 import {
   calendarStripeHex,
@@ -54,6 +57,10 @@ import {
 } from "@/helpers/calendar/calendar-event-mapper";
 import { PLANNING_CALENDAR_CUSTOM_VIEWS } from "@/helpers/calendar/planning-calendar-views";
 import { scheduleTadEventStripePaint } from "@/helpers/calendar/planning-calendar-event-stripe";
+import {
+  ensureTimegridOverlapLayoutObserver,
+  scheduleRepaintTimegridOverlapLayout,
+} from "@/helpers/calendar/planning-calendar-overlap-layout";
 import { isPlanningCalendarEventKind } from "@/helpers/calendar/planning-calendar-time-format";
 import type { PlanningCalendarToolbarMeta } from "@/helpers/calendar/planning-calendar-toolbar-meta";
 import { usePlanningCalendarBacklogDraggable } from "@/hooks/calendar/use-planning-calendar-backlog-draggable";
@@ -152,6 +159,8 @@ export const PlanningCalendar = forwardRef<
   const applyingProgrammaticSelectRef = useRef(false);
   const [toolbarMeta, setToolbarMeta] =
     useState<PlanningCalendarToolbarMeta | null>(null);
+  const [timeGridSlotMinutes, setTimeGridSlotMinutes] =
+    useState<PlanningTimeGridSlotMinutes>(30);
 
   const timeGrid = usePlanningCalendarTimeGridChrome({
     fcRef,
@@ -178,6 +187,11 @@ export const PlanningCalendar = forwardRef<
   );
 
   const zoneCount = axisTimeZones.length;
+
+  const slotDurationIso = useMemo(
+    () => (timeGridSlotMinutes === 15 ? "00:15:00" : ("00:30:00" as const)),
+    [timeGridSlotMinutes],
+  );
 
   const slotLabelContent = useCallback(
     (arg: SlotLabelContentArg) => {
@@ -250,21 +264,19 @@ export const PlanningCalendar = forwardRef<
   }, [events, visibleKinds, calendarColorTheme]);
 
   /**
-   * FullCalendar often skips updating inline `backgroundColor` when only styling inputs change for
-   * an existing event id. Remount when computed fills or calendar chrome change so coerced colors
-   * and kind/google defaults appear without a full page reload.
+   * FullCalendar sometimes skips updating inline `backgroundColor` when theme inputs change.
+   * Remount on theme changes only — do not fold the loaded event list into this key: changing
+   * views updates the visible range, server sync refetches events, and a new signature would
+   * remount the calendar and snap back to `initialView`.
    */
   const fcColorSignature = useMemo(() => {
-    const body = fcEvents
-      .map((ev) => `${String(ev.id)}:${String(ev.backgroundColor ?? "")}`)
-      .join("|");
     const kindJson =
       calendarColorTheme?.kindColors != null
         ? JSON.stringify(calendarColorTheme.kindColors)
         : "";
     const google = calendarColorTheme?.googleCalendarColor ?? "";
-    return `${body}|${kindJson}|${google}`;
-  }, [fcEvents, calendarColorTheme]);
+    return `${kindJson}|${google}`;
+  }, [calendarColorTheme]);
 
   const prevFcColorSignatureRef = useRef<string | null>(null);
 
@@ -386,13 +398,23 @@ export const PlanningCalendar = forwardRef<
     [onEventReceive],
   );
 
+  const scheduleOverlapLayoutRepaint = useCallback((eventApis?: EventApi[]) => {
+    scheduleRepaintTimegridOverlapLayout(
+      fcContainerRef.current,
+      eventsRef.current,
+      visibleKindsRef.current,
+      eventApis,
+    );
+  }, []);
+
   const handleDrop = useCallback(
     (info: EventDropArg) => {
       const patch = fcEventRangeToScheduledPatch(info.event);
       if (!patch) return;
       onEventTimesUpdated(info.event.id, patch, info.revert);
+      scheduleOverlapLayoutRepaint(info.view.calendar.getEvents());
     },
-    [onEventTimesUpdated],
+    [onEventTimesUpdated, scheduleOverlapLayoutRepaint],
   );
 
   const handleResize = useCallback(
@@ -400,21 +422,27 @@ export const PlanningCalendar = forwardRef<
       const patch = fcEventRangeToScheduledPatch(info.event);
       if (!patch) return;
       onEventTimesUpdated(info.event.id, patch, info.revert);
+      scheduleOverlapLayoutRepaint(info.view.calendar.getEvents());
     },
-    [onEventTimesUpdated],
+    [onEventTimesUpdated, scheduleOverlapLayoutRepaint],
   );
 
-  const handleEventDidMount = useCallback((info: EventMountArg) => {
-    const ep = info.event.extendedProps;
-    const baseColor = String(ep.eventCalendarBaseColor ?? "");
-    const bodyFill = String(ep.eventBodyFill ?? "");
-    const useStripe = Boolean(ep.useCalendarStripe);
-    scheduleTadEventStripePaint(info.el, {
-      useStripe,
-      baseColor,
-      bodyFill,
-    });
-  }, []);
+  const handleEventDidMount = useCallback(
+    (info: EventMountArg) => {
+      const ep = info.event.extendedProps;
+      const baseColor = String(ep.eventCalendarBaseColor ?? "");
+      const bodyFill = String(ep.eventBodyFill ?? "");
+      const useStripe = Boolean(ep.useCalendarStripe);
+      scheduleTadEventStripePaint(info.el, {
+        useStripe,
+        baseColor,
+        bodyFill,
+      });
+
+      scheduleOverlapLayoutRepaint(info.view.calendar.getEvents());
+    },
+    [scheduleOverlapLayoutRepaint],
+  );
 
   const repaintMountedEventStripes = useCallback((eventApis: EventApi[]) => {
     const t = calendarColorThemeRef.current ?? {};
@@ -436,8 +464,9 @@ export const PlanningCalendar = forwardRef<
   const handleEventsSet = useCallback(
     (eventApis: EventApi[]) => {
       repaintMountedEventStripes(eventApis);
+      scheduleOverlapLayoutRepaint(eventApis);
     },
-    [repaintMountedEventStripes],
+    [repaintMountedEventStripes, scheduleOverlapLayoutRepaint],
   );
 
   /**
@@ -448,38 +477,72 @@ export const PlanningCalendar = forwardRef<
   useLayoutEffect(() => {
     const api = fcRef.current?.getApi();
     if (!api) return;
-    repaintMountedEventStripes(api.getEvents());
+    const repaintLayout = () => {
+      const list = api.getEvents();
+      repaintMountedEventStripes(list);
+      scheduleOverlapLayoutRepaint(list);
+    };
+    repaintLayout();
     let rafNested = 0;
     const raf1 = requestAnimationFrame(() => {
-      repaintMountedEventStripes(api.getEvents());
-      rafNested = requestAnimationFrame(() =>
-        repaintMountedEventStripes(api.getEvents()),
-      );
+      repaintLayout();
+      rafNested = requestAnimationFrame(repaintLayout);
     });
     return () => {
       cancelAnimationFrame(raf1);
       cancelAnimationFrame(rafNested);
     };
-  }, [events, calendarColorTheme, visibleKinds, repaintMountedEventStripes]);
+  }, [
+    events,
+    calendarColorTheme,
+    visibleKinds,
+    repaintMountedEventStripes,
+    scheduleOverlapLayoutRepaint,
+  ]);
+
+  useEffect(() => {
+    ensureTimegridOverlapLayoutObserver(fcContainerRef.current, () => ({
+      sourceEvents: eventsRef.current,
+      visibleKinds: visibleKindsRef.current,
+      mountedEventApis: fcRef.current?.getApi().getEvents() ?? [],
+    }));
+  }, []);
 
   useLayoutEffect(() => {
     const api = fcRef.current?.getApi();
     if (!api || !draftSelectionHighlight) return;
-    applyingProgrammaticSelectRef.current = true;
-    try {
-      api.select({
-        start: draftSelectionHighlight.start,
-        end: draftSelectionHighlight.endExclusive,
-        allDay: draftSelectionHighlight.allDay,
-      });
-    } finally {
-      applyingProgrammaticSelectRef.current = false;
-    }
+    const { start, endExclusive, allDay } = draftSelectionHighlight;
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (cancelled) return;
+      applyingProgrammaticSelectRef.current = true;
+      try {
+        api.select({ start, end: endExclusive, allDay });
+      } finally {
+        applyingProgrammaticSelectRef.current = false;
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [draftSelectionHighlight, draftSelectionVersion]);
+
+  useEffect(() => {
+    if (!timeGrid.activeViewType.startsWith("timeGrid")) return;
+    const raf = requestAnimationFrame(() => {
+      timeGrid.syncTimeAxisCorner();
+      requestAnimationFrame(() => {
+        timeGrid.measureNowLineGeometry(timeGrid.activeViewType);
+        timeGrid.notifyLayoutResize();
+      });
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [timeGridSlotMinutes, timeGrid]);
 
   return (
     <div
       className="take-and-do-calendar calendar-surface flex min-h-0 flex-1 flex-col overflow-hidden"
+      data-time-grid-slot-min={timeGridSlotMinutes}
       data-draft-kind={draftSelectionKind ?? undefined}
       style={
         {
@@ -500,6 +563,8 @@ export const PlanningCalendar = forwardRef<
         toolbarMeta={toolbarMeta}
         slotTime24h={slotTime24h}
         onSlotTime24hChange={onSlotTime24hChange}
+        timeGridSlotMinutes={timeGridSlotMinutes}
+        onTimeGridSlotMinutesChange={setTimeGridSlotMinutes}
         onAlignViewToNow={timeGrid.scrollTimeGridToNowCentered}
         onToolbarNavigate={playToolbarNavigateAnimation}
       />
@@ -519,7 +584,7 @@ export const PlanningCalendar = forwardRef<
             ]}
             views={PLANNING_CALENDAR_CUSTOM_VIEWS}
             headerToolbar={false}
-            initialView="timeGridRollingWeek"
+            initialView={timeGrid.activeViewType}
             firstDay={1}
             editable
             eventResizableFromStart
@@ -527,7 +592,7 @@ export const PlanningCalendar = forwardRef<
             selectMirror={false}
             selectLongPressDelay={0}
             selectMinDistance={5}
-            slotDuration="00:15:00"
+            slotDuration={slotDurationIso}
             snapDuration="00:15:00"
             slotLabelInterval="01:00:00"
             slotLabelFormat={slotLabelFormat}
@@ -564,6 +629,7 @@ export const PlanningCalendar = forwardRef<
                 {...arg}
                 slotTime24h={slotTime24h}
                 draftSelectionKind={draftSelectionKind}
+                gridSlotMinutes={timeGridSlotMinutes}
               />
             )}
           />

@@ -137,6 +137,15 @@
   color: rgba(228, 228, 231, 0.78);
   white-space: nowrap;
   padding-inline: 0.06rem;
+  border-radius: 3px;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.take-and-do-calendar .fc .tad-slot-tz-row__cell:hover {
+  color: rgba(240, 240, 245, 0.92);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .take-and-do-calendar .fc .tad-slot-tz-row__cell--muted {
@@ -188,6 +197,29 @@
   letter-spacing: 0.02em;
   color: rgba(200, 200, 210, 0.82);
   white-space: nowrap;
+  cursor: pointer;
+  border: none;
+  border-radius: 4px;
+  padding: 2px 4px;
+  margin: -2px -4px;
+  background: transparent;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.take-and-do-calendar .fc .tad-axis-corner__tz:hover {
+  color: rgba(236, 236, 242, 0.95);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.take-and-do-calendar .fc .tad-axis-corner__tz:focus-visible {
+  outline: 2px solid rgba(196, 196, 204, 0.45);
+  outline-offset: 1px;
+}
+
+.take-and-do-calendar .fc .tad-axis-corner__tz + .tad-axis-corner__tz {
+  margin-inline-start: 1rem;
 }
 
 .take-and-do-calendar .fc .tad-axis-corner__tz--muted {
@@ -286,6 +318,21 @@
   column-gap: 4px;
   padding-left: 4px;
   padding-right: 4px;
+}
+
+.take-and-do-calendar
+  .fc
+  .fc-event-main
+  > .fc-event-main-frame.tad-planning-event-inner.tad-planning-event-inner--coarse-micro {
+  align-items: center !important;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.take-and-do-calendar[data-time-grid-slot-min="30"]
+  .fc
+  .fc-timegrid-event.fc-timegrid-event-short.fc-v-event.fc-event {
+  overflow: visible !important;
 }
 
 .take-and-do-calendar .fc .fc-timegrid-event .fc-v-event .fc-event-main-frame {
@@ -520,6 +567,27 @@
 /* Column insets handle horizontal padding; extra per-event margin skews overlap geometry */
 .take-and-do-calendar .fc .fc-timegrid-event-harness .fc-v-event {
   margin-inline: 0;
+}
+
+/*
+ * Default: full column width + z-index stacking (inline geometry also set in JS after FC layout).
+ * Same-start header conflict: right column only so peer title/time stay visible on the left.
+ */
+.take-and-do-calendar .fc .fc-timegrid-col-events .fc-timegrid-event-harness {
+  left: 0 !important;
+  right: 0 !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
+.take-and-do-calendar
+  .fc
+  .fc-timegrid-col-events
+  .fc-timegrid-event-harness.tad-overlap-same-start-column {
+  left: 50% !important;
+  right: 0 !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
 }
 
 .take-and-do-calendar .fc.fc-direction-ltr .fc-timegrid-col-events {

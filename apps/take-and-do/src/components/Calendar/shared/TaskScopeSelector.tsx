@@ -225,9 +225,11 @@ export function CalendarTaskScopeSelector({
   );
 
   useEffect(() => {
-    if (migratedValue !== value) onChange(migratedValue);
+    if (!taskScopeTokenArraysEqual(migratedValue, value)) {
+      onChange(migratedValue);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [migratedValue]);
+  }, [migratedValue, value]);
 
   const combinedLabel = (token: string) =>
     displayLabelForToken(token, boardsById, summaryByToken);
@@ -375,6 +377,14 @@ export function CalendarTaskScopeSelector({
       </div>
     </div>
   );
+}
+
+function taskScopeTokenArraysEqual(a: string[], b: string[]): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
 }
 
 function taskToken(boardId: string, taskId: string): ScopeToken {

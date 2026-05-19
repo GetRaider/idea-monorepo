@@ -53,7 +53,16 @@ export type CalendarPagePlanningHandlersDeps = {
   isGuest: boolean;
   bumpServerCalendar: () => void;
   replaceScheduled: (event: CalendarEvent) => void;
+  replaceScheduledForGoogleScope: (
+    event: CalendarEvent,
+    scope: GoogleCalendarRecurrenceScope,
+  ) => void;
   patchScheduled: (id: string, patch: Partial<CalendarEvent>) => void;
+  patchScheduledForGoogleScope: (
+    anchorId: string,
+    patch: Partial<CalendarEvent>,
+    scope: GoogleCalendarRecurrenceScope,
+  ) => void;
   addScheduled: (event: CalendarEvent) => void;
   removeScheduled: (id: string) => void;
   removeGoogleSeriesByMasterId: (masterId: string) => void;
@@ -274,8 +283,13 @@ export function useCalendarPagePlanningHandlers(
       const prompt = deps.googleScopePrompt;
       deps.setGoogleScopePrompt(null);
       if (!prompt) return;
+
+      const patchIsColorOnly =
+        prompt.kind === "quick" &&
+        Object.keys(prompt.patch).every((key) => key === "color");
+
       if (prompt.kind === "editor") {
-        deps.replaceScheduled(prompt.event);
+        deps.replaceScheduledForGoogleScope(prompt.event, scope);
         void deps.pushGoogleThenSync(prompt.event, scope);
         deps.setEditorOpen(false);
         deps.setCreateRange(null);
@@ -292,16 +306,23 @@ export function useCalendarPagePlanningHandlers(
             toast.error("Could not update calendar event");
             return;
           }
-          deps.patchScheduled(
+          deps.patchScheduledForGoogleScope(
             prompt.id,
             prompt.patch as Partial<CalendarEvent>,
+            scope,
           );
           deps.bumpServerCalendar();
         })();
         return;
       }
-      deps.patchScheduled(prompt.id, prompt.patch as Partial<CalendarEvent>);
-      void deps.pushGoogleThenSync(prompt.merged, scope);
+      deps.patchScheduledForGoogleScope(
+        prompt.id,
+        prompt.patch as Partial<CalendarEvent>,
+        scope,
+      );
+      if (!patchIsColorOnly) {
+        void deps.pushGoogleThenSync(prompt.merged, scope);
+      }
     },
     [deps],
   );

@@ -178,31 +178,30 @@ export function CalendarPanel({
         className="contents"
       >
         <section className="space-y-2">
-          <button
-            type="button"
-            className="flex w-full min-w-0 items-center gap-1 rounded-lg border-0 bg-transparent px-2 py-2 text-left transition-colors hover:bg-white/[0.06]"
-            onClick={() => toggleCalPanelSection("month")}
-            aria-expanded={openSections.month}
-          >
-            <FolderChevron isExpanded={openSections.month}>
-              <ChevronRightIcon size={11} />
-            </FolderChevron>
-            <div className="flex min-w-0 flex-1 items-center">
+          <div className="flex w-full min-w-0 items-center gap-1 rounded-lg px-2 py-2 transition-colors hover:bg-white/[0.06]">
+            <button
+              type="button"
+              className="flex min-w-0 flex-1 items-center gap-1 border-0 bg-transparent py-0 text-left text-inherit"
+              onClick={() => toggleCalPanelSection("month")}
+              aria-expanded={openSections.month}
+            >
+              <FolderChevron isExpanded={openSections.month}>
+                <ChevronRightIcon size={11} />
+              </FolderChevron>
               <span className={TASKS_SIDEBAR_SECTION_HEADER_TEXT_CLASS}>
                 Month
               </span>
-            </div>
+            </button>
             <div className="flex shrink-0 items-center justify-end gap-1.5">
               <button
                 type="button"
                 className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border-0 bg-transparent text-zinc-400 hover:bg-white/[0.06] hover:text-text-primary"
                 aria-label="Previous month"
-                onClick={(e) => {
-                  e.stopPropagation();
+                onClick={() =>
                   setPickerMonth(
                     (d) => new Date(d.getFullYear(), d.getMonth() - 1, 1),
-                  );
-                }}
+                  )
+                }
               >
                 <ChevronLeft size={14} aria-hidden />
               </button>
@@ -213,17 +212,16 @@ export function CalendarPanel({
                 type="button"
                 className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border-0 bg-transparent text-zinc-400 hover:bg-white/[0.06] hover:text-text-primary"
                 aria-label="Next month"
-                onClick={(e) => {
-                  e.stopPropagation();
+                onClick={() =>
                   setPickerMonth(
                     (d) => new Date(d.getFullYear(), d.getMonth() + 1, 1),
-                  );
-                }}
+                  )
+                }
               >
                 <ChevronRight size={14} aria-hidden />
               </button>
             </div>
-          </button>
+          </div>
 
           {openSections.month ? (
             <>
@@ -545,32 +543,31 @@ export function CalendarPanel({
             openSections.backlog && "flex min-h-0 flex-1 flex-col",
           )}
         >
-          <button
-            type="button"
-            className="flex w-full shrink-0 min-w-0 items-center gap-1 rounded-lg border-0 bg-transparent px-2 py-2 text-left transition-colors hover:bg-white/[0.06]"
-            onClick={() => toggleCalPanelSection("backlog")}
-            aria-expanded={openSections.backlog}
-          >
-            <FolderChevron isExpanded={openSections.backlog}>
-              <ChevronRightIcon size={11} />
-            </FolderChevron>
-            <div className="flex min-w-0 flex-1 items-center gap-2">
-              <span className={TASKS_SIDEBAR_SECTION_HEADER_TEXT_CLASS}>
-                Events Backlog
-              </span>
-              <AppTooltip content="Reusable backlog events">
-                <span className="inline-flex">
-                  <InfoCircleIcon size={16} className="text-zinc-500" />
+          <div className="flex w-full shrink-0 min-w-0 items-center gap-1 rounded-lg px-2 py-2 transition-colors hover:bg-white/[0.06]">
+            <button
+              type="button"
+              className="flex min-w-0 flex-1 items-center gap-1 border-0 bg-transparent py-0 text-left text-inherit"
+              onClick={() => toggleCalPanelSection("backlog")}
+              aria-expanded={openSections.backlog}
+            >
+              <FolderChevron isExpanded={openSections.backlog}>
+                <ChevronRightIcon size={11} />
+              </FolderChevron>
+              <div className="flex min-w-0 flex-1 items-center gap-2">
+                <span className={TASKS_SIDEBAR_SECTION_HEADER_TEXT_CLASS}>
+                  Events Backlog
                 </span>
-              </AppTooltip>
-            </div>
+                <AppTooltip content="Reusable backlog events">
+                  <span className="inline-flex">
+                    <InfoCircleIcon size={16} className="text-zinc-500" />
+                  </span>
+                </AppTooltip>
+              </div>
+            </button>
             <div className="flex shrink-0 items-center gap-1">
               <button
                 type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onRequestNewTemplate();
-                }}
+                onClick={onRequestNewTemplate}
                 className="flex h-8 w-8 items-center justify-center rounded-lg border-0 bg-transparent text-zinc-400 hover:bg-white/[0.06] hover:text-text-primary"
                 aria-label="Add backlog template"
                 title="Add backlog template"
@@ -578,7 +575,7 @@ export function CalendarPanel({
                 <PlusIcon size={16} aria-hidden />
               </button>
             </div>
-          </button>
+          </div>
 
           {openSections.backlog ? (
             <div className="mt-2 flex min-h-0 flex-1 flex-col space-y-2">

@@ -3,7 +3,7 @@ export type CalendarEventType = "common" | "timeBlock" | "task";
 /** IANA time zone, e.g. "Europe/Warsaw". */
 export type CalendarTimeZone = string;
 
-/** Repeat rules supported by the UI (no RRULE yet). */
+/** Repeat rules supported by the UI (mapped to Google RRULE on sync). */
 export type CalendarRepeatRule = "daily" | "weekly" | "monthly";
 
 /** UI value type for dropdowns that include “does not repeat”. */

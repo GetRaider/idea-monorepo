@@ -10,6 +10,8 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 
+import { X } from "lucide-react";
+
 import { Input } from "@/components/Input";
 import { cn } from "@/lib/styles/utils";
 import type { CalendarAxisTimeZone } from "@/types/calendar.types";
@@ -18,7 +20,12 @@ import {
   AXIS_TZ_LOCAL_SENTINEL,
   formatAxisHeaderLabel,
 } from "@/helpers/calendar/calendar-axis-time";
-import { timeZoneOptions } from "../shared/timezones";
+import {
+  formatDeviceTimeZoneYourLocationLabel,
+  formatTimeZoneOptionLabel,
+  timeZoneListIdentityKey,
+  timeZoneOptions,
+} from "../shared/timezones";
 
 type PanelMode = "menu" | "pick" | "rename" | "add";
 
@@ -32,16 +39,20 @@ export function CalendarAxisCorner({
   onZonesChange,
 }: CalendarAxisCornerProps) {
   const [tick, setTick] = useState(0);
-  const pickChoices = useMemo(() => zonePickChoices(), []);
-
   const [open, setOpen] = useState(false);
   const [panel, setPanel] = useState<PanelMode>("menu");
   const [activeId, setActiveId] = useState<string | null>(null);
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
   const [renameDraft, setRenameDraft] = useState("");
   const [filter, setFilter] = useState("");
-  const [addSelectedIana, setAddSelectedIana] = useState<string | null>(null);
+  const [addSelectedIanas, setAddSelectedIanas] = useState<string[]>([]);
   const [addNameDraft, setAddNameDraft] = useState("");
+
+  const pickChoices = useMemo(() => {
+    void tick;
+    void open;
+    return zonePickChoices(new Date());
+  }, [tick, open]);
 
   const popoverRef = useRef<HTMLDivElement>(null);
   const cornerWrapRef = useRef<HTMLDivElement>(null);
@@ -63,7 +74,7 @@ export function CalendarAxisCorner({
     setAnchorRect(null);
     setFilter("");
     setRenameDraft("");
-    setAddSelectedIana(null);
+    setAddSelectedIanas([]);
     setAddNameDraft("");
   }, []);
 
@@ -71,10 +82,10 @@ export function CalendarAxisCorner({
     setActiveId(null);
     setAnchorRect(rect);
     setPanel("add");
-    setAddSelectedIana(null);
+    setAddSelectedIanas([]);
     setAddNameDraft("");
     setFilter("");
-    setPopoverPos(clampPopover(rect.left, rect.bottom + 6, 240, 300));
+    setPopoverPos(clampPopover(rect.left, rect.bottom + 6, 380, 320));
     setOpen(true);
   }, []);
 
@@ -125,6 +136,8 @@ export function CalendarAxisCorner({
     setPopoverPos(c);
   }, [open, anchorRect]);
 
+  const addSelectedIanasKey = addSelectedIanas.join("\0");
+
   useLayoutEffect(() => {
     measurePopover();
   }, [
@@ -132,7 +145,7 @@ export function CalendarAxisCorner({
     open,
     panel,
     filter,
-    addSelectedIana,
+    addSelectedIanasKey,
     addNameDraft,
     tick,
   ]);
@@ -155,18 +168,36 @@ export function CalendarAxisCorner({
   );
 
   const commitAdd = useCallback(() => {
-    if (!addSelectedIana) return;
-    const label = addNameDraft.trim();
-    onZonesChange([
-      ...zones,
-      {
-        id: crypto.randomUUID(),
-        iana: addSelectedIana,
-        label: label.length > 0 ? label : null,
-      },
-    ]);
+    if (addSelectedIanas.length === 0) return;
+    const customLabel = addNameDraft.trim();
+    const sharedLabel =
+      addSelectedIanas.length === 1 && customLabel.length > 0
+        ? customLabel
+        : null;
+    const existingIana = new Set(zones.map((z) => z.iana));
+    const toAdd = addSelectedIanas.filter((iana) => !existingIana.has(iana));
+    if (toAdd.length === 0) {
+      close();
+      return;
+    }
+    const newEntries: CalendarAxisTimeZone[] = toAdd.map((iana) => ({
+      id: crypto.randomUUID(),
+      iana,
+      label: sharedLabel,
+    }));
+    onZonesChange([...newEntries, ...zones]);
     close();
-  }, [addSelectedIana, addNameDraft, zones, onZonesChange, close]);
+  }, [addSelectedIanas, addNameDraft, zones, onZonesChange, close]);
+
+  const toggleAddSelectionFromList = useCallback((iana: string) => {
+    setAddSelectedIanas((prev) =>
+      prev.includes(iana) ? prev.filter((x) => x !== iana) : [...prev, iana],
+    );
+  }, []);
+
+  const removeFromAddSelection = useCallback((iana: string) => {
+    setAddSelectedIanas((prev) => prev.filter((x) => x !== iana));
+  }, []);
 
   const handleRemove = useCallback(() => {
     if (!activeId || zones.length <= 1) return;
@@ -201,6 +232,24 @@ export function CalendarAxisCorner({
 
   const headerNow = new Date();
 
+  function isPickRowSelected(value: string): boolean {
+    if (!activeZone) return false;
+    if (activeZone.iana === AXIS_TZ_LOCAL_SENTINEL) {
+      return value === AXIS_TZ_LOCAL_SENTINEL;
+    }
+    if (value === AXIS_TZ_LOCAL_SENTINEL) return false;
+    return (
+      timeZoneListIdentityKey(value, headerNow) ===
+      timeZoneListIdentityKey(activeZone.iana, headerNow)
+    );
+  }
+
+  function addSelectionChipLabel(iana: string): string {
+    return iana === AXIS_TZ_LOCAL_SENTINEL
+      ? formatDeviceTimeZoneYourLocationLabel(headerNow)
+      : formatTimeZoneOptionLabel(iana, headerNow);
+  }
+
   const menuPanel = open && anchorRect && popoverPos && (
     <div
       ref={popoverRef}
@@ -211,7 +260,7 @@ export function CalendarAxisCorner({
         top: popoverPos.top,
         minWidth:
           panel === "pick" || panel === "add"
-            ? 232
+            ? 360
             : panel === "rename"
               ? 200
               : 168,
@@ -269,6 +318,16 @@ export function CalendarAxisCorner({
             className="py-1.5 text-xs"
             maxLength={80}
           />
+          {activeZone ? (
+            <p className="mt-1 text-[10px] leading-snug text-zinc-500">
+              Current:{" "}
+              <span className="font-medium text-zinc-300">
+                {activeZone.iana === AXIS_TZ_LOCAL_SENTINEL
+                  ? formatDeviceTimeZoneYourLocationLabel(headerNow)
+                  : formatTimeZoneOptionLabel(activeZone.iana, headerNow)}
+              </span>
+            </p>
+          ) : null}
           <ul className="mt-1 max-h-52 overflow-auto overscroll-contain">
             {filteredPick.length === 0 ? (
               <li className="px-2 py-2 text-zinc-500">No matches</li>
@@ -277,7 +336,11 @@ export function CalendarAxisCorner({
                 <li key={c.value}>
                   <button
                     type="button"
-                    className="w-full truncate px-2 py-1.5 text-left text-zinc-200 hover:bg-white/10"
+                    className={cn(
+                      "w-full truncate rounded-md px-2 py-1.5 text-left text-zinc-200 transition-colors hover:bg-white/10",
+                      isPickRowSelected(c.value) &&
+                        "bg-white/[0.12] text-text-primary ring-1 ring-inset ring-white/20",
+                    )}
                     onClick={() => handlePickZone(c.value)}
                   >
                     {c.label}
@@ -300,6 +363,12 @@ export function CalendarAxisCorner({
             placeholder="Optional name (e.g. EU)"
             className="py-1.5 text-xs"
             maxLength={12}
+            disabled={addSelectedIanas.length !== 1}
+            title={
+              addSelectedIanas.length !== 1
+                ? "Optional name applies when exactly one timezone is selected."
+                : undefined
+            }
           />
           <Input
             value={filter}
@@ -308,6 +377,37 @@ export function CalendarAxisCorner({
             className="py-1.5 text-xs"
             maxLength={80}
           />
+          <div className="rounded-md border border-white/[0.08] bg-white/[0.04] px-2 py-1.5">
+            <div className="text-[10px] font-medium text-zinc-500">
+              Selected:
+            </div>
+            {addSelectedIanas.length === 0 ? (
+              <p className="mt-1 text-[11px] font-normal text-zinc-500">
+                Choose timezones below.
+              </p>
+            ) : (
+              <ul className="mt-1.5 flex max-h-28 flex-col gap-1 overflow-y-auto overscroll-contain">
+                {addSelectedIanas.map((iana) => (
+                  <li
+                    key={iana}
+                    className="flex min-h-0 items-start gap-1 rounded-md bg-white/[0.06] px-1.5 py-1"
+                  >
+                    <span className="min-w-0 flex-1 break-words text-[11px] font-medium leading-snug text-zinc-200">
+                      {addSelectionChipLabel(iana)}
+                    </span>
+                    <button
+                      type="button"
+                      className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded border-0 bg-transparent text-zinc-500 transition-colors hover:bg-white/10 hover:text-text-primary"
+                      aria-label={`Remove ${addSelectionChipLabel(iana)}`}
+                      onClick={() => removeFromAddSelection(iana)}
+                    >
+                      <X className="h-3.5 w-3.5" strokeWidth={2.5} />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
           <ul className="max-h-44 min-h-0 overflow-auto overscroll-contain rounded-md border border-white/5">
             {filteredPick.length === 0 ? (
               <li className="px-2 py-2 text-zinc-500">No matches</li>
@@ -317,10 +417,11 @@ export function CalendarAxisCorner({
                   <button
                     type="button"
                     className={cn(
-                      "w-full truncate px-2 py-1.5 text-left text-zinc-200 hover:bg-white/10",
-                      addSelectedIana === c.value && "bg-white/12",
+                      "w-full truncate rounded-md px-2 py-1.5 text-left text-zinc-200 transition-colors hover:bg-white/10",
+                      addSelectedIanas.includes(c.value) &&
+                        "bg-white/[0.12] text-text-primary ring-1 ring-inset ring-white/20",
                     )}
-                    onClick={() => setAddSelectedIana(c.value)}
+                    onClick={() => toggleAddSelectionFromList(c.value)}
                   >
                     {c.label}
                   </button>
@@ -338,10 +439,10 @@ export function CalendarAxisCorner({
             </button>
             <button
               type="button"
-              disabled={!addSelectedIana}
+              disabled={addSelectedIanas.length === 0}
               className={cn(
                 "rounded-md px-2.5 py-1 font-medium",
-                addSelectedIana
+                addSelectedIanas.length > 0
                   ? "bg-zinc-600 text-text-primary hover:bg-zinc-500"
                   : "cursor-not-allowed bg-zinc-700 text-zinc-500",
               )}
@@ -415,7 +516,11 @@ export function CalendarAxisCorner({
             key={z.id}
             type="button"
             className="tad-axis-corner__tz"
-            title={z.iana === AXIS_TZ_LOCAL_SENTINEL ? "This device" : z.iana}
+            title={
+              z.iana === AXIS_TZ_LOCAL_SENTINEL
+                ? formatDeviceTimeZoneYourLocationLabel(headerNow)
+                : z.iana
+            }
             onClick={(e) => {
               const r = (
                 e.currentTarget as HTMLButtonElement
@@ -434,10 +539,13 @@ export function CalendarAxisCorner({
   );
 }
 
-function zonePickChoices(): { value: string; label: string }[] {
+function zonePickChoices(at: Date): { value: string; label: string }[] {
   const fromIntl = timeZoneOptions().filter((o) => o.value !== "");
   return [
-    { value: AXIS_TZ_LOCAL_SENTINEL, label: "This device" },
+    {
+      value: AXIS_TZ_LOCAL_SENTINEL,
+      label: formatDeviceTimeZoneYourLocationLabel(at),
+    },
     ...fromIntl.map((o) => ({ value: o.value, label: o.label })),
   ];
 }

@@ -1,7 +1,13 @@
 "use client";
 
 import type { CalendarApi } from "@fullcalendar/core";
-import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Minus,
+  Plus,
+} from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { cn } from "@/lib/styles/utils";
@@ -13,12 +19,17 @@ export type CalendarToolbarMeta = {
   badgeDay: string;
 };
 
+export type PlanningTimeGridSlotMinutes = 15 | 30;
+
 interface CalendarPlanningToolbarProps {
   getApi: () => CalendarApi | null;
   activeViewType: string;
   toolbarMeta?: CalendarToolbarMeta | null;
   slotTime24h: boolean;
   onSlotTime24hChange: (next: boolean) => void;
+  /** Time column step: 15′ (finer) vs 30′ (more hours visible). */
+  timeGridSlotMinutes: PlanningTimeGridSlotMinutes;
+  onTimeGridSlotMinutesChange: (next: PlanningTimeGridSlotMinutes) => void;
   /** After jumping to “today”, scroll the time grid so “now” is vertically centered. */
   onAlignViewToNow?: () => void;
   /** Short motion when using toolbar prev / next / today / view (not keyboard). */
@@ -31,19 +42,23 @@ export function CalendarPlanningToolbar({
   toolbarMeta,
   slotTime24h,
   onSlotTime24hChange,
+  timeGridSlotMinutes,
+  onTimeGridSlotMinutesChange,
   onAlignViewToNow,
   onToolbarNavigate,
 }: CalendarPlanningToolbarProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
-  const [subDays, setSubDays] = useState(false);
-  const [subSettings, setSubSettings] = useState(false);
+  const [specificDays, setSpecificDays] = useState(3);
 
   const closeAll = useCallback(() => {
     setOpen(false);
-    setSubDays(false);
-    setSubSettings(false);
   }, []);
+
+  useEffect(() => {
+    const n = daysFromMultiDayView(activeViewType);
+    if (n !== null) setSpecificDays(n);
+  }, [activeViewType]);
 
   useEffect(() => {
     if (!open) return;
@@ -100,6 +115,14 @@ export function CalendarPlanningToolbar({
     closeAll();
   };
 
+  const applySpecificDays = (count: number) => {
+    const view = multiDayViewForCount(count);
+    if (!view) return;
+    onToolbarNavigate?.("neutral");
+    getApi()?.changeView(view);
+    setSpecificDays(count);
+  };
+
   const goToday = () => {
     onToolbarNavigate?.("neutral");
     const api = getApi();
@@ -123,6 +146,19 @@ export function CalendarPlanningToolbar({
     onToolbarNavigate?.("next");
     getApi()?.next();
     closeAll();
+  };
+
+  const bumpSlotMinutes = (direction: -1 | 1) => {
+    onToolbarNavigate?.("neutral");
+    const next: PlanningTimeGridSlotMinutes = direction < 0 ? 30 : 15;
+    if (next !== timeGridSlotMinutes) {
+      onTimeGridSlotMinutesChange(next);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          onAlignViewToNow?.();
+        });
+      });
+    }
   };
 
   const currentLabel = labelForViewType(activeViewType);
@@ -172,11 +208,7 @@ export function CalendarPlanningToolbar({
               )}
               aria-expanded={open}
               aria-haspopup="menu"
-              onClick={() => {
-                setOpen((v) => !v);
-                setSubDays(false);
-                setSubSettings(false);
-              }}
+              onClick={() => setOpen((v) => !v)}
             >
               {currentLabel}
               <ChevronDown
@@ -192,7 +224,7 @@ export function CalendarPlanningToolbar({
             {open ? (
               <div
                 role="menu"
-                className="absolute right-0 top-[calc(100%+6px)] z-20 min-w-[240px] rounded-xl border border-border-app bg-background-primary py-1 shadow-dropdown sm:left-0 sm:right-auto"
+                className="absolute right-0 top-[calc(100%+6px)] z-20 w-[200px] rounded-xl border border-border-app bg-background-primary py-1 shadow-dropdown sm:left-0 sm:right-auto"
               >
                 <button
                   type="button"
@@ -200,8 +232,7 @@ export function CalendarPlanningToolbar({
                   className={menuItem}
                   onClick={() => changeView("timeGridDay")}
                 >
-                  <span>Day</span>
-                  <span className={menuHint}>1 or D</span>
+                  Day
                 </button>
                 <button
                   type="button"
@@ -209,8 +240,7 @@ export function CalendarPlanningToolbar({
                   className={menuItem}
                   onClick={() => changeView("timeGridRollingWeek")}
                 >
-                  <span>Week</span>
-                  <span className={menuHint}>0 or W</span>
+                  Week
                 </button>
                 <button
                   type="button"
@@ -218,88 +248,43 @@ export function CalendarPlanningToolbar({
                   className={menuItem}
                   onClick={() => changeView("dayGridMonth")}
                 >
-                  <span>Month</span>
-                  <span className={menuHint}>M</span>
+                  Month
                 </button>
 
                 <div className="my-1 h-px bg-white/[0.08]" />
 
-                <div className="relative">
-                  <button
-                    type="button"
-                    className={menuItem}
-                    onMouseEnter={() => {
-                      setSubDays(true);
-                      setSubSettings(false);
-                    }}
-                    onClick={() => setSubDays((s) => !s)}
-                  >
-                    <span>Number of days</span>
-                    <ChevronRight
-                      size={16}
-                      className="text-zinc-500"
-                      aria-hidden
-                    />
-                  </button>
-                  {subDays ? (
-                    <div
-                      className={submenuPanel}
-                      onMouseLeave={() => setSubDays(false)}
+                <div
+                  role="none"
+                  className="flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm text-zinc-100"
+                >
+                  <span className="shrink-0">Custom Days</span>
+                  <div className="flex shrink-0 items-center gap-px">
+                    <button
+                      type="button"
+                      className={dayStepBtn}
+                      aria-label="Fewer days"
+                      disabled={specificDays <= 2}
+                      onClick={() =>
+                        applySpecificDays(Math.max(2, specificDays - 1))
+                      }
                     >
-                      {(
-                        [
-                          ["timeGridTwoDay", "2 days"],
-                          ["timeGridThreeDay", "3 days"],
-                          ["timeGridFourDay", "4 days"],
-                          ["timeGridFiveDay", "5 days"],
-                        ] as const
-                      ).map(([view, label]) => (
-                        <button
-                          key={view}
-                          type="button"
-                          className={cn(
-                            menuItem,
-                            activeViewType === view && "bg-white/[0.08]",
-                          )}
-                          onClick={() => changeView(view)}
-                        >
-                          {label}
-                        </button>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-
-                <div className="relative">
-                  <button
-                    type="button"
-                    className={menuItem}
-                    onMouseEnter={() => {
-                      setSubSettings(true);
-                      setSubDays(false);
-                    }}
-                    onClick={() => setSubSettings((s) => !s)}
-                  >
-                    <span>View settings</span>
-                    <ChevronRight
-                      size={16}
-                      className="text-zinc-500"
-                      aria-hidden
-                    />
-                  </button>
-                  {subSettings ? (
-                    <div
-                      className={submenuPanel}
-                      onMouseLeave={() => setSubSettings(false)}
+                      <Minus size={14} aria-hidden />
+                    </button>
+                    <span className="w-5 select-none text-center text-xs tabular-nums text-zinc-300">
+                      {specificDays}
+                    </span>
+                    <button
+                      type="button"
+                      className={dayStepBtn}
+                      aria-label="More days"
+                      disabled={specificDays >= 5}
+                      onClick={() =>
+                        applySpecificDays(Math.min(5, specificDays + 1))
+                      }
                     >
-                      <div className="px-3 py-2 text-xs text-zinc-500">
-                        Slots shown: full day (0:00–24:00)
-                      </div>
-                      <div className="px-3 py-2 text-xs text-zinc-500">
-                        First day of week: Monday
-                      </div>
-                    </div>
-                  ) : null}
+                      <Plus size={14} aria-hidden />
+                    </button>
+                  </div>
                 </div>
               </div>
             ) : null}
@@ -329,6 +314,34 @@ export function CalendarPlanningToolbar({
               onClick={goNext}
             >
               <ChevronRight size={18} aria-hidden />
+            </button>
+          </div>
+
+          <div
+            className="flex items-center rounded-xl border border-white/[0.08] bg-black/25 p-0.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
+            role="group"
+            aria-label="Time grid scale"
+          >
+            <button
+              type="button"
+              className={dayStepBtn}
+              aria-label="Zoom out time grid (30 minute steps)"
+              disabled={timeGridSlotMinutes === 30}
+              onClick={() => bumpSlotMinutes(-1)}
+            >
+              <Minus size={14} aria-hidden />
+            </button>
+            <span className="min-w-[2.25rem] select-none px-1 text-center text-xs font-semibold tabular-nums text-zinc-200">
+              Zoom
+            </span>
+            <button
+              type="button"
+              className={dayStepBtn}
+              aria-label="Zoom in time grid (15 minute steps)"
+              disabled={timeGridSlotMinutes === 15}
+              onClick={() => bumpSlotMinutes(1)}
+            >
+              <Plus size={14} aria-hidden />
             </button>
           </div>
 
@@ -384,8 +397,44 @@ function labelForViewType(type: string) {
   return VIEW_LABELS[type] ?? "Week";
 }
 
+function daysFromMultiDayView(type: string): number | null {
+  switch (type) {
+    case "timeGridTwoDay":
+      return 2;
+    case "timeGridThreeDay":
+      return 3;
+    case "timeGridFourDay":
+      return 4;
+    case "timeGridFiveDay":
+      return 5;
+    default:
+      return null;
+  }
+}
+
+function multiDayViewForCount(
+  count: number,
+):
+  | "timeGridTwoDay"
+  | "timeGridThreeDay"
+  | "timeGridFourDay"
+  | "timeGridFiveDay"
+  | null {
+  switch (count) {
+    case 2:
+      return "timeGridTwoDay";
+    case 3:
+      return "timeGridThreeDay";
+    case 4:
+      return "timeGridFourDay";
+    case 5:
+      return "timeGridFiveDay";
+    default:
+      return null;
+  }
+}
+
 const menuItem =
-  "flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-zinc-100 transition-colors hover:bg-white/[0.06]";
-const menuHint = "text-xs tabular-nums text-zinc-500";
-const submenuPanel =
-  "absolute left-full top-0 z-10 ml-1 min-w-[160px] rounded-xl border border-border-app bg-background-primary py-1 shadow-dropdown";
+  "flex w-full items-center rounded-lg px-3 py-2 text-left text-sm text-zinc-100 transition-colors hover:bg-white/[0.06]";
+const dayStepBtn =
+  "flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-white/[0.08] bg-white/[0.04] text-zinc-300 transition-colors hover:bg-white/[0.08] hover:text-zinc-100 disabled:pointer-events-none disabled:opacity-35";

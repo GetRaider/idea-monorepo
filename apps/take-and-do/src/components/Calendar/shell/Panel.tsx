@@ -30,7 +30,6 @@ import type { Task } from "@/types/task";
 import type {
   CalendarBacklogEvent,
   CalendarEventType,
-  CalendarKindColorMap,
   CalendarKindVisibility,
 } from "@/types/calendar.types";
 
@@ -38,7 +37,7 @@ import { CalendarColorPickerPopover } from "../shared/ColorPickerPopover";
 import { CalendarKindIcon } from "../shared/KindIcon";
 import {
   effectiveGoogleCalendarColor,
-  effectiveKindColor,
+  effectiveInternalCalendarColor,
 } from "@/helpers/calendar/calendar-colors";
 import { kindLabel } from "@/helpers/calendar/calendar-event-mapper";
 import { tasksHelper } from "@/helpers/task.helper";
@@ -52,12 +51,14 @@ export interface CalendarPanelProps {
   kindVisibility: CalendarKindVisibility;
   onKindVisibilityChange: (next: CalendarKindVisibility) => void;
   onPickCalendarDay: (date: Date) => void;
+  showInternalCalendar: boolean;
+  onShowInternalCalendarChange: (next: boolean) => void;
   showGoogleCalendar: boolean;
   onShowGoogleCalendarChange: (next: boolean) => void;
   googleCalendarLabel?: string | null;
-  kindColors: CalendarKindColorMap | undefined;
+  internalCalendarColor: string | undefined;
   googleCalendarColor: string | undefined;
-  onKindColorChange: (kind: CalendarEventType, color: string | null) => void;
+  onInternalCalendarColorChange: (color: string | null) => void;
   onGoogleCalendarColorChange: (color: string | null) => void;
 }
 
@@ -70,12 +71,14 @@ export function CalendarPanel({
   kindVisibility,
   onKindVisibilityChange,
   onPickCalendarDay,
+  showInternalCalendar,
+  onShowInternalCalendarChange,
   showGoogleCalendar,
   onShowGoogleCalendarChange,
   googleCalendarLabel,
-  kindColors,
+  internalCalendarColor,
   googleCalendarColor,
-  onKindColorChange,
+  onInternalCalendarColorChange,
   onGoogleCalendarColorChange,
 }: CalendarPanelProps) {
   const [openSections, setOpenSections] = useState<
@@ -306,6 +309,47 @@ export function CalendarPanel({
           </button>
           {openSections.calendars ? (
             <ul className={cn("mt-2 space-y-2", CAL_PANEL_BODY_GUTTER)}>
+              <li className="group/calPanelInternal flex items-center gap-2 rounded-lg py-0.5 pr-0.5 transition-colors hover:bg-white/[0.04]">
+                <input
+                  id="cal-internal"
+                  type="checkbox"
+                  checked={showInternalCalendar}
+                  onChange={(e) =>
+                    onShowInternalCalendarChange(e.target.checked)
+                  }
+                  className="h-4 w-4 shrink-0 cursor-pointer rounded border border-white/25 bg-input-bg/80 accent-zinc-200"
+                />
+                <label
+                  htmlFor="cal-internal"
+                  className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 text-sm text-zinc-200"
+                >
+                  <span
+                    className="h-2 w-2 shrink-0 rounded-sm"
+                    style={{
+                      backgroundColor: effectiveInternalCalendarColor(
+                        internalCalendarColor,
+                      ),
+                    }}
+                    aria-hidden
+                  />
+                  <span className="truncate">Internal</span>
+                </label>
+                <div
+                  className={cn(
+                    "inline-flex shrink-0 items-center justify-center text-zinc-500 opacity-0 transition-opacity duration-150",
+                    "group-hover/calPanelInternal:opacity-100",
+                  )}
+                >
+                  <CalendarColorPickerPopover
+                    selectedHex={effectiveInternalCalendarColor(
+                      internalCalendarColor,
+                    )}
+                    onSelect={(hex) => onInternalCalendarColorChange(hex)}
+                    onResetToDefault={() => onInternalCalendarColorChange(null)}
+                    trigger={<DotsVerticalIcon size={14} />}
+                  />
+                </div>
+              </li>
               <li className="group/calPanelGcal flex items-center gap-2 rounded-lg py-0.5 pr-0.5 transition-colors hover:bg-white/[0.04]">
                 <input
                   id="cal-google"
@@ -499,7 +543,7 @@ export function CalendarPanel({
               {CALENDAR_ROWS.map(({ kind, label }) => (
                 <li
                   key={kind}
-                  className="group/calPanelKind flex items-center gap-2 rounded-lg py-0.5 pr-0.5 transition-colors hover:bg-white/[0.04]"
+                  className="flex items-center gap-2 rounded-lg py-0.5 pr-0.5"
                 >
                   <input
                     id={`cal-${kind}`}
@@ -507,9 +551,6 @@ export function CalendarPanel({
                     checked={kindVisibility[kind]}
                     onChange={() => toggleKind(kind)}
                     className="h-4 w-4 shrink-0 cursor-pointer rounded border border-white/25 bg-input-bg/80 accent-zinc-200"
-                    style={{
-                      accentColor: effectiveKindColor(kind, kindColors),
-                    }}
                   />
                   <label
                     htmlFor={`cal-${kind}`}
@@ -518,19 +559,6 @@ export function CalendarPanel({
                     <CalendarKindIcon kind={kind} size={16} aria-hidden />
                     <span className="truncate">{label}</span>
                   </label>
-                  <div
-                    className={cn(
-                      "inline-flex shrink-0 items-center justify-center text-zinc-500 opacity-0 transition-opacity duration-150",
-                      "group-hover/calPanelKind:opacity-100",
-                    )}
-                  >
-                    <CalendarColorPickerPopover
-                      selectedHex={effectiveKindColor(kind, kindColors)}
-                      onSelect={(hex) => onKindColorChange(kind, hex)}
-                      onResetToDefault={() => onKindColorChange(kind, null)}
-                      trigger={<DotsVerticalIcon size={14} />}
-                    />
-                  </div>
                 </li>
               ))}
             </ul>
@@ -601,9 +629,8 @@ export function CalendarPanel({
                         <div
                           className="mb-0.5 inline-flex h-6 w-6 items-center justify-center rounded"
                           style={{
-                            backgroundColor: effectiveKindColor(
-                              item.type,
-                              kindColors,
+                            backgroundColor: effectiveInternalCalendarColor(
+                              internalCalendarColor,
                             ),
                           }}
                           title={kindLabel(item.type)}

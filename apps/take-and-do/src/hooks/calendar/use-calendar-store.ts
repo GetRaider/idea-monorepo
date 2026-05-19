@@ -13,7 +13,6 @@ import type {
   CalendarAxisTimeZone,
   CalendarBacklogEvent,
   CalendarEvent,
-  CalendarEventType,
   CalendarPersistedState,
   GoogleCalendarRecurrenceScope,
 } from "@/types/calendar.types";
@@ -361,27 +360,20 @@ export function useCalendarStore() {
     });
   }, []);
 
-  const setKindColor = useCallback(
-    (kind: CalendarEventType, color: string | null) => {
-      setState((prev) => {
-        if (!prev) return prev;
-        const hex = color ? normalizeHexColor(color) : undefined;
-        const prevMap = prev.kindColors ?? {};
-        const nextMap = { ...prevMap };
-        if (!hex) {
-          delete nextMap[kind];
-        } else {
-          nextMap[kind] = coerceHexToWhiteTextSafe(hex);
-        }
-        const keys = Object.keys(nextMap);
-        return {
-          ...prev,
-          kindColors: keys.length > 0 ? nextMap : undefined,
-        };
-      });
-    },
-    [],
-  );
+  const setInternalCalendarColor = useCallback((color: string | null) => {
+    setState((prev) => {
+      if (!prev) return prev;
+      const hex = color ? normalizeHexColor(color) : undefined;
+      if (!hex) {
+        const { internalCalendarColor: _, ...rest } = prev;
+        return rest;
+      }
+      return {
+        ...prev,
+        internalCalendarColor: coerceHexToWhiteTextSafe(hex),
+      };
+    });
+  }, []);
 
   const setGoogleCalendarColor = useCallback((color: string | null) => {
     setState((prev) => {
@@ -411,7 +403,7 @@ export function useCalendarStore() {
     removeGoogleImportedEvents,
     removeGoogleSeriesByMasterId,
     setAxisTimeZones,
-    setKindColor,
+    setInternalCalendarColor,
     setGoogleCalendarColor,
     syncExternalGridEvents,
   };

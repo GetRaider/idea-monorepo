@@ -19,8 +19,11 @@ import {
   editorDraftToScheduledEvent,
   emptyCalendarEventEditorDraft,
 } from "./editorDraft";
+import type { CalendarEventColorTheme } from "@/helpers/calendar/calendar-event-mapper";
 import {
-  effectiveKindColor,
+  calendarChromeHexForDraft,
+  chromeToFillHex,
+  eventFillHex,
   normalizeHexColor,
 } from "@/helpers/calendar/calendar-colors";
 import { calendarCommonEventUsesGoogleCalendar } from "@/helpers/calendar/calendar-event-mapper";
@@ -38,6 +41,7 @@ interface CalendarEventEditorDialogProps {
   createRange?: { start: Date; end: Date; allDay: boolean } | null;
   createPrefill?: CalendarCreatePrefill | null;
   googleCalendarConnected?: boolean;
+  calendarColorTheme?: CalendarEventColorTheme;
   onClose: () => void;
   onSave: (event: CalendarEvent, opts?: { saveToGoogle?: boolean }) => void;
   onDeleteRequest?: (event: CalendarEvent) => void;
@@ -50,6 +54,7 @@ export function CalendarEventEditorDialog({
   createRange,
   createPrefill,
   googleCalendarConnected,
+  calendarColorTheme,
   onClose,
   onSave,
   onDeleteRequest,
@@ -119,10 +124,6 @@ export function CalendarEventEditorDialog({
 
   if (!open) return null;
 
-  const editorFillPreview =
-    normalizeHexColor(draft.colorHex) ??
-    effectiveKindColor(draft.type, undefined);
-
   const commonDestinationLocked = mode === "edit" && initial?.type === "common";
   const commonDestinationDisplay: CommonCreateDestination =
     commonDestinationLocked && initial && initial.type === "common"
@@ -130,6 +131,23 @@ export function CalendarEventEditorDialog({
         ? "google"
         : "internal"
       : commonCreateDestination;
+
+  const editorFillPreview = (() => {
+    const custom = normalizeHexColor(draft.colorHex);
+    if (custom) return custom;
+    if (mode === "edit" && initial) {
+      return eventFillHex(initial, calendarColorTheme ?? {});
+    }
+    const chrome = calendarChromeHexForDraft({
+      kind: draft.type,
+      commonUsesGoogle:
+        draft.type === "common" &&
+        !!googleCalendarConnected &&
+        commonDestinationDisplay === "google",
+      theme: calendarColorTheme,
+    });
+    return chromeToFillHex(chrome);
+  })();
 
   const showCommonDestination =
     draft.type === "common" &&

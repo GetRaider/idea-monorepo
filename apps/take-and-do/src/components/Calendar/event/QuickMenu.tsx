@@ -19,7 +19,8 @@ import type {
 import { GOOGLE_CALENDAR_EVENT_ID_PREFIX } from "@/constants/calendar.constants";
 
 import {
-  effectiveKindColor,
+  calendarChromeHexForDraft,
+  chromeToFillHex,
   eventFillHex,
   normalizeHexColor,
 } from "@/helpers/calendar/calendar-colors";
@@ -357,8 +358,23 @@ export function CalendarEventQuickMenu({
     if (payload.mode === "existing") {
       return eventFillHex(payload.event, calendarColorTheme ?? {});
     }
-    return effectiveKindColor(kind, calendarColorTheme?.kindColors);
-  }, [eventColorHex, payload, kind, calendarColorTheme]);
+    const chrome = calendarChromeHexForDraft({
+      kind,
+      commonUsesGoogle:
+        kind === "common" &&
+        googleCalendarConnected &&
+        commonCreateDestination === "google",
+      theme: calendarColorTheme,
+    });
+    return chromeToFillHex(chrome);
+  }, [
+    eventColorHex,
+    payload,
+    kind,
+    calendarColorTheme,
+    googleCalendarConnected,
+    commonCreateDestination,
+  ]);
 
   const quickFields = useMemo(() => {
     const colorField = normalizeHexColor(eventColorHex);

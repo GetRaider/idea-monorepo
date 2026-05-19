@@ -67,7 +67,7 @@ export function CalendarPage() {
     removeGoogleImportedEvents,
     removeGoogleSeriesByMasterId,
     setAxisTimeZones,
-    setKindColor,
+    setInternalCalendarColor,
     setGoogleCalendarColor,
     syncExternalGridEvents,
   } = useCalendarStore();
@@ -118,7 +118,7 @@ export function CalendarPage() {
     () =>
       state
         ? {
-            kindColors: state.kindColors,
+            internalCalendarColor: state.internalCalendarColor,
             googleCalendarColor: state.googleCalendarColor,
           }
         : undefined,
@@ -137,6 +137,7 @@ export function CalendarPage() {
   const [kindVisibility, setKindVisibility] = useState<CalendarKindVisibility>(
     DEFAULT_CALENDAR_KIND_VISIBILITY,
   );
+  const [showInternalCalendar, setShowInternalCalendar] = useState(true);
   const [showGoogleCalendar, setShowGoogleCalendar] = useState(true);
   const [googleScopePrompt, setGoogleScopePrompt] =
     useState<GoogleScopePrompt | null>(null);
@@ -302,6 +303,8 @@ export function CalendarPage() {
               onRequestNewTemplate: openNewTemplate,
               onEditTemplate: openEditTemplate,
               onRemoveItem: removeBacklogItem,
+              showInternalCalendar,
+              onShowInternalCalendarChange: setShowInternalCalendar,
               showGoogleCalendar,
               onShowGoogleCalendarChange: (next) => {
                 setShowGoogleCalendar(next);
@@ -310,9 +313,9 @@ export function CalendarPage() {
                 }
               },
               googleCalendarLabel,
-              kindColors: state.kindColors,
+              internalCalendarColor: state.internalCalendarColor,
               googleCalendarColor: state.googleCalendarColor,
-              onKindColorChange: setKindColor,
+              onInternalCalendarColorChange: setInternalCalendarColor,
               onGoogleCalendarColorChange: setGoogleCalendarColor,
             }}
           />
@@ -325,13 +328,14 @@ export function CalendarPage() {
               ref={planningCalendarRef}
               axisTimeZones={state?.axisTimeZones ?? defaultAxisTimeZones()}
               onAxisTimeZonesChange={setAxisTimeZones}
-              events={
-                showGoogleCalendar
-                  ? state.events
-                  : state.events.filter(
-                      (e) => !e.id.startsWith(GOOGLE_CALENDAR_EVENT_ID_PREFIX),
-                    )
-              }
+              events={state.events.filter((event) => {
+                const isGoogle = event.id.startsWith(
+                  GOOGLE_CALENDAR_EVENT_ID_PREFIX,
+                );
+                if (isGoogle && !showGoogleCalendar) return false;
+                if (!isGoogle && !showInternalCalendar) return false;
+                return true;
+              })}
               backlog={state.backlog}
               backlogContainerRef={backlogContainerRef}
               visibleKinds={kindVisibility}
@@ -380,6 +384,7 @@ export function CalendarPage() {
           createRange={editorMode === "create" ? createRange : null}
           createPrefill={editorMode === "create" ? createPrefill : null}
           googleCalendarConnected={googleCalendarConnected}
+          calendarColorTheme={calendarColorTheme}
           onClose={() => {
             setEditorOpen(false);
             setCreateRange(null);

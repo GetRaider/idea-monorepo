@@ -44,14 +44,14 @@ import {
 } from "./Toolbar";
 import { formatAxisSlotTime } from "@/helpers/calendar/calendar-axis-time";
 import {
-  calendarStripeHex,
+  calendarChromeHex,
+  effectiveInternalCalendarColor,
   eventFillHex,
   eventUsesCalendarStripe,
 } from "@/helpers/calendar/calendar-colors";
 import {
   extendedPropsToKind,
   fcEventRangeToScheduledPatch,
-  kindColor,
   scheduledToEventInput,
   type CalendarEventColorTheme,
 } from "@/helpers/calendar/calendar-event-mapper";
@@ -271,12 +271,9 @@ export const PlanningCalendar = forwardRef<
    * remount the calendar and snap back to `initialView`.
    */
   const fcColorSignature = useMemo(() => {
-    const kindJson =
-      calendarColorTheme?.kindColors != null
-        ? JSON.stringify(calendarColorTheme.kindColors)
-        : "";
+    const internal = calendarColorTheme?.internalCalendarColor ?? "";
     const google = calendarColorTheme?.googleCalendarColor ?? "";
-    return `${kindJson}|${google}`;
+    return `${internal}|${google}`;
   }, [calendarColorTheme]);
 
   const prevFcColorSignatureRef = useRef<string | null>(null);
@@ -457,7 +454,7 @@ export const PlanningCalendar = forwardRef<
       if (!found || !vis[found.type]) continue;
       scheduleTadEventStripePaint(el, {
         useStripe: eventUsesCalendarStripe(found, t),
-        baseColor: calendarStripeHex(found, t),
+        baseColor: calendarChromeHex(found, t),
         bodyFill: eventFillHex(found, t),
       });
       scheduleTadEventRsvpPaint(
@@ -560,7 +557,11 @@ export const PlanningCalendar = forwardRef<
             : {}),
           "--tad-axis-zone-count": String(zoneCount),
           ...(draftSelectionKind
-            ? { "--draft-kind-color": kindColor(draftSelectionKind) }
+            ? {
+                "--draft-kind-color": effectiveInternalCalendarColor(
+                  calendarColorTheme?.internalCalendarColor,
+                ),
+              }
             : {}),
         } as CSSProperties
       }

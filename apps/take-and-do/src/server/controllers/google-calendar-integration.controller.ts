@@ -33,6 +33,7 @@ import {
   mapGoogleApiRecordToCalendarEvent,
   mapGoogleEventToCalendarEvent,
   mapPushBodyToGooglePatch,
+  mergeGoogleRsvpIntoPatch,
   type ImportedGoogleCalendarEvent,
 } from "./google-calendar-integration.mapper";
 
@@ -205,6 +206,13 @@ export class GoogleCalendarIntegrationController extends BaseController {
       }
 
       const scope = body.recurrenceScope ?? "instance";
+      const userEmail = authContext.user.email?.trim();
+      if (body.rsvpStatus && !userEmail) {
+        throw new HttpError(
+          400,
+          "Your account email is required to update RSVP on Google Calendar.",
+        );
+      }
 
       try {
         if (scope === "following") {
@@ -216,12 +224,26 @@ export class GoogleCalendarIntegrationController extends BaseController {
             start: body.start,
             allDay: body.allDay,
           });
+          let followingPatchBody = patchBody;
+          if (body.rsvpStatus && userEmail) {
+            const masterGet = await getGoogleCalendarEvent({
+              accessToken,
+              calendarId: syncState.calendarId,
+              googleEventId: meta.recurringEventId,
+            });
+            followingPatchBody = mergeGoogleRsvpIntoPatch(
+              patchBody,
+              masterGet.raw,
+              body.rsvpStatus,
+              userEmail,
+            );
+          }
           await pushGoogleCalendarFollowingSplit({
             accessToken,
             calendarId: syncState.calendarId,
             masterId: meta.recurringEventId,
             meta: times,
-            patchBody,
+            patchBody: followingPatchBody,
           });
         } else {
           const targetGoogleId =
@@ -252,6 +274,14 @@ export class GoogleCalendarIntegrationController extends BaseController {
               mergedMeta,
               body,
             );
+            if (body.rsvpStatus && userEmail) {
+              bodyToSend = mergeGoogleRsvpIntoPatch(
+                bodyToSend,
+                masterGet.raw,
+                body.rsvpStatus,
+                userEmail,
+              );
+            }
             const putBody = mergeGoogleMasterForPut(masterGet.raw, bodyToSend);
             await updateGoogleCalendarEvent({
               accessToken,
@@ -261,6 +291,19 @@ export class GoogleCalendarIntegrationController extends BaseController {
               etag: masterGet.etag,
             });
           } else {
+            if (body.rsvpStatus && userEmail) {
+              const instanceGet = await getGoogleCalendarEvent({
+                accessToken,
+                calendarId: syncState.calendarId,
+                googleEventId: targetGoogleId,
+              });
+              bodyToSend = mergeGoogleRsvpIntoPatch(
+                patchBody,
+                instanceGet.raw,
+                body.rsvpStatus,
+                userEmail,
+              );
+            }
             await patchGoogleCalendarEvent({
               accessToken,
               calendarId: syncState.calendarId,

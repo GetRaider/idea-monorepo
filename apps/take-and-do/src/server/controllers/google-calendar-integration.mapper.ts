@@ -182,6 +182,55 @@ function mapRsvp(
   return undefined;
 }
 
+export function calendarRsvpToGoogleResponseStatus(
+  rsvp: CalendarRsvpStatus,
+): "accepted" | "declined" | "tentative" {
+  if (rsvp === "no") return "declined";
+  if (rsvp === "maybe") return "tentative";
+  return "accepted";
+}
+
+type GoogleAttendeeRecord = {
+  email?: string;
+  displayName?: string;
+  self?: boolean;
+  responseStatus?: string;
+};
+
+/** Google requires `email` on attendees when updating RSVP. */
+export function mergeGoogleRsvpIntoPatch(
+  patchBody: Record<string, unknown>,
+  existingRaw: Record<string, unknown>,
+  rsvp: CalendarRsvpStatus,
+  userEmail: string,
+): Record<string, unknown> {
+  const responseStatus = calendarRsvpToGoogleResponseStatus(rsvp);
+  const email = userEmail.trim();
+  const rawList = existingRaw.attendees;
+  const attendees: GoogleAttendeeRecord[] = Array.isArray(rawList)
+    ? rawList
+        .filter(
+          (a): a is Record<string, unknown> => !!a && typeof a === "object",
+        )
+        .map((a) => ({ ...(a as GoogleAttendeeRecord) }))
+    : [];
+
+  const selfIndex = attendees.findIndex((a) => a.self);
+  if (selfIndex >= 0) {
+    const self = attendees[selfIndex];
+    attendees[selfIndex] = {
+      ...self,
+      email: self.email?.trim() || email,
+      responseStatus,
+      self: true,
+    };
+  } else {
+    attendees.push({ self: true, email, responseStatus });
+  }
+
+  return { ...patchBody, attendees };
+}
+
 function formatLocalYmd(d: Date): string {
   const y = d.getFullYear();
   const mo = String(d.getMonth() + 1).padStart(2, "0");

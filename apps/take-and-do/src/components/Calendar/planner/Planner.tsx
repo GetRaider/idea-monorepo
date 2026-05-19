@@ -56,6 +56,7 @@ import {
   type CalendarEventColorTheme,
 } from "@/helpers/calendar/calendar-event-mapper";
 import { PLANNING_CALENDAR_CUSTOM_VIEWS } from "@/helpers/calendar/planning-calendar-views";
+import { scheduleTadEventRsvpPaint } from "@/helpers/calendar/planning-calendar-event-rsvp";
 import { scheduleTadEventStripePaint } from "@/helpers/calendar/planning-calendar-event-stripe";
 import {
   ensureTimegridOverlapLayoutObserver,
@@ -438,6 +439,7 @@ export const PlanningCalendar = forwardRef<
         baseColor,
         bodyFill,
       });
+      scheduleTadEventRsvpPaint(info.el, ep.rsvpStatus);
 
       scheduleOverlapLayoutRepaint(info.view.calendar.getEvents());
     },
@@ -458,6 +460,12 @@ export const PlanningCalendar = forwardRef<
         baseColor: calendarStripeHex(found, t),
         bodyFill: eventFillHex(found, t),
       });
+      scheduleTadEventRsvpPaint(
+        el,
+        found.type === "common" || found.type === "timeBlock"
+          ? found.rsvpStatus
+          : undefined,
+      );
     }
   }, []);
 

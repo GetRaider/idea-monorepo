@@ -153,7 +153,7 @@ export function effectiveGoogleCalendarColor(
   );
 }
 
-/** Color of the “parent calendar” stripe (Google feed vs. local event type). */
+/** Color of the “parent calendar” chrome (Google feed vs. local event type). */
 export function calendarStripeHex(
   event: CalendarEvent,
   opts: {
@@ -167,7 +167,21 @@ export function calendarStripeHex(
   return effectiveKindColor(event.type, opts.kindColors);
 }
 
-/** FullCalendar fill color for the event body. */
+/** Darken sRGB channels for the event body (left stripe uses calendar chrome only). */
+export function darkenHexSrgb(hex: string, factor: number): string {
+  const n = normalizeHexColor(hex);
+  if (!n) return "#334155";
+  const clamped = Math.max(0, Math.min(1, factor));
+  let r = parseInt(n.slice(1, 3), 16);
+  let g = parseInt(n.slice(3, 5), 16);
+  let b = parseInt(n.slice(5, 7), 16);
+  r = Math.round(r * clamped);
+  g = Math.round(g * clamped);
+  b = Math.round(b * clamped);
+  return `#${toHex2(r)}${toHex2(g)}${toHex2(b)}`;
+}
+
+/** FullCalendar body fill — per-event color when set, else darker calendar chrome. */
 export function eventFillHex(
   event: CalendarEvent,
   opts: {
@@ -176,20 +190,17 @@ export function eventFillHex(
   },
 ): string {
   const custom = normalizeHexColor(event.color);
-  if (custom) return coerceHexToWhiteTextSafe(custom);
-  return coerceHexToWhiteTextSafe(calendarStripeHex(event, opts));
+  const bodyBase = custom ?? calendarStripeHex(event, opts);
+  return coerceHexToWhiteTextSafe(darkenHexSrgb(bodyBase, 0.72));
 }
 
+/** All grid events use the left accent stripe + darker body split. */
 export function eventUsesCalendarStripe(
-  event: CalendarEvent,
-  opts: {
+  _event: CalendarEvent,
+  _opts: {
     kindColors?: Partial<Record<CalendarEventType, string>>;
     googleCalendarColor?: string;
   },
 ): boolean {
-  const custom = normalizeHexColor(event.color);
-  if (!custom) return false;
-  const stripeRaw = calendarStripeHex(event, opts);
-  const stripe = normalizeHexColor(stripeRaw) ?? stripeRaw.trim().toLowerCase();
-  return custom !== stripe;
+  return true;
 }

@@ -542,7 +542,8 @@ export function QuickMenuBody({
                                 type="button"
                                 className={cn(
                                   "rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors",
-                                  payload.event.type === "common" &&
+                                  (payload.event.type === "common" ||
+                                    payload.event.type === "timeBlock") &&
                                     payload.event.rsvpStatus === v
                                     ? "border-white/35 bg-white/15 text-text-primary"
                                     : "border-white/15 bg-transparent text-zinc-300 hover:border-white/25",

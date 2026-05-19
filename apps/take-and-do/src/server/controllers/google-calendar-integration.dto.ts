@@ -65,6 +65,7 @@ export const PushEventBodyDto = z
     timeZone: z.string().optional(),
     description: z.string().optional(),
     notes: z.string().optional(),
+    rsvpStatus: z.enum(["yes", "no", "maybe"]).optional(),
     repeat: CalendarRepeatRuleDto.optional(),
     recurrenceScope: z.enum(["instance", "series", "following"]).optional(),
     googleRecurrence: GoogleRecurrenceMetaDto.optional(),

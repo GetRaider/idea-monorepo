@@ -93,6 +93,7 @@ export async function pushConnectedGoogleCalendarEvent(
     notes: event.notes ?? "",
     ...(event.timeZone?.trim() ? { timeZone: event.timeZone.trim() } : {}),
     ...(event.repeat ? { repeat: event.repeat } : {}),
+    ...(event.rsvpStatus ? { rsvpStatus: event.rsvpStatus } : {}),
   };
 
   if (recurrenceScope) {

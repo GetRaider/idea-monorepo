@@ -203,6 +203,8 @@ function normalizeScheduledEvent(raw: unknown): CalendarEvent | null {
       taskScope.every((l) => typeof l === "string")
         ? { taskScope: taskScope as string[] }
         : {}),
+      ...(isRsvp(rsvpStatus) ? { rsvpStatus } : {}),
+      ...(typeof rsvpDeclineReason === "string" ? { rsvpDeclineReason } : {}),
     };
   }
 

@@ -158,13 +158,16 @@ export function CalendarEventQuickMenu({
   );
   const [declineReason, setDeclineReason] = useState(() => {
     if (payload.mode !== "existing") return "";
-    return payload.event.type === "common"
+    return payload.event.type === "common" || payload.event.type === "timeBlock"
       ? (payload.event.rsvpDeclineReason ?? "")
       : "";
   });
   const [showDeclineField, setShowDeclineField] = useState(() => {
     if (payload.mode !== "existing") return false;
-    return payload.event.type === "common" && payload.event.rsvpStatus === "no";
+    return (
+      (payload.event.type === "common" || payload.event.type === "timeBlock") &&
+      payload.event.rsvpStatus === "no"
+    );
   });
 
   const isTask = kind === "task";
@@ -216,8 +219,15 @@ export function CalendarEventQuickMenu({
           ? `${toLocalDateInputValue(end)}T00:00`
           : toDatetimeLocalValue(end),
       );
-      setDeclineReason(e.type === "common" ? (e.rsvpDeclineReason ?? "") : "");
-      setShowDeclineField(e.type === "common" && e.rsvpStatus === "no");
+      setDeclineReason(
+        e.type === "common" || e.type === "timeBlock"
+          ? (e.rsvpDeclineReason ?? "")
+          : "",
+      );
+      setShowDeclineField(
+        (e.type === "common" || e.type === "timeBlock") &&
+          e.rsvpStatus === "no",
+      );
       if (e.type === "task") {
         setTaskBoardId(e.taskBoardId);
         setTaskId(e.taskId);
@@ -269,14 +279,20 @@ export function CalendarEventQuickMenu({
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key !== "Escape") return;
+      if (showDeleteConfirm) {
+        setShowDeleteConfirm(false);
+        return;
+      }
+      onClose();
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  }, [onClose, showDeleteConfirm]);
 
   useEffect(() => {
     const onPointer = (e: MouseEvent) => {
+      if (showDeleteConfirm) return;
       const target = e.target as HTMLElement | null;
       // Dropdown menus are portaled to body; treat them as "inside" the quick menu.
       if (target?.closest?.("[data-dropdown-portal]")) return;
@@ -292,7 +308,7 @@ export function CalendarEventQuickMenu({
       window.clearTimeout(t);
       document.removeEventListener("mousedown", onPointer);
     };
-  }, [onClose, panelRef]);
+  }, [onClose, panelRef, showDeleteConfirm]);
 
   const slotPreview24h = displayTimes24h ?? false;
 

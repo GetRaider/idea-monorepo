@@ -51,6 +51,12 @@ export function calendarEventRowToClient(row: CalendarEventRow): CalendarEvent {
       ...base,
       type: "timeBlock",
       ...(extra.taskScope ? { taskScope: extra.taskScope } : {}),
+      ...(extra.rsvpStatus !== undefined
+        ? { rsvpStatus: extra.rsvpStatus }
+        : {}),
+      ...(extra.rsvpDeclineReason !== undefined
+        ? { rsvpDeclineReason: extra.rsvpDeclineReason }
+        : {}),
     };
     return ev;
   }
@@ -58,8 +64,8 @@ export function calendarEventRowToClient(row: CalendarEventRow): CalendarEvent {
   const ev: CommonCalendarEvent = {
     ...base,
     type: "common",
-    ...(extra.rsvpStatus ? { rsvpStatus: extra.rsvpStatus } : {}),
-    ...(extra.rsvpDeclineReason
+    ...(extra.rsvpStatus !== undefined ? { rsvpStatus: extra.rsvpStatus } : {}),
+    ...(extra.rsvpDeclineReason !== undefined
       ? { rsvpDeclineReason: extra.rsvpDeclineReason }
       : {}),
   };
@@ -74,20 +80,16 @@ export function clientCalendarEventToExtra(
     extra.reminderMinutes = event.reminderMinutes;
   if (event.timeZone) extra.timeZone = event.timeZone;
   if (event.repeat) extra.repeat = event.repeat;
-  if (event.type === "common") {
-    if (event.meetingUrl) extra.meetingUrl = event.meetingUrl;
-    if (event.participants) extra.participants = event.participants;
-    if (event.notes) extra.notes = event.notes;
-    if (event.description) extra.description = event.description;
-    if (event.rsvpStatus) extra.rsvpStatus = event.rsvpStatus;
-    if (event.rsvpDeclineReason)
-      extra.rsvpDeclineReason = event.rsvpDeclineReason;
-  } else {
-    if (event.meetingUrl) extra.meetingUrl = event.meetingUrl;
-    if (event.participants) extra.participants = event.participants;
-    if (event.notes) extra.notes = event.notes;
-    if (event.description) extra.description = event.description;
-    if (event.taskScope) extra.taskScope = event.taskScope;
+  if (event.meetingUrl) extra.meetingUrl = event.meetingUrl;
+  if (event.participants) extra.participants = event.participants;
+  if (event.notes) extra.notes = event.notes;
+  if (event.description) extra.description = event.description;
+  if (event.type === "timeBlock" && event.taskScope) {
+    extra.taskScope = event.taskScope;
+  }
+  if (event.rsvpStatus !== undefined) extra.rsvpStatus = event.rsvpStatus;
+  if (event.rsvpDeclineReason !== undefined) {
+    extra.rsvpDeclineReason = event.rsvpDeclineReason;
   }
   return extra;
 }

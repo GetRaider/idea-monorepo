@@ -77,6 +77,8 @@ export interface TimeBlockCalendarEvent extends BaseCalendarEvent {
   participants?: string[];
   notes?: string;
   description?: string;
+  rsvpStatus?: CalendarRsvpStatus;
+  rsvpDeclineReason?: string;
 }
 
 export interface TaskCalendarEvent extends BaseCalendarEvent {

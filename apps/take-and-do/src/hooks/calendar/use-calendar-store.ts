@@ -134,8 +134,10 @@ export function useCalendarStore() {
   const applyEventPatch = useCallback(
     (event: CalendarEvent, patch: CalendarEventPatch): CalendarEvent => {
       const next = { ...event, ...patch } as CalendarEvent;
-      if (event.type !== "common") {
+      if (event.type !== "common" && event.type !== "timeBlock") {
         delete (next as { rsvpStatus?: unknown }).rsvpStatus;
+        delete (next as { rsvpDeclineReason?: unknown }).rsvpDeclineReason;
+      } else if (patch.rsvpStatus !== undefined && patch.rsvpStatus !== "no") {
         delete (next as { rsvpDeclineReason?: unknown }).rsvpDeclineReason;
       }
       if ("color" in patch) {

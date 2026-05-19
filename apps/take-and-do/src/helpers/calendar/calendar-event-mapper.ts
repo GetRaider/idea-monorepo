@@ -1,6 +1,10 @@
 import type { EventApi, EventInput } from "@fullcalendar/core";
 
-import type { CalendarEvent, CalendarEventType } from "@/types/calendar.types";
+import type {
+  CalendarEvent,
+  CalendarEventType,
+  CalendarRsvpStatus,
+} from "@/types/calendar.types";
 
 import { GOOGLE_CALENDAR_EVENT_ID_PREFIX } from "@/constants/calendar.constants";
 
@@ -127,6 +131,26 @@ function migrateKindProp(kind: unknown): CalendarEventType {
   return "timeBlock";
 }
 
+function scheduledEventRsvpStatus(
+  event: CalendarEvent,
+): CalendarRsvpStatus | undefined {
+  if (event.type === "common" || event.type === "timeBlock") {
+    return event.rsvpStatus;
+  }
+  return undefined;
+}
+
+function planningEventClassNames(
+  stripeActive: boolean,
+  rsvpStatus?: CalendarRsvpStatus,
+): string[] | undefined {
+  const classNames: string[] = [];
+  if (stripeActive) classNames.push("tad-event-calendar-stripe");
+  if (rsvpStatus === "no") classNames.push("tad-event-rsvp-no");
+  else if (rsvpStatus === "maybe") classNames.push("tad-event-rsvp-maybe");
+  return classNames.length > 0 ? classNames : undefined;
+}
+
 export function scheduledToEventInput(
   event: CalendarEvent,
   theme?: CalendarEventColorTheme,
@@ -143,7 +167,7 @@ export function scheduledToEventInput(
     const taskId = event.type === "task" ? event.taskId : undefined;
     const taskSummarySnapshot =
       event.type === "task" ? event.taskSummarySnapshot : undefined;
-    const rsvpStatus = event.type === "common" ? event.rsvpStatus : undefined;
+    const rsvpStatus = scheduledEventRsvpStatus(event);
     return {
       id: event.id,
       title: event.title,
@@ -152,7 +176,7 @@ export function scheduledToEventInput(
       end: fcExclusiveEndDate(endDay),
       backgroundColor: fill,
       borderColor: fill,
-      classNames: stripeActive ? ["tad-event-calendar-stripe"] : undefined,
+      classNames: planningEventClassNames(stripeActive, rsvpStatus),
       extendedProps: {
         kind: event.type,
         taskScope,
@@ -172,7 +196,7 @@ export function scheduledToEventInput(
   const taskId = event.type === "task" ? event.taskId : undefined;
   const taskSummarySnapshot =
     event.type === "task" ? event.taskSummarySnapshot : undefined;
-  const rsvpStatus = event.type === "common" ? event.rsvpStatus : undefined;
+  const rsvpStatus = scheduledEventRsvpStatus(event);
   return {
     id: event.id,
     title: event.title,
@@ -181,7 +205,7 @@ export function scheduledToEventInput(
     allDay: false,
     backgroundColor: fill,
     borderColor: fill,
-    classNames: stripeActive ? ["tad-event-calendar-stripe"] : undefined,
+    classNames: planningEventClassNames(stripeActive, rsvpStatus),
     extendedProps: {
       kind: event.type,
       taskScope,

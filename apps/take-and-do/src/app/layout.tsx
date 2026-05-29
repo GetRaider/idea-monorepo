@@ -16,7 +16,10 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Take & Do - Productivity Management",
+  title: {
+    default: "Take & Do",
+    template: "Take & Do | %s",
+  },
   description: "A modern productivity management application",
   icons: {
     icon: [

@@ -68,17 +68,16 @@ export default async function ProjectDetailPage({ params }: PageProps) {
               ) : null}
               <div className="min-w-0 flex-1">
                 <h1 className="m-0 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-                  <span className="text-white">{project.title}</span>
-                  <span className="font-normal text-zinc-400">
-                    {" "}
-                    - {project.tagline}
-                  </span>
+                  {project.title}
                 </h1>
-                <p className="mt-5 text-sm leading-relaxed text-zinc-500">
-                  {project.summary}
+                <p className="mt-2 text-base font-normal leading-snug text-zinc-400 sm:text-lg">
+                  {project.tagline}
                 </p>
               </div>
             </div>
+            <p className="mt-5 text-sm leading-relaxed text-zinc-500">
+              {project.summary}
+            </p>
 
             <div className="mt-8 flex flex-col gap-3">
               <div className="flex flex-wrap gap-3">

@@ -1,4 +1,10 @@
+import type { Metadata } from "next";
+
 import { RequireSession } from "@/components/auth/RequireSession";
+
+export const metadata: Metadata = {
+  title: "Tasks",
+};
 
 import TasksLayoutClient from "./TasksLayout";
 

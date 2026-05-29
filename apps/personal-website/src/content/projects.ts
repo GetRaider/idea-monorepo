@@ -19,9 +19,9 @@ export const projects: PortfolioProject[] = [
   {
     slug: "take-and-do",
     title: "Take & Do",
-    tagline: "AI Productivity Manager",
+    tagline: "Unified AI Context for Tasks, Calendar Events, and Docs",
     summary:
-      "Take & Do is a modern AI productivity manager: task workspaces with Kanban and list views, calendar events, and documents that build shared context so everyone stays aligned. AI-assisted flows reduce friction-from capturing work to finishing it - while the same surface holds code, delivery, and everyday life so nothing fragments across a dozen tools.",
+      "Take & Do links tasks, calendar events, and documents in one workspace so context stays with the work—not rebuilt across boards, calendars, and notes. Kanban boards, schedules, and rich docs feed a shared layer AI can reason over for capture, planning, and completion without juggling a dozen disconnected tools.",
     why: `Most people don't fail because they lack an app - they fail because context doesn't travel with their work. A task lives in Jira, the spec in Notion, the meeting in Google Calendar - but the reason, decision, and state tying them together are missing.
 
 Modern tools optimize for isolated surfaces (lists, docs, calendars) - not for the relationship between them. As a result, people constantly reconstruct context: why this task exists, what it depends on, and when it actually matters.
@@ -100,7 +100,7 @@ The pain intensifies when work spans multiple teams and vendors-you need a livin
   {
     slug: "snap-words",
     title: "Snap Words",
-    tagline: "English Vocabulary Explorer",
+    tagline: "Vocabulary Explorer",
     summary:
       "Snap Words helps you learn new words through flash cards and other study modes, with AI-generated examples and explanations for each term. DeepL powers translations so you can pair meaning across languages while keeping the study loop fast and focused.",
     why: `Vocabulary apps often force one rigid study path or bury you in configuration. Snap Words starts from a simple idea: **flash cards should be flexible** - deck structure, card faces, and review order should adapt to how you learn, not the other way around.

@@ -1,5 +1,11 @@
+import type { Metadata } from "next";
+
 import { cn } from "@/lib/styles/utils";
 import { chromePrimaryButtonClassName } from "@/lib/styles/chrome-primary-button-classes";
+
+export const metadata: Metadata = {
+  title: "Permission Denied",
+};
 
 export default function ForbiddenPage() {
   return (

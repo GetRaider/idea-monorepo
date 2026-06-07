@@ -20,6 +20,7 @@ export function useCalendarPageServerGridSync(
     from.setHours(0, 0, 0, 0);
     const to = new Date();
     to.setDate(to.getDate() + 120);
+    to.setHours(23, 59, 59, 999);
     return { from, to };
   });
 
@@ -34,6 +35,7 @@ export function useCalendarPageServerGridSync(
         calendarQueryRange.to,
       ),
     enabled: !isGuest,
+    staleTime: 60_000,
   });
 
   const scheduledTasksQuery = useQuery({
@@ -44,6 +46,7 @@ export function useCalendarPageServerGridSync(
         calendarQueryRange.to,
       ),
     enabled: !isGuest,
+    staleTime: 60_000,
   });
 
   useEffect(() => {
@@ -66,7 +69,20 @@ export function useCalendarPageServerGridSync(
 
   const handleVisibleRangeChange = useCallback(
     (start: Date, endExclusive: Date) => {
-      setCalendarQueryRange({ from: start, to: endExclusive });
+      const startMs = start.getTime();
+      const endMs = endExclusive.getTime();
+      if (Number.isNaN(startMs) || Number.isNaN(endMs) || endMs <= startMs) {
+        return;
+      }
+      setCalendarQueryRange((previous) => {
+        if (
+          previous.from.getTime() === startMs &&
+          previous.to.getTime() === endMs
+        ) {
+          return previous;
+        }
+        return { from: new Date(startMs), to: new Date(endMs) };
+      });
     },
     [],
   );

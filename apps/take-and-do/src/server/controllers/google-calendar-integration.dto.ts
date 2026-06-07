@@ -1,9 +1,12 @@
 import { z } from "zod";
 
+import { parseGoogleGcalInstanceOccurrence } from "@/helpers/calendar/google-calendar-recurrence.helper";
+
 export const GoogleRecurrenceMetaDto = z.object({
   recurringEventId: z.string(),
   originalStart: z.string().optional(),
   originalAllDay: z.boolean().optional(),
+  splitGroupId: z.string().optional(),
 });
 
 const CalendarRepeatRuleDto = z.enum(["daily", "weekly", "monthly"]);
@@ -22,7 +25,6 @@ export const ImportedGoogleCalendarEventSchema = z.object({
   rsvpStatus: z.enum(["yes", "no", "maybe"]).optional(),
   repeat: CalendarRepeatRuleDto.optional(),
   googleRecurrence: GoogleRecurrenceMetaDto.optional(),
-  /** Local UI override; ignored by Google push until mapped to colorId. */
   color: z
     .string()
     .regex(/^#[0-9A-Fa-f]{6}$/)
@@ -51,6 +53,11 @@ export const SyncResponseDto = z.object({
       timeMax: z.string(),
     })
     .optional(),
+  /** Google calendar list chrome color (events without their own colorId). */
+  googleCalendarColor: z
+    .string()
+    .regex(/^#[0-9A-Fa-f]{6}$/)
+    .optional(),
 });
 
 export const PushEventBodyDto = z
@@ -69,6 +76,10 @@ export const PushEventBodyDto = z
     repeat: CalendarRepeatRuleDto.optional(),
     recurrenceScope: z.enum(["instance", "series", "following"]).optional(),
     googleRecurrence: GoogleRecurrenceMetaDto.optional(),
+    /** `#rrggbb` sets Google `colorId`; `null` clears per-event color. */
+    color: z
+      .union([z.string().regex(/^#[0-9A-Fa-f]{6}$/), z.null()])
+      .optional(),
   })
   .refine((b) => b.id.startsWith("gcal:"), {
     message: "Only Google-linked events can be updated.",
@@ -78,7 +89,10 @@ export const PushEventBodyDto = z
     (b) => {
       const scope = b.recurrenceScope ?? "instance";
       if (scope === "instance") return true;
-      return !!b.googleRecurrence?.recurringEventId;
+      return (
+        !!b.googleRecurrence?.recurringEventId ||
+        !!parseGoogleGcalInstanceOccurrence(b.id)?.recurringEventId
+      );
     },
     {
       message:
@@ -106,7 +120,10 @@ export const DeleteEventBodyDto = z
     (b) => {
       const scope = b.recurrenceScope ?? "instance";
       if (scope === "instance") return true;
-      return !!b.googleRecurrence?.recurringEventId;
+      return (
+        !!b.googleRecurrence?.recurringEventId ||
+        !!parseGoogleGcalInstanceOccurrence(b.id)?.recurringEventId
+      );
     },
     {
       message:
@@ -125,6 +142,7 @@ export const CreateEventBodyDto = z.object({
   description: z.string().optional(),
   notes: z.string().optional(),
   repeat: CalendarRepeatRuleDto.optional(),
+  color: z.union([z.string().regex(/^#[0-9A-Fa-f]{6}$/), z.null()]).optional(),
 });
 
 export const CreateEventResponseDto = z.object({

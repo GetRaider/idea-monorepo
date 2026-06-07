@@ -15,6 +15,7 @@ import { selectEndToInclusiveEnd } from "@/helpers/calendar-selection";
 import {
   createConnectedGoogleCalendarEvent,
   deleteConnectedGoogleCalendarEvent,
+  googlePushColorIfChanged,
 } from "@/helpers/calendar/google-calendar-sync-actions";
 import {
   getEffectiveGoogleRecurrence,
@@ -67,6 +68,10 @@ export type CalendarPagePlanningHandlersDeps = {
   addScheduled: (event: CalendarEvent) => void;
   removeScheduled: (id: string) => void;
   removeGoogleSeriesByMasterId: (masterId: string) => void;
+  removeGoogleInstancesForScope: (
+    anchor: CalendarEvent,
+    scope: GoogleCalendarRecurrenceScope,
+  ) => void;
   updateTask: (taskId: string, patch: TaskUpdate) => Promise<unknown>;
   editorMode: "create" | "edit";
   setEditorMode: (m: "create" | "edit") => void;
@@ -93,6 +98,7 @@ export type CalendarPagePlanningHandlersDeps = {
   pushGoogleThenSync: (
     event: CalendarEvent,
     scope?: GoogleCalendarRecurrenceScope,
+    pushColor?: string | null,
   ) => void | Promise<void>;
   showGoogleCalendar: boolean;
 };
@@ -282,13 +288,21 @@ export function useCalendarPagePlanningHandlers(
       deps.setGoogleScopePrompt(null);
       if (!prompt) return;
 
-      const patchIsColorOnly =
-        prompt.kind === "quick" &&
-        Object.keys(prompt.patch).every((key) => key === "color");
+      const pushColor =
+        prompt.kind === "quick" && "color" in prompt.patch
+          ? (prompt.patch.color ?? null)
+          : undefined;
 
       if (prompt.kind === "editor") {
+        const previous = deps.state?.events.find(
+          (event) => event.id === prompt.event.id,
+        );
         deps.replaceScheduledForGoogleScope(prompt.event, scope);
-        void deps.pushGoogleThenSync(prompt.event, scope);
+        void deps.pushGoogleThenSync(
+          prompt.event,
+          scope,
+          googlePushColorIfChanged(prompt.event, previous),
+        );
         deps.setEditorOpen(false);
         deps.setCreateRange(null);
         deps.setCreatePrefill(null);
@@ -318,9 +332,7 @@ export function useCalendarPagePlanningHandlers(
         prompt.patch as Partial<CalendarEvent>,
         scope,
       );
-      if (!patchIsColorOnly) {
-        void deps.pushGoogleThenSync(prompt.merged, scope);
-      }
+      void deps.pushGoogleThenSync(prompt.merged, scope, pushColor);
     },
     [deps],
   );
@@ -350,6 +362,8 @@ export function useCalendarPagePlanningHandlers(
           deps.removeScheduled(ev.id);
         } else if (scope === "series" && gr?.recurringEventId) {
           deps.removeGoogleSeriesByMasterId(gr.recurringEventId);
+        } else if (scope === "following") {
+          deps.removeGoogleInstancesForScope(ev, "following");
         } else {
           deps.removeScheduled(ev.id);
         }
@@ -510,7 +524,8 @@ export function useCalendarPagePlanningHandlers(
         return;
       }
       deps.patchScheduled(id, patch as Partial<CalendarEvent>);
-      void deps.pushGoogleThenSync(merged);
+      const pushColor = "color" in patch ? (patch.color ?? null) : undefined;
+      void deps.pushGoogleThenSync(merged, undefined, pushColor);
     },
     [deps],
   );

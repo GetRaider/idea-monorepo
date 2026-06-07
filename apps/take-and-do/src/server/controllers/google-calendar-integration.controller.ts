@@ -2,9 +2,18 @@ import { getAccessByAuth, requireNonAnonymous } from "@/auth/guards";
 import { auth } from "@/auth/server";
 import { HttpError } from "@/lib/api/errors";
 import { apiServices } from "@/server/services/api";
+import { googleCalendarColorIdToHex } from "@/helpers/calendar/google-calendar-event-colors";
+import {
+  parseGoogleGcalInstanceOccurrence,
+  resolveGoogleRecurrenceMeta,
+  resolveRecurringMasterId,
+} from "@/helpers/calendar/google-calendar-recurrence.helper";
 import {
   deleteGoogleCalendarEvent,
+  getGoogleCalendarColors,
   getGoogleCalendarEvent,
+  getGoogleCalendarListEntry,
+  GoogleCalendarSyncTokenExpiredError,
   listGoogleCalendarEvents,
   mergeGoogleMasterForPut,
   patchGoogleCalendarEvent,
@@ -13,8 +22,10 @@ import {
 } from "@/server/services/google/google-calendar.client";
 import {
   pushGoogleCalendarFollowingSplit,
+  resolveFollowingMasterIdFromInstance,
   truncateGoogleCalendarSeriesBefore,
 } from "@/server/services/google/google-calendar-recurring-push";
+import { resolveLinkedRecurringMasterIds } from "@/server/services/google/google-calendar-split-lineage";
 
 import { BaseController } from "./base.controller";
 import {
@@ -28,12 +39,15 @@ import {
   ToggleBodyDto,
 } from "./google-calendar-integration.dto";
 import {
-  adjustPatchBodyForRecurringMaster,
   effectiveGoogleRecurrenceTimes,
   mapGoogleApiRecordToCalendarEvent,
   mapGoogleEventToCalendarEvent,
   mapPushBodyToGooglePatch,
   mergeGoogleRsvpIntoPatch,
+  prepareSeriesMasterPushPatch,
+  resolveFollowingTruncateMeta,
+  resolvePushGoogleRecurrenceFromBody,
+  stripGooglePatchColorUnlessRequested,
   type ImportedGoogleCalendarEvent,
 } from "./google-calendar-integration.mapper";
 
@@ -139,17 +153,62 @@ export class GoogleCalendarIntegrationController extends BaseController {
         now.getTime() + 90 * 24 * 60 * 60 * 1000,
       ).toISOString();
 
-      const { items, nextSyncToken } = await listGoogleCalendarEvents({
-        accessToken,
-        calendarId: syncState.calendarId,
-        syncToken: syncState.syncToken,
-        timeMin,
-        timeMax,
-      });
+      let palettes;
+      try {
+        palettes = await getGoogleCalendarColors(accessToken);
+      } catch {
+        palettes = undefined;
+      }
+
+      let listResult: Awaited<ReturnType<typeof listGoogleCalendarEvents>>;
+      let didFullResync = false;
+      try {
+        listResult = await listGoogleCalendarEvents({
+          accessToken,
+          calendarId: syncState.calendarId,
+          syncToken: syncState.syncToken,
+          timeMin,
+          timeMax,
+        });
+      } catch (error) {
+        if (
+          error instanceof GoogleCalendarSyncTokenExpiredError &&
+          syncState.syncToken
+        ) {
+          didFullResync = true;
+          listResult = await listGoogleCalendarEvents({
+            accessToken,
+            calendarId: syncState.calendarId,
+            syncToken: null,
+            timeMin,
+            timeMax,
+          });
+        } else {
+          throw error;
+        }
+      }
+
+      const { items, nextSyncToken } = listResult;
 
       const imported = items
-        .map((e) => mapGoogleEventToCalendarEvent(e))
-        .filter((e): e is ImportedGoogleCalendarEvent => e !== null);
+        .map((event) => mapGoogleEventToCalendarEvent(event, palettes))
+        .filter(
+          (event): event is ImportedGoogleCalendarEvent => event !== null,
+        );
+
+      let googleCalendarColor: string | undefined;
+      try {
+        const listEntry = await getGoogleCalendarListEntry({
+          accessToken,
+          calendarId: syncState.calendarId,
+        });
+        googleCalendarColor = googleCalendarColorIdToHex(
+          listEntry.colorId,
+          palettes,
+        );
+      } catch {
+        googleCalendarColor = undefined;
+      }
 
       await apiServices.googleCalendarIntegration.upsertSyncResult({
         userId: access.userId,
@@ -157,11 +216,14 @@ export class GoogleCalendarIntegrationController extends BaseController {
         lastSyncAt: now,
       });
 
+      const effectiveIncremental = incremental && !didFullResync;
+
       return {
         imported,
         lastSyncAt: now.toISOString(),
-        incremental,
-        ...(incremental
+        incremental: effectiveIncremental,
+        ...(googleCalendarColor ? { googleCalendarColor } : {}),
+        ...(effectiveIncremental
           ? {}
           : {
               syncRange: { timeMin, timeMax },
@@ -206,6 +268,7 @@ export class GoogleCalendarIntegrationController extends BaseController {
       }
 
       const scope = body.recurrenceScope ?? "instance";
+      const resolvedRecurrence = resolvePushGoogleRecurrenceFromBody(body);
       const userEmail = authContext.user.email?.trim();
       if (body.rsvpStatus && !userEmail) {
         throw new HttpError(
@@ -216,23 +279,42 @@ export class GoogleCalendarIntegrationController extends BaseController {
 
       try {
         if (scope === "following") {
-          const meta = body.googleRecurrence;
-          if (!meta) {
+          if (!resolvedRecurrence?.recurringEventId) {
             throw new HttpError(400, "Missing Google recurrence metadata.");
           }
-          const times = effectiveGoogleRecurrenceTimes(meta, {
-            start: body.start,
-            allDay: body.allDay,
+          if (!parseGoogleGcalInstanceOccurrence(body.id)) {
+            throw new HttpError(
+              400,
+              "Open a specific occurrence to update this and following events.",
+            );
+          }
+          const instanceGet = await getGoogleCalendarEvent({
+            accessToken,
+            calendarId: syncState.calendarId,
+            googleEventId,
           });
-          let followingPatchBody = patchBody;
+          const times = resolveFollowingTruncateMeta({
+            instanceRaw: instanceGet.raw,
+            resolvedRecurrence,
+            body,
+          });
+          const followingMasterId = resolveFollowingMasterIdFromInstance(
+            instanceGet.raw,
+            resolveRecurringMasterId(body.id, resolvedRecurrence) ??
+              resolvedRecurrence.recurringEventId,
+          );
+          let followingPatchBody = stripGooglePatchColorUnlessRequested(
+            patchBody,
+            body,
+          );
           if (body.rsvpStatus && userEmail) {
             const masterGet = await getGoogleCalendarEvent({
               accessToken,
               calendarId: syncState.calendarId,
-              googleEventId: meta.recurringEventId,
+              googleEventId: followingMasterId,
             });
             followingPatchBody = mergeGoogleRsvpIntoPatch(
-              patchBody,
+              followingPatchBody,
               masterGet.raw,
               body.rsvpStatus,
               userEmail,
@@ -241,76 +323,107 @@ export class GoogleCalendarIntegrationController extends BaseController {
           await pushGoogleCalendarFollowingSplit({
             accessToken,
             calendarId: syncState.calendarId,
-            masterId: meta.recurringEventId,
+            masterId: followingMasterId,
             meta: times,
             patchBody: followingPatchBody,
           });
-        } else {
-          const targetGoogleId =
-            scope === "series" && body.googleRecurrence
-              ? body.googleRecurrence.recurringEventId
-              : googleEventId;
+          await apiServices.googleCalendarIntegration.invalidateSyncToken(
+            access.userId,
+          );
+        } else if (scope === "series") {
+          const masterId = resolveRecurringMasterId(
+            body.id,
+            body.googleRecurrence,
+          );
+          if (!masterId) {
+            throw new HttpError(
+              400,
+              "Could not resolve the recurring series master for this Google event.",
+            );
+          }
+          if (!resolvedRecurrence) {
+            throw new HttpError(400, "Missing Google recurrence metadata.");
+          }
 
-          let bodyToSend = patchBody;
-          const seriesUsesMasterPut =
-            scope === "series" && !!body.googleRecurrence?.recurringEventId;
+          const masterGet = await getGoogleCalendarEvent({
+            accessToken,
+            calendarId: syncState.calendarId,
+            googleEventId: masterId,
+          });
+          const linkedMasterIds = await resolveLinkedRecurringMasterIds({
+            accessToken,
+            calendarId: syncState.calendarId,
+            seedMasterId: masterId,
+            seedMasterRaw: masterGet.raw,
+          });
+          const mergedMeta = {
+            ...resolvedRecurrence,
+            recurringEventId: masterId,
+            ...effectiveGoogleRecurrenceTimes(resolvedRecurrence, {
+              start: body.start,
+              allDay: body.allDay,
+              timeZone: body.timeZone,
+            }),
+          };
 
-          if (seriesUsesMasterPut && body.googleRecurrence) {
-            const masterGet = await getGoogleCalendarEvent({
-              accessToken,
-              calendarId: syncState.calendarId,
-              googleEventId: body.googleRecurrence.recurringEventId,
-            });
-            const mergedMeta = {
-              ...body.googleRecurrence,
-              ...effectiveGoogleRecurrenceTimes(body.googleRecurrence, {
-                start: body.start,
-                allDay: body.allDay,
-              }),
-            };
-            bodyToSend = adjustPatchBodyForRecurringMaster(
+          for (const linkedMasterId of linkedMasterIds) {
+            const linkedMasterGet =
+              linkedMasterId === masterId
+                ? masterGet
+                : await getGoogleCalendarEvent({
+                    accessToken,
+                    calendarId: syncState.calendarId,
+                    googleEventId: linkedMasterId,
+                  });
+            let bodyToSend = prepareSeriesMasterPushPatch(
               patchBody,
-              masterGet.raw,
-              mergedMeta,
+              linkedMasterGet.raw,
+              {
+                ...mergedMeta,
+                recurringEventId: linkedMasterId,
+              },
               body,
             );
             if (body.rsvpStatus && userEmail) {
               bodyToSend = mergeGoogleRsvpIntoPatch(
                 bodyToSend,
-                masterGet.raw,
+                linkedMasterGet.raw,
                 body.rsvpStatus,
                 userEmail,
               );
             }
-            const putBody = mergeGoogleMasterForPut(masterGet.raw, bodyToSend);
+            const putBody = mergeGoogleMasterForPut(
+              linkedMasterGet.raw,
+              bodyToSend,
+            );
             await updateGoogleCalendarEvent({
               accessToken,
               calendarId: syncState.calendarId,
-              googleEventId: targetGoogleId,
+              googleEventId: linkedMasterId,
               body: putBody,
-              etag: masterGet.etag,
-            });
-          } else {
-            if (body.rsvpStatus && userEmail) {
-              const instanceGet = await getGoogleCalendarEvent({
-                accessToken,
-                calendarId: syncState.calendarId,
-                googleEventId: targetGoogleId,
-              });
-              bodyToSend = mergeGoogleRsvpIntoPatch(
-                patchBody,
-                instanceGet.raw,
-                body.rsvpStatus,
-                userEmail,
-              );
-            }
-            await patchGoogleCalendarEvent({
-              accessToken,
-              calendarId: syncState.calendarId,
-              googleEventId: targetGoogleId,
-              body: bodyToSend,
+              etag: linkedMasterGet.etag,
             });
           }
+        } else {
+          if (body.rsvpStatus && userEmail) {
+            const instanceGet = await getGoogleCalendarEvent({
+              accessToken,
+              calendarId: syncState.calendarId,
+              googleEventId: googleEventId,
+            });
+            patchBody = mergeGoogleRsvpIntoPatch(
+              patchBody,
+              instanceGet.raw,
+              body.rsvpStatus,
+              userEmail,
+            );
+          }
+          await patchGoogleCalendarEvent({
+            accessToken,
+            calendarId: syncState.calendarId,
+            googleEventId,
+            body: patchBody,
+          });
         }
       } catch (e) {
         if (e instanceof HttpError) throw e;
@@ -356,34 +469,50 @@ export class GoogleCalendarIntegrationController extends BaseController {
       }
 
       const scope = body.recurrenceScope ?? "instance";
+      const resolvedRecurrence = resolveGoogleRecurrenceMeta(
+        body.id,
+        body.googleRecurrence,
+        {
+          start: body.start?.trim() ?? "",
+          allDay: body.allDay ?? false,
+        },
+      );
 
       try {
         if (scope === "following") {
-          const meta = body.googleRecurrence;
-          if (!meta) {
+          if (!resolvedRecurrence?.recurringEventId) {
             throw new HttpError(400, "Missing Google recurrence metadata.");
           }
-          const startFb = body.start?.trim();
-          if (!meta.originalStart?.trim() && !startFb) {
+          if (!resolvedRecurrence.originalStart?.trim()) {
             throw new HttpError(
               400,
               "Recurring delete (this and following) needs the instance start time. Refresh the calendar and try again.",
             );
           }
-          const times = effectiveGoogleRecurrenceTimes(meta, {
-            start: startFb ?? "",
+          const times = effectiveGoogleRecurrenceTimes(resolvedRecurrence, {
+            start: body.start?.trim() ?? "",
             allDay: body.allDay ?? false,
           });
+          const deleteMasterId =
+            resolveRecurringMasterId(body.id, resolvedRecurrence) ??
+            resolvedRecurrence.recurringEventId;
           await truncateGoogleCalendarSeriesBefore({
             accessToken,
             calendarId: syncState.calendarId,
-            masterId: meta.recurringEventId,
+            masterId: deleteMasterId,
             meta: times,
           });
+          await apiServices.googleCalendarIntegration.invalidateSyncToken(
+            access.userId,
+          );
         } else {
+          const seriesMasterId =
+            scope === "series"
+              ? resolveRecurringMasterId(body.id, resolvedRecurrence)
+              : undefined;
           const targetGoogleId =
-            scope === "series" && body.googleRecurrence
-              ? body.googleRecurrence.recurringEventId
+            scope === "series" && seriesMasterId
+              ? seriesMasterId
               : googleEventId;
 
           await deleteGoogleCalendarEvent({
@@ -432,11 +561,14 @@ export class GoogleCalendarIntegrationController extends BaseController {
 
       let patchBody: Record<string, unknown>;
       try {
-        patchBody = mapPushBodyToGooglePatch({
-          ...body,
-          id: "gcal:create-placeholder",
-          type: "common",
-        });
+        patchBody = mapPushBodyToGooglePatch(
+          {
+            ...body,
+            id: "gcal:create-placeholder",
+            type: "common",
+          },
+          { includeRecurrence: true },
+        );
       } catch (e) {
         if (e instanceof HttpError) throw e;
         throw new HttpError(400, "Invalid event times.");

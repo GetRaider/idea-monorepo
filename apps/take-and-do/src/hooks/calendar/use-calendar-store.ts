@@ -26,6 +26,8 @@ import {
   googleEventMatchesRecurrenceScope,
   googleRecurrenceSeriesLocalPatchKeys,
 } from "@/helpers/calendar/google-calendar-recurrence.helper";
+import { calendarEventsLayoutSignature } from "@/helpers/calendar/planning-calendar-event-colors";
+
 import { mergeGoogleCalendarImportedEvents } from "./merge-google-calendar-import";
 
 export function useCalendarStore() {
@@ -79,10 +81,17 @@ export function useCalendarStore() {
   const syncExternalGridEvents = useCallback((blocks: CalendarEvent[]) => {
     setState((prev) => {
       if (!prev) return prev;
-      const gcal = prev.events.filter((e) =>
-        e.id.startsWith(GOOGLE_CALENDAR_EVENT_ID_PREFIX),
+      const googleEvents = prev.events.filter((event) =>
+        event.id.startsWith(GOOGLE_CALENDAR_EVENT_ID_PREFIX),
       );
-      return { ...prev, events: [...gcal, ...blocks] };
+      const nextEvents = [...googleEvents, ...blocks];
+      if (
+        calendarEventsLayoutSignature(prev.events) ===
+        calendarEventsLayoutSignature(nextEvents)
+      ) {
+        return prev;
+      }
+      return { ...prev, events: nextEvents };
     });
   }, []);
 
@@ -305,10 +314,14 @@ export function useCalendarStore() {
       opts: {
         incremental: boolean;
         syncRange?: { timeMin: string; timeMax: string };
+        googleCalendarColor?: string;
       },
     ) => {
       setState((prev) => {
         if (!prev) return prev;
+        const chromeHex = opts.googleCalendarColor
+          ? normalizeHexColor(opts.googleCalendarColor)
+          : undefined;
         return {
           ...prev,
           events: mergeGoogleCalendarImportedEvents(
@@ -316,6 +329,11 @@ export function useCalendarStore() {
             imported,
             opts,
           ),
+          ...(chromeHex
+            ? {
+                googleCalendarColor: coerceHexToWhiteTextSafe(chromeHex),
+              }
+            : {}),
         };
       });
     },
@@ -344,6 +362,23 @@ export function useCalendarStore() {
             getEffectiveGoogleRecurrence(e)?.recurringEventId !==
             recurringMasterId
           );
+        });
+        if (filtered.length === prev.events.length) return prev;
+        return { ...prev, events: filtered };
+      });
+    },
+    [],
+  );
+
+  const removeGoogleInstancesForScope = useCallback(
+    (anchor: CalendarEvent, scope: GoogleCalendarRecurrenceScope) => {
+      setState((prev) => {
+        if (!prev) return prev;
+        const filtered = prev.events.filter((event) => {
+          if (!event.id.startsWith(GOOGLE_CALENDAR_EVENT_ID_PREFIX))
+            return true;
+          if (scope === "instance") return event.id !== anchor.id;
+          return !googleEventMatchesRecurrenceScope(event, anchor, scope);
         });
         if (filtered.length === prev.events.length) return prev;
         return { ...prev, events: filtered };
@@ -402,6 +437,7 @@ export function useCalendarStore() {
     mergeGoogleCalendarSync,
     removeGoogleImportedEvents,
     removeGoogleSeriesByMasterId,
+    removeGoogleInstancesForScope,
     setAxisTimeZones,
     setInternalCalendarColor,
     setGoogleCalendarColor,

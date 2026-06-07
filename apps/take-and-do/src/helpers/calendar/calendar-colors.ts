@@ -155,7 +155,7 @@ export function calendarEventUsesGoogleChrome(
   return kind === "common" && commonUsesGoogle === true;
 }
 
-/** Color of the “parent calendar” chrome (Internal vs Google). */
+/** Calendar chrome for the left stripe — never the per-event override. */
 export function calendarChromeHex(
   event: CalendarEvent,
   opts: CalendarColorTheme,

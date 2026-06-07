@@ -31,6 +31,8 @@ export interface GoogleCalendarRecurrenceMeta {
    */
   originalStart?: string;
   originalAllDay?: boolean;
+  /** Links split head/tail masters after “this and following” (shared extended property). */
+  splitGroupId?: string;
 }
 
 export interface CalendarBacklogEvent {

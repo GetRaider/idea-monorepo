@@ -11,23 +11,123 @@ function looksLikeGoogleOccurrenceSuffix(s: string): boolean {
   return /^[0-9A-Za-zTZ:.\+\-]+$/.test(s);
 }
 
-function inferGoogleRecurrenceFromGcalInstanceId(
-  event: CalendarEvent & { type: "common" },
-): GoogleCalendarRecurrenceMeta | undefined {
-  const raw = event.id.slice(GOOGLE_CALENDAR_EVENT_ID_PREFIX.length);
-  for (let i = raw.length - 1; i >= 0; i--) {
-    if (raw[i] !== "_") continue;
-    const suffix = raw.slice(i + 1);
+function parseOccurrenceSuffix(suffix: string): {
+  originalStart: string;
+  originalAllDay: boolean;
+} | null {
+  const trimmed = suffix.trim();
+  if (!trimmed || !/^20\d/.test(trimmed)) return null;
+
+  if (/^\d{8}$/.test(trimmed)) {
+    return {
+      originalStart: `${trimmed.slice(0, 4)}-${trimmed.slice(4, 6)}-${trimmed.slice(6, 8)}`,
+      originalAllDay: true,
+    };
+  }
+
+  const compactTimed =
+    /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})(Z|[+-]\d{4})$/i.exec(trimmed);
+  if (compactTimed) {
+    const [, year, month, day, hour, minute, second, zoneTail] = compactTimed;
+    const zone =
+      zoneTail.toUpperCase() === "Z"
+        ? "Z"
+        : `${zoneTail.slice(0, 3)}:${zoneTail.slice(3)}`;
+    return {
+      originalStart: `${year}-${month}-${day}T${hour}:${minute}:${second}${zone}`,
+      originalAllDay: false,
+    };
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    return { originalStart: trimmed, originalAllDay: true };
+  }
+
+  const parsedMs = Date.parse(trimmed);
+  if (!Number.isNaN(parsedMs)) {
+    return {
+      originalStart: new Date(parsedMs).toISOString().replace(/\.\d{3}Z$/, "Z"),
+      originalAllDay: false,
+    };
+  }
+
+  return null;
+}
+
+/** Parse `{recurringEventId}_{originalStart}` from a Google instance event id. */
+export function parseGoogleGcalInstanceOccurrence(
+  gcalEventId: string,
+): GoogleCalendarRecurrenceMeta | null {
+  if (!gcalEventId.startsWith(GOOGLE_CALENDAR_EVENT_ID_PREFIX)) return null;
+  const raw = gcalEventId.slice(GOOGLE_CALENDAR_EVENT_ID_PREFIX.length);
+  for (let index = raw.length - 1; index >= 0; index--) {
+    if (raw[index] !== "_") continue;
+    const suffix = raw.slice(index + 1);
     if (!looksLikeGoogleOccurrenceSuffix(suffix)) continue;
-    const recurringEventId = raw.slice(0, i);
+    const parsed = parseOccurrenceSuffix(suffix);
+    if (!parsed) continue;
+    const recurringEventId = raw.slice(0, index);
     if (!recurringEventId) continue;
     return {
       recurringEventId,
-      originalStart: event.start,
-      originalAllDay: event.allDay,
+      originalStart: parsed.originalStart,
+      originalAllDay: parsed.originalAllDay,
     };
   }
-  return undefined;
+  return null;
+}
+
+/** Master id for API writes — always derived from the clicked instance id when possible. */
+export function resolveRecurringMasterId(
+  gcalEventId: string,
+  meta?: GoogleCalendarRecurrenceMeta,
+): string | undefined {
+  const fromPushInstance = parseGoogleGcalInstanceOccurrence(gcalEventId);
+  if (fromPushInstance?.recurringEventId) {
+    return fromPushInstance.recurringEventId;
+  }
+  const stored = meta?.recurringEventId?.trim();
+  if (!stored) return undefined;
+  const fromStoredInstance = parseGoogleGcalInstanceOccurrence(
+    `${GOOGLE_CALENDAR_EVENT_ID_PREFIX}${stored}`,
+  );
+  return fromStoredInstance?.recurringEventId ?? stored;
+}
+
+export function resolveGoogleRecurrenceMeta(
+  gcalEventId: string,
+  meta?: GoogleCalendarRecurrenceMeta,
+  fallback?: { start: string; allDay: boolean; timeZone?: string },
+): GoogleCalendarRecurrenceMeta | undefined {
+  const fromId = parseGoogleGcalInstanceOccurrence(gcalEventId);
+  const recurringEventId = resolveRecurringMasterId(gcalEventId, meta);
+  if (!recurringEventId) return undefined;
+
+  const originalStart =
+    fromId?.originalStart?.trim() ||
+    meta?.originalStart?.trim() ||
+    fallback?.start;
+  if (!originalStart?.trim()) {
+    return {
+      recurringEventId,
+      ...(meta?.splitGroupId?.trim()
+        ? { splitGroupId: meta.splitGroupId.trim() }
+        : {}),
+    };
+  }
+
+  return {
+    recurringEventId,
+    originalStart,
+    originalAllDay:
+      fromId?.originalAllDay ??
+      meta?.originalAllDay ??
+      fallback?.allDay ??
+      false,
+    ...(meta?.splitGroupId?.trim()
+      ? { splitGroupId: meta.splitGroupId.trim() }
+      : {}),
+  };
 }
 
 /**
@@ -42,16 +142,11 @@ export function getEffectiveGoogleRecurrence(
     !event.id.startsWith(GOOGLE_CALENDAR_EVENT_ID_PREFIX)
   )
     return undefined;
-  const gr = event.googleRecurrence;
-  if (gr?.recurringEventId) {
-    if (gr.originalStart?.trim()) return gr;
-    return {
-      recurringEventId: gr.recurringEventId,
-      originalStart: event.start,
-      originalAllDay: gr.originalAllDay ?? event.allDay,
-    };
-  }
-  return inferGoogleRecurrenceFromGcalInstanceId(event);
+  return resolveGoogleRecurrenceMeta(event.id, event.googleRecurrence, {
+    start: event.start,
+    allDay: event.allDay,
+    timeZone: event.timeZone,
+  });
 }
 
 export function needsGoogleCalendarRecurrenceScope(
@@ -72,8 +167,15 @@ export function googleEventMatchesRecurrenceScope(
   if (!masterId) return event.id === anchor.id;
 
   const eventMeta = getEffectiveGoogleRecurrence(event);
+  if (scope === "series") {
+    const anchorSplitGroupId = anchorMeta.splitGroupId;
+    if (anchorSplitGroupId && eventMeta?.splitGroupId === anchorSplitGroupId) {
+      return true;
+    }
+    return eventMeta?.recurringEventId === masterId;
+  }
+
   if (eventMeta?.recurringEventId !== masterId) return false;
-  if (scope === "series") return true;
 
   const anchorStart = anchorMeta.originalStart ?? anchor.start;
   const eventStart = eventMeta.originalStart ?? event.start;

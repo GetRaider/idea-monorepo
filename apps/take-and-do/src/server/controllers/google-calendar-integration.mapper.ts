@@ -2,9 +2,18 @@ import type { z } from "zod";
 
 import { HttpError } from "@/lib/api/errors";
 import {
-  calendarRepeatToGoogleRecurrence,
+  googleEventColorIdToHex,
+  googleEventColorPatchFromHex,
+  type GoogleCalendarColorPalettes,
+} from "@/helpers/calendar/google-calendar-event-colors";
+import { normalizeHexColor } from "@/helpers/calendar/calendar-colors";
+import {
   parseGoogleRecurrenceToCalendarRepeat,
+  calendarRepeatToGoogleRecurrence,
 } from "@/helpers/calendar/google-calendar-repeat.helper";
+import { resolveGoogleRecurrenceMeta } from "@/helpers/calendar/google-calendar-recurrence.helper";
+import { resolveGoogleInstanceOriginalStartMeta } from "@/server/services/google/google-calendar-recurring-push";
+import { GOOGLE_SPLIT_GROUP_PROP } from "@/server/services/google/google-calendar-split-lineage";
 import type { GoogleCalendarEventItem } from "@/server/services/google/google-calendar.client";
 import type {
   CalendarEvent,
@@ -21,21 +30,144 @@ export type ImportedGoogleCalendarEvent = Omit<CalendarEvent, "type"> & {
   type: "common";
 };
 
+function readImportedGoogleSplitGroupId(
+  event: GoogleCalendarEventItem,
+): string | undefined {
+  const extendedProperties = event.extendedProperties;
+  const shared = extendedProperties?.shared;
+  const value = shared?.[GOOGLE_SPLIT_GROUP_PROP];
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
 export function effectiveGoogleRecurrenceTimes(
   meta: z.infer<typeof GoogleRecurrenceMetaDto>,
-  fallback: { start: string; allDay: boolean },
+  fallback: { start: string; allDay: boolean; timeZone?: string },
 ): { originalStart: string; originalAllDay: boolean } {
-  const originalStart =
+  const rawOriginalStart =
     (typeof meta.originalStart === "string" && meta.originalStart.trim()) ||
     fallback.start;
+  const originalAllDay = meta.originalAllDay ?? fallback.allDay;
   return {
-    originalStart,
-    originalAllDay: meta.originalAllDay ?? fallback.allDay,
+    originalStart: normalizeGoogleOriginalStartInstant({
+      originalStart: rawOriginalStart,
+      originalAllDay,
+      timeZone: fallback.timeZone,
+    }),
+    originalAllDay,
+  };
+}
+
+export function resolvePushGoogleRecurrenceFromBody(
+  body: z.infer<typeof PushEventBodyDto>,
+): GoogleCalendarRecurrenceMeta | undefined {
+  const resolved = resolveGoogleRecurrenceMeta(body.id, body.googleRecurrence, {
+    start: body.start,
+    allDay: body.allDay,
+    timeZone: body.timeZone,
+  });
+  if (!resolved?.originalStart?.trim()) return resolved;
+  return {
+    ...resolved,
+    originalStart: normalizeGoogleOriginalStartInstant({
+      originalStart: resolved.originalStart,
+      originalAllDay: resolved.originalAllDay,
+      timeZone: body.timeZone,
+    }),
+  };
+}
+
+function normalizeGoogleOriginalStartInstant(params: {
+  originalStart: string;
+  originalAllDay?: boolean;
+  timeZone?: string;
+}): string {
+  const trimmed = params.originalStart.trim();
+  if (!trimmed) return trimmed;
+  if (params.originalAllDay || /^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    return trimmed.slice(0, 10);
+  }
+  if (/[Zz]$/.test(trimmed) || /[+-]\d{2}:?\d{2}$/.test(trimmed)) {
+    const parsedMs = Date.parse(trimmed);
+    if (!Number.isNaN(parsedMs)) {
+      return new Date(parsedMs).toISOString().replace(/\.\d{3}Z$/, "Z");
+    }
+  }
+  const wallUtcMs = parseGoogleWallDateTimeToUtcMs(trimmed, params.timeZone);
+  if (wallUtcMs != null) {
+    return new Date(wallUtcMs).toISOString().replace(/\.\d{3}Z$/, "Z");
+  }
+  return trimmed;
+}
+
+function parseGoogleWallDateTimeToUtcMs(
+  dateTime: string,
+  timeZone?: string,
+): number | null {
+  const target = dateTime.trim().replace(/\.\d+$/, "");
+  const tz = timeZone?.trim() || "UTC";
+  if (tz === "UTC") {
+    const parsedMs = Date.parse(target.endsWith("Z") ? target : `${target}Z`);
+    return Number.isNaN(parsedMs) ? null : parsedMs;
+  }
+  let utcMs = Date.parse(`${target}Z`);
+  if (Number.isNaN(utcMs)) return null;
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const wall = formatWallDateTimeInZone(new Date(utcMs), tz);
+    if (wall === target) return utcMs;
+    const wallMs = Date.parse(`${wall}Z`);
+    const targetMs = Date.parse(`${target}Z`);
+    if (Number.isNaN(wallMs) || Number.isNaN(targetMs)) return null;
+    utcMs += targetMs - wallMs;
+  }
+  return utcMs;
+}
+
+function omitGooglePatchStartEnd(
+  patchBody: Record<string, unknown>,
+): Record<string, unknown> {
+  const { start: _start, end: _end, ...rest } = patchBody;
+  return rest;
+}
+
+export function stripGooglePatchColorUnlessRequested(
+  patchBody: Record<string, unknown>,
+  body: Pick<z.infer<typeof PushEventBodyDto>, "color">,
+): Record<string, unknown> {
+  if ("color" in body) return patchBody;
+  if (!("colorId" in patchBody)) return patchBody;
+  const { colorId: _colorId, ...rest } = patchBody;
+  return rest;
+}
+
+export function resolveFollowingTruncateMeta(params: {
+  instanceRaw: Record<string, unknown>;
+  resolvedRecurrence: z.infer<typeof GoogleRecurrenceMetaDto>;
+  body: Pick<z.infer<typeof PushEventBodyDto>, "start" | "allDay" | "timeZone">;
+}): { originalStart: string; originalAllDay: boolean } {
+  const fromInstance = resolveGoogleInstanceOriginalStartMeta(
+    params.instanceRaw,
+  );
+  const fallback = effectiveGoogleRecurrenceTimes(params.resolvedRecurrence, {
+    start: params.body.start,
+    allDay: params.body.allDay,
+    timeZone: params.body.timeZone,
+  });
+  if (!fromInstance) return fallback;
+
+  return {
+    originalStart: normalizeGoogleOriginalStartInstant({
+      originalStart: fromInstance.originalStart,
+      originalAllDay: fromInstance.originalAllDay,
+      timeZone: fromInstance.timeZone ?? params.body.timeZone,
+    }),
+    originalAllDay: fromInstance.originalAllDay,
+    ...(fromInstance.timeZone ? { timeZone: fromInstance.timeZone } : {}),
   };
 }
 
 export function mapGoogleEventToCalendarEvent(
   e: GoogleCalendarEventItem,
+  palettes?: GoogleCalendarColorPalettes,
 ): ImportedGoogleCalendarEvent | null {
   if (e.status === "cancelled") return null;
   const id = e.id ? `gcal:${e.id}` : null;
@@ -62,8 +194,10 @@ export function mapGoogleEventToCalendarEvent(
 
   let googleRecurrence: GoogleCalendarRecurrenceMeta | undefined;
   const recurringEventId = e.recurringEventId;
+  const splitGroupId = readImportedGoogleSplitGroupId(e);
   const ost = e.originalStartTime;
   if (typeof recurringEventId === "string" && recurringEventId.length > 0) {
+    const splitFields = splitGroupId ? { splitGroupId } : {};
     if (
       ost &&
       (typeof ost.dateTime === "string" || typeof ost.date === "string")
@@ -78,12 +212,13 @@ export function mapGoogleEventToCalendarEvent(
           recurringEventId,
           originalStart,
           originalAllDay,
+          ...splitFields,
         };
       } else {
-        googleRecurrence = { recurringEventId };
+        googleRecurrence = { recurringEventId, ...splitFields };
       }
     } else {
-      googleRecurrence = { recurringEventId };
+      googleRecurrence = { recurringEventId, ...splitFields };
     }
   }
 
@@ -95,6 +230,7 @@ export function mapGoogleEventToCalendarEvent(
   if (!normalizedRange) return null;
 
   const repeat = parseGoogleRecurrenceToCalendarRepeat(e.recurrence);
+  const color = googleEventColorIdToHex(e.colorId, palettes);
 
   return {
     id,
@@ -110,6 +246,7 @@ export function mapGoogleEventToCalendarEvent(
     ...(rsvpStatus ? { rsvpStatus } : {}),
     ...(repeat ? { repeat } : {}),
     ...(googleRecurrence ? { googleRecurrence } : {}),
+    ...(color ? { color } : {}),
   };
 }
 
@@ -296,16 +433,31 @@ function googleTimedStartEnd(params: {
   };
 }
 
+function pushBodyGoogleColorPatch(
+  body: z.infer<typeof PushEventBodyDto>,
+): Record<string, unknown> {
+  if (!("color" in body)) return {};
+  if (body.color === null) return googleEventColorPatchFromHex(null);
+  const hex = normalizeHexColor(body.color);
+  return hex
+    ? googleEventColorPatchFromHex(hex)
+    : googleEventColorPatchFromHex(null);
+}
+
 export function mapPushBodyToGooglePatch(
   body: z.infer<typeof PushEventBodyDto>,
+  opts?: { includeRecurrence?: boolean },
 ): Record<string, unknown> {
   const summary = body.title.trim() || "(No title)";
   const description = mergedGoogleDescription(body.description, body.notes);
+  const colorPatch = pushBodyGoogleColorPatch(body);
+  const includeRecurrence = opts?.includeRecurrence ?? false;
 
   const base: Record<string, unknown> = {
     summary,
     description,
-    ...(body.repeat
+    ...colorPatch,
+    ...(includeRecurrence && body.repeat
       ? { recurrence: calendarRepeatToGoogleRecurrence(body.repeat) }
       : {}),
   };
@@ -363,9 +515,15 @@ function adjustTimedPatchForRecurringMaster(
   masterRaw: Record<string, unknown>,
   meta: z.infer<typeof GoogleRecurrenceMetaDto>,
   body: z.infer<typeof PushEventBodyDto>,
-): Record<string, unknown> {
-  if (!meta.originalStart) return patchBody;
-  const origMs = new Date(meta.originalStart).getTime();
+): Record<string, unknown> | null {
+  if (!meta.originalStart) return null;
+  const origMs = Date.parse(
+    normalizeGoogleOriginalStartInstant({
+      originalStart: meta.originalStart,
+      originalAllDay: meta.originalAllDay,
+      timeZone: body.timeZone,
+    }),
+  );
   const userStartMs = new Date(body.start).getTime();
   const userEndMs = new Date(body.end).getTime();
   if (
@@ -373,7 +531,7 @@ function adjustTimedPatchForRecurringMaster(
     Number.isNaN(userStartMs) ||
     Number.isNaN(userEndMs)
   ) {
-    return patchBody;
+    return null;
   }
 
   const deltaMs = userStartMs - origMs;
@@ -382,20 +540,21 @@ function adjustTimedPatchForRecurringMaster(
   const sObj = masterRaw.start;
   const eObj = masterRaw.end;
   if (!sObj || typeof sObj !== "object" || !eObj || typeof eObj !== "object") {
-    return patchBody;
+    return null;
   }
 
   const st = sObj as { dateTime?: string; date?: string; timeZone?: string };
   const en = eObj as { dateTime?: string; date?: string; timeZone?: string };
-  if (!st.dateTime || !en.dateTime) return patchBody;
+  if (!st.dateTime || !en.dateTime) return null;
 
-  const mStart = new Date(st.dateTime);
-  const mEnd = new Date(en.dateTime);
-  if (Number.isNaN(mStart.getTime()) || Number.isNaN(mEnd.getTime())) {
-    return patchBody;
-  }
+  const masterStartMs = parseGoogleWallDateTimeToUtcMs(
+    st.dateTime,
+    st.timeZone,
+  );
+  const masterEndMs = parseGoogleWallDateTimeToUtcMs(en.dateTime, en.timeZone);
+  if (masterStartMs == null || masterEndMs == null) return null;
 
-  const newMasterStart = new Date(mStart.getTime() + deltaMs);
+  const newMasterStart = new Date(masterStartMs + deltaMs);
   const newMasterEnd = new Date(newMasterStart.getTime() + newDurMs);
 
   const tz =
@@ -418,8 +577,8 @@ function adjustAllDayPatchForRecurringMaster(
   masterRaw: Record<string, unknown>,
   meta: z.infer<typeof GoogleRecurrenceMetaDto>,
   body: z.infer<typeof PushEventBodyDto>,
-): Record<string, unknown> {
-  if (!meta.originalStart?.trim()) return patchBody;
+): Record<string, unknown> | null {
+  if (!meta.originalStart?.trim()) return null;
   const origYmd = meta.originalStart.trim().slice(0, 10);
   const userStartYmd = formatLocalYmd(new Date(body.start));
   const userInclusiveEndYmd = formatLocalYmd(new Date(body.end));
@@ -428,11 +587,11 @@ function adjustAllDayPatchForRecurringMaster(
 
   const st = masterRaw.start as { date?: string } | undefined;
   const en = masterRaw.end as { date?: string } | undefined;
-  if (!st?.date || !en?.date) return patchBody;
+  if (!st?.date || !en?.date) return null;
 
   const newMasterStartYmd = addDaysToYmd(st.date, dayDelta);
   const inclusiveSpanDays = diffDaysYmd(userInclusiveEndYmd, userStartYmd) + 1;
-  if (inclusiveSpanDays < 1) return patchBody;
+  if (inclusiveSpanDays < 1) return null;
   const newMasterEndExclusiveYmd = addDaysToYmd(
     newMasterStartYmd,
     inclusiveSpanDays,
@@ -454,6 +613,7 @@ export function adjustPatchBodyForRecurringMaster(
   const times = effectiveGoogleRecurrenceTimes(meta, {
     start: body.start,
     allDay: body.allDay,
+    timeZone: body.timeZone,
   });
   const metaFull: z.infer<typeof GoogleRecurrenceMetaDto> = {
     ...meta,
@@ -462,28 +622,89 @@ export function adjustPatchBodyForRecurringMaster(
   };
 
   if (body.allDay && times.originalAllDay) {
-    return adjustAllDayPatchForRecurringMaster(
-      patchBody,
-      masterRaw,
-      metaFull,
-      body,
+    return (
+      adjustAllDayPatchForRecurringMaster(
+        patchBody,
+        masterRaw,
+        metaFull,
+        body,
+      ) ?? omitGooglePatchStartEnd(patchBody)
     );
   }
 
   if (!body.allDay && !times.originalAllDay) {
-    return adjustTimedPatchForRecurringMaster(
-      patchBody,
-      masterRaw,
-      metaFull,
-      body,
+    return (
+      adjustTimedPatchForRecurringMaster(
+        patchBody,
+        masterRaw,
+        metaFull,
+        body,
+      ) ?? omitGooglePatchStartEnd(patchBody)
     );
   }
 
-  return patchBody;
+  return omitGooglePatchStartEnd(patchBody);
+}
+
+export function pushBodyChangesSeriesSchedule(
+  body: Pick<
+    z.infer<typeof PushEventBodyDto>,
+    "start" | "end" | "allDay" | "timeZone"
+  >,
+  meta: z.infer<typeof GoogleRecurrenceMetaDto>,
+): boolean {
+  if (!meta.originalStart?.trim()) return false;
+
+  const times = effectiveGoogleRecurrenceTimes(meta, {
+    start: body.start,
+    allDay: body.allDay,
+    timeZone: body.timeZone,
+  });
+
+  if (body.allDay !== times.originalAllDay) return true;
+
+  if (body.allDay) {
+    const origYmd = times.originalStart.slice(0, 10);
+    const userStartYmd = formatLocalYmd(new Date(body.start));
+    return userStartYmd !== origYmd;
+  }
+
+  const origMs = Date.parse(
+    normalizeGoogleOriginalStartInstant({
+      originalStart: times.originalStart,
+      originalAllDay: false,
+      timeZone: body.timeZone,
+    }),
+  );
+  const userStartMs = new Date(body.start).getTime();
+  if (Number.isNaN(origMs) || Number.isNaN(userStartMs)) return false;
+  return Math.abs(userStartMs - origMs) > 1000;
+}
+
+export function prepareSeriesMasterPushPatch(
+  patchBody: Record<string, unknown>,
+  masterRaw: Record<string, unknown>,
+  meta: z.infer<typeof GoogleRecurrenceMetaDto>,
+  body: z.infer<typeof PushEventBodyDto>,
+): Record<string, unknown> {
+  let result = adjustPatchBodyForRecurringMaster(
+    patchBody,
+    masterRaw,
+    meta,
+    body,
+  );
+  if (!pushBodyChangesSeriesSchedule(body, meta)) {
+    result = omitGooglePatchStartEnd(result);
+  }
+  return stripGooglePatchColorUnlessRequested(result, body);
 }
 
 export function mapGoogleApiRecordToCalendarEvent(
   raw: Record<string, unknown>,
+  palettes?: GoogleCalendarColorPalettes,
 ): ImportedGoogleCalendarEvent | null {
-  return mapGoogleEventToCalendarEvent(raw as GoogleCalendarEventItem);
+  return mapGoogleEventToCalendarEvent(
+    raw as GoogleCalendarEventItem,
+    palettes,
+  );
 }

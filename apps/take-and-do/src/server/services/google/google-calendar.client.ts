@@ -46,11 +46,45 @@ const GoogleCalendarEventsListResponseSchema = z.object({
           })
           .optional(),
         status: z.string().optional(),
+        colorId: z.union([z.string(), z.number()]).optional(),
+        extendedProperties: z
+          .object({
+            shared: z.record(z.string()).optional(),
+            private: z.record(z.string()).optional(),
+          })
+          .optional(),
       }),
     )
     .default([]),
   nextSyncToken: z.string().optional(),
 });
+
+const GoogleCalendarColorDefinitionSchema = z.object({
+  background: z.string(),
+  foreground: z.string(),
+});
+
+const GoogleCalendarColorsResponseSchema = z.object({
+  event: z.record(GoogleCalendarColorDefinitionSchema).default({}),
+  calendar: z.record(GoogleCalendarColorDefinitionSchema).default({}),
+});
+
+export type GoogleCalendarColorPalettes = {
+  event: Record<string, { background: string; foreground: string }>;
+  calendar: Record<string, { background: string; foreground: string }>;
+};
+
+const GoogleCalendarListEntrySchema = z.object({
+  id: z.string().optional(),
+  colorId: z.union([z.string(), z.number()]).optional(),
+});
+
+export class GoogleCalendarSyncTokenExpiredError extends Error {
+  constructor() {
+    super("Google Calendar sync token expired");
+    this.name = "GoogleCalendarSyncTokenExpiredError";
+  }
+}
 
 export type GoogleCalendarEventItem = z.infer<
   typeof GoogleCalendarEventsListResponseSchema
@@ -77,6 +111,9 @@ export async function listGoogleCalendarEvents(params: {
   timeMin?: string;
   timeMax?: string;
   maxResults?: number;
+  singleEvents?: boolean;
+  sharedExtendedProperty?: string;
+  iCalUID?: string;
 }): Promise<{
   items: GoogleCalendarEventItem[];
   nextSyncToken: string | null;
@@ -85,9 +122,20 @@ export async function listGoogleCalendarEvents(params: {
     `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(params.calendarId)}/events`,
   );
 
-  url.searchParams.set("singleEvents", "true");
-  url.searchParams.set("orderBy", "startTime");
+  const singleEvents = params.singleEvents ?? true;
+  url.searchParams.set("singleEvents", singleEvents ? "true" : "false");
+  if (singleEvents) url.searchParams.set("orderBy", "startTime");
   url.searchParams.set("maxResults", String(params.maxResults ?? 2500));
+
+  if (params.sharedExtendedProperty?.trim()) {
+    url.searchParams.set(
+      "sharedExtendedProperty",
+      params.sharedExtendedProperty.trim(),
+    );
+  }
+  if (params.iCalUID?.trim()) {
+    url.searchParams.set("iCalUID", params.iCalUID.trim());
+  }
 
   if (params.syncToken) {
     url.searchParams.set("syncToken", params.syncToken);
@@ -105,6 +153,9 @@ export async function listGoogleCalendarEvents(params: {
 
   if (!res.ok) {
     const text = await res.text().catch(() => "");
+    if (res.status === 410 && params.syncToken) {
+      throw new GoogleCalendarSyncTokenExpiredError();
+    }
     throw new Error(
       `Google Calendar API request failed (${res.status}): ${googleCalendarApiErrorDetail(text, res.statusText)}`,
     );
@@ -113,6 +164,93 @@ export async function listGoogleCalendarEvents(params: {
   const json = (await res.json()) as unknown;
   const parsed = GoogleCalendarEventsListResponseSchema.parse(json);
   return { items: parsed.items, nextSyncToken: parsed.nextSyncToken ?? null };
+}
+
+export async function listGoogleCalendarEventInstances(params: {
+  accessToken: string;
+  calendarId: string;
+  recurringEventId: string;
+  timeMin?: string;
+  timeMax?: string;
+  maxResults?: number;
+}): Promise<GoogleCalendarEventItem[]> {
+  const items: GoogleCalendarEventItem[] = [];
+  let pageToken: string | undefined;
+
+  do {
+    const url = new URL(
+      `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(params.calendarId)}/events/${encodeURIComponent(params.recurringEventId)}/instances`,
+    );
+    url.searchParams.set("maxResults", String(params.maxResults ?? 2500));
+    if (params.timeMin) url.searchParams.set("timeMin", params.timeMin);
+    if (params.timeMax) url.searchParams.set("timeMax", params.timeMax);
+    if (pageToken) url.searchParams.set("pageToken", pageToken);
+
+    const res = await fetch(url.toString(), {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${params.accessToken}`,
+      },
+    });
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(
+        `Google Calendar API request failed (${res.status}): ${googleCalendarApiErrorDetail(text, res.statusText)}`,
+      );
+    }
+
+    const json = (await res.json()) as unknown;
+    const parsed = GoogleCalendarEventsListResponseSchema.parse(json);
+    items.push(...parsed.items);
+    pageToken = (json as { nextPageToken?: string }).nextPageToken;
+  } while (pageToken);
+
+  return items;
+}
+
+export async function getGoogleCalendarColors(
+  accessToken: string,
+): Promise<GoogleCalendarColorPalettes> {
+  const res = await fetch("https://www.googleapis.com/calendar/v3/colors", {
+    method: "GET",
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(
+      `Google Calendar API request failed (${res.status}): ${googleCalendarApiErrorDetail(text, res.statusText)}`,
+    );
+  }
+
+  const json = (await res.json()) as unknown;
+  const parsed = GoogleCalendarColorsResponseSchema.parse(json);
+  return { event: parsed.event, calendar: parsed.calendar };
+}
+
+export async function getGoogleCalendarListEntry(params: {
+  accessToken: string;
+  calendarId: string;
+}): Promise<{ colorId?: string | number }> {
+  const url = new URL(
+    `https://www.googleapis.com/calendar/v3/users/me/calendarList/${encodeURIComponent(params.calendarId)}`,
+  );
+
+  const res = await fetch(url.toString(), {
+    method: "GET",
+    headers: { Authorization: `Bearer ${params.accessToken}` },
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(
+      `Google Calendar API request failed (${res.status}): ${googleCalendarApiErrorDetail(text, res.statusText)}`,
+    );
+  }
+
+  const json = (await res.json()) as unknown;
+  return GoogleCalendarListEntrySchema.parse(json);
 }
 
 /** Strip read-only fields and merge writable patch keys for Calendar `events.update` (PUT). */

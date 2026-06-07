@@ -59,6 +59,10 @@ import { PLANNING_CALENDAR_CUSTOM_VIEWS } from "@/helpers/calendar/planning-cale
 import { scheduleTadEventRsvpPaint } from "@/helpers/calendar/planning-calendar-event-rsvp";
 import { scheduleTadEventStripePaint } from "@/helpers/calendar/planning-calendar-event-stripe";
 import {
+  applyScheduledEventColorsToFullCalendar,
+  planningCalendarEventColorFingerprint,
+} from "@/helpers/calendar/planning-calendar-event-colors";
+import {
   ensureTimegridOverlapLayoutObserver,
   scheduleRepaintTimegridOverlapLayout,
 } from "@/helpers/calendar/planning-calendar-overlap-layout";
@@ -263,6 +267,11 @@ export const PlanningCalendar = forwardRef<
     const filtered = events.filter((e) => visibleKinds[e.type]);
     return filtered.map((e) => scheduledToEventInput(e, calendarColorTheme));
   }, [events, visibleKinds, calendarColorTheme]);
+
+  const eventColorFingerprint = useMemo(
+    () => planningCalendarEventColorFingerprint(events),
+    [events],
+  );
 
   /**
    * FullCalendar sometimes skips updating inline `backgroundColor` when theme inputs change.
@@ -483,6 +492,12 @@ export const PlanningCalendar = forwardRef<
     const api = fcRef.current?.getApi();
     if (!api) return;
     const repaintLayout = () => {
+      applyScheduledEventColorsToFullCalendar(
+        api,
+        eventsRef.current,
+        visibleKindsRef.current,
+        calendarColorThemeRef.current,
+      );
       const list = api.getEvents();
       repaintMountedEventStripes(list);
       scheduleOverlapLayoutRepaint(list);
@@ -498,7 +513,7 @@ export const PlanningCalendar = forwardRef<
       cancelAnimationFrame(rafNested);
     };
   }, [
-    events,
+    eventColorFingerprint,
     calendarColorTheme,
     visibleKinds,
     repaintMountedEventStripes,

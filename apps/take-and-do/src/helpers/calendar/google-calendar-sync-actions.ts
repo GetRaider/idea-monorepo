@@ -1,6 +1,7 @@
 import { toast } from "sonner";
 
 import { GOOGLE_CALENDAR_EVENT_ID_PREFIX } from "@/constants/calendar.constants";
+import { normalizeHexColor } from "@/helpers/calendar/calendar-colors";
 import { clientServices } from "@/services";
 import type { ApiResult } from "@/services/api-result.types";
 import type {
@@ -10,6 +11,20 @@ import type {
 } from "@/types/calendar.types";
 
 import { getEffectiveGoogleRecurrence } from "./google-calendar-recurrence.helper";
+
+export function googlePushColorIfChanged(
+  event: CalendarEvent,
+  previous: CalendarEvent | undefined,
+): string | null | undefined {
+  if (event.type !== "common") return undefined;
+  const previousHex =
+    previous?.type === "common"
+      ? normalizeHexColor((previous as { color?: string }).color)
+      : undefined;
+  const nextHex = normalizeHexColor((event as { color?: string }).color);
+  if (previousHex === nextHex) return undefined;
+  return nextHex ?? null;
+}
 
 function toastApiFailure(result: ApiResult<unknown>, fallback: string): void {
   if (result.ok) return;
@@ -62,6 +77,8 @@ export async function createConnectedGoogleCalendarEvent(
     ...(event.timeZone?.trim() ? { timeZone: event.timeZone.trim() } : {}),
     description: event.description ?? "",
     notes: event.notes ?? "",
+    ...(event.repeat ? { repeat: event.repeat } : {}),
+    ...googleEventColorPushField(event),
   };
 
   const result =
@@ -74,6 +91,7 @@ export async function createConnectedGoogleCalendarEvent(
 export async function pushConnectedGoogleCalendarEvent(
   event: CalendarEvent,
   recurrenceScope?: GoogleCalendarRecurrenceScope,
+  pushColor?: string | null,
 ): Promise<boolean> {
   if (
     event.type !== "common" ||
@@ -91,14 +109,25 @@ export async function pushConnectedGoogleCalendarEvent(
     description: event.description ?? "",
     notes: event.notes ?? "",
     ...(event.timeZone?.trim() ? { timeZone: event.timeZone.trim() } : {}),
+    ...(event.repeat ? { repeat: event.repeat } : {}),
+    ...(event.rsvpStatus ? { rsvpStatus: event.rsvpStatus } : {}),
   };
 
   if (recurrenceScope) {
     body.recurrenceScope = recurrenceScope;
   }
   const effectiveGr = getEffectiveGoogleRecurrence(event);
-  if (recurrenceScope && recurrenceScope !== "instance" && effectiveGr) {
+  if (recurrenceScope && recurrenceScope !== "instance") {
+    if (!effectiveGr?.recurringEventId) {
+      toast.error(
+        "Could not resolve Google recurring event metadata. Refresh the calendar and try again.",
+      );
+      return false;
+    }
     body.googleRecurrence = effectiveGr;
+  }
+  if (pushColor !== undefined) {
+    Object.assign(body, { color: pushColor });
   }
 
   const result = await clientServices.googleCalendarIntegration.pushEvent(body);
@@ -108,4 +137,12 @@ export async function pushConnectedGoogleCalendarEvent(
     "Could not update Google Calendar. Try reconnecting in Settings.",
   );
   return false;
+}
+
+function googleEventColorPushField(event: CalendarEvent): {
+  color?: string | null;
+} {
+  if (!("color" in event)) return {};
+  const hex = normalizeHexColor((event as { color?: string }).color);
+  return { color: hex ?? null };
 }

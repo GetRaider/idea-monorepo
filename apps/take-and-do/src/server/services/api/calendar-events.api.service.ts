@@ -62,12 +62,13 @@ export class CalendarEventsApiService extends BaseApiService {
         participants: body.participants,
         notes: body.notes,
         description: body.description,
-        ...(body.type === "timeBlock"
-          ? { taskScope: body.taskScope }
-          : {
-              rsvpStatus: body.rsvpStatus,
-              rsvpDeclineReason: body.rsvpDeclineReason,
-            }),
+        ...(body.type === "timeBlock" ? { taskScope: body.taskScope } : {}),
+        ...(body.rsvpStatus !== undefined
+          ? { rsvpStatus: body.rsvpStatus }
+          : {}),
+        ...(body.rsvpDeclineReason !== undefined
+          ? { rsvpDeclineReason: body.rsvpDeclineReason }
+          : {}),
       } as CommonCalendarEvent | TimeBlockCalendarEvent;
       const extra = clientCalendarEventToExtra(forExtra);
       const [row] = await this.db
@@ -154,21 +155,20 @@ export class CalendarEventsApiService extends BaseApiService {
         ...(patch.description !== undefined
           ? { description: patch.description }
           : {}),
-        ...(mergedType === "timeBlock"
-          ? {
-              ...(patch.taskScope !== undefined
-                ? { taskScope: patch.taskScope }
-                : {}),
-            }
-          : {
-              ...(patch.rsvpStatus !== undefined
-                ? { rsvpStatus: patch.rsvpStatus }
-                : {}),
-              ...(patch.rsvpDeclineReason !== undefined
-                ? { rsvpDeclineReason: patch.rsvpDeclineReason }
-                : {}),
-            }),
+        ...(mergedType === "timeBlock" && patch.taskScope !== undefined
+          ? { taskScope: patch.taskScope }
+          : {}),
+        ...(patch.rsvpStatus !== undefined
+          ? { rsvpStatus: patch.rsvpStatus }
+          : {}),
+        ...(patch.rsvpDeclineReason !== undefined
+          ? { rsvpDeclineReason: patch.rsvpDeclineReason }
+          : {}),
       } as CommonCalendarEvent | TimeBlockCalendarEvent;
+
+      if (patch.rsvpStatus !== undefined && patch.rsvpStatus !== "no") {
+        delete (nextForExtra as CommonCalendarEvent).rsvpDeclineReason;
+      }
 
       const extra = clientCalendarEventToExtra(nextForExtra);
       const now = new Date();

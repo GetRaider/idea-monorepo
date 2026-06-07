@@ -15,6 +15,7 @@ import { selectEndToInclusiveEnd } from "@/helpers/calendar-selection";
 import {
   createConnectedGoogleCalendarEvent,
   deleteConnectedGoogleCalendarEvent,
+  googlePushColorIfChanged,
 } from "@/helpers/calendar/google-calendar-sync-actions";
 import {
   getEffectiveGoogleRecurrence,
@@ -29,6 +30,7 @@ import type {
   CalendarRsvpStatus,
   GoogleCalendarRecurrenceScope,
 } from "@/types/calendar.types";
+import type { TaskUpdate } from "@/types/task";
 
 import type {
   CalendarOpenFullEditorContext,
@@ -53,14 +55,24 @@ export type CalendarPagePlanningHandlersDeps = {
   isGuest: boolean;
   bumpServerCalendar: () => void;
   replaceScheduled: (event: CalendarEvent) => void;
+  replaceScheduledForGoogleScope: (
+    event: CalendarEvent,
+    scope: GoogleCalendarRecurrenceScope,
+  ) => void;
   patchScheduled: (id: string, patch: Partial<CalendarEvent>) => void;
+  patchScheduledForGoogleScope: (
+    anchorId: string,
+    patch: Partial<CalendarEvent>,
+    scope: GoogleCalendarRecurrenceScope,
+  ) => void;
   addScheduled: (event: CalendarEvent) => void;
   removeScheduled: (id: string) => void;
   removeGoogleSeriesByMasterId: (masterId: string) => void;
-  updateTask: (
-    taskId: string,
-    patch: { scheduleDate: Date },
-  ) => Promise<unknown>;
+  removeGoogleInstancesForScope: (
+    anchor: CalendarEvent,
+    scope: GoogleCalendarRecurrenceScope,
+  ) => void;
+  updateTask: (taskId: string, patch: TaskUpdate) => Promise<unknown>;
   editorMode: "create" | "edit";
   setEditorMode: (m: "create" | "edit") => void;
   setEditorEvent: (e: CalendarEvent | null) => void;
@@ -86,6 +98,7 @@ export type CalendarPagePlanningHandlersDeps = {
   pushGoogleThenSync: (
     event: CalendarEvent,
     scope?: GoogleCalendarRecurrenceScope,
+    pushColor?: string | null,
   ) => void | Promise<void>;
   showGoogleCalendar: boolean;
 };
@@ -274,9 +287,22 @@ export function useCalendarPagePlanningHandlers(
       const prompt = deps.googleScopePrompt;
       deps.setGoogleScopePrompt(null);
       if (!prompt) return;
+
+      const pushColor =
+        prompt.kind === "quick" && "color" in prompt.patch
+          ? (prompt.patch.color ?? null)
+          : undefined;
+
       if (prompt.kind === "editor") {
-        deps.replaceScheduled(prompt.event);
-        void deps.pushGoogleThenSync(prompt.event, scope);
+        const previous = deps.state?.events.find(
+          (event) => event.id === prompt.event.id,
+        );
+        deps.replaceScheduledForGoogleScope(prompt.event, scope);
+        void deps.pushGoogleThenSync(
+          prompt.event,
+          scope,
+          googlePushColorIfChanged(prompt.event, previous),
+        );
         deps.setEditorOpen(false);
         deps.setCreateRange(null);
         deps.setCreatePrefill(null);
@@ -292,16 +318,21 @@ export function useCalendarPagePlanningHandlers(
             toast.error("Could not update calendar event");
             return;
           }
-          deps.patchScheduled(
+          deps.patchScheduledForGoogleScope(
             prompt.id,
             prompt.patch as Partial<CalendarEvent>,
+            scope,
           );
           deps.bumpServerCalendar();
         })();
         return;
       }
-      deps.patchScheduled(prompt.id, prompt.patch as Partial<CalendarEvent>);
-      void deps.pushGoogleThenSync(prompt.merged, scope);
+      deps.patchScheduledForGoogleScope(
+        prompt.id,
+        prompt.patch as Partial<CalendarEvent>,
+        scope,
+      );
+      void deps.pushGoogleThenSync(prompt.merged, scope, pushColor);
     },
     [deps],
   );
@@ -331,6 +362,8 @@ export function useCalendarPagePlanningHandlers(
           deps.removeScheduled(ev.id);
         } else if (scope === "series" && gr?.recurringEventId) {
           deps.removeGoogleSeriesByMasterId(gr.recurringEventId);
+        } else if (scope === "following") {
+          deps.removeGoogleInstancesForScope(ev, "following");
         } else {
           deps.removeScheduled(ev.id);
         }
@@ -342,10 +375,32 @@ export function useCalendarPagePlanningHandlers(
 
   const handleDeleteGoogleAware = useCallback(
     (event: CalendarEvent) => {
+      if (event.type === "task") {
+        void (async () => {
+          await deps.updateTask(event.taskId, { scheduleDate: null });
+          deps.removeScheduled(event.id);
+          if (!deps.isGuest) deps.bumpServerCalendar();
+        })();
+        return;
+      }
       if (
         event.type === "common" &&
         event.id.startsWith(GOOGLE_CALENDAR_EVENT_ID_PREFIX)
       ) {
+        const googleRecurrence = getEffectiveGoogleRecurrence(event);
+        if (!googleRecurrence) {
+          void (async () => {
+            const ok = await deleteConnectedGoogleCalendarEvent({
+              id: event.id,
+              start: event.start,
+              allDay: event.allDay,
+            });
+            if (!ok) return;
+            deps.removeScheduled(event.id);
+            await deps.syncGoogleIfEnabled({ show: deps.showGoogleCalendar });
+          })();
+          return;
+        }
         deps.setGoogleDeletePrompt(event);
         return;
       }
@@ -469,7 +524,8 @@ export function useCalendarPagePlanningHandlers(
         return;
       }
       deps.patchScheduled(id, patch as Partial<CalendarEvent>);
-      void deps.pushGoogleThenSync(merged);
+      const pushColor = "color" in patch ? (patch.color ?? null) : undefined;
+      void deps.pushGoogleThenSync(merged, undefined, pushColor);
     },
     [deps],
   );
@@ -520,21 +576,37 @@ export function useCalendarPagePlanningHandlers(
         rsvpDeclineReason:
           rsvp === "no" ? declineReason?.trim() || undefined : undefined,
       };
-      if (!deps.isGuest && deps.state) {
-        const ev = deps.state.events.find((e) => e.id === id);
-        if (ev && calendarEventUsesApiStorage(ev, false)) {
-          void (async () => {
-            const updated = await clientServices.calendarEvents.update(
-              id,
-              rsvpPatch,
-            );
-            if (!updated) toast.error("Could not update RSVP");
-            else deps.bumpServerCalendar();
-          })();
-          return;
-        }
-      }
+      const ev = deps.state?.events.find((e) => e.id === id);
+      if (!ev || (ev.type !== "common" && ev.type !== "timeBlock")) return;
+
       deps.patchScheduled(id, rsvpPatch);
+      const merged = { ...ev, ...rsvpPatch } as CalendarEvent;
+
+      if (!deps.isGuest && calendarEventUsesApiStorage(ev, false)) {
+        void (async () => {
+          const updated = await clientServices.calendarEvents.update(
+            id,
+            rsvpPatch,
+          );
+          if (!updated) {
+            toast.error("Could not update RSVP");
+            deps.bumpServerCalendar();
+            return;
+          }
+          if (updated.type === "common" || updated.type === "timeBlock") {
+            deps.patchScheduled(id, {
+              rsvpStatus: updated.rsvpStatus,
+              rsvpDeclineReason: updated.rsvpDeclineReason,
+            });
+          }
+          deps.bumpServerCalendar();
+        })();
+        return;
+      }
+
+      if (!deps.isGuest && ev.id.startsWith(GOOGLE_CALENDAR_EVENT_ID_PREFIX)) {
+        void deps.pushGoogleThenSync(merged);
+      }
     },
     [deps],
   );

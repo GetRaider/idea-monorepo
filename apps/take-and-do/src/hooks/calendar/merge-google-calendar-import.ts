@@ -24,8 +24,8 @@ function parseYmdPrefix(value: string): string | null {
 }
 
 /**
- * One recurring occurrence in Google (`singleEvents`), stable across API event id
- * changes (series split, etc.).
+ * One recurring occurrence in Google (`singleEvents`), scoped by master + anchor.
+ * Different masters may share the same originalStart after bad splits — do not collapse those.
  */
 export function recurringOccurrenceDedupeKey(ev: CalendarEvent): string | null {
   if (
@@ -38,6 +38,8 @@ export function recurringOccurrenceDedupeKey(ev: CalendarEvent): string | null {
   const anchorStart = gr.originalStart ?? ev.start;
   const anchorAllDay = gr.originalAllDay ?? ev.allDay;
   if (!anchorStart) return null;
+
+  const masterId = gr.recurringEventId.trim();
   if (anchorAllDay) {
     const ymd =
       parseYmdPrefix(anchorStart) ??
@@ -46,11 +48,11 @@ export function recurringOccurrenceDedupeKey(ev: CalendarEvent): string | null {
         return Number.isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10);
       })();
     if (!ymd) return null;
-    return `d:${ymd}`;
+    return `${masterId}:d:${ymd}`;
   }
   const ms = new Date(anchorStart).getTime();
   if (Number.isNaN(ms)) return null;
-  return `t:${new Date(ms).toISOString()}`;
+  return `${masterId}:t:${new Date(ms).toISOString()}`;
 }
 
 function eventIntersectsSyncRange(
@@ -114,18 +116,21 @@ export function mergeGoogleCalendarImportedEvents(
 
   const byId = new Map(kept.map((ev) => [ev.id, ev]));
   for (const ev of imported) {
-    const prev = byId.get(ev.id);
-    const preservedColor =
-      prev &&
-      typeof (prev as { color?: string }).color === "string" &&
-      (prev as { color?: string }).color
-        ? (prev as { color: string }).color
-        : undefined;
-    const merged =
-      preservedColor && !(ev as { color?: string }).color
-        ? ({ ...ev, color: preservedColor } as CalendarEvent)
-        : ev;
-    byId.set(ev.id, withCoercedEventColor(merged));
+    const occKey = recurringOccurrenceDedupeKey(ev);
+    if (occKey && winnerByOccurrence.get(occKey) !== ev.id) continue;
+
+    const importedColor = normalizeHexColor((ev as { color?: string }).color);
+    if (importedColor) {
+      byId.set(
+        ev.id,
+        withCoercedEventColor({ ...ev, color: importedColor } as CalendarEvent),
+      );
+      continue;
+    }
+    const { color: _stale, ...withoutColor } = ev as CalendarEvent & {
+      color?: string;
+    };
+    byId.set(ev.id, withoutColor as CalendarEvent);
   }
   return Array.from(byId.values());
 }

@@ -3,7 +3,7 @@ export type CalendarEventType = "common" | "timeBlock" | "task";
 /** IANA time zone, e.g. "Europe/Warsaw". */
 export type CalendarTimeZone = string;
 
-/** Repeat rules supported by the UI (no RRULE yet). */
+/** Repeat rules supported by the UI (mapped to Google RRULE on sync). */
 export type CalendarRepeatRule = "daily" | "weekly" | "monthly";
 
 /** UI value type for dropdowns that include “does not repeat”. */
@@ -31,6 +31,8 @@ export interface GoogleCalendarRecurrenceMeta {
    */
   originalStart?: string;
   originalAllDay?: boolean;
+  /** Links split head/tail masters after “this and following” (shared extended property). */
+  splitGroupId?: string;
 }
 
 export interface CalendarBacklogEvent {
@@ -77,6 +79,8 @@ export interface TimeBlockCalendarEvent extends BaseCalendarEvent {
   participants?: string[];
   notes?: string;
   description?: string;
+  rsvpStatus?: CalendarRsvpStatus;
+  rsvpDeclineReason?: string;
 }
 
 export interface TaskCalendarEvent extends BaseCalendarEvent {
@@ -113,15 +117,13 @@ export interface CalendarAxisTimeZone {
   label?: string | null;
 }
 
-/** Per–event-type default colors on the planning grid (local “calendars”). */
-export type CalendarKindColorMap = Partial<Record<CalendarEventType, string>>;
-
 export interface CalendarPersistedState {
   version: 1;
   events: CalendarEvent[];
   backlog: CalendarBacklogEvent[];
   axisTimeZones?: CalendarAxisTimeZone[];
-  kindColors?: CalendarKindColorMap;
+  /** Panel + stripe “parent” color for local events (time blocks, tasks, internal common). */
+  internalCalendarColor?: string;
   /** Panel + stripe “parent” color for the linked Google Calendar. */
   googleCalendarColor?: string;
 }

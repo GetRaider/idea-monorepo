@@ -51,13 +51,17 @@ export default function RootLayout({
           grayColor="gray"
           className="flex min-h-0 w-full min-w-0 flex-1 flex-col bg-transparent"
           hasBackground={false}
+          suppressHydrationWarning
         >
           <QueryProvider>
             <Analytics />
             <AuthRedirectRegistrar />
             <GuestStoreGuard />
             <GuestBanner />
-            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <div
+              className="flex min-h-0 flex-1 flex-col overflow-hidden"
+              suppressHydrationWarning
+            >
               {children}
             </div>
           </QueryProvider>

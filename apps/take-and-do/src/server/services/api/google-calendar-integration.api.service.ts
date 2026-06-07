@@ -131,6 +131,16 @@ export class GoogleCalendarIntegrationApiService extends BaseApiService {
       .where(eq(googleCalendarIntegration.userId, params.userId));
   }
 
+  async invalidateSyncToken(userId: string): Promise<void> {
+    await this.db
+      .update(googleCalendarIntegration)
+      .set({
+        syncToken: null,
+        updatedAt: new Date(),
+      })
+      .where(eq(googleCalendarIntegration.userId, userId));
+  }
+
   async clearIntegration(userId: string): Promise<void> {
     await this.db
       .update(googleCalendarIntegration)

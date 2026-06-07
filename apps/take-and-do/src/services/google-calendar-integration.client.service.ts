@@ -17,6 +17,7 @@ export type GoogleCalendarSyncResult = {
   lastSyncAt: string;
   incremental: boolean;
   syncRange?: { timeMin: string; timeMax: string };
+  googleCalendarColor?: string;
 };
 
 export class GoogleCalendarIntegrationClientService extends BaseClientService {

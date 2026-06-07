@@ -5,12 +5,12 @@ import type { LucideProps } from "lucide-react";
 
 import type { CalendarEventType } from "@/types/calendar.types";
 
-import { kindColor } from "@/helpers/calendar/calendar-event-mapper";
+const DEFAULT_KIND_ICON_STROKE = "#a1a1aa";
 
 export interface CalendarKindIconProps {
   kind: CalendarEventType;
   size: number;
-  /** Defaults to the kind’s accent color (good on dark UI); use e.g. white on tinted event cells. */
+  /** Defaults to neutral zinc (event types are not color-coded). */
   color?: string;
   className?: string;
   "aria-hidden"?: boolean;
@@ -23,7 +23,7 @@ export function CalendarKindIcon({
   className,
   "aria-hidden": ariaHidden = true,
 }: CalendarKindIconProps) {
-  const strokeColor = color ?? kindColor(kind);
+  const strokeColor = color ?? DEFAULT_KIND_ICON_STROKE;
   const common: LucideProps = {
     size,
     strokeWidth: size <= 11 ? 2 : 2.25,

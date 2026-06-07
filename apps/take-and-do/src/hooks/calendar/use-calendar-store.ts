@@ -13,15 +13,21 @@ import type {
   CalendarAxisTimeZone,
   CalendarBacklogEvent,
   CalendarEvent,
-  CalendarEventType,
   CalendarPersistedState,
+  GoogleCalendarRecurrenceScope,
 } from "@/types/calendar.types";
 
 import { useIsAnonymous } from "@/hooks/auth/use-is-anonymous";
 
 import { readCalendarState, writeCalendarState } from "./calendar-storage";
 import { CALENDAR_STATE_EXTERNAL_UPDATE_EVENT } from "./task-calendar-local-sync";
-import { getEffectiveGoogleRecurrence } from "@/helpers/calendar/google-calendar-recurrence.helper";
+import {
+  getEffectiveGoogleRecurrence,
+  googleEventMatchesRecurrenceScope,
+  googleRecurrenceSeriesLocalPatchKeys,
+} from "@/helpers/calendar/google-calendar-recurrence.helper";
+import { calendarEventsLayoutSignature } from "@/helpers/calendar/planning-calendar-event-colors";
+
 import { mergeGoogleCalendarImportedEvents } from "./merge-google-calendar-import";
 
 export function useCalendarStore() {
@@ -75,10 +81,17 @@ export function useCalendarStore() {
   const syncExternalGridEvents = useCallback((blocks: CalendarEvent[]) => {
     setState((prev) => {
       if (!prev) return prev;
-      const gcal = prev.events.filter((e) =>
-        e.id.startsWith(GOOGLE_CALENDAR_EVENT_ID_PREFIX),
+      const googleEvents = prev.events.filter((event) =>
+        event.id.startsWith(GOOGLE_CALENDAR_EVENT_ID_PREFIX),
       );
-      return { ...prev, events: [...gcal, ...blocks] };
+      const nextEvents = [...googleEvents, ...blocks];
+      if (
+        calendarEventsLayoutSignature(prev.events) ===
+        calendarEventsLayoutSignature(nextEvents)
+      ) {
+        return prev;
+      }
+      return { ...prev, events: nextEvents };
     });
   }, []);
 
@@ -126,40 +139,113 @@ export function useCalendarStore() {
     color: string | null;
   }>;
 
+  const applyEventPatch = useCallback(
+    (event: CalendarEvent, patch: CalendarEventPatch): CalendarEvent => {
+      const next = { ...event, ...patch } as CalendarEvent;
+      if (event.type !== "common" && event.type !== "timeBlock") {
+        delete (next as { rsvpStatus?: unknown }).rsvpStatus;
+        delete (next as { rsvpDeclineReason?: unknown }).rsvpDeclineReason;
+      } else if (patch.rsvpStatus !== undefined && patch.rsvpStatus !== "no") {
+        delete (next as { rsvpDeclineReason?: unknown }).rsvpDeclineReason;
+      }
+      if ("color" in patch) {
+        if (patch.color === null || patch.color === "") {
+          delete (next as { color?: string }).color;
+        } else {
+          const hex = normalizeHexColor(patch.color);
+          if (hex) {
+            (next as { color: string }).color = coerceHexToWhiteTextSafe(hex);
+          } else {
+            delete (next as { color?: string }).color;
+          }
+        }
+      }
+      return next;
+    },
+    [],
+  );
+
+  const seriesSafePatch = useCallback(
+    (patch: CalendarEventPatch): CalendarEventPatch => {
+      const allowed = googleRecurrenceSeriesLocalPatchKeys();
+      const out: CalendarEventPatch = {};
+      for (const [key, value] of Object.entries(patch)) {
+        if (allowed.has(key)) {
+          (out as Record<string, unknown>)[key] = value;
+        }
+      }
+      return out;
+    },
+    [],
+  );
+
   const patchScheduled = useCallback(
     (id: string, patch: CalendarEventPatch) => {
       setState((prev) => {
         if (!prev) return prev;
         return {
           ...prev,
+          events: prev.events.map((e) =>
+            e.id !== id ? e : applyEventPatch(e, patch),
+          ),
+        };
+      });
+    },
+    [applyEventPatch],
+  );
+
+  const patchScheduledForGoogleScope = useCallback(
+    (
+      anchorId: string,
+      patch: CalendarEventPatch,
+      scope: GoogleCalendarRecurrenceScope,
+    ) => {
+      setState((prev) => {
+        if (!prev) return prev;
+        const anchor = prev.events.find((e) => e.id === anchorId);
+        if (!anchor) return prev;
+        const safe = seriesSafePatch(patch);
+        return {
+          ...prev,
           events: prev.events.map((e) => {
-            if (e.id !== id) return e;
-            const next = { ...e, ...patch } as CalendarEvent;
-            if (e.type !== "common") {
-              // Strip common-only fields if they got patched in
-              delete (next as { rsvpStatus?: unknown }).rsvpStatus;
-              delete (next as { rsvpDeclineReason?: unknown })
-                .rsvpDeclineReason;
-            }
-            if ("color" in patch) {
-              if (patch.color === null || patch.color === "") {
-                delete (next as { color?: string }).color;
-              } else {
-                const hex = normalizeHexColor(patch.color);
-                if (hex) {
-                  (next as { color: string }).color =
-                    coerceHexToWhiteTextSafe(hex);
-                } else {
-                  delete (next as { color?: string }).color;
-                }
-              }
-            }
-            return next;
+            if (!googleEventMatchesRecurrenceScope(e, anchor, scope)) return e;
+            const usePatch =
+              scope === "instance" || e.id === anchorId ? patch : safe;
+            if (Object.keys(usePatch).length === 0) return e;
+            return applyEventPatch(e, usePatch);
           }),
         };
       });
     },
-    [],
+    [applyEventPatch, seriesSafePatch],
+  );
+
+  const replaceScheduledForGoogleScope = useCallback(
+    (event: CalendarEvent, scope: GoogleCalendarRecurrenceScope) => {
+      const c = normalizeHexColor(event.color);
+      const normalized =
+        c != null
+          ? ({ ...event, color: coerceHexToWhiteTextSafe(c) } as CalendarEvent)
+          : event;
+      setState((prev) => {
+        if (!prev) return prev;
+        const anchor = prev.events.find((e) => e.id === normalized.id);
+        if (!anchor) return prev;
+        const seriesPatch = seriesSafePatch(normalized as CalendarEventPatch);
+        return {
+          ...prev,
+          events: prev.events.map((e) => {
+            if (!googleEventMatchesRecurrenceScope(e, anchor, scope)) {
+              return e;
+            }
+            if (e.id === normalized.id) return normalized;
+            if (Object.keys(seriesPatch).length === 0) return e;
+            return applyEventPatch(e, seriesPatch);
+          }),
+        };
+      });
+    },
+    [applyEventPatch, seriesSafePatch],
   );
 
   const replaceScheduled = useCallback((event: CalendarEvent) => {
@@ -228,10 +314,14 @@ export function useCalendarStore() {
       opts: {
         incremental: boolean;
         syncRange?: { timeMin: string; timeMax: string };
+        googleCalendarColor?: string;
       },
     ) => {
       setState((prev) => {
         if (!prev) return prev;
+        const chromeHex = opts.googleCalendarColor
+          ? normalizeHexColor(opts.googleCalendarColor)
+          : undefined;
         return {
           ...prev,
           events: mergeGoogleCalendarImportedEvents(
@@ -239,6 +329,11 @@ export function useCalendarStore() {
             imported,
             opts,
           ),
+          ...(chromeHex
+            ? {
+                googleCalendarColor: coerceHexToWhiteTextSafe(chromeHex),
+              }
+            : {}),
         };
       });
     },
@@ -275,6 +370,23 @@ export function useCalendarStore() {
     [],
   );
 
+  const removeGoogleInstancesForScope = useCallback(
+    (anchor: CalendarEvent, scope: GoogleCalendarRecurrenceScope) => {
+      setState((prev) => {
+        if (!prev) return prev;
+        const filtered = prev.events.filter((event) => {
+          if (!event.id.startsWith(GOOGLE_CALENDAR_EVENT_ID_PREFIX))
+            return true;
+          if (scope === "instance") return event.id !== anchor.id;
+          return !googleEventMatchesRecurrenceScope(event, anchor, scope);
+        });
+        if (filtered.length === prev.events.length) return prev;
+        return { ...prev, events: filtered };
+      });
+    },
+    [],
+  );
+
   const setAxisTimeZones = useCallback((next: CalendarAxisTimeZone[]) => {
     setState((prev) => {
       if (!prev) return prev;
@@ -283,27 +395,20 @@ export function useCalendarStore() {
     });
   }, []);
 
-  const setKindColor = useCallback(
-    (kind: CalendarEventType, color: string | null) => {
-      setState((prev) => {
-        if (!prev) return prev;
-        const hex = color ? normalizeHexColor(color) : undefined;
-        const prevMap = prev.kindColors ?? {};
-        const nextMap = { ...prevMap };
-        if (!hex) {
-          delete nextMap[kind];
-        } else {
-          nextMap[kind] = coerceHexToWhiteTextSafe(hex);
-        }
-        const keys = Object.keys(nextMap);
-        return {
-          ...prev,
-          kindColors: keys.length > 0 ? nextMap : undefined,
-        };
-      });
-    },
-    [],
-  );
+  const setInternalCalendarColor = useCallback((color: string | null) => {
+    setState((prev) => {
+      if (!prev) return prev;
+      const hex = color ? normalizeHexColor(color) : undefined;
+      if (!hex) {
+        const { internalCalendarColor: _, ...rest } = prev;
+        return rest;
+      }
+      return {
+        ...prev,
+        internalCalendarColor: coerceHexToWhiteTextSafe(hex),
+      };
+    });
+  }, []);
 
   const setGoogleCalendarColor = useCallback((color: string | null) => {
     setState((prev) => {
@@ -321,7 +426,9 @@ export function useCalendarStore() {
     state,
     addScheduled,
     patchScheduled,
+    patchScheduledForGoogleScope,
     replaceScheduled,
+    replaceScheduledForGoogleScope,
     removeScheduled,
     addBacklogItem,
     removeBacklogItem,
@@ -330,8 +437,9 @@ export function useCalendarStore() {
     mergeGoogleCalendarSync,
     removeGoogleImportedEvents,
     removeGoogleSeriesByMasterId,
+    removeGoogleInstancesForScope,
     setAxisTimeZones,
-    setKindColor,
+    setInternalCalendarColor,
     setGoogleCalendarColor,
     syncExternalGridEvents,
   };

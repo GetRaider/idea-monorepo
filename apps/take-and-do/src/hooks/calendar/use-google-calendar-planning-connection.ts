@@ -20,7 +20,7 @@ export function useGoogleCalendarPlanningConnection(options: {
   showGoogleCalendar: boolean;
   mergeGoogleCalendarSync: (
     imported: CalendarEvent[],
-    opts: MergeGoogleOpts,
+    opts: MergeGoogleOpts & { googleCalendarColor?: string },
   ) => void;
   removeGoogleImportedEvents: () => void;
 }) {
@@ -62,6 +62,9 @@ export function useGoogleCalendarPlanningConnection(options: {
         mergeGoogleCalendarSync(data.imported, {
           incremental: data.incremental,
           syncRange: data.syncRange,
+          ...(data.googleCalendarColor
+            ? { googleCalendarColor: data.googleCalendarColor }
+            : {}),
         });
       } finally {
         isSyncingRef.current = false;
@@ -71,8 +74,16 @@ export function useGoogleCalendarPlanningConnection(options: {
   );
 
   const pushGoogleThenSync = useCallback(
-    async (event: CalendarEvent, scope?: GoogleCalendarRecurrenceScope) => {
-      const ok = await pushConnectedGoogleCalendarEvent(event, scope);
+    async (
+      event: CalendarEvent,
+      scope?: GoogleCalendarRecurrenceScope,
+      pushColor?: string | null,
+    ) => {
+      const ok = await pushConnectedGoogleCalendarEvent(
+        event,
+        scope,
+        pushColor,
+      );
       if (ok) await syncGoogleIfEnabled({ show: showGoogleCalendar });
     },
     [syncGoogleIfEnabled, showGoogleCalendar],

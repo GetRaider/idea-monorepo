@@ -2,20 +2,10 @@ import type { CalendarEvent, CalendarEventType } from "@/types/calendar.types";
 
 import { GOOGLE_CALENDAR_EVENT_ID_PREFIX } from "@/constants/calendar.constants";
 
-function builtInKindColor(kind: CalendarEventType): string {
-  switch (kind) {
-    case "timeBlock":
-      return "#4f46b8";
-    case "common":
-      return "#0f766e";
-    case "task":
-      return "#b45309";
-    default: {
-      const _e: never = kind;
-      return _e;
-    }
-  }
-}
+export type CalendarColorTheme = {
+  internalCalendarColor?: string;
+  googleCalendarColor?: string;
+};
 
 export function normalizeHexColor(value: unknown): string | undefined {
   if (typeof value !== "string") return undefined;
@@ -135,15 +125,18 @@ export const CALENDAR_PRESET_HEXES: readonly string[] = Array.from(
   ),
 );
 
-export function effectiveKindColor(
-  kind: CalendarEventType,
-  kindColors: Partial<Record<CalendarEventType, string>> | undefined,
-): string {
-  const o = kindColors?.[kind];
-  return normalizeHexColor(o) ?? builtInKindColor(kind);
-}
+export const DEFAULT_INTERNAL_CALENDAR_CHROME_HEX = "#4f46b8";
 
 export const DEFAULT_GOOGLE_CALENDAR_CHROME_HEX = "#0d9488";
+
+export function effectiveInternalCalendarColor(
+  internalCalendarColor: string | undefined,
+): string {
+  return (
+    normalizeHexColor(internalCalendarColor) ??
+    DEFAULT_INTERNAL_CALENDAR_CHROME_HEX
+  );
+}
 
 export function effectiveGoogleCalendarColor(
   googleCalendarColor: string | undefined,
@@ -153,43 +146,70 @@ export function effectiveGoogleCalendarColor(
   );
 }
 
-/** Color of the “parent calendar” stripe (Google feed vs. local event type). */
-export function calendarStripeHex(
+export function calendarEventUsesGoogleChrome(
+  eventId: string,
+  kind: CalendarEventType,
+  commonUsesGoogle?: boolean,
+): boolean {
+  if (eventId.startsWith(GOOGLE_CALENDAR_EVENT_ID_PREFIX)) return true;
+  return kind === "common" && commonUsesGoogle === true;
+}
+
+/** Calendar chrome for the left stripe — never the per-event override. */
+export function calendarChromeHex(
   event: CalendarEvent,
-  opts: {
-    kindColors?: Partial<Record<CalendarEventType, string>>;
-    googleCalendarColor?: string;
-  },
+  opts: CalendarColorTheme,
 ): string {
   if (event.id.startsWith(GOOGLE_CALENDAR_EVENT_ID_PREFIX)) {
     return effectiveGoogleCalendarColor(opts.googleCalendarColor);
   }
-  return effectiveKindColor(event.type, opts.kindColors);
+  return effectiveInternalCalendarColor(opts.internalCalendarColor);
 }
 
-/** FullCalendar fill color for the event body. */
+export function calendarChromeHexForDraft(opts: {
+  kind: CalendarEventType;
+  commonUsesGoogle?: boolean;
+  theme?: CalendarColorTheme;
+}): string {
+  const theme = opts.theme ?? {};
+  if (calendarEventUsesGoogleChrome("", opts.kind, opts.commonUsesGoogle)) {
+    return effectiveGoogleCalendarColor(theme.googleCalendarColor);
+  }
+  return effectiveInternalCalendarColor(theme.internalCalendarColor);
+}
+
+/** Darken sRGB channels for the event body (left stripe uses calendar chrome only). */
+export function darkenHexSrgb(hex: string, factor: number): string {
+  const n = normalizeHexColor(hex);
+  if (!n) return "#334155";
+  const clamped = Math.max(0, Math.min(1, factor));
+  let r = parseInt(n.slice(1, 3), 16);
+  let g = parseInt(n.slice(3, 5), 16);
+  let b = parseInt(n.slice(5, 7), 16);
+  r = Math.round(r * clamped);
+  g = Math.round(g * clamped);
+  b = Math.round(b * clamped);
+  return `#${toHex2(r)}${toHex2(g)}${toHex2(b)}`;
+}
+
+export function chromeToFillHex(chromeHex: string): string {
+  return coerceHexToWhiteTextSafe(darkenHexSrgb(chromeHex, 0.72));
+}
+
+/** FullCalendar body fill — per-event color when set, else darker calendar chrome. */
 export function eventFillHex(
   event: CalendarEvent,
-  opts: {
-    kindColors?: Partial<Record<CalendarEventType, string>>;
-    googleCalendarColor?: string;
-  },
+  opts: CalendarColorTheme,
 ): string {
   const custom = normalizeHexColor(event.color);
-  if (custom) return coerceHexToWhiteTextSafe(custom);
-  return coerceHexToWhiteTextSafe(calendarStripeHex(event, opts));
+  const bodyBase = custom ?? calendarChromeHex(event, opts);
+  return chromeToFillHex(bodyBase);
 }
 
+/** All grid events use the left accent stripe + darker body split. */
 export function eventUsesCalendarStripe(
-  event: CalendarEvent,
-  opts: {
-    kindColors?: Partial<Record<CalendarEventType, string>>;
-    googleCalendarColor?: string;
-  },
+  _event: CalendarEvent,
+  _opts: CalendarColorTheme,
 ): boolean {
-  const custom = normalizeHexColor(event.color);
-  if (!custom) return false;
-  const stripeRaw = calendarStripeHex(event, opts);
-  const stripe = normalizeHexColor(stripeRaw) ?? stripeRaw.trim().toLowerCase();
-  return custom !== stripe;
+  return true;
 }

@@ -1,19 +1,22 @@
 import type { EventApi, EventInput } from "@fullcalendar/core";
 
-import type { CalendarEvent, CalendarEventType } from "@/types/calendar.types";
+import type {
+  CalendarEvent,
+  CalendarEventType,
+  CalendarRsvpStatus,
+} from "@/types/calendar.types";
 
 import { GOOGLE_CALENDAR_EVENT_ID_PREFIX } from "@/constants/calendar.constants";
 
+import type { CalendarColorTheme } from "./calendar-colors";
 import {
-  calendarStripeHex,
+  calendarChromeHex,
   eventFillHex,
   eventUsesCalendarStripe,
 } from "./calendar-colors";
+import { parseCalendarEventTypeOrDefault } from "./calendar-event-type";
 
-export type CalendarEventColorTheme = {
-  kindColors?: Partial<Record<CalendarEventType, string>>;
-  googleCalendarColor?: string;
-};
+export type CalendarEventColorTheme = CalendarColorTheme;
 
 /** Common events created or synced via Google Calendar use `gcal:` ids. */
 export function calendarCommonEventUsesGoogleCalendar(
@@ -49,21 +52,6 @@ export function kindTag(kind: CalendarEventType): string {
       return "Common";
     case "task":
       return "Task";
-    default: {
-      const _exhaustive: never = kind;
-      return _exhaustive;
-    }
-  }
-}
-
-export function kindColor(kind: CalendarEventType): string {
-  switch (kind) {
-    case "timeBlock":
-      return "#4f46b8";
-    case "common":
-      return "#0f766e";
-    case "task":
-      return "#b45309";
     default: {
       const _exhaustive: never = kind;
       return _exhaustive;
@@ -118,13 +106,24 @@ function fcExclusiveEndDate(isoDateOnly: string): string {
   return d.toISOString().slice(0, 10);
 }
 
-function migrateKindProp(kind: unknown): CalendarEventType {
-  if (kind === "timeBlock" || kind === "common" || kind === "task") return kind;
-  // Back-compat for older persisted / imported values.
-  if (kind === "time_block") return "timeBlock";
-  if (kind === "general" || kind === "mutual") return "common";
-  if (kind === "task_event") return "task";
-  return "timeBlock";
+function scheduledEventRsvpStatus(
+  event: CalendarEvent,
+): CalendarRsvpStatus | undefined {
+  if (event.type === "common" || event.type === "timeBlock") {
+    return event.rsvpStatus;
+  }
+  return undefined;
+}
+
+function planningEventClassNames(
+  stripeActive: boolean,
+  rsvpStatus?: CalendarRsvpStatus,
+): string[] | undefined {
+  const classNames: string[] = [];
+  if (stripeActive) classNames.push("tad-event-calendar-stripe");
+  if (rsvpStatus === "no") classNames.push("tad-event-rsvp-no");
+  else if (rsvpStatus === "maybe") classNames.push("tad-event-rsvp-maybe");
+  return classNames.length > 0 ? classNames : undefined;
 }
 
 export function scheduledToEventInput(
@@ -133,7 +132,7 @@ export function scheduledToEventInput(
 ): EventInput {
   const t = theme ?? {};
   const fill = eventFillHex(event, t);
-  const stripe = calendarStripeHex(event, t);
+  const stripe = calendarChromeHex(event, t);
   const stripeActive = eventUsesCalendarStripe(event, t);
   const startDay = event.start.slice(0, 10);
   const endDay = event.end.slice(0, 10);
@@ -143,7 +142,7 @@ export function scheduledToEventInput(
     const taskId = event.type === "task" ? event.taskId : undefined;
     const taskSummarySnapshot =
       event.type === "task" ? event.taskSummarySnapshot : undefined;
-    const rsvpStatus = event.type === "common" ? event.rsvpStatus : undefined;
+    const rsvpStatus = scheduledEventRsvpStatus(event);
     return {
       id: event.id,
       title: event.title,
@@ -152,7 +151,7 @@ export function scheduledToEventInput(
       end: fcExclusiveEndDate(endDay),
       backgroundColor: fill,
       borderColor: fill,
-      classNames: stripeActive ? ["tad-event-calendar-stripe"] : undefined,
+      classNames: planningEventClassNames(stripeActive, rsvpStatus),
       extendedProps: {
         kind: event.type,
         taskScope,
@@ -172,7 +171,7 @@ export function scheduledToEventInput(
   const taskId = event.type === "task" ? event.taskId : undefined;
   const taskSummarySnapshot =
     event.type === "task" ? event.taskSummarySnapshot : undefined;
-  const rsvpStatus = event.type === "common" ? event.rsvpStatus : undefined;
+  const rsvpStatus = scheduledEventRsvpStatus(event);
   return {
     id: event.id,
     title: event.title,
@@ -181,7 +180,7 @@ export function scheduledToEventInput(
     allDay: false,
     backgroundColor: fill,
     borderColor: fill,
-    classNames: stripeActive ? ["tad-event-calendar-stripe"] : undefined,
+    classNames: planningEventClassNames(stripeActive, rsvpStatus),
     extendedProps: {
       kind: event.type,
       taskScope,
@@ -198,5 +197,5 @@ export function scheduledToEventInput(
 }
 
 export function extendedPropsToKind(kind: unknown): CalendarEventType {
-  return migrateKindProp(kind);
+  return parseCalendarEventTypeOrDefault(kind);
 }

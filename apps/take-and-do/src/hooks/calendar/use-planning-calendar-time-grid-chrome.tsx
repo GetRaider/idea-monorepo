@@ -95,9 +95,14 @@ export function usePlanningCalendarTimeGridChrome({
     if (!(frame instanceof HTMLElement)) return;
 
     if (axisCornerHostRef.current !== frame) {
-      axisCornerRootRef.current?.unmount();
+      const previousRoot = axisCornerRootRef.current;
       axisCornerRootRef.current = null;
       axisCornerHostRef.current = frame;
+      if (previousRoot) {
+        queueMicrotask(() => {
+          previousRoot.unmount();
+        });
+      }
     }
 
     if (!axisCornerRootRef.current) {
@@ -313,9 +318,14 @@ export function usePlanningCalendarTimeGridChrome({
 
   useEffect(() => {
     return () => {
-      axisCornerRootRef.current?.unmount();
-      axisCornerRootRef.current = null;
-      axisCornerHostRef.current = null;
+      const rootToUnmount = axisCornerRootRef.current;
+      window.setTimeout(() => {
+        if (axisCornerRootRef.current === rootToUnmount) {
+          rootToUnmount?.unmount();
+          axisCornerRootRef.current = null;
+          axisCornerHostRef.current = null;
+        }
+      }, 0);
     };
   }, []);
 
@@ -334,9 +344,14 @@ export function usePlanningCalendarTimeGridChrome({
 
   const handleViewWillUnmount = useCallback((arg: ViewMountArg) => {
     if (!arg.view.type.startsWith("timeGrid")) return;
-    axisCornerRootRef.current?.unmount();
-    axisCornerRootRef.current = null;
-    axisCornerHostRef.current = null;
+    const rootToUnmount = axisCornerRootRef.current;
+    window.setTimeout(() => {
+      if (axisCornerRootRef.current === rootToUnmount) {
+        rootToUnmount?.unmount();
+        axisCornerRootRef.current = null;
+        axisCornerHostRef.current = null;
+      }
+    }, 0);
   }, []);
 
   const scrollTimeGridToNowCentered = useCallback(() => {

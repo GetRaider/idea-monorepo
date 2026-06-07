@@ -103,14 +103,14 @@ export function EditorForm({
 
         {showCommonDestination ? (
           <DialogFormGroup>
-            <DialogFormLabel>Destination</DialogFormLabel>
+            <DialogFormLabel>Calendar</DialogFormLabel>
             <Dropdown<CommonCreateDestination>
               options={[
                 {
                   value: "internal",
-                  label: "Internal (Only this calendar)",
+                  label: "Internal ",
                 },
-                { value: "google", label: "Google Calendar" },
+                { value: "google", label: "Google" },
               ]}
               value={commonDestinationDisplay}
               onChange={setCommonCreateDestination}

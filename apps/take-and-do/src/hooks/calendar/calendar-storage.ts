@@ -1,12 +1,13 @@
 import { normalizeAxisTimeZones } from "@/helpers/calendar/calendar-axis-time";
 import { normalizeHexColor } from "@/helpers/calendar/calendar-colors";
+import {
+  parseCalendarBacklogType,
+  parseCalendarEventType,
+} from "@/helpers/calendar/calendar-event-type";
 
 import type {
   CalendarBacklogEvent,
-  CalendarBacklogType,
   CalendarEvent,
-  CalendarEventType,
-  CalendarKindColorMap,
   CalendarPersistedState,
   CalendarRepeatRule,
   CalendarRsvpStatus,
@@ -57,23 +58,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function migrateEventType(value: unknown): CalendarEventType | null {
-  if (value === "timeBlock" || value === "common" || value === "task") {
-    return value;
-  }
-  // Back-compat for old persisted values.
-  if (value === "time_block") return "timeBlock";
-  if (value === "general" || value === "mutual") return "common";
-  if (value === "task_event") return "task";
-  return null;
-}
-
-function migrateBacklogKind(value: unknown): CalendarBacklogType | null {
-  const k = migrateEventType(value);
-  if (k === "timeBlock" || k === "common") return k;
-  return null;
-}
-
 function isRsvp(value: unknown): value is CalendarRsvpStatus {
   return value === "yes" || value === "no" || value === "maybe";
 }
@@ -105,11 +89,10 @@ function normalizeBacklogItem(raw: unknown): CalendarBacklogEvent | null {
   if (!isRecord(raw)) return null;
   const id = raw.id;
   const title = raw.title;
-  const kindRaw = raw.type ?? raw.kind;
-  const durationMinutesRaw = raw.durationMinutes ?? raw.defaultDurationMinutes;
+  const durationMinutesRaw = raw.durationMinutes;
   if (typeof id !== "string" || !id) return null;
   if (typeof title !== "string" || !title) return null;
-  const type = migrateBacklogKind(kindRaw);
+  const type = parseCalendarBacklogType(raw.type);
   if (!type) return null;
   if (typeof durationMinutesRaw !== "number" || durationMinutesRaw <= 0) {
     return null;
@@ -133,7 +116,7 @@ function normalizeScheduledEvent(raw: unknown): CalendarEvent | null {
   if (!isRecord(raw)) return null;
   const id = raw.id;
   const title = raw.title;
-  const type = migrateEventType(raw.type ?? raw.kind);
+  const type = parseCalendarEventType(raw.type);
   const start = raw.start;
   const end = raw.end;
   const allDay = raw.allDay;
@@ -153,7 +136,7 @@ function normalizeScheduledEvent(raw: unknown): CalendarEvent | null {
   const repeat = raw.repeat;
   const meetingUrl = raw.meetingUrl;
   const participants = raw.participants;
-  const notes = raw.notes ?? raw.notesAndDocs;
+  const notes = raw.notes;
   const reminderMinutes = raw.reminderMinutes;
   const googleRecurrence = normalizeGoogleRecurrence(raw.googleRecurrence);
   const colorRaw = raw.color;
@@ -203,6 +186,8 @@ function normalizeScheduledEvent(raw: unknown): CalendarEvent | null {
       taskScope.every((l) => typeof l === "string")
         ? { taskScope: taskScope as string[] }
         : {}),
+      ...(isRsvp(rsvpStatus) ? { rsvpStatus } : {}),
+      ...(typeof rsvpDeclineReason === "string" ? { rsvpDeclineReason } : {}),
     };
   }
 
@@ -214,18 +199,6 @@ function normalizeScheduledEvent(raw: unknown): CalendarEvent | null {
     ...(typeof rsvpDeclineReason === "string" ? { rsvpDeclineReason } : {}),
     ...(googleRecurrence ? { googleRecurrence } : {}),
   };
-}
-
-function normalizeKindColors(raw: unknown): CalendarKindColorMap | undefined {
-  if (!isRecord(raw)) return undefined;
-  const out: CalendarKindColorMap = {};
-  for (const kind of ["timeBlock", "common", "task"] as const) {
-    const v = raw[kind];
-    if (typeof v !== "string") continue;
-    const hex = normalizeHexColor(v);
-    if (hex) out[kind] = hex;
-  }
-  return Object.keys(out).length ? out : undefined;
 }
 
 export function readCalendarState(): CalendarPersistedState {
@@ -248,14 +221,16 @@ export function readCalendarState(): CalendarPersistedState {
       .filter((b): b is CalendarBacklogEvent => b !== null);
     const backlog = backlogParsed.length > 0 ? backlogParsed : DEFAULT_BACKLOG;
     const axisTimeZones = normalizeAxisTimeZones(parsed.axisTimeZones);
-    const kindColors = normalizeKindColors(parsed.kindColors);
+    const internalCalendarColor = normalizeHexColor(
+      parsed.internalCalendarColor,
+    );
     const googleCalendarColor = normalizeHexColor(parsed.googleCalendarColor);
     return {
       version: 1,
       events,
       backlog,
       axisTimeZones,
-      ...(kindColors ? { kindColors } : {}),
+      ...(internalCalendarColor ? { internalCalendarColor } : {}),
       ...(googleCalendarColor ? { googleCalendarColor } : {}),
     };
   } catch {

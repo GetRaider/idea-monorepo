@@ -50,6 +50,8 @@ export function userCalendarEventToCreateBody(
     notes: ev.notes,
     description: ev.description,
     taskScope: ev.taskScope,
+    rsvpStatus: ev.rsvpStatus,
+    rsvpDeclineReason: ev.rsvpDeclineReason,
   };
 }
 

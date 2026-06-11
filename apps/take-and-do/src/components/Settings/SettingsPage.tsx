@@ -9,6 +9,7 @@ import {
   WelcomeSection,
 } from "@/app/shell.ui";
 import { SettingsIcon } from "@/components/Icons";
+import { LightningMenu } from "@/components/LightningMenu";
 import { MenuRowButton } from "@/components/MenuRowButton/MenuRowButton";
 import { Sidebar } from "@/components/Sidebar/Sidebar";
 import { env } from "@/env/client";
@@ -16,6 +17,7 @@ import {
   APP_CHROME_MAIN_INSET,
   APP_CHROME_NAV_ICON_PX,
   APP_CHROME_PAGE_BLOCK_GAP,
+  APP_CHROME_TITLE_ACTION_ROW,
 } from "@/helpers/app-chrome-layout";
 import { cn } from "@/lib/styles/utils";
 
@@ -47,7 +49,9 @@ export function SettingsPage() {
         withNavSidebar={false}
         className={cn("flex min-h-0 flex-col", APP_CHROME_MAIN_INSET)}
       >
-        <WelcomeSection className="flex flex-col gap-2">
+        <WelcomeSection
+          className={cn("flex flex-col gap-2", APP_CHROME_TITLE_ACTION_ROW)}
+        >
           <AppPageTitle
             icon={
               <SettingsIcon
@@ -58,6 +62,7 @@ export function SettingsPage() {
           >
             Settings
           </AppPageTitle>
+          <LightningMenu className="shrink-0 self-end sm:self-auto" />
         </WelcomeSection>
 
         <div

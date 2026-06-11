@@ -21,10 +21,12 @@ import {
   AppPageTitle,
 } from "../shell.ui";
 import { OverviewIcon } from "@/components/Icons";
+import { LightningMenu } from "@/components/LightningMenu";
 import {
   APP_CHROME_MAIN_INSET,
   APP_CHROME_PAGE_BLOCK_GAP,
   APP_CHROME_PAGE_TITLE_ICON_PX,
+  APP_CHROME_TITLE_ACTION_ROW,
 } from "@/helpers/app-chrome-layout";
 import { cn } from "@/lib/styles/utils";
 
@@ -121,7 +123,9 @@ function OverviewPage() {
         withNavSidebar={false}
         className={cn("flex min-h-0 flex-col", APP_CHROME_MAIN_INSET)}
       >
-        <WelcomeSection>
+        <WelcomeSection
+          className={cn("flex flex-col gap-4", APP_CHROME_TITLE_ACTION_ROW)}
+        >
           <AppPageTitle
             icon={
               <OverviewIcon
@@ -132,6 +136,7 @@ function OverviewPage() {
           >
             Overview
           </AppPageTitle>
+          <LightningMenu className="shrink-0 self-end sm:self-auto" />
         </WelcomeSection>
 
         <div className={cn("flex min-w-0 flex-col", APP_CHROME_PAGE_BLOCK_GAP)}>

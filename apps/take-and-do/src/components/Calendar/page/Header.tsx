@@ -3,6 +3,7 @@ import Image from "next/image";
 import { AppPageTitle, WelcomeSection } from "@/app/shell.ui";
 import { PrimaryButton } from "@/components/Buttons";
 import { PlusIcon } from "@/components/Icons";
+import { LightningMenu } from "@/components/LightningMenu";
 import {
   APP_CHROME_NAV_ICON_PX,
   APP_CHROME_TITLE_ACTION_ROW,
@@ -36,14 +37,17 @@ export function PageHeader({ onCreateEvent }: PageHeaderProps) {
           Calendar
         </AppPageTitle>
       </div>
-      <PrimaryButton
-        size="sm"
-        className="shrink-0 font-medium"
-        onClick={onCreateEvent}
-      >
-        <PlusIcon size={18} className="shrink-0" />
-        Create Event
-      </PrimaryButton>
+      <div className="flex shrink-0 items-center gap-3">
+        <PrimaryButton
+          size="sm"
+          className="shrink-0 font-medium"
+          onClick={onCreateEvent}
+        >
+          <PlusIcon size={18} className="shrink-0" />
+          Create Event
+        </PrimaryButton>
+        <LightningMenu className="shrink-0" />
+      </div>
     </WelcomeSection>
   );
 }

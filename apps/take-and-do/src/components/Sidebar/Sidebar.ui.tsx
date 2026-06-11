@@ -53,7 +53,20 @@ export function Nav({ className, ref, ...props }: UiProps<"nav">) {
   return (
     <nav
       ref={ref}
-      className={cn("flex flex-1 flex-col gap-2", className)}
+      className={cn("flex flex-col gap-2", className)}
+      {...props}
+    />
+  );
+}
+
+export function SidebarMiddle({ className, ref, ...props }: UiProps<"div">) {
+  return (
+    <div
+      ref={ref}
+      className={cn(
+        "flex min-h-0 flex-1 flex-col items-center justify-center",
+        className,
+      )}
       {...props}
     />
   );
@@ -98,7 +111,7 @@ export function BottomActions({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div
       ref={ref}
-      className={cn("mt-auto flex flex-col items-center gap-2", className)}
+      className={cn("flex flex-col items-center gap-2", className)}
       {...props}
     />
   );

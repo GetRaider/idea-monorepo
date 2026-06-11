@@ -1,6 +1,8 @@
 import type { Config } from "tailwindcss";
 import typography from "@tailwindcss/typography";
 
+const DROPDOWN_DURATION_MS = 300;
+
 const config: Config = {
   content: [
     "./src/app/**/*.{ts,tsx}",
@@ -59,6 +61,9 @@ const config: Config = {
       maxWidth: {
         dialog: "var(--dialog-max-width)",
       },
+      transitionDuration: {
+        dropdown: `${DROPDOWN_DURATION_MS}ms`,
+      },
       keyframes: {
         "gradient-shift": {
           "0%, 100%": { backgroundPosition: "0% 50%" },
@@ -87,7 +92,7 @@ const config: Config = {
         "segment-fill": "segment-fill 0.35s ease-out forwards",
         shimmer: "shimmer 1.2s ease-in-out infinite",
         "task-drop-in": "task-drop-in 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
-        "dropdown-panel-in": "dropdown-panel-in 700ms ease-out both",
+        "dropdown-panel-in": `dropdown-panel-in ${DROPDOWN_DURATION_MS}ms ease-out both`,
       },
     },
   },

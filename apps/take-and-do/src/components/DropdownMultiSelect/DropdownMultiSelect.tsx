@@ -21,6 +21,10 @@ import {
 } from "@/components/SelectableList";
 
 import { cn } from "@/lib/styles/utils";
+import {
+  dropdownPanelClass,
+  dropdownTriggerBorderTransitionClass,
+} from "@/lib/styles/dropdown-classes";
 
 export function DropdownMultiSelect<T extends string = string>({
   options,
@@ -138,7 +142,10 @@ export function DropdownMultiSelect<T extends string = string>({
         <button
           type="button"
           id={id}
-          className="flex w-full cursor-pointer items-center justify-between gap-1.5 whitespace-nowrap rounded-md border border-input-border bg-input-bg px-3 py-1.5 text-sm text-text-primary transition-[border-color] duration-200 hover:border-input-border-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+          className={cn(
+            "flex w-full cursor-pointer items-center justify-between gap-1.5 whitespace-nowrap rounded-md border border-input-border bg-input-bg px-3 py-1.5 text-sm text-text-primary hover:border-input-border-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring",
+            dropdownTriggerBorderTransitionClass,
+          )}
           aria-haspopup="listbox"
           aria-expanded={isOpen}
           onClick={() => updateOpen(!isOpen)}
@@ -157,7 +164,10 @@ export function DropdownMultiSelect<T extends string = string>({
             data-dropdown-portal
             role="listbox"
             aria-multiselectable="true"
-            className="fixed z-[5200] box-border rounded-lg border border-input-border bg-input-bg p-3 shadow-dropdown"
+            className={cn(
+              "fixed z-[5200] box-border rounded-lg border border-input-border bg-input-bg p-3 shadow-dropdown",
+              dropdownPanelClass,
+            )}
             style={{
               top: panelRect.top,
               left: panelRect.left,

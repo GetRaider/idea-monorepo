@@ -4,6 +4,12 @@ import { ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { cn } from "@/lib/styles/utils";
+import {
+  dropdownChevronClass,
+  dropdownMenuItemTransitionClass,
+  dropdownPanelClass,
+  dropdownTriggerTransitionClass,
+} from "@/lib/styles/dropdown-classes";
 
 export function DropdownChevron({
   open,
@@ -17,7 +23,7 @@ export function DropdownChevron({
   return (
     <span
       className={cn(
-        "text-[10px] text-text-secondary transition-transform duration-700 ease-out",
+        dropdownChevronClass,
         open ? "rotate-180" : "rotate-0",
         className,
       )}
@@ -217,7 +223,8 @@ export function Dropdown<T extends string = string>({
             id={id}
             disabled={disabled}
             className={cn(
-              "inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-md border border-input-border bg-input-bg font-semibold text-text-primary transition-[border-color,background-color] duration-700 ease-out hover:border-input-border-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring",
+              "inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-md border border-input-border bg-input-bg font-semibold text-text-primary hover:border-input-border-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring",
+              dropdownTriggerTransitionClass,
               triggerSizeClass,
               fullWidth ? "w-full justify-between" : "w-auto justify-start",
               disabled &&
@@ -238,7 +245,10 @@ export function Dropdown<T extends string = string>({
           <ul
             ref={menuRef}
             data-dropdown-portal
-            className="fixed z-[5200] m-0 flex max-h-[60vh] w-max origin-top list-none flex-col gap-0.5 overflow-y-auto rounded-md border border-input-border bg-background-primary p-1 shadow-dropdown motion-safe:animate-dropdown-panel-in [-webkit-overflow-scrolling:touch]"
+            className={cn(
+              "fixed z-[5200] m-0 flex max-h-[60vh] w-max origin-top list-none flex-col gap-0.5 overflow-y-auto rounded-md border border-input-border bg-background-primary p-1 shadow-dropdown [-webkit-overflow-scrolling:touch]",
+              dropdownPanelClass,
+            )}
             style={{
               ...(menuRect.vertical === "below"
                 ? { top: menuRect.top }
@@ -253,7 +263,8 @@ export function Dropdown<T extends string = string>({
                 key={String(option.value)}
                 type="button"
                 className={cn(
-                  "w-full cursor-pointer whitespace-nowrap rounded px-3 py-2.5 text-left text-sm transition-[background,color] duration-700 ease-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:cursor-not-allowed disabled:opacity-60",
+                  "w-full cursor-pointer whitespace-nowrap rounded px-3 py-2.5 text-left text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:cursor-not-allowed disabled:opacity-60",
+                  dropdownMenuItemTransitionClass,
                   option.value === value
                     ? option.danger
                       ? "bg-zinc-700 text-red-600/85"

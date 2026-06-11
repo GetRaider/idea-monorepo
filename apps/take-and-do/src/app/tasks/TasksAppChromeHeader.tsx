@@ -7,6 +7,7 @@ import { useCallback, useMemo } from "react";
 import { BoardTitleEmoji } from "@/components/Boards/KanbanBoard/KanbanBoard.ui";
 import { PrimaryButton } from "@/components/Buttons";
 import { ClockCircleIcon, ClockNavIcon, PlusIcon } from "@/components/Icons";
+import { LightningMenu } from "@/components/LightningMenu";
 import { useTasksShellHeaderExtras, useWorkspace } from "@/contexts";
 import { Route } from "@/constants/route.constant";
 import {
@@ -112,6 +113,7 @@ export function TasksAppChromeHeader() {
         {!isRoot && settingsSlot ? (
           <div className="flex shrink-0 items-center">{settingsSlot}</div>
         ) : null}
+        <LightningMenu className="shrink-0" />
       </div>
     </div>
   );

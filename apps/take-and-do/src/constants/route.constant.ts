@@ -14,4 +14,5 @@ export enum Route {
   STATS = "/stats",
   ANALYTICS = "/analytics",
   SETTINGS = "/settings",
+  FOCUS = "/focus",
 }

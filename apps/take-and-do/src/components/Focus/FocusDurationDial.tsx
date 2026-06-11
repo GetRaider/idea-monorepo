@@ -34,7 +34,7 @@ export function FocusDurationDial({
 }: FocusDurationDialProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const labelId = useId();
-  const safeMinutes = clampMinutes(minutes);
+  const safeMinutes = normalizeDialMinutes(minutes);
 
   const handlePointer = useCallback(
     (event: ReactPointerEvent<SVGSVGElement>) => {
@@ -53,8 +53,11 @@ export function FocusDurationDial({
     [disabled, onChange],
   );
 
-  const handleRadians = minutesToRadians(safeMinutes);
-  const handlePoint = polarToCartesian(handleRadians, DIAL_RADIUS);
+  const handleRadians = minutesToRadians(
+    safeMinutes >= MAX_MINUTES ? MAX_MINUTES : safeMinutes,
+  );
+  const handlePoint =
+    safeMinutes > 0 ? polarToCartesian(handleRadians, DIAL_RADIUS) : null;
   const fillPath = describeFillWedge(safeMinutes);
 
   return (
@@ -74,7 +77,7 @@ export function FocusDurationDial({
         )}
         role="slider"
         aria-labelledby={labelId}
-        aria-valuemin={MIN_MINUTES}
+        aria-valuemin={0}
         aria-valuemax={MAX_MINUTES}
         aria-valuenow={safeMinutes}
         aria-disabled={disabled}
@@ -137,20 +140,24 @@ export function FocusDurationDial({
           );
         })}
 
-        <path
-          d={fillPath}
-          className="fill-orange-500/45"
-          pointerEvents="none"
-        />
+        {fillPath ? (
+          <path
+            d={fillPath}
+            className="fill-orange-500/45"
+            pointerEvents="none"
+          />
+        ) : null}
 
-        <circle
-          cx={handlePoint.x}
-          cy={handlePoint.y}
-          r={HANDLE_RADIUS}
-          className="fill-[var(--app-ui-white)] stroke-zinc-500/70"
-          strokeWidth={1.25}
-          pointerEvents="none"
-        />
+        {handlePoint ? (
+          <circle
+            cx={handlePoint.x}
+            cy={handlePoint.y}
+            r={HANDLE_RADIUS}
+            className="fill-[var(--app-ui-white)] stroke-zinc-500/70"
+            strokeWidth={1.25}
+            pointerEvents="none"
+          />
+        ) : null}
       </svg>
 
       {size === "default" ? (
@@ -161,6 +168,11 @@ export function FocusDurationDial({
       ) : null}
     </div>
   );
+}
+
+function normalizeDialMinutes(value: number): number {
+  if (!Number.isFinite(value) || value <= 0) return 0;
+  return Math.min(MAX_MINUTES, Math.max(MIN_MINUTES, Math.round(value)));
 }
 
 function clampMinutes(value: number): number {
@@ -199,6 +211,18 @@ function pointToMinutes(x: number, y: number): number {
 
 function describeFillWedge(minutes: number): string {
   if (minutes <= 0) return "";
+
+  if (minutes >= MAX_MINUTES) {
+    const top = polarToCartesian(minutesToRadians(0));
+    const bottom = polarToCartesian(minutesToRadians(30));
+    return [
+      `M ${DIAL_CENTER} ${DIAL_CENTER}`,
+      `L ${top.x} ${top.y}`,
+      `A ${DIAL_RADIUS} ${DIAL_RADIUS} 0 1 1 ${bottom.x} ${bottom.y}`,
+      `A ${DIAL_RADIUS} ${DIAL_RADIUS} 0 1 1 ${top.x} ${top.y}`,
+      "Z",
+    ].join(" ");
+  }
 
   const start = polarToCartesian(minutesToRadians(0));
   const end = polarToCartesian(minutesToRadians(minutes));

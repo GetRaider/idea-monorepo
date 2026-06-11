@@ -17,6 +17,7 @@ import {
   getWeeklyFocusSeconds,
   isActiveTimerSystemState,
   randomFocusSessionColor,
+  resolveFocusSessionColor,
   runtimeFromActiveSession,
   sessionConfigFromBacklogItem,
   systemStateFromActiveSession,
@@ -404,12 +405,19 @@ export function useFocusSession() {
         setBacklog((previous) => [...previous, savedBacklogItem!]);
       }
 
+      const sessionColor =
+        idleDraft.sessionSelection === "backlog" && idleDraft.selectedBacklogId
+          ? (backlog.find((item) => item.id === idleDraft.selectedBacklogId)
+              ?.color ?? idleDraft.color)
+          : idleDraft.color;
+
       const plannedDurationSeconds = getPlannedFocusDurationSeconds(config);
       const startedAt = new Date().toISOString();
       const nextRuntime: FocusRuntime = {
         sessionId: crypto.randomUUID(),
         sessionType: "focus",
         config: { ...config, name: config.name.trim() },
+        color: sessionColor,
         plannedDurationSeconds,
         elapsedSeconds: 0,
         remainingSeconds: plannedDurationSeconds,
@@ -603,6 +611,7 @@ export function useFocusSession() {
         taskId: parentSession.taskId,
         name: parentSession.name,
       },
+      color: resolveFocusSessionColor(parentSession),
       plannedDurationSeconds,
       elapsedSeconds: 0,
       remainingSeconds: plannedDurationSeconds,

@@ -9,6 +9,7 @@ import { cn } from "@/lib/styles/utils";
 export function FocusCollapsibleSection({
   title,
   defaultExpanded = false,
+  headerActions,
   children,
   className,
 }: FocusCollapsibleSectionProps) {
@@ -21,26 +22,36 @@ export function FocusCollapsibleSection({
         className,
       )}
     >
-      <button
-        type="button"
-        aria-expanded={expanded}
-        onClick={() => setExpanded((previous) => !previous)}
-        className="flex w-full items-center gap-2 border-0 bg-transparent px-5 py-4 text-left transition-colors hover:bg-white/[0.03]"
-      >
-        <ChevronDownIcon
-          size={14}
-          className={cn(
-            "shrink-0 text-text-secondary transition-transform",
-            expanded ? "rotate-180" : "rotate-0",
-          )}
-        />
-        <span className={cn("m-0", APP_CHROME_SECTION_TITLE_SIZE)}>
-          {title}
-        </span>
-      </button>
+      <div className="flex items-center justify-between gap-3 px-5 py-4">
+        <button
+          type="button"
+          aria-expanded={expanded}
+          onClick={() => setExpanded((previous) => !previous)}
+          className="flex min-w-0 flex-1 items-center gap-2 border-0 bg-transparent p-0 text-left transition-colors hover:opacity-90"
+        >
+          <ChevronDownIcon
+            size={14}
+            className={cn(
+              "shrink-0 text-text-secondary transition-transform",
+              expanded ? "rotate-180" : "rotate-0",
+            )}
+          />
+          <span className={cn("m-0", APP_CHROME_SECTION_TITLE_SIZE)}>
+            {title}
+          </span>
+        </button>
+
+        {headerActions ? (
+          <div className="shrink-0">
+            {typeof headerActions === "function"
+              ? headerActions(expanded)
+              : headerActions}
+          </div>
+        ) : null}
+      </div>
 
       {expanded ? (
-        <div className="border-t border-white/10 px-4 py-4">{children}</div>
+        <div className="border-t border-white/10 px-5 py-4">{children}</div>
       ) : null}
     </section>
   );
@@ -49,6 +60,7 @@ export function FocusCollapsibleSection({
 interface FocusCollapsibleSectionProps {
   title: string;
   defaultExpanded?: boolean;
+  headerActions?: ReactNode | ((expanded: boolean) => ReactNode);
   children: ReactNode;
   className?: string;
 }

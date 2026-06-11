@@ -1,6 +1,9 @@
 export {
   buildFocusHeatmapGrid,
-  focusHeatmapLevelClassName,
+  FOCUS_ANALYTICS_WEEK_COUNT,
+  FOCUS_HEATMAP_CELL_BORDER_CLASS,
+  FOCUS_HEATMAP_EMPTY_CELL_CLASS,
+  focusHeatmapSegmentOpacity,
 } from "./focus-heatmap.helper";
 export {
   DEFAULT_SESSION_CONFIG,
@@ -12,7 +15,9 @@ export {
   POMODORO_25_5_FOCUS_SECONDS,
   buildActiveSession,
   buildBreakSessionRecord,
+  buildFocusSessionFilterOptions,
   buildFocusSessionRecord,
+  resolveFocusSessionColor,
   getBreakDurationSeconds,
   formatFocusCountdown,
   formatFocusDurationLabel,
@@ -20,7 +25,9 @@ export {
   getDailyFocusSeconds,
   getFocusHistoryStatusLabel,
   getFocusSessionModeLabel,
+  getMonthlyFocusSeconds,
   getPlannedFocusDurationSeconds,
+  getTotalFocusSeconds,
   getWeeklyFocusSeconds,
   resolveBreakParentName,
   sortFocusHistorySessions,

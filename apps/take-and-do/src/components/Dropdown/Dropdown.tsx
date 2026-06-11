@@ -37,6 +37,7 @@ export interface DropdownOption<T extends string = string> {
   label: string;
   value: T;
   danger?: boolean;
+  disabled?: boolean;
 }
 
 interface DropdownProps<T extends string = string> {
@@ -273,6 +274,7 @@ export function Dropdown<T extends string = string>({
                       ? "bg-transparent text-red-600/85 hover:bg-zinc-700 hover:text-red-400/80"
                       : "bg-transparent text-text-secondary hover:bg-zinc-700 hover:text-text-primary",
                 )}
+                disabled={option.disabled}
                 onClick={() => {
                   onChange(option.value);
                   updateOpen(false);

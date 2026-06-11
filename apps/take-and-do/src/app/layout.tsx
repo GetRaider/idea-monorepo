@@ -8,6 +8,7 @@ import { Analytics } from "@/components/Analytics";
 import { GuestBanner } from "@/components/GuestBanner";
 import { GuestStoreGuard } from "@/components/GuestStoreGuard";
 import { QueryProvider } from "@/providers/query-provider";
+import { FocusSessionProvider } from "@/contexts/FocusSessionContext";
 import { AuthRedirectRegistrar } from "@/services/auth-redirect.registrar";
 
 const inter = Inter({
@@ -54,16 +55,18 @@ export default function RootLayout({
           suppressHydrationWarning
         >
           <QueryProvider>
-            <Analytics />
-            <AuthRedirectRegistrar />
-            <GuestStoreGuard />
-            <GuestBanner />
-            <div
-              className="flex min-h-0 flex-1 flex-col overflow-hidden"
-              suppressHydrationWarning
-            >
-              {children}
-            </div>
+            <FocusSessionProvider>
+              <Analytics />
+              <AuthRedirectRegistrar />
+              <GuestStoreGuard />
+              <GuestBanner />
+              <div
+                className="flex min-h-0 flex-1 flex-col overflow-hidden"
+                suppressHydrationWarning
+              >
+                {children}
+              </div>
+            </FocusSessionProvider>
           </QueryProvider>
         </Theme>
         <AppToaster />

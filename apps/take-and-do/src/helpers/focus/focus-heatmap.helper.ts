@@ -1,13 +1,22 @@
-import { isFocusSessionRecord } from "@/helpers/focus/focus-session.helper";
+import {
+  isFocusSessionRecord,
+  resolveFocusSessionColor,
+} from "@/helpers/focus/focus-session.helper";
 
 import type { FocusSessionRecord } from "@/types/focus.types";
 
 export type FocusHeatmapLevel = 0 | 1 | 2 | 3 | 4;
 
+export interface FocusHeatmapDaySegment {
+  color: string;
+  seconds: number;
+}
+
 export interface FocusHeatmapDay {
   dateKey: string;
   totalSeconds: number;
   level: FocusHeatmapLevel;
+  segments: FocusHeatmapDaySegment[];
 }
 
 export interface FocusHeatmapWeekColumn {
@@ -16,12 +25,16 @@ export interface FocusHeatmapWeekColumn {
 }
 
 const DEFAULT_WEEK_COUNT = 18;
+export const FOCUS_ANALYTICS_WEEK_COUNT = 14;
+
+export const FOCUS_HEATMAP_CELL_BORDER_CLASS = "border border-white/20";
+export const FOCUS_HEATMAP_EMPTY_CELL_CLASS = "bg-white/[0.12]";
 
 export function buildFocusHeatmapGrid(
   sessions: FocusSessionRecord[],
   weekCount = DEFAULT_WEEK_COUNT,
+  sessionNameFilter: string | null = null,
 ): FocusHeatmapWeekColumn[] {
-  const totalsByDate = aggregateFocusSecondsByDate(sessions);
   const today = startOfLocalDay(new Date());
   const currentWeekStart = startOfLocalWeek(today);
   const columns: FocusHeatmapWeekColumn[] = [];
@@ -39,16 +52,22 @@ export function buildFocusHeatmapGrid(
           dateKey: formatDateKey(date),
           totalSeconds: 0,
           level: 0,
+          segments: [],
         });
         continue;
       }
 
       const dateKey = formatDateKey(date);
-      const totalSeconds = totalsByDate.get(dateKey) ?? 0;
+      const segments = buildDaySegments(sessions, dateKey, sessionNameFilter);
+      const totalSeconds = segments.reduce(
+        (total, segment) => total + segment.seconds,
+        0,
+      );
       days.push({
         dateKey,
         totalSeconds,
         level: secondsToHeatmapLevel(totalSeconds),
+        segments,
       });
     }
 
@@ -61,21 +80,44 @@ export function buildFocusHeatmapGrid(
   return columns;
 }
 
-function aggregateFocusSecondsByDate(
+export function focusHeatmapSegmentOpacity(level: FocusHeatmapLevel): number {
+  switch (level) {
+    case 4:
+      return 1;
+    case 3:
+      return 0.82;
+    case 2:
+      return 0.64;
+    case 1:
+      return 0.46;
+    default:
+      return 0;
+  }
+}
+
+function buildDaySegments(
   sessions: FocusSessionRecord[],
-): Map<string, number> {
-  const totals = new Map<string, number>();
+  dateKey: string,
+  sessionNameFilter: string | null,
+): FocusHeatmapDaySegment[] {
+  const totalsByColor = new Map<string, number>();
 
   for (const session of sessions) {
     if (!isFocusSessionRecord(session)) continue;
-    const dateKey = formatDateKey(new Date(session.endedAt));
-    totals.set(
-      dateKey,
-      (totals.get(dateKey) ?? 0) + session.actualDurationSeconds,
+    const sessionName = session.name.trim();
+    if (sessionNameFilter && sessionName !== sessionNameFilter) continue;
+    if (formatDateKey(new Date(session.endedAt)) !== dateKey) continue;
+
+    const color = resolveFocusSessionColor(session);
+    totalsByColor.set(
+      color,
+      (totalsByColor.get(color) ?? 0) + session.actualDurationSeconds,
     );
   }
 
-  return totals;
+  return [...totalsByColor.entries()]
+    .map(([color, seconds]) => ({ color, seconds }))
+    .sort((left, right) => right.seconds - left.seconds);
 }
 
 function secondsToHeatmapLevel(totalSeconds: number): FocusHeatmapLevel {
@@ -104,19 +146,4 @@ function startOfLocalWeek(date: Date): Date {
   start.setDate(date.getDate() - diff);
   start.setHours(0, 0, 0, 0);
   return start;
-}
-
-export function focusHeatmapLevelClassName(level: FocusHeatmapLevel): string {
-  switch (level) {
-    case 4:
-      return "bg-violet-400";
-    case 3:
-      return "bg-violet-500/80";
-    case 2:
-      return "bg-violet-600/55";
-    case 1:
-      return "bg-violet-700/35";
-    default:
-      return "bg-white/[0.06]";
-  }
 }

@@ -35,6 +35,7 @@ export interface FocusSession {
   taskId: string | null;
   mode: FocusTimerMode;
   presetId: FocusPresetId | null;
+  color?: string;
   plannedDurationSeconds: number;
   actualDurationSeconds: number;
   startedAt: string;
@@ -62,6 +63,7 @@ export interface ActiveSession {
   remainingSeconds: number;
   pausedAt: string | null;
   elapsedSeconds: number;
+  color?: string;
   config: SessionConfig;
 }
 
@@ -112,6 +114,7 @@ export interface FocusRuntime {
   sessionId: string;
   sessionType: FocusSessionRecordType;
   config: SessionConfig;
+  color: string;
   plannedDurationSeconds: number;
   elapsedSeconds: number;
   remainingSeconds: number;

@@ -54,7 +54,8 @@ function isFocusSession(value: unknown): value is FocusSessionRecord {
       typeof value.actualDurationSeconds === "number" &&
       typeof value.startedAt === "string" &&
       typeof value.endedAt === "string" &&
-      (value.status === "completed" || value.status === "interrupted")
+      (value.status === "completed" || value.status === "interrupted") &&
+      (value.color === undefined || typeof value.color === "string")
     );
   }
 
@@ -87,6 +88,9 @@ function isActiveSession(value: unknown): value is ActiveSession {
     return false;
   }
   if (typeof value.elapsedSeconds !== "number") return false;
+  if (value.color !== undefined && typeof value.color !== "string") {
+    return false;
+  }
   return isSessionConfig(value.config);
 }
 

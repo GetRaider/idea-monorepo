@@ -20,6 +20,7 @@ import { cn } from "@/lib/styles/utils";
 import { FocusBacklogPicker } from "./FocusBacklogPicker";
 import { FocusColourPicker } from "./FocusColourPicker";
 import { FocusDurationDial } from "./FocusDurationDial";
+import { FocusSectionHeader } from "./FocusSectionHeader";
 import { FocusEstimationInput } from "./FocusEstimationInput";
 import { FocusBreakSuggestionDialog, FocusStopDialog } from "./FocusStopDialog";
 import { FocusTaskPicker } from "./FocusTaskPicker";
@@ -150,9 +151,11 @@ function FocusIdleSessionPanel({
   const [detailsExpanded, setDetailsExpanded] = useState(true);
 
   const dialMinutes = useMemo(() => {
+    if (draft.mode === "custom" && draft.durationMinutes === null) {
+      return 0;
+    }
     const estimation = getEstimationMinutes(draft);
-    if (estimation !== null) return estimation;
-    return 25;
+    return estimation ?? 0;
   }, [draft]);
 
   const isPomodoro = draft.mode === "preset";
@@ -168,31 +171,18 @@ function FocusIdleSessionPanel({
     return true;
   }, [draft, idleDraft.selectedBacklogId, idleDraft.sessionSelection]);
 
-  const panelMinHeight = "min-h-[min(52vh,440px)]";
-  const panelMaxHeight = "max-h-[min(52vh,440px)]";
-
   return (
     <div className="relative overflow-hidden rounded-xl border border-white/10 bg-white/[0.03]">
+      <FocusSectionHeader title="Timer" />
       <div
         className={cn(
-          "grid items-start",
-          panelMinHeight,
+          "grid items-start border-t border-white/10",
           detailsExpanded
-            ? "grid-cols-1 lg:grid-cols-[minmax(0,1.15fr)_minmax(300px,38%)_2.25rem]"
+            ? "grid-cols-1 lg:grid-cols-[minmax(0,1.15fr)_minmax(280px,34%)_2.25rem]"
             : "grid-cols-1 lg:grid-cols-[minmax(0,1fr)_2.25rem]",
         )}
       >
-        <section
-          className={cn(
-            "flex flex-col gap-5 p-6 sm:p-8",
-            panelMinHeight,
-            panelMaxHeight,
-          )}
-        >
-          <p className="m-0 shrink-0 text-sm font-medium text-text-secondary">
-            Timer
-          </p>
-
+        <section className="flex flex-col gap-5 p-6 sm:p-8">
           <div className="flex items-end justify-start gap-8 sm:gap-12">
             <FocusDurationDial
               size="large"
@@ -233,12 +223,7 @@ function FocusIdleSessionPanel({
         </section>
 
         {detailsExpanded ? (
-          <section
-            className={cn(
-              "flex flex-col gap-4 overflow-y-auto border-l border-white/10 p-6 sm:p-8",
-              panelMaxHeight,
-            )}
-          >
+          <section className="flex max-h-[min(52vh,420px)] min-h-0 flex-col gap-3 overflow-y-auto overscroll-contain border-l border-white/10 p-4 sm:p-5 [scrollbar-gutter:stable]">
             <FocusSessionDetailsContent
               draft={draft}
               idleDraft={idleDraft}
@@ -361,13 +346,13 @@ function FocusSessionDetailsContent({
             />
           </DialogFormGroup>
 
-          <FocusTaskPicker compact defaultExpanded={false} />
-
           <FocusColourPicker
             value={idleDraft.color}
             onChange={(color) => configureIdleDraft({ color })}
             defaultExpanded={false}
           />
+
+          <FocusTaskPicker compact defaultExpanded={false} />
 
           <div className="flex flex-col gap-1.5">
             <p className="m-0 text-xs font-medium text-text-secondary">
@@ -438,43 +423,44 @@ function FocusTimerCard({
   secondaryDisabled = false,
 }: FocusTimerCardProps) {
   return (
-    <div className="min-h-[min(40vh,320px)] rounded-xl border border-white/10 bg-white/[0.03] p-6 sm:p-8">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="min-w-0 flex-1">
-          <p className="m-0 text-sm font-medium uppercase tracking-wide text-text-tertiary">
+    <div className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.03]">
+      <FocusSectionHeader title="Timer" />
+      <div className="flex min-h-[min(40vh,320px)] flex-col items-center justify-center gap-6 border-t border-white/10 px-6 py-8 sm:px-8">
+        <div className="flex flex-col items-center gap-1 text-center">
+          <p className="m-0 text-xs font-medium uppercase tracking-wide text-text-tertiary">
             {title}
           </p>
-          <p className="m-0 truncate text-base font-semibold text-text-primary">
+          <p className="m-0 max-w-full truncate text-base font-semibold text-text-primary">
             {sessionName}
           </p>
           <p className="m-0 text-xs text-text-secondary">{statusLabel}</p>
         </div>
 
-        <p className="m-0 shrink-0 font-mono text-4xl font-semibold tabular-nums tracking-tight text-text-primary sm:text-5xl">
+        <p className="m-0 font-mono text-5xl font-semibold tabular-nums tracking-tight text-text-primary sm:text-6xl">
           {formatFocusCountdown(remainingSeconds)}
         </p>
-      </div>
 
-      <div className="mt-4 flex flex-wrap justify-end gap-2">
-        {secondaryLabel && onSecondary ? (
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          {secondaryLabel && onSecondary ? (
+            <PrimaryButton
+              type="button"
+              size="sm"
+              variant="surface"
+              disabled={secondaryDisabled}
+              onClick={onSecondary}
+            >
+              {secondaryLabel}
+            </PrimaryButton>
+          ) : null}
           <PrimaryButton
             type="button"
             size="sm"
-            variant="surface"
-            disabled={secondaryDisabled}
-            onClick={onSecondary}
+            disabled={primaryDisabled}
+            onClick={onPrimary}
           >
-            {secondaryLabel}
+            {primaryLabel}
           </PrimaryButton>
-        ) : null}
-        <PrimaryButton
-          type="button"
-          size="sm"
-          disabled={primaryDisabled}
-          onClick={onPrimary}
-        >
-          {primaryLabel}
-        </PrimaryButton>
+        </div>
       </div>
     </div>
   );

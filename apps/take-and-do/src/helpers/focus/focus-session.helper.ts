@@ -202,8 +202,48 @@ export function buildActiveSession(
     remainingSeconds: runtime.remainingSeconds,
     pausedAt: runtime.pausedAt,
     elapsedSeconds: runtime.elapsedSeconds,
+    color: runtime.color,
     config: runtime.config,
   };
+}
+
+export interface FocusSessionFilterOption {
+  value: string;
+  label: string;
+  color: string | null;
+}
+
+export function buildFocusSessionFilterOptions(
+  sessions: FocusSessionRecord[],
+): FocusSessionFilterOption[] {
+  const optionsByName = new Map<string, string>();
+  const focusSessions = sessions
+    .filter(isFocusSessionRecord)
+    .sort((left, right) => right.endedAt.localeCompare(left.endedAt));
+
+  for (const session of focusSessions) {
+    const name = session.name.trim();
+    if (!name || optionsByName.has(name)) continue;
+    optionsByName.set(name, resolveFocusSessionColor(session));
+  }
+
+  return [
+    { value: "", label: "All sessions", color: null },
+    ...[...optionsByName.entries()]
+      .sort(([leftName], [rightName]) => leftName.localeCompare(rightName))
+      .map(([name, color]) => ({
+        value: name,
+        label: name,
+        color,
+      })),
+  ];
+}
+
+export function resolveFocusSessionColor(session: FocusSession): string {
+  if (session.color) return session.color;
+  const paletteIndex =
+    Math.abs(hashString(session.name)) % FOCUS_SESSION_COLORS.length;
+  return FOCUS_SESSION_COLORS[paletteIndex] ?? FOCUS_SESSION_COLORS[0];
 }
 
 export function buildFocusSessionRecord(
@@ -218,12 +258,22 @@ export function buildFocusSessionRecord(
     taskId: runtime.config.taskId,
     mode: runtime.config.mode,
     presetId: runtime.config.mode === "preset" ? runtime.config.presetId : null,
+    color: runtime.color,
     plannedDurationSeconds: runtime.plannedDurationSeconds,
     actualDurationSeconds: runtime.elapsedSeconds,
     startedAt: runtime.startedAt,
     endedAt,
     status,
   };
+}
+
+function hashString(value: string): number {
+  let hash = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash << 5) - hash + value.charCodeAt(index);
+    hash |= 0;
+  }
+  return hash;
 }
 
 export function buildBreakSessionRecord(
@@ -288,10 +338,22 @@ export function runtimeFromActiveSession(
       ? (resolveBreakParentFocusSession(sessions)?.id ?? null)
       : null;
 
+  const parentFocusSession = parentFocusSessionId
+    ? sessions.find(
+        (session): session is FocusSession =>
+          isFocusSessionRecord(session) && session.id === parentFocusSessionId,
+      )
+    : null;
+
   return {
     sessionId: active.sessionId,
     sessionType: active.sessionType,
     config: active.config,
+    color:
+      active.color ??
+      (parentFocusSession
+        ? resolveFocusSessionColor(parentFocusSession)
+        : FOCUS_SESSION_COLORS[0]),
     plannedDurationSeconds,
     elapsedSeconds: active.elapsedSeconds,
     remainingSeconds: active.remainingSeconds,
@@ -397,6 +459,40 @@ export function getWeeklyFocusSeconds(
       const endedAt = new Date(session.endedAt);
       return endedAt >= weekStart && endedAt <= weekEnd;
     })
+    .reduce((total, session) => total + session.actualDurationSeconds, 0);
+}
+
+export function getMonthlyFocusSeconds(
+  sessions: FocusSessionRecord[],
+  referenceDate = new Date(),
+): number {
+  const monthStart = new Date(
+    referenceDate.getFullYear(),
+    referenceDate.getMonth(),
+    1,
+  );
+  const monthEnd = new Date(
+    referenceDate.getFullYear(),
+    referenceDate.getMonth() + 1,
+    0,
+    23,
+    59,
+    59,
+    999,
+  );
+
+  return sessions
+    .filter(isFocusSessionRecord)
+    .filter((session) => {
+      const endedAt = new Date(session.endedAt);
+      return endedAt >= monthStart && endedAt <= monthEnd;
+    })
+    .reduce((total, session) => total + session.actualDurationSeconds, 0);
+}
+
+export function getTotalFocusSeconds(sessions: FocusSessionRecord[]): number {
+  return sessions
+    .filter(isFocusSessionRecord)
     .reduce((total, session) => total + session.actualDurationSeconds, 0);
 }
 

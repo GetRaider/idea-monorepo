@@ -13,11 +13,13 @@ import {
   Logo,
   Nav,
   NavButton,
+  SidebarMiddle,
   BottomActions,
   Avatar,
 } from "./Sidebar.ui";
 import { GuestAvatarIcon } from "../Icons/GuestAvatarIcon";
 import { DefaultAvatarIcon } from "../Icons/DefaulAvatarIcon";
+import { FocusTimerSidebarButton } from "./FocusTimerSidebarButton";
 import { Route } from "@/constants/route.constant";
 import { env } from "@/env/client";
 
@@ -101,6 +103,10 @@ export function Sidebar({ onNavigationChange }: SidebarProps) {
           </AppTooltip>
         ))}
       </Nav>
+
+      <SidebarMiddle>
+        <FocusTimerSidebarButton />
+      </SidebarMiddle>
 
       <BottomActions>
         <NavButton title="Toggle theme">

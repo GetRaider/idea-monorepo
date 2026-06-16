@@ -13,18 +13,18 @@ import { NavButton } from "./Sidebar.ui";
 export function FocusTimerSidebarButton() {
   const router = useRouter();
   const pathname = usePathname() ?? "";
-  const { runtime, systemState } = useFocusSessionContext();
+  const { activeTimer, systemState } = useFocusSessionContext();
 
   const isOnFocusPage = pathname.startsWith(Route.FOCUS);
   const isFocusSessionActive =
-    runtime?.sessionType === "focus" &&
+    activeTimer?.sessionType === "focus" &&
     (systemState === "running" ||
       systemState === "paused" ||
       systemState === "stopping");
 
-  if (!isFocusSessionActive) return null;
+  if (!isFocusSessionActive || !activeTimer) return null;
 
-  const remainingLabel = formatFocusCountdown(runtime.remainingSeconds);
+  const remainingLabel = formatFocusCountdown(activeTimer.remainingSeconds);
   const tooltipContent = `Focus session active, ${remainingLabel} remaining`;
 
   return (

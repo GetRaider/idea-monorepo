@@ -1,9 +1,12 @@
 import type {
-  ActiveSession,
+  ActiveBreakTimer,
+  ActiveFocusTimer,
+  ActiveTimer,
   FocusBacklogItem,
   FocusBacklogStore,
   FocusBreakSuggestion,
   FocusIdleDraft,
+  FocusSession,
   FocusSessionRecord,
   FocusSessionsStore,
   SessionConfig,
@@ -23,40 +26,94 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function isSessionConfig(value: unknown): value is SessionConfig {
-  if (!isRecord(value)) return false;
-  const mode = value.mode;
-  if (mode !== "preset" && mode !== "custom") return false;
-  if (typeof value.name !== "string") return false;
-  if (value.taskId !== null && typeof value.taskId !== "string") return false;
-  if (value.presetId !== null && value.presetId !== "pomodoro_25_5") {
-    return false;
+function migrateDurationMinutes(raw: Record<string, unknown>): number | null {
+  if (typeof raw.durationMinutes === "number") {
+    return raw.durationMinutes;
   }
+  if (raw.mode === "preset") {
+    return 25;
+  }
+  return null;
+}
+
+function migrateSessionConfig(value: unknown): SessionConfig | null {
+  if (!isRecord(value)) return null;
+  if (typeof value.name !== "string") return null;
+  if (value.taskId !== null && typeof value.taskId !== "string") return null;
+  return {
+    name: value.name,
+    durationMinutes: migrateDurationMinutes(value),
+    taskId:
+      value.taskId === null || typeof value.taskId === "string"
+        ? value.taskId
+        : null,
+  };
+}
+
+function isSessionConfig(value: unknown): value is SessionConfig {
+  const migrated = migrateSessionConfig(value);
+  if (!migrated) return false;
   if (
-    value.durationMinutes !== null &&
-    typeof value.durationMinutes !== "number"
+    migrated.durationMinutes !== null &&
+    typeof migrated.durationMinutes !== "number"
   ) {
     return false;
   }
   return true;
 }
 
+function migratePlannedDurationSeconds(
+  raw: Record<string, unknown>,
+): number | null {
+  if (typeof raw.plannedDurationSeconds === "number") {
+    return raw.plannedDurationSeconds;
+  }
+  if (raw.mode === "preset") {
+    return 25 * 60;
+  }
+  const minutes = migrateDurationMinutes(raw);
+  if (minutes === null) return null;
+  return minutes * 60;
+}
+
+function migrateFocusSession(value: unknown): FocusSession | null {
+  if (!isRecord(value) || value.type !== "focus") return null;
+
+  const plannedDurationSeconds = migratePlannedDurationSeconds(value);
+  if (plannedDurationSeconds === null) return null;
+
+  if (
+    typeof value.id !== "string" ||
+    typeof value.name !== "string" ||
+    (value.taskId !== null && typeof value.taskId !== "string") ||
+    typeof value.actualDurationSeconds !== "number" ||
+    typeof value.startedAt !== "string" ||
+    typeof value.endedAt !== "string" ||
+    (value.status !== "completed" && value.status !== "interrupted") ||
+    (value.color !== undefined && typeof value.color !== "string")
+  ) {
+    return null;
+  }
+
+  return {
+    id: value.id,
+    type: "focus",
+    name: value.name,
+    taskId: value.taskId,
+    color: typeof value.color === "string" ? value.color : undefined,
+    plannedDurationSeconds,
+    actualDurationSeconds: value.actualDurationSeconds,
+    startedAt: value.startedAt,
+    endedAt: value.endedAt,
+    status: value.status,
+  };
+}
+
 function isFocusSession(value: unknown): value is FocusSessionRecord {
   if (!isRecord(value) || typeof value.type !== "string") return false;
 
   if (value.type === "focus") {
-    return (
-      typeof value.id === "string" &&
-      typeof value.name === "string" &&
-      (value.taskId === null || typeof value.taskId === "string") &&
-      (value.mode === "preset" || value.mode === "custom") &&
-      typeof value.plannedDurationSeconds === "number" &&
-      typeof value.actualDurationSeconds === "number" &&
-      typeof value.startedAt === "string" &&
-      typeof value.endedAt === "string" &&
-      (value.status === "completed" || value.status === "interrupted") &&
-      (value.color === undefined || typeof value.color === "string")
-    );
+    return migrateFocusSession(value) !== null;
   }
 
   if (value.type === "break") {
@@ -74,28 +131,147 @@ function isFocusSession(value: unknown): value is FocusSessionRecord {
   return false;
 }
 
-function isActiveSession(value: unknown): value is ActiveSession {
-  if (!isRecord(value)) return false;
-  if (typeof value.sessionId !== "string") return false;
-  if (value.sessionType !== "focus" && value.sessionType !== "break") {
-    return false;
+function normalizeFocusSession(value: unknown): FocusSessionRecord | null {
+  if (!isRecord(value) || typeof value.type !== "string") return null;
+
+  if (value.type === "focus") {
+    return migrateFocusSession(value);
   }
+
+  if (value.type === "break") {
+    if (!isFocusSession(value)) return null;
+    return value as FocusSessionRecord;
+  }
+
+  return null;
+}
+
+function isActiveFocusTimer(value: unknown): value is ActiveFocusTimer {
+  if (!isRecord(value)) return false;
+  if (value.sessionType !== "focus") return false;
+  if (typeof value.sessionId !== "string") return false;
   if (value.systemState !== "running" && value.systemState !== "paused") {
     return false;
   }
+  if (typeof value.name !== "string") return false;
+  if (value.taskId !== null && typeof value.taskId !== "string") return false;
+  if (typeof value.color !== "string") return false;
+  if (typeof value.plannedDurationSeconds !== "number") return false;
   if (typeof value.remainingSeconds !== "number") return false;
   if (value.pausedAt !== null && typeof value.pausedAt !== "string") {
     return false;
   }
   if (typeof value.elapsedSeconds !== "number") return false;
-  if (value.color !== undefined && typeof value.color !== "string") {
+  if (typeof value.startedAt !== "string") return false;
+  return true;
+}
+
+function isActiveBreakTimer(value: unknown): value is ActiveBreakTimer {
+  if (!isRecord(value)) return false;
+  if (value.sessionType !== "break") return false;
+  if (typeof value.sessionId !== "string") return false;
+  if (value.systemState !== "running" && value.systemState !== "paused") {
     return false;
   }
-  return isSessionConfig(value.config);
+  if (typeof value.parentFocusSessionId !== "string") return false;
+  if (typeof value.plannedDurationSeconds !== "number") return false;
+  if (typeof value.remainingSeconds !== "number") return false;
+  if (value.pausedAt !== null && typeof value.pausedAt !== "string") {
+    return false;
+  }
+  if (typeof value.elapsedSeconds !== "number") return false;
+  if (typeof value.startedAt !== "string") return false;
+  return true;
+}
+
+function migrateActiveTimer(value: unknown): ActiveTimer | null {
+  if (isActiveFocusTimer(value) || isActiveBreakTimer(value)) {
+    return value;
+  }
+
+  if (!isRecord(value)) return null;
+  if (typeof value.sessionId !== "string") return null;
+  if (value.sessionType !== "focus" && value.sessionType !== "break") {
+    return null;
+  }
+  if (value.systemState !== "running" && value.systemState !== "paused") {
+    return null;
+  }
+  if (typeof value.remainingSeconds !== "number") return null;
+  if (value.pausedAt !== null && typeof value.pausedAt !== "string") {
+    return null;
+  }
+  if (typeof value.elapsedSeconds !== "number") return null;
+
+  const startedAt =
+    typeof value.startedAt === "string"
+      ? value.startedAt
+      : new Date(
+          Date.now() - (value.elapsedSeconds as number) * 1000,
+        ).toISOString();
+
+  if (value.sessionType === "break") {
+    const parentFocusSessionId =
+      typeof value.parentFocusSessionId === "string"
+        ? value.parentFocusSessionId
+        : null;
+
+    if (!parentFocusSessionId) return null;
+
+    const plannedDurationSeconds =
+      typeof value.plannedDurationSeconds === "number"
+        ? value.plannedDurationSeconds
+        : value.remainingSeconds + value.elapsedSeconds;
+
+    return {
+      sessionId: value.sessionId,
+      sessionType: "break",
+      systemState: value.systemState,
+      parentFocusSessionId,
+      plannedDurationSeconds,
+      elapsedSeconds: value.elapsedSeconds,
+      remainingSeconds: value.remainingSeconds,
+      pausedAt: value.pausedAt,
+      startedAt,
+    };
+  }
+
+  const config = migrateSessionConfig(value.config);
+  if (!config) return null;
+
+  const plannedDurationSeconds =
+    typeof value.plannedDurationSeconds === "number"
+      ? value.plannedDurationSeconds
+      : getPlannedDurationFromConfig(config);
+
+  const color =
+    typeof value.color === "string"
+      ? value.color
+      : typeof config.name === "string"
+        ? "#f97316"
+        : "#f97316";
+
+  return {
+    sessionId: value.sessionId,
+    sessionType: "focus",
+    systemState: value.systemState,
+    name: config.name,
+    taskId: config.taskId,
+    color,
+    plannedDurationSeconds,
+    elapsedSeconds: value.elapsedSeconds,
+    remainingSeconds: value.remainingSeconds,
+    pausedAt: value.pausedAt,
+    startedAt,
+  };
+}
+
+function getPlannedDurationFromConfig(config: SessionConfig): number {
+  return (config.durationMinutes ?? 0) * 60;
 }
 
 function defaultSessionsStore(): FocusSessionsStore {
-  return { version: 1, items: [] };
+  return { version: 2, items: [] };
 }
 
 export function readFocusSessionsStore(): FocusSessionsStore {
@@ -104,12 +280,15 @@ export function readFocusSessionsStore(): FocusSessionsStore {
     const raw = window.localStorage.getItem(FOCUS_STORAGE_SESSIONS_KEY);
     if (!raw) return defaultSessionsStore();
     const parsed = JSON.parse(raw) as unknown;
-    if (!isRecord(parsed) || parsed.version !== 1) {
+    if (!isRecord(parsed)) return defaultSessionsStore();
+    if (parsed.version !== 1 && parsed.version !== 2) {
       return defaultSessionsStore();
     }
     if (!Array.isArray(parsed.items)) return defaultSessionsStore();
-    const items = parsed.items.filter(isFocusSession);
-    return { version: 1, items };
+    const items = parsed.items
+      .map(normalizeFocusSession)
+      .filter((item): item is FocusSessionRecord => item !== null);
+    return { version: 2, items };
   } catch {
     return defaultSessionsStore();
   }
@@ -130,25 +309,25 @@ export function writeFocusSessionsStore(next: FocusSessionsStore): void {
 export function appendFocusSessionRecord(record: FocusSessionRecord): void {
   const store = readFocusSessionsStore();
   writeFocusSessionsStore({
-    version: 1,
+    version: 2,
     items: [...store.items, record],
   });
 }
 
-export function readFocusActiveSession(): ActiveSession | null {
+export function readFocusActiveTimer(): ActiveTimer | null {
   if (typeof window === "undefined") return null;
   try {
     const raw = window.localStorage.getItem(FOCUS_STORAGE_ACTIVE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as unknown;
     if (parsed === null) return null;
-    return isActiveSession(parsed) ? parsed : null;
+    return migrateActiveTimer(parsed);
   } catch {
     return null;
   }
 }
 
-export function writeFocusActiveSession(next: ActiveSession | null): void {
+export function writeFocusActiveTimer(next: ActiveTimer | null): void {
   if (typeof window === "undefined") return;
   try {
     window.localStorage.setItem(FOCUS_STORAGE_ACTIVE_KEY, JSON.stringify(next));
@@ -182,29 +361,36 @@ function isStoredFocusDraft(value: unknown): value is StoredFocusDraft {
   return isFocusIdleDraft(value.idle);
 }
 
-function isFocusBacklogItem(value: unknown): value is FocusBacklogItem {
-  if (!isRecord(value)) return false;
+function migrateBacklogItem(value: unknown): FocusBacklogItem | null {
+  if (!isRecord(value)) return null;
   if (typeof value.id !== "string" || typeof value.name !== "string") {
-    return false;
+    return null;
   }
-  if (value.mode !== "preset" && value.mode !== "custom") return false;
-  if (value.presetId !== null && value.presetId !== "pomodoro_25_5") {
-    return false;
-  }
+
+  const durationMinutes = migrateDurationMinutes(value);
   if (
-    value.durationMinutes !== null &&
-    typeof value.durationMinutes !== "number"
+    durationMinutes === null ||
+    !Number.isInteger(durationMinutes) ||
+    durationMinutes < 1
   ) {
-    return false;
+    return null;
   }
+
   if (typeof value.color !== "string" || typeof value.createdAt !== "string") {
-    return false;
+    return null;
   }
-  return true;
+
+  return {
+    id: value.id,
+    name: value.name,
+    durationMinutes,
+    color: value.color,
+    createdAt: value.createdAt,
+  };
 }
 
 function defaultBacklogStore(): FocusBacklogStore {
-  return { version: 1, items: [] };
+  return { version: 2, items: [] };
 }
 
 export function readFocusDraft(): StoredFocusDraft | null {
@@ -216,9 +402,10 @@ export function readFocusDraft(): StoredFocusDraft | null {
     if (isStoredFocusDraft(parsed)) {
       return parsed;
     }
-    if (isSessionConfig(parsed)) {
+    const migratedConfig = migrateSessionConfig(parsed);
+    if (migratedConfig) {
       return {
-        config: parsed,
+        config: migratedConfig,
         idle: { ...DEFAULT_IDLE_DRAFT },
       };
     }
@@ -247,12 +434,15 @@ export function readFocusBacklogStore(): FocusBacklogStore {
     const raw = window.localStorage.getItem(FOCUS_STORAGE_BACKLOG_KEY);
     if (!raw) return defaultBacklogStore();
     const parsed = JSON.parse(raw) as unknown;
-    if (!isRecord(parsed) || parsed.version !== 1) {
+    if (!isRecord(parsed)) return defaultBacklogStore();
+    if (parsed.version !== 1 && parsed.version !== 2) {
       return defaultBacklogStore();
     }
     if (!Array.isArray(parsed.items)) return defaultBacklogStore();
-    const items = parsed.items.filter(isFocusBacklogItem);
-    return { version: 1, items };
+    const items = parsed.items
+      .map(migrateBacklogItem)
+      .filter((item): item is FocusBacklogItem => item !== null);
+    return { version: 2, items };
   } catch {
     return defaultBacklogStore();
   }
@@ -273,7 +463,7 @@ export function writeFocusBacklogStore(next: FocusBacklogStore): void {
 export function appendFocusBacklogItem(item: FocusBacklogItem): void {
   const store = readFocusBacklogStore();
   writeFocusBacklogStore({
-    version: 1,
+    version: 2,
     items: [...store.items, item],
   });
 }

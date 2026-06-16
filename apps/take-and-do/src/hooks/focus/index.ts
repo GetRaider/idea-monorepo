@@ -1,10 +1,10 @@
 export {
   appendFocusSessionRecord,
-  readFocusActiveSession,
+  readFocusActiveTimer,
   readFocusBreakSuggestion,
   readFocusDraft,
   readFocusSessionsStore,
-  writeFocusActiveSession,
+  writeFocusActiveTimer,
   writeFocusBreakSuggestion,
   writeFocusDraft,
   writeFocusSessionsStore,

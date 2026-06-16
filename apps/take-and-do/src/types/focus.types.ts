@@ -1,8 +1,4 @@
-export type FocusTimerMode = "preset" | "custom";
-
 export type FocusSessionSelection = "new" | "backlog";
-
-export type FocusPresetId = "pomodoro_25_5";
 
 export type FocusSessionRecordType = "focus" | "break";
 
@@ -11,7 +7,6 @@ export type FocusSystemState =
   | "running"
   | "paused"
   | "stopping"
-  | "completed"
   | "break_suggested"
   | "break_running"
   | "break_stopping";
@@ -21,11 +16,9 @@ export type FocusSessionStatus = "completed" | "interrupted";
 export type ActiveTimerSystemState = "running" | "paused";
 
 export interface SessionConfig {
-  mode: FocusTimerMode;
-  presetId: FocusPresetId | null;
+  name: string;
   durationMinutes: number | null;
   taskId: string | null;
-  name: string;
 }
 
 export interface FocusSession {
@@ -33,8 +26,6 @@ export interface FocusSession {
   type: "focus";
   name: string;
   taskId: string | null;
-  mode: FocusTimerMode;
-  presetId: FocusPresetId | null;
   color?: string;
   plannedDurationSeconds: number;
   actualDurationSeconds: number;
@@ -56,34 +47,49 @@ export interface BreakSession {
 
 export type FocusSessionRecord = FocusSession | BreakSession;
 
-export interface ActiveSession {
+export interface ActiveFocusTimer {
   sessionId: string;
-  sessionType: FocusSessionRecordType;
+  sessionType: "focus";
   systemState: ActiveTimerSystemState;
+  name: string;
+  taskId: string | null;
+  color: string;
+  plannedDurationSeconds: number;
+  elapsedSeconds: number;
   remainingSeconds: number;
   pausedAt: string | null;
-  elapsedSeconds: number;
-  color?: string;
-  config: SessionConfig;
+  startedAt: string;
 }
 
+export interface ActiveBreakTimer {
+  sessionId: string;
+  sessionType: "break";
+  systemState: ActiveTimerSystemState;
+  parentFocusSessionId: string;
+  plannedDurationSeconds: number;
+  elapsedSeconds: number;
+  remainingSeconds: number;
+  pausedAt: string | null;
+  startedAt: string;
+}
+
+export type ActiveTimer = ActiveFocusTimer | ActiveBreakTimer;
+
 export interface FocusSessionsStore {
-  version: 1;
+  version: 2;
   items: FocusSessionRecord[];
 }
 
 export interface FocusBacklogItem {
   id: string;
   name: string;
-  mode: FocusTimerMode;
-  presetId: FocusPresetId | null;
-  durationMinutes: number | null;
+  durationMinutes: number;
   color: string;
   createdAt: string;
 }
 
 export interface FocusBacklogStore {
-  version: 1;
+  version: 2;
   items: FocusBacklogItem[];
 }
 
@@ -108,19 +114,6 @@ export type FocusActionStatus =
 export interface FocusActionResult {
   status: FocusActionStatus;
   reason?: string;
-}
-
-export interface FocusRuntime {
-  sessionId: string;
-  sessionType: FocusSessionRecordType;
-  config: SessionConfig;
-  color: string;
-  plannedDurationSeconds: number;
-  elapsedSeconds: number;
-  remainingSeconds: number;
-  pausedAt: string | null;
-  startedAt: string;
-  parentFocusSessionId: string | null;
 }
 
 export interface FocusBreakSuggestion {

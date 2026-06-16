@@ -1,11 +1,12 @@
 import type {
-  ActiveSession,
+  ActiveBreakTimer,
+  ActiveFocusTimer,
+  ActiveTimer,
   BreakSession,
   FocusActionResult,
   FocusBacklogItem,
   FocusBreakSuggestion,
   FocusIdleDraft,
-  FocusRuntime,
   FocusSession,
   FocusSessionRecord,
   FocusSessionStatus,
@@ -28,9 +29,6 @@ export const FOCUS_SESSION_COLORS = [
   "#eab308",
 ] as const;
 
-export const POMODORO_25_5_FOCUS_SECONDS = 25 * 60;
-export const POMODORO_25_5_BREAK_SECONDS = 5 * 60;
-
 export const DEFAULT_IDLE_DRAFT: FocusIdleDraft = {
   sessionSelection: "new",
   selectedBacklogId: null,
@@ -39,8 +37,6 @@ export const DEFAULT_IDLE_DRAFT: FocusIdleDraft = {
 };
 
 export const DEFAULT_SESSION_CONFIG: SessionConfig = {
-  mode: "custom",
-  presetId: null,
   durationMinutes: null,
   taskId: null,
   name: "",
@@ -74,7 +70,6 @@ export function parseEstimationInput(value: string): number | null {
 }
 
 export function getEstimationMinutes(config: SessionConfig): number | null {
-  if (config.mode === "preset") return 25;
   return config.durationMinutes;
 }
 
@@ -96,9 +91,7 @@ export function backlogItemFromConfig(
   return {
     id: crypto.randomUUID(),
     name: config.name.trim(),
-    mode: config.mode,
-    presetId: config.mode === "preset" ? config.presetId : null,
-    durationMinutes: config.mode === "custom" ? config.durationMinutes : null,
+    durationMinutes: config.durationMinutes ?? 0,
     color,
     createdAt: new Date().toISOString(),
   };
@@ -108,8 +101,6 @@ export function sessionConfigFromBacklogItem(
   item: FocusBacklogItem,
 ): SessionConfig {
   return {
-    mode: item.mode,
-    presetId: item.presetId,
     durationMinutes: item.durationMinutes,
     taskId: null,
     name: item.name,
@@ -117,9 +108,6 @@ export function sessionConfigFromBacklogItem(
 }
 
 export function getPlannedFocusDurationSeconds(config: SessionConfig): number {
-  if (config.mode === "preset") {
-    return POMODORO_25_5_FOCUS_SECONDS;
-  }
   return (config.durationMinutes ?? 0) * 60;
 }
 
@@ -132,30 +120,16 @@ export function getBreakDurationSeconds(
 export function validateSessionConfig(
   config: SessionConfig,
 ): FocusActionResult {
-  if (config.mode === "preset") {
-    if (config.presetId !== "pomodoro_25_5") {
-      return {
-        status: "CONSTRAINT_VIOLATION",
-        reason: "presetId must be pomodoro_25_5 for preset mode",
-      };
-    }
-  } else if (config.mode === "custom") {
-    const minutes = config.durationMinutes;
-    if (
-      minutes === null ||
-      !Number.isInteger(minutes) ||
-      minutes < 1 ||
-      minutes > 60
-    ) {
-      return {
-        status: "CONSTRAINT_VIOLATION",
-        reason: "durationMinutes must be an integer between 1 and 60",
-      };
-    }
-  } else {
+  const minutes = config.durationMinutes;
+  if (
+    minutes === null ||
+    !Number.isInteger(minutes) ||
+    minutes < 1 ||
+    minutes > 60
+  ) {
     return {
       status: "CONSTRAINT_VIOLATION",
-      reason: "mode must be preset or custom",
+      reason: "durationMinutes must be an integer between 1 and 60",
     };
   }
 
@@ -181,6 +155,18 @@ export function isBreakSessionRecord(
   return record.type === "break";
 }
 
+export function isActiveFocusTimer(
+  timer: ActiveTimer,
+): timer is ActiveFocusTimer {
+  return timer.sessionType === "focus";
+}
+
+export function isActiveBreakTimer(
+  timer: ActiveTimer,
+): timer is ActiveBreakTimer {
+  return timer.sessionType === "break";
+}
+
 export function isActiveTimerSystemState(
   systemState: FocusSystemState,
 ): boolean {
@@ -191,20 +177,11 @@ export function isActiveTimerSystemState(
   );
 }
 
-export function buildActiveSession(
-  runtime: FocusRuntime,
-  timerState: ActiveSession["systemState"],
-): ActiveSession {
-  return {
-    sessionId: runtime.sessionId,
-    sessionType: runtime.sessionType,
-    systemState: timerState,
-    remainingSeconds: runtime.remainingSeconds,
-    pausedAt: runtime.pausedAt,
-    elapsedSeconds: runtime.elapsedSeconds,
-    color: runtime.color,
-    config: runtime.config,
-  };
+export function withActiveTimerSystemState(timer: ActiveTimer): ActiveTimer {
+  const systemState: ActiveTimer["systemState"] = timer.pausedAt
+    ? "paused"
+    : "running";
+  return { ...timer, systemState };
 }
 
 export interface FocusSessionFilterOption {
@@ -247,21 +224,19 @@ export function resolveFocusSessionColor(session: FocusSession): string {
 }
 
 export function buildFocusSessionRecord(
-  runtime: FocusRuntime,
+  timer: ActiveFocusTimer,
   status: FocusSession["status"],
   endedAt: string,
 ): FocusSession {
   return {
-    id: runtime.sessionId,
+    id: timer.sessionId,
     type: "focus",
-    name: runtime.config.name.trim(),
-    taskId: runtime.config.taskId,
-    mode: runtime.config.mode,
-    presetId: runtime.config.mode === "preset" ? runtime.config.presetId : null,
-    color: runtime.color,
-    plannedDurationSeconds: runtime.plannedDurationSeconds,
-    actualDurationSeconds: runtime.elapsedSeconds,
-    startedAt: runtime.startedAt,
+    name: timer.name.trim(),
+    taskId: timer.taskId,
+    color: timer.color,
+    plannedDurationSeconds: timer.plannedDurationSeconds,
+    actualDurationSeconds: timer.elapsedSeconds,
+    startedAt: timer.startedAt,
     endedAt,
     status,
   };
@@ -277,18 +252,17 @@ function hashString(value: string): number {
 }
 
 export function buildBreakSessionRecord(
-  runtime: FocusRuntime,
-  parentFocusSessionId: string,
+  timer: ActiveBreakTimer,
   status: BreakSession["status"],
   endedAt: string,
 ): BreakSession {
   return {
-    id: runtime.sessionId,
+    id: timer.sessionId,
     type: "break",
-    parentFocusSessionId,
-    plannedDurationSeconds: runtime.plannedDurationSeconds,
-    actualDurationSeconds: runtime.elapsedSeconds,
-    startedAt: runtime.startedAt,
+    parentFocusSessionId: timer.parentFocusSessionId,
+    plannedDurationSeconds: timer.plannedDurationSeconds,
+    actualDurationSeconds: timer.elapsedSeconds,
+    startedAt: timer.startedAt,
     endedAt,
     status,
   };
@@ -324,49 +298,8 @@ export function resolveBreakSuggestion(
   };
 }
 
-export function runtimeFromActiveSession(
-  active: ActiveSession,
-  sessions: FocusSessionRecord[],
-): FocusRuntime {
-  const plannedDurationSeconds =
-    active.sessionType === "focus"
-      ? getPlannedFocusDurationSeconds(active.config)
-      : resolveBreakDurationForActive(active, sessions);
-
-  const parentFocusSessionId =
-    active.sessionType === "break"
-      ? (resolveBreakParentFocusSession(sessions)?.id ?? null)
-      : null;
-
-  const parentFocusSession = parentFocusSessionId
-    ? sessions.find(
-        (session): session is FocusSession =>
-          isFocusSessionRecord(session) && session.id === parentFocusSessionId,
-      )
-    : null;
-
-  return {
-    sessionId: active.sessionId,
-    sessionType: active.sessionType,
-    config: active.config,
-    color:
-      active.color ??
-      (parentFocusSession
-        ? resolveFocusSessionColor(parentFocusSession)
-        : FOCUS_SESSION_COLORS[0]),
-    plannedDurationSeconds,
-    elapsedSeconds: active.elapsedSeconds,
-    remainingSeconds: active.remainingSeconds,
-    pausedAt: active.pausedAt,
-    startedAt: new Date(
-      Date.now() - active.elapsedSeconds * 1000,
-    ).toISOString(),
-    parentFocusSessionId,
-  };
-}
-
-export function systemStateFromActiveSession(
-  active: ActiveSession,
+export function systemStateFromActiveTimer(
+  active: ActiveTimer,
 ): FocusSystemState {
   if (active.sessionType === "break") {
     return "break_running";
@@ -424,10 +357,9 @@ export function formatFocusHistoryTimestamp(iso: string): string {
   });
 }
 
-export function getFocusSessionModeLabel(session: FocusSession): string {
-  if (session.mode === "preset") return "25/5 Pomodoro";
+export function getFocusSessionDurationLabel(session: FocusSession): string {
   const minutes = Math.round(session.plannedDurationSeconds / 60);
-  return `${minutes} min custom`;
+  return `${minutes} min`;
 }
 
 export function getFocusHistoryStatusLabel(status: FocusSessionStatus): string {
@@ -494,17 +426,6 @@ export function getTotalFocusSeconds(sessions: FocusSessionRecord[]): number {
   return sessions
     .filter(isFocusSessionRecord)
     .reduce((total, session) => total + session.actualDurationSeconds, 0);
-}
-
-function resolveBreakDurationForActive(
-  active: ActiveSession,
-  sessions: FocusSessionRecord[],
-): number {
-  const parent = resolveBreakParentFocusSession(sessions);
-  if (parent) {
-    return getBreakDurationSeconds(parent.plannedDurationSeconds);
-  }
-  return active.remainingSeconds + active.elapsedSeconds;
 }
 
 function startOfLocalDay(date: Date): Date {

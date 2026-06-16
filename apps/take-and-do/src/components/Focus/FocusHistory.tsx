@@ -7,7 +7,7 @@ import {
   formatFocusDurationLabel,
   formatFocusHistoryTimestamp,
   getFocusHistoryStatusLabel,
-  getFocusSessionModeLabel,
+  getFocusSessionDurationLabel,
   isFocusSessionRecord,
   resolveBreakParentName,
   sortFocusHistorySessions,
@@ -68,7 +68,7 @@ function FocusHistoryFocusRow({ session }: { session: FocusSession }) {
           <FocusHistoryTypeBadge variant="focus">Focus</FocusHistoryTypeBadge>
         </div>
         <p className="m-0 text-xs text-text-secondary">
-          {getFocusSessionModeLabel(session)} ·{" "}
+          {getFocusSessionDurationLabel(session)} ·{" "}
           {formatFocusDurationLabel(session.actualDurationSeconds)} recorded
         </p>
         <p className="m-0 text-xs text-text-tertiary">

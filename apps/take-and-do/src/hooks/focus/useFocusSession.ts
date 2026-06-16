@@ -6,7 +6,6 @@ import {
   DEFAULT_IDLE_DRAFT,
   DEFAULT_SESSION_CONFIG,
   backlogItemFromConfig,
-  buildActiveSession,
   buildBreakSessionRecord,
   buildDefaultFocusSessionName,
   buildFocusSessionRecord,
@@ -15,34 +14,36 @@ import {
   getDailyFocusSeconds,
   getPlannedFocusDurationSeconds,
   getWeeklyFocusSeconds,
+  isActiveBreakTimer,
+  isActiveFocusTimer,
   isActiveTimerSystemState,
   randomFocusSessionColor,
-  resolveFocusSessionColor,
-  runtimeFromActiveSession,
   sessionConfigFromBacklogItem,
-  systemStateFromActiveSession,
+  systemStateFromActiveTimer,
   validateSessionConfig,
+  withActiveTimerSystemState,
 } from "@/helpers/focus/focus-session.helper";
 import {
   appendFocusBacklogItem,
   appendFocusSessionRecord,
-  readFocusActiveSession,
+  readFocusActiveTimer,
   readFocusBacklogStore,
   readFocusBreakSuggestion,
   readFocusDraft,
   readFocusSessionsStore,
-  writeFocusActiveSession,
+  writeFocusActiveTimer,
   writeFocusBreakSuggestion,
   writeFocusDraft,
 } from "@/hooks/focus/focus-storage";
 
 import type {
-  ActiveSession,
+  ActiveBreakTimer,
+  ActiveFocusTimer,
+  ActiveTimer,
   FocusActionResult,
   FocusBacklogItem,
   FocusBreakSuggestion,
   FocusIdleDraft,
-  FocusRuntime,
   FocusSessionRecord,
   FocusSystemState,
   SessionConfig,
@@ -60,30 +61,26 @@ export function useFocusSession() {
   });
   const [backlog, setBacklog] = useState<FocusBacklogItem[]>([]);
   const [sessions, setSessions] = useState<FocusSessionRecord[]>([]);
-  const [runtime, setRuntime] = useState<FocusRuntime | null>(null);
+  const [activeTimer, setActiveTimer] = useState<ActiveTimer | null>(null);
   const [breakSuggestion, setBreakSuggestion] =
     useState<FocusBreakSuggestion | null>(null);
   const [isHydrated, setIsHydrated] = useState(false);
 
-  const runtimeRef = useRef<FocusRuntime | null>(null);
+  const activeTimerRef = useRef<ActiveTimer | null>(null);
   const systemStateRef = useRef<FocusSystemState>("idle");
   const sessionsRef = useRef<FocusSessionRecord[]>([]);
 
-  runtimeRef.current = runtime;
+  activeTimerRef.current = activeTimer;
   systemStateRef.current = systemState;
   sessionsRef.current = sessions;
 
-  const persistActive = useCallback((nextRuntime: FocusRuntime | null) => {
-    if (!nextRuntime) {
-      writeFocusActiveSession(null);
+  const persistActive = useCallback((nextTimer: ActiveTimer | null) => {
+    if (!nextTimer) {
+      writeFocusActiveTimer(null);
       return;
     }
 
-    const timerState: ActiveSession["systemState"] = nextRuntime.pausedAt
-      ? "paused"
-      : "running";
-
-    writeFocusActiveSession(buildActiveSession(nextRuntime, timerState));
+    writeFocusActiveTimer(withActiveTimerSystemState(nextTimer));
   }, []);
 
   const persistDraft = useCallback((stored: StoredFocusDraft) => {
@@ -107,10 +104,10 @@ export function useFocusSession() {
   }, []);
 
   const completeFocusSessionInternal = useCallback(
-    (currentRuntime: FocusRuntime) => {
+    (currentTimer: ActiveFocusTimer) => {
       const endedAt = new Date().toISOString();
       const record = buildFocusSessionRecord(
-        currentRuntime,
+        currentTimer,
         "completed",
         endedAt,
       );
@@ -125,8 +122,8 @@ export function useFocusSession() {
         parentPlannedFocusSeconds: record.plannedDurationSeconds,
       };
 
-      runtimeRef.current = null;
-      setRuntime(null);
+      activeTimerRef.current = null;
+      setActiveTimer(null);
       persistActive(null);
       writeFocusBreakSuggestion(suggestion);
       setBreakSuggestion(suggestion);
@@ -136,14 +133,12 @@ export function useFocusSession() {
   );
 
   const completeBreakSessionInternal = useCallback(
-    (currentRuntime: FocusRuntime) => {
-      const parentFocusSessionId = currentRuntime.parentFocusSessionId;
-      if (!parentFocusSessionId) return;
+    (currentTimer: ActiveTimer) => {
+      if (!isActiveBreakTimer(currentTimer)) return;
 
       const endedAt = new Date().toISOString();
       const record = buildBreakSessionRecord(
-        currentRuntime,
-        parentFocusSessionId,
+        currentTimer,
         "completed",
         endedAt,
       );
@@ -153,8 +148,8 @@ export function useFocusSession() {
       sessionsRef.current = nextSessions;
       setSessions(nextSessions);
 
-      runtimeRef.current = null;
-      setRuntime(null);
+      activeTimerRef.current = null;
+      setActiveTimer(null);
       persistActive(null);
       writeFocusBreakSuggestion(null);
       setBreakSuggestion(null);
@@ -167,7 +162,7 @@ export function useFocusSession() {
     const storedSessions = readFocusSessionsStore();
     const storedBacklog = readFocusBacklogStore();
     const storedDraft = readFocusDraft();
-    const storedActive = readFocusActiveSession();
+    const storedActive = readFocusActiveTimer();
 
     setSessions(storedSessions.items);
     sessionsRef.current = storedSessions.items;
@@ -199,12 +194,8 @@ export function useFocusSession() {
     }
 
     if (storedActive) {
-      const restoredRuntime = runtimeFromActiveSession(
-        storedActive,
-        storedSessions.items,
-      );
-      setRuntime(restoredRuntime);
-      setSystemState(systemStateFromActiveSession(storedActive));
+      setActiveTimer(storedActive);
+      setSystemState(systemStateFromActiveTimer(storedActive));
     } else {
       const suggestion = readFocusBreakSuggestion();
       if (suggestion) {
@@ -223,42 +214,52 @@ export function useFocusSession() {
     }
 
     const interval = window.setInterval(() => {
-      const currentRuntime = runtimeRef.current;
+      const currentTimer = activeTimerRef.current;
       const currentSystemState = systemStateRef.current;
 
       if (
-        !currentRuntime ||
+        !currentTimer ||
         (currentSystemState !== "running" &&
           currentSystemState !== "break_running")
       ) {
         return;
       }
 
-      if (currentRuntime.pausedAt) return;
+      if (currentTimer.pausedAt) return;
 
-      const nextElapsed = currentRuntime.elapsedSeconds + 1;
+      const nextElapsed = currentTimer.elapsedSeconds + 1;
       const nextRemaining = Math.max(
         0,
-        currentRuntime.plannedDurationSeconds - nextElapsed,
+        currentTimer.plannedDurationSeconds - nextElapsed,
       );
-      const nextRuntime: FocusRuntime = {
-        ...currentRuntime,
+      const nextTimer: ActiveTimer = {
+        ...currentTimer,
         elapsedSeconds: nextElapsed,
         remainingSeconds: nextRemaining,
       };
 
       if (nextRemaining === 0) {
-        if (currentSystemState === "running") {
-          completeFocusSessionInternal(nextRuntime);
-        } else {
-          completeBreakSessionInternal(nextRuntime);
+        if (isActiveFocusTimer(currentTimer)) {
+          completeFocusSessionInternal({
+            ...currentTimer,
+            elapsedSeconds: nextElapsed,
+            remainingSeconds: nextRemaining,
+            systemState: "running",
+          });
+        } else if (isActiveBreakTimer(currentTimer)) {
+          completeBreakSessionInternal({
+            ...currentTimer,
+            elapsedSeconds: nextElapsed,
+            remainingSeconds: nextRemaining,
+            systemState: "running",
+          });
         }
         return;
       }
 
-      runtimeRef.current = nextRuntime;
-      setRuntime(nextRuntime);
-      persistActive(nextRuntime);
+      activeTimerRef.current = nextTimer;
+      setActiveTimer(nextTimer);
+      persistActive(nextTimer);
     }, 1000);
 
     return () => window.clearInterval(interval);
@@ -275,7 +276,7 @@ export function useFocusSession() {
 
     const persistOnHide = () => {
       if (document.visibilityState !== "hidden") return;
-      persistActive(runtimeRef.current);
+      persistActive(activeTimerRef.current);
     };
 
     window.addEventListener("beforeunload", persistOnHide);
@@ -413,17 +414,18 @@ export function useFocusSession() {
 
       const plannedDurationSeconds = getPlannedFocusDurationSeconds(config);
       const startedAt = new Date().toISOString();
-      const nextRuntime: FocusRuntime = {
+      const nextTimer: ActiveFocusTimer = {
         sessionId: crypto.randomUUID(),
         sessionType: "focus",
-        config: { ...config, name: config.name.trim() },
+        systemState: "running",
+        name: config.name.trim(),
+        taskId: config.taskId,
         color: sessionColor,
         plannedDurationSeconds,
         elapsedSeconds: 0,
         remainingSeconds: plannedDurationSeconds,
         pausedAt: null,
         startedAt,
-        parentFocusSessionId: null,
       };
 
       const nextBacklog = savedBacklogItem
@@ -434,8 +436,8 @@ export function useFocusSession() {
         nextBacklog,
       );
 
-      runtimeRef.current = nextRuntime;
-      setRuntime(nextRuntime);
+      activeTimerRef.current = nextTimer;
+      setActiveTimer(nextTimer);
       const nextDraftConfig = {
         ...DEFAULT_SESSION_CONFIG,
         name: nextDefaultName,
@@ -447,7 +449,7 @@ export function useFocusSession() {
       setDraftState(nextDraftConfig);
       setIdleDraftState(nextIdleDraft);
       persistStoredDraft(nextDraftConfig, nextIdleDraft);
-      persistActive(nextRuntime);
+      persistActive(nextTimer);
       setSystemState("running");
 
       return { status: "SUCCESS" };
@@ -463,19 +465,23 @@ export function useFocusSession() {
       };
     }
 
-    const currentRuntime = runtimeRef.current;
-    if (!currentRuntime) {
-      return { status: "CONSTRAINT_VIOLATION", reason: "no active runtime" };
+    const currentTimer = activeTimerRef.current;
+    if (!currentTimer || !isActiveFocusTimer(currentTimer)) {
+      return {
+        status: "CONSTRAINT_VIOLATION",
+        reason: "no active focus timer",
+      };
     }
 
-    const nextRuntime: FocusRuntime = {
-      ...currentRuntime,
+    const nextTimer: ActiveFocusTimer = {
+      ...currentTimer,
+      systemState: "paused",
       pausedAt: new Date().toISOString(),
     };
 
-    runtimeRef.current = nextRuntime;
-    setRuntime(nextRuntime);
-    persistActive(nextRuntime);
+    activeTimerRef.current = nextTimer;
+    setActiveTimer(nextTimer);
+    persistActive(nextTimer);
     setSystemState("paused");
 
     return { status: "SUCCESS" };
@@ -489,19 +495,23 @@ export function useFocusSession() {
       };
     }
 
-    const currentRuntime = runtimeRef.current;
-    if (!currentRuntime) {
-      return { status: "CONSTRAINT_VIOLATION", reason: "no active runtime" };
+    const currentTimer = activeTimerRef.current;
+    if (!currentTimer || !isActiveFocusTimer(currentTimer)) {
+      return {
+        status: "CONSTRAINT_VIOLATION",
+        reason: "no active focus timer",
+      };
     }
 
-    const nextRuntime: FocusRuntime = {
-      ...currentRuntime,
+    const nextTimer: ActiveFocusTimer = {
+      ...currentTimer,
+      systemState: "running",
       pausedAt: null,
     };
 
-    runtimeRef.current = nextRuntime;
-    setRuntime(nextRuntime);
-    persistActive(nextRuntime);
+    activeTimerRef.current = nextTimer;
+    setActiveTimer(nextTimer);
+    persistActive(nextTimer);
     setSystemState("running");
 
     return { status: "SUCCESS" };
@@ -528,8 +538,12 @@ export function useFocusSession() {
       };
     }
 
-    const currentRuntime = runtimeRef.current;
-    if (!currentRuntime || currentRuntime.elapsedSeconds <= 0) {
+    const currentTimer = activeTimerRef.current;
+    if (
+      !currentTimer ||
+      !isActiveFocusTimer(currentTimer) ||
+      currentTimer.elapsedSeconds <= 0
+    ) {
       return {
         status: "CONSTRAINT_VIOLATION",
         reason: "save_partial_session requires elapsed focus seconds > 0",
@@ -538,14 +552,14 @@ export function useFocusSession() {
 
     const endedAt = new Date().toISOString();
     const record = buildFocusSessionRecord(
-      currentRuntime,
+      currentTimer,
       "interrupted",
       endedAt,
     );
     appendSession(record);
 
-    runtimeRef.current = null;
-    setRuntime(null);
+    activeTimerRef.current = null;
+    setActiveTimer(null);
     persistActive(null);
     setSystemState("idle");
 
@@ -560,8 +574,8 @@ export function useFocusSession() {
       };
     }
 
-    runtimeRef.current = null;
-    setRuntime(null);
+    activeTimerRef.current = null;
+    setActiveTimer(null);
     persistActive(null);
     setSystemState("idle");
 
@@ -584,45 +598,25 @@ export function useFocusSession() {
       };
     }
 
-    const parentSession = sessionsRef.current.find(
-      (session) => session.id === suggestion.parentFocusSessionId,
-    );
-    if (!parentSession || parentSession.type !== "focus") {
-      return {
-        status: "CONSTRAINT_VIOLATION",
-        reason: "parent focus session not found",
-      };
-    }
-
     const plannedDurationSeconds = getBreakDurationSeconds(
       suggestion.parentPlannedFocusSeconds,
     );
     const startedAt = new Date().toISOString();
-    const nextRuntime: FocusRuntime = {
+    const nextTimer: ActiveBreakTimer = {
       sessionId: crypto.randomUUID(),
       sessionType: "break",
-      config: {
-        mode: parentSession.mode,
-        presetId: parentSession.presetId,
-        durationMinutes:
-          parentSession.mode === "custom"
-            ? Math.round(parentSession.plannedDurationSeconds / 60)
-            : null,
-        taskId: parentSession.taskId,
-        name: parentSession.name,
-      },
-      color: resolveFocusSessionColor(parentSession),
+      systemState: "running",
+      parentFocusSessionId: suggestion.parentFocusSessionId,
       plannedDurationSeconds,
       elapsedSeconds: 0,
       remainingSeconds: plannedDurationSeconds,
       pausedAt: null,
       startedAt,
-      parentFocusSessionId: suggestion.parentFocusSessionId,
     };
 
-    runtimeRef.current = nextRuntime;
-    setRuntime(nextRuntime);
-    persistActive(nextRuntime);
+    activeTimerRef.current = nextTimer;
+    setActiveTimer(nextTimer);
+    persistActive(nextTimer);
     writeFocusBreakSuggestion(null);
     setBreakSuggestion(null);
     setSystemState("break_running");
@@ -665,12 +659,11 @@ export function useFocusSession() {
       };
     }
 
-    const currentRuntime = runtimeRef.current;
-    const parentFocusSessionId = currentRuntime?.parentFocusSessionId;
+    const currentTimer = activeTimerRef.current;
     if (
-      !currentRuntime ||
-      !parentFocusSessionId ||
-      currentRuntime.elapsedSeconds <= 0
+      !currentTimer ||
+      !isActiveBreakTimer(currentTimer) ||
+      currentTimer.elapsedSeconds <= 0
     ) {
       return {
         status: "CONSTRAINT_VIOLATION",
@@ -680,15 +673,14 @@ export function useFocusSession() {
 
     const endedAt = new Date().toISOString();
     const record = buildBreakSessionRecord(
-      currentRuntime,
-      parentFocusSessionId,
+      currentTimer,
       "interrupted",
       endedAt,
     );
     appendSession(record);
 
-    runtimeRef.current = null;
-    setRuntime(null);
+    activeTimerRef.current = null;
+    setActiveTimer(null);
     persistActive(null);
     setSystemState("idle");
 
@@ -703,8 +695,8 @@ export function useFocusSession() {
       };
     }
 
-    runtimeRef.current = null;
-    setRuntime(null);
+    activeTimerRef.current = null;
+    setActiveTimer(null);
     persistActive(null);
     setSystemState("idle");
 
@@ -721,7 +713,7 @@ export function useFocusSession() {
     [sessions],
   );
 
-  const canSaveOnStop = (runtime?.elapsedSeconds ?? 0) > 0;
+  const canSaveOnStop = (activeTimer?.elapsedSeconds ?? 0) > 0;
   const isTimerActive = isActiveTimerSystemState(systemState);
 
   const selectBacklogSession = useCallback(
@@ -766,7 +758,7 @@ export function useFocusSession() {
     idleDraft,
     backlog,
     sessions,
-    runtime,
+    activeTimer,
     breakSuggestion,
     canSaveOnStop,
     isTimerActive,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useMemo, type ReactNode } from "react";
 import { toast } from "sonner";
 
 import { PrimaryButton } from "@/components/Buttons";
@@ -48,7 +48,7 @@ function FocusSessionPanelBody({
 }) {
   const {
     systemState,
-    runtime,
+    activeTimer,
     startFocusSession,
     pauseFocusSession,
     resumeFocusSession,
@@ -71,12 +71,12 @@ function FocusSessionPanelBody({
   const isBreakTimer =
     systemState === "break_running" || systemState === "break_stopping";
 
-  if (isBreakTimer && runtime) {
+  if (isBreakTimer && activeTimer) {
     return (
       <FocusTimerCard
         title="Break"
         sessionName="Rest"
-        remainingSeconds={runtime.remainingSeconds}
+        remainingSeconds={activeTimer.remainingSeconds}
         statusLabel={systemState === "break_running" ? "Running" : "Stopping…"}
         primaryLabel="Stop"
         onPrimary={() => {
@@ -89,7 +89,7 @@ function FocusSessionPanelBody({
     );
   }
 
-  if (isFocusTimer && runtime) {
+  if (isFocusTimer && activeTimer?.sessionType === "focus") {
     const statusLabel =
       systemState === "running"
         ? "Running"
@@ -100,8 +100,8 @@ function FocusSessionPanelBody({
     return (
       <FocusTimerCard
         title="Focus"
-        sessionName={runtime.config.name}
-        remainingSeconds={runtime.remainingSeconds}
+        sessionName={activeTimer.name}
+        remainingSeconds={activeTimer.remainingSeconds}
         statusLabel={statusLabel}
         primaryLabel={systemState === "paused" ? "Resume" : "Pause"}
         secondaryLabel="Stop"
@@ -148,17 +148,15 @@ function FocusIdleSessionPanel({
     configureSession,
     configureIdleDraft,
   } = focus;
-  const [detailsExpanded, setDetailsExpanded] = useState(true);
 
   const dialMinutes = useMemo(() => {
-    if (draft.mode === "custom" && draft.durationMinutes === null) {
+    if (draft.durationMinutes === null) {
       return 0;
     }
     const estimation = getEstimationMinutes(draft);
     return estimation ?? 0;
   }, [draft]);
 
-  const isPomodoro = draft.mode === "preset";
   const isNewSession = idleDraft.sessionSelection === "new";
   const canSaveBacklog = canEnableSaveToBacklog(draft, idleDraft);
 
@@ -174,56 +172,44 @@ function FocusIdleSessionPanel({
   return (
     <div className="relative overflow-hidden rounded-xl border border-white/10 bg-white/[0.03]">
       <FocusSectionHeader title="Timer" />
-      <div
-        className={cn(
-          "grid items-start border-t border-white/10",
-          detailsExpanded
-            ? "grid-cols-1 lg:grid-cols-[minmax(0,1.15fr)_minmax(280px,34%)_2.25rem]"
-            : "grid-cols-1 lg:grid-cols-[minmax(0,1fr)_2.25rem]",
-        )}
-      >
-        <section className="flex flex-col gap-5 p-6 sm:p-8">
-          <div className="flex items-end justify-start gap-8 sm:gap-12">
-            <FocusDurationDial
-              size="large"
-              minutes={dialMinutes}
-              disabled={isPomodoro}
-              onChange={(nextMinutes) =>
-                configureSession({
-                  mode: "custom",
-                  presetId: null,
-                  durationMinutes: nextMinutes,
-                })
-              }
-            />
-
-            <div className="flex w-full max-w-[14rem] shrink-0 flex-col gap-4 pb-1">
-              <FocusEstimationInput
+      <div className="border-t border-white/10 px-5 py-4">
+        <div className="flex flex-col gap-6 lg:grid lg:grid-cols-[auto_1px_minmax(0,1fr)] lg:items-stretch lg:gap-x-0">
+          <section className="flex min-w-0 flex-col justify-center lg:pr-12">
+            <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:gap-8">
+              <FocusDurationDial
                 size="large"
-                config={draft}
-                disabled={isPomodoro}
-                onChange={(minutes) =>
-                  configureSession({
-                    mode: "custom",
-                    presetId: null,
-                    durationMinutes: minutes,
-                  })
+                minutes={dialMinutes}
+                onChange={(nextMinutes) =>
+                  configureSession({ durationMinutes: nextMinutes })
                 }
               />
-              <PrimaryButton
-                type="button"
-                disabled={!canStart}
-                onClick={onStart}
-                className="w-full py-3 text-base"
-              >
-                Start
-              </PrimaryButton>
-            </div>
-          </div>
-        </section>
 
-        {detailsExpanded ? (
-          <section className="flex max-h-[min(52vh,420px)] min-h-0 flex-col gap-3 overflow-y-auto overscroll-contain border-l border-white/10 p-4 sm:p-5 [scrollbar-gutter:stable]">
+              <div className="flex w-[14rem] shrink-0 flex-col gap-4">
+                <FocusEstimationInput
+                  size="large"
+                  durationMinutes={draft.durationMinutes}
+                  onChange={(minutes) =>
+                    configureSession({ durationMinutes: minutes })
+                  }
+                />
+                <PrimaryButton
+                  type="button"
+                  disabled={!canStart}
+                  onClick={onStart}
+                  className="w-full py-3 text-base"
+                >
+                  Start
+                </PrimaryButton>
+              </div>
+            </div>
+          </section>
+
+          <div
+            className="hidden w-px self-stretch bg-white/10 lg:block"
+            aria-hidden
+          />
+
+          <section className="flex min-h-0 min-w-0 flex-col gap-5 overflow-y-auto overscroll-contain lg:max-h-[min(52vh,420px)] lg:pl-12">
             <FocusSessionDetailsContent
               draft={draft}
               idleDraft={idleDraft}
@@ -237,8 +223,6 @@ function FocusIdleSessionPanel({
                   selectedBacklogId: null,
                 });
                 configureSession({
-                  mode: "custom",
-                  presetId: null,
                   durationMinutes: null,
                   taskId: null,
                   name: buildDefaultFocusSessionName(sessions, backlog),
@@ -246,21 +230,7 @@ function FocusIdleSessionPanel({
               }}
             />
           </section>
-        ) : null}
-
-        <button
-          type="button"
-          aria-expanded={detailsExpanded}
-          onClick={() => setDetailsExpanded((previous) => !previous)}
-          className={cn(
-            "flex w-9 shrink-0 flex-col items-center justify-center gap-1 self-stretch border-0 border-l border-white/10 bg-black/20 px-1.5 py-6 text-[11px] font-semibold uppercase tracking-wide text-text-secondary transition-colors hover:bg-white/[0.04] hover:text-text-primary",
-            detailsExpanded ? "border-l-white/10" : "",
-          )}
-        >
-          <span className="[writing-mode:vertical-rl] rotate-180">
-            {detailsExpanded ? "Hide Details" : "Show Details"}
-          </span>
-        </button>
+        </div>
       </div>
     </div>
   );
@@ -277,38 +247,6 @@ function FocusSessionDetailsContent({
 }: FocusSessionDetailsContentProps) {
   return (
     <>
-      <div className="flex flex-col gap-1.5">
-        <p className="m-0 text-xs font-medium text-text-secondary">
-          Timer mode
-        </p>
-        <div className="flex rounded-lg border border-white/10 bg-black/20 p-0.5">
-          <FocusModeToggleButton
-            active={draft.mode === "preset"}
-            onClick={() =>
-              configureSession({
-                mode: "preset",
-                presetId: "pomodoro_25_5",
-                durationMinutes: null,
-              })
-            }
-          >
-            Pomodoro
-          </FocusModeToggleButton>
-          <FocusModeToggleButton
-            active={draft.mode === "custom"}
-            onClick={() =>
-              configureSession({
-                mode: "custom",
-                presetId: null,
-                durationMinutes: draft.durationMinutes,
-              })
-            }
-          >
-            Custom
-          </FocusModeToggleButton>
-        </div>
-      </div>
-
       <div className="flex flex-col gap-1.5">
         <p className="m-0 text-xs font-medium text-text-secondary">
           Session selection

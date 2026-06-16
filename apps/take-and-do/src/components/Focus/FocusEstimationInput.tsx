@@ -5,36 +5,28 @@ import { useCallback, useEffect, useState } from "react";
 import { Input } from "@/components/Input";
 import {
   formatEstimationInput,
-  getEstimationMinutes,
   parseEstimationInput,
 } from "@/helpers/focus/focus-session.helper";
 import { cn } from "@/lib/styles/utils";
 
-import type { SessionConfig } from "@/types/focus.types";
-
 export function FocusEstimationInput({
-  config,
+  durationMinutes,
   disabled = false,
   onChange,
   className,
   size = "default",
 }: FocusEstimationInputProps) {
-  const estimationMinutes = getEstimationMinutes(config);
   const [inputValue, setInputValue] = useState(
-    estimationMinutes !== null ? formatEstimationInput(estimationMinutes) : "",
+    durationMinutes !== null ? formatEstimationInput(durationMinutes) : "",
   );
 
   useEffect(() => {
-    if (config.mode === "preset") {
-      setInputValue(formatEstimationInput(25));
-      return;
-    }
-    if (config.durationMinutes !== null) {
-      setInputValue(formatEstimationInput(config.durationMinutes));
+    if (durationMinutes !== null) {
+      setInputValue(formatEstimationInput(durationMinutes));
       return;
     }
     setInputValue("");
-  }, [config.durationMinutes, config.mode]);
+  }, [durationMinutes]);
 
   const commitValue = useCallback(
     (rawValue: string) => {
@@ -93,7 +85,7 @@ export function FocusEstimationInput({
 type FocusEstimationInputSize = "default" | "large";
 
 interface FocusEstimationInputProps {
-  config: SessionConfig;
+  durationMinutes: number | null;
   disabled?: boolean;
   onChange: (minutes: number | null) => void;
   className?: string;

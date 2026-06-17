@@ -1,8 +1,8 @@
 ---
-description: TypeScript configuration package rules
+description: TypeScript configuration package (@repo/typescript-config)
 globs:
-  - "**/*.json"
-alwaysApply: true
+  - "packages/typescript-config/**"
+alwaysApply: false
 ---
 
 # TypeScript Configuration Package Rules

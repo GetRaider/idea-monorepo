@@ -1,0 +1,59 @@
+---
+description: Branch and commit naming enforced by Husky and Commitlint
+alwaysApply: true
+---
+
+# Git Conventions
+
+Enforced by `.husky/pre-commit`, `.husky/pre-push`, and `.husky/commit-msg` → `commitlint.config.cjs`.
+
+## Branch names
+
+Format: `<type>/<SCOPE>-<slug>`
+
+| Field | Allowed values |
+|-------|----------------|
+| `type` | `feat`, `fix`, `test`, `chore`, `docs`, `refactor`, `style`, `release` |
+| `SCOPE` | `GEN`, `TAD`, `DVN`, `PRT` |
+| `slug` | Starts with letter or digit; then letters, digits, hyphens, dots |
+
+**Constraints**
+
+- Max length: **50** characters (Husky pre-commit + pre-push).
+- Exceptions: `main`, `master`, `develop` skip branch lint.
+
+**Examples**
+
+- `feat/GEN-commitlint-and-branchlint`
+- `fix/TAD-kanban-dnd-bug`
+- `release/GEN-v1`
+- `release/TAD-1.2.0`
+
+## Commit messages
+
+Format: `<type>(<SCOPE>): <subject>`
+
+| Field | Allowed values |
+|-------|----------------|
+| `type` | Same as branch types |
+| `SCOPE` | `GEN`, `TAD`, `DVN`, `PRT` — **required** (`scope-empty: never`) |
+| `subject` | Imperative, concise |
+
+**Constraints**
+
+- Header max length: **70** characters (`header-max-length` in commitlint).
+- **No body** (`body-empty: always`).
+- **No footer** (`footer-empty: always`).
+
+**Examples**
+
+- `feat(GEN): enforce commit message and branch naming rules`
+- `fix(TAD): focus session persistence on reload`
+- `release(DVN): cut v2.0.0`
+
+## Scope selection
+
+- `GEN` — monorepo tooling, shared packages used across apps, CI, eslint/tsconfig
+- `TAD` — `apps/take-and-do`
+- `DVN` — `apps/devinity-api`, `apps/devinity-web`
+- `PRT` — `apps/personal-website`

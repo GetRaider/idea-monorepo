@@ -1,0 +1,75 @@
+---
+description: take-and-do full-stack Next.js app — API routes, controllers, Drizzle, UI
+globs:
+  - "apps/take-and-do/**"
+alwaysApply: false
+---
+
+# take-and-do
+
+Next.js full-stack task/calendar/focus app. Scope: `TAD`.
+
+## Structure
+
+```
+src/
+  app/                    # Pages + app/api/**/route.ts
+  components/
+  hooks/
+  server/
+    controllers/          # BaseController subclasses
+    services/api/         # DB/business logic per domain
+    services/ai/
+    services/google/
+  db/
+    schemas/
+    dtos/                 # Zod DTOs for API boundary
+  services/               # Client-side API services (*.client.service.ts)
+  lib/                    # Framework plumbing ONLY (defineRoute, errors, styles)
+  auth/
+  stores/
+  env/
+```
+
+## API route → controller → service
+
+1. Zod DTOs in `db/dtos/`
+2. Controller in `server/controllers/` extends `BaseController`, uses `initRoute({ bodyDto, responseDto, handler })`
+3. API service in `server/services/api/<domain>.api.service.ts`
+4. Route file wires exports:
+
+```typescript
+import { FocusController } from "@/server/controllers";
+const controller = new FocusController();
+export const GET = controller.getState;
+```
+
+5. Client calls via `services/<domain>.client.service.ts` → `fetch('/api/...')`
+
+## Database
+
+- Drizzle: `db/schemas/`, migrations in `drizzle/`
+- Scripts: `db:generate`, `db:push`, `db:migrate`, `db:studio`
+
+## UI
+
+- Kanban: native HTML5 DnD, `@dnd-kit` where used
+- Tailwind + some styled-components; no inline styles
+- `@repo/ui` for shared primitives
+
+## `lib/` boundary
+
+Only thin third-party/framework wrappers. Domain logic → `server/`, `helpers/`, `services/`, `db/`.
+
+## Auth
+
+- `auth/guards.ts` — `requireNonAnonymous`, `getAccessByAuth` in controllers
+
+## Testing
+
+- Vitest, `src/**/*.test.ts`, node environment
+- Controller tests in `server/controllers/tests/`
+
+## Lint-staged
+
+App-level husky runs eslint on staged `apps/take-and-do/**` files.

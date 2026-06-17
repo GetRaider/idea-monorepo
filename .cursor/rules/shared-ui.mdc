@@ -1,9 +1,8 @@
 ---
-description: Shared UI components library for the monorepo
+description: Shared UI components library (@repo/ui)
 globs:
-  - "**/*.tsx"
-  - "**/*.ts"
-alwaysApply: true
+  - "packages/ui/**"
+alwaysApply: false
 ---
 
 # Shared UI Package Development Rules

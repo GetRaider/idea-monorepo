@@ -1,8 +1,8 @@
 ---
-description: ESLint configuration package rules
+description: ESLint configuration package (@repo/eslint-config)
 globs:
-  - "**/*.js"
-alwaysApply: true
+  - "packages/eslint-config/**"
+alwaysApply: false
 ---
 
 # ESLint Configuration Package Rules

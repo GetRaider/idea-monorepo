@@ -1,0 +1,58 @@
+---
+description: devinity-api NestJS app structure, modules, Drizzle, auth, and testing
+globs:
+  - "apps/devinity-api/**"
+alwaysApply: false
+---
+
+# devinity-api
+
+NestJS API for Devinity. Scope: `DVN`.
+
+## Structure
+
+```
+src/
+  modules/           # Feature modules (user/, app.module.ts)
+  db/                # Drizzle schemas
+  env/env.ts         # Zod-validated env
+  helpers/
+test/                # e2e specs (vitest + supertest)
+```
+
+## Module pattern
+
+Each feature under `src/modules/<feature>/`:
+
+- `<feature>.module.ts` — imports, controllers, providers, exports
+- `<feature>.controller.ts` — HTTP layer only
+- `<feature>.service.ts` — business logic, DB, cache
+
+Register new modules in `app.module.ts`.
+
+## Database
+
+- Drizzle ORM, schemas in `src/db/`
+- Inject via `@Inject(DRIZZLE_DB)`
+- Use `.returning()` on insert/update
+
+## Auth
+
+- Better-Auth via `@thallesp/nestjs-better-auth`
+- CLI scripts: `auth:generate`, `auth:migrate` in package.json
+
+## Shared types
+
+- Import models/DTOs from `@repo/api` when shared with frontend
+- External HTTP: prefer `httpClient` from `@repo/api/helpers` (see `http-client` rule)
+
+## Testing
+
+- Unit: Vitest (`vitest.config.ts`)
+- E2e: `test/*.e2e-spec.ts` via `vitest.e2e.config.ts`, supertest + `AppModule`
+- **Not Jest** — use `vitest` imports
+
+## Scripts
+
+- `pnpm dev` — nest start --watch
+- `pnpm db:generate` / `db:migrate` — drizzle-kit

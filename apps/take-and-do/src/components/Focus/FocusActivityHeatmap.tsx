@@ -10,6 +10,13 @@ import {
   buildFocusHeatmapGrid,
   focusHeatmapSegmentOpacity,
 } from "@/helpers/focus/focus-heatmap.helper";
+import {
+  getFocusHeatmapCellClassName,
+  getFocusHeatmapColumnSplitClassName,
+  getFocusHeatmapGapClassName,
+  getFocusHeatmapGridClassName,
+  getFocusHeatmapWeekColumnClassName,
+} from "@/helpers/focus/focus-heatmap-layout.helper";
 import { formatFocusDurationLabel } from "@/helpers/focus/focus-session.helper";
 import { cn } from "@/lib/styles/utils";
 
@@ -30,21 +37,19 @@ export function FocusActivityHeatmap({
   );
 
   const isAnalytics = size === "analytics";
-  const cellClassName = isAnalytics
-    ? "h-3 w-3 rounded-[2px]"
-    : embedded
-      ? "h-2.5 w-2.5 rounded-[2px]"
-      : "h-3 w-3 rounded-[3px]";
+  const cellClassName = getFocusHeatmapCellClassName(size, embedded);
   const gapClassName = isAnalytics
-    ? "gap-[3px]"
+    ? getFocusHeatmapGapClassName(size)
     : embedded
       ? "gap-[3px]"
       : "gap-1";
+  const columnSplitClassName = getFocusHeatmapColumnSplitClassName(size);
   const labelCellClassName = isAnalytics
-    ? "h-3 w-3"
+    ? "h-4"
     : embedded
       ? "h-2.5 w-2.5"
       : "h-3 w-3";
+  const weekColumnClassName = getFocusHeatmapWeekColumnClassName(size);
   const columnSplitIndex = isAnalytics ? Math.floor(columns.length / 2) : null;
 
   return (
@@ -61,12 +66,24 @@ export function FocusActivityHeatmap({
       <div
         className={cn(
           "rounded-lg border border-white/10 bg-white/[0.03]",
-          isAnalytics ? "flex h-full items-center p-4" : "w-fit",
+          isAnalytics ? "w-full p-4" : "w-fit",
           embedded && !isAnalytics ? "p-2" : !isAnalytics ? "p-4" : null,
         )}
       >
-        <div className={cn("flex w-fit", gapClassName)}>
-          <div className={cn("flex shrink-0 flex-col", gapClassName, "pt-px")}>
+        <div
+          className={cn(
+            getFocusHeatmapGridClassName(size),
+            gapClassName,
+            isAnalytics ? "min-h-0" : null,
+          )}
+        >
+          <div
+            className={cn(
+              "flex shrink-0 flex-col",
+              gapClassName,
+              isAnalytics ? "pt-px" : "pt-px",
+            )}
+          >
             {DAY_LABELS.map((label, index) => (
               <span
                 key={`${label}-${index}`}
@@ -81,14 +98,30 @@ export function FocusActivityHeatmap({
             ))}
           </div>
 
-          <div className={cn("flex w-fit", gapClassName)}>
+          <div
+            className={cn(
+              isAnalytics ? "flex min-h-0 min-w-0 flex-1" : "flex w-fit",
+              gapClassName,
+            )}
+          >
             {columns.map((column, columnIndex) => (
-              <div key={column.weekStartKey} className="flex">
+              <div
+                key={column.weekStartKey}
+                className={cn("flex min-h-0 min-w-0", isAnalytics && "flex-1")}
+              >
                 {columnSplitIndex !== null &&
                 columnIndex === columnSplitIndex ? (
-                  <div className="w-2 shrink-0" aria-hidden />
+                  <div
+                    className={columnSplitClassName ?? "w-2 shrink-0"}
+                    aria-hidden
+                  />
                 ) : null}
-                <div className={cn("flex flex-col", gapClassName)}>
+                <div
+                  className={cn(
+                    weekColumnClassName ?? "flex flex-col",
+                    gapClassName,
+                  )}
+                >
                   {column.days.map((day) => (
                     <AppTooltip
                       key={day.dateKey}
@@ -97,6 +130,7 @@ export function FocusActivityHeatmap({
                       <FocusHeatmapCell
                         day={day}
                         cellClassName={cellClassName}
+                        fluid={false}
                       />
                     </AppTooltip>
                   ))}
@@ -113,12 +147,14 @@ export function FocusActivityHeatmap({
 function FocusHeatmapCell({
   day,
   cellClassName,
+  fluid = false,
 }: {
   day: FocusHeatmapDay;
   cellClassName: string;
+  fluid?: boolean;
 }) {
   const baseClassName = cn(
-    "block shrink-0",
+    fluid ? "block h-full w-full min-h-0" : "block shrink-0",
     cellClassName,
     FOCUS_HEATMAP_CELL_BORDER_CLASS,
   );
@@ -148,7 +184,9 @@ function FocusHeatmapCell({
   return (
     <span
       className={cn(
-        "flex shrink-0 overflow-hidden",
+        fluid
+          ? "flex h-full w-full min-h-0 overflow-hidden"
+          : "flex shrink-0 overflow-hidden",
         cellClassName,
         FOCUS_HEATMAP_CELL_BORDER_CLASS,
       )}

@@ -146,8 +146,8 @@ function FocusIdleSessionPanel({
     <div className="relative overflow-hidden rounded-xl border border-white/10 bg-white/[0.03]">
       <FocusSectionHeader title="Timer" />
       <div className="border-t border-white/10 px-5 py-4">
-        <div className="flex flex-col gap-6 lg:grid lg:grid-cols-[auto_1px_minmax(0,1fr)] lg:items-stretch lg:gap-x-0">
-          <section className="flex min-w-0 flex-col justify-center lg:pr-12">
+        <div className="flex flex-col gap-6 lg:grid lg:h-[min(52vh,420px)] lg:grid-cols-[auto_1px_minmax(0,1fr)] lg:items-stretch lg:gap-x-0">
+          <section className="flex min-h-0 min-w-0 flex-col justify-center lg:h-full lg:pr-12">
             <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:gap-8">
               <FocusDurationDial
                 size="large"
@@ -182,7 +182,10 @@ function FocusIdleSessionPanel({
             aria-hidden
           />
 
-          <section className="flex min-h-0 min-w-0 flex-col gap-5 overflow-y-auto overscroll-contain lg:max-h-[min(52vh,420px)] lg:pl-12">
+          <section
+            className="flex min-h-0 min-w-0 flex-col gap-5 overflow-y-auto overscroll-contain pr-2 lg:h-full lg:pl-12"
+            style={{ scrollbarGutter: "stable" }}
+          >
             <FocusSessionDetailsContent
               draft={draft}
               idleDraft={idleDraft}

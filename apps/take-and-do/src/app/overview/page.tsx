@@ -28,6 +28,7 @@ import {
   APP_CHROME_PAGE_TITLE_ICON_PX,
   APP_CHROME_TITLE_ACTION_ROW,
 } from "@/helpers/app-chrome-layout";
+import { deriveHasWorkspaceTaskData } from "./derive-has-workspace-task-data";
 import { cn } from "@/lib/styles/utils";
 
 function OverviewPage() {
@@ -35,7 +36,7 @@ function OverviewPage() {
   const { tasks: guestTasks } = useGuestTasks();
   const [, setCurrentPage] = useState("overview");
 
-  const scheduledAndStats = useQueries({
+  const scheduledStatsAndWorkspace = useQueries({
     queries: [
       {
         queryKey: queryKeys.tasks.schedule,
@@ -47,12 +48,21 @@ function OverviewPage() {
         queryFn: () => clientServices.stats.getByTimeframe("month"),
         enabled: !isAnonymous,
       },
+      {
+        queryKey: queryKeys.stats("all"),
+        queryFn: () => clientServices.stats.getByTimeframe("all"),
+        enabled: !isAnonymous,
+      },
     ],
   });
 
-  const [scheduledQuery, statsQuery] = scheduledAndStats;
+  const [scheduledQuery, statsQuery, workspaceStatsQuery] =
+    scheduledStatsAndWorkspace;
   const isLoading =
-    !isAnonymous && (scheduledQuery.isPending || statsQuery.isPending);
+    !isAnonymous &&
+    (scheduledQuery.isPending ||
+      statsQuery.isPending ||
+      workspaceStatsQuery.isPending);
 
   const scheduledTasks =
     !isAnonymous && scheduledQuery.data
@@ -98,9 +108,13 @@ function OverviewPage() {
     setCurrentPage(page);
   };
 
-  const hasWorkspaceTaskData = isAnonymous
-    ? guestTasks.length > 0
-    : (taskStats?.total ?? 0) > 0;
+  const hasWorkspaceTaskData = deriveHasWorkspaceTaskData({
+    isAnonymous,
+    guestTaskCount: guestTasks.length,
+    workspaceTaskTotal: isAnonymous
+      ? undefined
+      : workspaceStatsQuery.data?.total,
+  });
 
   if (isLoading) {
     return (

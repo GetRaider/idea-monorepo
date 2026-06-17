@@ -1,4 +1,4 @@
-Modify existing behavior of the system.
+Update existing behavior of the system.
 
 This is NOT a bug fix and NOT a refactor.
 

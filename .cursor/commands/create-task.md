@@ -1,4 +1,4 @@
-Generate a new feature, module, or capability.
+Create a new feature, module, or capability.
 
 ---
 

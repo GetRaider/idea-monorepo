@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { authClient } from "@/auth/client";
+import { clientServices } from "@/services";
 import {
   DEFAULT_IDLE_DRAFT,
   DEFAULT_SESSION_CONFIG,
@@ -27,13 +29,13 @@ import {
   appendFocusBacklogItem,
   appendFocusSessionRecord,
   readFocusActiveTimer,
-  readFocusBacklogStore,
   readFocusBreakSuggestion,
   readFocusDraft,
-  readFocusSessionsStore,
   writeFocusActiveTimer,
+  writeFocusBacklogStore,
   writeFocusBreakSuggestion,
   writeFocusDraft,
+  writeFocusSessionsStore,
 } from "@/hooks/focus/focus-storage";
 
 import type {
@@ -50,7 +52,18 @@ import type {
   StoredFocusDraft,
 } from "@/types/focus.types";
 
+type UserWithAnonymous = {
+  isAnonymous?: boolean;
+};
+
 export function useFocusSession() {
+  const { data: session, isPending: isSessionPending } =
+    authClient.useSession();
+  const isAnonymous =
+    (session?.user as UserWithAnonymous | undefined)?.isAnonymous ?? false;
+  const isAnonymousRef = useRef(isAnonymous);
+  isAnonymousRef.current = isAnonymous;
+
   const [systemState, setSystemState] = useState<FocusSystemState>("idle");
   const [draft, setDraftState] = useState<SessionConfig>(
     DEFAULT_SESSION_CONFIG,
@@ -101,6 +114,9 @@ export function useFocusSession() {
       sessionsRef.current = next;
       return next;
     });
+
+    if (isAnonymousRef.current) return;
+    void clientServices.focus.updateState({ appendSession: record });
   }, []);
 
   const completeFocusSessionInternal = useCallback(
@@ -116,6 +132,10 @@ export function useFocusSession() {
       const nextSessions = [...sessionsRef.current, record];
       sessionsRef.current = nextSessions;
       setSessions(nextSessions);
+
+      if (!isAnonymousRef.current) {
+        void clientServices.focus.updateState({ appendSession: record });
+      }
 
       const suggestion: FocusBreakSuggestion = {
         parentFocusSessionId: record.id,
@@ -148,6 +168,10 @@ export function useFocusSession() {
       sessionsRef.current = nextSessions;
       setSessions(nextSessions);
 
+      if (!isAnonymousRef.current) {
+        void clientServices.focus.updateState({ appendSession: record });
+      }
+
       activeTimerRef.current = null;
       setActiveTimer(null);
       persistActive(null);
@@ -159,53 +183,66 @@ export function useFocusSession() {
   );
 
   useEffect(() => {
-    const storedSessions = readFocusSessionsStore();
-    const storedBacklog = readFocusBacklogStore();
-    const storedDraft = readFocusDraft();
-    const storedActive = readFocusActiveTimer();
+    if (isSessionPending) return;
 
-    setSessions(storedSessions.items);
-    sessionsRef.current = storedSessions.items;
-    setBacklog(storedBacklog.items);
+    let cancelled = false;
 
-    if (storedDraft) {
-      const config = storedDraft.config;
-      const defaultName = buildDefaultFocusSessionName(
-        storedSessions.items,
-        storedBacklog.items,
-      );
-      setDraftState({
-        ...config,
-        name: config.name.trim() ? config.name : defaultName,
-      });
-      setIdleDraftState(storedDraft.idle);
-    } else {
-      setDraftState({
-        ...DEFAULT_SESSION_CONFIG,
-        name: buildDefaultFocusSessionName(
-          storedSessions.items,
-          storedBacklog.items,
-        ),
-      });
-      setIdleDraftState({
-        ...DEFAULT_IDLE_DRAFT,
-        color: randomFocusSessionColor(),
-      });
-    }
+    const hydrate = async () => {
+      const persisted = await hydratePersistedFocusState(isAnonymous);
+      if (cancelled) return;
 
-    if (storedActive) {
-      setActiveTimer(storedActive);
-      setSystemState(systemStateFromActiveTimer(storedActive));
-    } else {
-      const suggestion = readFocusBreakSuggestion();
-      if (suggestion) {
-        setBreakSuggestion(suggestion);
-        setSystemState("break_suggested");
+      const storedDraft = readFocusDraft();
+      const storedActive = readFocusActiveTimer();
+
+      setSessions(persisted.sessions);
+      sessionsRef.current = persisted.sessions;
+      setBacklog(persisted.backlog);
+
+      if (storedDraft) {
+        const config = storedDraft.config;
+        const defaultName = buildDefaultFocusSessionName(
+          persisted.sessions,
+          persisted.backlog,
+        );
+        setDraftState({
+          ...config,
+          name: config.name.trim() ? config.name : defaultName,
+        });
+        setIdleDraftState(storedDraft.idle);
+      } else {
+        setDraftState({
+          ...DEFAULT_SESSION_CONFIG,
+          name: buildDefaultFocusSessionName(
+            persisted.sessions,
+            persisted.backlog,
+          ),
+        });
+        setIdleDraftState({
+          ...DEFAULT_IDLE_DRAFT,
+          color: randomFocusSessionColor(),
+        });
       }
-    }
 
-    setIsHydrated(true);
-  }, []);
+      if (storedActive) {
+        setActiveTimer(storedActive);
+        setSystemState(systemStateFromActiveTimer(storedActive));
+      } else {
+        const suggestion = readFocusBreakSuggestion();
+        if (suggestion) {
+          setBreakSuggestion(suggestion);
+          setSystemState("break_suggested");
+        }
+      }
+
+      setIsHydrated(true);
+    };
+
+    void hydrate();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAnonymous, isSessionPending]);
 
   useEffect(() => {
     if (!isHydrated) return;
@@ -404,6 +441,12 @@ export function useFocusSession() {
         savedBacklogItem = backlogItemFromConfig(config, idleDraft.color);
         appendFocusBacklogItem(savedBacklogItem);
         setBacklog((previous) => [...previous, savedBacklogItem!]);
+
+        if (!isAnonymousRef.current) {
+          void clientServices.focus.updateState({
+            appendBacklogItem: savedBacklogItem,
+          });
+        }
       }
 
       const sessionColor =
@@ -783,3 +826,34 @@ export function useFocusSession() {
 }
 
 export type FocusSessionContextValue = ReturnType<typeof useFocusSession>;
+
+async function hydratePersistedFocusState(
+  isAnonymous: boolean,
+): Promise<{ sessions: FocusSessionRecord[]; backlog: FocusBacklogItem[] }> {
+  if (isAnonymous) {
+    resetLocalFocusPersistence();
+    return { sessions: [], backlog: [] };
+  }
+
+  resetLocalFocusPersistence();
+
+  const remote = await clientServices.focus.getState();
+
+  if (!remote) {
+    writeFocusSessionsStore({ version: 2, items: [] });
+    writeFocusBacklogStore({ version: 2, items: [] });
+    return { sessions: [], backlog: [] };
+  }
+
+  writeFocusSessionsStore({ version: 2, items: remote.sessions });
+  writeFocusBacklogStore({ version: 2, items: remote.backlog });
+  return remote;
+}
+
+function resetLocalFocusPersistence(): void {
+  writeFocusSessionsStore({ version: 2, items: [] });
+  writeFocusBacklogStore({ version: 2, items: [] });
+  writeFocusActiveTimer(null);
+  writeFocusDraft(null);
+  writeFocusBreakSuggestion(null);
+}

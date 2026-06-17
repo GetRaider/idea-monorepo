@@ -7,6 +7,7 @@ import {
 } from "@/server/services/ai/schemas";
 
 import { taskStatsSchema, timeframeEnum } from "./analytics.dto";
+import { FocusBacklogItemDto, FocusSessionRecordDto } from "./focus.dto";
 
 const dateLike = z.union([z.date(), z.string()]);
 
@@ -118,6 +119,11 @@ export const GuestResourceDeleteResponseDto = z.object({
   id: z.string(),
   deleted: z.literal(true),
   guest: z.literal(true),
+});
+
+export const FocusStateResponseDto = z.object({
+  sessions: z.array(FocusSessionRecordDto),
+  backlog: z.array(FocusBacklogItemDto),
 });
 
 export const TaskBoardCreateErrorResponseDto = z.object({

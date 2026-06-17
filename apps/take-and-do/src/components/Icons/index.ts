@@ -36,5 +36,6 @@ export { SortIcon } from "./SortIcon";
 export { ShieldCheckIcon } from "./ShieldCheckIcon";
 export { SettingsIcon } from "./SettingsIcon";
 export { SunIcon } from "./SunIcon";
+export { TimerIcon } from "./TimerIcon";
 export { TrashIcon } from "./TrashIcon";
 export { ViewIcon } from "./ViewIcon";

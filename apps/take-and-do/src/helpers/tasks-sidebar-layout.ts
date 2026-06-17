@@ -1,3 +1,5 @@
+import { localStorageHelper } from "@/helpers/local-storage.helper";
+
 export const TASKS_SIDEBAR_NAV_RAIL_PX = 60;
 export const TASKS_SIDEBAR_MIN_WIDTH_PX = 200;
 export const TASKS_SIDEBAR_MAX_WIDTH_PX = 350;
@@ -13,8 +15,7 @@ export function clampTasksSidebarWidthPx(width: number): number {
 }
 
 export function readStoredTasksSidebarWidthPx(): number | null {
-  if (typeof window === "undefined") return null;
-  const raw = window.localStorage.getItem(TASKS_SIDEBAR_WIDTH_STORAGE_KEY);
+  const raw = localStorageHelper.readString(TASKS_SIDEBAR_WIDTH_STORAGE_KEY);
   if (raw == null) return null;
   const parsed = Number.parseInt(raw, 10);
   if (Number.isNaN(parsed)) return null;

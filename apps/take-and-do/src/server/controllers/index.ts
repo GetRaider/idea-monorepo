@@ -3,6 +3,7 @@ export { AnalyticsController } from "./analytics.controller";
 export { BaseController } from "./base.controller";
 export type { AppRouteHandler, NextAppRouteContext } from "./base.controller";
 export { FoldersController } from "./folders.controller";
+export { FocusController } from "./focus.controller";
 export { GoogleCalendarIntegrationController } from "./google-calendar-integration.controller";
 export { LabelsController } from "./labels.controller";
 export { StatsController } from "./stats.controller";

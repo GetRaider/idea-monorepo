@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+import { localStorageHelper } from "@/helpers/local-storage.helper";
+
 /**
  * List layout preference: three status sections vs. merged “Tasks + Done”.
  * Section structure and drop mapping live in `@/helpers/list-board.helper`.
@@ -18,33 +20,21 @@ function isSubmode(value: unknown): value is BoardListSubmode {
 }
 
 function readMap(): SubmodeMap {
-  if (typeof window === "undefined") return {};
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return {};
-    const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-      return {};
-    }
-    const out: SubmodeMap = {};
-    for (const [key, value] of Object.entries(
-      parsed as Record<string, unknown>,
-    )) {
-      if (isSubmode(value)) out[key] = value;
-    }
-    return out;
-  } catch {
+  const parsed = localStorageHelper.readItem(STORAGE_KEY);
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
     return {};
   }
+  const out: SubmodeMap = {};
+  for (const [key, value] of Object.entries(
+    parsed as Record<string, unknown>,
+  )) {
+    if (isSubmode(value)) out[key] = value;
+  }
+  return out;
 }
 
 function writeMap(map: SubmodeMap) {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(map));
-  } catch {
-    /* no-op: storage may be unavailable */
-  }
+  localStorageHelper.writeItem(STORAGE_KEY, map);
 }
 
 export function useBoardListSubmode(

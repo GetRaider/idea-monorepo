@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useIsAnonymous } from "@/hooks/auth/use-is-anonymous";
+import { localStorageHelper } from "@/helpers/local-storage.helper";
 import { guestStoreHelper } from "@/stores/guest";
 import type { Folder, TaskBoard } from "@/types/workspace";
 
@@ -61,25 +62,16 @@ function normalizeOrderState(parsed: unknown): OrderState {
 }
 
 function readStorage(): OrderState {
-  if (typeof window === "undefined") return emptyOrder();
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return emptyOrder();
-    return normalizeOrderState(JSON.parse(raw) as unknown);
-  } catch {
-    return emptyOrder();
-  }
+  const parsed = localStorageHelper.readItem(STORAGE_KEY);
+  if (parsed === null) return emptyOrder();
+  return normalizeOrderState(parsed);
 }
 
 function writeStorage(next: OrderState) {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(
-    STORAGE_KEY,
-    JSON.stringify({
-      topLevelIds: next.topLevelIds,
-      boardsInFolder: next.boardsInFolder,
-    }),
-  );
+  localStorageHelper.writeItem(STORAGE_KEY, {
+    topLevelIds: next.topLevelIds,
+    boardsInFolder: next.boardsInFolder,
+  });
 }
 
 function mergeIds(current: string[], preferred: string[]): string[] {

@@ -4,6 +4,7 @@ import {
   parseCalendarBacklogType,
   parseCalendarEventType,
 } from "@/helpers/calendar/calendar-event-type";
+import { localStorageHelper } from "@/helpers/local-storage.helper";
 
 import type {
   CalendarBacklogEvent,
@@ -202,49 +203,35 @@ function normalizeScheduledEvent(raw: unknown): CalendarEvent | null {
 }
 
 export function readCalendarState(): CalendarPersistedState {
-  if (typeof window === "undefined") return defaultState();
-  try {
-    const raw = window.localStorage.getItem(CALENDAR_STORAGE_KEY);
-    if (!raw) return defaultState();
-    const parsed = JSON.parse(raw) as unknown;
-    if (!isRecord(parsed) || parsed.version !== 1) return defaultState();
-    const eventsRaw = parsed.events;
-    const backlogRaw = parsed.backlog;
-    if (!Array.isArray(eventsRaw) || !Array.isArray(backlogRaw)) {
-      return defaultState();
-    }
-    const events = eventsRaw
-      .map(normalizeScheduledEvent)
-      .filter((e): e is CalendarEvent => e !== null);
-    const backlogParsed = backlogRaw
-      .map(normalizeBacklogItem)
-      .filter((b): b is CalendarBacklogEvent => b !== null);
-    const backlog = backlogParsed.length > 0 ? backlogParsed : DEFAULT_BACKLOG;
-    const axisTimeZones = normalizeAxisTimeZones(parsed.axisTimeZones);
-    const internalCalendarColor = normalizeHexColor(
-      parsed.internalCalendarColor,
-    );
-    const googleCalendarColor = normalizeHexColor(parsed.googleCalendarColor);
-    return {
-      version: 1,
-      events,
-      backlog,
-      axisTimeZones,
-      ...(internalCalendarColor ? { internalCalendarColor } : {}),
-      ...(googleCalendarColor ? { googleCalendarColor } : {}),
-    };
-  } catch {
+  const parsed = localStorageHelper.readItem(CALENDAR_STORAGE_KEY);
+  if (!isRecord(parsed) || parsed.version !== 1) return defaultState();
+  const eventsRaw = parsed.events;
+  const backlogRaw = parsed.backlog;
+  if (!Array.isArray(eventsRaw) || !Array.isArray(backlogRaw)) {
     return defaultState();
   }
+  const events = eventsRaw
+    .map(normalizeScheduledEvent)
+    .filter((e): e is CalendarEvent => e !== null);
+  const backlogParsed = backlogRaw
+    .map(normalizeBacklogItem)
+    .filter((b): b is CalendarBacklogEvent => b !== null);
+  const backlog = backlogParsed.length > 0 ? backlogParsed : DEFAULT_BACKLOG;
+  const axisTimeZones = normalizeAxisTimeZones(parsed.axisTimeZones);
+  const internalCalendarColor = normalizeHexColor(parsed.internalCalendarColor);
+  const googleCalendarColor = normalizeHexColor(parsed.googleCalendarColor);
+  return {
+    version: 1,
+    events,
+    backlog,
+    axisTimeZones,
+    ...(internalCalendarColor ? { internalCalendarColor } : {}),
+    ...(googleCalendarColor ? { googleCalendarColor } : {}),
+  };
 }
 
 export function writeCalendarState(next: CalendarPersistedState) {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(CALENDAR_STORAGE_KEY, JSON.stringify(next));
-  } catch {
-    /* storage may be unavailable */
-  }
+  localStorageHelper.writeItem(CALENDAR_STORAGE_KEY, next);
 }
 
 const GCAL_PREFIX = "gcal:";

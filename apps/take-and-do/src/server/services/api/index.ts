@@ -7,6 +7,7 @@ import { StatsApiService } from "./stats.api.service";
 import { TaskBoardsApiService } from "./task-boards.api.service";
 import { TasksApiService } from "./tasks.api.service";
 import { WorkspaceApiService } from "./workspace.api.service";
+import { FocusApiService } from "./focus.api.service";
 import { GoogleCalendarIntegrationApiService } from "./google-calendar-integration.api.service";
 
 const workspaceService = new WorkspaceApiService(db);
@@ -25,5 +26,6 @@ export const apiServices = {
   workspace: workspaceService,
   analytics: new AnalyticsApiService(db),
   stats: new StatsApiService(db, tasksService),
+  focus: new FocusApiService(db),
   googleCalendarIntegration: new GoogleCalendarIntegrationApiService(db),
 };

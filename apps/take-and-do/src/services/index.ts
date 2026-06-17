@@ -1,5 +1,6 @@
 import { AnalyticsClientService } from "./analytics.client.service";
 import { CalendarEventsClientService } from "./calendar-events.client.service";
+import { FocusClientService } from "./focus.client.service";
 import { FoldersClientService } from "./folders.client.service";
 import { GoogleCalendarIntegrationClientService } from "./google-calendar-integration.client.service";
 import { LabelsClientService } from "./labels.client.service";
@@ -16,6 +17,7 @@ const foldersClientService = new FoldersClientService();
 export const clientServices = {
   calendarEvents: new CalendarEventsClientService(),
   googleCalendarIntegration: new GoogleCalendarIntegrationClientService(),
+  focus: new FocusClientService(),
   tasks: tasksClientService,
   folders: foldersClientService,
   labels: new LabelsClientService(),

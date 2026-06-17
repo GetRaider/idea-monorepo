@@ -6,3 +6,4 @@ export * from "./analytics.dto";
 export * from "./response.dto";
 export * from "./task-request.dto";
 export * from "./stats.dto";
+export * from "./focus.dto";

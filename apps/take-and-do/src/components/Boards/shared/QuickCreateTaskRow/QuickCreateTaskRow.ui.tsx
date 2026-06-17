@@ -2,8 +2,7 @@
 
 import {
   type FocusEvent,
-  type FormEvent,
-  type KeyboardEvent,
+  type ReactNode,
   useCallback,
   useEffect,
   useMemo,
@@ -11,16 +10,8 @@ import {
   useState,
 } from "react";
 
-import {
-  CalendarIcon,
-  CalendarMonthIcon,
-  ClockIcon,
-  PlusIcon,
-} from "@/components/Icons";
+import { CalendarIcon, CalendarMonthIcon, ClockIcon } from "@/components/Icons";
 import { Dropdown } from "@/components/Dropdown";
-import { tasksHelper } from "@/helpers/task.helper";
-import { useClickOutside } from "@/hooks/ui/useClickOutside";
-import { chromePrimaryButtonClassName } from "@/lib/styles/chrome-primary-button-classes";
 import { TaskStatusGlyph } from "@/components/TaskStatusGlyph";
 import {
   EstimationInput,
@@ -31,416 +22,16 @@ import {
   DropdownItem,
   PriorityIconSpan,
 } from "@/components/TaskView/TaskView.ui";
+import { tasksHelper } from "@/helpers/task.helper";
+import { useClickOutside } from "@/hooks/ui/useClickOutside";
 import { cn } from "@/lib/styles/utils";
 
-import { TaskPriority, TaskStatus } from "../KanbanBoard/types";
+import { TaskPriority, TaskStatus } from "../../KanbanBoard/types";
+
+import type { QuickCreateTaskRowBoardOption } from "./QuickCreateTaskRow.types";
 
 const PRIORITY_OPTIONS: TaskPriority[] = Object.values(TaskPriority);
 const STATUS_OPTIONS: TaskStatus[] = Object.values(TaskStatus);
-
-const QUICK_CREATE_DRAFT_VERSION = 1 as const;
-
-type QuickCreateStoredDraft = {
-  v: typeof QUICK_CREATE_DRAFT_VERSION;
-  title: string;
-  status: TaskStatus;
-  priority: TaskPriority;
-  scheduleDateISO?: string;
-  dueDateISO?: string;
-  estimation?: number;
-  selectedBoardId?: string;
-};
-
-function sameCalendarDay(a: Date | undefined, b: Date | undefined): boolean {
-  if (!a && !b) return true;
-  if (!a || !b) return false;
-  return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
-  );
-}
-
-export interface QuickCreateTaskInput {
-  summary: string;
-  priority: TaskPriority;
-  status: TaskStatus;
-  scheduleDate?: Date;
-  dueDate?: Date;
-  estimation?: number;
-  taskBoardId: string;
-}
-
-export interface QuickCreateTaskRowBoardOption {
-  id: string;
-  name: string;
-  emoji?: string | null;
-}
-
-export interface QuickCreateTaskRowProps {
-  /** Submit handler — should resolve once the create has been persisted. */
-  onCreate: (input: QuickCreateTaskInput) => Promise<void> | void;
-  /** Status the new task lands in. Defaults to TaskStatus.TODO. */
-  defaultStatus?: TaskStatus;
-  defaultPriority?: TaskPriority;
-  defaultScheduleDate?: Date;
-  /**
-   * Single-board mode: the board id used for every created task.
-   * Multi-board mode: leave undefined and pass `boardOptions` instead.
-   */
-  taskBoardId?: string;
-  /** When provided, a board picker chip is shown next to priority/schedule. */
-  boardOptions?: QuickCreateTaskRowBoardOption[];
-  /** Default selected board for multi-board mode. */
-  defaultBoardId?: string;
-  /** Label for the collapsed row. Defaults to "Create a new task". */
-  triggerLabel?: string;
-  className?: string;
-}
-
-export function QuickCreateTaskRow({
-  onCreate,
-  defaultStatus = TaskStatus.TODO,
-  defaultPriority = TaskPriority.MEDIUM,
-  defaultScheduleDate,
-  taskBoardId,
-  boardOptions,
-  defaultBoardId,
-  triggerLabel = "Create a new task",
-  className,
-}: QuickCreateTaskRowProps) {
-  const isMultiBoard = !!boardOptions && boardOptions.length > 0;
-  const draftStorageKey = useMemo(
-    () =>
-      `take-and-do:quick-create-draft:${isMultiBoard ? "multi" : (taskBoardId ?? "unknown")}`,
-    [isMultiBoard, taskBoardId],
-  );
-
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [title, setTitle] = useState("");
-  const [status, setStatus] = useState<TaskStatus>(defaultStatus);
-  const [priority, setPriority] = useState<TaskPriority>(defaultPriority);
-  const [scheduleDate, setScheduleDate] = useState<Date | undefined>(
-    defaultScheduleDate,
-  );
-  const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
-  const [estimation, setEstimation] = useState<number | undefined>(undefined);
-  const [selectedBoardId, setSelectedBoardId] = useState<string | undefined>(
-    defaultBoardId ?? boardOptions?.[0]?.id ?? taskBoardId,
-  );
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const containerRef = useRef<HTMLElement | null>(null);
-  const setContainerRef = useCallback((node: HTMLElement | null) => {
-    containerRef.current = node;
-  }, []);
-
-  useEffect(() => {
-    setSelectedBoardId(defaultBoardId ?? boardOptions?.[0]?.id ?? taskBoardId);
-  }, [defaultBoardId, boardOptions, taskBoardId]);
-
-  useEffect(() => {
-    setScheduleDate(defaultScheduleDate);
-  }, [defaultScheduleDate]);
-
-  const reset = useCallback(
-    (options?: { removeStoredDraft?: boolean }) => {
-      const removeStoredDraft = options?.removeStoredDraft !== false;
-      setTitle("");
-      setStatus(defaultStatus);
-      setPriority(defaultPriority);
-      setScheduleDate(defaultScheduleDate);
-      setDueDate(undefined);
-      setEstimation(undefined);
-      setSelectedBoardId(
-        defaultBoardId ?? boardOptions?.[0]?.id ?? taskBoardId,
-      );
-      setIsExpanded(false);
-      if (removeStoredDraft && typeof window !== "undefined") {
-        try {
-          window.localStorage.removeItem(draftStorageKey);
-        } catch {
-          /* ignore */
-        }
-      }
-    },
-    [
-      defaultBoardId,
-      boardOptions,
-      taskBoardId,
-      defaultPriority,
-      defaultScheduleDate,
-      defaultStatus,
-      draftStorageKey,
-    ],
-  );
-
-  const hasDraftContent = useCallback(() => {
-    const defaultBoard = defaultBoardId ?? boardOptions?.[0]?.id ?? taskBoardId;
-    return (
-      title.trim() !== "" ||
-      status !== defaultStatus ||
-      priority !== defaultPriority ||
-      dueDate != null ||
-      estimation != null ||
-      !sameCalendarDay(scheduleDate, defaultScheduleDate) ||
-      (isMultiBoard && selectedBoardId !== defaultBoard)
-    );
-  }, [
-    title,
-    status,
-    defaultStatus,
-    priority,
-    defaultPriority,
-    dueDate,
-    estimation,
-    scheduleDate,
-    defaultScheduleDate,
-    isMultiBoard,
-    selectedBoardId,
-    defaultBoardId,
-    boardOptions,
-    taskBoardId,
-  ]);
-
-  const persistDraftToStorage = useCallback(() => {
-    if (typeof window === "undefined") return;
-    const payload: QuickCreateStoredDraft = {
-      v: QUICK_CREATE_DRAFT_VERSION,
-      title,
-      status,
-      priority,
-      scheduleDateISO: scheduleDate?.toISOString(),
-      dueDateISO: dueDate?.toISOString(),
-      estimation,
-      selectedBoardId,
-    };
-    try {
-      window.localStorage.setItem(draftStorageKey, JSON.stringify(payload));
-    } catch {
-      /* ignore quota / private mode */
-    }
-  }, [
-    draftStorageKey,
-    title,
-    status,
-    priority,
-    scheduleDate,
-    dueDate,
-    estimation,
-    selectedBoardId,
-  ]);
-
-  useClickOutside(containerRef, isExpanded, () => {
-    if (hasDraftContent()) {
-      persistDraftToStorage();
-    } else if (typeof window !== "undefined") {
-      try {
-        window.localStorage.removeItem(draftStorageKey);
-      } catch {
-        /* ignore */
-      }
-    }
-    reset({ removeStoredDraft: false });
-  });
-
-  const draftHydratedForOpenRef = useRef(false);
-
-  useEffect(() => {
-    if (!isExpanded) {
-      draftHydratedForOpenRef.current = false;
-      return;
-    }
-    if (draftHydratedForOpenRef.current) {
-      queueMicrotask(() => inputRef.current?.focus());
-      return;
-    }
-    draftHydratedForOpenRef.current = true;
-    if (typeof window !== "undefined") {
-      try {
-        const raw = window.localStorage.getItem(draftStorageKey);
-        if (raw) {
-          const parsed = JSON.parse(raw) as QuickCreateStoredDraft;
-          if (parsed.v === QUICK_CREATE_DRAFT_VERSION) {
-            setTitle(parsed.title ?? "");
-            if (parsed.status) setStatus(parsed.status);
-            if (parsed.priority) setPriority(parsed.priority);
-            setScheduleDate(
-              parsed.scheduleDateISO
-                ? new Date(parsed.scheduleDateISO)
-                : defaultScheduleDate,
-            );
-            setDueDate(
-              parsed.dueDateISO ? new Date(parsed.dueDateISO) : undefined,
-            );
-            setEstimation(parsed.estimation);
-            if (isMultiBoard && parsed.selectedBoardId && boardOptions) {
-              const allowed = boardOptions.some(
-                (b) => b.id === parsed.selectedBoardId,
-              );
-              if (allowed) setSelectedBoardId(parsed.selectedBoardId);
-            }
-          }
-        }
-      } catch {
-        /* ignore */
-      }
-    }
-    queueMicrotask(() => inputRef.current?.focus());
-  }, [
-    isExpanded,
-    draftStorageKey,
-    isMultiBoard,
-    boardOptions,
-    defaultScheduleDate,
-  ]);
-
-  const resolvedBoardId = isMultiBoard ? selectedBoardId : taskBoardId;
-
-  const handleSubmit = useCallback(
-    async (event?: FormEvent) => {
-      event?.preventDefault();
-      const trimmed = title.trim();
-      if (!trimmed || !resolvedBoardId || isSubmitting) return;
-      setIsSubmitting(true);
-      try {
-        await onCreate({
-          summary: trimmed,
-          priority,
-          status,
-          scheduleDate,
-          dueDate,
-          estimation,
-          taskBoardId: resolvedBoardId,
-        });
-        reset();
-      } finally {
-        setIsSubmitting(false);
-      }
-    },
-    [
-      title,
-      resolvedBoardId,
-      isSubmitting,
-      onCreate,
-      status,
-      priority,
-      scheduleDate,
-      dueDate,
-      estimation,
-      reset,
-    ],
-  );
-
-  const handleKeyDown = useCallback(
-    (event: KeyboardEvent<HTMLInputElement>) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        reset();
-      }
-    },
-    [reset],
-  );
-
-  if (!isExpanded) {
-    return (
-      <button
-        type="button"
-        ref={setContainerRef}
-        onClick={() => setIsExpanded(true)}
-        className={cn(
-          "quick-create-appear group flex w-full cursor-pointer items-center gap-2 rounded-lg border border-dashed border-input-border bg-transparent px-4 py-3 text-left text-sm text-text-tertiary transition-colors duration-200 hover:border-focus-ring hover:bg-focus-ring/[0.06] hover:text-focus-ring focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring",
-          className,
-        )}
-        aria-label={triggerLabel}
-      >
-        <PlusIcon
-          size={16}
-          className="text-text-tertiary transition-colors group-hover:text-focus-ring"
-        />
-        <span>{triggerLabel}</span>
-      </button>
-    );
-  }
-
-  return (
-    <form
-      ref={setContainerRef}
-      onSubmit={handleSubmit}
-      className={cn(
-        "flex w-full flex-col gap-2 rounded-lg border border-input-border bg-background-secondary/40 px-3 py-2 shadow-sm transition-colors focus-within:border-focus-ring/70",
-        className,
-      )}
-    >
-      <input
-        ref={inputRef}
-        value={title}
-        onChange={(event) => setTitle(event.target.value)}
-        onKeyDown={handleKeyDown}
-        placeholder="Task name…"
-        className="m-0 w-full appearance-none border-0 bg-transparent p-0 text-sm font-medium text-text-primary outline-none placeholder:text-text-tertiary"
-        aria-label="Task name"
-        disabled={isSubmitting}
-      />
-
-      <div className="flex flex-wrap items-center gap-1.5">
-        <StatusChip
-          value={status}
-          onChange={setStatus}
-          disabled={isSubmitting}
-        />
-        <PriorityChip
-          value={priority}
-          onChange={setPriority}
-          disabled={isSubmitting}
-        />
-        <ScheduleChip
-          value={scheduleDate}
-          onChange={setScheduleDate}
-          disabled={isSubmitting}
-        />
-        <DueDateChip
-          value={dueDate}
-          onChange={setDueDate}
-          disabled={isSubmitting}
-        />
-        <EstimationChip
-          value={estimation}
-          onChange={setEstimation}
-          disabled={isSubmitting}
-        />
-        {isMultiBoard ? (
-          <BoardChip
-            options={boardOptions!}
-            value={selectedBoardId}
-            onChange={setSelectedBoardId}
-            disabled={isSubmitting}
-          />
-        ) : null}
-        <div className="ml-auto flex items-center gap-1.5">
-          <button
-            type="button"
-            onClick={() => reset()}
-            disabled={isSubmitting}
-            className="cursor-pointer rounded-md border-0 bg-transparent px-2.5 py-1 text-xs text-text-secondary transition-colors hover:bg-white/[0.04] hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={!title.trim() || !resolvedBoardId || isSubmitting}
-            className={cn(
-              chromePrimaryButtonClassName,
-              "cursor-pointer rounded-md px-3 py-1 text-xs font-medium",
-            )}
-          >
-            {isSubmitting ? "Creating…" : "Create"}
-          </button>
-        </div>
-      </div>
-    </form>
-  );
-}
 
 interface StatusChipProps {
   value: TaskStatus;
@@ -448,7 +39,7 @@ interface StatusChipProps {
   disabled?: boolean;
 }
 
-function StatusChip({ value, onChange, disabled }: StatusChipProps) {
+export function StatusChip({ value, onChange, disabled }: StatusChipProps) {
   const [isOpen, setIsOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
   useClickOutside(wrapperRef, isOpen, () => setIsOpen(false));
@@ -507,7 +98,7 @@ interface PriorityChipProps {
   disabled?: boolean;
 }
 
-function PriorityChip({ value, onChange, disabled }: PriorityChipProps) {
+export function PriorityChip({ value, onChange, disabled }: PriorityChipProps) {
   const [isOpen, setIsOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
   useClickOutside(wrapperRef, isOpen, () => setIsOpen(false));
@@ -558,7 +149,7 @@ interface ScheduleChipProps {
   disabled?: boolean;
 }
 
-function ScheduleChip({ value, onChange, disabled }: ScheduleChipProps) {
+export function ScheduleChip({ value, onChange, disabled }: ScheduleChipProps) {
   const [isEditing, setIsEditing] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
   useClickOutside(wrapperRef, isEditing, () => setIsEditing(false));
@@ -633,7 +224,7 @@ interface DueDateChipProps {
   disabled?: boolean;
 }
 
-function DueDateChip({ value, onChange, disabled }: DueDateChipProps) {
+export function DueDateChip({ value, onChange, disabled }: DueDateChipProps) {
   const [isEditing, setIsEditing] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
   useClickOutside(wrapperRef, isEditing, () => setIsEditing(false));
@@ -703,7 +294,11 @@ interface EstimationChipProps {
   disabled?: boolean;
 }
 
-function EstimationChip({ value, onChange, disabled }: EstimationChipProps) {
+export function EstimationChip({
+  value,
+  onChange,
+  disabled,
+}: EstimationChipProps) {
   const [isEditing, setIsEditing] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const parsed = useMemo(
@@ -851,7 +446,12 @@ interface BoardChipProps {
   disabled?: boolean;
 }
 
-function BoardChip({ options, value, onChange, disabled }: BoardChipProps) {
+export function BoardChip({
+  options,
+  value,
+  onChange,
+  disabled,
+}: BoardChipProps) {
   const dropdownOptions = useMemo(
     () =>
       options.map((option) => ({
@@ -884,7 +484,7 @@ type ChipButtonProps = {
   disabled?: boolean;
   isActive?: boolean;
   onClick?: () => void;
-  children: React.ReactNode;
+  children: ReactNode;
   as?: "button" | "span";
   "aria-haspopup"?: "menu";
   "aria-expanded"?: boolean;

@@ -370,6 +370,31 @@ export function sortFocusHistorySessions(
   );
 }
 
+export const FOCUS_HISTORY_PAGE_SIZE = 3;
+
+export function getFocusHistoryVisibleSessions(
+  sessions: FocusSessionRecord[],
+  visibleCount: number,
+): FocusSessionRecord[] {
+  return sessions.slice(0, visibleCount);
+}
+
+export function getNextFocusHistoryVisibleCount(
+  currentCount: number,
+  totalCount: number,
+  pageSize = FOCUS_HISTORY_PAGE_SIZE,
+): number {
+  if (totalCount <= 0) return 0;
+  return Math.min(currentCount + pageSize, totalCount);
+}
+
+export function hasMoreFocusHistory(
+  visibleCount: number,
+  totalCount: number,
+): boolean {
+  return visibleCount < totalCount;
+}
+
 export function formatFocusHistoryTimestamp(iso: string): string {
   const date = new Date(iso);
   return date.toLocaleString(undefined, {

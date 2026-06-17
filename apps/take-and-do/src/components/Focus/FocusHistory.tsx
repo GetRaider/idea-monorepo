@@ -1,13 +1,23 @@
 "use client";
 
-import { useMemo, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 
+import { PrimaryButton } from "@/components/Buttons";
 import { useFocusSessionContext } from "@/contexts/FocusSessionContext";
 import {
+  FOCUS_HISTORY_PAGE_SIZE,
   formatFocusDurationLabel,
   formatFocusHistoryTimestamp,
   getFocusHistoryStatusLabel,
   getFocusSessionDurationLabel,
+  getNextFocusHistoryVisibleCount,
+  hasMoreFocusHistory,
   isFocusSessionRecord,
   resolveBreakParentName,
   sortFocusHistorySessions,
@@ -24,10 +34,33 @@ import type {
 
 export function FocusHistory() {
   const { sessions } = useFocusSessionContext();
+  const [visibleCount, setVisibleCount] = useState(FOCUS_HISTORY_PAGE_SIZE);
   const historySessions = useMemo(
     () => sortFocusHistorySessions(sessions),
     [sessions],
   );
+  const visibleSessions = useMemo(
+    () => historySessions.slice(0, visibleCount),
+    [historySessions, visibleCount],
+  );
+  const hasMore = hasMoreFocusHistory(visibleCount, historySessions.length);
+
+  useEffect(() => {
+    setVisibleCount((current) =>
+      historySessions.length === 0
+        ? FOCUS_HISTORY_PAGE_SIZE
+        : Math.min(
+            Math.max(current, FOCUS_HISTORY_PAGE_SIZE),
+            historySessions.length,
+          ),
+    );
+  }, [historySessions.length]);
+
+  const loadMoreHistory = useCallback(() => {
+    setVisibleCount((current) =>
+      getNextFocusHistoryVisibleCount(current, historySessions.length),
+    );
+  }, [historySessions.length]);
 
   return (
     <FocusCollapsibleSection title="History" defaultExpanded={false}>
@@ -38,20 +71,33 @@ export function FocusHistory() {
           </p>
         </div>
       ) : (
-        <ul className="m-0 flex list-none flex-col gap-2 p-0">
-          {historySessions.map((session) => (
-            <li key={session.id}>
-              {isFocusSessionRecord(session) ? (
-                <FocusHistoryFocusRow session={session} />
-              ) : (
-                <FocusHistoryBreakRow
-                  session={session}
-                  allSessions={historySessions}
-                />
-              )}
-            </li>
-          ))}
-        </ul>
+        <div className="flex flex-col gap-3">
+          <ul className="m-0 flex list-none flex-col gap-2 p-0">
+            {visibleSessions.map((session) => (
+              <li key={session.id}>
+                {isFocusSessionRecord(session) ? (
+                  <FocusHistoryFocusRow session={session} />
+                ) : (
+                  <FocusHistoryBreakRow
+                    session={session}
+                    allSessions={historySessions}
+                  />
+                )}
+              </li>
+            ))}
+          </ul>
+          {hasMore ? (
+            <PrimaryButton
+              type="button"
+              size="sm"
+              variant="surface"
+              className="w-full"
+              onClick={loadMoreHistory}
+            >
+              Load more
+            </PrimaryButton>
+          ) : null}
+        </div>
       )}
     </FocusCollapsibleSection>
   );

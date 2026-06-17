@@ -1,4 +1,9 @@
 export {
+  focusConstraint,
+  focusRejected,
+  focusSuccess,
+} from "./focus-action-result.helper";
+export {
   buildFocusHeatmapGrid,
   FOCUS_ANALYTICS_WEEK_COUNT,
   FOCUS_HEATMAP_CELL_BORDER_CLASS,

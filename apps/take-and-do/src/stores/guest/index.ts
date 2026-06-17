@@ -6,6 +6,7 @@ import {
 } from "@/components/Boards/KanbanBoard/types";
 import { tasksHelper } from "@/helpers/task.helper";
 import { genericHelper } from "@/helpers/generic.helper";
+import { localStorageHelper } from "@/helpers/local-storage.helper";
 import type { Folder, TaskBoard } from "@/types/workspace";
 
 import {
@@ -260,16 +261,15 @@ export const guestStoreHelper = {
       expiresAt: this._expiresAt(),
     };
     if (typeof window === "undefined") return persisted;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(persisted));
+    localStorageHelper.writeItem(STORAGE_KEY, persisted);
     notifyGuestStoreChanged();
     return persisted;
   },
 
   read(): GuestStore | null {
-    if (typeof window === "undefined") return null;
+    const raw = localStorageHelper.readString(STORAGE_KEY);
+    if (!raw) return null;
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return null;
       const store = parseStore(raw);
       if (!store) {
         this.clear();
@@ -284,7 +284,7 @@ export const guestStoreHelper = {
 
   clear(): void {
     if (typeof window === "undefined") return;
-    localStorage.removeItem(STORAGE_KEY);
+    localStorageHelper.removeItem(STORAGE_KEY);
     notifyGuestStoreChanged();
   },
 

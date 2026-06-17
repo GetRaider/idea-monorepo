@@ -25,6 +25,7 @@ import { useTasksSidebarWidthPx } from "@/hooks/tasks/useTasksSidebarWidthPx";
 import { isDuplicateWorkspaceName } from "@/helpers/workspace-name.helper";
 import { invalidateWorkspaceQueries } from "@/lib/invalidate-app-queries";
 import { APP_CHROME_PADDING_X } from "@/helpers/app-chrome-layout";
+import { localStorageHelper } from "@/helpers/local-storage.helper";
 import { cn } from "@/lib/styles/utils";
 import { clientServices } from "@/services";
 import { toast } from "sonner";
@@ -314,17 +315,11 @@ export default function TasksLayout({
 }
 
 function writeTasksNavSidebarOpenPref(open: boolean) {
-  try {
-    window.localStorage.setItem(TASKS_NAV_SIDEBAR_OPEN_KEY, open ? "1" : "0");
-  } catch {
-    /* ignore */
-  }
+  localStorageHelper.writeString(TASKS_NAV_SIDEBAR_OPEN_KEY, open ? "1" : "0");
 }
 
 function readTasksNavSidebarOpenPref(): boolean {
-  try {
-    return window.localStorage.getItem(TASKS_NAV_SIDEBAR_OPEN_KEY) !== "0";
-  } catch {
-    return true;
-  }
+  const value = localStorageHelper.readString(TASKS_NAV_SIDEBAR_OPEN_KEY);
+  if (value === null) return true;
+  return value !== "0";
 }

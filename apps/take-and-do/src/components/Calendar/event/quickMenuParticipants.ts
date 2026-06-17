@@ -1,3 +1,6 @@
+import { CALENDAR_STORAGE_KEY } from "@/hooks/calendar/calendar-storage";
+import { localStorageHelper } from "@/helpers/local-storage.helper";
+
 export function parseParticipantCsv(raw: string): string[] {
   return raw
     .split(",")
@@ -15,34 +18,33 @@ export function getCalendarParticipantSuggest(
   const token = (lastComma >= 0 ? raw.slice(lastComma + 1) : raw).trim();
   const q = token.toLowerCase();
   const base = (() => {
-    if (typeof window === "undefined") return [] as string[];
-    try {
-      const rawStorage = window.localStorage.getItem("take-and-do:calendar:v1");
-      if (!rawStorage) return [] as string[];
-      const parsed = JSON.parse(rawStorage) as { events?: unknown[] } | null;
-      if (!parsed || !Array.isArray(parsed.events)) return [] as string[];
-      const out: string[] = [];
-      for (const ev of parsed.events) {
-        if (
-          ev &&
-          typeof ev === "object" &&
-          (ev as { type?: unknown }).type !== "task"
-        ) {
-          const parts = (ev as { participants?: unknown }).participants;
-          if (Array.isArray(parts)) {
-            for (const p of parts) {
-              if (typeof p === "string" && p.trim()) out.push(p.trim());
+    const parsed = localStorageHelper.readItem(CALENDAR_STORAGE_KEY) as {
+      events?: unknown[];
+    } | null;
+    if (!parsed || !Array.isArray(parsed.events)) return [] as string[];
+    const out: string[] = [];
+    for (const event of parsed.events) {
+      if (
+        event &&
+        typeof event === "object" &&
+        (event as { type?: unknown }).type !== "task"
+      ) {
+        const parts = (event as { participants?: unknown }).participants;
+        if (Array.isArray(parts)) {
+          for (const participant of parts) {
+            if (typeof participant === "string" && participant.trim()) {
+              out.push(participant.trim());
             }
           }
         }
       }
-      return Array.from(new Set(out)).sort();
-    } catch {
-      return [] as string[];
     }
+    return Array.from(new Set(out)).sort();
   })();
   const list = q
-    ? base.filter((p) => p.toLowerCase().includes(q)).slice(0, 8)
+    ? base
+        .filter((participant) => participant.toLowerCase().includes(q))
+        .slice(0, 8)
     : base.slice(0, 8);
   return { token, list };
 }

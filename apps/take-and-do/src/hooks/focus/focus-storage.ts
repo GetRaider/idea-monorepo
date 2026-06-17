@@ -21,6 +21,7 @@ import {
   FOCUS_STORAGE_DRAFT_KEY,
   FOCUS_STORAGE_SESSIONS_KEY,
 } from "@/helpers/focus/focus-session.helper";
+import { localStorageHelper } from "@/helpers/local-storage.helper";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -244,12 +245,7 @@ function migrateActiveTimer(value: unknown): ActiveTimer | null {
       ? value.plannedDurationSeconds
       : getPlannedDurationFromConfig(config);
 
-  const color =
-    typeof value.color === "string"
-      ? value.color
-      : typeof config.name === "string"
-        ? "#f97316"
-        : "#f97316";
+  const color = typeof value.color === "string" ? value.color : "#f97316";
 
   return {
     sessionId: value.sessionId,
@@ -275,35 +271,20 @@ function defaultSessionsStore(): FocusSessionsStore {
 }
 
 export function readFocusSessionsStore(): FocusSessionsStore {
-  if (typeof window === "undefined") return defaultSessionsStore();
-  try {
-    const raw = window.localStorage.getItem(FOCUS_STORAGE_SESSIONS_KEY);
-    if (!raw) return defaultSessionsStore();
-    const parsed = JSON.parse(raw) as unknown;
-    if (!isRecord(parsed)) return defaultSessionsStore();
-    if (parsed.version !== 1 && parsed.version !== 2) {
-      return defaultSessionsStore();
-    }
-    if (!Array.isArray(parsed.items)) return defaultSessionsStore();
-    const items = parsed.items
-      .map(normalizeFocusSession)
-      .filter((item): item is FocusSessionRecord => item !== null);
-    return { version: 2, items };
-  } catch {
+  const parsed = localStorageHelper.readItem(FOCUS_STORAGE_SESSIONS_KEY);
+  if (!isRecord(parsed)) return defaultSessionsStore();
+  if (parsed.version !== 1 && parsed.version !== 2) {
     return defaultSessionsStore();
   }
+  if (!Array.isArray(parsed.items)) return defaultSessionsStore();
+  const items = parsed.items
+    .map(normalizeFocusSession)
+    .filter((item): item is FocusSessionRecord => item !== null);
+  return { version: 2, items };
 }
 
 export function writeFocusSessionsStore(next: FocusSessionsStore): void {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(
-      FOCUS_STORAGE_SESSIONS_KEY,
-      JSON.stringify(next),
-    );
-  } catch {
-    /* storage may be unavailable */
-  }
+  localStorageHelper.writeItem(FOCUS_STORAGE_SESSIONS_KEY, next);
 }
 
 export function appendFocusSessionRecord(record: FocusSessionRecord): void {
@@ -315,25 +296,13 @@ export function appendFocusSessionRecord(record: FocusSessionRecord): void {
 }
 
 export function readFocusActiveTimer(): ActiveTimer | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = window.localStorage.getItem(FOCUS_STORAGE_ACTIVE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as unknown;
-    if (parsed === null) return null;
-    return migrateActiveTimer(parsed);
-  } catch {
-    return null;
-  }
+  const parsed = localStorageHelper.readItem(FOCUS_STORAGE_ACTIVE_KEY);
+  if (parsed === null) return null;
+  return migrateActiveTimer(parsed);
 }
 
 export function writeFocusActiveTimer(next: ActiveTimer | null): void {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(FOCUS_STORAGE_ACTIVE_KEY, JSON.stringify(next));
-  } catch {
-    /* storage may be unavailable */
-  }
+  localStorageHelper.writeItem(FOCUS_STORAGE_ACTIVE_KEY, next);
 }
 
 function isFocusIdleDraft(value: unknown): value is FocusIdleDraft {
@@ -394,70 +363,44 @@ function defaultBacklogStore(): FocusBacklogStore {
 }
 
 export function readFocusDraft(): StoredFocusDraft | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = window.localStorage.getItem(FOCUS_STORAGE_DRAFT_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as unknown;
-    if (isStoredFocusDraft(parsed)) {
-      return parsed;
-    }
-    const migratedConfig = migrateSessionConfig(parsed);
-    if (migratedConfig) {
-      return {
-        config: migratedConfig,
-        idle: { ...DEFAULT_IDLE_DRAFT },
-      };
-    }
-    return null;
-  } catch {
-    return null;
+  const parsed = localStorageHelper.readItem(FOCUS_STORAGE_DRAFT_KEY);
+  if (parsed === null) return null;
+  if (isStoredFocusDraft(parsed)) {
+    return parsed;
   }
+  const migratedConfig = migrateSessionConfig(parsed);
+  if (migratedConfig) {
+    return {
+      config: migratedConfig,
+      idle: { ...DEFAULT_IDLE_DRAFT },
+    };
+  }
+  return null;
 }
 
 export function writeFocusDraft(next: StoredFocusDraft | null): void {
-  if (typeof window === "undefined") return;
-  try {
-    if (next === null) {
-      window.localStorage.removeItem(FOCUS_STORAGE_DRAFT_KEY);
-      return;
-    }
-    window.localStorage.setItem(FOCUS_STORAGE_DRAFT_KEY, JSON.stringify(next));
-  } catch {
-    /* storage may be unavailable */
+  if (next === null) {
+    localStorageHelper.removeItem(FOCUS_STORAGE_DRAFT_KEY);
+    return;
   }
+  localStorageHelper.writeItem(FOCUS_STORAGE_DRAFT_KEY, next);
 }
 
 export function readFocusBacklogStore(): FocusBacklogStore {
-  if (typeof window === "undefined") return defaultBacklogStore();
-  try {
-    const raw = window.localStorage.getItem(FOCUS_STORAGE_BACKLOG_KEY);
-    if (!raw) return defaultBacklogStore();
-    const parsed = JSON.parse(raw) as unknown;
-    if (!isRecord(parsed)) return defaultBacklogStore();
-    if (parsed.version !== 1 && parsed.version !== 2) {
-      return defaultBacklogStore();
-    }
-    if (!Array.isArray(parsed.items)) return defaultBacklogStore();
-    const items = parsed.items
-      .map(migrateBacklogItem)
-      .filter((item): item is FocusBacklogItem => item !== null);
-    return { version: 2, items };
-  } catch {
+  const parsed = localStorageHelper.readItem(FOCUS_STORAGE_BACKLOG_KEY);
+  if (!isRecord(parsed)) return defaultBacklogStore();
+  if (parsed.version !== 1 && parsed.version !== 2) {
     return defaultBacklogStore();
   }
+  if (!Array.isArray(parsed.items)) return defaultBacklogStore();
+  const items = parsed.items
+    .map(migrateBacklogItem)
+    .filter((item): item is FocusBacklogItem => item !== null);
+  return { version: 2, items };
 }
 
 export function writeFocusBacklogStore(next: FocusBacklogStore): void {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(
-      FOCUS_STORAGE_BACKLOG_KEY,
-      JSON.stringify(next),
-    );
-  } catch {
-    /* storage may be unavailable */
-  }
+  localStorageHelper.writeItem(FOCUS_STORAGE_BACKLOG_KEY, next);
 }
 
 export function appendFocusBacklogItem(item: FocusBacklogItem): void {
@@ -478,32 +421,19 @@ function isBreakSuggestion(value: unknown): value is FocusBreakSuggestion {
 }
 
 export function readFocusBreakSuggestion(): FocusBreakSuggestion | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = window.localStorage.getItem(FOCUS_STORAGE_BREAK_SUGGESTION_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as unknown;
-    if (parsed === null) return null;
-    return isBreakSuggestion(parsed) ? parsed : null;
-  } catch {
-    return null;
-  }
+  const parsed = localStorageHelper.readItem(
+    FOCUS_STORAGE_BREAK_SUGGESTION_KEY,
+  );
+  if (parsed === null) return null;
+  return isBreakSuggestion(parsed) ? parsed : null;
 }
 
 export function writeFocusBreakSuggestion(
   next: FocusBreakSuggestion | null,
 ): void {
-  if (typeof window === "undefined") return;
-  try {
-    if (next === null) {
-      window.localStorage.removeItem(FOCUS_STORAGE_BREAK_SUGGESTION_KEY);
-      return;
-    }
-    window.localStorage.setItem(
-      FOCUS_STORAGE_BREAK_SUGGESTION_KEY,
-      JSON.stringify(next),
-    );
-  } catch {
-    /* storage may be unavailable */
+  if (next === null) {
+    localStorageHelper.removeItem(FOCUS_STORAGE_BREAK_SUGGESTION_KEY);
+    return;
   }
+  localStorageHelper.writeItem(FOCUS_STORAGE_BREAK_SUGGESTION_KEY, next);
 }

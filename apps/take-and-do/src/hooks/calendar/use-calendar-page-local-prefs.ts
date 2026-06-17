@@ -5,6 +5,7 @@ import {
   CALENDAR_SIDEBAR_COLLAPSED_STORAGE_KEY,
   CALENDAR_SLOT_TIME_24H_STORAGE_KEY,
 } from "@/constants/calendar.constants";
+import { localStorageHelper } from "@/helpers/local-storage.helper";
 
 import type { PlanningCalendarHandle } from "@/components/Calendar";
 
@@ -16,37 +17,25 @@ export function useCalendarPageLocalPrefs(
     useState(false);
 
   useEffect(() => {
-    try {
-      setSlotTime24h(
-        window.localStorage.getItem(CALENDAR_SLOT_TIME_24H_STORAGE_KEY) === "1",
-      );
-    } catch {
-      /* ignore */
-    }
+    setSlotTime24h(
+      localStorageHelper.readString(CALENDAR_SLOT_TIME_24H_STORAGE_KEY) === "1",
+    );
   }, []);
 
   useEffect(() => {
-    try {
-      setCalendarSidebarCollapsed(
-        window.localStorage.getItem(CALENDAR_SIDEBAR_COLLAPSED_STORAGE_KEY) ===
-          "1",
-      );
-    } catch {
-      /* ignore */
-    }
+    setCalendarSidebarCollapsed(
+      localStorageHelper.readString(CALENDAR_SIDEBAR_COLLAPSED_STORAGE_KEY) ===
+        "1",
+    );
   }, []);
 
   const toggleCalendarSidebar = useCallback(() => {
     setCalendarSidebarCollapsed((prev) => {
       const next = !prev;
-      try {
-        window.localStorage.setItem(
-          CALENDAR_SIDEBAR_COLLAPSED_STORAGE_KEY,
-          next ? "1" : "0",
-        );
-      } catch {
-        /* ignore */
-      }
+      localStorageHelper.writeString(
+        CALENDAR_SIDEBAR_COLLAPSED_STORAGE_KEY,
+        next ? "1" : "0",
+      );
       return next;
     });
   }, []);
@@ -67,14 +56,10 @@ export function useCalendarPageLocalPrefs(
 
   const setSlotTime24hPersist = useCallback((next: boolean) => {
     setSlotTime24h(next);
-    try {
-      window.localStorage.setItem(
-        CALENDAR_SLOT_TIME_24H_STORAGE_KEY,
-        next ? "1" : "0",
-      );
-    } catch {
-      /* ignore */
-    }
+    localStorageHelper.writeString(
+      CALENDAR_SLOT_TIME_24H_STORAGE_KEY,
+      next ? "1" : "0",
+    );
   }, []);
 
   return {

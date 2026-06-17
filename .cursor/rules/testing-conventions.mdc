@@ -1,0 +1,68 @@
+---
+description: Vitest unit test and Playwright e2e conventions used in this monorepo
+globs:
+  - "**/*.test.ts"
+  - "**/*.test.tsx"
+  - "**/*e2e*"
+  - "**/test/**"
+  - "**/vitest.config.ts"
+  - "**/vitest.setup.ts"
+alwaysApply: false
+---
+
+# Testing Conventions
+
+Stack: **Vitest** (unit/integration), **Playwright** (e2e in devinity-web), **supertest** (API e2e in devinity-api).
+
+## Running tests
+
+From repo root:
+
+```bash
+pnpm test        # turbo run test — all packages/apps
+pnpm test:e2e    # turbo run test:e2e
+pnpm codeCheck   # npx tsc && pnpm lint (root)
+```
+
+Per-app: `pnpm test` inside the app/package directory.
+
+## Vitest — file naming & location
+
+| App / package | Config | Include pattern | Environment |
+|---------------|--------|-----------------|-------------|
+| take-and-do | `vitest.config.ts` | `src/**/*.test.ts` | `node` |
+| devinity-api | `vitest.config.ts` | unit in src; e2e via `vitest.e2e.config.ts` | node |
+| devinity-web | `vitest.config.ts` + `@repo/vitest-config/next` | component/unit tests | jsdom |
+| @repo/shared | `vitest.config.ts` | `src/**/*.test.ts` | node |
+
+- Co-locate unit tests next to source (`*.test.ts`) or under `src/tests/` for shared helpers.
+- Controller tests: `apps/take-and-do/src/server/controllers/tests/`.
+
+## Vitest — patterns
+
+```typescript
+import { describe, expect, it, vi } from "vitest";
+```
+
+- Mock with `vi.fn()`, `vi.mock()`.
+- take-and-do controller tests: extend `BaseController`, use `NextRequest`, assert status + JSON.
+- devinity-api e2e: `@nestjs/testing` `Test.createTestingModule`, `supertest` against `app.getHttpServer()`.
+- Prefer testing behavior and HTTP contracts, not implementation details.
+
+## Playwright e2e (devinity-web)
+
+- Location: `apps/devinity-web/test/e2e/*.e2e-spec.ts`
+- Run: `pnpm test:e2e` in devinity-web (or root `pnpm test:e2e`).
+- Use `@playwright/test` `test` / `expect`; `page.request` for API-level checks.
+
+## What to test
+
+- Helpers and pure functions: unit tests with edge cases.
+- `BaseController` route wiring: request/response validation, error mapping.
+- New shared `@repo/shared` helpers: add tests under `src/tests/`.
+- UI components in `@repo/ui`: add tests when behavior is non-trivial (package has no test script yet — add vitest if introducing tests).
+
+## Do not
+
+- Use Jest APIs — this repo uses Vitest (NestJS `globals.vitest` in eslint nest config).
+- Add e2e tests for take-and-do unless Playwright is set up there (currently devinity-web only).

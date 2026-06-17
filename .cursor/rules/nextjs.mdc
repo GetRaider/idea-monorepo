@@ -1,9 +1,8 @@
 ---
-description: Next.js frontend development rules for take-and-do task management app
+description: "[LEGACY — prefer take-and-do.mdc] Next.js patterns for take-and-do"
 globs:
-  - "**/*.tsx"
-  - "**/*.ts"
-alwaysApply: true
+  - "apps/take-and-do/**"
+alwaysApply: false
 ---
 
 # Next.js Task Management App Development Rules

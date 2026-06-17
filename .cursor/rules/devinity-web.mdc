@@ -1,0 +1,50 @@
+---
+description: devinity-web Next.js App Router frontend conventions
+globs:
+  - "apps/devinity-web/**"
+alwaysApply: false
+---
+
+# devinity-web
+
+Next.js frontend for Devinity. Scope: `DVN`. Port **3001** in dev.
+
+## Structure
+
+```
+src/
+  app/               # App Router pages, layouts, route handlers
+    components/      # Page-scoped components (Sidebar, AppShell, …)
+    api/             # Route handlers
+    sign-in/
+  components/        # Shared app components (AuthGuard, …)
+  hooks/             # React Query hooks (e.g. hooks/users/)
+  providers/
+  lib/               # Auth client, thin third-party wrappers
+```
+
+## Patterns
+
+- App Router, Turbopack (`next dev --port 3001`, `next build --turbopack`)
+- `"use client"` for interactive pages/components
+- Styled-components: colocate `*.styles.tsx` with components
+- Shared UI from `@repo/ui`; data types from `@repo/api`
+- Auth: Better-Auth client in `@lib/auth-client`
+- Data fetching: `@tanstack/react-query` hooks in `src/hooks/`
+
+## Path aliases
+
+Follow `tsconfig.json` paths: `@/`, `@lib/`, `@components/`.
+
+## API routes
+
+- `src/app/api/**/route.ts` — thin handlers, delegate to services if needed
+
+## Testing
+
+- Unit: Vitest + `@repo/vitest-config/next`, `vitest.setup.ts`
+- E2e: Playwright in `test/e2e/*.e2e-spec.ts` — `pnpm test:e2e`
+
+## Lint
+
+- `eslint . --max-warnings 0`

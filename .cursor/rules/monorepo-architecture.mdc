@@ -1,0 +1,56 @@
+---
+description: Monorepo boundaries, package imports, and Turborepo pipeline expectations
+alwaysApply: true
+---
+
+# Monorepo Architecture
+
+## Layout
+
+```
+apps/
+  devinity-api/     # NestJS API (DVN)
+  devinity-web/     # Next.js frontend (DVN)
+  take-and-do/      # Next.js full-stack app (TAD)
+  personal-website/ # Next.js site (PRT)
+packages/
+  @repo/api         # Shared models, DTOs, HTTP helpers
+  @repo/ui          # Shared React components
+  @repo/shared      # Shared TS utilities
+  @repo/eslint-config
+  @repo/typescript-config
+  @repo/vitest-config
+```
+
+## Import boundaries
+
+- Apps **must not** import source from other apps (`apps/foo` → `apps/bar` is forbidden).
+- Shared code goes through workspace packages: `@repo/api`, `@repo/ui`, `@repo/shared`, etc.
+- Use package **exports** — do not reach into another package's `src/` via relative paths from apps.
+- Root `package.json` scripts orchestrate builds; prefer root commands over per-app `pnpm build` when matching CI.
+
+## Turborepo pipeline
+
+From `turbo.json`:
+
+- `build` → `dependsOn: ["^build"]` — upstream packages build first.
+- `dev` → `dependsOn: ["^build"]`, `cache: false`, `persistent: true`.
+- `lint`, `codeCheck`, `test`, `test:e2e` → `dependsOn: ["^<task>"]` — run upstream first.
+- `prod` → `dependsOn: ["build"]`.
+
+When adding a new package or app task, register it in `turbo.json` and `pnpm-workspace.yaml`.
+
+## Dev entrypoints (root scripts)
+
+- `pnpm dev:devinity` — devinity-api + devinity-web + @repo/api + @repo/ui
+- `pnpm dev:take-and-do` — take-and-do + @repo/ui + @repo/api + @repo/shared
+- `pnpm dev:personal-website` — personal-website + @repo/ui
+
+## Scope mapping (git / releases)
+
+| SCOPE | App / area |
+|-------|------------|
+| `GEN` | Repo-wide / tooling |
+| `TAD` | take-and-do |
+| `DVN` | devinity-api + devinity-web |
+| `PRT` | personal-website |

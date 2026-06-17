@@ -1,8 +1,8 @@
 ---
-description: Shared API types, models, and DTOs for the monorepo
+description: Shared API types, models, and DTOs (@repo/api)
 globs:
-  - "**/*.ts"
-alwaysApply: true
+  - "packages/api/**"
+alwaysApply: false
 ---
 
 # Shared API Package Development Rules

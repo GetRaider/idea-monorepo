@@ -1,8 +1,8 @@
 ---
-description: NestJS API development rules for devinity-api
+description: NestJS module/controller/service patterns (devinity-api)
 globs:
-  - "**/*.ts"
-alwaysApply: true
+  - "apps/devinity-api/**"
+alwaysApply: false
 ---
 
 # NestJS API Development Rules
@@ -89,6 +89,6 @@ export class ResourceService {
 - Validate environment variables at startup
 
 ## Testing
-- Use Jest for unit and e2e testing
-- Test files: `*.spec.ts` for unit, `*.e2e-spec.ts` for e2e
+- Use Vitest for unit and e2e testing
+- Test files: `*.test.ts` for unit, `*.e2e-spec.ts` for e2e
 - Mock injected dependencies in tests

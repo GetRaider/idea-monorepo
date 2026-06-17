@@ -57,25 +57,7 @@ export class FocusApiService extends BaseApiService {
         backlog: input.backlog ?? [],
       });
 
-      if (!existing) {
-        await this.db.insert(focusStateTable).values({
-          userId: access.userId,
-          sessions: merged.sessions,
-          backlog: merged.backlog,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        });
-      } else {
-        await this.db
-          .update(focusStateTable)
-          .set({
-            sessions: merged.sessions,
-            backlog: merged.backlog,
-            updatedAt: new Date(),
-          })
-          .where(eq(focusStateTable.userId, access.userId));
-      }
-
+      await this.upsertState(access, merged, existing);
       return merged;
     });
   }
@@ -91,48 +73,9 @@ export class FocusApiService extends BaseApiService {
 
       const existing = await this.getState(access);
       const base: FocusStatePayload = existing ?? { sessions: [], backlog: [] };
+      const next = this.applyStateUpdate(base, input);
 
-      let nextSessions = base.sessions;
-      let nextBacklog = base.backlog;
-
-      if (input.sessions !== undefined) {
-        nextSessions = this.mergeEntities(base.sessions, input.sessions);
-      } else if (input.appendSession) {
-        nextSessions = this.mergeEntities(base.sessions, [input.appendSession]);
-      }
-
-      if (input.backlog !== undefined) {
-        nextBacklog = this.mergeEntities(base.backlog, input.backlog);
-      } else if (input.appendBacklogItem) {
-        nextBacklog = this.mergeEntities(base.backlog, [
-          input.appendBacklogItem,
-        ]);
-      }
-
-      const next: FocusStatePayload = {
-        sessions: nextSessions,
-        backlog: nextBacklog,
-      };
-
-      if (!existing) {
-        await this.db.insert(focusStateTable).values({
-          userId: access.userId,
-          sessions: next.sessions,
-          backlog: next.backlog,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        });
-      } else {
-        await this.db
-          .update(focusStateTable)
-          .set({
-            sessions: next.sessions,
-            backlog: next.backlog,
-            updatedAt: new Date(),
-          })
-          .where(eq(focusStateTable.userId, access.userId));
-      }
-
+      await this.upsertState(access, next, existing);
       return next;
     });
   }
@@ -164,6 +107,56 @@ export class FocusApiService extends BaseApiService {
       entitiesMapById.set(item.id, item);
     }
     return [...entitiesMapById.values()];
+  }
+
+  private applyStateUpdate(
+    base: FocusStatePayload,
+    input: UpdateFocusStateInput,
+  ): FocusStatePayload {
+    let nextSessions = base.sessions;
+    let nextBacklog = base.backlog;
+
+    if (input.sessions !== undefined) {
+      nextSessions = this.mergeEntities(base.sessions, input.sessions);
+    } else if (input.appendSession) {
+      nextSessions = this.mergeEntities(base.sessions, [input.appendSession]);
+    }
+
+    if (input.backlog !== undefined) {
+      nextBacklog = this.mergeEntities(base.backlog, input.backlog);
+    } else if (input.appendBacklogItem) {
+      nextBacklog = this.mergeEntities(base.backlog, [input.appendBacklogItem]);
+    }
+
+    return { sessions: nextSessions, backlog: nextBacklog };
+  }
+
+  private async upsertState(
+    access: DataAccess,
+    payload: FocusStatePayload,
+    existing: FocusStatePayload | null,
+  ): Promise<void> {
+    const now = new Date();
+
+    if (!existing) {
+      await this.db.insert(focusStateTable).values({
+        userId: access.userId,
+        sessions: payload.sessions,
+        backlog: payload.backlog,
+        createdAt: now,
+        updatedAt: now,
+      });
+      return;
+    }
+
+    await this.db
+      .update(focusStateTable)
+      .set({
+        sessions: payload.sessions,
+        backlog: payload.backlog,
+        updatedAt: now,
+      })
+      .where(eq(focusStateTable.userId, access.userId));
   }
 
   private mergeState(

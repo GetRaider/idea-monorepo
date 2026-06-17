@@ -8,6 +8,7 @@ import { DialogFormGroup, DialogFormLabel } from "@/components/Dialogs";
 import { Input } from "@/components/Input";
 import { Spinner } from "@/components/Spinner/Spinner";
 import { useFocusSessionContext } from "@/contexts/FocusSessionContext";
+import type { FocusSessionContextValue } from "@/hooks/focus/useFocusSession";
 import {
   buildDefaultFocusSessionName,
   canEnableSaveToBacklog,
@@ -16,6 +17,8 @@ import {
   hasValidEstimation,
 } from "@/helpers/focus/focus-session.helper";
 import { cn } from "@/lib/styles/utils";
+
+import type { FocusActionResult, FocusSystemState } from "@/types/focus.types";
 
 import { FocusBacklogPicker } from "./FocusBacklogPicker";
 import { FocusColourPicker } from "./FocusColourPicker";
@@ -28,9 +31,7 @@ import { FocusTaskPicker } from "./FocusTaskPicker";
 export function FocusSessionPanel() {
   const focus = useFocusSessionContext();
 
-  if (!focus.isHydrated) {
-    return <Spinner className="min-h-[280px] w-full" />;
-  }
+  if (!focus.isHydrated) return <Spinner className="min-h-[280px] w-full" />;
 
   return (
     <>
@@ -41,11 +42,7 @@ export function FocusSessionPanel() {
   );
 }
 
-function FocusSessionPanelBody({
-  focus,
-}: {
-  focus: ReturnType<typeof useFocusSessionContext>;
-}) {
+function FocusSessionPanelBody({ focus }: { focus: FocusSessionContextValue }) {
   const {
     systemState,
     activeTimer,
@@ -57,10 +54,7 @@ function FocusSessionPanelBody({
   } = focus;
 
   const handleStart = useCallback(() => {
-    const result = startFocusSession();
-    if (result.status !== "SUCCESS") {
-      toast.error(result.reason ?? "Cannot start focus session");
-    }
+    toastFocusActionError(startFocusSession(), "Cannot start focus session");
   }, [startFocusSession]);
 
   const isIdle = systemState === "idle";
@@ -79,76 +73,55 @@ function FocusSessionPanelBody({
         remainingSeconds={activeTimer.remainingSeconds}
         statusLabel={systemState === "break_running" ? "Running" : "Stopping…"}
         primaryLabel="Stop"
-        onPrimary={() => {
-          const result = stopBreakSession();
-          if (result.status !== "SUCCESS") {
-            toast.error(result.reason ?? "Cannot stop break");
-          }
-        }}
+        onPrimary={() =>
+          toastFocusActionError(stopBreakSession(), "Cannot stop break")
+        }
       />
     );
   }
 
   if (isFocusTimer && activeTimer?.sessionType === "focus") {
-    const statusLabel =
-      systemState === "running"
-        ? "Running"
-        : systemState === "paused"
-          ? "Paused"
-          : "Stopping…";
-
+    const isPaused = systemState === "paused";
     return (
       <FocusTimerCard
         title="Focus"
         sessionName={activeTimer.name}
         remainingSeconds={activeTimer.remainingSeconds}
-        statusLabel={statusLabel}
-        primaryLabel={systemState === "paused" ? "Resume" : "Pause"}
+        statusLabel={getStatusLabelByState(systemState)}
+        primaryLabel={isPaused ? "Resume" : "Pause"}
         secondaryLabel="Stop"
         onPrimary={() => {
-          const result =
-            systemState === "paused"
-              ? resumeFocusSession()
-              : pauseFocusSession();
-          if (result.status !== "SUCCESS") {
-            toast.error(result.reason ?? "Cannot update session");
-          }
+          const result = isPaused ? resumeFocusSession() : pauseFocusSession();
+          toastFocusActionError(result, "Cannot update session");
         }}
-        onSecondary={() => {
-          const result = stopFocusSession();
-          if (result.status !== "SUCCESS") {
-            toast.error(result.reason ?? "Cannot stop session");
-          }
-        }}
+        onSecondary={() =>
+          toastFocusActionError(stopFocusSession(), "Cannot stop session")
+        }
         primaryDisabled={systemState === "stopping"}
         secondaryDisabled={systemState === "stopping"}
       />
     );
   }
 
-  if (!isIdle) {
-    return null;
-  }
+  if (!isIdle) return null;
 
   return <FocusIdleSessionPanel focus={focus} onStart={handleStart} />;
 }
 
 function FocusIdleSessionPanel({
-  focus,
-  onStart,
-}: {
-  focus: ReturnType<typeof useFocusSessionContext>;
-  onStart: () => void;
-}) {
-  const {
+  focus: {
     draft,
     idleDraft,
     sessions,
     backlog,
     configureSession,
     configureIdleDraft,
-  } = focus;
-
+  },
+  onStart,
+}: {
+  focus: FocusSessionContextValue;
+  onStart: () => void;
+}) {
   const dialMinutes = useMemo(() => {
     if (draft.durationMinutes === null) {
       return 0;
@@ -405,16 +378,12 @@ function FocusTimerCard({
 }
 
 interface FocusSessionDetailsContentProps {
-  draft: ReturnType<typeof useFocusSessionContext>["draft"];
-  idleDraft: ReturnType<typeof useFocusSessionContext>["idleDraft"];
+  draft: FocusSessionContextValue["draft"];
+  idleDraft: FocusSessionContextValue["idleDraft"];
   isNewSession: boolean;
   canSaveBacklog: boolean;
-  configureSession: ReturnType<
-    typeof useFocusSessionContext
-  >["configureSession"];
-  configureIdleDraft: ReturnType<
-    typeof useFocusSessionContext
-  >["configureIdleDraft"];
+  configureSession: FocusSessionContextValue["configureSession"];
+  configureIdleDraft: FocusSessionContextValue["configureIdleDraft"];
   onSelectNewSession: () => void;
 }
 
@@ -436,4 +405,18 @@ interface FocusTimerCardProps {
   onSecondary?: () => void;
   primaryDisabled?: boolean;
   secondaryDisabled?: boolean;
+}
+
+function toastFocusActionError(
+  result: FocusActionResult,
+  fallbackMessage: string,
+): void {
+  if (result.status === "SUCCESS") return;
+  toast.error(result.reason ?? fallbackMessage);
+}
+
+function getStatusLabelByState(state: FocusSystemState): string {
+  if (state === "running") return "Running";
+  if (state === "paused") return "Paused";
+  return "Stopping…";
 }

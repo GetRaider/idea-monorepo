@@ -8,6 +8,7 @@ import {
 } from "@/components/Dialogs";
 import { PrimaryButton } from "@/components/Buttons";
 import { useFocusSessionContext } from "@/contexts/FocusSessionContext";
+import { getBreakDurationSeconds } from "@/helpers/focus/focus-session.helper";
 
 export function FocusStopDialog() {
   const {
@@ -69,7 +70,7 @@ export function FocusBreakSuggestionDialog() {
   if (systemState !== "break_suggested" || !breakSuggestion) return null;
 
   const breakMinutes = Math.round(
-    (breakSuggestion.parentPlannedFocusSeconds * 0.2) / 60,
+    getBreakDurationSeconds(breakSuggestion.parentPlannedFocusSeconds) / 60,
   );
 
   return (

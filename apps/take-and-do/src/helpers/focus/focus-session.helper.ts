@@ -184,6 +184,29 @@ export function withActiveTimerSystemState(timer: ActiveTimer): ActiveTimer {
   return { ...timer, systemState };
 }
 
+export function advanceActiveTimer(timer: ActiveTimer): ActiveTimer {
+  const nextElapsed = timer.elapsedSeconds + 1;
+  const nextRemaining = Math.max(0, timer.plannedDurationSeconds - nextElapsed);
+  return {
+    ...timer,
+    elapsedSeconds: nextElapsed,
+    remainingSeconds: nextRemaining,
+  };
+}
+
+export function startOfLocalDay(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+export function startOfLocalWeek(date: Date): Date {
+  const day = date.getDay();
+  const diff = day === 0 ? 6 : day - 1;
+  const start = new Date(date);
+  start.setDate(date.getDate() - diff);
+  start.setHours(0, 0, 0, 0);
+  return start;
+}
+
 export interface FocusSessionFilterOption {
   value: string;
   label: string;
@@ -428,10 +451,6 @@ export function getTotalFocusSeconds(sessions: FocusSessionRecord[]): number {
     .reduce((total, session) => total + session.actualDurationSeconds, 0);
 }
 
-function startOfLocalDay(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
-}
-
 function endOfLocalDay(date: Date): Date {
   return new Date(
     date.getFullYear(),
@@ -442,15 +461,6 @@ function endOfLocalDay(date: Date): Date {
     59,
     999,
   );
-}
-
-function startOfLocalWeek(date: Date): Date {
-  const day = date.getDay();
-  const diff = day === 0 ? 6 : day - 1;
-  const start = new Date(date);
-  start.setDate(date.getDate() - diff);
-  start.setHours(0, 0, 0, 0);
-  return start;
 }
 
 function endOfLocalWeek(date: Date): Date {

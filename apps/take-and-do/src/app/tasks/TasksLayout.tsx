@@ -10,7 +10,7 @@ import { CreateWorkspaceDialog } from "@/components/TasksSidebar/Workspaces/Crea
 import {
   CollapsibleSidePanel,
   CollapsibleSidePanelMain,
-} from "@/components/Panel";
+} from "@/components/SidePanel";
 import "@/components/Calendar/theme.css";
 import { TasksShellHeaderExtrasProvider } from "@/contexts";
 import { TasksAppChromeHeader } from "./TasksAppChromeHeader";
@@ -30,7 +30,7 @@ import { cn } from "@/lib/styles/utils";
 import { clientServices } from "@/services";
 import { toast } from "sonner";
 
-const TASKS_NAV_SIDEBAR_OPEN_KEY = "take-and-do:tasks-nav-sidebar-open";
+const TASKS_PANEL_KEY = "take-and-do:tasks-panel";
 
 export default function TasksLayout({
   children,
@@ -50,21 +50,21 @@ export default function TasksLayout({
     setTaskBoards,
   } = useWorkspaces();
 
-  const [isNavSidebarOpen, setIsNavSidebarOpen] = useState(true);
+  const [isSidePanelOpen, setIsSidePanelOpen] = useState(true);
 
   useEffect(() => {
-    setIsNavSidebarOpen(readTasksNavSidebarOpenPref());
-  }, []);
+    setIsSidePanelOpen(readTasksNavSidebarOpenPref());
+  }, [isSidePanelOpen]);
 
-  const persistNavSidebarOpen = useCallback((open: boolean) => {
-    setIsNavSidebarOpen(open);
-    writeTasksNavSidebarOpenPref(open);
+  const persistNavSidebarOpen = useCallback((shouldOpen: boolean) => {
+    setIsSidePanelOpen(shouldOpen);
+    setTaskPanelPreference(shouldOpen);
   }, []);
 
   const toggleNavSidebar = useCallback(() => {
-    setIsNavSidebarOpen((prev) => {
+    setIsSidePanelOpen((prev) => {
       const next = !prev;
-      writeTasksNavSidebarOpenPref(next);
+      setTaskPanelPreference(next);
       return next;
     });
   }, []);
@@ -79,18 +79,15 @@ export default function TasksLayout({
   );
 
   const handleViewChange = (view: string) => {
-    if (view === "today" || view === "tomorrow") {
-      router.push(tasksUrlHelper.routing.buildScheduleUrl(view));
-      return;
+    switch (true) {
+      case view === "today" || view === "tomorrow":
+        return router.push(tasksUrlHelper.routing.buildScheduleUrl(view));
+      case view === TASKS_ROOT_VIEW_ID:
+        return router.push(tasksUrlHelper.routing.buildRootUrl());
+      default:
+        return router.push(tasksUrlHelper.routing.buildBoardUrl(view));
     }
-    if (view === TASKS_ROOT_VIEW_ID) {
-      router.push(tasksUrlHelper.routing.buildRootUrl());
-      return;
-    }
-    router.push(tasksUrlHelper.routing.buildBoardUrl(view));
   };
-
-  const handleNavigationChange = () => persistNavSidebarOpen(true);
 
   const handleCreateFolder = async (
     name: string,
@@ -220,7 +217,7 @@ export default function TasksLayout({
     <WorkspaceProvider value={workspaceValue}>
       <PageContainer>
         <TasksShellHeaderExtrasProvider>
-          <Sidebar onNavigationChange={handleNavigationChange} />
+          <Sidebar onNavigationChange={() => persistNavSidebarOpen(true)} />
           <Main
             withNavSidebar={false}
             className="flex min-h-0 flex-1 flex-col overflow-hidden max-lg:overflow-y-auto lg:overflow-hidden"
@@ -241,21 +238,21 @@ export default function TasksLayout({
                 )}
               >
                 <CollapsibleSidePanel
-                  expanded={isNavSidebarOpen}
+                  expanded={isSidePanelOpen}
                   onRequestCollapse={toggleNavSidebar}
                   panelId="take-and-do-tasks-sidebar"
                   hideTooltip="Hide panel"
                   hideSrLabel="Hide tasks navigation panel"
                   columnClassName={cn(
                     "relative flex shrink-0 flex-col overflow-visible transition-[width,opacity,min-width,max-height] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none lg:min-h-0 lg:max-h-full lg:self-stretch",
-                    !isNavSidebarOpen
+                    !isSidePanelOpen
                       ? "pointer-events-none max-h-0 min-w-0 w-0 overflow-hidden opacity-0 lg:max-h-none"
                       : "opacity-100",
-                    isNavSidebarOpen &&
+                    isSidePanelOpen &&
                       "max-lg:max-h-[min(40vh,420px)] max-lg:w-full lg:opacity-100",
                   )}
                   columnStyle={
-                    isNavSidebarOpen
+                    isSidePanelOpen
                       ? {
                           width: `min(${navPanelWidth}px, 100%)`,
                         }
@@ -267,7 +264,7 @@ export default function TasksLayout({
                   contentClassName="relative flex h-full min-h-0 w-full min-w-0 max-w-full flex-1 flex-col overflow-hidden lg:min-h-0 lg:max-h-full"
                 >
                   <TasksSidebar
-                    isOpen={isNavSidebarOpen}
+                    isOpen={isSidePanelOpen}
                     widthPx={tasksSidebarWidthPx}
                     onWidthPxChange={setTasksSidebarWidthPx}
                     activeView={activeView}
@@ -285,8 +282,8 @@ export default function TasksLayout({
                 </CollapsibleSidePanel>
 
                 <CollapsibleSidePanelMain
-                  collapsed={!isNavSidebarOpen}
-                  onRequestExpand={() => persistNavSidebarOpen(true)}
+                  isCollapsed={!isSidePanelOpen}
+                  onExpand={() => persistNavSidebarOpen(true)}
                   panelId="take-and-do-tasks-sidebar"
                   showTooltip="Show panel"
                   showSrLabel="Show tasks navigation panel"
@@ -314,12 +311,15 @@ export default function TasksLayout({
   );
 }
 
-function writeTasksNavSidebarOpenPref(open: boolean) {
-  localStorageHelper.writeString(TASKS_NAV_SIDEBAR_OPEN_KEY, open ? "1" : "0");
+function setTaskPanelPreference(shouldOpen: boolean): void {
+  localStorageHelper.writeString(
+    TASKS_PANEL_KEY,
+    shouldOpen ? "true" : "false",
+  );
 }
 
 function readTasksNavSidebarOpenPref(): boolean {
-  const value = localStorageHelper.readString(TASKS_NAV_SIDEBAR_OPEN_KEY);
+  const value = localStorageHelper.readString(TASKS_PANEL_KEY);
   if (value === null) return true;
-  return value !== "0";
+  return value !== "false";
 }

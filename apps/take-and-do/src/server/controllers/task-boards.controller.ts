@@ -15,7 +15,7 @@ import {
 import { BadRequestError, NotFoundError } from "@/lib/api/errors";
 import { apiServices } from "@/server/services/api";
 import type { TaskBoard } from "@/types/workspace";
-import { BaseController } from "./base.controller";
+import { BaseController } from "./base/base.controller";
 
 const taskBoardIdQuerySchema = z.object({ id: z.string().min(1) });
 

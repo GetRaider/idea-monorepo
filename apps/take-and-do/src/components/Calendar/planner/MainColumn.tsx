@@ -1,6 +1,6 @@
 import type { ReactNode, Ref } from "react";
 
-import { CollapsibleSidePanelMain } from "@/components/Panel";
+import { CollapsibleSidePanelMain } from "@/components/SidePanel";
 
 export interface CalendarPlannerMainColumnProps {
   calendarSidebarCollapsed: boolean;
@@ -17,8 +17,8 @@ export function CalendarPlannerMainColumn({
 }: CalendarPlannerMainColumnProps) {
   return (
     <CollapsibleSidePanelMain
-      collapsed={calendarSidebarCollapsed}
-      onRequestExpand={onToggleSidebar}
+      isCollapsed={calendarSidebarCollapsed}
+      onExpand={onToggleSidebar}
       panelId="calendar-planner-sidebar"
       showTooltip="Show Panel"
       showSrLabel="Show calendar sidebar"

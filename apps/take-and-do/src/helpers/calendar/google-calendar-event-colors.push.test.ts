@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { mapPushBodyToGooglePatch } from "@/server/controllers/google-calendar-integration.mapper";
+import { mapPushBodyToGooglePatch } from "@/server/controllers/google-calendar/google-calendar-integration.mapper";
 
 describe("mapPushBodyToGooglePatch colorId", () => {
   const baseBody = {

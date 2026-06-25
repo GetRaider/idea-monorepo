@@ -26,9 +26,7 @@ export function ProductivitySummaryDialog({
   onClose,
 }: ProductivitySummaryDialogProps) {
   const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (e.target === e.currentTarget) {
-      onClose();
-    }
+    if (e.target === e.currentTarget) onClose();
   };
 
   const insights = Array.isArray(analytics.insights) ? analytics.insights : [];

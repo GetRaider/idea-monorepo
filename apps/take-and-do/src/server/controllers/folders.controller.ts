@@ -11,7 +11,7 @@ import {
 } from "@/db/dtos";
 import { BadRequestError, NotFoundError } from "@/lib/api/errors";
 import { apiServices } from "@/server/services/api";
-import { BaseController } from "./base.controller";
+import { BaseController } from "./base/base.controller";
 
 export class FoldersController extends BaseController {
   getAll = this.initRoute({

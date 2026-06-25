@@ -1,5 +1,5 @@
 import { cn } from "@/lib/styles/utils";
-import { CollapsibleSidePanel } from "@/components/Panel";
+import { CollapsibleSidePanel } from "@/components/SidePanel";
 
 import { CalendarPanel, type CalendarPanelProps } from "../shell/Panel";
 

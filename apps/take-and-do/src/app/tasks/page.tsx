@@ -61,8 +61,7 @@ export default function TasksPage() {
   const toggleFolderExpanded = (folderId: string) => {
     setExpandedFolderIds((previous) => {
       const next = new Set(previous);
-      if (next.has(folderId)) next.delete(folderId);
-      else next.add(folderId);
+      next.has(folderId) ? next.delete(folderId) : next.add(folderId);
       return next;
     });
   };

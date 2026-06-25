@@ -6,7 +6,7 @@ import {
   GetAnalyticsQueryDto,
 } from "@/db/dtos";
 import { apiServices } from "@/server/services/api";
-import { BaseController } from "./base.controller";
+import { BaseController } from "./base/base.controller";
 
 export class AnalyticsController extends BaseController {
   getStatistics = this.initRoute({

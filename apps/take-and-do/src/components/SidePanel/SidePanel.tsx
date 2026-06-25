@@ -91,8 +91,8 @@ export function CollapsibleSidePanel({
 
 export type CollapsibleSidePanelMainProps = {
   /** When true, sidebar is collapsed and the “show panel” chevron appears (lg+). */
-  collapsed: boolean;
-  onRequestExpand: () => void;
+  isCollapsed: boolean;
+  onExpand: () => void;
   panelId: string;
   showTooltip: string;
   showSrLabel: string;
@@ -104,8 +104,8 @@ export type CollapsibleSidePanelMainProps = {
 };
 
 export function CollapsibleSidePanelMain({
-  collapsed,
-  onRequestExpand,
+  isCollapsed: collapsed,
+  onExpand,
   panelId,
   showTooltip,
   showSrLabel,
@@ -126,7 +126,7 @@ export function CollapsibleSidePanelMain({
           <AppTooltip content={showTooltip} side="right">
             <button
               type="button"
-              onClick={onRequestExpand}
+              onClick={onExpand}
               aria-expanded={false}
               aria-controls={panelId}
               className={tasksSidebarEdgeShowToggleClass}

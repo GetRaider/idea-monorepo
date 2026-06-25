@@ -1,14 +1,23 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { ZodError, type z } from "zod";
 
 import { HttpError } from "@/lib/api/errors";
 import { formatZodError } from "@/lib/api/format-zod-error";
+import {
+  OptionalZodSchema,
+  AppRouteHandler,
+  InitRouteParams,
+  InferredDto,
+  GetInputsParams,
+  Inputs,
+  ErrorResponseBody,
+} from "./base.controller.types";
 
 export class BaseController {
   protected initRoute<
-    const PDto extends OptionalZodSchema = undefined,
-    const QDto extends OptionalZodSchema = undefined,
-    const BDto extends OptionalZodSchema = undefined,
+    const ParamsDto extends OptionalZodSchema = undefined,
+    const QueryDto extends OptionalZodSchema = undefined,
+    const BodyDto extends OptionalZodSchema = undefined,
     TResponse = unknown,
   >({
     paramsDto,
@@ -17,7 +26,12 @@ export class BaseController {
     responseDto,
     handler,
     status = 200,
-  }: InitRouteParams<PDto, QDto, BDto, TResponse>): AppRouteHandler {
+  }: InitRouteParams<
+    ParamsDto,
+    QueryDto,
+    BodyDto,
+    TResponse
+  >): AppRouteHandler {
     return async (request, context) => {
       try {
         const { params, query, body } = await this.getRequestInputs({
@@ -31,9 +45,9 @@ export class BaseController {
         const response = await handler({
           request,
           context,
-          params: params as InferredDto<PDto>,
-          query: query as InferredDto<QDto>,
-          body: body as InferredDto<BDto>,
+          params: params as InferredDto<ParamsDto>,
+          query: query as InferredDto<QueryDto>,
+          body: body as InferredDto<BodyDto>,
         });
 
         // Handles: No body (204 / 205), Redirects, Non-JSON body
@@ -95,7 +109,7 @@ export class BaseController {
 
   private handleError(error: unknown): NextResponse {
     if (error instanceof HttpError) return this.sendHttpError(error);
-    if (error instanceof ZodError) return this.sendZodError(error);
+    if (error instanceof ZodError) return this.sendDtoError(error);
     return this.sendUnknownError(error);
   }
 
@@ -105,7 +119,7 @@ export class BaseController {
     return NextResponse.json(responseBody, { status: error.status });
   }
 
-  private sendZodError(error: ZodError): NextResponse {
+  private sendDtoError(error: ZodError): NextResponse {
     return NextResponse.json(
       { error: "DTO validation failed", details: formatZodError(error) },
       { status: 400 },
@@ -117,64 +131,3 @@ export class BaseController {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
-
-type OptionalZodSchema = z.ZodType<unknown> | undefined;
-
-type InferredDto<Dto extends z.ZodType<unknown> | undefined> =
-  Dto extends z.ZodType<unknown> ? z.output<Dto> : null;
-
-interface Inputs<TParams, TQuery, TBody> {
-  params: TParams | null;
-  query: TQuery | null;
-  body: TBody | null;
-}
-
-interface GetInputsParams<TParams, TQuery, TBody> {
-  paramsDto?: z.ZodType<TParams>;
-  queryDto?: z.ZodType<TQuery>;
-  bodyDto?: z.ZodType<TBody>;
-  context: NextAppRouteContext;
-  request: NextRequest;
-}
-
-interface ErrorResponseBody {
-  error: string;
-  details?: string;
-}
-
-export type NextAppRouteContext = {
-  params: Promise<Record<string, string | string[]>>;
-};
-
-export type AppRouteHandler = (
-  request: NextRequest,
-  context: NextAppRouteContext,
-) => Promise<Response>;
-
-export interface HandlerParams<TParams = null, TQuery = null, TBody = null> {
-  request: NextRequest;
-  context: NextAppRouteContext;
-  params: TParams;
-  query: TQuery;
-  body: TBody;
-}
-
-type InitRouteParams<
-  ParamsDto extends z.ZodType<unknown> | undefined,
-  QueryDto extends z.ZodType<unknown> | undefined,
-  BodyDto extends z.ZodType<unknown> | undefined,
-  TResponse,
-> = {
-  paramsDto?: ParamsDto;
-  queryDto?: QueryDto;
-  bodyDto?: BodyDto;
-  responseDto?: z.ZodType<TResponse>;
-  handler: (
-    params: HandlerParams<
-      InferredDto<ParamsDto>,
-      InferredDto<QueryDto>,
-      InferredDto<BodyDto>
-    >,
-  ) => Promise<TResponse | Response>;
-  status?: number;
-};

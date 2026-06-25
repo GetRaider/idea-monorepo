@@ -22,7 +22,7 @@ import {
 import { BadRequestError, HttpError, NotFoundError } from "@/lib/api/errors";
 import { apiServices } from "@/server/services/api";
 
-import { BaseController } from "./base.controller";
+import { BaseController } from "./base/base.controller";
 import { tasksHelper } from "@/helpers/task.helper";
 
 const taskIdParamsSchema = z.object({ id: z.string() });

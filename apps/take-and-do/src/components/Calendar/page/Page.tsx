@@ -44,7 +44,6 @@ import {
   PlanningCalendar,
   type PlanningCalendarHandle,
 } from "../planner/Planner";
-import { CalendarPlannerMainColumn } from "../planner/MainColumn";
 import { CalendarPlannerSidebarColumn } from "../planner/SidebarColumn";
 import { GoogleCalendarRecurrenceScopeDialog } from "../event/GoogleRecurrenceScopeDialog";
 
@@ -296,6 +295,7 @@ export function CalendarPage() {
           <CalendarPlannerSidebarColumn
             collapsed={calendarSidebarCollapsed}
             onToggleCollapse={toggleCalendarSidebar}
+            calendarScopeRef={calendarScopeRef}
             panelProps={{
               containerRef: backlogContainerRef,
               items: state.backlog,
@@ -321,11 +321,6 @@ export function CalendarPage() {
               onInternalCalendarColorChange: setInternalCalendarColor,
               onGoogleCalendarColorChange: setGoogleCalendarColor,
             }}
-          />
-          <CalendarPlannerMainColumn
-            calendarSidebarCollapsed={calendarSidebarCollapsed}
-            onToggleSidebar={toggleCalendarSidebar}
-            calendarScopeRef={calendarScopeRef}
           >
             <PlanningCalendar
               ref={planningCalendarRef}
@@ -377,7 +372,7 @@ export function CalendarPage() {
                 calendarColorTheme={calendarColorTheme}
               />
             ) : null}
-          </CalendarPlannerMainColumn>
+          </CalendarPlannerSidebarColumn>
         </div>
 
         <CalendarEventEditorDialog

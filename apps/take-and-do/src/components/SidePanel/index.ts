@@ -1,5 +1,6 @@
-export { CollapsibleSidePanel, CollapsibleSidePanelMain } from "./SidePanel";
+export { SidePanel } from "./SidePanel";
 export type {
   CollapsibleSidePanelMainProps,
   CollapsibleSidePanelProps,
+  SidePanelProps,
 } from "./SidePanel";

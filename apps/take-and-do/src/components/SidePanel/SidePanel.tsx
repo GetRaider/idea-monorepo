@@ -1,104 +1,105 @@
 "use client";
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import type { CSSProperties, LegacyRef, ReactNode, Ref } from "react";
+import type { LegacyRef } from "react";
 
 import { AppTooltip } from "@/components/Tooltip/AppTooltip";
-import {
-  tasksSidebarEdgeHideToggleClass,
-  tasksSidebarEdgeShowToggleClass,
-} from "@/components/TasksSidebar/tasks-sidebar-edge-toggle-classes";
 import { cn } from "@/lib/styles/utils";
+
+import {
+  sidePanelEdgeHideToggleClass,
+  sidePanelEdgeShowToggleClass,
+} from "./side-panel-edge-toggle-classes";
+import {
+  getSidePanelColumnClassName,
+  getSidePanelColumnStyle,
+  getSidePanelContentMinWidthStyle,
+} from "./side-panel-column-classes";
+import { SIDE_PANEL_SIZE_PX } from "./side-panel-layout";
+import { SidePanelAside } from "./SidePanel.ui";
+import { SidePanelSectionView } from "./SidePanelSection";
+import { useSidePanelSectionState } from "@/hooks/sidePanel/useSidePanelSectionState";
+
+import type { SidePanelProps } from "./SidePanel.types";
 
 const SHELL_DEFAULT =
   "flex min-h-0 w-full flex-1 flex-col overflow-hidden max-lg:min-h-0 max-lg:flex-none max-lg:overflow-visible motion-reduce:transition-none lg:min-h-0 lg:max-h-full";
-
-export type SidePanelProps = {
-  /** When false, the hide chevron is not shown (panel already “closed” on desktop). */
-  expanded: boolean;
-  onRequestCollapse: () => void;
-  onExpand: () => void;
-  panelId: string;
-  hideTooltip: string;
-  hideSrLabel: string;
-  showTooltip: string;
-  showSrLabel: string;
-  /** Outer column: width / opacity / transitions (layout-specific). */
-  sidebarColumnClassName: string;
-  sidebarColumnStyle?: CSSProperties;
-  /** Inner flex shell; merged with defaults + `!expanded && lg:pointer-events-none`. */
-  sidebarShellClassName?: string;
-  /** Direct wrapper around `sidebar` (e.g. fixed min width for calendar). */
-  sidebarContentClassName: string;
-  /** Optional DOM id on the sidebar content wrapper (must match `panelId` when used for `aria-controls`). */
-  sidebarContentId?: string;
-  sidebar: ReactNode;
-  mainRef?: Ref<HTMLDivElement | null>;
-  mainClassName: string;
-  /** If set, main `children` are wrapped in this inner div (e.g. tasks main scroll shell). */
-  mainBodyClassName?: string;
-  children: ReactNode;
-};
-
-/** @deprecated Use `SidePanelProps` */
-export type CollapsibleSidePanelProps = SidePanelProps;
-
-/** @deprecated Use `SidePanelProps` */
-export type CollapsibleSidePanelMainProps = SidePanelProps;
 
 export function SidePanel({
   expanded,
   onRequestCollapse,
   onExpand,
   panelId,
-  hideTooltip,
-  hideSrLabel,
-  showTooltip,
-  showSrLabel,
-  sidebarColumnClassName,
-  sidebarColumnStyle,
-  sidebarShellClassName,
-  sidebarContentClassName,
-  sidebarContentId,
-  sidebar,
+  a11y,
+  sections,
+  size = "default",
+  variant = "solid",
+  collapsePolicy = { mode: "independent" },
+  responsive = "fixed",
   mainRef,
-  mainClassName,
+  panelInnerRef,
+  mainClassName = "relative flex min-h-0 min-w-0 flex-1 flex-col overflow-visible",
   mainBodyClassName,
   children,
 }: SidePanelProps) {
   const collapsed = !expanded;
+  const panelWidthPx = SIDE_PANEL_SIZE_PX[size];
+  const { isSectionOpen, toggleSection } = useSidePanelSectionState(
+    sections,
+    collapsePolicy,
+  );
 
   return (
     <>
-      <div className={sidebarColumnClassName} style={sidebarColumnStyle}>
+      <div
+        className={getSidePanelColumnClassName(expanded, responsive)}
+        style={getSidePanelColumnStyle(expanded, panelWidthPx)}
+      >
         <div
-          className={cn(
-            SHELL_DEFAULT,
-            !expanded && "lg:pointer-events-none",
-            sidebarShellClassName,
-          )}
+          className={cn(SHELL_DEFAULT, !expanded && "lg:pointer-events-none")}
         >
           <div
-            {...(sidebarContentId != null ? { id: sidebarContentId } : {})}
-            className={sidebarContentClassName}
+            className="relative flex h-full min-h-0 w-full min-w-0 max-w-full flex-1 flex-col overflow-hidden lg:min-h-0 lg:max-h-full"
+            style={getSidePanelContentMinWidthStyle(
+              expanded,
+              responsive,
+              panelWidthPx,
+            )}
           >
-            {sidebar}
+            <SidePanelAside panelId={panelId} size={size} variant={variant}>
+              <div
+                {...(panelInnerRef != null
+                  ? { ref: panelInnerRef as LegacyRef<HTMLDivElement> }
+                  : {})}
+                className="contents"
+              >
+                {sections.map((section, index) => (
+                  <SidePanelSectionView
+                    key={section.id}
+                    section={section}
+                    isOpen={isSectionOpen(section.id)}
+                    onToggle={() => toggleSection(section.id)}
+                    isFirst={index === 0}
+                  />
+                ))}
+              </div>
+            </SidePanelAside>
           </div>
         </div>
         {expanded ? (
           <div className="pointer-events-none absolute inset-y-0 left-full z-30 hidden lg:flex lg:items-center">
-            <AppTooltip content={hideTooltip} side="right">
+            <AppTooltip content={a11y.hideTooltip} side="right">
               <button
                 type="button"
                 onClick={onRequestCollapse}
                 aria-expanded
                 aria-controls={panelId}
                 className={cn(
-                  tasksSidebarEdgeHideToggleClass,
+                  sidePanelEdgeHideToggleClass,
                   "rounded-l-none border-l-0 -translate-x-px",
                 )}
               >
-                <span className="sr-only">{hideSrLabel}</span>
+                <span className="sr-only">{a11y.hideSrLabel}</span>
                 <ChevronLeft
                   size={13}
                   strokeWidth={2.25}
@@ -119,15 +120,15 @@ export function SidePanel({
       >
         {collapsed ? (
           <div className="pointer-events-none absolute inset-y-0 z-30 hidden left-[calc(-1.5rem-1px)] lg:flex lg:items-center">
-            <AppTooltip content={showTooltip} side="right">
+            <AppTooltip content={a11y.showTooltip} side="right">
               <button
                 type="button"
                 onClick={onExpand}
                 aria-expanded={false}
                 aria-controls={panelId}
-                className={tasksSidebarEdgeShowToggleClass}
+                className={sidePanelEdgeShowToggleClass}
               >
-                <span className="sr-only">{showSrLabel}</span>
+                <span className="sr-only">{a11y.showSrLabel}</span>
                 <ChevronRight
                   size={13}
                   strokeWidth={2.25}

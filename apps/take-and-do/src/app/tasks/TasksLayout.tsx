@@ -5,20 +5,18 @@ import { useCallback, useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
 import { Sidebar } from "@/components/Sidebar/Sidebar";
-import { TasksSidebar } from "@/components/TasksSidebar/TasksSidebar";
 import { CreateWorkspaceDialog } from "@/components/TasksSidebar/Workspaces/CreateWorkspace/CreateWorkspaceDialog";
+import { useTasksSidePanel } from "@/hooks/tasksSidebar/useTasksSidePanel";
 import { SidePanel } from "@/components/SidePanel";
 import "@/components/Calendar/theme.css";
 import { TasksShellHeaderExtrasProvider } from "@/contexts";
 import { TasksAppChromeHeader } from "./TasksAppChromeHeader";
 import { PageContainer, TasksLayoutMain as Main } from "../shell.ui";
 import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
-import { clampTasksSidebarWidthPx } from "@/helpers/tasks-sidebar-layout";
 import { useIsAnonymous } from "@/hooks/auth/use-is-anonymous";
 import { waiterHelper } from "@/helpers/waiter.helper";
 import { useWorkspaces } from "@/hooks/tasks/useWorkspaces";
 import { WorkspaceProvider } from "@/contexts/WorkspaceContext";
-import { useTasksSidebarWidthPx } from "@/hooks/tasks/useTasksSidebarWidthPx";
 import { isDuplicateWorkspaceName } from "@/helpers/workspace-name.helper";
 import { invalidateWorkspaceQueries } from "@/lib/invalidate-app-queries";
 import { APP_CHROME_PADDING_X } from "@/helpers/app-chrome-layout";
@@ -68,8 +66,6 @@ export default function TasksLayout({
     });
   }, []);
 
-  const [tasksSidebarWidthPx, setTasksSidebarWidthPx] =
-    useTasksSidebarWidthPx();
   const [isWorkspaceCreateDialogOpen, setIsWorkspaceCreateDialogOpen] =
     useState(false);
 
@@ -199,7 +195,17 @@ export default function TasksLayout({
     openCreateWorkspace: () => setIsWorkspaceCreateDialogOpen(true),
   };
 
-  const navPanelWidth = clampTasksSidebarWidthPx(tasksSidebarWidthPx);
+  const tasksSidePanel = useTasksSidePanel({
+    activeView,
+    onViewChange: (view: string) => navigateToWorkspaceView(view),
+    onCreateTaskBoard: () => setIsWorkspaceCreateDialogOpen(true),
+    folders,
+    taskBoards,
+    setTaskBoards,
+    setFolders,
+    isFoldersLoading,
+    isBoardsLoading,
+  });
 
   return (
     <WorkspaceProvider value={workspaceValue}>
@@ -230,49 +236,16 @@ export default function TasksLayout({
                   onRequestCollapse={toggleNavSidebar}
                   onExpand={() => persistNavSidebarOpen(true)}
                   panelId="take-and-do-tasks-sidebar"
-                  hideTooltip="Hide panel"
-                  hideSrLabel="Hide tasks navigation panel"
-                  showTooltip="Show panel"
-                  showSrLabel="Show tasks navigation panel"
-                  sidebarColumnClassName={cn(
-                    "relative flex shrink-0 flex-col overflow-visible transition-[width,opacity,min-width,max-height] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none lg:min-h-0 lg:max-h-full lg:self-stretch",
-                    !isSidePanelOpen
-                      ? "pointer-events-none max-h-0 min-w-0 w-0 overflow-hidden opacity-0 lg:max-h-none"
-                      : "opacity-100",
-                    isSidePanelOpen &&
-                      "max-lg:max-h-[min(40vh,420px)] max-lg:w-full lg:opacity-100",
-                  )}
-                  sidebarColumnStyle={
-                    isSidePanelOpen
-                      ? {
-                          width: `min(${navPanelWidth}px, 100%)`,
-                        }
-                      : {
-                          width: 0,
-                          minWidth: 0,
-                        }
-                  }
-                  sidebarContentClassName="relative flex h-full min-h-0 w-full min-w-0 max-w-full flex-1 flex-col overflow-hidden lg:min-h-0 lg:max-h-full"
-                  sidebar={
-                    <TasksSidebar
-                      isOpen={isSidePanelOpen}
-                      widthPx={tasksSidebarWidthPx}
-                      onWidthPxChange={setTasksSidebarWidthPx}
-                      activeView={activeView}
-                      onViewChange={(view: string) =>
-                        navigateToWorkspaceView(view)
-                      }
-                      onCreateTaskBoard={() =>
-                        setIsWorkspaceCreateDialogOpen(true)
-                      }
-                      folders={folders}
-                      taskBoards={taskBoards}
-                      setTaskBoards={setTaskBoards}
-                      setFolders={setFolders}
-                      isFoldersLoading={isFoldersLoading}
-                      isBoardsLoading={isBoardsLoading}
-                    />
-                  }
+                  size="compact"
+                  variant="solid"
+                  responsive="stack"
+                  sections={tasksSidePanel.sections}
+                  a11y={{
+                    hideTooltip: "Hide panel",
+                    hideSrLabel: "Hide tasks navigation panel",
+                    showTooltip: "Show panel",
+                    showSrLabel: "Show tasks navigation panel",
+                  }}
                   mainClassName="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-visible"
                   mainBodyClassName="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
                 >
@@ -283,7 +256,7 @@ export default function TasksLayout({
           </Main>
         </TasksShellHeaderExtrasProvider>
 
-        {isWorkspaceCreateDialogOpen && (
+        {isWorkspaceCreateDialogOpen ? (
           <CreateWorkspaceDialog
             onClose={() => setIsWorkspaceCreateDialogOpen(false)}
             onCreateFolder={handleCreateFolder}
@@ -291,7 +264,9 @@ export default function TasksLayout({
             taskBoards={taskBoards}
             folders={folders}
           />
-        )}
+        ) : null}
+
+        {tasksSidePanel.dialogs}
       </PageContainer>
     </WorkspaceProvider>
   );

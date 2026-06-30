@@ -2,38 +2,9 @@
 
 import type { ComponentProps } from "react";
 
-import { ChevronRightIcon } from "@/components/Icons";
 import { Input } from "@/components/Input";
-import { TASKS_SIDEBAR_MAX_WIDTH_PX } from "@/helpers/tasks-sidebar-layout";
 import { cn } from "@/lib/styles/utils";
 import type { UiProps } from "@/lib/styles/ui-props";
-
-type TasksSidebarPanelProps = UiProps<"aside">;
-
-export function TasksSidebarContainer({
-  className,
-  ref,
-  style,
-  ...props
-}: TasksSidebarPanelProps) {
-  return (
-    <aside
-      ref={ref}
-      id="take-and-do-tasks-sidebar"
-      style={{
-        width: "100%",
-        minWidth: 0,
-        maxWidth: TASKS_SIDEBAR_MAX_WIDTH_PX,
-        ...style,
-      }}
-      className={cn(
-        "relative z-0 flex min-h-0 w-full max-w-full flex-1 flex-col gap-4 overflow-y-auto overscroll-contain rounded-xl border border-white/[0.06] bg-sidebar-bg p-3.5 max-[900px]:max-w-none",
-        className,
-      )}
-      {...props}
-    />
-  );
-}
 
 export function Search({ className, ref, ...props }: UiProps<"div">) {
   return (
@@ -110,83 +81,6 @@ export function WorkspaceContainer({
     <div
       ref={ref}
       className={cn("flex flex-col gap-2", grow && "min-h-0 flex-1", className)}
-      {...props}
-    />
-  );
-}
-
-export const TASKS_SIDEBAR_SECTION_HEADER_TEXT_CLASS =
-  "text-sm font-extrabold tracking-wide text-text-tertiary";
-
-export function SideBarSectionHeader({
-  className,
-  ref,
-  ...props
-}: UiProps<"div">) {
-  return (
-    <div
-      ref={ref}
-      className={cn(
-        "flex items-center justify-between",
-        TASKS_SIDEBAR_SECTION_HEADER_TEXT_CLASS,
-        className,
-      )}
-      {...props}
-    />
-  );
-}
-
-export function SidebarCollapsibleSectionHeader({
-  isExpanded,
-  onToggle,
-  title,
-  className,
-  ref,
-}: UiProps<"button"> & {
-  isExpanded: boolean;
-  onToggle: () => void;
-  title: string;
-}) {
-  return (
-    <button
-      ref={ref}
-      type="button"
-      onClick={onToggle}
-      aria-expanded={isExpanded}
-      className={cn(
-        "flex min-w-0 items-center gap-1 rounded-lg border-0 bg-transparent py-1 pl-0 pr-1 text-left transition-colors hover:bg-white/[0.04]",
-        className,
-      )}
-    >
-      <FolderChevron isExpanded={isExpanded}>
-        <ChevronRightIcon size={11} />
-      </FolderChevron>
-      <span
-        className={cn(
-          "min-w-0 flex-1 truncate",
-          TASKS_SIDEBAR_SECTION_HEADER_TEXT_CLASS,
-        )}
-      >
-        {title}
-      </span>
-    </button>
-  );
-}
-
-export function AddButton({
-  className,
-  type = "button",
-  ref,
-  ...props
-}: UiProps<"button">) {
-  return (
-    <button
-      ref={ref}
-      type={type}
-      className={cn(
-        "flex h-5 w-5 cursor-pointer items-center justify-center rounded border-0 bg-transparent p-0 text-text-tertiary transition-all duration-200 hover:bg-[#1a1a1a] hover:text-text-primary",
-        className,
-      )}
       {...props}
     />
   );

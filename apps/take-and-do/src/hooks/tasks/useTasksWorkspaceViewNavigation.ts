@@ -5,10 +5,10 @@ import { useRouter } from "next/navigation";
 
 import { TASKS_ROOT_VIEW_ID, tasksUrlHelper } from "@/helpers/tasks-url.helper";
 
-export function useTasksWorkspaceViewNavigation() {
+export function useTasksViewRouter() {
   const router = useRouter();
 
-  const navigateToWorkspaceView = useCallback(
+  const navigateToView = useCallback(
     (view: string) => {
       switch (true) {
         case view === "today" || view === "tomorrow":
@@ -22,5 +22,5 @@ export function useTasksWorkspaceViewNavigation() {
     [router],
   );
 
-  return { navigateToWorkspaceView };
+  return { navigateToView };
 }

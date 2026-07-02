@@ -24,9 +24,9 @@ import { localStorageHelper } from "@/helpers/local-storage.helper";
 import { cn } from "@/lib/styles/utils";
 import { clientServices } from "@/services";
 import { toast } from "sonner";
-import { useTasksWorkspaceViewNavigation } from "@/hooks/tasks/useTasksWorkspaceViewNavigation";
+import { useTasksViewRouter } from "@/hooks/tasks/useTasksWorkspaceViewNavigation";
 
-const TASKS_PANEL_KEY = "take-and-do:tasks-side-panel";
+const SIDE_PANEL_OPEN_KEY = "take-and-do:side-panel-open";
 
 export default function TasksLayout({
   children,
@@ -45,33 +45,30 @@ export default function TasksLayout({
     setFolders,
     setTaskBoards,
   } = useWorkspaces();
-  const { navigateToWorkspaceView } = useTasksWorkspaceViewNavigation();
-
+  const { navigateToView: navigateToWorkspaceView } = useTasksViewRouter();
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(true);
+  const [isWorkspaceCreateDialogOpen, setIsWorkspaceCreateDialogOpen] =
+    useState(false);
+  const activeView = tasksUrlHelper.routing.getActiveViewFromPathname(
+    pathname ?? "",
+  );
 
   useEffect(() => {
-    setIsSidePanelOpen(readTasksNavSidebarOpenPref());
+    setIsSidePanelOpen(readSidePanelOpenPreference());
   }, [isSidePanelOpen]);
 
   const persistNavSidebarOpen = useCallback((shouldOpen: boolean) => {
     setIsSidePanelOpen(shouldOpen);
-    setTaskPanelPreference(shouldOpen);
+    setSidePanelOpenPreference(shouldOpen);
   }, []);
 
-  const toggleNavSidebar = useCallback(() => {
+  const toggleSidePanel = useCallback(() => {
     setIsSidePanelOpen((prev) => {
       const next = !prev;
-      setTaskPanelPreference(next);
+      setSidePanelOpenPreference(next);
       return next;
     });
   }, []);
-
-  const [isWorkspaceCreateDialogOpen, setIsWorkspaceCreateDialogOpen] =
-    useState(false);
-
-  const activeView = tasksUrlHelper.routing.getActiveViewFromPathname(
-    pathname ?? "",
-  );
 
   const handleCreateFolder = async (
     name: string,
@@ -107,19 +104,18 @@ export default function TasksLayout({
               createdAt: board.createdAt,
             },
           });
-          if (!updated) return null;
-          return updated;
+          return updated ? updated : null;
         }),
       );
 
       if (!isAnonymous) {
-        setTaskBoards((previous) => {
+        setTaskBoards((prev) => {
           const updatedById = new Map(
             updatedBoards
               .filter((board): board is NonNullable<typeof board> => !!board)
               .map((board) => [board.id, board]),
           );
-          return previous.map((board) => updatedById.get(board.id) ?? board);
+          return prev.map((board) => updatedById.get(board.id) ?? board);
         });
       }
     }
@@ -134,8 +130,8 @@ export default function TasksLayout({
 
   const handleCreateTaskBoard = async (
     name: string,
-    folderId: string,
-    emoji?: string | null,
+    folderId: string | null = null,
+    emoji?: string | null | undefined,
   ): Promise<boolean> => {
     if (isDuplicateWorkspaceName(name.trim(), taskBoards, folders)) {
       toast.error("A workspace with this name already exists");
@@ -143,7 +139,7 @@ export default function TasksLayout({
     }
     const createdBoard = await clientServices.taskBoards.create({
       name,
-      folderId: folderId || undefined,
+      folderId,
       isPublic: false,
       ...(emoji ? { emoji } : {}),
     });
@@ -233,7 +229,7 @@ export default function TasksLayout({
               >
                 <SidePanel
                   expanded={isSidePanelOpen}
-                  onRequestCollapse={toggleNavSidebar}
+                  onRequestCollapse={toggleSidePanel}
                   onExpand={() => persistNavSidebarOpen(true)}
                   panelId="take-and-do-tasks-sidebar"
                   size="compact"
@@ -272,15 +268,15 @@ export default function TasksLayout({
   );
 }
 
-function setTaskPanelPreference(shouldOpen: boolean): void {
+function setSidePanelOpenPreference(shouldOpen: boolean): void {
   localStorageHelper.writeString(
-    TASKS_PANEL_KEY,
+    SIDE_PANEL_OPEN_KEY,
     shouldOpen ? "true" : "false",
   );
 }
 
-function readTasksNavSidebarOpenPref(): boolean {
-  const value = localStorageHelper.readString(TASKS_PANEL_KEY);
+function readSidePanelOpenPreference(): boolean {
+  const value = localStorageHelper.readString(SIDE_PANEL_OPEN_KEY);
   if (value === null) return true;
   return value !== "false";
 }

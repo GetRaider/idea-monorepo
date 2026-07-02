@@ -10,7 +10,7 @@ import { useTasksSidePanel } from "@/hooks/tasksSidebar/useTasksSidePanel";
 import { SidePanel } from "@/components/SidePanel";
 import "@/components/Calendar/theme.css";
 import { TasksShellHeaderExtrasProvider } from "@/contexts";
-import { TasksAppChromeHeader } from "./TasksAppChromeHeader";
+import { TasksHeader } from "./TasksHeader";
 import { PageContainer, TasksLayoutMain as Main } from "../shell.ui";
 import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
 import { useIsAnonymous } from "@/hooks/auth/use-is-anonymous";
@@ -219,7 +219,7 @@ export default function TasksLayout({
                   APP_CHROME_PADDING_X,
                 )}
               >
-                <TasksAppChromeHeader />
+                <TasksHeader />
               </div>
               <div
                 className={cn(

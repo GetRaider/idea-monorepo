@@ -10,29 +10,28 @@ import {
 } from "@/helpers/app-chrome-layout";
 import { cn } from "@/lib/styles/utils";
 
-export type TasksBreadcrumbSegment = {
+export type TasksBreadcrumb = {
   label: string;
   href?: string;
-  /** Shown before the label (e.g. board emoji, schedule icon). */
   leading?: ReactNode;
 };
 
 export function TasksBreadcrumbs({
-  segments,
+  breadcrumbs,
   className,
 }: {
-  segments: TasksBreadcrumbSegment[];
+  breadcrumbs: TasksBreadcrumb[];
   className?: string;
 }) {
   return (
     <nav aria-label="Breadcrumb" className={cn("min-w-0", className)}>
       <ol className="m-0 flex list-none flex-wrap items-center gap-x-2 gap-y-1 p-0">
-        {segments.map((seg, i) => {
-          const isLast = i === segments.length - 1;
-          const showLink = Boolean(seg.href) && !isLast;
+        {breadcrumbs.map((item, i) => {
+          const isLast = i === breadcrumbs.length - 1;
+          const showLink = Boolean(item.href) && !isLast;
           return (
             <li
-              key={`${seg.label}-${i}`}
+              key={`${item.label}-${i}`}
               className={cn("flex min-w-0 items-center", i > 0 && "gap-x-2")}
             >
               {i > 0 ? (
@@ -49,18 +48,18 @@ export function TasksBreadcrumbs({
               ) : null}
               {showLink ? (
                 <Link
-                  href={seg.href!}
+                  href={item.href!}
                   className={cn(
                     "flex min-w-0 max-w-full items-center gap-2 truncate",
                     appChromeHeadingLinkClass,
                   )}
                 >
-                  {seg.leading ? (
+                  {item.leading ? (
                     <span className="inline-flex shrink-0 items-center justify-center text-zinc-400 [&>svg]:shrink-0">
-                      {seg.leading}
+                      {item.leading}
                     </span>
                   ) : null}
-                  <span className="min-w-0 truncate">{seg.label}</span>
+                  <span className="min-w-0 truncate">{item.label}</span>
                 </Link>
               ) : (
                 <span
@@ -70,12 +69,12 @@ export function TasksBreadcrumbs({
                   )}
                   {...(isLast ? { "aria-current": "page" as const } : {})}
                 >
-                  {seg.leading ? (
+                  {item.leading ? (
                     <span className="inline-flex shrink-0 items-center justify-center text-zinc-300 [&>svg]:shrink-0">
-                      {seg.leading}
+                      {item.leading}
                     </span>
                   ) : null}
-                  <span className="min-w-0 truncate">{seg.label}</span>
+                  <span className="min-w-0 truncate">{item.label}</span>
                 </span>
               )}
             </li>

@@ -132,6 +132,7 @@ export function Sidebar({ onNavigationChange }: SidebarProps) {
           options={[{ label: "Log out", value: "logout", danger: true }]}
           menuMinWidth={140}
           onChange={async (value) => {
+            console.log("I'm Logout option");
             if (value !== "logout") return;
             await signOutAndClear();
             router.push("/login");

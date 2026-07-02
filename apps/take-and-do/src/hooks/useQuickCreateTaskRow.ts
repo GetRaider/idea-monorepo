@@ -13,19 +13,22 @@ import {
 import { localStorageHelper } from "@/helpers/local-storage.helper";
 import { useClickOutside } from "@/hooks/ui/useClickOutside";
 
-import { TaskPriority, TaskStatus } from "../../KanbanBoard/types";
+import {
+  TaskPriority,
+  TaskStatus,
+} from "../components/Boards/KanbanBoard/types";
 
 import {
   buildQuickCreateDraftStorageKey,
   buildQuickCreateStoredDraft,
   hasQuickCreateDraftContent,
   hydrateQuickCreateDraftFromStorage,
-} from "./quick-create-task-draft.helper";
+} from "../components/Boards/shared/QuickCreateTaskRow/quick-create-task-draft.helper";
 
 import type {
   QuickCreateTaskInput,
   QuickCreateTaskRowProps,
-} from "./QuickCreateTaskRow.types";
+} from "../components/Boards/shared/QuickCreateTaskRow/QuickCreateTaskRow.types";
 
 type UseQuickCreateTaskRowParams = Pick<
   QuickCreateTaskRowProps,

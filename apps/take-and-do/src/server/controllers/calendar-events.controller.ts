@@ -9,7 +9,7 @@ import {
 import { BadRequestError, NotFoundError } from "@/lib/api/errors";
 import { apiServices } from "@/server/services/api";
 
-import { BaseController } from "./base.controller";
+import { BaseController } from "./base/base.controller";
 
 const eventIdParamsSchema = z.object({ id: z.string().min(1) });
 

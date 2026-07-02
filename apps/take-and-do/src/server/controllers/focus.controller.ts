@@ -8,7 +8,7 @@ import {
 } from "@/db/dtos";
 import { apiServices } from "@/server/services/api";
 
-import { BaseController } from "./base.controller";
+import { BaseController } from "./base/base.controller";
 
 export class FocusController extends BaseController {
   getState = this.initRoute({

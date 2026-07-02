@@ -99,10 +99,6 @@ export function TaskSearchHeader({
   const onQueryChange: ChangeEventHandler<HTMLInputElement> = (e) =>
     setQuery(e.target.value);
 
-  const expandButtonClass =
-    "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-input-border bg-input-bg text-[#888] transition-colors hover:text-[var(--text-secondary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]";
-
-  /** Same width collapsed vs expanded so the chrome row does not reflow. */
   const searchSlotClass = cn(
     "relative flex h-10 min-w-0 w-72 max-w-full shrink-0 items-center justify-end lg:w-80",
     className,
@@ -115,7 +111,9 @@ export function TaskSearchHeader({
           type="button"
           aria-label="Search tasks"
           aria-expanded={false}
-          className={expandButtonClass}
+          className={
+            "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-input-border bg-input-bg text-[#888] transition-colors hover:text-[var(--text-secondary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
+          }
           onClick={() => setExpanded(true)}
         >
           <SearchIcon size={18} className="opacity-90" />

@@ -53,3 +53,12 @@ Do not mix class-validator and Zod for the same DTO in one app layer — follow 
 
 - `singleQuote: true` (from `@repo/eslint-config/prettier-base`).
 - Root format: `pnpm format` → `prettier --write "**/*.{ts,tsx,md}"`.
+
+## Control flow
+
+Do not chain ternaries (`a ? b : c ? d : e`). Prefer:
+
+1. A named resolver (`resolveXView`, `getXLabel`) that returns a discriminant or value
+2. Early returns or `if`/`switch` on that result
+
+Simple binary `condition ? a : b` is fine when there is no nesting.

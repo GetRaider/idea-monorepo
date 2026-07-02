@@ -29,7 +29,7 @@ import { cn } from "@/lib/styles/utils";
 import { Route } from "@/constants/route.constant";
 import { ProductivityOverviewIcon } from "@/components/Icons/ProductivityOverviewIcon";
 import { AIIcon } from "@/components/Icons/AIIcon";
-import { OverviewEmptyStateBackdrop } from "@/app/overview/OverviewEmptyStateBackdrop";
+import { OverviewEmptyStateBackdrop } from "@/app/overview/EmptyStateBackdrop";
 import { LightningIcon } from "@/components/Icons/LightningIcon";
 import { APP_CHROME_SECTION_MODULE_ICON_PX } from "@/helpers/app-chrome-layout";
 

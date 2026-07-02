@@ -11,57 +11,6 @@ import {
   dropdownTriggerTransitionClass,
 } from "@/lib/styles/dropdown-classes";
 
-export function DropdownChevron({
-  open,
-  className,
-  children = "▼",
-}: {
-  open: boolean;
-  className?: string;
-  children?: ReactNode;
-}) {
-  return (
-    <span
-      className={cn(
-        dropdownChevronClass,
-        open ? "rotate-180" : "rotate-0",
-        className,
-      )}
-    >
-      {children}
-    </span>
-  );
-}
-
-export interface DropdownOption<T extends string = string> {
-  label: string;
-  value: T;
-  danger?: boolean;
-  disabled?: boolean;
-}
-
-interface DropdownProps<T extends string = string> {
-  options: DropdownOption<T>[];
-  value?: T;
-  onChange: (value: T) => void;
-  placeholder?: string;
-  trigger?: ReactNode;
-  disabled?: boolean;
-  /**
-   * With a custom `trigger`: `left` keeps the menu’s right edge aligned with the
-   * trigger’s right edge (extends left). `right` places the menu’s left edge at the
-   * trigger’s right edge (extends right) — use for triggers on the viewport’s left edge.
-   */
-  menuOpensTo?: "left" | "right";
-  onOpenChange?: (isOpen: boolean) => void;
-  className?: string;
-  menuMinWidth?: number;
-  fullWidth?: boolean;
-  id?: string;
-  /** Match adjacent `AIActionButton` sizing (`compact` on overview modules). */
-  size?: "compact" | "default" | "comfortable";
-}
-
 export function Dropdown<T extends string = string>({
   options,
   value,
@@ -288,4 +237,55 @@ export function Dropdown<T extends string = string>({
         )}
     </>
   );
+}
+
+export function DropdownChevron({
+  open,
+  className,
+  children = "▼",
+}: {
+  open: boolean;
+  className?: string;
+  children?: ReactNode;
+}) {
+  return (
+    <span
+      className={cn(
+        dropdownChevronClass,
+        open ? "rotate-180" : "rotate-0",
+        className,
+      )}
+    >
+      {children}
+    </span>
+  );
+}
+
+export interface DropdownOption<T extends string = string> {
+  label: string;
+  value: T;
+  danger?: boolean;
+  disabled?: boolean;
+}
+
+interface DropdownProps<T extends string = string> {
+  options: DropdownOption<T>[];
+  value?: T;
+  onChange: (value: T) => void;
+  placeholder?: string;
+  trigger?: ReactNode;
+  disabled?: boolean;
+  /**
+   * With a custom `trigger`: `left` keeps the menu’s right edge aligned with the
+   * trigger’s right edge (extends left). `right` places the menu’s left edge at the
+   * trigger’s right edge (extends right) — use for triggers on the viewport’s left edge.
+   */
+  menuOpensTo?: "left" | "right";
+  onOpenChange?: (isOpen: boolean) => void;
+  className?: string;
+  menuMinWidth?: number;
+  fullWidth?: boolean;
+  id?: string;
+  /** Match adjacent `AIActionButton` sizing (`compact` on overview modules). */
+  size?: "compact" | "default" | "comfortable";
 }

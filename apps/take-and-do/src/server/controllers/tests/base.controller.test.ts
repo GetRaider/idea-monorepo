@@ -3,8 +3,8 @@ import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import { HttpError } from "@/lib/api/errors";
-
-import { BaseController, type NextAppRouteContext } from "../base.controller";
+import { BaseController } from "../base/base.controller";
+import { type NextAppRouteContext } from "../base/base.controller.types";
 
 const emptyCtx: NextAppRouteContext = { params: Promise.resolve({}) };
 

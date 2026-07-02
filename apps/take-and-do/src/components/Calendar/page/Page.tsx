@@ -44,8 +44,8 @@ import {
   PlanningCalendar,
   type PlanningCalendarHandle,
 } from "../planner/Planner";
-import { CalendarPlannerMainColumn } from "../planner/MainColumn";
-import { CalendarPlannerSidebarColumn } from "../planner/SidebarColumn";
+import { SidePanel } from "@/components/SidePanel";
+import { useCalendarSidePanel } from "@/hooks/calendar/useCalendarSidePanel";
 import { GoogleCalendarRecurrenceScopeDialog } from "../event/GoogleRecurrenceScopeDialog";
 
 export function CalendarPage() {
@@ -261,6 +261,30 @@ export function CalendarPage() {
     [addBacklogItem, updateBacklogItem, templateMode],
   );
 
+  const calendarSidePanel = useCalendarSidePanel({
+    items: state?.backlog ?? [],
+    kindVisibility,
+    onKindVisibilityChange: setKindVisibility,
+    onPickCalendarDay: (date) => planningCalendarRef.current?.goToDate(date),
+    onRequestNewTemplate: openNewTemplate,
+    onEditTemplate: openEditTemplate,
+    onRemoveItem: removeBacklogItem,
+    showInternalCalendar,
+    onShowInternalCalendarChange: setShowInternalCalendar,
+    showGoogleCalendar,
+    onShowGoogleCalendarChange: (next) => {
+      setShowGoogleCalendar(next);
+      if (next) {
+        void syncGoogleIfEnabled({ show: true });
+      }
+    },
+    googleCalendarLabel,
+    internalCalendarColor: state?.internalCalendarColor,
+    googleCalendarColor: state?.googleCalendarColor,
+    onInternalCalendarColorChange: setInternalCalendarColor,
+    onGoogleCalendarColorChange: setGoogleCalendarColor,
+  });
+
   if (!state) {
     return (
       <PageContainer>
@@ -293,39 +317,24 @@ export function CalendarPage() {
             APP_CHROME_PAGE_BLOCK_GAP,
           )}
         >
-          <CalendarPlannerSidebarColumn
-            collapsed={calendarSidebarCollapsed}
-            onToggleCollapse={toggleCalendarSidebar}
-            panelProps={{
-              containerRef: backlogContainerRef,
-              items: state.backlog,
-              kindVisibility,
-              onKindVisibilityChange: setKindVisibility,
-              onPickCalendarDay: (d) =>
-                planningCalendarRef.current?.goToDate(d),
-              onRequestNewTemplate: openNewTemplate,
-              onEditTemplate: openEditTemplate,
-              onRemoveItem: removeBacklogItem,
-              showInternalCalendar,
-              onShowInternalCalendarChange: setShowInternalCalendar,
-              showGoogleCalendar,
-              onShowGoogleCalendarChange: (next) => {
-                setShowGoogleCalendar(next);
-                if (next) {
-                  void syncGoogleIfEnabled({ show: true });
-                }
-              },
-              googleCalendarLabel,
-              internalCalendarColor: state.internalCalendarColor,
-              googleCalendarColor: state.googleCalendarColor,
-              onInternalCalendarColorChange: setInternalCalendarColor,
-              onGoogleCalendarColorChange: setGoogleCalendarColor,
+          <SidePanel
+            expanded={!calendarSidebarCollapsed}
+            onRequestCollapse={toggleCalendarSidebar}
+            onExpand={toggleCalendarSidebar}
+            panelId="calendar-planner-sidebar"
+            size="default"
+            variant="glass"
+            sections={calendarSidePanel.sections}
+            collapsePolicy={calendarSidePanel.collapsePolicy}
+            panelInnerRef={backlogContainerRef}
+            a11y={{
+              hideTooltip: "Hide Panel",
+              hideSrLabel: "Hide calendar sidebar",
+              showTooltip: "Show Panel",
+              showSrLabel: "Show calendar sidebar",
             }}
-          />
-          <CalendarPlannerMainColumn
-            calendarSidebarCollapsed={calendarSidebarCollapsed}
-            onToggleSidebar={toggleCalendarSidebar}
-            calendarScopeRef={calendarScopeRef}
+            mainRef={calendarScopeRef}
+            mainClassName="relative flex min-h-0 flex-1 overflow-visible"
           >
             <PlanningCalendar
               ref={planningCalendarRef}
@@ -377,8 +386,10 @@ export function CalendarPage() {
                 calendarColorTheme={calendarColorTheme}
               />
             ) : null}
-          </CalendarPlannerMainColumn>
+          </SidePanel>
         </div>
+
+        {calendarSidePanel.dialogs}
 
         <CalendarEventEditorDialog
           open={editorOpen}

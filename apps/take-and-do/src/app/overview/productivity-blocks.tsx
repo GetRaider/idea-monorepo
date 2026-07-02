@@ -32,20 +32,6 @@ export function Section({
   );
 }
 
-/** Legacy stacked header (e.g. forms with margin below). Prefer `SectionHeadBand` for cards. */
-export function SectionHeader({ className, ref, ...props }: UiProps<"div">) {
-  return (
-    <div
-      ref={ref}
-      className={cn(
-        "mb-4 flex w-full min-w-0 items-center justify-between gap-3 sm:gap-4",
-        className,
-      )}
-      {...props}
-    />
-  );
-}
-
 export function SectionHeadBand({ className, ref, ...props }: UiProps<"div">) {
   return (
     <div

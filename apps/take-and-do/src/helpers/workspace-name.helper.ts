@@ -2,7 +2,6 @@ export function normalizeWorkspaceNameForComparison(name: string): string {
   return name.trim().toLowerCase();
 }
 
-/** Same name cannot be used by both a board and a folder (workspace-wide). */
 export function isDuplicateWorkspaceName(
   name: string,
   boards: ReadonlyArray<{ id: string; name: string }>,

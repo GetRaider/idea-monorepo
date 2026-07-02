@@ -27,7 +27,7 @@ import {
 } from "@/server/services/google/google-calendar-recurring-push";
 import { resolveLinkedRecurringMasterIds } from "@/server/services/google/google-calendar-split-lineage";
 
-import { BaseController } from "./base.controller";
+import { BaseController } from "../base/base.controller";
 import {
   CreateEventBodyDto,
   CreateEventResponseDto,

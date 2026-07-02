@@ -8,7 +8,7 @@ import {
   APP_CHROME_PAGE_TITLE_ICON_GAP,
   APP_CHROME_WELCOME_SECTION_MARGIN,
 } from "@/helpers/app-chrome-layout";
-import { TASKS_SIDEBAR_DEFAULT_WIDTH_PX } from "@/helpers/tasks-sidebar-layout";
+import { SIDE_PANEL_SIZE_PX } from "@/components/SidePanel/side-panel-layout";
 import { cn } from "@/lib/styles/utils";
 import { chromePrimaryButtonClassName } from "@/lib/styles/chrome-primary-button-classes";
 import type { UiProps } from "@/lib/styles/ui-props";
@@ -35,7 +35,7 @@ type WithNavSidebarProps = UiProps<"main"> & {
 export function TasksLayoutMain({
   className,
   withNavSidebar,
-  tasksSidebarWidthPx = TASKS_SIDEBAR_DEFAULT_WIDTH_PX,
+  tasksSidebarWidthPx = SIDE_PANEL_SIZE_PX.compact,
   ref,
   style,
   ...props
@@ -57,7 +57,7 @@ export function TasksLayoutMain({
 export function HomeMainContent({
   className,
   withNavSidebar,
-  tasksSidebarWidthPx = TASKS_SIDEBAR_DEFAULT_WIDTH_PX,
+  tasksSidebarWidthPx = SIDE_PANEL_SIZE_PX.compact,
   ref,
   style,
   ...props

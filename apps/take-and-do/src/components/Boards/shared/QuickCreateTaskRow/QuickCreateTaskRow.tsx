@@ -14,7 +14,7 @@ import {
   ScheduleChip,
   StatusChip,
 } from "./QuickCreateTaskRow.ui";
-import { useQuickCreateTaskRow } from "./useQuickCreateTaskRow";
+import { useQuickCreateTaskRow } from "../../../../hooks/useQuickCreateTaskRow";
 
 import type { QuickCreateTaskRowProps } from "./QuickCreateTaskRow.types";
 

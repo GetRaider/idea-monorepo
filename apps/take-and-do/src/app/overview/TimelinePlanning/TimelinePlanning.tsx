@@ -48,7 +48,7 @@ import { Dropdown } from "@/components/Dropdown";
 import { toast } from "sonner";
 import { Route } from "@/constants/route.constant";
 import { AIIcon } from "@/components/Icons/AIIcon";
-import { OverviewEmptyStateBackdrop } from "@/app/overview/OverviewEmptyStateBackdrop";
+import { OverviewEmptyStateBackdrop } from "@/app/overview/EmptyStateBackdrop";
 import { RulerIcon } from "@/components/Icons/RulerIcon";
 import { APP_CHROME_SECTION_MODULE_ICON_PX } from "@/helpers/app-chrome-layout";
 

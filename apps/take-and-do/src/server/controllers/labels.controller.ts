@@ -8,7 +8,7 @@ import {
   RenameLabelDto,
 } from "@/db/dtos";
 import { apiServices } from "@/server/services/api";
-import { BaseController } from "./base.controller";
+import { BaseController } from "./base/base.controller";
 import { NextResponse } from "next/server";
 
 export class LabelsController extends BaseController {

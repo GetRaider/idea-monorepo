@@ -8,9 +8,9 @@ import type { CalendarEventPatchBody } from "@/db/dtos/calendar-events.dto";
 import { GOOGLE_CALENDAR_EVENT_ID_PREFIX } from "@/constants/calendar.constants";
 import {
   calendarEventUsesApiStorage,
-  userCalendarEventToCreateBody,
   userCalendarEventToPatchBody,
 } from "@/helpers/calendar-grid-server.helper";
+import type { CalendarRepository } from "@/repositories/calendar";
 import { selectEndToInclusiveEnd } from "@/helpers/calendar-selection";
 import {
   createConnectedGoogleCalendarEvent,
@@ -21,7 +21,6 @@ import {
   getEffectiveGoogleRecurrence,
   needsGoogleCalendarRecurrenceScope,
 } from "@/helpers/calendar/google-calendar-recurrence.helper";
-import { clientServices } from "@/services";
 import type {
   CalendarCreatePrefill,
   CalendarEvent,
@@ -52,8 +51,11 @@ export type GoogleScopePrompt =
 export type CalendarPagePlanningHandlersDeps = {
   planningCalendarRef: RefObject<PlanningCalendarHandle | null>;
   state: CalendarPersistedState | null;
-  isGuest: boolean;
+  isLocalCalendar: boolean;
   bumpServerCalendar: () => void;
+  createCalendarEvent: CalendarRepository["createCalendarEvent"];
+  updateCalendarEvent: CalendarRepository["updateCalendarEvent"];
+  deleteCalendarEvent: CalendarRepository["deleteCalendarEvent"];
   replaceScheduled: (event: CalendarEvent) => void;
   replaceScheduledForGoogleScope: (
     event: CalendarEvent,
@@ -207,13 +209,11 @@ export function useCalendarPagePlanningHandlers(
         return;
       }
       if (
-        !deps.isGuest &&
+        !deps.isLocalCalendar &&
         (event.type === "common" || event.type === "timeBlock")
       ) {
         void (async () => {
-          const created = await clientServices.calendarEvents.create(
-            userCalendarEventToCreateBody(event),
-          );
+          const created = await deps.createCalendarEvent(event);
           if (!created) toast.error("Could not create calendar event");
           else deps.bumpServerCalendar();
         })();
@@ -238,13 +238,11 @@ export function useCalendarPagePlanningHandlers(
           return;
         }
         if (
-          !deps.isGuest &&
+          !deps.isLocalCalendar &&
           (event.type === "common" || event.type === "timeBlock")
         ) {
           void (async () => {
-            const created = await clientServices.calendarEvents.create(
-              userCalendarEventToCreateBody(event),
-            );
+            const created = await deps.createCalendarEvent(event);
             if (!created) toast.error("Could not create calendar event");
             else deps.bumpServerCalendar();
           })();
@@ -258,12 +256,12 @@ export function useCalendarPagePlanningHandlers(
         return;
       }
       if (
-        !deps.isGuest &&
+        !deps.isLocalCalendar &&
         (event.type === "common" || event.type === "timeBlock") &&
         calendarEventUsesApiStorage(event, false)
       ) {
         void (async () => {
-          const updated = await clientServices.calendarEvents.update(
+          const updated = await deps.updateCalendarEvent(
             event.id,
             userCalendarEventToPatchBody(event),
           );
@@ -308,9 +306,12 @@ export function useCalendarPagePlanningHandlers(
         deps.setCreatePrefill(null);
         return;
       }
-      if (!deps.isGuest && calendarEventUsesApiStorage(prompt.merged, false)) {
+      if (
+        !deps.isLocalCalendar &&
+        calendarEventUsesApiStorage(prompt.merged, false)
+      ) {
         void (async () => {
-          const updated = await clientServices.calendarEvents.update(
+          const updated = await deps.updateCalendarEvent(
             prompt.id,
             prompt.patch as CalendarEventPatchBody,
           );
@@ -379,7 +380,7 @@ export function useCalendarPagePlanningHandlers(
         void (async () => {
           await deps.updateTask(event.taskId, { scheduleDate: null });
           deps.removeScheduled(event.id);
-          if (!deps.isGuest) deps.bumpServerCalendar();
+          if (!deps.isLocalCalendar) deps.bumpServerCalendar();
         })();
         return;
       }
@@ -404,9 +405,9 @@ export function useCalendarPagePlanningHandlers(
         deps.setGoogleDeletePrompt(event);
         return;
       }
-      if (!deps.isGuest && calendarEventUsesApiStorage(event, false)) {
+      if (!deps.isLocalCalendar && calendarEventUsesApiStorage(event, false)) {
         void (async () => {
-          const ok = await clientServices.calendarEvents.remove(event.id);
+          const ok = await deps.deleteCalendarEvent(event.id);
           if (!ok) {
             toast.error("Could not delete calendar event");
             return;
@@ -446,7 +447,7 @@ export function useCalendarPagePlanningHandlers(
         void deps.updateTask(merged.taskId, {
           scheduleDate: new Date(merged.start),
         });
-        if (deps.isGuest) {
+        if (deps.isLocalCalendar) {
           deps.patchScheduled(id, patch as Partial<CalendarEvent>);
           void deps.pushGoogleThenSync(merged);
         } else {
@@ -454,9 +455,9 @@ export function useCalendarPagePlanningHandlers(
         }
         return;
       }
-      if (!deps.isGuest && calendarEventUsesApiStorage(merged, false)) {
+      if (!deps.isLocalCalendar && calendarEventUsesApiStorage(merged, false)) {
         void (async () => {
-          const updated = await clientServices.calendarEvents.update(
+          const updated = await deps.updateCalendarEvent(
             id,
             patch as CalendarEventPatchBody,
           );
@@ -499,7 +500,7 @@ export function useCalendarPagePlanningHandlers(
         void deps.updateTask(merged.taskId, {
           scheduleDate: new Date(merged.start),
         });
-        if (deps.isGuest) {
+        if (deps.isLocalCalendar) {
           deps.patchScheduled(id, patch as Partial<CalendarEvent>);
           void deps.pushGoogleThenSync(merged);
         } else {
@@ -507,9 +508,9 @@ export function useCalendarPagePlanningHandlers(
         }
         return;
       }
-      if (!deps.isGuest && calendarEventUsesApiStorage(merged, false)) {
+      if (!deps.isLocalCalendar && calendarEventUsesApiStorage(merged, false)) {
         void (async () => {
-          const updated = await clientServices.calendarEvents.update(
+          const updated = await deps.updateCalendarEvent(
             id,
             patch as CalendarEventPatchBody,
           );
@@ -551,14 +552,12 @@ export function useCalendarPagePlanningHandlers(
           : {}),
       } as CalendarEvent;
       if (
-        !deps.isGuest &&
+        !deps.isLocalCalendar &&
         (event.type === "common" || event.type === "timeBlock")
       ) {
         void (async () => {
           if (dup.type !== "common" && dup.type !== "timeBlock") return;
-          const created = await clientServices.calendarEvents.create(
-            userCalendarEventToCreateBody(dup),
-          );
+          const created = await deps.createCalendarEvent(dup);
           if (!created) toast.error("Could not duplicate event");
           else deps.bumpServerCalendar();
         })();
@@ -582,12 +581,9 @@ export function useCalendarPagePlanningHandlers(
       deps.patchScheduled(id, rsvpPatch);
       const merged = { ...ev, ...rsvpPatch } as CalendarEvent;
 
-      if (!deps.isGuest && calendarEventUsesApiStorage(ev, false)) {
+      if (!deps.isLocalCalendar && calendarEventUsesApiStorage(ev, false)) {
         void (async () => {
-          const updated = await clientServices.calendarEvents.update(
-            id,
-            rsvpPatch,
-          );
+          const updated = await deps.updateCalendarEvent(id, rsvpPatch);
           if (!updated) {
             toast.error("Could not update RSVP");
             deps.bumpServerCalendar();
@@ -604,7 +600,10 @@ export function useCalendarPagePlanningHandlers(
         return;
       }
 
-      if (!deps.isGuest && ev.id.startsWith(GOOGLE_CALENDAR_EVENT_ID_PREFIX)) {
+      if (
+        !deps.isLocalCalendar &&
+        ev.id.startsWith(GOOGLE_CALENDAR_EVENT_ID_PREFIX)
+      ) {
         void deps.pushGoogleThenSync(merged);
       }
     },
@@ -617,7 +616,7 @@ export function useCalendarPagePlanningHandlers(
         void deps.updateTask(event.taskId, {
           scheduleDate: new Date(event.start),
         });
-        if (deps.isGuest) {
+        if (deps.isLocalCalendar) {
           deps.addScheduled(event);
         } else {
           deps.bumpServerCalendar();
@@ -625,13 +624,11 @@ export function useCalendarPagePlanningHandlers(
         return;
       }
       if (
-        !deps.isGuest &&
+        !deps.isLocalCalendar &&
         (event.type === "common" || event.type === "timeBlock")
       ) {
         void (async () => {
-          const created = await clientServices.calendarEvents.create(
-            userCalendarEventToCreateBody(event),
-          );
+          const created = await deps.createCalendarEvent(event);
           if (!created) toast.error("Could not place calendar event");
           else deps.bumpServerCalendar();
         })();

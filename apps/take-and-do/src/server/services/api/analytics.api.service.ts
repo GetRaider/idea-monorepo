@@ -141,11 +141,11 @@ export class AnalyticsApiService extends BaseApiService {
     stats: TaskStatsInput,
     timeframe: Timeframe,
     shouldUseAI: boolean,
-    isAnonymous: boolean,
+    isGuest: boolean,
   ): Promise<AnalyticsOutput> {
     return this.handleOperation(async () => {
       if (shouldUseAI) {
-        if (isAnonymous) {
+        if (isGuest) {
           throw new ForbiddenError(
             "AI features are not available for guest users. Please sign in to use them.",
           );

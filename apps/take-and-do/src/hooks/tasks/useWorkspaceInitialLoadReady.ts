@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from "react";
 
-import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { useWorkspaceRepository } from "@/repositories/workspace";
 
 export function useWorkspaceInitialLoadReady(): boolean {
-  const { isBoardsLoading, isFoldersLoading } = useWorkspace();
+  const { isBoardsLoading, isFoldersLoading } = useWorkspaceRepository();
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {

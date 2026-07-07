@@ -1,11 +1,11 @@
 "use client";
 
-import { authClient } from "@/auth/client";
+import { useUser } from "@/contexts/UserContext";
 
 export function GuestBanner() {
-  const { data: session } = authClient.useSession();
+  const { isGuest } = useUser();
 
-  if (!session?.user?.isAnonymous) return null;
+  if (!isGuest) return null;
 
   return (
     <div

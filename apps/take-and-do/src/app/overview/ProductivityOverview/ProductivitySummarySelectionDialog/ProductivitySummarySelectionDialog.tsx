@@ -1,6 +1,6 @@
 "use client";
 
-import { AiGate } from "@/components/ai-gate";
+import { FeatureGate } from "@/components/FeatureGate";
 import { CloseIcon } from "@/components/Icons";
 import {
   AIActionButton,
@@ -59,7 +59,7 @@ export function ProductivitySummarySelectionDialog({
         </DialogHeader>
 
         <OptionsContainer>
-          <AiGate>
+          <FeatureGate feature="ai">
             <OptionBlock
               isSelected={selectedOption === "ai"}
               isAi={true}
@@ -71,7 +71,7 @@ export function ProductivitySummarySelectionDialog({
                 recommendations.
               </OptionDescription>
             </OptionBlock>
-          </AiGate>
+          </FeatureGate>
 
           <OptionBlock
             isSelected={selectedOption === "basic"}

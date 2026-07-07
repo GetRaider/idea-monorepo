@@ -115,12 +115,6 @@ export const TaskDeleteSuccessResponseDto = z.object({
   success: z.literal(true),
 });
 
-export const GuestResourceDeleteResponseDto = z.object({
-  id: z.string(),
-  deleted: z.literal(true),
-  guest: z.literal(true),
-});
-
 export const FocusStateResponseDto = z.object({
   sessions: z.array(FocusSessionRecordDto),
   backlog: z.array(FocusBacklogItemDto),

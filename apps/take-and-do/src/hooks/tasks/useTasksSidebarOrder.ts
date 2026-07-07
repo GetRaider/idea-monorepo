@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { useIsAnonymous } from "@/hooks/auth/use-is-anonymous";
+import { useUser } from "@/contexts/UserContext";
 import { localStorageHelper } from "@/helpers/local-storage.helper";
 import { guestStoreHelper } from "@/stores/guest";
 import type { Folder, TaskBoard } from "@/types/workspace";
@@ -130,11 +130,11 @@ export function useTasksSidebarOrder(
   folders: Folder[],
   taskBoards: TaskBoard[],
 ) {
-  const isAnonymous = useIsAnonymous();
+  const { isGuest } = useUser();
   const [order, setOrder] = useState<OrderState>(readInitialOrder);
 
   useEffect(() => {
-    if (!isAnonymous) return;
+    if (!isGuest) return;
     const fromGuest = guestStoreHelper.getSidebarOrder();
     if (
       fromGuest &&
@@ -143,7 +143,7 @@ export function useTasksSidebarOrder(
     ) {
       setOrder(normalizeOrderState(fromGuest));
     }
-  }, [isAnonymous]);
+  }, [isGuest]);
 
   const currentFolderIds = useMemo(
     () => folders.map((folder) => folder.id),
@@ -198,14 +198,14 @@ export function useTasksSidebarOrder(
     (next: OrderState) => {
       writeStorage(next);
       setOrder(next);
-      if (isAnonymous) {
+      if (isGuest) {
         guestStoreHelper.setSidebarOrder({
           topLevelIds: next.topLevelIds,
           boardsInFolder: next.boardsInFolder,
         });
       }
     },
-    [isAnonymous],
+    [isGuest],
   );
 
   const reorderTopLevel = useCallback(

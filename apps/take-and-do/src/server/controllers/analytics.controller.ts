@@ -33,7 +33,7 @@ export class AnalyticsController extends BaseController {
         stats,
         timeframe,
         shouldUseAI,
-        auth.isAnonymous,
+        auth.isGuest,
       );
       return {
         timeframe,

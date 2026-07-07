@@ -1,18 +1,10 @@
 "use client";
 
-import { useQueries } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { Sidebar } from "@/components/Sidebar/Sidebar";
-import { Task } from "@/components/Boards/KanbanBoard/types";
 import { StatsCards, ProductivityOverview, TimelinePlanning } from ".";
-import type { TaskStats } from ".";
 import { Spinner } from "@/components/Spinner/Spinner";
-import { useIsAnonymous } from "@/hooks/auth/use-is-anonymous";
-import { useGuestTasks } from "@/hooks/tasks/use-guest-store";
-import { queryKeys } from "@/lib/query-keys";
-import { guestTasksBySchedule } from "@/stores/guest/guest-task-filters";
-import { clientServices } from "@/services";
-import { toast } from "sonner";
+import { useOverviewPageData } from "@/hooks/overview";
 
 import {
   PageContainer,
@@ -28,93 +20,21 @@ import {
   APP_CHROME_PAGE_TITLE_ICON_PX,
   APP_CHROME_TITLE_ACTION_ROW,
 } from "@/helpers/app-chrome-layout";
-import { deriveHasWorkspaceTaskData } from "./derive-has-workspace-task-data";
 import { cn } from "@/lib/styles/utils";
 
 function OverviewPage() {
-  const isAnonymous = useIsAnonymous();
-  const { tasks: guestTasks } = useGuestTasks();
+  const {
+    isLoading,
+    taskStats,
+    todayTasks,
+    tomorrowTasks,
+    hasWorkspaceTaskData,
+  } = useOverviewPageData();
   const [, setCurrentPage] = useState("overview");
-
-  const scheduledStatsAndWorkspace = useQueries({
-    queries: [
-      {
-        queryKey: queryKeys.tasks.schedule,
-        queryFn: () => clientServices.tasks.getBySchedule(),
-        enabled: !isAnonymous,
-      },
-      {
-        queryKey: queryKeys.stats("month"),
-        queryFn: () => clientServices.stats.getByTimeframe("month"),
-        enabled: !isAnonymous,
-      },
-      {
-        queryKey: queryKeys.stats("all"),
-        queryFn: () => clientServices.stats.getByTimeframe("all"),
-        enabled: !isAnonymous,
-      },
-    ],
-  });
-
-  const [scheduledQuery, statsQuery, workspaceStatsQuery] =
-    scheduledStatsAndWorkspace;
-  const isLoading =
-    !isAnonymous &&
-    (scheduledQuery.isPending ||
-      statsQuery.isPending ||
-      workspaceStatsQuery.isPending);
-
-  const scheduledTasks =
-    !isAnonymous && scheduledQuery.data
-      ? scheduledQuery.data
-      : { today: [] as Task[], tomorrow: [] as Task[] };
-  const taskStats: TaskStats | null =
-    !isAnonymous && statsQuery.data !== undefined ? statsQuery.data : null;
-
-  const guestSchedule = isAnonymous
-    ? guestTasksBySchedule(guestTasks)
-    : { today: [] as Task[], tomorrow: [] as Task[] };
-
-  const todayTasks = [
-    ...scheduledTasks.today,
-    ...(isAnonymous ? guestSchedule.today : []),
-  ];
-  const tomorrowTasks = [
-    ...scheduledTasks.tomorrow,
-    ...(isAnonymous ? guestSchedule.tomorrow : []),
-  ];
-
-  const statsToastShown = useRef(false);
-  useEffect(() => {
-    if (
-      isAnonymous ||
-      !statsQuery.isSuccess ||
-      statsQuery.data !== null ||
-      statsQuery.isFetching
-    ) {
-      return;
-    }
-    if (statsToastShown.current) return;
-    statsToastShown.current = true;
-    toast.error("Can't load dashboard stats");
-  }, [
-    isAnonymous,
-    statsQuery.data,
-    statsQuery.isSuccess,
-    statsQuery.isFetching,
-  ]);
 
   const handleNavigationToTasksPage = (page: string) => {
     setCurrentPage(page);
   };
-
-  const hasWorkspaceTaskData = deriveHasWorkspaceTaskData({
-    isAnonymous,
-    guestTaskCount: guestTasks.length,
-    workspaceTaskTotal: isAnonymous
-      ? undefined
-      : workspaceStatsQuery.data?.total,
-  });
 
   if (isLoading) {
     return (

@@ -1,14 +1,9 @@
 "use client";
 
-import { useQueries } from "@tanstack/react-query";
 import { useMemo } from "react";
 
 import { TaskStatus } from "@/constants/tasks.constants";
-import { queryKeys } from "@/lib/query-keys";
-import { useIsAnonymous } from "@/hooks/auth/use-is-anonymous";
-import { useGuestTasks } from "@/hooks/tasks/use-guest-store";
-import { guestTasksForBoard } from "@/stores/guest/guest-task-filters";
-import { clientServices } from "@/services";
+import { useTasksByBoards } from "@/hooks/tasks/useTasksByBoards";
 import { cn } from "@/lib/styles/utils";
 import type { Task } from "@/components/Boards/KanbanBoard/types";
 import type { TaskBoard } from "@/types/workspace";
@@ -32,37 +27,18 @@ function countStatusesRecursive(tasks: Task[]): StatusCounts {
 }
 
 export function BoardHealthPanel({ boards }: { boards: TaskBoard[] }) {
-  const isAnonymous = useIsAnonymous();
-  const { tasks: guestTasks } = useGuestTasks();
+  const { tasksByBoardId, isLoading } = useTasksByBoards(boards);
 
-  const taskQueries = useQueries({
-    queries: boards.map((board) => ({
-      queryKey: queryKeys.tasks.byBoard(board.id),
-      queryFn: () => clientServices.tasks.getByBoardId(board.id),
-      enabled: !isAnonymous && boards.length > 0,
-    })),
-  });
-
-  const countsByBoardId = useMemo(() => {
-    if (boards.length === 0) return {};
-    if (isAnonymous) {
-      return Object.fromEntries(
+  const countsByBoardId = useMemo(
+    () =>
+      Object.fromEntries(
         boards.map((board) => {
-          const tasks = guestTasksForBoard(guestTasks, board.id);
+          const tasks = tasksByBoardId[board.id] ?? [];
           return [board.id, countStatusesRecursive(tasks)] as const;
         }),
-      );
-    }
-    return Object.fromEntries(
-      boards.map((board, index) => {
-        const tasks = taskQueries[index]?.data ?? [];
-        return [board.id, countStatusesRecursive(tasks)] as const;
-      }),
-    );
-  }, [boards, isAnonymous, guestTasks, taskQueries]);
-
-  const isLoading =
-    !isAnonymous && boards.length > 0 && taskQueries.some((q) => q.isPending);
+      ),
+    [boards, tasksByBoardId],
+  );
 
   const sortedBoards = useMemo(
     () => [...boards].sort((a, b) => a.name.localeCompare(b.name)),
@@ -113,7 +89,7 @@ export function BoardHealthPanel({ boards }: { boards: TaskBoard[] }) {
             const done = counts[TaskStatus.DONE];
             const sum = todo + progress + done;
             if (sum === 0) return null;
-            const pct = (n: number) => `${(n / sum) * 100}%`;
+            const pct = (count: number) => `${(count / sum) * 100}%`;
 
             return (
               <li key={board.id} className="min-w-0">

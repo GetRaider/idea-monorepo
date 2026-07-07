@@ -1,20 +1,18 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Task, type TaskStatus } from "@/components/Boards/KanbanBoard/types";
 import { tasksIntoStatusColumns } from "@/components/Boards/KanbanBoard/shared/tasksIntoStatusColumns";
 import { queryKeys } from "@/lib/query-keys";
-import { useIsAnonymous } from "@/hooks/auth/use-is-anonymous";
-import { GUEST_STORE_UPDATED_EVENT } from "@/stores/guest/constants";
-import { guestStoreHelper } from "@/stores/guest";
+import { useWorkspaceRepository } from "@/repositories/workspace";
 import {
   guestTasksForBoard,
   guestTasksForScheduleDate,
 } from "@/stores/guest/guest-task-filters";
 import { clientServices } from "@/services";
-import type { TaskBoardWithTasks } from "@/types/workspace";
+import type { TaskBoard, TaskBoardWithTasks } from "@/types/workspace";
 
 function countTasksInColumns(tasks: Record<TaskStatus, Task[]>): number {
   let total = 0;
@@ -24,17 +22,14 @@ function countTasksInColumns(tasks: Record<TaskStatus, Task[]>): number {
   return total;
 }
 
-function buildGuestBoardsWithTasks(
+function buildBoardsWithTasks(
+  taskBoards: TaskBoard[],
+  tasks: Task[],
   scheduleDate: Date | undefined,
   folderId: string | undefined,
 ): TaskBoardWithTasks[] {
-  const taskBoards = guestStoreHelper.getTaskBoards();
-
   if (scheduleDate) {
-    const scheduledTasks = guestTasksForScheduleDate(
-      guestStoreHelper.getTasks(),
-      scheduleDate,
-    );
+    const scheduledTasks = guestTasksForScheduleDate(tasks, scheduleDate);
     const tasksByBoardId = new Map<string, Task[]>();
     for (const task of scheduledTasks) {
       if (!task.taskBoardId) continue;
@@ -52,11 +47,10 @@ function buildGuestBoardsWithTasks(
 
   if (folderId) {
     const boards: TaskBoardWithTasks[] = [];
-    for (const board of taskBoards.filter((tb) => tb.folderId === folderId)) {
-      const boardTasks = guestTasksForBoard(
-        guestStoreHelper.getTasks(),
-        board.id,
-      );
+    for (const board of taskBoards.filter(
+      (taskBoard) => taskBoard.folderId === folderId,
+    )) {
+      const boardTasks = guestTasksForBoard(tasks, board.id);
       if (boardTasks.length === 0) continue;
       boards.push({
         ...board,
@@ -69,7 +63,7 @@ function buildGuestBoardsWithTasks(
   return [];
 }
 
-async function loadAuthenticatedBoardsWithTasks(
+async function loadRemoteBoardsWithTasks(
   scheduleDate: Date | undefined,
   folderId: string | undefined,
 ): Promise<TaskBoardWithTasks[]> {
@@ -94,7 +88,9 @@ async function loadAuthenticatedBoardsWithTasks(
 
   if (folderId) {
     const boards: TaskBoardWithTasks[] = [];
-    for (const board of taskBoards.filter((tb) => tb.folderId === folderId)) {
+    for (const board of taskBoards.filter(
+      (taskBoard) => taskBoard.folderId === folderId,
+    )) {
       const boardTasks = await clientServices.tasks.getByBoardId(board.id);
       if (boardTasks.length === 0) continue;
       boards.push({
@@ -112,8 +108,7 @@ export function useMultipleKanbanBoardData(
   scheduleDate: Date | undefined,
   folderId: string | undefined,
 ) {
-  const isAnonymous = useIsAnonymous();
-
+  const { useLocalWorkspace, taskBoards, tasks } = useWorkspaceRepository();
   const scheduleKey = scheduleDate?.getTime();
 
   const query = useQuery({
@@ -121,9 +116,23 @@ export function useMultipleKanbanBoardData(
       scheduleKey !== undefined ? String(scheduleKey) : undefined,
       folderId,
     ),
-    queryFn: () => loadAuthenticatedBoardsWithTasks(scheduleDate, folderId),
-    enabled: !isAnonymous && (!!scheduleDate || !!folderId),
+    queryFn: () => loadRemoteBoardsWithTasks(scheduleDate, folderId),
+    enabled: !useLocalWorkspace && (!!scheduleDate || !!folderId),
   });
+
+  const resolvedBoardsWithTasks = useMemo(() => {
+    if (useLocalWorkspace) {
+      return buildBoardsWithTasks(taskBoards, tasks, scheduleDate, folderId);
+    }
+    return query.data ?? [];
+  }, [
+    folderId,
+    query.data,
+    scheduleDate,
+    taskBoards,
+    tasks,
+    useLocalWorkspace,
+  ]);
 
   const [boardsWithTasks, setBoardsWithTasks] = useState<TaskBoardWithTasks[]>(
     [],
@@ -133,60 +142,27 @@ export function useMultipleKanbanBoardData(
   );
 
   useEffect(() => {
-    if (isAnonymous) {
-      const boards = buildGuestBoardsWithTasks(scheduleDate, folderId);
-      setBoardsWithTasks(boards);
-      if (boards.length > 0) {
-        setExpandedBoardIds(new Set(boards.map((b) => b.id)));
-      }
-    }
-  }, [isAnonymous, scheduleDate, folderId]);
-
-  useEffect(() => {
-    if (isAnonymous) return;
-    const data = query.data;
-    if (data === undefined) return;
-    setBoardsWithTasks(data);
-    if (data.length > 0) {
-      setExpandedBoardIds(new Set(data.map((b) => b.id)));
-    }
-  }, [isAnonymous, query.data]);
-
-  useEffect(() => {
-    const onGuestStoreUpdated = () => {
-      if (!isAnonymous) return;
-      const boards = buildGuestBoardsWithTasks(scheduleDate, folderId);
-      setBoardsWithTasks(boards);
-      if (boards.length > 0) {
-        setExpandedBoardIds(new Set(boards.map((b) => b.id)));
-      }
-    };
-    if (isAnonymous) {
-      window.addEventListener(GUEST_STORE_UPDATED_EVENT, onGuestStoreUpdated);
-    }
-    return () => {
-      window.removeEventListener(
-        GUEST_STORE_UPDATED_EVENT,
-        onGuestStoreUpdated,
+    setBoardsWithTasks(resolvedBoardsWithTasks);
+    if (resolvedBoardsWithTasks.length > 0) {
+      setExpandedBoardIds(
+        new Set(resolvedBoardsWithTasks.map((board) => board.id)),
       );
-    };
-  }, [isAnonymous, scheduleDate, folderId]);
+    }
+  }, [resolvedBoardsWithTasks]);
 
   const fetchBoards = useCallback(async (): Promise<TaskBoardWithTasks[]> => {
-    if (isAnonymous) {
-      const boards = buildGuestBoardsWithTasks(scheduleDate, folderId);
-      setBoardsWithTasks(boards);
-      return boards;
+    if (useLocalWorkspace) {
+      return buildBoardsWithTasks(taskBoards, tasks, scheduleDate, folderId);
     }
     const result = await query.refetch();
     return result.data ?? [];
-  }, [isAnonymous, scheduleDate, folderId, query]);
+  }, [folderId, query, scheduleDate, taskBoards, tasks, useLocalWorkspace]);
 
-  const isLoading = isAnonymous ? false : query.isPending;
+  const isLoading = useLocalWorkspace ? false : query.isPending;
 
   const toggleBoardExpanded = useCallback((taskBoardId: string) => {
-    setExpandedBoardIds((prev) => {
-      const next = new Set(prev);
+    setExpandedBoardIds((previous) => {
+      const next = new Set(previous);
       if (next.has(taskBoardId)) next.delete(taskBoardId);
       else next.add(taskBoardId);
       return next;

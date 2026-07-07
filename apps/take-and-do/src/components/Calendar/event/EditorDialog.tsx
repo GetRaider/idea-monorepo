@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { ConfirmDialog, Dialog } from "@/components/Dialogs";
 import { TrashIcon } from "@/components/Icons";
 import { DeleteButton } from "@/components/TaskView/TaskView.ui";
-import { useIsAnonymous } from "@/hooks/auth/use-is-anonymous";
+import { useFeatureAccess } from "@/contexts/UserContext";
 import type {
   CalendarCreatePrefill,
   CalendarEvent,
@@ -59,7 +59,9 @@ export function CalendarEventEditorDialog({
   onSave,
   onDeleteRequest,
 }: CalendarEventEditorDialogProps) {
-  const isGuest = useIsAnonymous();
+  const googleCalendarAccess = useFeatureAccess("googleCalendar");
+  const canUseGoogleCalendar =
+    googleCalendarAccess.allowed && !!googleCalendarConnected;
   const [draft, setDraft] = useState(() =>
     emptyCalendarEventEditorDraft(new Date()),
   );
@@ -70,13 +72,13 @@ export function CalendarEventEditorDialog({
   useEffect(() => {
     if (!open || mode !== "create") return;
     setCommonCreateDestination(
-      googleCalendarConnected &&
+      canUseGoogleCalendar &&
         createPrefill?.type === "common" &&
         createPrefill?.saveToGoogle
         ? "google"
         : "internal",
     );
-  }, [open, mode, createPrefill, googleCalendarConnected]);
+  }, [open, mode, createPrefill, canUseGoogleCalendar]);
 
   useEffect(() => {
     if (!open) return;
@@ -142,7 +144,7 @@ export function CalendarEventEditorDialog({
       kind: draft.type,
       commonUsesGoogle:
         draft.type === "common" &&
-        !!googleCalendarConnected &&
+        !!canUseGoogleCalendar &&
         commonDestinationDisplay === "google",
       theme: calendarColorTheme,
     });
@@ -151,8 +153,7 @@ export function CalendarEventEditorDialog({
 
   const showCommonDestination =
     draft.type === "common" &&
-    (commonDestinationLocked ||
-      (mode === "create" && !!googleCalendarConnected));
+    (commonDestinationLocked || (mode === "create" && canUseGoogleCalendar));
 
   const handleSave = () => {
     const next = editorDraftToScheduledEvent(draft, initial?.id, initial);
@@ -169,7 +170,7 @@ export function CalendarEventEditorDialog({
         mode === "create" &&
         commonCreateDestination === "google" &&
         next.type === "common" &&
-        !!googleCalendarConnected,
+        canUseGoogleCalendar,
     });
     onClose();
   };
@@ -205,7 +206,6 @@ export function CalendarEventEditorDialog({
       <EditorForm
         draft={draft}
         setDraft={setDraft}
-        isGuest={isGuest}
         editorFillPreview={editorFillPreview}
         showCommonDestination={showCommonDestination}
         commonDestinationLocked={commonDestinationLocked}

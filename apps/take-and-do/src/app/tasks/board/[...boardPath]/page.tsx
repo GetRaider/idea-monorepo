@@ -8,7 +8,7 @@ import {
   LoadingContainer,
   KanbanSpinner,
 } from "@/components/Boards/KanbanBoard/KanbanBoard.ui";
-import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { useWorkspaceRepository } from "@/repositories/workspace";
 import { useBoardTaskUrlSync } from "@/hooks/tasks/useKanbanTaskUrlSync";
 import { useWorkspaceInitialLoadReady } from "@/hooks/tasks/useWorkspaceInitialLoadReady";
 import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
@@ -18,7 +18,7 @@ import { TasksSubpageShell } from "../../TasksSubpageShell";
 
 export default function BoardPage({ params }: BoardPageProps) {
   const { boardPath } = use(params);
-  const { taskBoards } = useWorkspace();
+  const { taskBoards } = useWorkspaceRepository();
   const isBoardReady = useWorkspaceInitialLoadReady();
 
   const parsedBoardPath = tasksUrlHelper.routing.parseBoardPath(boardPath);

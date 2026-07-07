@@ -2,10 +2,9 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { envServer } from "@/env";
-import { getAccessByAuth, requireAuth } from "@/auth/guards";
+import { getAccessByAuth, requireRegistered } from "@/auth/guards";
 import {
   CreateTaskBoardDto,
-  GuestResourceDeleteResponseDto,
   TaskBoardCreateErrorResponseDto,
   TaskBoardListResponseDto,
   TaskBoardResponseDto,
@@ -36,7 +35,7 @@ export class TaskBoardsController extends BaseController {
     queryDto: TaskBoardByQueryRequestDto,
     responseDto: listOrGetResponseSchema,
     handler: async ({ query: { id } }) => {
-      const auth = await requireAuth();
+      const auth = await requireRegistered();
       const access = getAccessByAuth(auth);
 
       if (id) {
@@ -54,7 +53,7 @@ export class TaskBoardsController extends BaseController {
     responseDto: TaskBoardResponseDto,
     status: 201,
     handler: async ({ body }) => {
-      const auth = await requireAuth();
+      const auth = await requireRegistered();
       const access = getAccessByAuth(auth);
       const { name, folderId = null, emoji = null } = body;
 
@@ -65,15 +64,8 @@ export class TaskBoardsController extends BaseController {
         emoji,
       };
 
-      // TODO: Move error handling to the base controller level.
       try {
-        const newTaskBoard = await apiServices.taskBoards.create(
-          taskBoardData,
-          access,
-        );
-        return access.isAnonymous
-          ? { ...newTaskBoard, guest: true as const }
-          : newTaskBoard;
+        return await apiServices.taskBoards.create(taskBoardData, access);
       } catch (error) {
         const message =
           error instanceof Error
@@ -95,7 +87,7 @@ export class TaskBoardsController extends BaseController {
   update = this.initRoute({
     responseDto: TaskBoardResponseDto,
     handler: async ({ request }) => {
-      const auth = await requireAuth();
+      const auth = await requireRegistered();
       const access = getAccessByAuth(auth);
       const id = new URL(request.url).searchParams.get("id");
       if (!id) throw new BadRequestError("id is required");
@@ -106,43 +98,27 @@ export class TaskBoardsController extends BaseController {
       if (Object.keys(body).length === 0)
         throw new BadRequestError("No updates provided");
 
-      if (!access.isAnonymous) {
-        const existing = await apiServices.taskBoards.getById(
-          taskBoardId,
-          access,
-        );
-        if (!existing) throw new NotFoundError("Task board");
-      }
-
-      const updated = await apiServices.taskBoards.update(
+      const existing = await apiServices.taskBoards.getById(
         taskBoardId,
-        body,
         access,
       );
-      return access.isAnonymous
-        ? { ...updated, guest: true as const }
-        : updated;
+      if (!existing) throw new NotFoundError("Task board");
+
+      return apiServices.taskBoards.update(taskBoardId, body, access);
     },
   });
 
   delete = this.initRoute({
     queryDto: taskBoardIdQuerySchema,
-    responseDto: GuestResourceDeleteResponseDto,
     handler: async ({ query }) => {
-      const auth = await requireAuth();
+      const auth = await requireRegistered();
       const access = getAccessByAuth(auth);
       const { id } = query;
 
-      if (!access.isAnonymous) {
-        const existing = await apiServices.taskBoards.getById(id, access);
-        if (!existing) throw new NotFoundError("Task board");
-      }
+      const existing = await apiServices.taskBoards.getById(id, access);
+      if (!existing) throw new NotFoundError("Task board");
 
       await apiServices.taskBoards.delete(id, access);
-
-      if (access.isAnonymous) {
-        return { id, deleted: true, guest: true };
-      }
       return new NextResponse(null, { status: 204 });
     },
   });

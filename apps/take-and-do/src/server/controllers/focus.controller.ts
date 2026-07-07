@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { getAccessByAuth, requireNonAnonymous } from "@/auth/guards";
+import { getAccessByAuth, requireRegistered } from "@/auth/guards";
 import {
   CreateFocusStateDto,
   FocusStateResponseDto,
@@ -14,7 +14,7 @@ export class FocusController extends BaseController {
   getState = this.initRoute({
     responseDto: FocusStateResponseDto,
     handler: async () => {
-      const auth = await requireNonAnonymous();
+      const auth = await requireRegistered();
       const access = getAccessByAuth(auth);
       const state = await apiServices.focus.getState(access);
       return state ?? { sessions: [], backlog: [] };
@@ -26,7 +26,7 @@ export class FocusController extends BaseController {
     responseDto: FocusStateResponseDto,
     status: 201,
     handler: async ({ body }) => {
-      const auth = await requireNonAnonymous();
+      const auth = await requireRegistered();
       const access = getAccessByAuth(auth);
       return apiServices.focus.createState(body, access);
     },
@@ -36,7 +36,7 @@ export class FocusController extends BaseController {
     bodyDto: UpdateFocusStateDto,
     responseDto: FocusStateResponseDto,
     handler: async ({ body }) => {
-      const auth = await requireNonAnonymous();
+      const auth = await requireRegistered();
       const access = getAccessByAuth(auth);
       return apiServices.focus.updateState(body, access);
     },
@@ -44,7 +44,7 @@ export class FocusController extends BaseController {
 
   deleteState = this.initRoute({
     handler: async () => {
-      const auth = await requireNonAnonymous();
+      const auth = await requireRegistered();
       const access = getAccessByAuth(auth);
       await apiServices.focus.deleteState(access);
       return new NextResponse(null, { status: 204 });

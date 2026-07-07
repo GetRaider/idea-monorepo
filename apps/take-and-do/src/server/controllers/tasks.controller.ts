@@ -3,8 +3,7 @@ import { z } from "zod";
 import {
   getAccessByAuth,
   requireAiAccess,
-  requireAuth,
-  requireNonAnonymous,
+  requireRegistered,
 } from "@/auth/guards";
 import {
   CreateSubtaskBodySchema,
@@ -64,7 +63,7 @@ export class TasksController extends BaseController {
     queryDto: TaskListQueryDto,
     responseDto: TaskListResponseDto,
     handler: async ({ query }) => {
-      const auth = await requireAuth();
+      const auth = await requireRegistered();
       const access = getAccessByAuth(auth);
       const { taskBoardId, date, scheduleFrom, scheduleTo } = query;
       if (scheduleFrom && scheduleTo) {
@@ -98,7 +97,7 @@ export class TasksController extends BaseController {
     paramsDto: taskIdParamsSchema,
     responseDto: TaskResponseDto,
     handler: async ({ params: { id } }) => {
-      const auth = await requireAuth();
+      const auth = await requireRegistered();
       const access = getAccessByAuth(auth);
       const task = await apiServices.tasks.getById(id, access);
       if (!task) throw new NotFoundError("Task");
@@ -110,7 +109,7 @@ export class TasksController extends BaseController {
     paramsDto: taskKeyParamsSchema,
     responseDto: TaskByKeyResponseDto,
     handler: async ({ params }) => {
-      const auth = await requireAuth();
+      const auth = await requireRegistered();
       const access = getAccessByAuth(auth);
       const result = await apiServices.tasks.getByKey(params.taskKey, access);
       if (!result) throw new NotFoundError("Task");
@@ -123,7 +122,7 @@ export class TasksController extends BaseController {
     responseDto: TaskCreateResponseDto,
     status: 201,
     handler: async ({ body }) => {
-      const auth = await requireAuth();
+      const auth = await requireRegistered();
       const access = getAccessByAuth(auth);
 
       if (body.shouldUseAI) await requireAiAccess();
@@ -139,9 +138,7 @@ export class TasksController extends BaseController {
         );
       }
 
-      return access.isAnonymous
-        ? { ...result.task, guest: true as const }
-        : result.task;
+      return result.task;
     },
   });
 
@@ -150,7 +147,7 @@ export class TasksController extends BaseController {
     bodyDto: TaskPatchBodySchema,
     responseDto: TaskResponseDto,
     handler: async ({ params: { id }, body }) => {
-      const auth = await requireNonAnonymous();
+      const auth = await requireRegistered();
       const access = getAccessByAuth(auth);
       const updatedTask = await apiServices.tasks.update(id, body, access);
       if (!updatedTask) throw new NotFoundError("Task");
@@ -164,7 +161,7 @@ export class TasksController extends BaseController {
     responseDto: TaskResponseDto,
     status: 201,
     handler: async ({ params: { id }, body }) => {
-      const auth = await requireNonAnonymous();
+      const auth = await requireRegistered();
       const access = getAccessByAuth(auth);
       const updatedTask = await apiServices.tasks.createSubtask(
         id,
@@ -190,7 +187,7 @@ export class TasksController extends BaseController {
     paramsDto: taskIdParamsSchema,
     responseDto: TaskDeleteSuccessResponseDto,
     handler: async ({ params }) => {
-      const auth = await requireNonAnonymous();
+      const auth = await requireRegistered();
       const access = getAccessByAuth(auth);
       await apiServices.tasks.delete(params.id, access);
       return { success: true };
@@ -201,7 +198,7 @@ export class TasksController extends BaseController {
     queryDto: deleteTasksForBoardQuerySchema,
     responseDto: TasksDeletedCountResponseDto,
     handler: async ({ query: { taskBoardId } }) => {
-      const auth = await requireNonAnonymous();
+      const auth = await requireRegistered();
       const access = getAccessByAuth(auth);
       const deleted = await apiServices.tasks.deleteAllForBoard(
         taskBoardId,

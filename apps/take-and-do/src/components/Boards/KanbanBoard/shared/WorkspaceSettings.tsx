@@ -18,13 +18,12 @@ import {
   SortIcon,
   ViewIcon,
 } from "@/components/Icons";
+import { FeatureGate } from "@/components/FeatureGate";
 import { Dropdown } from "@/components/Dropdown";
 import { Switch } from "@/components/Switch/Switch";
 import { AppTooltip } from "@/components/Tooltip/AppTooltip";
 import { OptionToggleButton } from "@/components/OptionToggleButton/OptionToggleButton";
-import { useWorkspace } from "@/contexts/WorkspaceContext";
-import { useIsAnonymous } from "@/hooks/auth/use-is-anonymous";
-import { clientServices } from "@/services";
+import { useWorkspaceRepository } from "@/repositories/workspace";
 import { toast } from "sonner";
 import type { BoardViewMode } from "@/hooks/tasks/useBoardViewMode";
 import type { BoardListSubmode } from "@/hooks/tasks/useBoardListSubmode";
@@ -69,8 +68,8 @@ export function WorkspaceSettings({
   sort,
   onSortChange,
 }: WorkspaceSettingsProps) {
-  const isAnonymous = useIsAnonymous();
-  const { taskBoards, setTaskBoards } = useWorkspace();
+  const { changeBoardVisibility, taskBoards, setTaskBoards } =
+    useWorkspaceRepository();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [isSavingPublic, setIsSavingPublic] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
@@ -108,15 +107,13 @@ export function WorkspaceSettings({
       setIsSavingPublic(true);
       try {
         const board = taskBoards.find((entry) => entry.id === boardId);
-        if (isAnonymous && !board) {
+        if (!board) {
           toast.error("Board not loaded");
           return;
         }
-        const updated = await clientServices.taskBoards.changeVisibility({
-          id: boardId,
-          toPublic: toPublic,
-          boardSnapshot: board,
-          skipCascade: isAnonymous,
+        const updated = await changeBoardVisibility({
+          board,
+          toPublic,
         });
         if (!updated) {
           toast.error("Can't update workspace visibility");
@@ -129,7 +126,7 @@ export function WorkspaceSettings({
         setIsSavingPublic(false);
       }
     },
-    [boardId, isSavingPublic, setTaskBoards, taskBoards, isAnonymous],
+    [boardId, changeBoardVisibility, isSavingPublic, setTaskBoards, taskBoards],
   );
 
   const showPublicToggle = !!boardId;
@@ -186,20 +183,22 @@ export function WorkspaceSettings({
             ) : null}
 
             {showPublicToggle ? (
-              <SettingRow
-                labelId="workspace-public-label"
-                label="Public Workspace"
-                icon={
-                  <PublicWorkspaceIcon
-                    size={20}
-                    className="text-text-primary"
-                  />
-                }
-                tooltip="Guests can use this board without signing in."
-                checked={isPublic}
-                disabled={isAnonymous || isSavingPublic}
-                onChange={(toPublic) => void handlePublicToggle(toPublic)}
-              />
+              <FeatureGate feature="publicWorkspaces">
+                <SettingRow
+                  labelId="workspace-public-label"
+                  label="Public Workspace"
+                  icon={
+                    <PublicWorkspaceIcon
+                      size={20}
+                      className="text-text-primary"
+                    />
+                  }
+                  tooltip="Guests can use this board without signing in."
+                  checked={isPublic}
+                  disabled={isSavingPublic}
+                  onChange={(toPublic) => void handlePublicToggle(toPublic)}
+                />
+              </FeatureGate>
             ) : null}
           </ul>
         </Popover>

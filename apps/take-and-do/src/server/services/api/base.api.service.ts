@@ -27,7 +27,7 @@ export class BaseApiService {
     table: { userId: unknown; isPublic: unknown },
     access: DataAccess,
   ) {
-    if (access.isAnonymous) return eq(table.isPublic as never, true);
+    if (access.isGuest) return eq(table.isPublic as never, true);
     return eq(table.userId as never, access.userId);
   }
 
@@ -54,10 +54,10 @@ export class BaseApiService {
 
 export type DataAccess = {
   userId: string;
-  isAnonymous: boolean;
+  isGuest: boolean;
 };
 
-export async function isAnonymousUser(userId: string): Promise<boolean> {
+export async function isGuestUser(userId: string): Promise<boolean> {
   const result = await db
     .select({ isAnonymous: user.isAnonymous })
     .from(user)

@@ -5,8 +5,7 @@ import { useMemo } from "react";
 
 import { Task } from "@/components/Boards/KanbanBoard/types";
 import { queryKeys } from "@/lib/query-keys";
-import { useIsAnonymous } from "@/hooks/auth/use-is-anonymous";
-import { useGuestTasks } from "@/hooks/tasks/use-guest-store";
+import { useWorkspaceRepository } from "@/repositories/workspace";
 import { guestTasksRecent } from "@/stores/guest/guest-task-filters";
 import { clientServices } from "@/services";
 
@@ -16,21 +15,20 @@ interface UseRecentTasksReturn {
 }
 
 export function useRecentTasks(tasksNumber: number = 7): UseRecentTasksReturn {
-  const isAnonymous = useIsAnonymous();
-  const { tasks: guestTasks } = useGuestTasks();
+  const { useLocalWorkspace, tasks } = useWorkspaceRepository();
 
   const dbQuery = useQuery({
     queryKey: queryKeys.tasks.recent(tasksNumber),
     queryFn: () => clientServices.tasks.getRecent(tasksNumber),
-    enabled: !isAnonymous,
+    enabled: !useLocalWorkspace,
   });
 
   const recentTasks = useMemo(() => {
-    if (isAnonymous) return guestTasksRecent(guestTasks, tasksNumber);
+    if (useLocalWorkspace) return guestTasksRecent(tasks, tasksNumber);
     return dbQuery.data ?? [];
-  }, [isAnonymous, guestTasks, tasksNumber, dbQuery.data]);
+  }, [dbQuery.data, tasks, tasksNumber, useLocalWorkspace]);
 
-  const isLoadingRecent = isAnonymous ? false : dbQuery.isPending;
+  const isLoadingRecent = useLocalWorkspace ? false : dbQuery.isPending;
 
   return { recentTasks, isLoadingRecent };
 }

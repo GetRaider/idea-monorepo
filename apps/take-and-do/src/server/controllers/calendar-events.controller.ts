@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { getAccessByAuth, requireNonAnonymous } from "@/auth/guards";
+import { getAccessByAuth, requireRegistered } from "@/auth/guards";
 import {
   CalendarEventCreateBodySchema,
   CalendarEventPatchBodySchema,
@@ -17,7 +17,7 @@ export class CalendarEventsController extends BaseController {
   list = this.initRoute({
     queryDto: CalendarEventsListQueryDto,
     handler: async ({ query }) => {
-      const auth = await requireNonAnonymous();
+      const auth = await requireRegistered();
       const access = getAccessByAuth(auth);
       const from = new Date(query.from);
       const to = new Date(query.to);
@@ -34,7 +34,7 @@ export class CalendarEventsController extends BaseController {
   create = this.initRoute({
     bodyDto: CalendarEventCreateBodySchema,
     handler: async ({ body }) => {
-      const auth = await requireNonAnonymous();
+      const auth = await requireRegistered();
       const access = getAccessByAuth(auth);
       const created = await apiServices.calendarEvents.create(body, access);
       if (!created)
@@ -48,7 +48,7 @@ export class CalendarEventsController extends BaseController {
     paramsDto: eventIdParamsSchema,
     bodyDto: CalendarEventPatchBodySchema,
     handler: async ({ params: { id }, body }) => {
-      const auth = await requireNonAnonymous();
+      const auth = await requireRegistered();
       const access = getAccessByAuth(auth);
       const updated = await apiServices.calendarEvents.updateById(
         id,
@@ -64,7 +64,7 @@ export class CalendarEventsController extends BaseController {
     paramsDto: eventIdParamsSchema,
     responseDto: z.object({ ok: z.literal(true) }),
     handler: async ({ params: { id } }) => {
-      const auth = await requireNonAnonymous();
+      const auth = await requireRegistered();
       const access = getAccessByAuth(auth);
       const ok = await apiServices.calendarEvents.deleteById(id, access);
       if (!ok) throw new NotFoundError("Calendar event");

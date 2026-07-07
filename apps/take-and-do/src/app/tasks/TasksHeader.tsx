@@ -9,6 +9,7 @@ import { PrimaryButton } from "@/components/Buttons";
 import { ClockCircleIcon, ClockNavIcon, PlusIcon } from "@/components/Icons";
 import { LightningMenu } from "@/components/LightningMenu";
 import { useTasksShellHeaderExtras, useWorkspace } from "@/contexts";
+import { useWorkspaceRepository } from "@/repositories/workspace";
 import {
   APP_CHROME_NAV_ICON_PX,
   APP_CHROME_TITLE_ACTION_ROW,
@@ -23,7 +24,8 @@ import { TaskBoard } from "@/types/workspace";
 
 export function TasksHeader() {
   const pathname = usePathname() ?? "";
-  const { openCreateWorkspace, taskBoards } = useWorkspace();
+  const { openCreateWorkspace } = useWorkspace();
+  const { taskBoards } = useWorkspaceRepository();
   const { settingsSlot } = useTasksShellHeaderExtras();
 
   const breadcrumps = useMemo((): TasksBreadcrumb[] => {

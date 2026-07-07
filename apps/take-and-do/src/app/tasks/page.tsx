@@ -17,6 +17,7 @@ import {
 import { BoardHealthPanel } from "@/components/BoardHealthPanel";
 import { TasksWorkspaceEmptyState } from "@/components/TasksWorkspaceEmptyState";
 import { useWorkspace } from "@/contexts";
+import { useWorkspaceRepository } from "@/repositories/workspace";
 import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
 import { cn } from "@/lib/styles/utils";
 import type { Folder, TaskBoard } from "@/types/workspace";
@@ -26,13 +27,9 @@ import { TasksRouteRootShell } from "./TasksRootShell";
 
 export default function TasksPage() {
   const router = useRouter();
-  const {
-    folders,
-    taskBoards,
-    isFoldersLoading,
-    isBoardsLoading,
-    openCreateWorkspace,
-  } = useWorkspace();
+  const { openCreateWorkspace } = useWorkspace();
+  const { folders, taskBoards, isFoldersLoading, isBoardsLoading } =
+    useWorkspaceRepository();
   const [expandedFolderIds, setExpandedFolderIds] = useState<Set<string>>(
     () => new Set(),
   );

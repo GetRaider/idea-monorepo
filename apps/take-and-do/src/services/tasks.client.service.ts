@@ -1,7 +1,6 @@
 import { TaskPriority, TaskStatus } from "@/constants/tasks.constants";
 import { Task, TaskUpdate } from "@/types/task";
 import type { ComposeTaskOutput } from "@/server/services/ai/schemas";
-import { guestStoreHelper } from "@/stores/guest";
 import { tasksHelper } from "@/helpers/task.helper";
 
 import { BaseClientService } from "./base.client.service";
@@ -114,15 +113,11 @@ export class TasksClientService extends BaseClientService {
   async create(
     task: Omit<Task, "id"> & { taskBoardName?: string },
   ): Promise<Task | null> {
-    const result = await this.post<Task & { guest?: boolean }>({
+    const result = await this.post<Task>({
       body: task,
     });
     if (!this.isResultOk(result)) return null;
-    const raw = result.data;
-    const { guest, ...rest } = raw as Task & { guest?: boolean };
-    const created = rest as Task;
-    if (guest) guestStoreHelper.addTask(created);
-    return created;
+    return result.data;
   }
 
   async composeWithAI({

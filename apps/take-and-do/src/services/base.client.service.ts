@@ -10,6 +10,7 @@ import { urlHelper } from "@repo/shared";
 import type { ApiOk, ApiResult } from "./api-result.types";
 import { getAuthRedirectHandlers } from "./auth-redirect.registry";
 import { Route } from "@/constants/route.constant";
+import { assertGuestApiAccessAllowed } from "@/lib/guest-api-dev-guard";
 
 export class BaseClientService {
   protected readonly httpClient = new HttpClient();
@@ -114,6 +115,8 @@ export class BaseClientService {
       body?: unknown;
     },
   ): Promise<ApiResult<T>> {
+    assertGuestApiAccessAllowed(this.relativeUrl);
+
     try {
       const response = await operation();
       if (response.status >= 200 && response.status < 300) {

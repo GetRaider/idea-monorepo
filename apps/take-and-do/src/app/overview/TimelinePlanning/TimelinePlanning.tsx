@@ -1,19 +1,15 @@
 "use client";
 
-import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Task } from "@/components/Boards/KanbanBoard/types";
 import { AIActionButton, PrimaryButton } from "@/components/Buttons";
 import { TimePlanningIcon } from "@/components/Icons/TimePlanningIcon";
-import { useIsAnonymous } from "@/hooks/auth/use-is-anonymous";
-import { guestStoreHelper } from "@/stores/guest";
-import { queryKeys } from "@/lib/query-keys";
-import { clientServices } from "@/services";
+import { useWorkspaceRepository } from "@/repositories/workspace";
 import { ScheduleType, tasksHelper } from "@/helpers/task.helper";
 import { TaskStatusGlyph } from "@/components/TaskStatusGlyph";
-import { AiGate } from "@/components/ai-gate";
+import { FeatureGate } from "@/components/FeatureGate";
 import { AIPlanningOptimizationDialog } from "./AIPlanningOptimizationDialog/AIPlanningOptimizationDialog";
 import {
   Section,
@@ -57,8 +53,7 @@ export function TimelinePlanning({
   tomorrowTasks,
   hasWorkspaceTaskData,
 }: TimelinePlanningProps) {
-  const isAnonymous = useIsAnonymous();
-  const queryClient = useQueryClient();
+  const { taskBoards } = useWorkspaceRepository();
   const [customDate, setCustomDate] = useState<string>("");
   const { customDateTasks, isLoadingCustomDate, setSchedule, schedule } =
     useCustomDateTasks(customDate);
@@ -84,14 +79,9 @@ export function TimelinePlanning({
   const controlsDisabled = !hasWorkspaceTaskData;
 
   const handleTaskClick = async (task: Task) => {
-    const taskBoard = isAnonymous
-      ? guestStoreHelper.getTaskBoardById(task.taskBoardId)
-      : await queryClient.fetchQuery({
-          queryKey: queryKeys.taskBoards.detail(task.taskBoardId),
-          queryFn: () => clientServices.taskBoards.getById(task.taskBoardId),
-        });
+    const taskBoard = taskBoards.find((board) => board.id === task.taskBoardId);
     if (!taskBoard) {
-      toast.error(isAnonymous ? "Task board not found" : "Can't load board");
+      toast.error("Task board not found");
       return;
     }
     router.push(
@@ -143,7 +133,7 @@ export function TimelinePlanning({
               onChange={(value) => setSchedule(value as ScheduleType)}
               disabled={controlsDisabled}
             />
-            <AiGate>
+            <FeatureGate feature="ai">
               <AIActionButton
                 size="compact"
                 onClick={handleOpenOptimizationDialog}
@@ -151,7 +141,7 @@ export function TimelinePlanning({
               >
                 <AIIcon size={14} /> Explore AI Optimization
               </AIActionButton>
-            </AiGate>
+            </FeatureGate>
           </ScheduleSelectContainer>
         </SectionHeadBand>
         <SectionDivider />

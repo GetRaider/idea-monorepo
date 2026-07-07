@@ -1,6 +1,5 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { ConfirmDialog } from "@/components/Dialogs";
@@ -18,12 +17,7 @@ import {
 } from "@/components/Calendar/shell/panel/calendar-panel-month.helpers";
 import type { CalendarPanelProps } from "@/components/Calendar/shell/panel/calendar-panel.types";
 import { TaskStatus } from "@/constants/tasks.constants";
-import { useIsAnonymous } from "@/hooks/auth/use-is-anonymous";
-import { useGuestTasks } from "@/hooks/tasks/use-guest-store";
-import { useWorkspaces } from "@/hooks/tasks/useWorkspaces";
-import { queryKeys } from "@/lib/query-keys";
-import { clientServices } from "@/services";
-import { guestTasksForBoard } from "@/stores/guest/guest-task-filters";
+import { useWorkspaceRepository } from "@/repositories/workspace";
 import type { CalendarEventType } from "@/types/calendar.types";
 
 export function useCalendarSidePanel({
@@ -54,14 +48,13 @@ export function useCalendarSidePanel({
     (typeof items)[number] | null
   >(null);
 
-  const isAnonymous = useIsAnonymous();
-  const { taskBoards, isBoardsLoading } = useWorkspaces();
-  const { tasks: guestTasks } = useGuestTasks();
-
-  const tasksQuery = useQuery({
-    queryKey: queryKeys.tasks.byBoard(selectedBoardId),
-    queryFn: () => clientServices.tasks.getByBoardId(selectedBoardId),
-    enabled: !isAnonymous && !!selectedBoardId,
+  const {
+    taskBoards,
+    isBoardsLoading,
+    tasks: boardTasks,
+    isTasksLoading: tasksLoading,
+  } = useWorkspaceRepository({
+    taskBoardId: selectedBoardId || undefined,
   });
 
   const boardOptions = useMemo(
@@ -75,12 +68,6 @@ export function useCalendarSidePanel({
     [taskBoards],
   );
 
-  const boardTasks = useMemo(() => {
-    if (!selectedBoardId) return [];
-    if (isAnonymous) return guestTasksForBoard(guestTasks, selectedBoardId);
-    return tasksQuery.data ?? [];
-  }, [guestTasks, isAnonymous, selectedBoardId, tasksQuery.data]);
-
   const sortedBoardTasks = useMemo(() => {
     const list = boardTasks.filter(
       (task) => !task.scheduleDate && task.status !== TaskStatus.DONE,
@@ -93,9 +80,6 @@ export function useCalendarSidePanel({
     });
     return list;
   }, [boardTasks]);
-
-  const tasksLoading =
-    !isAnonymous && !!selectedBoardId && tasksQuery.isPending;
 
   useEffect(() => {
     if (

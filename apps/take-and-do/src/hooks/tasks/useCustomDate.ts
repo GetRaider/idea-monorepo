@@ -5,8 +5,7 @@ import { useMemo, useState } from "react";
 
 import { Task } from "@/components/Boards/KanbanBoard/types";
 import { queryKeys } from "@/lib/query-keys";
-import { useIsAnonymous } from "@/hooks/auth/use-is-anonymous";
-import { useGuestTasks } from "@/hooks/tasks/use-guest-store";
+import { useWorkspaceRepository } from "@/repositories/workspace";
 import { guestTasksForScheduleDate } from "@/stores/guest/guest-task-filters";
 import { clientServices } from "@/services";
 import { ScheduleType, tasksHelper } from "@/helpers/task.helper";
@@ -19,8 +18,7 @@ interface UseCustomDateReturn {
 }
 
 export function useCustomDateTasks(customDate: string): UseCustomDateReturn {
-  const isAnonymous = useIsAnonymous();
-  const { tasks: guestTasks } = useGuestTasks();
+  const { useLocalWorkspace, tasks } = useWorkspaceRepository();
   const [schedule, setSchedule] = useState<ScheduleType>("new");
 
   const parsedDate = useMemo(() => {
@@ -43,25 +41,26 @@ export function useCustomDateTasks(customDate: string): UseCustomDateReturn {
       parsedDate
         ? clientServices.tasks.getByDate(parsedDate)
         : Promise.resolve([]),
-    enabled: !isAnonymous && schedule === "custom" && parsedDate !== undefined,
+    enabled:
+      !useLocalWorkspace && schedule === "custom" && parsedDate !== undefined,
   });
 
-  const guestCustom = useMemo(() => {
+  const localCustomTasks = useMemo(() => {
     if (!parsedDate) return [];
-    return guestTasksForScheduleDate(guestTasks, parsedDate);
-  }, [guestTasks, parsedDate]);
+    return guestTasksForScheduleDate(tasks, parsedDate);
+  }, [parsedDate, tasks]);
 
   const customDateTasks = useMemo(() => {
     if (schedule !== "custom" || !parsedDate) return [];
-    if (isAnonymous) return guestCustom;
+    if (useLocalWorkspace) return localCustomTasks;
     return dbQuery.data ?? [];
-  }, [schedule, parsedDate, isAnonymous, guestCustom, dbQuery.data]);
+  }, [dbQuery.data, localCustomTasks, parsedDate, schedule, useLocalWorkspace]);
 
   const isLoadingCustomDate = useMemo(() => {
     if (schedule !== "custom" || !parsedDate) return false;
-    if (isAnonymous) return false;
+    if (useLocalWorkspace) return false;
     return dbQuery.isPending;
-  }, [schedule, parsedDate, isAnonymous, dbQuery.isPending]);
+  }, [dbQuery.isPending, parsedDate, schedule, useLocalWorkspace]);
 
   return {
     customDateTasks,

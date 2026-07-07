@@ -1,6 +1,5 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
 import { Dialog } from "@/components/Dialogs";
@@ -10,12 +9,7 @@ import {
   DialogFormGroup,
   DialogFormLabel,
 } from "@/components/Dialogs";
-import { useIsAnonymous } from "@/hooks/auth/use-is-anonymous";
-import { GUEST_STORE_UPDATED_EVENT } from "@/stores/guest/constants";
-import { guestStoreHelper } from "@/stores/guest";
-import { TaskBoard } from "@/types/workspace";
-import { queryKeys } from "@/lib/query-keys";
-import { clientServices } from "@/services";
+import { useWorkspaceRepository } from "@/repositories/workspace";
 import { cn } from "@/lib/styles/utils";
 import type { UiProps } from "@/lib/styles/ui-props";
 
@@ -28,48 +22,24 @@ export function SelectBoardDialog({
   onClose,
   onSelect,
 }: SelectBoardDialogProps) {
-  const isAnonymous = useIsAnonymous();
-  const [boards, setBoards] = useState<TaskBoard[]>([]);
+  const { taskBoards, isBoardsLoading } = useWorkspaceRepository();
   const [selectedBoardId, setSelectedBoardId] = useState("");
 
-  const boardsQuery = useQuery({
-    queryKey: queryKeys.taskBoards.all,
-    queryFn: () => clientServices.taskBoards.getAll(),
-    enabled: !isAnonymous,
-  });
-
-  const isLoading = isAnonymous ? false : boardsQuery.isPending;
-
   useEffect(() => {
-    if (isAnonymous) {
-      const sync = () => {
-        const allBoards = guestStoreHelper.getTaskBoards();
-        setBoards(allBoards);
-        setSelectedBoardId((previous) => {
-          if (allBoards.length === 0) return "";
-          if (allBoards.some((board) => board.id === previous)) {
-            return previous;
-          }
-          return allBoards[0].id;
-        });
-      };
-      sync();
-      window.addEventListener(GUEST_STORE_UPDATED_EVENT, sync);
-      return () => window.removeEventListener(GUEST_STORE_UPDATED_EVENT, sync);
+    if (taskBoards.length === 0) {
+      setSelectedBoardId("");
+      return;
     }
-    const allBoards = boardsQuery.data ?? [];
-    setBoards(allBoards);
-    if (allBoards.length > 0) {
-      setSelectedBoardId((previous) =>
-        allBoards.some((board) => board.id === previous)
-          ? previous
-          : allBoards[0].id,
-      );
-    }
-  }, [isAnonymous, boardsQuery.data]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+    setSelectedBoardId((previous) =>
+      taskBoards.some((board) => board.id === previous)
+        ? previous
+        : taskBoards[0].id,
+    );
+  }, [taskBoards]);
+
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
     if (!selectedBoardId) return;
     onSelect(selectedBoardId);
   };
@@ -79,11 +49,11 @@ export function SelectBoardDialog({
       <form onSubmit={handleSubmit}>
         <FormGroup>
           <Label htmlFor="board-select">Board</Label>
-          {isLoading ? (
+          {isBoardsLoading ? (
             <Select disabled>
               <option>Loading...</option>
             </Select>
-          ) : boards.length === 0 ? (
+          ) : taskBoards.length === 0 ? (
             <Select disabled>
               <option>No boards available</option>
             </Select>
@@ -91,10 +61,10 @@ export function SelectBoardDialog({
             <Select
               id="board-select"
               value={selectedBoardId}
-              onChange={(e) => setSelectedBoardId(e.target.value)}
+              onChange={(event) => setSelectedBoardId(event.target.value)}
               required
             >
-              {boards.map((board) => (
+              {taskBoards.map((board) => (
                 <option key={board.id} value={board.id}>
                   {board.name}
                 </option>
@@ -110,7 +80,9 @@ export function SelectBoardDialog({
           <Button
             type="submit"
             primary
-            disabled={!selectedBoardId || isLoading || boards.length === 0}
+            disabled={
+              !selectedBoardId || isBoardsLoading || taskBoards.length === 0
+            }
           >
             Save
           </Button>

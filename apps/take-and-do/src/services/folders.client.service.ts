@@ -1,4 +1,3 @@
-import { guestStoreHelper } from "@/stores/guest";
 import { Folder } from "@/types/workspace";
 
 import { BaseClientService } from "./base.client.service";
@@ -25,14 +24,11 @@ export class FoldersClientService extends BaseClientService {
     name: string;
     emoji?: string | null;
   }): Promise<Folder | null> {
-    const result = await this.post<Folder & { guest?: boolean }>({
+    const result = await this.post<Folder>({
       body: params,
     });
     if (!this.isResultOk(result)) return null;
-    const { guest, ...rest } = result.data;
-    const folder = rest as Folder;
-    if (guest) guestStoreHelper.upsertFolder(folder);
-    return folder;
+    return result.data;
   }
 
   async update({
@@ -42,24 +38,16 @@ export class FoldersClientService extends BaseClientService {
     id: string;
     updates: FolderUpdate;
   }): Promise<Folder | null> {
-    const result = await this.patch<Folder & { guest?: boolean }>({
+    const result = await this.patch<Folder>({
       pathParams: [id],
       body: updates,
     });
     if (!this.isResultOk(result)) return null;
-    const payload = result.data;
-    const { guest, ...rest } = payload as Folder & { guest?: boolean };
-    const folder = rest as Folder;
-    if (guest) guestStoreHelper.upsertFolder(folder);
-    return folder;
+    return result.data;
   }
 
   async deleteFolder(id: string): Promise<void> {
-    const result = await this.delete<{ guest?: boolean; deleted?: boolean }>({
-      pathParams: [id],
-    });
-    if (this.isResultOk(result) && result.data?.guest)
-      guestStoreHelper.deleteFolder(id);
+    await this.delete<void>({ pathParams: [id] });
   }
 }
 

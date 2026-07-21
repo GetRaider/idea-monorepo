@@ -14,7 +14,7 @@ Format: `<type>/<SCOPE>-<slug>`
 | Field | Allowed values |
 |-------|----------------|
 | `type` | `feat`, `fix`, `test`, `chore`, `docs`, `refactor`, `style`, `release` |
-| `SCOPE` | `GEN`, `TAD`, `DVN`, `PRT` |
+| `SCOPE` | `GEN`, `TAD`, `DVN`, `PRT`, `LEX` |
 | `slug` | Starts with letter or digit; then letters, digits, hyphens, dots |
 
 **Constraints**
@@ -36,7 +36,7 @@ Format: `<type>(<SCOPE>): <subject>`
 | Field | Allowed values |
 |-------|----------------|
 | `type` | Same as branch types |
-| `SCOPE` | `GEN`, `TAD`, `DVN`, `PRT` — **required** (`scope-empty: never`) |
+| `SCOPE` | `GEN`, `TAD`, `DVN`, `PRT`, `LEX` — **required** (`scope-empty: never`) |
 | `subject` | Imperative, concise |
 
 **Constraints**
@@ -57,3 +57,4 @@ Format: `<type>(<SCOPE>): <subject>`
 - `TAD` — `apps/take-and-do`
 - `DVN` — `apps/devinity-api`, `apps/devinity-web`
 - `PRT` — `apps/personal-website`
+- `LEX` — `apps/lexly`

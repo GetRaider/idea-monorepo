@@ -7,7 +7,7 @@ module.exports = {
       "always",
       ["feat", "fix", "test", "chore", "docs", "refactor", "style", "release"],
     ],
-    "scope-enum": [2, "always", ["GEN", "TAD", "DVN", "PRT"]],
+    "scope-enum": [2, "always", ["GEN", "TAD", "DVN", "PRT", "LEX"]],
     "scope-empty": [2, "never"],
     "header-max-length": [2, "always", 70],
     "body-empty": [2, "always"],

@@ -13,6 +13,7 @@ apps/
   devinity-web/     # Next.js frontend (DVN)
   take-and-do/      # Next.js full-stack app (TAD)
   personal-website/ # Next.js site (PRT)
+  lexly/            # Next.js vocabulary learning app (LEX)
 packages/
   @repo/api         # Shared models, DTOs, HTTP helpers
   @repo/ui          # Shared React components
@@ -45,6 +46,7 @@ When adding a new package or app task, register it in `turbo.json` and `pnpm-wor
 - `pnpm dev:devinity` — devinity-api + devinity-web + @repo/api + @repo/ui
 - `pnpm dev:take-and-do` — take-and-do + @repo/ui + @repo/api + @repo/shared
 - `pnpm dev:personal-website` — personal-website + @repo/ui
+- `pnpm dev:lexly` — lexly + @repo/api + @repo/shared
 
 ## Scope mapping (git / releases)
 
@@ -54,3 +56,4 @@ When adding a new package or app task, register it in `turbo.json` and `pnpm-wor
 | `TAD` | take-and-do |
 | `DVN` | devinity-api + devinity-web |
 | `PRT` | personal-website |
+| `LEX` | apps/lexly |

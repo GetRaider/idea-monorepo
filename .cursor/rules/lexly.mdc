@@ -1,0 +1,32 @@
+---
+description: Lexly (apps/lexly) — YouTube vocab learning app
+globs:
+  - "apps/lexly/**"
+alwaysApply: false
+---
+
+# Lexly
+
+Next.js app for turning YouTube subtitles into vocabulary practice.
+Scope: `LEX`.
+
+## Tech / UX expectations
+
+- Next.js App Router.
+- shadcn/ui components + Tailwind class-based styling for UI.
+- No auth for MVP (single implicit learner).
+- Drizzle ORM with PostgreSQL.
+
+## Implementation boundaries
+
+- Domain logic (transcript parsing, dictionary lookup, SRS scheduling) lives under:
+  - `src/server/`
+  - `src/db/`
+  - `src/services/` (client fetch + server services)
+- Route handlers live under `src/app/api/**/route.ts`.
+
+## Styling
+
+- Prefer shadcn/ui + Tailwind classNames for component styling.
+- Keep layout containers responsive (mobile-first, then enhance).
+

@@ -104,7 +104,7 @@ Enough detail for `/create-task` or `/generic-task` to implement without guessin
 - **Routes / pages:** <paths and entry components>
 - **Components:** <new vs extend existing; key props and states>
 - **State & data fetching:** <server vs client, cache, optimistic updates>
-- **Styling:** <`.styles.tsx` patterns, `@repo/ui` primitives to use>
+- **Styling:** Tailwind + Radix + shadcn; reuse `@repo/ui` primitives — or "N/A"
 
 ### Auth & permissions
 

@@ -8,140 +8,74 @@ alwaysApply: false
 # Shared UI Package Development Rules
 
 ## Purpose
-This package contains shared React UI components used across frontend applications in the monorepo.
+
+Shared React primitives used across frontend apps. New components follow **shadcn**: Radix primitive + Tailwind + `cn()` + `cva`.
 
 ## File Structure
-- `src/components/ComponentName/ComponentName.component.tsx` - Component files
-- `src/components/ComponentName/ComponentName.styles.tsx` - Styled components
-- `src/index.ts` - Barrel exports
+
+- `src/components/ComponentName/ComponentName.tsx` — component
+- `src/components/ComponentName/index.ts` — re-export
+- `src/lib/cn.ts` — `clsx` + `tailwind-merge`
+- `src/index.ts` — barrel
+
+Do not add `*.styles.tsx` or `styled-components`.
+
+Existing `*.component.tsx` / Header styled wrappers are legacy — migrate when touched.
 
 ## Component Pattern
-- Use `"use client"` directive for interactive components
-- Export as named exports
-- Use TypeScript interfaces for props
-- Wrap Radix UI primitives with custom styling
+
+Named exports, `"use client"` for interactive components, props interface at end of file.
 
 ```typescript
 "use client";
-import { ReactNode, ButtonHTMLAttributes } from "react";
-import { Button as ButtonRadix } from "@radix-ui/themes";
 
-type ButtonVariant = "solid" | "soft" | "outline" | "ghost";
-type ButtonSize = "1" | "2" | "3" | "4";
+import { cva, type VariantProps } from "class-variance-authority";
+
+import { cn } from "../../lib/cn";
+
+const buttonVariants = cva(
+  "inline-flex items-center justify-center rounded-md text-sm font-medium",
+  {
+    variants: {
+      variant: {
+        solid: "bg-primary text-primary-foreground",
+        outline: "border border-border bg-transparent",
+        ghost: "hover:bg-muted",
+      },
+    },
+    defaultVariants: { variant: "solid" },
+  },
+);
+
+export function Button({ className, variant, ...props }: ButtonProps) {
+  return (
+    <button className={cn(buttonVariants({ variant }), className)} {...props} />
+  );
+}
 
 interface ButtonProps
-  extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "color"> {
-  children: ReactNode;
-  variant?: ButtonVariant;
-  size?: ButtonSize;
-  onClick?: () => unknown;
-  disabled?: boolean;
-}
-
-export const Button = ({
-  children,
-  variant = "solid",
-  size = "3",
-  onClick,
-  disabled,
-  ...props
-}: ButtonProps) => {
-  return (
-    <ButtonRadix
-      size={size}
-      variant={variant}
-      onClick={onClick}
-      disabled={disabled}
-      {...props}
-    >
-      {children}
-    </ButtonRadix>
-  );
-};
+  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
+    VariantProps<typeof buttonVariants> {}
 ```
 
-## Styling Pattern
-- Use styled-components for custom styling
-- Keep styles in separate `.styles.tsx` files
-- Export styled components as named exports
+Wrap `@radix-ui/react-*` primitives (not `@radix-ui/themes`) for dialogs, dropdowns, etc.
 
-```typescript
-import styled from "styled-components";
+## Props
 
-export const Container = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-`;
+- Union types for variants/sizes; sensible defaults
+- Forward `className` and remaining HTML attributes
+- `ReactNode` for children
+- Explicit interfaces (no inline prop types); JSDoc only when non-obvious
 
-export const Title = styled.h1`
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: inherit;
-`;
-```
+## Naming / exports
 
-## Props Design
-- Use TypeScript union types for variants/sizes
-- Extend HTML element attributes with `Omit` for conflicting props
-- Provide sensible defaults for optional props
-- Use `ReactNode` for children type
-- Support `className` for custom styling from consumers
+- Files and exports: PascalCase, name matches component
+- `packages/ui/src/index.ts` + folder `index.ts`
+- Consume: `import { Button } from "@repo/ui"` or `@repo/ui/components/Button`
 
-## Radix UI Integration
-- Use `@radix-ui/themes` components as base
-- Wrap with custom props interface
-- Forward necessary props to Radix component
-- Use spread operator for remaining HTML attributes
+## Constraints
 
-## Component Naming
-- Files: `ComponentName.component.tsx`
-- Style files: `ComponentName.styles.tsx`
-- Export name matches component name
-- Use PascalCase for all component names
-
-## Export Pattern
-```typescript
-// src/index.ts
-export { Button } from "./components/Button/Button.component";
-export { Card } from "./card";
-export { Code } from "./code";
-
-// Usage in consuming apps
-import { Button } from "@repo/ui/components/Button/Button.component";
-// or via barrel export
-import { Card } from "@repo/ui";
-```
-
-## Props Interface Guidelines
-- Always define explicit interface (don't use inline types)
-- Document complex props with JSDoc comments
-- Use specific types over generic ones
-- Make visual customization props optional with defaults
-
-```typescript
-interface CardProps {
-  /** Card title displayed at the top */
-  title: string;
-  /** Card content */
-  children: ReactNode;
-  /** Visual variant */
-  variant?: "default" | "elevated" | "outlined";
-  /** Additional CSS class */
-  className?: string;
-}
-```
-
-## Accessibility
-- Ensure components are keyboard navigable
-- Use semantic HTML elements
-- Include proper ARIA attributes when needed
-- Test with screen readers for important components
-
-## Best Practices
-- Keep components small and focused
-- Avoid business logic in UI components
-- Support composition over configuration
-- Test components in isolation
-- Document component usage with examples
-- Make components responsive by default
+- No business logic or app domain types
+- No inline `style={{}}` except runtime CSS variables
+- Accessible by default (semantic HTML, keyboard, ARIA on custom widgets)
+- Keep components small and composable

@@ -1,6 +1,6 @@
 ---
 name: add-ui-component
-description: Add a new React component to packages/ui with ComponentName.component.tsx, styles file, barrel exports, and optional tests. Use when creating a shared UI component, button, dialog, or primitive for @repo/ui consumed by Next.js apps.
+description: Add a new React component to packages/ui with Tailwind + Radix (shadcn pattern), barrel exports, and optional tests. Use when creating a shared UI component, button, dialog, or primitive for @repo/ui consumed by Next.js or Electron apps.
 ---
 
 # Add UI Component
@@ -11,39 +11,59 @@ description: Add a new React component to packages/ui with ComponentName.compone
 
 | File | Required |
 |------|----------|
-| `<ComponentName>.component.tsx` | Yes — named export |
-| `<ComponentName>.styles.tsx` | Yes if custom styling beyond Radix |
+| `<ComponentName>.tsx` | Yes — named export |
 | `index.ts` | Yes — re-export component |
 
-Optional: use `pnpm generate:component` in `packages/ui` (turbo gen) as starting point.
+Optional: `pnpm generate:component` in `packages/ui` (turbo gen) as a starting point — rewrite generated styled-components to Tailwind if the generator is still legacy.
+
+Do **not** add `*.styles.tsx` or `styled-components`.
 
 ## Component pattern
+
+shadcn: Radix primitive (when needed) + Tailwind + `cva` + `cn()`.
 
 ```typescript
 "use client";
 
-import { ReactNode } from "react";
-import { Button as ButtonRadix } from "@radix-ui/themes";
+import { cva, type VariantProps } from "class-variance-authority";
 
-interface ComponentNameProps {
-  children: ReactNode;
+import { cn } from "../../lib/cn";
+
+const buttonVariants = cva(
+  "inline-flex items-center justify-center rounded-md text-sm font-medium",
+  {
+    variants: {
+      variant: {
+        solid: "bg-primary text-primary-foreground",
+        ghost: "hover:bg-muted",
+      },
+    },
+    defaultVariants: { variant: "solid" },
+  },
+);
+
+export function ComponentName({ className, variant, ...props }: ComponentNameProps) {
+  return (
+    <button className={cn(buttonVariants({ variant }), className)} {...props} />
+  );
 }
 
-export const ComponentName = ({ children }: ComponentNameProps) => (
-  <ButtonRadix>{children}</ButtonRadix>
-);
+interface ComponentNameProps
+  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
+    VariantProps<typeof buttonVariants> {}
 ```
 
 - Named exports only (no anonymous default)
-- Wrap `@radix-ui/themes` primitives
-- Props interface at end of file (repo convention)
+- Wrap `@radix-ui/react-*` primitives, not `@radix-ui/themes`
+- Props interface at end of file
 - `"use client"` for interactive components
 
 ## Styles
 
-- `styled-components` in separate `.styles.tsx`
-- Transient props: `$prefix` for non-DOM props
-- Tailwind utilities via `cn()` from `src/lib/cn.ts` where appropriate
+- Tailwind on the JSX; variants via `cva`
+- Merge with `cn()` from `src/lib/cn.ts`
+- No inline `style={{}}` except runtime CSS variables
+- Forward `className`
 
 ## Exports
 
@@ -78,5 +98,5 @@ Rebuild is required before apps pick up types — root dev filters include `@rep
 ## Constraints
 
 - No business logic or app-specific domain types
-- No inline styles
+- No styled-components
 - Keep components composable and accessible

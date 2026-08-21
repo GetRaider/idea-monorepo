@@ -21,12 +21,36 @@ const connectionString = envServer.db.connectionString;
 
 export const pool = new Pool({
   connectionString,
-  ssl: { rejectUnauthorized: false },
+  ssl: resolvePoolSsl(connectionString),
   connectionTimeoutMillis: 10000,
 });
 
 if (envServer.nodeEnv === "development") {
   console.log(`[DB] Connecting to: ${getHostName(connectionString)}`);
+}
+
+function resolvePoolSsl(
+  connectionString: string,
+): false | { rejectUnauthorized: false } {
+  try {
+    const url = new URL(connectionString);
+    const sslMode = url.searchParams.get("sslmode")?.toLowerCase();
+
+    if (sslMode === "disable" || sslMode === "allow") return false;
+    if (
+      sslMode === "require" ||
+      sslMode === "verify-ca" ||
+      sslMode === "verify-full"
+    ) {
+      return { rejectUnauthorized: false };
+    }
+  } catch {
+    // Fall through to environment-based default.
+  }
+
+  return envServer.nodeEnv === "production"
+    ? { rejectUnauthorized: false }
+    : false;
 }
 
 function getHostName(connectionString: string): string {

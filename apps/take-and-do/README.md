@@ -4,27 +4,95 @@ A productivity management application built with Next.js and React. Organize tas
 
 ## Getting Started
 
-Run the development server:
+### Prerequisites
+
+- Node.js 20+
+- pnpm
+- Docker & Docker Compose
+- [Ollama](https://ollama.com) (optional, for local AI)
+
+### 1. Install dependencies
+
+From the monorepo root:
 
 ```bash
-pnpm run dev
+pnpm install
 ```
 
-Open [localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Start local services
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+From this directory:
 
-### ⚠️ Note about build
+```bash
+docker compose up -d
+```
+
+This starts PostgreSQL on port `5433` (database: `take_and_do`).
+
+### 3. Local AI (optional)
+
+Install and run [Ollama](https://ollama.com) on the host (uses Metal GPU on macOS — much faster than Docker):
+
+```bash
+ollama pull llama3.1:8b
+ollama serve
+```
+
+The app expects `AI_BASE_URL=http://localhost:11434/v1` (see `.env.example`).
+
+### 4. Environment variables
+
+Copy `.env.example` to `.env` and fill in the remaining values:
+
+```bash
+cp .env.example .env
+```
+
+Required for local development:
+
+- `BETTER_AUTH_SECRET` — any random string
+- `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `NEXT_PUBLIC_GOOGLE_CLIENT_ID` — Google OAuth credentials
+
+`DB_CONNECTION_STRING` in `.env.example` matches the Docker Compose Postgres service.
+
+### 5. Run migrations
+
+Required on first setup (and after pulling new migrations):
+
+```bash
+pnpm db:migrate
+```
+
+This creates all tables including Better Auth (`user`, `session`, `account`, `verification`).
+
+### 6. Start the app
+
+From the monorepo root:
+
+```bash
+pnpm dev:take-and-do
+```
+
+Or from this directory:
+
+```bash
+pnpm dev
+```
+
+Open [localhost:3000](http://localhost:3000).
+
+### Note about build
 
 If you plan to only build this app, make sure you've built the packages first.
-
-## Development
-
-This is a productivity management application designed to help users organize tasks, manage workflows, and improve productivity through an intuitive task management interface.
 
 ## Available Scripts
 
 - `pnpm dev` - Start development server with Turbopack
 - `pnpm build` - Build for production with Turbopack
-- `pnpm start` - Start production server
+- `pnpm prod` - Start production server
 - `pnpm lint` - Lint code
+- `pnpm db:generate` - Generate Drizzle migrations
+- `pnpm db:migrate` - Apply Drizzle migrations
+- `pnpm db:studio` - Open Drizzle Studio
+- `pnpm docker:up` - Start Docker Compose services
+- `pnpm docker:down` - Stop Docker Compose services

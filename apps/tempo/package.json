@@ -1,0 +1,47 @@
+{
+  "name": "tempo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Tempo — personal focus timer and stopwatch",
+  "author": "Andrew Polovets",
+  "type": "module",
+  "main": "./out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "package": "pnpm generate:icon && electron-vite build && electron-builder --dir --mac --config electron-builder.yml",
+    "generate:icon": "node --experimental-strip-types scripts/generate-icon.ts",
+    "install:mac": "pnpm package && rm -rf /Applications/Tempo.app && cp -R release/mac-arm64/Tempo.app /Applications/Tempo.app && xattr -cr /Applications/Tempo.app",
+    "lint": "eslint . --max-warnings=0",
+    "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
+    "codeCheck": "pnpm typecheck && pnpm lint",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "clean": "rm -rf out .turbo release",
+    "clean:hard": "pnpm run clean && rm -rf node_modules"
+  },
+  "dependencies": {
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "sql.js": "^1.13.0",
+    "styled-components": "catalog:"
+  },
+  "devDependencies": {
+    "@repo/eslint-config": "workspace:*",
+    "@repo/typescript-config": "workspace:*",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@types/sql.js": "^1.4.9",
+    "@types/styled-components": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
+    "electron": "^37.3.1",
+    "electron-builder": "^26.0.12",
+    "electron-vite": "^4.0.1",
+    "eslint": "catalog:",
+    "globals": "catalog:",
+    "typescript": "catalog:",
+    "vite": "^6.3.5",
+    "vitest": "catalog:"
+  }
+}

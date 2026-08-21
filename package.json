@@ -23,6 +23,7 @@
     "dev:devinity": "turbo run dev --filter=devinity-api --filter=devinity-web --filter=@repo/api --filter=@repo/ui",
     "dev:take-and-do": "turbo run dev --filter=take-and-do --filter=@repo/ui --filter=@repo/api --filter=@repo/shared",
     "dev:personal-website": "turbo run dev --filter=personal-website --filter=@repo/ui",
+    "dev:tempo": "turbo run dev --filter=tempo",
     "prod:take-and-do": "turbo run prod --filter=take-and-do --filter=@repo/ui --filter=@repo/api --filter=@repo/shared",
     "prod": "turbo run prod",
     "test": "turbo run test",
@@ -48,5 +49,20 @@
     "@thallesp/nestjs-better-auth": "catalog:",
     "better-auth": "catalog:",
     "drizzle-orm": "catalog:"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@nestjs/core",
+      "@prisma/client",
+      "@prisma/engines",
+      "better-sqlite3",
+      "core-js-pure",
+      "electron",
+      "electron-winstaller",
+      "esbuild",
+      "prisma",
+      "sharp",
+      "unrs-resolver"
+    ]
   }
 }

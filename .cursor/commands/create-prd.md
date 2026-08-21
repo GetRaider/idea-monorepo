@@ -158,7 +158,7 @@ Ordered steps for an agent executing this PRD:
 
 - **Discovery first** — always ask questions when context is incomplete; never invent requirements to skip the Q&A
 - **Execution-ready** — technical requirements must be concrete (paths, endpoints, schema fields, test targets); vague "implement X" is not enough
-- **SCOPE:** `GEN` (repo-wide), `TAD` (take-and-do), `DVN` (devinity-api/web), `PRT` (personal-website) — see `.cursor/rules/git-conventions.mdc`
+- **SCOPE:** `GEN` (repo-wide), `TAD` (take-and-do), `DVN` (devinity-api/web), `PRT` (personal-website), `TMP` (tempo) — see `.cursor/rules/git-conventions.mdc`
 - **Monorepo:** apps must not import other apps; shared logic belongs in `@repo/*` — see `.cursor/rules/monorepo-architecture.mdc`
 - Requirements must be **testable** — no vague "should be fast" without a threshold
 - Prefer **reuse** over greenfield; call out existing modules to extend

@@ -77,7 +77,7 @@ Format:
 Rules:
 
 - Allowed `type`: `feat`, `fix`, `test`, `chore`, `docs`, `refactor`, `style`, `release`
-- Allowed `SCOPE`: `GEN`, `TAD`, `DVN`, `PRT`
+- Allowed `SCOPE`: `GEN`, `TAD`, `DVN`, `PRT`, `TMP`
 - Max header length: **60** characters (single line), enforced by Commitlint
 - Commit body and footer are not used (enforced)
 
@@ -126,6 +126,9 @@ pnpm run dev:take-and-do
 
 # Start only Personal Website (+ required packages)
 pnpm run dev:personal-website
+
+# Start Tempo Electron app
+pnpm run dev:tempo
 
 # Run in production mode
 pnpm run prod

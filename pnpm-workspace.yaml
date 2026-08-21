@@ -1,6 +1,18 @@
 packages:
   - apps/*
   - packages/*
+onlyBuiltDependencies:
+  - "@nestjs/core"
+  - "@prisma/client"
+  - "@prisma/engines"
+  - better-sqlite3
+  - core-js-pure
+  - electron
+  - electron-winstaller
+  - esbuild
+  - prisma
+  - sharp
+  - unrs-resolver
 catalog:
   # FE
   ## Core

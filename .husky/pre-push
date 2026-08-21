@@ -21,12 +21,12 @@ if [ "$branch_name_length" -gt 50 ]; then
 fi
 
 # <type>/<SCOPE>-<name|version|version+name> — e.g. feat/GEN-my-branch, release/GEN-v1, release/TAD-1.2.0-notes
-echo "$branch_name" | grep -Eq '^(feat|fix|test|chore|docs|refactor|style|release)/(GEN|TAD|DVN|PRT)-[A-Za-z0-9][A-Za-z0-9.-]*$' || {
+echo "$branch_name" | grep -Eq '^(feat|fix|test|chore|docs|refactor|style|release)/(GEN|TAD|DVN|PRT|TMP)-[A-Za-z0-9][A-Za-z0-9.-]*$' || {
   echo "pre-push: invalid branch name"
   echo "branch: $branch_name"
   echo "expected: <type>/<SCOPE>-<name|version|version+name>"
   echo "type: feat|fix|test|chore|docs|refactor|style|release"
-  echo "SCOPE: GEN|TAD|DVN|PRT"
+  echo "SCOPE: GEN|TAD|DVN|PRT|TMP"
   echo "examples: feat/GEN-my-branch-name  |  release/GEN-v1  |  release/TAD-1.2.0"
   exit 1
 }

@@ -318,9 +318,7 @@ function FocusSessionDetailsContent({
           <FocusTaskPicker compact defaultExpanded={false} />
 
           <div className="flex flex-col gap-1.5">
-            <p className="m-0 text-xs font-medium text-text-secondary">
-              Save to backlog?
-            </p>
+            <p className="m-0 text-xs font-medium text-text-secondary">Save</p>
             <div className="flex rounded-lg border border-white/10 bg-black/20 p-0.5">
               <FocusModeToggleButton
                 active={idleDraft.saveToBacklog}

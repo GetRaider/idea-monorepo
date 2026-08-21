@@ -11,6 +11,8 @@ import type {
   FocusSessionRecord,
   FocusSessionStatus,
   FocusSystemState,
+  FocusTimerMode,
+  ManualFocusRecordInput,
   SessionConfig,
 } from "@/types/focus.types";
 
@@ -29,11 +31,14 @@ export const FOCUS_SESSION_COLORS = [
   "#eab308",
 ] as const;
 
+export const MANUAL_FOCUS_MAX_DURATION_MINUTES = 24 * 60;
+
 export const DEFAULT_IDLE_DRAFT: FocusIdleDraft = {
   sessionSelection: "new",
   selectedBacklogId: null,
   saveToBacklog: false,
   color: FOCUS_SESSION_COLORS[0],
+  timerMode: "stopwatch",
 };
 
 export const DEFAULT_SESSION_CONFIG: SessionConfig = {
@@ -69,12 +74,181 @@ export function parseEstimationInput(value: string): number | null {
   return parsed;
 }
 
+export function parseManualDurationInput(value: string): number | null {
+  const trimmed = value.trim().toLowerCase().replace(/m$/, "");
+  if (!trimmed) return null;
+  const parsed = Number.parseInt(trimmed, 10);
+  if (
+    !Number.isInteger(parsed) ||
+    parsed < 1 ||
+    parsed > MANUAL_FOCUS_MAX_DURATION_MINUTES
+  ) {
+    return null;
+  }
+  return parsed;
+}
+
 export function getEstimationMinutes(config: SessionConfig): number | null {
   return config.durationMinutes;
 }
 
 export function hasValidEstimation(config: SessionConfig): boolean {
   return getEstimationMinutes(config) !== null;
+}
+
+export function resolveIdleTimerMode(idle: FocusIdleDraft): FocusTimerMode {
+  return idle.timerMode ?? "stopwatch";
+}
+
+export function canStartFocusSession(
+  config: SessionConfig,
+  idle: FocusIdleDraft,
+): boolean {
+  if (idle.sessionSelection === "backlog") {
+    return Boolean(idle.selectedBacklogId);
+  }
+
+  if (!config.taskId && config.name.trim().length === 0) {
+    return false;
+  }
+
+  const timerMode = resolveIdleTimerMode(idle);
+  if (timerMode === "stopwatch") {
+    return true;
+  }
+
+  return hasValidEstimation(config);
+}
+
+export function validateStopwatchSessionConfig(
+  config: SessionConfig,
+): FocusActionResult {
+  const minutes = config.durationMinutes;
+  if (
+    minutes !== null &&
+    (!Number.isInteger(minutes) || minutes < 1 || minutes > 60)
+  ) {
+    return {
+      status: "CONSTRAINT_VIOLATION",
+      reason: "target duration must be an integer between 1 and 60 minutes",
+    };
+  }
+
+  if (!config.taskId && config.name.trim().length === 0) {
+    return {
+      status: "CONSTRAINT_VIOLATION",
+      reason: "name is required when no task is linked",
+    };
+  }
+
+  return { status: "SUCCESS" };
+}
+
+export function validateSessionConfigForTimerMode(
+  config: SessionConfig,
+  timerMode: FocusTimerMode,
+): FocusActionResult {
+  if (timerMode === "stopwatch") {
+    return validateStopwatchSessionConfig(config);
+  }
+  return validateSessionConfig(config);
+}
+
+export function validateManualFocusRecordInput(
+  input: ManualFocusRecordInput,
+): FocusActionResult {
+  const trimmedName = input.name.trim();
+  if (!trimmedName) {
+    return {
+      status: "CONSTRAINT_VIOLATION",
+      reason: "name is required",
+    };
+  }
+
+  const minSeconds = 60;
+  const maxSeconds = MANUAL_FOCUS_MAX_DURATION_MINUTES * 60;
+  if (
+    !Number.isInteger(input.durationSeconds) ||
+    input.durationSeconds < minSeconds ||
+    input.durationSeconds > maxSeconds
+  ) {
+    return {
+      status: "CONSTRAINT_VIOLATION",
+      reason: "duration must be between 1 minute and 24 hours",
+    };
+  }
+
+  const startedAt = new Date(input.startedAt);
+  if (Number.isNaN(startedAt.getTime())) {
+    return {
+      status: "CONSTRAINT_VIOLATION",
+      reason: "date and time are invalid",
+    };
+  }
+
+  if (startedAt.getTime() > Date.now()) {
+    return {
+      status: "CONSTRAINT_VIOLATION",
+      reason: "date and time cannot be in the future",
+    };
+  }
+
+  return { status: "SUCCESS" };
+}
+
+export function buildManualFocusSessionRecord(
+  input: ManualFocusRecordInput,
+): FocusSession {
+  const trimmedName = input.name.trim();
+  const startedAt = new Date(input.startedAt);
+  const endedAt = new Date(startedAt.getTime() + input.durationSeconds * 1000);
+
+  return {
+    id: crypto.randomUUID(),
+    type: "focus",
+    name: trimmedName,
+    taskId: null,
+    plannedDurationSeconds: input.durationSeconds,
+    actualDurationSeconds: input.durationSeconds,
+    startedAt: startedAt.toISOString(),
+    endedAt: endedAt.toISOString(),
+    status: "completed",
+    timerMode: "stopwatch",
+    source: "manual",
+  };
+}
+
+export function resolveBreakBasisSeconds(timer: ActiveFocusTimer): number {
+  if (timer.plannedDurationSeconds > 0) {
+    return timer.plannedDurationSeconds;
+  }
+  return timer.elapsedSeconds;
+}
+
+export function isManualFocusSession(session: FocusSession): boolean {
+  return session.source === "manual";
+}
+
+export function shouldAutoCompleteActiveTimer(timer: ActiveTimer): boolean {
+  if (timer.remainingSeconds > 0) {
+    return false;
+  }
+
+  if (isActiveFocusTimer(timer) && timer.timerMode === "stopwatch") {
+    return false;
+  }
+
+  return true;
+}
+
+export function getStopwatchRemainingSeconds(
+  plannedDurationSeconds: number,
+  elapsedSeconds: number,
+): number {
+  if (plannedDurationSeconds <= 0) {
+    return Number.MAX_SAFE_INTEGER;
+  }
+  return Math.max(0, plannedDurationSeconds - elapsedSeconds);
 }
 
 export function canEnableSaveToBacklog(
@@ -185,12 +359,40 @@ export function withActiveTimerSystemState(timer: ActiveTimer): ActiveTimer {
 }
 
 export function advanceActiveTimer(timer: ActiveTimer): ActiveTimer {
-  const nextElapsed = timer.elapsedSeconds + 1;
-  const nextRemaining = Math.max(0, timer.plannedDurationSeconds - nextElapsed);
+  return computeActiveTimerFromWallClock(timer, Date.now() + 1000);
+}
+
+export function computeActiveTimerFromWallClock(
+  timer: ActiveTimer,
+  nowMs = Date.now(),
+): ActiveTimer {
+  if (timer.pausedAt) {
+    return timer;
+  }
+
+  const startedAtMs = new Date(timer.startedAt).getTime();
+  const elapsedSeconds = Math.max(0, Math.floor((nowMs - startedAtMs) / 1000));
+
+  if (isActiveFocusTimer(timer) && timer.timerMode === "stopwatch") {
+    return {
+      ...timer,
+      elapsedSeconds,
+      remainingSeconds: getStopwatchRemainingSeconds(
+        timer.plannedDurationSeconds,
+        elapsedSeconds,
+      ),
+    };
+  }
+
+  const remainingSeconds = Math.max(
+    0,
+    timer.plannedDurationSeconds - elapsedSeconds,
+  );
+
   return {
     ...timer,
-    elapsedSeconds: nextElapsed,
-    remainingSeconds: nextRemaining,
+    elapsedSeconds,
+    remainingSeconds,
   };
 }
 
@@ -262,6 +464,8 @@ export function buildFocusSessionRecord(
     startedAt: timer.startedAt,
     endedAt,
     status,
+    timerMode: timer.timerMode,
+    source: "live",
   };
 }
 
@@ -317,7 +521,10 @@ export function resolveBreakSuggestion(
   if (!parent) return null;
   return {
     parentFocusSessionId: parent.id,
-    parentPlannedFocusSeconds: parent.plannedDurationSeconds,
+    parentPlannedFocusSeconds:
+      parent.plannedDurationSeconds > 0
+        ? parent.plannedDurationSeconds
+        : parent.actualDurationSeconds,
   };
 }
 
@@ -406,8 +613,11 @@ export function formatFocusHistoryTimestamp(iso: string): string {
 }
 
 export function getFocusSessionDurationLabel(session: FocusSession): string {
-  const minutes = Math.round(session.plannedDurationSeconds / 60);
-  return `${minutes} min`;
+  if (session.plannedDurationSeconds > 0) {
+    const minutes = Math.round(session.plannedDurationSeconds / 60);
+    return `${minutes} min`;
+  }
+  return formatFocusDurationLabel(session.actualDurationSeconds);
 }
 
 export function getFocusHistoryStatusLabel(status: FocusSessionStatus): string {

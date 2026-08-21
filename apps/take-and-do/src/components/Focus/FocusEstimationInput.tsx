@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useState,
+} from "react";
 
 import { Input } from "@/components/Input";
 import {
@@ -9,13 +15,21 @@ import {
 } from "@/helpers/focus/focus-session.helper";
 import { cn } from "@/lib/styles/utils";
 
-export function FocusEstimationInput({
-  durationMinutes,
-  disabled = false,
-  onChange,
-  className,
-  size = "default",
-}: FocusEstimationInputProps) {
+export const FocusEstimationInput = forwardRef<
+  FocusEstimationInputHandle,
+  FocusEstimationInputProps
+>(function FocusEstimationInput(
+  {
+    durationMinutes,
+    disabled = false,
+    onChange,
+    className,
+    size = "default",
+    label = "Estimation",
+    placeholder = "25m",
+  },
+  ref,
+) {
   const [inputValue, setInputValue] = useState(
     durationMinutes !== null ? formatEstimationInput(durationMinutes) : "",
   );
@@ -33,12 +47,30 @@ export function FocusEstimationInput({
       const parsed = parseEstimationInput(rawValue);
       if (parsed === null) {
         onChange(null);
-        return;
+        return null;
       }
       onChange(parsed);
       setInputValue(formatEstimationInput(parsed));
+      return parsed;
     },
     [onChange],
+  );
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      getCommittedMinutes() {
+        const parsed = parseEstimationInput(inputValue);
+        if (parsed !== null) {
+          return parsed;
+        }
+        return durationMinutes;
+      },
+      commitPendingValue() {
+        return commitValue(inputValue);
+      },
+    }),
+    [commitValue, durationMinutes, inputValue],
   );
 
   const isLarge = size === "large";
@@ -54,13 +86,13 @@ export function FocusEstimationInput({
           isLarge ? "text-sm" : "text-xs",
         )}
       >
-        Estimation
+        {label}
       </label>
       <Input
         id="focus-estimation"
         value={inputValue}
         disabled={disabled}
-        placeholder="25m"
+        placeholder={placeholder}
         onChange={(event) => {
           setInputValue(event.target.value);
           const parsed = parseEstimationInput(event.target.value);
@@ -80,7 +112,12 @@ export function FocusEstimationInput({
       />
     </div>
   );
-}
+});
+
+export type FocusEstimationInputHandle = {
+  getCommittedMinutes: () => number | null;
+  commitPendingValue: () => number | null;
+};
 
 type FocusEstimationInputSize = "default" | "large";
 
@@ -90,4 +127,6 @@ interface FocusEstimationInputProps {
   onChange: (minutes: number | null) => void;
   className?: string;
   size?: FocusEstimationInputSize;
+  label?: string;
+  placeholder?: string;
 }

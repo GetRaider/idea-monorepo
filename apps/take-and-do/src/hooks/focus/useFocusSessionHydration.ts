@@ -15,6 +15,8 @@ import {
   readFocusDraft,
 } from "@/hooks/focus/focus-storage";
 
+import type { ActiveTimer, FocusIdleDraft } from "@/types/focus.types";
+
 import type { FocusSessionStore } from "./focus-session-state.types";
 import { hydratePersistedFocusState } from "./focus-session-hydration";
 
@@ -61,7 +63,7 @@ export function useFocusSessionHydration(
           ...config,
           name: config.name.trim() ? config.name : defaultName,
         });
-        setIdleDraftState(storedDraft.idle);
+        setIdleDraftState(normalizeHydratedIdleDraft(storedDraft.idle));
       } else {
         setDraftState({
           ...DEFAULT_SESSION_CONFIG,
@@ -77,7 +79,7 @@ export function useFocusSessionHydration(
       }
 
       if (storedActive) {
-        setActiveTimer(storedActive);
+        setActiveTimer(normalizeHydratedActiveTimer(storedActive));
         setSystemState(systemStateFromActiveTimer(storedActive));
       } else {
         const suggestion = readFocusBreakSuggestion();
@@ -108,4 +110,22 @@ export function useFocusSessionHydration(
     setSessions,
     setSystemState,
   ]);
+}
+
+function normalizeHydratedIdleDraft(idle: FocusIdleDraft): FocusIdleDraft {
+  return {
+    ...idle,
+    timerMode: idle.timerMode ?? "stopwatch",
+  };
+}
+
+function normalizeHydratedActiveTimer(timer: ActiveTimer): ActiveTimer {
+  if (timer.sessionType !== "focus") {
+    return timer;
+  }
+
+  return {
+    ...timer,
+    timerMode: timer.timerMode ?? "timer",
+  };
 }

@@ -19,12 +19,14 @@ import {
   getNextFocusHistoryVisibleCount,
   hasMoreFocusHistory,
   isFocusSessionRecord,
+  isManualFocusSession,
   resolveBreakParentName,
   sortFocusHistorySessions,
 } from "@/helpers/focus/focus-session.helper";
 import { cn } from "@/lib/styles/utils";
 
 import { FocusCollapsibleSection } from "./FocusCollapsibleSection";
+import { FocusManualRecordDialog } from "./FocusManualRecordDialog";
 
 import type {
   BreakSession,
@@ -35,6 +37,7 @@ import type {
 export function FocusHistory() {
   const { sessions } = useFocusSessionContext();
   const [visibleCount, setVisibleCount] = useState(FOCUS_HISTORY_PAGE_SIZE);
+  const [manualRecordOpen, setManualRecordOpen] = useState(false);
   const historySessions = useMemo(
     () => sortFocusHistorySessions(sessions),
     [sessions],
@@ -63,43 +66,63 @@ export function FocusHistory() {
   }, [historySessions.length]);
 
   return (
-    <FocusCollapsibleSection title="History" defaultExpanded={false}>
-      {historySessions.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-white/10 bg-white/[0.02] px-4 py-6 text-center">
-          <p className="m-0 text-xs text-text-secondary">
-            Completed and interrupted sessions will appear here.
-          </p>
-        </div>
-      ) : (
-        <div className="flex flex-col gap-3">
-          <ul className="m-0 flex list-none flex-col gap-2 p-0">
-            {visibleSessions.map((session) => (
-              <li key={session.id}>
-                {isFocusSessionRecord(session) ? (
-                  <FocusHistoryFocusRow session={session} />
-                ) : (
-                  <FocusHistoryBreakRow
-                    session={session}
-                    allSessions={historySessions}
-                  />
-                )}
-              </li>
-            ))}
-          </ul>
-          {hasMore ? (
-            <PrimaryButton
-              type="button"
-              size="sm"
-              variant="surface"
-              className="w-full"
-              onClick={loadMoreHistory}
-            >
-              Load more
-            </PrimaryButton>
-          ) : null}
-        </div>
-      )}
-    </FocusCollapsibleSection>
+    <>
+      <FocusCollapsibleSection
+        title="History"
+        defaultExpanded={false}
+        headerActions={
+          <PrimaryButton
+            type="button"
+            size="sm"
+            variant="surface"
+            onClick={() => setManualRecordOpen(true)}
+          >
+            Add record
+          </PrimaryButton>
+        }
+      >
+        {historySessions.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-white/10 bg-white/[0.02] px-4 py-6 text-center">
+            <p className="m-0 text-xs text-text-secondary">
+              Completed and interrupted sessions will appear here.
+            </p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            <ul className="m-0 flex list-none flex-col gap-2 p-0">
+              {visibleSessions.map((session) => (
+                <li key={session.id}>
+                  {isFocusSessionRecord(session) ? (
+                    <FocusHistoryFocusRow session={session} />
+                  ) : (
+                    <FocusHistoryBreakRow
+                      session={session}
+                      allSessions={historySessions}
+                    />
+                  )}
+                </li>
+              ))}
+            </ul>
+            {hasMore ? (
+              <PrimaryButton
+                type="button"
+                size="sm"
+                variant="surface"
+                className="w-full"
+                onClick={loadMoreHistory}
+              >
+                Load more
+              </PrimaryButton>
+            ) : null}
+          </div>
+        )}
+      </FocusCollapsibleSection>
+
+      <FocusManualRecordDialog
+        open={manualRecordOpen}
+        onClose={() => setManualRecordOpen(false)}
+      />
+    </>
   );
 }
 
@@ -112,6 +135,11 @@ function FocusHistoryFocusRow({ session }: { session: FocusSession }) {
             {session.name}
           </p>
           <FocusHistoryTypeBadge variant="focus">Focus</FocusHistoryTypeBadge>
+          {isManualFocusSession(session) ? (
+            <FocusHistoryTypeBadge variant="manual">
+              Manual
+            </FocusHistoryTypeBadge>
+          ) : null}
         </div>
         <p className="m-0 text-xs text-text-secondary">
           {getFocusSessionDurationLabel(session)} ·{" "}
@@ -182,7 +210,7 @@ function FocusHistoryTypeBadge({
   variant,
   children,
 }: {
-  variant: "focus" | "break";
+  variant: "focus" | "break" | "manual";
   children: ReactNode;
 }) {
   return (
@@ -191,7 +219,9 @@ function FocusHistoryTypeBadge({
         "inline-flex shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide",
         variant === "focus"
           ? "bg-emerald-400/10 text-emerald-300"
-          : "bg-sky-400/10 text-sky-300",
+          : variant === "break"
+            ? "bg-sky-400/10 text-sky-300"
+            : "bg-violet-400/10 text-violet-300",
       )}
     >
       {children}

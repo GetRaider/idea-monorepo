@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, type ReactNode } from "react";
+import { useCallback, useMemo, useRef, type ReactNode } from "react";
 import { toast } from "sonner";
 
 import { PrimaryButton } from "@/components/Buttons";
@@ -12,9 +12,10 @@ import type { FocusSessionContextValue } from "@/hooks/focus/useFocusSession";
 import {
   buildDefaultFocusSessionName,
   canEnableSaveToBacklog,
+  canStartFocusSession,
   formatFocusCountdown,
   getEstimationMinutes,
-  hasValidEstimation,
+  resolveIdleTimerMode,
 } from "@/helpers/focus/focus-session.helper";
 import { cn } from "@/lib/styles/utils";
 
@@ -24,7 +25,10 @@ import { FocusBacklogPicker } from "./FocusBacklogPicker";
 import { FocusColourPicker } from "./FocusColourPicker";
 import { FocusDurationDial } from "./FocusDurationDial";
 import { FocusSectionHeader } from "./FocusSectionHeader";
-import { FocusEstimationInput } from "./FocusEstimationInput";
+import {
+  FocusEstimationInput,
+  type FocusEstimationInputHandle,
+} from "./FocusEstimationInput";
 import { FocusBreakSuggestionDialog, FocusStopDialog } from "./FocusStopDialog";
 import { FocusTaskPicker } from "./FocusTaskPicker";
 
@@ -46,16 +50,11 @@ function FocusSessionPanelBody({ focus }: { focus: FocusSessionContextValue }) {
   const {
     systemState,
     activeTimer,
-    startFocusSession,
     pauseFocusSession,
     resumeFocusSession,
     stopFocusSession,
     stopBreakSession,
   } = focus;
-
-  const handleStart = useCallback(() => {
-    toastFocusActionError(startFocusSession(), "Cannot start focus session");
-  }, [startFocusSession]);
 
   const isIdle = systemState === "idle";
   const isFocusTimer =
@@ -70,7 +69,7 @@ function FocusSessionPanelBody({ focus }: { focus: FocusSessionContextValue }) {
       <FocusTimerCard
         title="Break"
         sessionName="Rest"
-        remainingSeconds={activeTimer.remainingSeconds}
+        displaySeconds={activeTimer.remainingSeconds}
         statusLabel={systemState === "break_running" ? "Running" : "Stopping…"}
         primaryLabel="Stop"
         onPrimary={() =>
@@ -82,12 +81,22 @@ function FocusSessionPanelBody({ focus }: { focus: FocusSessionContextValue }) {
 
   if (isFocusTimer && activeTimer?.sessionType === "focus") {
     const isPaused = systemState === "paused";
+    const isStopwatch = activeTimer.timerMode === "stopwatch";
     return (
       <FocusTimerCard
         title="Focus"
         sessionName={activeTimer.name}
-        remainingSeconds={activeTimer.remainingSeconds}
+        displaySeconds={
+          isStopwatch
+            ? activeTimer.elapsedSeconds
+            : activeTimer.remainingSeconds
+        }
         statusLabel={getStatusLabelByState(systemState)}
+        targetLabel={
+          isStopwatch && activeTimer.plannedDurationSeconds > 0
+            ? `Target ${formatFocusCountdown(activeTimer.plannedDurationSeconds)}`
+            : undefined
+        }
         primaryLabel={isPaused ? "Resume" : "Pause"}
         secondaryLabel="Stop"
         onPrimary={() => {
@@ -105,7 +114,7 @@ function FocusSessionPanelBody({ focus }: { focus: FocusSessionContextValue }) {
 
   if (!isIdle) return null;
 
-  return <FocusIdleSessionPanel focus={focus} onStart={handleStart} />;
+  return <FocusIdleSessionPanel focus={focus} />;
 }
 
 function FocusIdleSessionPanel({
@@ -116,36 +125,73 @@ function FocusIdleSessionPanel({
     backlog,
     configureSession,
     configureIdleDraft,
+    startFocusSession,
   },
-  onStart,
 }: {
   focus: FocusSessionContextValue;
-  onStart: () => void;
 }) {
+  const estimationInputRef = useRef<FocusEstimationInputHandle>(null);
+  const isNewSession = idleDraft.sessionSelection === "new";
+  const canSaveBacklog = canEnableSaveToBacklog(draft, idleDraft);
+  const timerMode = resolveIdleTimerMode(idleDraft);
+  const isStopwatchMode = timerMode === "stopwatch";
+  const isTimerMode = timerMode === "timer";
+
+  const handleStart = useCallback(() => {
+    const committedMinutes =
+      estimationInputRef.current?.commitPendingValue() ??
+      estimationInputRef.current?.getCommittedMinutes() ??
+      draft.durationMinutes;
+    const config = { ...draft, durationMinutes: committedMinutes };
+    toastFocusActionError(
+      startFocusSession(config),
+      "Cannot start focus session",
+    );
+  }, [draft, startFocusSession]);
+
+  const canStart = useMemo(
+    () => canStartFocusSession(draft, idleDraft),
+    [draft, idleDraft],
+  );
+
   const dialMinutes = useMemo(() => {
+    if (isStopwatchMode) {
+      return draft.durationMinutes ?? 0;
+    }
     if (draft.durationMinutes === null) {
       return 0;
     }
     const estimation = getEstimationMinutes(draft);
     return estimation ?? 0;
-  }, [draft]);
-
-  const isNewSession = idleDraft.sessionSelection === "new";
-  const canSaveBacklog = canEnableSaveToBacklog(draft, idleDraft);
-
-  const canStart = useMemo(() => {
-    if (!hasValidEstimation(draft)) return false;
-    if (idleDraft.sessionSelection === "backlog") {
-      return Boolean(idleDraft.selectedBacklogId);
-    }
-    if (!draft.taskId && draft.name.trim().length === 0) return false;
-    return true;
-  }, [draft, idleDraft.selectedBacklogId, idleDraft.sessionSelection]);
+  }, [draft, isStopwatchMode]);
 
   return (
     <div className="relative overflow-hidden rounded-xl border border-white/10 bg-white/[0.03]">
-      <FocusSectionHeader title="Timer" />
+      <FocusSectionHeader title="Operation" />
       <div className="border-t border-white/10 px-5 py-4">
+        <div className="mb-5 flex flex-col gap-1.5">
+          <p className="m-0 text-xs font-medium text-text-secondary">Mode</p>
+          <div className="flex rounded-lg border border-white/10 bg-black/20 p-0.5">
+            <FocusModeToggleButton
+              active={isStopwatchMode}
+              onClick={() => {
+                configureIdleDraft({ timerMode: "stopwatch" });
+                if (isTimerMode) {
+                  configureSession({ durationMinutes: null });
+                }
+              }}
+            >
+              Stopwatch
+            </FocusModeToggleButton>
+            <FocusModeToggleButton
+              active={isTimerMode}
+              onClick={() => configureIdleDraft({ timerMode: "timer" })}
+            >
+              Timer
+            </FocusModeToggleButton>
+          </div>
+        </div>
+
         <div className="flex flex-col gap-6 lg:grid lg:h-[min(52vh,420px)] lg:grid-cols-[auto_1px_minmax(0,1fr)] lg:items-stretch lg:gap-x-0">
           <section className="flex min-h-0 min-w-0 flex-col justify-center lg:h-full lg:pr-12">
             <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:gap-8">
@@ -159,8 +205,11 @@ function FocusIdleSessionPanel({
 
               <div className="flex w-[14rem] shrink-0 flex-col gap-4">
                 <FocusEstimationInput
+                  ref={estimationInputRef}
                   size="large"
                   durationMinutes={draft.durationMinutes}
+                  label={isStopwatchMode ? "Target (optional)" : "Estimation"}
+                  placeholder={isStopwatchMode ? "Optional" : "25m"}
                   onChange={(minutes) =>
                     configureSession({ durationMinutes: minutes })
                   }
@@ -168,7 +217,7 @@ function FocusIdleSessionPanel({
                 <PrimaryButton
                   type="button"
                   disabled={!canStart}
-                  onClick={onStart}
+                  onClick={handleStart}
                   className="w-full py-3 text-base"
                 >
                   Start
@@ -327,8 +376,9 @@ function FocusModeToggleButton({
 function FocusTimerCard({
   title,
   sessionName,
-  remainingSeconds,
+  displaySeconds,
   statusLabel,
+  targetLabel,
   primaryLabel,
   secondaryLabel,
   onPrimary,
@@ -338,7 +388,7 @@ function FocusTimerCard({
 }: FocusTimerCardProps) {
   return (
     <div className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.03]">
-      <FocusSectionHeader title="Timer" />
+      <FocusSectionHeader title="Operation" />
       <div className="flex min-h-[min(40vh,320px)] flex-col items-center justify-center gap-6 border-t border-white/10 px-6 py-8 sm:px-8">
         <div className="flex flex-col items-center gap-1 text-center">
           <p className="m-0 text-xs font-medium uppercase tracking-wide text-text-tertiary">
@@ -348,10 +398,13 @@ function FocusTimerCard({
             {sessionName}
           </p>
           <p className="m-0 text-xs text-text-secondary">{statusLabel}</p>
+          {targetLabel ? (
+            <p className="m-0 text-xs text-text-tertiary">{targetLabel}</p>
+          ) : null}
         </div>
 
         <p className="m-0 font-mono text-5xl font-semibold tabular-nums tracking-tight text-text-primary sm:text-6xl">
-          {formatFocusCountdown(remainingSeconds)}
+          {formatFocusCountdown(displaySeconds)}
         </p>
 
         <div className="flex flex-wrap items-center justify-center gap-2">
@@ -400,8 +453,9 @@ interface FocusModeToggleButtonProps {
 interface FocusTimerCardProps {
   title: string;
   sessionName: string;
-  remainingSeconds: number;
+  displaySeconds: number;
   statusLabel: string;
+  targetLabel?: string;
   primaryLabel: string;
   secondaryLabel?: string;
   onPrimary: () => void;

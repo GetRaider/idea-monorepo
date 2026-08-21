@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
 
 import {
-  advanceActiveTimer,
+  computeActiveTimerFromWallClock,
   isActiveBreakTimer,
   isActiveFocusTimer,
+  shouldAutoCompleteActiveTimer,
 } from "@/helpers/focus/focus-session.helper";
 
 import type { FocusSessionPersistence } from "./useFocusSessionPersistence";
@@ -28,73 +29,76 @@ export function useFocusActiveTimerEffects(
     completeBreakSessionInternal,
   } = persistence;
 
+  const syncActiveTimer = useCallback(() => {
+    const currentTimer = activeTimerRef.current;
+    const currentSystemState = systemStateRef.current;
+
+    if (
+      !currentTimer ||
+      (currentSystemState !== "running" &&
+        currentSystemState !== "break_running")
+    ) {
+      return;
+    }
+
+    if (currentTimer.pausedAt) return;
+
+    const nextTimer = computeActiveTimerFromWallClock(currentTimer);
+
+    if (shouldAutoCompleteActiveTimer(nextTimer)) {
+      if (isActiveFocusTimer(nextTimer)) {
+        completeFocusSessionInternal({
+          ...nextTimer,
+          systemState: "running",
+        });
+      } else if (isActiveBreakTimer(nextTimer)) {
+        completeBreakSessionInternal({
+          ...nextTimer,
+          systemState: "running",
+        });
+      }
+      return;
+    }
+
+    activeTimerRef.current = nextTimer;
+    setActiveTimer(nextTimer);
+    persistActive(nextTimer);
+  }, [
+    activeTimerRef,
+    completeBreakSessionInternal,
+    completeFocusSessionInternal,
+    persistActive,
+    setActiveTimer,
+    systemStateRef,
+  ]);
+
   useEffect(() => {
     if (!isHydrated) return;
     if (systemState !== "running" && systemState !== "break_running") {
       return;
     }
 
-    const interval = window.setInterval(() => {
-      const currentTimer = activeTimerRef.current;
-      const currentSystemState = systemStateRef.current;
-
-      if (
-        !currentTimer ||
-        (currentSystemState !== "running" &&
-          currentSystemState !== "break_running")
-      ) {
-        return;
-      }
-
-      if (currentTimer.pausedAt) return;
-
-      const nextTimer = advanceActiveTimer(currentTimer);
-
-      if (nextTimer.remainingSeconds === 0) {
-        if (isActiveFocusTimer(nextTimer)) {
-          completeFocusSessionInternal({
-            ...nextTimer,
-            systemState: "running",
-          });
-        } else if (isActiveBreakTimer(nextTimer)) {
-          completeBreakSessionInternal({
-            ...nextTimer,
-            systemState: "running",
-          });
-        }
-        return;
-      }
-
-      activeTimerRef.current = nextTimer;
-      setActiveTimer(nextTimer);
-      persistActive(nextTimer);
-    }, 1000);
+    syncActiveTimer();
+    const interval = window.setInterval(syncActiveTimer, 1000);
 
     return () => window.clearInterval(interval);
-  }, [
-    activeTimerRef,
-    completeBreakSessionInternal,
-    completeFocusSessionInternal,
-    isHydrated,
-    persistActive,
-    setActiveTimer,
-    systemState,
-    systemStateRef,
-  ]);
+  }, [isHydrated, syncActiveTimer, systemState]);
 
   useEffect(() => {
     if (!isHydrated) return;
 
-    const persistOnHide = () => {
-      if (document.visibilityState !== "hidden") return;
-      persistActive(activeTimerRef.current);
+    const handleVisibilityChange = () => {
+      syncActiveTimer();
+      if (document.visibilityState === "hidden") {
+        persistActive(activeTimerRef.current);
+      }
     };
 
-    window.addEventListener("beforeunload", persistOnHide);
-    document.addEventListener("visibilitychange", persistOnHide);
+    window.addEventListener("beforeunload", handleVisibilityChange);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
     return () => {
-      window.removeEventListener("beforeunload", persistOnHide);
-      document.removeEventListener("visibilitychange", persistOnHide);
+      window.removeEventListener("beforeunload", handleVisibilityChange);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [activeTimerRef, isHydrated, persistActive]);
+  }, [activeTimerRef, isHydrated, persistActive, syncActiveTimer]);
 }

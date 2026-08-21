@@ -9,6 +9,8 @@ import type {
   FocusSession,
   FocusSessionRecord,
   FocusSessionsStore,
+  FocusSessionSource,
+  FocusTimerMode,
   SessionConfig,
   StoredFocusDraft,
 } from "@/types/focus.types";
@@ -77,6 +79,19 @@ function migratePlannedDurationSeconds(
   return minutes * 60;
 }
 
+function migrateTimerMode(value: unknown): FocusTimerMode {
+  if (value === "stopwatch" || value === "timer") {
+    return value;
+  }
+  return "timer";
+}
+
+function migrateSessionSource(value: unknown): FocusSessionSource | undefined {
+  if (value === "manual") return "manual";
+  if (value === "live") return "live";
+  return undefined;
+}
+
 function migrateFocusSession(value: unknown): FocusSession | null {
   if (!isRecord(value) || value.type !== "focus") return null;
 
@@ -107,6 +122,8 @@ function migrateFocusSession(value: unknown): FocusSession | null {
     startedAt: value.startedAt,
     endedAt: value.endedAt,
     status: value.status,
+    timerMode: migrateTimerMode(value.timerMode),
+    source: migrateSessionSource(value.source),
   };
 }
 
@@ -164,6 +181,13 @@ function isActiveFocusTimer(value: unknown): value is ActiveFocusTimer {
   }
   if (typeof value.elapsedSeconds !== "number") return false;
   if (typeof value.startedAt !== "string") return false;
+  if (
+    value.timerMode !== undefined &&
+    value.timerMode !== "timer" &&
+    value.timerMode !== "stopwatch"
+  ) {
+    return false;
+  }
   return true;
 }
 
@@ -186,7 +210,14 @@ function isActiveBreakTimer(value: unknown): value is ActiveBreakTimer {
 }
 
 function migrateActiveTimer(value: unknown): ActiveTimer | null {
-  if (isActiveFocusTimer(value) || isActiveBreakTimer(value)) {
+  if (isActiveFocusTimer(value)) {
+    return {
+      ...value,
+      timerMode: value.timerMode ?? "timer",
+    };
+  }
+
+  if (isActiveBreakTimer(value)) {
     return value;
   }
 
@@ -251,6 +282,7 @@ function migrateActiveTimer(value: unknown): ActiveTimer | null {
     sessionId: value.sessionId,
     sessionType: "focus",
     systemState: value.systemState,
+    timerMode: migrateTimerMode(value.timerMode),
     name: config.name,
     taskId: config.taskId,
     color,
@@ -305,6 +337,13 @@ export function writeFocusActiveTimer(next: ActiveTimer | null): void {
   localStorageHelper.writeItem(FOCUS_STORAGE_ACTIVE_KEY, next);
 }
 
+function normalizeFocusIdleDraft(value: FocusIdleDraft): FocusIdleDraft {
+  return {
+    ...value,
+    timerMode: value.timerMode ?? "stopwatch",
+  };
+}
+
 function isFocusIdleDraft(value: unknown): value is FocusIdleDraft {
   if (!isRecord(value)) return false;
   if (
@@ -321,6 +360,13 @@ function isFocusIdleDraft(value: unknown): value is FocusIdleDraft {
   }
   if (typeof value.saveToBacklog !== "boolean") return false;
   if (typeof value.color !== "string") return false;
+  if (
+    value.timerMode !== undefined &&
+    value.timerMode !== "timer" &&
+    value.timerMode !== "stopwatch"
+  ) {
+    return false;
+  }
   return true;
 }
 
@@ -366,7 +412,10 @@ export function readFocusDraft(): StoredFocusDraft | null {
   const parsed = localStorageHelper.readItem(FOCUS_STORAGE_DRAFT_KEY);
   if (parsed === null) return null;
   if (isStoredFocusDraft(parsed)) {
-    return parsed;
+    return {
+      config: parsed.config,
+      idle: normalizeFocusIdleDraft(parsed.idle),
+    };
   }
   const migratedConfig = migrateSessionConfig(parsed);
   if (migratedConfig) {

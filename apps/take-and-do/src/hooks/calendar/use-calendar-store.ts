@@ -17,7 +17,7 @@ import type {
   GoogleCalendarRecurrenceScope,
 } from "@/types/calendar.types";
 
-import { useIsAnonymous } from "@/hooks/auth/use-is-anonymous";
+import { useUser } from "@/contexts/UserContext";
 
 import { readCalendarState, writeCalendarState } from "./calendar-storage";
 import { CALENDAR_STATE_EXTERNAL_UPDATE_EVENT } from "./task-calendar-local-sync";
@@ -31,7 +31,7 @@ import { calendarEventsLayoutSignature } from "@/helpers/calendar/planning-calen
 import { mergeGoogleCalendarImportedEvents } from "./merge-google-calendar-import";
 
 export function useCalendarStore() {
-  const isGuest = useIsAnonymous();
+  const { isGuest } = useUser();
   const [state, setState] = useState<CalendarPersistedState | null>(null);
 
   useLayoutEffect(() => {

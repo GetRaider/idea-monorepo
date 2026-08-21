@@ -26,6 +26,10 @@ export const auth = betterAuth({
       verification: authSchema.verification,
     },
   }),
+  session: {
+    expiresIn: 60 * 60 * 24 * 7,
+    updateAge: 60 * 60 * 24,
+  },
   emailAndPassword: { enabled: true },
   ...(envServer.auth.google
     ? {

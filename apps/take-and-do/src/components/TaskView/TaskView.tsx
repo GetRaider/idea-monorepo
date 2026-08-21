@@ -8,7 +8,7 @@ import {
   TaskUpdate,
 } from "../Boards/KanbanBoard/types";
 import { toast } from "sonner";
-import { useTaskActions } from "@/hooks/tasks/useTasks";
+import { useWorkspaceRepository } from "@/repositories/workspace";
 import { TextEditor } from "../TextEditor/TextEditor";
 import { TaskViewHeader } from "./TaskViewHeader/TaskViewHeader";
 import { SecondaryButton } from "@/components/Buttons";
@@ -61,7 +61,7 @@ export function TaskView({
   onTaskDelete,
   onNavigateToParentTask,
 }: TaskViewProps) {
-  const { createTask, updateTask, deleteTask } = useTaskActions();
+  const { createTask, updateTask, deleteTask } = useWorkspaceRepository();
   const isSubtask = !!parentTask;
   const [task, setTask] = useState<Task | null>(initialTask);
   const isCreating = !initialTask || !initialTask.id;

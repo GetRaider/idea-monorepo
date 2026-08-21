@@ -14,10 +14,25 @@ import {
   recomposeGuestTaskTreeForBoard,
 } from "@/helpers/task-key.helper";
 
+import { GUEST_STORE_TTL_MS } from "@/constants/guest-features.constant";
+
 import { GUEST_STORE_UPDATED_EVENT } from "./constants";
 import type { GuestSidebarOrder, GuestStore } from "./types";
 
 const STORAGE_KEY = "guest_store";
+
+export function guestStoreExpiresAtFromNow(nowMs: number = Date.now()): string {
+  return new Date(nowMs + GUEST_STORE_TTL_MS).toISOString();
+}
+
+export function isGuestStoreExpired(
+  expiresAt: string,
+  nowMs: number = Date.now(),
+): boolean {
+  const expiryMs = Date.parse(expiresAt);
+  if (Number.isNaN(expiryMs)) return true;
+  return expiryMs <= nowMs;
+}
 
 /** JSON dates are strings; revive to `Task` for app code. */
 function normalizeStoredTask(raw: unknown): Task {
@@ -90,7 +105,7 @@ function normalizeStoredTaskBoard(raw: unknown): TaskBoard {
   };
 }
 
-function notifyGuestStoreChanged() {
+function notifyGuestStoreChanged(): boolean | undefined {
   if (typeof window === "undefined") return;
   window.dispatchEvent(new Event(GUEST_STORE_UPDATED_EVENT));
 }
@@ -137,7 +152,7 @@ function parseStore(raw: string): GuestStore | null {
     const expiresAt =
       typeof record.expiresAt === "string"
         ? record.expiresAt
-        : new Date("2099-12-31T23:59:59.000Z").toISOString();
+        : guestStoreExpiresAtFromNow();
     const tasks = Array.isArray(record.tasks)
       ? record.tasks.map((item) => normalizeStoredTask(item))
       : [];
@@ -241,7 +256,7 @@ export const guestStoreHelper = {
   },
 
   _expiresAt(): string {
-    return new Date("2099-12-31T23:59:59.000Z").toISOString();
+    return guestStoreExpiresAtFromNow();
   },
 
   _empty(): GuestStore {
@@ -272,6 +287,10 @@ export const guestStoreHelper = {
     try {
       const store = parseStore(raw);
       if (!store) {
+        this.clear();
+        return null;
+      }
+      if (isGuestStoreExpired(store.expiresAt)) {
         this.clear();
         return null;
       }

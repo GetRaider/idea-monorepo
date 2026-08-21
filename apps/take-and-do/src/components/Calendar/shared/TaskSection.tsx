@@ -2,16 +2,13 @@
 
 import type { ReactNode } from "react";
 import { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
 
 import { QuickCreateTaskRow } from "@/components/Boards/shared/QuickCreateTaskRow";
 import {
   TaskPriority,
   TaskStatus,
 } from "@/components/Boards/KanbanBoard/types";
-import { queryKeys } from "@/lib/query-keys";
-import { clientServices } from "@/services";
-import { useTaskActions, useTasks } from "@/hooks/tasks/useTasks";
+import { useWorkspaceRepository } from "@/repositories/workspace";
 import { toast } from "sonner";
 
 import { DialogFormGroup, DialogFormLabel } from "@/components/Dialogs";
@@ -21,7 +18,6 @@ import { cn } from "@/lib/styles/utils";
 interface CalendarEventTaskSectionProps {
   taskBoardId: string;
   taskId: string;
-  isGuest: boolean;
   inputClass: string;
   onBoardChange: (boardId: string) => void;
   onTaskChange: (taskId: string, summarySnapshot: string) => void;
@@ -35,7 +31,6 @@ interface CalendarEventTaskSectionProps {
 export function CalendarEventTaskSection({
   taskBoardId,
   taskId,
-  isGuest,
   inputClass: _inputClass,
   onBoardChange,
   onTaskChange,
@@ -43,40 +38,23 @@ export function CalendarEventTaskSection({
   boardTrailing,
   sectionClassName,
 }: CalendarEventTaskSectionProps) {
-  const boardsQuery = useQuery({
-    queryKey: queryKeys.taskBoards.all,
-    queryFn: () => clientServices.taskBoards.getAll(),
-    enabled: !isGuest,
-  });
+  const { taskBoards, createTask, tasks, isTasksLoading } =
+    useWorkspaceRepository({ taskBoardId: taskBoardId || undefined });
 
   const boardOptions = useMemo(
     () =>
-      (boardsQuery.data ?? []).map((b) => ({
-        id: b.id,
-        name: b.name,
-        emoji: b.emoji,
+      taskBoards.map((board) => ({
+        id: board.id,
+        name: board.name,
+        emoji: board.emoji,
       })),
-    [boardsQuery.data],
+    [taskBoards],
   );
-
-  const { tasks, isLoading: tasksLoading } = useTasks({
-    taskBoardId: taskBoardId || undefined,
-  });
-
-  const { createTask } = useTaskActions();
 
   const taskOptions = useMemo(
-    () => tasks.map((t) => ({ id: t.id, summary: t.summary })),
+    () => tasks.map((task) => ({ id: task.id, summary: task.summary })),
     [tasks],
   );
-
-  if (isGuest) {
-    return (
-      <p className="m-0 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-zinc-400">
-        Sign in to link calendar events to boards and tasks.
-      </p>
-    );
-  }
 
   return (
     <div className={cn("flex flex-col gap-4", sectionClassName)}>
@@ -87,9 +65,9 @@ export function CalendarEventTaskSection({
             <Dropdown<string>
               options={[
                 { value: "", label: "Select a board…" },
-                ...boardOptions.map((b) => ({
-                  value: b.id,
-                  label: `${b.emoji ? `${b.emoji} ` : ""}${b.name}`,
+                ...boardOptions.map((board) => ({
+                  value: board.id,
+                  label: `${board.emoji ? `${board.emoji} ` : ""}${board.name}`,
                 })),
               ]}
               value={taskBoardId}
@@ -111,17 +89,20 @@ export function CalendarEventTaskSection({
               options={[
                 {
                   value: "",
-                  label: tasksLoading ? "Loading…" : "Select a task…",
+                  label: isTasksLoading ? "Loading…" : "Select a task…",
                 },
-                ...taskOptions.map((t) => ({ value: t.id, label: t.summary })),
+                ...taskOptions.map((task) => ({
+                  value: task.id,
+                  label: task.summary,
+                })),
               ]}
               value={taskId}
               onChange={(id) => {
-                const t = taskOptions.find((x) => x.id === id);
-                onTaskChange(id, t?.summary ?? "");
-                if (t && onTitleSync) onTitleSync(t.summary);
+                const task = taskOptions.find((option) => option.id === id);
+                onTaskChange(id, task?.summary ?? "");
+                if (task && onTitleSync) onTitleSync(task.summary);
               }}
-              disabled={tasksLoading}
+              disabled={isTasksLoading}
               fullWidth
             />
           </DialogFormGroup>
@@ -134,8 +115,8 @@ export function CalendarEventTaskSection({
               defaultStatus={TaskStatus.TODO}
               defaultPriority={TaskPriority.MEDIUM}
               onCreate={async (input) => {
-                const board = (boardsQuery.data ?? []).find(
-                  (b) => b.id === input.taskBoardId,
+                const board = boardOptions.find(
+                  (item) => item.id === input.taskBoardId,
                 );
                 const created = await createTask({
                   taskBoardId: input.taskBoardId,

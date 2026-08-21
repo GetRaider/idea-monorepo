@@ -13,21 +13,33 @@ import {
   backlogItemFromConfig,
   buildDefaultFocusSessionName,
   buildFocusSessionRecord,
+  buildManualFocusSessionRecord,
   canEnableSaveToBacklog,
   getPlannedFocusDurationSeconds,
+  getStopwatchRemainingSeconds,
   isActiveFocusTimer,
   randomFocusSessionColor,
+  resolveBreakBasisSeconds,
+  resolveIdleTimerMode,
   sessionConfigFromBacklogItem,
+  validateManualFocusRecordInput,
   validateSessionConfig,
+  validateSessionConfigForTimerMode,
 } from "@/helpers/focus/focus-session.helper";
 import { clientServices } from "@/services";
-import { appendFocusBacklogItem } from "@/hooks/focus/focus-storage";
+import {
+  appendFocusBacklogItem,
+  writeFocusBreakSuggestion,
+} from "@/hooks/focus/focus-storage";
 
 import type {
   ActiveFocusTimer,
   FocusActionResult,
   FocusBacklogItem,
+  FocusBreakSuggestion,
   FocusIdleDraft,
+  FocusTimerMode,
+  ManualFocusRecordInput,
   SessionConfig,
 } from "@/types/focus.types";
 
@@ -41,6 +53,7 @@ export type FocusSessionLifecycleActions = {
   stopFocusSession: () => FocusActionResult;
   savePartialSession: () => FocusActionResult;
   discardSession: () => FocusActionResult;
+  addManualFocusRecord: (input: ManualFocusRecordInput) => FocusActionResult;
 };
 
 export function useFocusSessionLifecycleActions(
@@ -60,6 +73,7 @@ export function useFocusSessionLifecycleActions(
     setIdleDraftState,
     setBacklog,
     setSystemState,
+    setBreakSuggestion,
   } = store;
   const { persistActive, persistStoredDraft, clearActiveTimer, appendSession } =
     persistence;
@@ -85,7 +99,14 @@ export function useFocusSessionLifecycleActions(
         config = sessionConfigFromBacklogItem(backlogItem);
       }
 
-      const validation = validateSessionConfig(config);
+      const isBacklogSession = idleDraft.sessionSelection === "backlog";
+      const timerMode: FocusTimerMode = isBacklogSession
+        ? "timer"
+        : resolveIdleTimerMode(idleDraft);
+
+      const validation = isBacklogSession
+        ? validateSessionConfig(config)
+        : validateSessionConfigForTimerMode(config, timerMode);
       if (validation.status !== "SUCCESS") {
         return validation;
       }
@@ -119,12 +140,16 @@ export function useFocusSessionLifecycleActions(
         sessionId: crypto.randomUUID(),
         sessionType: "focus",
         systemState: "running",
+        timerMode,
         name: config.name.trim(),
         taskId: config.taskId,
         color: sessionColor,
         plannedDurationSeconds,
         elapsedSeconds: 0,
-        remainingSeconds: plannedDurationSeconds,
+        remainingSeconds:
+          timerMode === "stopwatch"
+            ? getStopwatchRemainingSeconds(plannedDurationSeconds, 0)
+            : plannedDurationSeconds,
         pausedAt: null,
         startedAt,
       };
@@ -145,6 +170,7 @@ export function useFocusSessionLifecycleActions(
       };
       const nextIdleDraft: FocusIdleDraft = {
         ...DEFAULT_IDLE_DRAFT,
+        timerMode: idleDraft.timerMode,
         color: randomFocusSessionColor(),
       };
       setDraftState(nextDraftConfig);
@@ -217,6 +243,9 @@ export function useFocusSessionLifecycleActions(
       ...currentTimer,
       systemState: "running",
       pausedAt: null,
+      startedAt: new Date(
+        Date.now() - currentTimer.elapsedSeconds * 1000,
+      ).toISOString(),
     };
 
     activeTimerRef.current = nextTimer;
@@ -265,10 +294,22 @@ export function useFocusSessionLifecycleActions(
 
     const record = buildFocusSessionRecord(
       currentTimer,
-      "interrupted",
+      currentTimer.timerMode === "stopwatch" ? "completed" : "interrupted",
       new Date().toISOString(),
     );
     appendSession(record);
+
+    if (currentTimer.timerMode === "stopwatch") {
+      const suggestion: FocusBreakSuggestion = {
+        parentFocusSessionId: record.id,
+        parentPlannedFocusSeconds: resolveBreakBasisSeconds(currentTimer),
+      };
+      clearActiveTimer();
+      writeFocusBreakSuggestion(suggestion);
+      setBreakSuggestion(suggestion);
+      setSystemState("break_suggested");
+      return focusSuccess;
+    }
 
     clearActiveTimer();
     setSystemState("idle");
@@ -278,6 +319,7 @@ export function useFocusSessionLifecycleActions(
     activeTimerRef,
     appendSession,
     clearActiveTimer,
+    setBreakSuggestion,
     setSystemState,
     systemStateRef,
   ]);
@@ -293,6 +335,20 @@ export function useFocusSessionLifecycleActions(
     return focusSuccess;
   }, [clearActiveTimer, setSystemState, systemStateRef]);
 
+  const addManualFocusRecord = useCallback(
+    (input: ManualFocusRecordInput): FocusActionResult => {
+      const validation = validateManualFocusRecordInput(input);
+      if (validation.status !== "SUCCESS") {
+        return validation;
+      }
+
+      const record = buildManualFocusSessionRecord(input);
+      appendSession(record);
+      return focusSuccess;
+    },
+    [appendSession],
+  );
+
   return {
     startFocusSession,
     pauseFocusSession,
@@ -300,5 +356,6 @@ export function useFocusSessionLifecycleActions(
     stopFocusSession,
     savePartialSession,
     discardSession,
+    addManualFocusRecord,
   };
 }

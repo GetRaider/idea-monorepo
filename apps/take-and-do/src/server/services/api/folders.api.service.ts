@@ -61,18 +61,6 @@ export class FoldersApiService extends BaseApiService {
       const nameTrimmed = name.trim();
       if (!nameTrimmed) throw new Error("Folder name is required");
 
-      if (access.isAnonymous) {
-        const now = new Date();
-        return {
-          id,
-          name: nameTrimmed,
-          emoji: trimmedEmoji,
-          isPublic: false,
-          createdAt: now,
-          updatedAt: now,
-        };
-      }
-
       if (await this.workspace.isNameTaken(access, nameTrimmed))
         throw new Error("A workspace with this name already exists");
 
@@ -102,28 +90,6 @@ export class FoldersApiService extends BaseApiService {
     access: DataAccess,
   ) {
     return this.handleOperation(async () => {
-      if (access.isAnonymous) {
-        if (
-          data.name === undefined ||
-          typeof data.name !== "string" ||
-          !data.name.trim()
-        ) {
-          throw new Error("Folder name is required");
-        }
-        const now = new Date();
-        const createdAt = data.createdAt
-          ? new Date(data.createdAt as string | Date)
-          : now;
-        return {
-          id,
-          name: data.name.trim(),
-          emoji: data.emoji !== undefined ? data.emoji : null,
-          isPublic: data.isPublic ?? false,
-          createdAt,
-          updatedAt: now,
-        };
-      }
-
       const existing = await this.getById(id, access);
       if (!existing) {
         throw new Error("Folder not found");
@@ -158,8 +124,6 @@ export class FoldersApiService extends BaseApiService {
 
   async delete(id: string, access: DataAccess) {
     return this.handleOperation(async () => {
-      if (access.isAnonymous) return;
-
       const existing = await this.getById(id, access);
 
       if (!existing) throw new Error("Folder not found");

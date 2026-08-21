@@ -37,7 +37,7 @@ import {
 } from "./shared/taskComposeHelpers";
 import { useKanbanTaskHandlers } from "../../../hooks/tasks/useKanbanTaskHandlers";
 import { useMultipleKanbanBoardData } from "../../../hooks/tasks/useMultipleKanbanBoardData";
-import { useTaskActions } from "@/hooks/tasks/useTasks";
+import { useWorkspaceRepository } from "@/repositories/workspace";
 import { useBoardViewMode } from "@/hooks/tasks/useBoardViewMode";
 import { useBoardListSubmode } from "@/hooks/tasks/useBoardListSubmode";
 import { useBoardListSort } from "@/hooks/tasks/useBoardListSort";
@@ -84,8 +84,9 @@ export function MultipleKanbanBoard({
   onTaskClose,
   onSubtaskOpen,
 }: MultipleKanbanBoardProps) {
-  const { createTask, updateTask } = useTaskActions();
-  const { taskBoards, isBoardsLoading, openCreateWorkspace } = useWorkspace();
+  const { createTask, updateTask, taskBoards, isBoardsLoading } =
+    useWorkspaceRepository();
+  const { openCreateWorkspace } = useWorkspace();
   const { setSettingsSlot } = useTasksShellHeaderExtras();
   const {
     boardsWithTasks,

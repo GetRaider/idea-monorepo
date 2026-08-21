@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   type ReactNode,
   useEffect,
@@ -27,12 +27,7 @@ import {
 } from "./shared/taskComposeHelpers";
 import { useKanbanTaskHandlers } from "../../../hooks/tasks/useKanbanTaskHandlers";
 import { useBoardUrlTaskDialogSync } from "@/hooks/tasks/useBoardUrlTaskDialogSync";
-import { useIsAnonymous } from "@/hooks/auth/use-is-anonymous";
-import { useTaskActions } from "@/hooks/tasks/useTasks";
-import { useGuestTasks } from "@/hooks/tasks/use-guest-store";
-import { GUEST_STORE_UPDATED_EVENT } from "@/stores/guest/constants";
-import { guestStoreHelper } from "@/stores/guest";
-import { guestTasksForBoard } from "@/stores/guest/guest-task-filters";
+import { useWorkspaceRepository } from "@/repositories/workspace";
 import { TaskView } from "../../TaskView/TaskView";
 import {
   applyOptimisticPatch,
@@ -40,7 +35,7 @@ import {
   removeTaskFromColumns,
   updateTaskInColumns,
 } from "@/hooks/tasks/useTaskBoardState";
-import { useWorkspace, useTasksShellHeaderExtras } from "@/contexts";
+import { useTasksShellHeaderExtras } from "@/contexts";
 import { findTaskStatusInColumns } from "@/helpers/task-board-lookup.helper";
 import { sortTaskColumnsForList } from "@/helpers/list-sort.helper";
 import {
@@ -105,10 +100,14 @@ export function SingleKanbanBoard({
   onSubtaskOpen,
 }: SingleKanbanBoardProps) {
   const router = useRouter();
-  const isAnonymous = useIsAnonymous();
-  const { tasks: guestTasks } = useGuestTasks();
-  const { createTask, updateTask } = useTaskActions();
-  const { taskBoards } = useWorkspace();
+  const queryClient = useQueryClient();
+  const {
+    tasks: boardTasks,
+    isTasksLoading: isLoading,
+    taskBoards,
+    createTask,
+    updateTask,
+  } = useWorkspaceRepository({ taskBoardId: boardId });
   const { setSettingsSlot } = useTasksShellHeaderExtras();
   const [viewMode, setViewMode] = useBoardViewMode(boardId);
   const [listSubmode, setListSubmode] = useBoardListSubmode(boardId);
@@ -118,44 +117,13 @@ export function SingleKanbanBoard({
     [taskBoards],
   );
 
-  const tasksQuery = useQuery({
-    queryKey: queryKeys.tasks.byBoard(boardId),
-    queryFn: () => clientServices.tasks.getByBoardId(boardId),
-    enabled: !isAnonymous && !!boardId,
-  });
-
   const [tasksByStatus, setTasksByStatus] =
     useState<Record<TaskStatus, Task[]>>(emptyTaskColumns);
   const [isAIComposeDialogOpen, setIsAIComposeDialogOpen] = useState(false);
 
   useEffect(() => {
-    if (isAnonymous) {
-      setTasksByStatus(tasksToColumns(guestTasksForBoard(guestTasks, boardId)));
-    }
-  }, [isAnonymous, guestTasks, boardId]);
-
-  useEffect(() => {
-    if (isAnonymous) return;
-    if (tasksQuery.data === undefined) return;
-    setTasksByStatus(tasksToColumns(tasksQuery.data));
-  }, [isAnonymous, tasksQuery.data, boardId]);
-
-  useEffect(() => {
-    if (!isAnonymous) return;
-    const onGuestStoreUpdated = () => {
-      setTasksByStatus(
-        tasksToColumns(
-          guestTasksForBoard(guestStoreHelper.getTasks(), boardId),
-        ),
-      );
-    };
-    window.addEventListener(GUEST_STORE_UPDATED_EVENT, onGuestStoreUpdated);
-    return () =>
-      window.removeEventListener(
-        GUEST_STORE_UPDATED_EVENT,
-        onGuestStoreUpdated,
-      );
-  }, [isAnonymous, boardId]);
+    setTasksByStatus(tasksToColumns(boardTasks));
+  }, [boardTasks]);
 
   const {
     selectedTask,
@@ -167,12 +135,12 @@ export function SingleKanbanBoard({
     handleSubtaskClick,
   } = useKanbanTaskHandlers({ onTaskOpen, onTaskClose, onSubtaskOpen });
 
-  const isLoading = !isAnonymous && tasksQuery.isPending;
+  const isLoadingBoardTasks = isLoading;
 
   const { handleCloseBoardDialog } = useBoardUrlTaskDialogSync({
     boardName,
     tasksByStatus,
-    isLoading,
+    isLoading: isLoadingBoardTasks,
     selectedTask,
     parentTask,
     setSelectedTask,
@@ -183,16 +151,11 @@ export function SingleKanbanBoard({
 
   const fetchTasks = useCallback(async () => {
     if (!boardId) return;
-    if (isAnonymous) {
-      setTasksByStatus(
-        tasksToColumns(
-          guestTasksForBoard(guestStoreHelper.getTasks(), boardId),
-        ),
-      );
-      return;
-    }
-    await tasksQuery.refetch();
-  }, [boardId, isAnonymous, tasksQuery]);
+    await queryClient.invalidateQueries({
+      queryKey: queryKeys.tasks.byBoard(boardId),
+    });
+    setTasksByStatus(tasksToColumns(boardTasks));
+  }, [boardId, boardTasks, queryClient]);
 
   const persistTaskStatus = useCallback(
     async (taskId: string, newStatus: TaskStatus) => {
@@ -279,15 +242,13 @@ export function SingleKanbanBoard({
         toast.error("Can't create task");
         return;
       }
-      if (!isAnonymous) {
-        setTasksByStatus((prev) => ({
-          ...prev,
-          [created.status]: [...prev[created.status], created],
-        }));
-      }
+      setTasksByStatus((previous) => ({
+        ...previous,
+        [created.status]: [...previous[created.status], created],
+      }));
       toast.success(`Task “${created.summary}” created`);
     },
-    [createTask, boardName, isAnonymous],
+    [createTask, boardName],
   );
 
   const handleNavigateToParentTask = useCallback(() => {
@@ -447,7 +408,7 @@ export function SingleKanbanBoard({
         ) : null}
 
         <Board fillHeight={viewMode === "kanban"} viewMode={viewMode}>
-          {isLoading ? (
+          {isLoadingBoardTasks ? (
             <LoadingContainer>
               <KanbanSpinner />
             </LoadingContainer>

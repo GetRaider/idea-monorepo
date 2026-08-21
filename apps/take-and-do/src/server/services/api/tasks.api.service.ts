@@ -192,71 +192,6 @@ export class TasksApiService extends BaseApiService {
     });
   }
 
-  async createGuestTask(
-    taskData: Omit<Task, "id">,
-    access: DataAccess,
-    options?: { taskBoardName?: string },
-  ): Promise<Task> {
-    if (!access.isAnonymous)
-      throw new Error("createTaskInMemoryWithoutDatabase: anonymous only");
-    if (!taskData.taskBoardId?.trim())
-      throw new Error("Task must have a taskBoardId");
-
-    const taskId = genericHelper.generateId();
-    const boardForPrefix = options?.taskBoardName?.trim()
-      ? { name: options.taskBoardName.trim() }
-      : null;
-    const boardPrefix = boardNameToTaskKeyPrefix(boardForPrefix);
-    let taskKey = taskData.taskKey?.trim();
-    if (!taskKey)
-      taskKey = `${boardPrefix}-${genericHelper.generateId().slice(0, 10)}`;
-
-    const baseTask: Task = {
-      id: taskId,
-      taskBoardId: taskData.taskBoardId,
-      taskKey,
-      summary: taskData.summary,
-      description: taskData.description || "",
-      status: taskData.status,
-      priority: taskData.priority,
-      dueDate: taskData.dueDate,
-      estimation: taskData.estimation,
-      scheduleDate: taskData.scheduleDate,
-      labels: taskData.labels,
-    };
-
-    if (!taskData.subtasks?.length) return baseTask;
-
-    const subtaskPrefix = deriveTaskKeyPrefix(taskKey);
-    const parentNumeric = extractNumericPortion(taskKey) ?? 0;
-    const processedSubtasks = assignSubtaskIdsAndKeys(
-      taskData.subtasks,
-      subtaskPrefix,
-      parentNumeric,
-      () => undefined,
-    );
-
-    return {
-      ...baseTask,
-      subtasks: taskData.subtasks.map((subtask, index) => {
-        const processed = processedSubtasks[index];
-        return {
-          id: processed.id,
-          taskBoardId: subtask.taskBoardId || taskData.taskBoardId,
-          taskKey: processed.taskKey,
-          summary: subtask.summary,
-          description: subtask.description || "",
-          status: subtask.status,
-          priority: subtask.priority,
-          dueDate: subtask.dueDate,
-          estimation: subtask.estimation,
-          scheduleDate: subtask.scheduleDate,
-          labels: subtask.labels,
-        };
-      }),
-    };
-  }
-
   async generateNextTaskKeyForBoard(
     taskBoardId: string,
     access: DataAccess,
@@ -299,15 +234,10 @@ export class TasksApiService extends BaseApiService {
   private async createTask(
     taskData: Omit<Task, "id">,
     access: DataAccess,
-    options?: { taskBoardName?: string },
   ): Promise<Task> {
     return this.handleOperation(async () => {
       if (!taskData.taskBoardId)
         throw new Error("Task must have a taskBoardId");
-
-      if (access.isAnonymous) {
-        return this.createGuestTask(taskData, access, options);
-      }
 
       const board = await this.taskBoardsService.getById(
         taskData.taskBoardId,
@@ -408,15 +338,11 @@ export class TasksApiService extends BaseApiService {
           labels: composed.labels ?? payload.task.labels,
         });
 
-        const task = await this.createTask(taskData, access, {
-          taskBoardName: payload.taskBoardName,
-        });
+        const task = await this.createTask(taskData, access);
         return { task };
       }
 
-      const task = await this.createTask(payload.task, access, {
-        taskBoardName: payload.taskBoardName,
-      });
+      const task = await this.createTask(payload.task, access);
       return { task };
     });
   }

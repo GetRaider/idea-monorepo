@@ -5,7 +5,6 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import { HomeMainContent, PageContainer } from "@/app/shell.ui";
 import { GOOGLE_CALENDAR_EVENT_ID_PREFIX } from "@/constants/calendar.constants";
 import { defaultAxisTimeZones } from "@/helpers/calendar/calendar-axis-time";
-import { useIsAnonymous } from "@/hooks/auth/use-is-anonymous";
 import {
   type CalendarPagePlanningHandlersDeps,
   type GoogleScopePrompt,
@@ -14,8 +13,8 @@ import {
 import { useCalendarPageLocalPrefs } from "@/hooks/calendar/use-calendar-page-local-prefs";
 import { useCalendarPageServerGridSync } from "@/hooks/calendar/use-calendar-page-server-grid-sync";
 import { useGoogleCalendarPlanningConnection } from "@/hooks/calendar/use-google-calendar-planning-connection";
-import { useCalendarStore } from "@/hooks/calendar/use-calendar-store";
-import { useTaskActions } from "@/hooks/tasks/useTasks";
+import { useCalendarRepository } from "@/repositories/calendar";
+import { useWorkspaceRepository } from "@/repositories/workspace";
 import { getEffectiveGoogleRecurrence } from "@/helpers/calendar/google-calendar-recurrence.helper";
 import { Sidebar } from "@/components/Sidebar/Sidebar";
 import { Spinner } from "@/components/Spinner/Spinner";
@@ -54,6 +53,8 @@ export function CalendarPage() {
   const calendarScopeRef = useRef<HTMLDivElement | null>(null);
   const {
     state,
+    isLocalCalendar,
+    bumpServerCalendar,
     addScheduled,
     patchScheduled,
     patchScheduledForGoogleScope,
@@ -71,13 +72,17 @@ export function CalendarPage() {
     setInternalCalendarColor,
     setGoogleCalendarColor,
     syncExternalGridEvents,
-  } = useCalendarStore();
+    createCalendarEvent,
+    updateCalendarEvent,
+    deleteCalendarEvent,
+  } = useCalendarRepository();
 
-  const { updateTask } = useTaskActions();
-  const isGuest = useIsAnonymous();
+  const { updateTask } = useWorkspaceRepository();
 
-  const { bumpServerCalendar, handleVisibleRangeChange } =
-    useCalendarPageServerGridSync(isGuest, syncExternalGridEvents);
+  const { handleVisibleRangeChange } = useCalendarPageServerGridSync(
+    isLocalCalendar,
+    syncExternalGridEvents,
+  );
 
   const [, setCurrentPage] = useState("calendar");
 
@@ -161,7 +166,7 @@ export function CalendarPage() {
     (): CalendarPagePlanningHandlersDeps => ({
       planningCalendarRef,
       state,
-      isGuest,
+      isLocalCalendar,
       bumpServerCalendar,
       replaceScheduled,
       replaceScheduledForGoogleScope,
@@ -172,6 +177,9 @@ export function CalendarPage() {
       removeGoogleSeriesByMasterId,
       removeGoogleInstancesForScope,
       updateTask,
+      createCalendarEvent,
+      updateCalendarEvent,
+      deleteCalendarEvent,
       editorMode,
       setEditorMode,
       setEditorEvent,
@@ -191,7 +199,7 @@ export function CalendarPage() {
     [
       planningCalendarRef,
       state,
-      isGuest,
+      isLocalCalendar,
       bumpServerCalendar,
       replaceScheduled,
       replaceScheduledForGoogleScope,
@@ -202,6 +210,9 @@ export function CalendarPage() {
       removeGoogleSeriesByMasterId,
       removeGoogleInstancesForScope,
       updateTask,
+      createCalendarEvent,
+      updateCalendarEvent,
+      deleteCalendarEvent,
       editorMode,
       setEditorMode,
       setEditorEvent,
@@ -364,7 +375,7 @@ export function CalendarPage() {
               onSlotTime24hChange={setSlotTime24hPersist}
               calendarColorTheme={calendarColorTheme}
               onVisibleRangeChange={
-                isGuest ? undefined : handleVisibleRangeChange
+                isLocalCalendar ? undefined : handleVisibleRangeChange
               }
             />
             {quickMenu ? (

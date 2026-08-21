@@ -1,6 +1,5 @@
 "use client";
 
-import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -9,14 +8,13 @@ import type { TasksSidebarProps } from "@/components/TasksSidebar/tasksSidebar.t
 import { useTasksSidebarOrder } from "@/hooks/tasks/useTasksSidebarOrder";
 import { isDuplicateWorkspaceName } from "@/helpers/workspace-name.helper";
 import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
-import { invalidateWorkspaceQueries } from "@/lib/invalidate-app-queries";
 import {
   type DragEndEvent,
   type DragOverEvent,
   type SidebarDraggableData,
   type SidebarDroppableData,
 } from "@/lib/board-dnd";
-import { clientServices } from "@/services";
+import { useWorkspaceRepository } from "@/repositories/workspace";
 import type { Folder, TaskBoard } from "@/types/workspace";
 
 import { useEmojiPickerState } from "./useEmojiPickerState";
@@ -44,7 +42,8 @@ export function useTasksSidebarModel({
   setFolders,
 }: TasksSidebarProps) {
   const router = useRouter();
-  const queryClient = useQueryClient();
+  const { updateTaskBoard, deleteTaskBoard, updateFolder, deleteFolder } =
+    useWorkspaceRepository();
   const [expandedFolder, setExpandedFolder] = useState<string>("");
   const [openMenuBoardId, setOpenMenuBoardId] = useState<string | null>(null);
   const [sidebarDragHighlight, setSidebarDragHighlight] =
@@ -159,7 +158,7 @@ export function useTasksSidebarModel({
       setEditingBoardId(null);
       setOpenBoardEmojiPickerId(null);
 
-      const updated = await clientServices.taskBoards.update({
+      const updated = await updateTaskBoard({
         id: board.id,
         updates: {
           name: nameChanged ? trimmedName : board.name,
@@ -182,19 +181,18 @@ export function useTasksSidebarModel({
       if (nameChanged) {
         router.push(tasksUrlHelper.routing.buildBoardUrl(updated.name));
       }
-      await invalidateWorkspaceQueries(queryClient);
       toast.success(nameChanged ? "Board renamed" : "Board emoji updated");
     },
     [
       editingName,
       editingBoardEmoji,
-      queryClient,
       router,
       setEditingBoardId,
       setOpenBoardEmojiPickerId,
       setTaskBoards,
       taskBoards,
       folders,
+      updateTaskBoard,
     ],
   );
 
@@ -202,7 +200,7 @@ export function useTasksSidebarModel({
     if (!deletingBoard) return;
     const { id, name } = deletingBoard;
     setDeletingBoard(null);
-    await clientServices.taskBoards.deleteBoard(id);
+    await deleteTaskBoard(id);
     const remaining = taskBoards.filter((board: TaskBoard) => board.id !== id);
     setTaskBoards(remaining);
     router.push(
@@ -210,7 +208,6 @@ export function useTasksSidebarModel({
         ? tasksUrlHelper.routing.buildBoardUrl(remaining[0].name)
         : tasksUrlHelper.routing.buildRootUrl(),
     );
-    await invalidateWorkspaceQueries(queryClient);
     toast.success(`'${name}' board deleted`);
   };
 
@@ -256,7 +253,7 @@ export function useTasksSidebarModel({
       setEditingFolderId(null);
       setOpenFolderEmojiPickerId(null);
 
-      const updated = await clientServices.folders.update({
+      const updated = await updateFolder({
         id: folder.id,
         updates: {
           name: nameChanged ? trimmedName : folder.name,
@@ -274,18 +271,17 @@ export function useTasksSidebarModel({
         previous.map((item) => (item.id === updated.id ? updated : item)),
       );
 
-      await invalidateWorkspaceQueries(queryClient);
       toast.success(nameChanged ? "Folder renamed" : "Folder emoji updated");
     },
     [
       editingFolderEmoji,
       editingFolderName,
-      queryClient,
       setEditingFolderId,
       setOpenFolderEmojiPickerId,
       setFolders,
       folders,
       taskBoards,
+      updateFolder,
     ],
   );
 
@@ -298,14 +294,13 @@ export function useTasksSidebarModel({
     if (!deletingFolder) return;
     const folder = deletingFolder;
     setDeletingFolder(null);
-    await clientServices.folders.deleteFolder(folder.id);
+    await deleteFolder(folder.id);
     setFolders((prev) => prev.filter((f) => f.id !== folder.id));
     setTaskBoards((prev) =>
       prev.map((b) =>
-        b.folderId === folder.id ? { ...b, folderId: undefined } : b,
+        b.folderId === folder.id ? { ...b, folderId: null } : b,
       ),
     );
-    await invalidateWorkspaceQueries(queryClient);
     toast.success("Folder deleted");
   };
 
@@ -324,44 +319,41 @@ export function useTasksSidebarModel({
         return;
       }
 
-      void clientServices.taskBoards
-        .update({
-          id: boardId,
-          updates: {
-            name: board.name,
-            emoji: board.emoji,
-            folderId,
-            isPublic: board.isPublic,
-            createdAt: board.createdAt,
-          },
-        })
-        .then(async (updated) => {
-          if (!updated) {
-            toast.error("Can't move board");
-            return;
-          }
-          const wasRoot = !board.folderId;
-          setTaskBoards((previous) =>
-            previous.map((item) => (item.id === updated.id ? updated : item)),
-          );
-          if (!updated.folderId) {
-            insertRootBoardTopLevel(boardId, rootInsertBeforeId ?? null);
-          } else if (wasRoot) {
-            removeFromTopLevel(boardId);
-          }
-          await invalidateWorkspaceQueries(queryClient);
-          if (folderId && expandedFolder !== folderId)
-            setExpandedFolder(folderId);
-          toast.success("Board moved");
-        });
+      void updateTaskBoard({
+        id: boardId,
+        updates: {
+          name: board.name,
+          emoji: board.emoji,
+          folderId,
+          isPublic: board.isPublic,
+          createdAt: board.createdAt,
+        },
+      }).then(async (updated) => {
+        if (!updated) {
+          toast.error("Can't move board");
+          return;
+        }
+        const wasRoot = !board.folderId;
+        setTaskBoards((previous) =>
+          previous.map((item) => (item.id === updated.id ? updated : item)),
+        );
+        if (!updated.folderId) {
+          insertRootBoardTopLevel(boardId, rootInsertBeforeId ?? null);
+        } else if (wasRoot) {
+          removeFromTopLevel(boardId);
+        }
+        if (folderId && expandedFolder !== folderId)
+          setExpandedFolder(folderId);
+        toast.success("Board moved");
+      });
     },
     [
       expandedFolder,
       insertRootBoardTopLevel,
-      queryClient,
       removeFromTopLevel,
       setTaskBoards,
       taskBoards,
+      updateTaskBoard,
     ],
   );
 

@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 
-import { authClient } from "@/auth/client";
+import { useUser } from "@/contexts/UserContext";
 import {
   getDailyFocusSeconds,
   getWeeklyFocusSeconds,
@@ -17,17 +17,10 @@ import { useFocusSessionLifecycleActions } from "./useFocusSessionLifecycleActio
 import { useFocusSessionPersistence } from "./useFocusSessionPersistence";
 import { useFocusSessionStore } from "./useFocusSessionStore";
 
-type UserWithAnonymous = {
-  isAnonymous?: boolean;
-};
-
 export function useFocusSession() {
-  const { data: session, isPending: isSessionPending } =
-    authClient.useSession();
-  const isAnonymous =
-    (session?.user as UserWithAnonymous | undefined)?.isAnonymous ?? false;
+  const { isGuest, isPending: isSessionPending } = useUser();
 
-  const store = useFocusSessionStore(isAnonymous);
+  const store = useFocusSessionStore(isGuest);
   const {
     systemState,
     draft,
@@ -40,7 +33,7 @@ export function useFocusSession() {
   } = store;
 
   const persistence = useFocusSessionPersistence(store);
-  useFocusSessionHydration(store, isAnonymous, isSessionPending);
+  useFocusSessionHydration(store, isGuest, isSessionPending);
   useFocusActiveTimerEffects(store, persistence);
 
   const draftActions = useFocusDraftActions(store, persistence);

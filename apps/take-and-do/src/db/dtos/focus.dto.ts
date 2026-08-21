@@ -1,6 +1,8 @@
 import { z } from "zod";
 
 const focusSessionStatusSchema = z.enum(["completed", "interrupted"]);
+const focusTimerModeSchema = z.enum(["timer", "stopwatch"]);
+const focusSessionSourceSchema = z.enum(["live", "manual"]);
 
 export const FocusSessionRecordDto = z.discriminatedUnion("type", [
   z.object({
@@ -14,6 +16,8 @@ export const FocusSessionRecordDto = z.discriminatedUnion("type", [
     startedAt: z.string(),
     endedAt: z.string(),
     status: focusSessionStatusSchema,
+    timerMode: focusTimerModeSchema.optional(),
+    source: focusSessionSourceSchema.optional(),
   }),
   z.object({
     id: z.string(),

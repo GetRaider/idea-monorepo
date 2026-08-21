@@ -45,7 +45,7 @@ import {
   ActionsContainer,
 } from "./AIPlanningOptimizationDialog.ui";
 import { useDialogFocusLock } from "@/hooks/ui/useDialogFocusLock";
-import { useTaskActions, useTasks } from "@/hooks/tasks/useTasks";
+import { useWorkspaceRepository } from "@/repositories/workspace";
 import type { Task } from "@/components/Boards/KanbanBoard/types";
 
 export function AIPlanningOptimizationDialog({
@@ -62,8 +62,7 @@ export function AIPlanningOptimizationDialog({
   const [exploration, setExploration] = useState<ScheduleOptimization | null>(
     null,
   );
-  const { tasks, isLoading: isTasksLoading } = useTasks();
-  const { updateTask } = useTaskActions();
+  const { tasks, isTasksLoading, updateTask } = useWorkspaceRepository();
 
   const exploreMutation = useMutation({
     mutationFn: (taskIds: string[]) =>

@@ -1,6 +1,5 @@
 "use client";
 
-import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
@@ -13,12 +12,10 @@ import { TasksShellHeaderExtrasProvider } from "@/contexts";
 import { TasksHeader } from "./TasksHeader";
 import { PageContainer, TasksLayoutMain as Main } from "../shell.ui";
 import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
-import { useIsAnonymous } from "@/hooks/auth/use-is-anonymous";
 import { waiterHelper } from "@/helpers/waiter.helper";
-import { useWorkspaces } from "@/hooks/tasks/useWorkspaces";
+import { useWorkspaceRepository } from "@/repositories/workspace";
 import { WorkspaceProvider } from "@/contexts/WorkspaceContext";
 import { isDuplicateWorkspaceName } from "@/helpers/workspace-name.helper";
-import { invalidateWorkspaceQueries } from "@/lib/invalidate-app-queries";
 import { APP_CHROME_PADDING_X } from "@/helpers/app-chrome-layout";
 import { localStorageHelper } from "@/helpers/local-storage.helper";
 import { cn } from "@/lib/styles/utils";
@@ -35,16 +32,18 @@ export default function TasksLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const queryClient = useQueryClient();
-  const isAnonymous = useIsAnonymous();
   const {
+    useLocalWorkspace,
     folders,
     taskBoards,
     isFoldersLoading,
     isBoardsLoading,
     setFolders,
     setTaskBoards,
-  } = useWorkspaces();
+    createFolder,
+    createTaskBoard,
+    updateTaskBoard,
+  } = useWorkspaceRepository();
   const { navigateToView: navigateToWorkspaceView } = useTasksViewRouter();
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(true);
   const [isWorkspaceCreateDialogOpen, setIsWorkspaceCreateDialogOpen] =
@@ -79,12 +78,12 @@ export default function TasksLayout({
       toast.error("A workspace with this name already exists");
       return false;
     }
-    const folder = await clientServices.folders.create({ name, emoji });
+    const folder = await createFolder({ name, emoji });
     if (!folder) {
       toast.error("Can't create folder");
       return false;
     }
-    if (!isAnonymous) {
+    if (!useLocalWorkspace) {
       setFolders((previous) => [...previous, folder]);
     }
 
@@ -94,7 +93,7 @@ export default function TasksLayout({
         uniqueBoardIds.map(async (boardId) => {
           const board = taskBoards.find((item) => item.id === boardId);
           if (!board) return null;
-          const updated = await clientServices.taskBoards.update({
+          const updated = await updateTaskBoard({
             id: boardId,
             updates: {
               name: board.name,
@@ -104,11 +103,11 @@ export default function TasksLayout({
               createdAt: board.createdAt,
             },
           });
-          return updated ? updated : null;
+          return updated ?? null;
         }),
       );
 
-      if (!isAnonymous) {
+      if (!useLocalWorkspace) {
         setTaskBoards((prev) => {
           const updatedById = new Map(
             updatedBoards
@@ -118,10 +117,6 @@ export default function TasksLayout({
           return prev.map((board) => updatedById.get(board.id) ?? board);
         });
       }
-    }
-
-    if (!isAnonymous) {
-      await invalidateWorkspaceQueries(queryClient);
     }
 
     setIsWorkspaceCreateDialogOpen(false);
@@ -137,7 +132,7 @@ export default function TasksLayout({
       toast.error("A workspace with this name already exists");
       return false;
     }
-    const createdBoard = await clientServices.taskBoards.create({
+    const createdBoard = await createTaskBoard({
       name,
       folderId,
       isPublic: false,
@@ -147,7 +142,7 @@ export default function TasksLayout({
       toast.error("Can't create board");
       return false;
     }
-    const resolvedBoard = isAnonymous
+    const resolvedBoard = useLocalWorkspace
       ? createdBoard
       : await waiterHelper.retry(
           async () => {
@@ -160,7 +155,7 @@ export default function TasksLayout({
           { retries: 5, timeout: 150 },
         );
 
-    if (!isAnonymous) {
+    if (!useLocalWorkspace) {
       setTaskBoards((previous) => {
         const existing = previous.find(
           (board) => board.id === resolvedBoard.id,
@@ -172,7 +167,6 @@ export default function TasksLayout({
         }
         return [...previous, resolvedBoard];
       });
-      await invalidateWorkspaceQueries(queryClient);
     }
 
     setIsWorkspaceCreateDialogOpen(false);

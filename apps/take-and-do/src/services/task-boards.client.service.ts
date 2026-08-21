@@ -1,5 +1,4 @@
 import { Task } from "@/types/task";
-import { guestStoreHelper } from "@/stores/guest";
 import { TaskBoard } from "@/types/workspace";
 
 import { BaseClientService } from "./base.client.service";
@@ -39,15 +38,11 @@ export class TaskBoardsClientService extends BaseClientService {
   async create(
     taskBoard: Omit<TaskBoard, "id" | "createdAt" | "updatedAt">,
   ): Promise<TaskBoard | null> {
-    const result = await this.post<TaskBoard & { guest?: boolean }>({
+    const result = await this.post<TaskBoard>({
       body: taskBoard,
     });
     if (!this.isResultOk(result)) return null;
-    const payload = result.data;
-    const { guest, ...rest } = payload as TaskBoard & { guest?: boolean };
-    const board = rest as TaskBoard;
-    if (guest) guestStoreHelper.upsertTaskBoard(board);
-    return board;
+    return result.data;
   }
 
   async update({
@@ -57,23 +52,18 @@ export class TaskBoardsClientService extends BaseClientService {
     id: string;
     updates: TaskBoardUpdate;
   }): Promise<TaskBoard | null> {
-    const result = await this.patch<TaskBoard & { guest?: boolean }>({
+    const result = await this.patch<TaskBoard>({
       queries: { id },
       body: updates,
     });
     if (!this.isResultOk(result)) return null;
-    const payload = result.data;
-    const { guest, ...rest } = payload as TaskBoard & { guest?: boolean };
-    const board = rest as TaskBoard;
-    if (guest) guestStoreHelper.upsertTaskBoard(board);
-    return board;
+    return result.data;
   }
 
   async changeVisibility({
     id,
     toPublic,
     boardSnapshot,
-    skipCascade,
   }: {
     id: string;
     toPublic: boolean;
@@ -93,7 +83,6 @@ export class TaskBoardsClientService extends BaseClientService {
       },
     });
     if (!updatedBoard) return null;
-    if (skipCascade) return updatedBoard;
     const tasks = await this.tasksClientService.getByBoardId(id);
     for (const task of tasks) {
       await this.tasksClientService.update({
@@ -111,12 +100,7 @@ export class TaskBoardsClientService extends BaseClientService {
   }
 
   async deleteBoard(id: string): Promise<null> {
-    const result = await this.delete<{
-      guest?: boolean;
-      deleted?: boolean;
-    }>({ queries: { id } });
-    if (this.isResultOk(result) && result.data?.guest)
-      guestStoreHelper.deleteTaskBoard(id);
+    await this.delete<void>({ queries: { id } });
     return null;
   }
 }

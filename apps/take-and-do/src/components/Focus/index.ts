@@ -5,6 +5,7 @@ export { FocusCollapsibleSection } from "./FocusCollapsibleSection";
 export { FocusColourPicker } from "./FocusColourPicker";
 export { FocusDurationDial } from "./FocusDurationDial";
 export { FocusEstimationInput } from "./FocusEstimationInput";
+export { FocusManualRecordDialog } from "./FocusManualRecordDialog";
 export { FocusHistory } from "./FocusHistory";
 export { FocusSectionHeader } from "./FocusSectionHeader";
 export { FocusSessionPanel } from "./FocusSessionPanel";

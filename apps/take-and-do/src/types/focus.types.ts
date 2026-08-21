@@ -1,5 +1,9 @@
 export type FocusSessionSelection = "new" | "backlog";
 
+export type FocusTimerMode = "timer" | "stopwatch";
+
+export type FocusSessionSource = "live" | "manual";
+
 export type FocusSessionRecordType = "focus" | "break";
 
 export type FocusSystemState =
@@ -32,6 +36,8 @@ export interface FocusSession {
   startedAt: string;
   endedAt: string;
   status: FocusSessionStatus;
+  timerMode?: FocusTimerMode;
+  source?: FocusSessionSource;
 }
 
 export interface BreakSession {
@@ -51,6 +57,7 @@ export interface ActiveFocusTimer {
   sessionId: string;
   sessionType: "focus";
   systemState: ActiveTimerSystemState;
+  timerMode: FocusTimerMode;
   name: string;
   taskId: string | null;
   color: string;
@@ -98,6 +105,13 @@ export interface FocusIdleDraft {
   selectedBacklogId: string | null;
   saveToBacklog: boolean;
   color: string;
+  timerMode: FocusTimerMode;
+}
+
+export interface ManualFocusRecordInput {
+  name: string;
+  durationSeconds: number;
+  startedAt: string;
 }
 
 export interface StoredFocusDraft {

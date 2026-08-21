@@ -24,7 +24,7 @@ export class FocusApiService extends BaseApiService {
 
   async getState(access: DataAccess): Promise<FocusStatePayload | null> {
     return this.handleOperation(async () => {
-      if (access.isAnonymous) return null;
+      if (access.isGuest) return null;
 
       const rows = await this.db
         .select()
@@ -47,7 +47,7 @@ export class FocusApiService extends BaseApiService {
     access: DataAccess,
   ): Promise<FocusStatePayload> {
     return this.handleOperation(async () => {
-      if (access.isAnonymous) {
+      if (access.isGuest) {
         throw new Error("Guest users cannot persist focus state");
       }
 
@@ -67,7 +67,7 @@ export class FocusApiService extends BaseApiService {
     access: DataAccess,
   ): Promise<FocusStatePayload> {
     return this.handleOperation(async () => {
-      if (access.isAnonymous) {
+      if (access.isGuest) {
         throw new Error("Guest users cannot persist focus state");
       }
 
@@ -82,7 +82,7 @@ export class FocusApiService extends BaseApiService {
 
   async deleteState(access: DataAccess): Promise<void> {
     return this.handleOperation(async () => {
-      if (access.isAnonymous) return;
+      if (access.isGuest) return;
 
       await this.db
         .delete(focusStateTable)

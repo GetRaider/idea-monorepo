@@ -1,6 +1,7 @@
 "use client";
 
 import type { Dispatch, SetStateAction } from "react";
+import { useMemo } from "react";
 
 import {
   DialogActions,
@@ -11,6 +12,7 @@ import {
 } from "@/components/Dialogs";
 import { Dropdown } from "@/components/Dropdown";
 import { Input } from "@/components/Input";
+import { useFeatureAccess } from "@/contexts/UserContext";
 import type {
   CalendarEventType,
   CalendarRepeatValue,
@@ -30,7 +32,6 @@ import { timeZoneOptions } from "../shared/timezones";
 export interface EditorFormProps {
   draft: CalendarEventEditorDraft;
   setDraft: Dispatch<SetStateAction<CalendarEventEditorDraft>>;
-  isGuest: boolean;
   editorFillPreview: string;
   showCommonDestination: boolean;
   commonDestinationLocked: boolean;
@@ -44,7 +45,6 @@ export interface EditorFormProps {
 export function EditorForm({
   draft,
   setDraft,
-  isGuest,
   editorFillPreview,
   showCommonDestination,
   commonDestinationLocked,
@@ -54,6 +54,21 @@ export function EditorForm({
   onCancel,
   onSave,
 }: EditorFormProps) {
+  const googleCalendarAccess = useFeatureAccess("googleCalendar");
+
+  const commonDestinationOptions = useMemo(
+    () => [
+      {
+        value: "internal" as const,
+        label: "Internal ",
+      },
+      ...(googleCalendarAccess.allowed
+        ? [{ value: "google" as const, label: "Google" }]
+        : []),
+    ],
+    [googleCalendarAccess.allowed],
+  );
+
   return (
     <>
       <DialogBody className="gap-4">
@@ -105,13 +120,7 @@ export function EditorForm({
           <DialogFormGroup>
             <DialogFormLabel>Calendar</DialogFormLabel>
             <Dropdown<CommonCreateDestination>
-              options={[
-                {
-                  value: "internal",
-                  label: "Internal ",
-                },
-                { value: "google", label: "Google" },
-              ]}
+              options={commonDestinationOptions}
               value={commonDestinationDisplay}
               onChange={setCommonCreateDestination}
               disabled={commonDestinationLocked}
@@ -279,7 +288,6 @@ export function EditorForm({
                 onChange={(next) =>
                   setDraft((d) => ({ ...d, taskScope: next }))
                 }
-                disabled={isGuest}
               />
             ) : null}
 
@@ -287,7 +295,6 @@ export function EditorForm({
               <CalendarEventTaskSection
                 taskBoardId={draft.taskBoardId}
                 taskId={draft.taskId}
-                isGuest={isGuest}
                 inputClass={inputClass}
                 onBoardChange={(boardId) =>
                   setDraft((d) => ({

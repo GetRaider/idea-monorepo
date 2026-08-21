@@ -7,3 +7,4 @@ export {
   useTasksShellHeaderExtras,
 } from "./TasksShellHeaderExtrasContext";
 export { WorkspaceProvider, useWorkspace } from "./WorkspaceContext";
+export { UserProvider, useUser, useFeatureAccess } from "./UserContext";

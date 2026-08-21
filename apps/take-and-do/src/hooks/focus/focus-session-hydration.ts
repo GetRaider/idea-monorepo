@@ -1,5 +1,7 @@
 import { clientServices } from "@/services";
 import {
+  readFocusBacklogStore,
+  readFocusSessionsStore,
   writeFocusActiveTimer,
   writeFocusBacklogStore,
   writeFocusBreakSuggestion,
@@ -13,8 +15,9 @@ export async function hydratePersistedFocusState(
   isAnonymous: boolean,
 ): Promise<{ sessions: FocusSessionRecord[]; backlog: FocusBacklogItem[] }> {
   if (isAnonymous) {
-    resetLocalFocusPersistence();
-    return { sessions: [], backlog: [] };
+    const sessionsStore = readFocusSessionsStore();
+    const backlogStore = readFocusBacklogStore();
+    return { sessions: sessionsStore.items, backlog: backlogStore.items };
   }
 
   resetLocalFocusPersistence();

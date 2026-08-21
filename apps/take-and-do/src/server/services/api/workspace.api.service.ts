@@ -19,7 +19,7 @@ export class WorkspaceApiService extends BaseApiService {
     nameTrimmed: string,
     exclude?: { boardId?: string; folderId?: string },
   ): Promise<boolean> {
-    if (access.isAnonymous) return false;
+    if (access.isGuest) return false;
 
     const normalized = nameTrimmed.trim().toLowerCase();
     if (!normalized) return false;

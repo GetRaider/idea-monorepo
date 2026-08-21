@@ -1,6 +1,5 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
 import {
   useEffect,
   useMemo,
@@ -16,11 +15,8 @@ import { SearchInput } from "@/components/TasksSidebar/TasksSidebar.ui";
 import { SearchIcon } from "@/components/Icons";
 import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
 import { tasksHelper } from "@/helpers/task.helper";
-import { queryKeys } from "@/lib/query-keys";
-import { useIsAnonymous } from "@/hooks/auth/use-is-anonymous";
-import { useGuestTasks } from "@/hooks/tasks/use-guest-store";
+import { useWorkspaceRepository } from "@/repositories/workspace";
 import { cn } from "@/lib/styles/utils";
-import { clientServices } from "@/services";
 import type { TaskBoard } from "@/types/workspace";
 
 type TaskSearchHeaderProps = {
@@ -33,23 +29,10 @@ export function TaskSearchHeader({
   className,
 }: TaskSearchHeaderProps) {
   const router = useRouter();
-  const isAnonymous = useIsAnonymous();
-  const { tasks: guestTasks } = useGuestTasks();
+  const { tasks, isTasksLoading } = useWorkspaceRepository();
   const inputRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState("");
   const [expanded, setExpanded] = useState(false);
-
-  const allTasksQuery = useQuery({
-    queryKey: queryKeys.tasks.all,
-    queryFn: () => clientServices.tasks.getAll(),
-    enabled: !isAnonymous,
-  });
-
-  const tasks = useMemo(
-    () => (isAnonymous ? guestTasks : (allTasksQuery.data ?? [])),
-    [isAnonymous, guestTasks, allTasksQuery.data],
-  );
-  const loaded = isAnonymous || !allTasksQuery.isPending;
 
   const normalizedQuery = query.trim().toLowerCase();
 
@@ -155,7 +138,7 @@ export function TaskSearchHeader({
           )}
           aria-label="Task search results"
         >
-          {!loaded ? (
+          {isTasksLoading ? (
             <div className="px-3 py-2 text-sm text-[#888]">Loading…</div>
           ) : matches.length === 0 ? (
             <div className="px-3 py-2 text-sm text-[#888]">

@@ -1,4 +1,4 @@
-import { getAccessByAuth, requireNonAnonymous } from "@/auth/guards";
+import { getAccessByAuth, requireRegistered } from "@/auth/guards";
 import { auth } from "@/auth/server";
 import { HttpError } from "@/lib/api/errors";
 import { apiServices } from "@/server/services/api";
@@ -71,7 +71,7 @@ export class GoogleCalendarIntegrationController extends BaseController {
   status = this.initRoute({
     responseDto: StatusResponseDto,
     handler: async () => {
-      const authContext = await requireNonAnonymous();
+      const authContext = await requireRegistered();
       const access = getAccessByAuth(authContext);
       const status = await apiServices.googleCalendarIntegration.getStatus(
         access.userId,
@@ -90,7 +90,7 @@ export class GoogleCalendarIntegrationController extends BaseController {
     bodyDto: ToggleBodyDto,
     responseDto: StatusResponseDto,
     handler: async ({ body }) => {
-      const authContext = await requireNonAnonymous();
+      const authContext = await requireRegistered();
       const access = getAccessByAuth(authContext);
 
       const status = await apiServices.googleCalendarIntegration.getStatus(
@@ -125,7 +125,7 @@ export class GoogleCalendarIntegrationController extends BaseController {
   sync = this.initRoute({
     responseDto: SyncResponseDto,
     handler: async ({ request }) => {
-      const authContext = await requireNonAnonymous();
+      const authContext = await requireRegistered();
       const access = getAccessByAuth(authContext);
 
       const status = await apiServices.googleCalendarIntegration.getStatus(
@@ -236,7 +236,7 @@ export class GoogleCalendarIntegrationController extends BaseController {
     bodyDto: PushEventBodyDto,
     responseDto: PushResponseDto,
     handler: async ({ body, request }) => {
-      const authContext = await requireNonAnonymous();
+      const authContext = await requireRegistered();
       const access = getAccessByAuth(authContext);
 
       const status = await apiServices.googleCalendarIntegration.getStatus(
@@ -445,7 +445,7 @@ export class GoogleCalendarIntegrationController extends BaseController {
     bodyDto: DeleteEventBodyDto,
     responseDto: PushResponseDto,
     handler: async ({ body, request }) => {
-      const authContext = await requireNonAnonymous();
+      const authContext = await requireRegistered();
       const access = getAccessByAuth(authContext);
 
       const status = await apiServices.googleCalendarIntegration.getStatus(
@@ -541,7 +541,7 @@ export class GoogleCalendarIntegrationController extends BaseController {
     bodyDto: CreateEventBodyDto,
     responseDto: CreateEventResponseDto,
     handler: async ({ body, request }) => {
-      const authContext = await requireNonAnonymous();
+      const authContext = await requireRegistered();
       const access = getAccessByAuth(authContext);
 
       const status = await apiServices.googleCalendarIntegration.getStatus(
@@ -606,7 +606,7 @@ export class GoogleCalendarIntegrationController extends BaseController {
 
   disconnect = this.initRoute({
     handler: async () => {
-      const authContext = await requireNonAnonymous();
+      const authContext = await requireRegistered();
       const access = getAccessByAuth(authContext);
 
       await apiServices.googleCalendarIntegration.clearIntegration(

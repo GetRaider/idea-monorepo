@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useQueries, useQuery } from "@tanstack/react-query";
+import { useQueries } from "@tanstack/react-query";
 
 import type { Task } from "@/components/Boards/KanbanBoard/types";
 import { TaskStatus } from "@/components/Boards/KanbanBoard/types";
@@ -16,9 +16,7 @@ import { DialogFormGroup, DialogFormLabel } from "@/components/Dialogs";
 import { ChevronRightIcon } from "@/components/Icons/ChevronRightIcon";
 import { TaskStatusGlyph } from "@/components/TaskStatusGlyph";
 import { tasksHelper } from "@/helpers/task.helper";
-import { useIsAnonymous } from "@/hooks/auth/use-is-anonymous";
-import { useTasks } from "@/hooks/tasks/useTasks";
-import { useGuestTasks } from "@/hooks/tasks/use-guest-store";
+import { useWorkspaceRepository } from "@/repositories/workspace";
 import { queryKeys } from "@/lib/query-keys";
 import { cn } from "@/lib/styles/utils";
 import { clientServices } from "@/services";
@@ -120,31 +118,31 @@ export function CalendarTaskScopeSelector({
   className,
 }: CalendarTaskScopeSelectorProps) {
   const [boardForTasks, setBoardForTasks] = useState<string>("");
-  const isAnonymous = useIsAnonymous();
-  const { tasks: guestTasks } = useGuestTasks();
-
-  const boardsQuery = useQuery({
-    queryKey: queryKeys.taskBoards.all,
-    queryFn: () => clientServices.taskBoards.getAll(),
-    enabled: !disabled,
+  const {
+    useLocalWorkspace: isLocalCalendar,
+    taskBoards,
+    tasks: allTasks,
+  } = useWorkspaceRepository();
+  const { tasks, isTasksLoading: tasksLoading } = useWorkspaceRepository({
+    taskBoardId: boardForTasks || undefined,
   });
 
   const boardOptions: DropdownOption<string>[] = useMemo(
     () =>
-      (boardsQuery.data ?? []).map((b) => ({
-        value: b.id,
-        label: `${b.emoji ? `${b.emoji} ` : ""}${b.name}`,
+      taskBoards.map((board) => ({
+        value: board.id,
+        label: `${board.emoji ? `${board.emoji} ` : ""}${board.name}`,
       })),
-    [boardsQuery.data],
+    [taskBoards],
   );
 
   const boardsById = useMemo(() => {
-    const m = new Map<string, { name: string; emoji?: string | null }>();
-    for (const b of boardsQuery.data ?? []) {
-      m.set(b.id, { name: b.name, emoji: b.emoji });
+    const boardMap = new Map<string, { name: string; emoji?: string | null }>();
+    for (const board of taskBoards) {
+      boardMap.set(board.id, { name: board.name, emoji: board.emoji });
     }
-    return m;
-  }, [boardsQuery.data]);
+    return boardMap;
+  }, [taskBoards]);
 
   const migratedValue = useMemo(() => {
     const normalized = value.map((t) =>
@@ -166,19 +164,16 @@ export function CalendarTaskScopeSelector({
     queries: boardIdsFromSelection.map((boardId) => ({
       queryKey: queryKeys.tasks.byBoard(boardId),
       queryFn: () => clientServices.tasks.getByBoardId(boardId),
-      enabled: !disabled && !isAnonymous && boardIdsFromSelection.length > 0,
+      enabled:
+        !disabled && !isLocalCalendar && boardIdsFromSelection.length > 0,
     })),
-  });
-
-  const { tasks, isLoading: tasksLoading } = useTasks({
-    taskBoardId: boardForTasks || undefined,
   });
 
   const taskByToken = useMemo(() => {
     const m = new Map<string, Task>();
-    if (isAnonymous) {
+    if (isLocalCalendar) {
       for (const boardId of boardIdsFromSelection) {
-        for (const t of guestTasksForBoard(guestTasks, boardId)) {
+        for (const t of guestTasksForBoard(allTasks, boardId)) {
           m.set(taskToken(boardId, t.id), t);
         }
       }
@@ -199,8 +194,8 @@ export function CalendarTaskScopeSelector({
     }
     return m;
   }, [
-    isAnonymous,
-    guestTasks,
+    isLocalCalendar,
+    allTasks,
     boardIdsFromSelection,
     taskQueries,
     boardForTasks,

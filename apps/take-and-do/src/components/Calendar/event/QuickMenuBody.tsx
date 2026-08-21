@@ -1,9 +1,11 @@
 "use client";
 
 import { ChevronDown } from "lucide-react";
+import { useMemo } from "react";
 
 import { Dropdown } from "@/components/Dropdown";
 import { Input } from "@/components/Input";
+import { useFeatureAccess } from "@/contexts/UserContext";
 import { cn } from "@/lib/styles/utils";
 import { chromePrimaryButtonClassName } from "@/lib/styles/chrome-primary-button-classes";
 import type {
@@ -33,7 +35,6 @@ export type QuickMenuBodyProps = {
   section: string;
   sectionTitleClass: string;
   isTask: boolean;
-  isGuest: boolean;
   isGoogleImported: boolean;
   email: string | null;
   kind: CalendarEventType;
@@ -93,7 +94,6 @@ export function QuickMenuBody({
   section,
   sectionTitleClass,
   isTask,
-  isGuest,
   isGoogleImported,
   email,
   kind,
@@ -143,6 +143,21 @@ export function QuickMenuBody({
   setDeclineReason,
   applyRsvp,
 }: QuickMenuBodyProps) {
+  const googleCalendarAccess = useFeatureAccess("googleCalendar");
+
+  const commonDestinationOptions = useMemo(
+    () => [
+      {
+        value: "internal" as const,
+        label: "Internal ",
+      },
+      ...(googleCalendarAccess.allowed
+        ? [{ value: "google" as const, label: "Google" }]
+        : []),
+    ],
+    [googleCalendarAccess.allowed],
+  );
+
   return (
     <div className="min-h-0 flex-1 overflow-y-auto [-webkit-overflow-scrolling:touch]">
       {!isTask ? (
@@ -180,7 +195,6 @@ export function QuickMenuBody({
             <CalendarEventTaskSection
               taskBoardId={taskBoardId}
               taskId={taskId}
-              isGuest={isGuest}
               inputClass=""
               sectionClassName="gap-2"
               boardTrailing={
@@ -218,13 +232,7 @@ export function QuickMenuBody({
         <div className={cn(section, "border-b border-white/[0.05]")}>
           <p className={sectionTitleClass}>Calendar</p>
           <Dropdown<CommonCreateDestination>
-            options={[
-              {
-                value: "internal",
-                label: "Internal ",
-              },
-              { value: "google", label: "Google" },
-            ]}
+            options={commonDestinationOptions}
             value={
               payload.mode === "existing"
                 ? calendarCommonEventUsesGoogleCalendar(payload.event)
@@ -235,7 +243,8 @@ export function QuickMenuBody({
             onChange={setCommonCreateDestination}
             disabled={
               payload.mode === "existing" ||
-              (payload.mode === "draft" && !googleCalendarConnected)
+              (payload.mode === "draft" &&
+                (!googleCalendarConnected || !googleCalendarAccess.allowed))
             }
             fullWidth
           />
@@ -482,7 +491,6 @@ export function QuickMenuBody({
                   <CalendarEventTaskScopeSection
                     value={taskScope}
                     onChange={setTaskScope}
-                    disabled={isGuest}
                     className="p-3"
                   />
                 ) : null}

@@ -10,7 +10,7 @@ import {
   PlusIcon,
 } from "@/components/Icons";
 import { tasksHelper } from "@/helpers/task.helper";
-import { useTaskActions } from "@/hooks/tasks/useTasks";
+import { useWorkspaceRepository } from "@/repositories/workspace";
 
 import { Task } from "../../Boards/KanbanBoard/types";
 import { StatusIcon } from "../../Boards/KanbanBoard/Column/Column.ui";
@@ -23,7 +23,7 @@ export function TaskSubtasks({
   onSubtaskClick,
   onTaskUpdate,
 }: TaskSubtasksProps) {
-  const { createSubtask } = useTaskActions();
+  const { createSubtask } = useWorkspaceRepository();
   const [isSubtasksExpanded, setIsSubtasksExpanded] = useState(
     !!task.subtasks?.length,
   );

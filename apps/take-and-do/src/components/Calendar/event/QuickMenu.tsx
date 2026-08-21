@@ -5,8 +5,7 @@ import { useEffect, useId, useMemo, useState, type LegacyRef } from "react";
 import { createPortal } from "react-dom";
 
 import { ConfirmDialog } from "@/components/Dialogs";
-import { useIsAnonymous } from "@/hooks/auth/use-is-anonymous";
-import { useTasks } from "@/hooks/tasks/useTasks";
+import { useWorkspaceRepository } from "@/repositories/workspace";
 import { cn } from "@/lib/styles/utils";
 import type {
   CalendarEventType,
@@ -71,7 +70,6 @@ export function CalendarEventQuickMenu({
 }: QuickMenuProps) {
   const kindSelectId = useId();
   const { data: session } = useSession();
-  const isGuest = useIsAnonymous();
   const [menuOpen, setMenuOpen] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -173,7 +171,7 @@ export function CalendarEventQuickMenu({
 
   const isTask = kind === "task";
 
-  const { tasks: boardTasks } = useTasks({
+  const { tasks: boardTasks } = useWorkspaceRepository({
     taskBoardId: isTask ? taskBoardId || undefined : undefined,
   });
 
@@ -810,7 +808,6 @@ export function CalendarEventQuickMenu({
               section={section}
               sectionTitleClass={sectionTitleClass}
               isTask={isTask}
-              isGuest={isGuest}
               isGoogleImported={isGoogleImported}
               email={email}
               kind={kind}

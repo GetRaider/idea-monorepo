@@ -1,45 +1,48 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 
+import { FeatureGate } from "@/components/FeatureGate";
 import { Dropdown } from "@/components/Dropdown";
 import { ChevronDownIcon } from "@/components/Icons";
 import { useFocusSessionContext } from "@/contexts/FocusSessionContext";
-import { useIsAnonymous } from "@/hooks/auth/use-is-anonymous";
-import { useTasks } from "@/hooks/tasks/useTasks";
-import { queryKeys } from "@/lib/query-keys";
+import { useWorkspaceRepository } from "@/repositories/workspace";
 import { cn } from "@/lib/styles/utils";
 import { chromePrimaryButtonClassName } from "@/lib/styles/chrome-primary-button-classes";
-import { clientServices } from "@/services";
 
 export function FocusTaskPicker({
   compact = false,
   defaultExpanded = false,
 }: FocusTaskPickerProps) {
-  const isAnonymous = useIsAnonymous();
+  return (
+    <FeatureGate feature="focus">
+      <FocusTaskPickerContent
+        compact={compact}
+        defaultExpanded={defaultExpanded}
+      />
+    </FeatureGate>
+  );
+}
+
+function FocusTaskPickerContent({
+  compact = false,
+  defaultExpanded = false,
+}: FocusTaskPickerProps) {
   const { draft, configureSession } = useFocusSessionContext();
   const [boardId, setBoardId] = useState("");
   const [expanded, setExpanded] = useState(defaultExpanded);
-
-  const boardsQuery = useQuery({
-    queryKey: queryKeys.taskBoards.all,
-    queryFn: () => clientServices.taskBoards.getAll(),
-    enabled: !isAnonymous,
+  const { taskBoards, tasks, isTasksLoading } = useWorkspaceRepository({
+    taskBoardId: boardId || undefined,
   });
 
   const boardOptions = useMemo(
     () =>
-      (boardsQuery.data ?? []).map((board) => ({
+      taskBoards.map((board) => ({
         value: board.id,
         label: `${board.emoji ? `${board.emoji} ` : ""}${board.name}`,
       })),
-    [boardsQuery.data],
+    [taskBoards],
   );
-
-  const { tasks, isLoading: tasksLoading } = useTasks({
-    taskBoardId: boardId || undefined,
-  });
 
   const taskOptions = useMemo(
     () => tasks.map((task) => ({ value: task.id, label: task.summary })),
@@ -52,14 +55,10 @@ export function FocusTaskPicker({
   const selectedTaskLabel =
     taskOptions.find((option) => option.value === draft.taskId)?.label ??
     (boardId
-      ? tasksLoading
+      ? isTasksLoading
         ? "Loading…"
         : "Select task"
       : "Select board first");
-
-  if (isAnonymous) {
-    return null;
-  }
 
   if (compact) {
     return (
@@ -106,7 +105,7 @@ export function FocusTaskPicker({
                 {
                   value: "",
                   label: boardId
-                    ? tasksLoading
+                    ? isTasksLoading
                       ? "Loading…"
                       : "No task"
                     : "Pick a board first",
@@ -125,13 +124,13 @@ export function FocusTaskPicker({
                   name: task?.summary ?? draft.name,
                 });
               }}
-              disabled={!boardId || tasksLoading}
+              disabled={!boardId || isTasksLoading}
               trigger={
                 <span
                   className={cn(
                     chromePrimaryButtonClassName,
                     "inline-flex w-full items-center justify-center px-5 py-2.5 text-sm font-semibold",
-                    (!boardId || tasksLoading) &&
+                    (!boardId || isTasksLoading) &&
                       "cursor-not-allowed opacity-50",
                   )}
                 >
@@ -163,7 +162,7 @@ export function FocusTaskPicker({
           {
             value: "",
             label: boardId
-              ? tasksLoading
+              ? isTasksLoading
                 ? "Loading…"
                 : "No task"
               : "Pick a board first",
@@ -182,7 +181,7 @@ export function FocusTaskPicker({
             name: task?.summary ?? draft.name,
           });
         }}
-        disabled={!boardId || tasksLoading}
+        disabled={!boardId || isTasksLoading}
         placeholder="Select a task…"
         fullWidth
       />

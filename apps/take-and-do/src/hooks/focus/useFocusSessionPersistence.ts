@@ -2,10 +2,12 @@
 
 import { useCallback } from "react";
 
+import { playCompletionChime } from "@/lib/effects/completion";
 import {
   buildBreakSessionRecord,
   buildFocusSessionRecord,
   isActiveBreakTimer,
+  resolveBreakBasisSeconds,
   withActiveTimerSystemState,
 } from "@/helpers/focus/focus-session.helper";
 import { clientServices } from "@/services";
@@ -95,9 +97,11 @@ export function useFocusSessionPersistence(
       );
       appendSession(record);
 
+      playCompletionChime();
+
       const suggestion: FocusBreakSuggestion = {
         parentFocusSessionId: record.id,
-        parentPlannedFocusSeconds: record.plannedDurationSeconds,
+        parentPlannedFocusSeconds: resolveBreakBasisSeconds(currentTimer),
       };
 
       clearActiveTimer();
@@ -118,6 +122,8 @@ export function useFocusSessionPersistence(
         new Date().toISOString(),
       );
       appendSession(record);
+
+      playCompletionChime();
 
       clearActiveTimer();
       writeFocusBreakSuggestion(null);

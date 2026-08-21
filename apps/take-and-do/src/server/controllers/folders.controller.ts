@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server";
 
-import { getAccessByAuth, requireAuth } from "@/auth/guards";
+import { getAccessByAuth, requireRegistered } from "@/auth/guards";
 import {
   CreateFolderDto,
   FolderByIdRequestDto,
   FolderResponseDto,
   FoldersListResponseDto as GetAllFoldersResponseDto,
-  GuestResourceDeleteResponseDto,
   UpdateFolderRequestDto,
 } from "@/db/dtos";
 import { BadRequestError, NotFoundError } from "@/lib/api/errors";
@@ -17,7 +16,7 @@ export class FoldersController extends BaseController {
   getAll = this.initRoute({
     responseDto: GetAllFoldersResponseDto,
     handler: async () => {
-      const auth = await requireAuth();
+      const auth = await requireRegistered();
       const access = getAccessByAuth(auth);
       return apiServices.folders.getAll(access);
     },
@@ -28,15 +27,10 @@ export class FoldersController extends BaseController {
     responseDto: FolderResponseDto,
     status: 201,
     handler: async ({ body }) => {
-      const auth = await requireAuth();
+      const auth = await requireRegistered();
       const access = getAccessByAuth(auth);
       const { name, emoji = null } = body;
-      const folder = await apiServices.folders.create(
-        name.trim(),
-        access,
-        emoji,
-      );
-      return access.isAnonymous ? { ...folder, guest: true as const } : folder;
+      return apiServices.folders.create(name.trim(), access, emoji);
     },
   });
 
@@ -44,7 +38,7 @@ export class FoldersController extends BaseController {
     paramsDto: FolderByIdRequestDto,
     responseDto: FolderResponseDto,
     handler: async ({ params }) => {
-      const auth = await requireAuth();
+      const auth = await requireRegistered();
       const access = getAccessByAuth(auth);
       const folder = await apiServices.folders.getById(params.id, access);
       if (!folder) throw new NotFoundError("Folder");
@@ -56,7 +50,7 @@ export class FoldersController extends BaseController {
     bodyDto: UpdateFolderRequestDto,
     responseDto: FolderResponseDto,
     handler: async ({ body }) => {
-      const auth = await requireAuth();
+      const auth = await requireRegistered();
       const access = getAccessByAuth(auth);
       const { id: folderId, ...updates } = body;
 
@@ -64,40 +58,24 @@ export class FoldersController extends BaseController {
         throw new BadRequestError("No updates provided");
       }
 
-      if (!access.isAnonymous) {
-        const folder = await apiServices.folders.getById(folderId, access);
-        if (!folder) throw new NotFoundError("Folder");
-      }
+      const folder = await apiServices.folders.getById(folderId, access);
+      if (!folder) throw new NotFoundError("Folder");
 
-      const updated = await apiServices.folders.update(
-        folderId,
-        updates,
-        access,
-      );
-      return access.isAnonymous
-        ? { ...updated, guest: true as const }
-        : updated;
+      return apiServices.folders.update(folderId, updates, access);
     },
   });
 
   delete = this.initRoute({
     paramsDto: FolderByIdRequestDto,
-    responseDto: GuestResourceDeleteResponseDto,
     handler: async ({ params }) => {
-      const auth = await requireAuth();
+      const auth = await requireRegistered();
       const access = getAccessByAuth(auth);
       const folderId = params.id;
 
-      if (!access.isAnonymous) {
-        const folder = await apiServices.folders.getById(folderId, access);
-        if (!folder) throw new NotFoundError("Folder");
-      }
+      const folder = await apiServices.folders.getById(folderId, access);
+      if (!folder) throw new NotFoundError("Folder");
 
       await apiServices.folders.delete(folderId, access);
-
-      if (access.isAnonymous) {
-        return { id: folderId, deleted: true, guest: true };
-      }
       return new NextResponse(null, { status: 204 });
     },
   });

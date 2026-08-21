@@ -2,7 +2,7 @@ import { headers } from "next/headers";
 
 import { ForbiddenError, UnauthorizedError } from "@/lib/api/errors";
 import {
-  isAnonymousUser,
+  isGuestUser,
   type DataAccess,
 } from "@/server/services/api/base.api.service";
 import { auth } from "./server";
@@ -10,7 +10,7 @@ import { auth } from "./server";
 export function getAccessByAuth(authContext: AuthenticatedContext): DataAccess {
   return {
     userId: authContext.user.id,
-    isAnonymous: authContext.isAnonymous,
+    isGuest: authContext.isGuest,
   };
 }
 
@@ -23,12 +23,12 @@ export async function requireAuth(): Promise<AuthenticatedContext> {
     throw new UnauthorizedError("Authentication is required.");
   }
 
-  const anonymous = await isAnonymousUser(sessionResult.user.id);
+  const isGuest = await isGuestUser(sessionResult.user.id);
 
   return {
     session: sessionResult.session,
     user: sessionResult.user,
-    isAnonymous: anonymous,
+    isGuest,
   };
 }
 
@@ -41,16 +41,16 @@ export async function requirePermission(
   return authContext;
 }
 
-export async function requireNonAnonymous(): Promise<AuthenticatedContext> {
+export async function requireRegistered(): Promise<AuthenticatedContext> {
   return requirePermission(
-    (ctx) => !ctx.isAnonymous,
+    (ctx) => !ctx.isGuest,
     "Guest users cannot perform this action. Please sign in to continue.",
   );
 }
 
 export async function requireAiAccess(): Promise<AuthenticatedContext> {
   return requirePermission(
-    (ctx) => !ctx.isAnonymous,
+    (ctx) => !ctx.isGuest,
     "AI features are not available for guest users. Please sign in to use them.",
   );
 }
@@ -62,5 +62,5 @@ type SessionResult = NonNullable<
 export interface AuthenticatedContext {
   session: SessionResult["session"];
   user: SessionResult["user"];
-  isAnonymous: boolean;
+  isGuest: boolean;
 }

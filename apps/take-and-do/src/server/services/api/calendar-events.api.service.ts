@@ -23,7 +23,7 @@ import {
 export class CalendarEventsApiService extends BaseApiService {
   async listOverlapping(from: Date, to: Date, access: DataAccess) {
     return this.handleOperation(async () => {
-      if (access.isAnonymous) return [];
+      if (access.isGuest) return [];
       const rows = await this.db
         .select()
         .from(calendarEventsTable)
@@ -40,7 +40,7 @@ export class CalendarEventsApiService extends BaseApiService {
 
   async create(body: CalendarEventCreateBody, access: DataAccess) {
     return this.handleOperation(async () => {
-      if (access.isAnonymous) return null;
+      if (access.isGuest) return null;
       const id = body.id?.trim() || randomUUID();
       const now = new Date();
       const start = new Date(body.start);
@@ -98,7 +98,7 @@ export class CalendarEventsApiService extends BaseApiService {
     access: DataAccess,
   ) {
     return this.handleOperation(async () => {
-      if (access.isAnonymous) return null;
+      if (access.isGuest) return null;
       const rows = await this.db
         .select()
         .from(calendarEventsTable)
@@ -193,7 +193,7 @@ export class CalendarEventsApiService extends BaseApiService {
 
   async deleteById(id: string, access: DataAccess) {
     return this.handleOperation(async () => {
-      if (access.isAnonymous) return false;
+      if (access.isGuest) return false;
       const deleted = await this.db
         .delete(calendarEventsTable)
         .where(

@@ -5,6 +5,7 @@ import {
   formatClock,
   formatHmsClock,
   formatMenuBarClock,
+  formatTimerClock,
   getDisplayedElapsedSeconds,
   getRemainingSeconds,
   shouldAutoStopTimer,
@@ -74,6 +75,13 @@ describe("formatClock", () => {
   it("formats minutes and hours", () => {
     expect(formatClock(75)).toBe("01:15");
     expect(formatClock(3661)).toBe("1:01:01");
+  });
+});
+
+describe("formatTimerClock", () => {
+  it("keeps minutes past 59 instead of rolling to hours", () => {
+    expect(formatTimerClock(75)).toBe("01:15");
+    expect(formatTimerClock(3600)).toBe("60:00");
   });
 });
 

@@ -16,6 +16,7 @@ export {
   formatClock,
   formatHmsClock,
   formatMenuBarClock,
+  formatTimerClock,
   getDisplayedElapsedSeconds,
   getRemainingSeconds,
   shouldAutoStopTimer,

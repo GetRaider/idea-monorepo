@@ -190,17 +190,9 @@ export const FocusScreen = styled.div`
   flex-direction: column;
   flex: 1;
   width: 100%;
-  max-width: 760px;
+  max-width: 880px;
   margin: 0 auto;
-  gap: 1.15rem;
-`;
-
-export const FocusHero = styled.div`
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 0.75rem 0 0.35rem;
+  gap: 1.35rem;
 `;
 
 export const SaveFieldSlot = styled.div`
@@ -317,34 +309,36 @@ export const ButtonRow = styled.div`
   }
 `;
 
-export const PrimaryActionRow = styled.div`
-  display: flex;
-  width: 100%;
-
-  > button {
-    flex: 1;
-  }
-`;
-
 export const Button = styled.button<{
-  $variant?: "primary" | "ghost" | "danger";
+  $variant?: "primary" | "ghost" | "danger" | "glow";
 }>`
-  border: 0;
+  border: ${({ $variant }) =>
+    $variant === "glow" ? "1px solid rgba(168, 85, 247, 0.55)" : "0"};
   border-radius: 999px;
   padding: 0.95rem 1.15rem;
   cursor: pointer;
   font-weight: 650;
   letter-spacing: 0.04em;
-  color: ${({ $variant }) => ($variant === "ghost" ? colors.text : "#fff")};
+  color: ${({ $variant }) => {
+    if ($variant === "glow") return colors.purple;
+    if ($variant === "ghost") return colors.text;
+    return "#fff";
+  }};
   background: ${({ $variant }) => {
     if ($variant === "danger") return "#be123c";
     if ($variant === "ghost") return colors.surface;
+    if ($variant === "glow") return "rgba(12, 8, 18, 0.92)";
     return colors.purple;
   }};
-  box-shadow: ${({ $variant }) =>
-    $variant === undefined || $variant === "primary"
-      ? "0 10px 28px rgba(124, 58, 237, 0.28)"
-      : "none"};
+  box-shadow: ${({ $variant }) => {
+    if ($variant === "glow") {
+      return "0 0 16px rgba(168, 85, 247, 0.35), inset 0 0 12px rgba(168, 85, 247, 0.12)";
+    }
+    if ($variant === undefined || $variant === "primary") {
+      return "0 10px 28px rgba(124, 58, 237, 0.28)";
+    }
+    return "none";
+  }};
 
   &:hover:not(:disabled) {
     filter: brightness(1.08);
@@ -371,21 +365,16 @@ export const StartPlayIcon = styled.span`
 export const SetupGrid = styled.div`
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 0.85rem 1rem;
-  align-items: center;
+  gap: 1.25rem 2rem;
+  align-items: start;
 `;
 
 export const SetupFields = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.85rem;
   min-width: 0;
-`;
-
-export const SetupDialPlaceholder = styled.div`
-  width: 220px;
-  height: 220px;
-  flex-shrink: 0;
+  padding-top: 0.35rem;
 `;
 
 export const SettingsCopy = styled.p`

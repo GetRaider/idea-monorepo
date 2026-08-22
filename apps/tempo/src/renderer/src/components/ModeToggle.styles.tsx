@@ -13,16 +13,18 @@ export const ToggleRow = styled.div`
 export const ToggleButton = styled.button<{ $active: boolean }>`
   border: 0;
   border-radius: 999px;
-  padding: 0.72rem 0.85rem;
+  padding: 0.78rem 0.85rem;
   cursor: pointer;
   font-weight: 700;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   font-size: 0.72rem;
   color: ${({ $active }) => ($active ? "#fff" : "#8f84a8")};
-  background: ${({ $active }) => ($active ? "#9b5cff" : "transparent")};
+  background: ${({ $active }) => ($active ? "#a855f7" : "transparent")};
   box-shadow: ${({ $active }) =>
-    $active ? "0 8px 22px rgba(124, 58, 237, 0.28)" : "none"};
+    $active
+      ? "0 0 18px rgba(168, 85, 247, 0.55), 0 8px 22px rgba(124, 58, 237, 0.35)"
+      : "none"};
 
   &:disabled {
     cursor: not-allowed;

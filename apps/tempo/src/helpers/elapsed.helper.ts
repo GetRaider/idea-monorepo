@@ -90,6 +90,13 @@ export function formatClock(totalSeconds: number): string {
   return `${paddedMinutes}:${paddedSeconds}`;
 }
 
+export function formatTimerClock(totalSeconds: number): string {
+  const clampedSeconds = Math.max(0, Math.floor(totalSeconds));
+  const minutes = Math.floor(clampedSeconds / 60);
+  const seconds = clampedSeconds % 60;
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
 export function formatMenuBarClock(
   record: Pick<
     FocusRecord,

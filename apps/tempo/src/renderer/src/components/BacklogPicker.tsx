@@ -9,7 +9,6 @@ import {
   BacklogCardName,
   BacklogColorDot,
   BacklogDeleteRow,
-  BacklogHeading,
   BacklogRow,
   BacklogStartButton,
   BacklogStartContent,
@@ -34,7 +33,6 @@ export function BacklogPicker({
 
   return (
     <>
-      <BacklogHeading>Regular Sessions</BacklogHeading>
       {sessions.length === 0 ? (
         <PickerHint>
           No saved sessions yet. Name one and optionally save it.

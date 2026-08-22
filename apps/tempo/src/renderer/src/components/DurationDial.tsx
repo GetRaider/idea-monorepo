@@ -7,11 +7,12 @@ import {
 
 import styled from "styled-components";
 
-const VIEW_SIZE = 200;
+const VIEW_SIZE = 280;
 const DIAL_CENTER = VIEW_SIZE / 2;
-const DIAL_RADIUS = 68;
-const HANDLE_RADIUS = 8;
-const LABEL_RADIUS = DIAL_RADIUS + 18;
+const DIAL_RADIUS = 86;
+const INNER_RADIUS = 64;
+const HANDLE_RADIUS = 7;
+const LABEL_RADIUS = DIAL_RADIUS + 22;
 const MIN_MINUTES = 1;
 const MAX_MINUTES = 60;
 const MINUTE_LABELS = Array.from({ length: 12 }, (_, index) => {
@@ -21,12 +22,19 @@ const MINUTE_LABELS = Array.from({ length: 12 }, (_, index) => {
 
 export function DurationDial({
   minutes,
+  displayValue,
+  unitLabel,
+  caption = null,
   onChange,
   disabled = false,
 }: DurationDialProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const labelId = useId();
+  const glowId = `dial-glow-${labelId.replace(/:/g, "")}`;
+  const fillId = `dial-fill-${labelId.replace(/:/g, "")}`;
   const safeMinutes = normalizeDialMinutes(minutes);
+  const trackCircumference = 2 * Math.PI * DIAL_RADIUS;
+  const progressLength = (safeMinutes / MAX_MINUTES) * trackCircumference;
 
   const handlePointer = useCallback(
     (event: ReactPointerEvent<SVGSVGElement>) => {
@@ -54,7 +62,6 @@ export function DurationDial({
   );
   const handlePoint =
     safeMinutes > 0 ? polarToCartesian(handleRadians, DIAL_RADIUS) : null;
-  const fillPath = describeFillWedge(safeMinutes);
 
   return (
     <DialWrap>
@@ -77,21 +84,60 @@ export function DurationDial({
         }}
       >
         <title id={labelId}>Session duration</title>
+        <defs>
+          <radialGradient id={fillId} cx="50%" cy="42%" r="65%">
+            <stop offset="0%" stopColor="#8b5cf6" />
+            <stop offset="70%" stopColor="#6d28d9" />
+            <stop offset="100%" stopColor="#4c1d95" />
+          </radialGradient>
+          <filter id={glowId} x="-40%" y="-40%" width="180%" height="180%">
+            <feGaussianBlur stdDeviation="2.4" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+        <circle
+          cx={DIAL_CENTER}
+          cy={DIAL_CENTER}
+          r={INNER_RADIUS}
+          fill={`url(#${fillId})`}
+          pointerEvents="none"
+        />
         <circle
           cx={DIAL_CENTER}
           cy={DIAL_CENTER}
           r={DIAL_RADIUS}
           fill="none"
-          stroke="#3a2a55"
-          strokeWidth={10}
+          stroke="rgba(155, 92, 255, 0.22)"
+          strokeWidth={8}
           pointerEvents="none"
         />
+        {safeMinutes > 0 ? (
+          <circle
+            cx={DIAL_CENTER}
+            cy={DIAL_CENTER}
+            r={DIAL_RADIUS}
+            fill="none"
+            stroke="#c4b5fd"
+            strokeWidth={7}
+            strokeLinecap="round"
+            strokeDasharray={`${progressLength} ${trackCircumference}`}
+            transform={`rotate(-90 ${DIAL_CENTER} ${DIAL_CENTER})`}
+            filter={`url(#${glowId})`}
+            pointerEvents="none"
+          />
+        ) : null}
         {Array.from({ length: 60 }, (_, minute) => {
           const tickRadians = minutesToRadians(minute);
           const isMajorTick = minute % 5 === 0;
-          const tickLength = isMajorTick ? 9 : 4;
-          const outer = polarToCartesian(tickRadians, DIAL_RADIUS);
-          const inner = polarToCartesian(tickRadians, DIAL_RADIUS - tickLength);
+          const tickLength = isMajorTick ? 8 : 4;
+          const outer = polarToCartesian(
+            tickRadians,
+            DIAL_RADIUS + 6 + tickLength,
+          );
+          const inner = polarToCartesian(tickRadians, DIAL_RADIUS + 6);
           return (
             <line
               key={minute}
@@ -99,8 +145,8 @@ export function DurationDial({
               y1={inner.y}
               x2={outer.x}
               y2={outer.y}
-              stroke={isMajorTick ? "#c4b5fd" : "rgba(155, 92, 255, 0.35)"}
-              strokeWidth={isMajorTick ? 1.25 : 0.75}
+              stroke={isMajorTick ? "#d8b4fe" : "rgba(196, 181, 253, 0.35)"}
+              strokeWidth={isMajorTick ? 1.4 : 0.8}
               pointerEvents="none"
             />
           );
@@ -117,56 +163,54 @@ export function DurationDial({
               y={labelPoint.y}
               textAnchor="middle"
               dominantBaseline="middle"
-              fill="#c4b5fd"
-              fontSize="9"
+              fill="#a78bfa"
+              fontSize="11"
               fontWeight="500"
             >
               {label}
             </text>
           );
         })}
-        {fillPath ? (
-          <path
-            d={fillPath}
-            fill="rgba(155, 92, 255, 0.55)"
-            pointerEvents="none"
-          />
-        ) : null}
         {handlePoint ? (
           <circle
             cx={handlePoint.x}
             cy={handlePoint.y}
             r={HANDLE_RADIUS}
-            fill="#9b5cff"
-            stroke="#f4eefe"
-            strokeWidth={1.25}
+            fill="#1a1028"
+            stroke="#c4b5fd"
+            strokeWidth={2.25}
+            filter={`url(#${glowId})`}
             pointerEvents="none"
           />
         ) : null}
         <text
           x={DIAL_CENTER}
-          y={DIAL_CENTER - 6}
+          y={DIAL_CENTER - 4}
           textAnchor="middle"
           dominantBaseline="middle"
-          fill="#f4eefe"
-          fontSize="22"
+          fill="#f8f4ff"
+          fontSize={displayValue.length > 5 ? 22 : 28}
           fontWeight="700"
           pointerEvents="none"
         >
-          {`${String(safeMinutes).padStart(2, "0")}:00`}
+          {displayValue}
         </text>
         <text
           x={DIAL_CENTER}
-          y={DIAL_CENTER + 16}
+          y={DIAL_CENTER + 22}
           textAnchor="middle"
           dominantBaseline="middle"
-          fill="#9b8fb0"
-          fontSize="10"
+          fill="#c4b5fd"
+          fontSize="11"
+          letterSpacing="0.08em"
           pointerEvents="none"
         >
-          mins
+          {unitLabel}
         </text>
       </DialSvg>
+      {caption !== null && caption.length > 0 ? (
+        <DialCaption>{caption}</DialCaption>
+      ) : null}
     </DialWrap>
   );
 }
@@ -218,51 +262,33 @@ function pointToMinutes(x: number, y: number): number {
   return clampMinutes(rawMinutes);
 }
 
-function describeFillWedge(minutes: number): string {
-  if (minutes <= 0) {
-    return "";
-  }
-
-  if (minutes >= MAX_MINUTES) {
-    const top = polarToCartesian(minutesToRadians(0));
-    const bottom = polarToCartesian(minutesToRadians(30));
-    return [
-      `M ${DIAL_CENTER} ${DIAL_CENTER}`,
-      `L ${top.x} ${top.y}`,
-      `A ${DIAL_RADIUS} ${DIAL_RADIUS} 0 1 1 ${bottom.x} ${bottom.y}`,
-      `A ${DIAL_RADIUS} ${DIAL_RADIUS} 0 1 1 ${top.x} ${top.y}`,
-      "Z",
-    ].join(" ");
-  }
-
-  const start = polarToCartesian(minutesToRadians(0));
-  const end = polarToCartesian(minutesToRadians(minutes));
-  const largeArc = minutes > 30 ? 1 : 0;
-  return [
-    `M ${DIAL_CENTER} ${DIAL_CENTER}`,
-    `L ${start.x} ${start.y}`,
-    `A ${DIAL_RADIUS} ${DIAL_RADIUS} 0 ${largeArc} 1 ${end.x} ${end.y}`,
-    "Z",
-  ].join(" ");
-}
-
 const DialWrap = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
+  flex-shrink: 0;
 `;
 
 const DialSvg = styled.svg<{ $disabled: boolean }>`
-  width: 220px;
-  height: 220px;
+  width: 280px;
+  height: 280px;
   touch-action: none;
   user-select: none;
   cursor: ${({ $disabled }) => ($disabled ? "default" : "pointer")};
   opacity: ${({ $disabled }) => ($disabled ? 0.85 : 1)};
 `;
 
+const DialCaption = styled.p`
+  margin: 0.15rem 0 0;
+  color: #8f84a8;
+  font-size: 0.78rem;
+`;
+
 interface DurationDialProps {
   minutes: number;
+  displayValue: string;
+  unitLabel: string;
+  caption?: string | null;
   onChange: (minutes: number) => void;
   disabled?: boolean;
 }

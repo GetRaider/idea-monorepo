@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
-  formatClock,
   formatHmsClock,
+  formatTimerClock,
   getDisplayedElapsedSeconds,
   getRemainingSeconds,
   shouldAutoStopTimer,
@@ -39,20 +39,17 @@ import {
   ErrorText,
   Field,
   FieldLabel,
-  FocusHero,
   FocusScreen,
   GlobalStyle,
   Main,
   MainHeader,
   NavButton,
   NavLabel,
-  PrimaryActionRow,
   RequiredMark,
   SaveFieldSlot,
   ScreenTitle,
   SetupFields,
   SetupGrid,
-  SetupDialPlaceholder,
   Sidebar,
   StartButtonContent,
   StartPlayIcon,
@@ -62,7 +59,7 @@ import type { AppScreen } from "./App.types";
 import {
   AnalyticsSection,
   BacklogPicker,
-  ClockDisplay,
+  CollapsibleSection,
   DurationDial,
   HistorySection,
   ManualRecordDialog,
@@ -277,24 +274,29 @@ export function App() {
     activeRecord !== null && activeRecord.segmentStartedAt !== null;
   const isPaused =
     activeRecord !== null && activeRecord.segmentStartedAt === null;
-  const clockValue =
-    mode === "timer" && remainingSeconds !== null
-      ? formatClock(remainingSeconds)
-      : formatHmsClock(elapsedSeconds);
   const isIdle = activeRecord === null;
+  const clockValue =
+    mode === "timer"
+      ? formatTimerClock(
+          remainingSeconds ??
+            (durationMinutes > 0 ? durationMinutes * 60 : 0),
+        )
+      : formatHmsClock(elapsedSeconds);
   const hasReachedGoal =
     mode === "stopwatch" &&
     remainingSeconds !== null &&
     remainingSeconds === 0 &&
     (activeRecord?.plannedSeconds ??
       (durationMinutes > 0 ? durationMinutes * 60 : 0)) > 0;
-  const clockCaption = resolveClockCaption(
-    mode,
-    isRunning,
-    isPaused,
-    remainingSeconds,
-    hasReachedGoal,
-  );
+  const clockCaption = isIdle
+    ? null
+    : resolveClockCaption(
+        mode,
+        isRunning,
+        isPaused,
+        remainingSeconds,
+        hasReachedGoal,
+      );
   const hasSessionName = name.trim().length > 0;
   const selectedSession = sessions.find(
     (session) => session.id === selectedSessionId,
@@ -521,146 +523,125 @@ export function App() {
           {activeScreen === "focus" ? (
             <FocusScreen>
               <ModeToggle mode={mode} disabled={!isIdle} onChange={setMode} />
-              {isIdle ? (
-                <>
-                  <SetupGrid>
-                    <SetupFields>
-                      <SessionNameField
-                        name={name}
-                        disabled={!isIdle || isBacklogSelected}
-                        onChange={setName}
-                      />
-                      <Field>
-                        <FieldLabel>
-                          {mode === "timer" ? "Duration" : "Goal (optional)"}
-                        </FieldLabel>
-                        <TextInput
-                          value={
-                            durationMinutes > 0 ? `${durationMinutes}m` : ""
-                          }
-                          disabled={!isIdle}
-                          onChange={(event) =>
-                            handleDurationInputChange(event.target.value)
-                          }
-                          placeholder={
-                            mode === "timer" ? "e.g. 45m" : "e.g. 25m"
-                          }
-                        />
-                      </Field>
-                      <SaveToBacklogField
-                        visible={!isBacklogSelected}
-                        checked={saveToBacklog}
-                        disabled={!isIdle}
-                        onChange={setSaveToBacklog}
-                      />
-                    </SetupFields>
-                    {mode === "timer" ? (
-                      <DurationDial
-                        minutes={durationMinutes}
-                        disabled={!isIdle}
-                        onChange={handleDurationChange}
-                      />
-                    ) : (
-                      <SetupDialPlaceholder aria-hidden />
-                    )}
-                  </SetupGrid>
-                  {mode === "stopwatch" ? (
-                    <FocusHero>
-                      <ClockDisplay
-                        value={clockValue}
-                        caption={clockCaption}
-                        showUnits
-                        overGoal={false}
-                      />
-                    </FocusHero>
-                  ) : null}
-                </>
-              ) : (
-                <>
+              <SetupGrid>
+                <SetupFields>
                   <SessionNameField
                     name={name}
                     disabled={!isIdle || isBacklogSelected}
                     onChange={setName}
                   />
-                  <FocusHero>
-                    <ClockDisplay
-                      value={clockValue}
-                      caption={clockCaption}
-                      showUnits={mode === "stopwatch"}
-                      overGoal={hasReachedGoal && !isIdle}
+                  <Field>
+                    <FieldLabel>
+                      {mode === "timer" ? (
+                        <>
+                          Duration
+                          <RequiredMark>*</RequiredMark>
+                        </>
+                      ) : (
+                        "Goal (optional)"
+                      )}
+                    </FieldLabel>
+                    <TextInput
+                      value={
+                        durationMinutes > 0 ? `${durationMinutes}m` : ""
+                      }
+                      disabled={!isIdle}
+                      onChange={(event) =>
+                        handleDurationInputChange(event.target.value)
+                      }
+                      placeholder={
+                        mode === "timer" ? "e.g. 45m" : "e.g. 25m"
+                      }
                     />
-                  </FocusHero>
-                </>
-              )}
-              {errorMessage ? <ErrorText>{errorMessage}</ErrorText> : null}
-              {isIdle ? (
-                <PrimaryActionRow>
-                  <Button
-                    type="button"
-                    disabled={isBusy || !hasSessionName}
-                    onClick={handleStart}
-                  >
-                    <StartButtonContent>
-                      Start
-                      <StartPlayIcon aria-hidden>▶</StartPlayIcon>
-                    </StartButtonContent>
-                  </Button>
-                </PrimaryActionRow>
-              ) : (
-                <ButtonRow>
-                  {isRunning ? (
+                  </Field>
+                  {isIdle && !isBacklogSelected ? (
+                    <SaveToBacklogField
+                      visible
+                      checked={saveToBacklog}
+                      disabled={!isIdle}
+                      onChange={setSaveToBacklog}
+                    />
+                  ) : null}
+                  {errorMessage ? <ErrorText>{errorMessage}</ErrorText> : null}
+                  {isIdle ? (
                     <Button
                       type="button"
-                      disabled={isBusy}
-                      onClick={handlePause}
+                      $variant="glow"
+                      disabled={isBusy || !hasSessionName}
+                      onClick={handleStart}
                     >
-                      Pause
+                      <StartButtonContent>
+                        Start
+                        <StartPlayIcon aria-hidden>▶</StartPlayIcon>
+                      </StartButtonContent>
                     </Button>
-                  ) : null}
-                  {isPaused ? (
-                    <Button
-                      type="button"
-                      disabled={isBusy}
-                      onClick={handleResume}
-                    >
-                      Resume
-                    </Button>
-                  ) : null}
-                  {activeRecord !== null ? (
-                    <Button
-                      type="button"
-                      $variant="danger"
-                      disabled={isBusy}
-                      onClick={() => {
-                        if (activeRecord !== null) {
-                          handledAutoStopRecordId.current = activeRecord.id;
-                        }
-                        requestStop(elapsedSeconds, settings.confirmOnStop);
-                      }}
-                    >
-                      Stop
-                    </Button>
-                  ) : null}
-                </ButtonRow>
-              )}
-              <BacklogPicker
-                sessions={sessions}
-                selectedSessionId={selectedSessionId}
-                disabled={!isIdle}
-                onSelect={handleSelectBacklog}
-                onPlay={(sessionId) => {
-                  void handlePlayBacklog(sessionId);
-                }}
-                onEdit={(session) => setEditingSession(session)}
-                onDelete={async (sessionId) => {
-                  await window.tempo.deleteSession(sessionId);
-                  if (selectedSessionId === sessionId) {
-                    setSelectedSessionId(null);
-                    setName("");
-                  }
-                  await refreshState();
-                }}
-              />
+                  ) : (
+                    <ButtonRow>
+                      {isRunning ? (
+                        <Button
+                          type="button"
+                          disabled={isBusy}
+                          onClick={handlePause}
+                        >
+                          Pause
+                        </Button>
+                      ) : null}
+                      {isPaused ? (
+                        <Button
+                          type="button"
+                          disabled={isBusy}
+                          onClick={handleResume}
+                        >
+                          Resume
+                        </Button>
+                      ) : null}
+                      {activeRecord !== null ? (
+                        <Button
+                          type="button"
+                          $variant="danger"
+                          disabled={isBusy}
+                          onClick={() => {
+                            if (activeRecord !== null) {
+                              handledAutoStopRecordId.current = activeRecord.id;
+                            }
+                            requestStop(elapsedSeconds, settings.confirmOnStop);
+                          }}
+                        >
+                          Stop
+                        </Button>
+                      ) : null}
+                    </ButtonRow>
+                  )}
+                </SetupFields>
+                <DurationDial
+                  minutes={durationMinutes}
+                  displayValue={clockValue}
+                  unitLabel={mode === "timer" ? "mins" : "secs"}
+                  caption={clockCaption}
+                  disabled={!isIdle}
+                  onChange={handleDurationChange}
+                />
+              </SetupGrid>
+              <CollapsibleSection title="Regular Sessions">
+                <BacklogPicker
+                  sessions={sessions}
+                  selectedSessionId={selectedSessionId}
+                  disabled={!isIdle}
+                  onSelect={handleSelectBacklog}
+                  onPlay={(sessionId) => {
+                    void handlePlayBacklog(sessionId);
+                  }}
+                  onEdit={(session) => setEditingSession(session)}
+                  onDelete={async (sessionId) => {
+                    await window.tempo.deleteSession(sessionId);
+                    if (selectedSessionId === sessionId) {
+                      setSelectedSessionId(null);
+                      setName("");
+                    }
+                    await refreshState();
+                  }}
+                />
+              </CollapsibleSection>
             </FocusScreen>
           ) : null}
           {activeScreen === "history" ? (

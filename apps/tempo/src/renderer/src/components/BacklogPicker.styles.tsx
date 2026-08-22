@@ -8,15 +8,6 @@ export const PickerHint = styled.p`
   font-size: 0.8rem;
 `;
 
-export const BacklogHeading = styled.h2`
-  margin: 1.75rem 0 0.85rem;
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: ${colors.muted};
-`;
-
 export const BacklogRow = styled.div`
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

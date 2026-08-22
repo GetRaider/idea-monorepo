@@ -54,7 +54,7 @@ export const GET = controller.getState;
 ## UI
 
 - Kanban: native HTML5 DnD, `@dnd-kit` where used
-- Tailwind + some styled-components; no inline styles
+- Tailwind + Radix primitives + shadcn-style components; no styled-components or inline styles
 - `@repo/ui` for shared primitives
 
 ## `lib/` boundary

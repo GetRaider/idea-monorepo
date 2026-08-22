@@ -18,6 +18,7 @@
     "NEXT_PUBLIC_WHITELIST_CONTACT_EMAIL",
     "NEXT_PUBLIC_PERSONAL_WEBSITE_CONTACT_EMAIL",
     "NODE_ENV",
+    "ELECTRON_RENDERER_URL",
     "VERCEL",
     "VERCEL_ENV",
     "VERCEL_URL"
@@ -37,7 +38,8 @@
         ".next/**",
         "!.next/cache/**",
         "tsconfig.build.tsbuildinfo",
-        "dist/**"
+        "dist/**",
+        "out/**"
       ]
     },
     "dev": {

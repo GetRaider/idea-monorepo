@@ -1,0 +1,30 @@
+---
+description: Frontend styling — Tailwind + Radix + shadcn; no styled-components
+alwaysApply: true
+---
+
+# Frontend styling
+
+Stack for all UI (Next.js apps, Electron renderer, `@repo/ui`):
+
+- **Tailwind CSS** for layout and visuals
+- **Radix primitives** (`@radix-ui/react-*`) for accessible behavior
+- **shadcn/ui pattern** for components: Radix + Tailwind + `cn()` + `cva` variants + `className` forwarding
+
+## Do
+
+- Put Tailwind on the JSX: `className={cn("…", className)}`
+- Shared primitives live in `@repo/ui`; keep app-local UI only when it is not reusable
+- Variants via `cva` (class-variance-authority), not boolean-prop soup
+- Merge classes with `cn()` from `@repo/ui` or the app's `src/lib/cn.ts`
+
+## Don't
+
+- Do not add `styled-components` or new `*.styles.tsx`
+- Do not use inline `style={{}}` except runtime values Tailwind cannot express (e.g. a session hex as a CSS variable)
+- Do not wrap **new** components in `@radix-ui/themes` — use Radix primitives
+- Do not introduce a second styling system in a file you are editing
+
+## Legacy
+
+Existing styled-components / Radix Themes code may stay until that file is touched. When you edit it, migrate that component to Tailwind + Radix primitives. Do not extend styled wrappers.

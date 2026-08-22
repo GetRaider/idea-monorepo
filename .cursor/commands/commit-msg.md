@@ -14,7 +14,7 @@ Format: `<type>(<SCOPE>): <subject>`
 
 **Types:** `feat`, `fix`, `test`, `chore`, `docs`, `refactor`, `style`, `release`
 
-**Scopes:** `GEN`, `TAD`, `DVN`, `PRT` — required
+**Scopes:** `GEN`, `TAD`, `DVN`, `PRT`, `TMP` — required
 
 **Max header length:** 70 characters
 

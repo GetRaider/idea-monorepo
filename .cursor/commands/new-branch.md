@@ -14,7 +14,7 @@ Format: `<type>/<SCOPE>-<slug>`
 
 **Types:** `feat`, `fix`, `test`, `chore`, `docs`, `refactor`, `style`, `release`
 
-**Scopes:** `GEN` (repo-wide), `TAD` (take-and-do), `DVN` (devinity-api/web), `PRT` (personal-website)
+**Scopes:** `GEN` (repo-wide), `TAD` (take-and-do), `DVN` (devinity-api/web), `PRT` (personal-website), `TMP` (Tempo)
 
 **Slug:** lowercase, hyphens between words; may include version like `1.2.0` or `v1`
 
@@ -24,7 +24,7 @@ Format: `<type>/<SCOPE>-<slug>`
 
 - `feat/TAD-focus-session-persistence`
 - `fix/DVN-user-hook-race`
-- `chore/GEN-cursor-rules`
+- `feat/TMP-tempo-sidebar`
 - `release/TAD-1.2.0`
 
 Pick the most accurate `type` and `SCOPE` from the description. Abbreviate slug if needed to stay under 50 chars.

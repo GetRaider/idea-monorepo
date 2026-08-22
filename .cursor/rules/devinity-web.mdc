@@ -27,7 +27,7 @@ src/
 
 - App Router, Turbopack (`next dev --port 3001`, `next build --turbopack`)
 - `"use client"` for interactive pages/components
-- Styled-components: colocate `*.styles.tsx` with components
+- Styling: Tailwind + Radix primitives + shadcn; no new styled-components / `*.styles.tsx`
 - Shared UI from `@repo/ui`; data types from `@repo/api`
 - Auth: Better-Auth client in `@lib/auth-client`
 - Data fetching: `@tanstack/react-query` hooks in `src/hooks/`

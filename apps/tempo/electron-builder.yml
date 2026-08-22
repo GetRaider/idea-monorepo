@@ -1,0 +1,21 @@
+appId: com.polovec.tempo
+productName: Tempo
+directories:
+  output: release
+  buildResources: resources
+files:
+  - out/**/*
+  - package.json
+asarUnpack:
+  - "**/sql.js/**"
+extraResources:
+  - from: node_modules/sql.js/dist/sql-wasm.wasm
+    to: sql-wasm.wasm
+mac:
+  icon: icon.png
+  identity: "-"
+  hardenedRuntime: false
+  gatekeeperAssess: false
+  target:
+    - dir
+  category: public.app-category.productivity

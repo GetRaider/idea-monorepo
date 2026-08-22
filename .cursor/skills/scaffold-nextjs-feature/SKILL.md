@@ -14,8 +14,8 @@ description: Scaffold a new page, API route, controller, and client service in a
 
 ## devinity-web (frontend-focused)
 
-1. **Page**: `src/app/<route>/page.tsx` + `page.styles.tsx`
-2. **Components**: `src/app/components/` (page-scoped) or `src/components/` (shared)
+1. **Page**: `src/app/<route>/page.tsx`
+2. **Components**: `src/app/components/` (page-scoped) or `src/components/` (shared) — Tailwind + `cn()`, no `*.styles.tsx`
 3. **Data**: React Query hook in `src/hooks/<domain>/`
 4. **API route** (if needed): `src/app/api/<resource>/route.ts`
 5. **UI**: import from `@repo/ui`
@@ -73,7 +73,7 @@ Export from `src/services/index.ts`.
 ### 6. Page / UI
 
 - Page: `src/app/<feature>/page.tsx`
-- Components + `*.styles.tsx` (no inline styles)
+- Components: Tailwind + Radix + shadcn (`cn()` / `@repo/ui`); no `*.styles.tsx`
 - Hooks: `src/hooks/<feature>/`
 
 ### 7. DB migration (if schema changed)
@@ -97,3 +97,4 @@ cd apps/devinity-web && pnpm lint && pnpm test
 - `lib/` is framework plumbing only — no domain logic
 - Auth in take-and-do: `requireNonAnonymous` + `getAccessByAuth`
 - Reuse `@repo/ui` before creating local primitives
+- Styling: Tailwind + Radix primitives + shadcn; no styled-components

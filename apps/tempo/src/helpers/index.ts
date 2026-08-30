@@ -1,15 +1,14 @@
 export {
-  ANALYTICS_WEEK_COUNT,
-  UNKNOWN_ANALYTICS_COLOR_KEY,
-  buildAnalyticsLegend,
-  buildHeatmapGrid,
+  NO_ACTIVITY_COLOR_KEY,
+  buildAnalyticsMetrics,
+  buildTimeByActivity,
+  buildTimeByDay,
   formatDurationLabel,
+  getAnalyticsDataset,
   getAnalyticsPalette,
-  getDailyFocusSeconds,
-  getMonthlyFocusSeconds,
   getRecordColorKey,
-  getTotalFocusSeconds,
-  getWeeklyFocusSeconds,
+  parseDateInputValue,
+  resolveAnalyticsPeriod,
 } from "./analytics.helper";
 export {
   foldRunningSegment,
@@ -28,6 +27,7 @@ export {
   encodeTrayTemplatePng,
 } from "./icon.helper";
 export {
+  buildActivityFilterOptions,
   buildBacklogFilterOptions,
   buildManualSessionOptions,
   buildHistoryEntries,

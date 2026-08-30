@@ -58,6 +58,15 @@ export function buildBacklogFilterOptions(
   ];
 }
 
+export function buildActivityFilterOptions(
+  sessions: SavedSession[],
+): Array<{ value: string; label: string }> {
+  return [
+    { value: "", label: "All activities" },
+    ...buildSortedSessionOptions(sessions),
+  ];
+}
+
 export function buildManualSessionOptions(
   sessions: SavedSession[],
 ): Array<{ value: string; label: string }> {

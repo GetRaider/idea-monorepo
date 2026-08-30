@@ -1,32 +1,16 @@
 import type { FocusRecord, SavedSession } from "../shared/records.types";
 
-export type HeatmapLevel = 0 | 1 | 2 | 3 | 4;
+export const NO_ACTIVITY_COLOR_KEY = "no-activity";
 
-export interface HeatmapDay {
-  dateKey: string;
-  totalSeconds: number;
-  level: HeatmapLevel;
-  colorKey: string | null;
-}
-
-export interface HeatmapWeekColumn {
-  weekStartKey: string;
-  days: HeatmapDay[];
-}
-
-export interface AnalyticsPalette {
-  hue: number;
-  saturation: number;
-}
-
-export interface AnalyticsLegendItem extends AnalyticsPalette {
-  colorKey: string;
-  label: string;
-  totalSeconds: number;
-}
-
-export const ANALYTICS_WEEK_COUNT = 40;
-export const UNKNOWN_ANALYTICS_COLOR_KEY = "unknown";
+const WEEKDAY_LABELS = [
+  "Mon",
+  "Tue",
+  "Wed",
+  "Thu",
+  "Fri",
+  "Sat",
+  "Sun",
+] as const;
 
 export function formatDurationLabel(totalSeconds: number): string {
   const safeSeconds = Math.max(0, Math.floor(totalSeconds));
@@ -44,6 +28,105 @@ export function formatDurationLabel(totalSeconds: number): string {
   return `${safeSeconds}s`;
 }
 
+export function parseDateInputValue(value: string): Date | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
+  if (match === null) {
+    return null;
+  }
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const parsed = new Date(year, month - 1, day);
+  if (
+    parsed.getFullYear() !== year ||
+    parsed.getMonth() !== month - 1 ||
+    parsed.getDate() !== day
+  ) {
+    return null;
+  }
+
+  return parsed;
+}
+
+export function resolveAnalyticsPeriod(
+  preset: AnalyticsPeriodPreset,
+  referenceDate = new Date(),
+  customRange: AnalyticsCustomRange | null = null,
+): AnalyticsPeriod | null {
+  if (preset === "today") {
+    const start = startOfLocalDay(referenceDate);
+    const end = endOfLocalDay(referenceDate);
+    return {
+      start,
+      end,
+      calendarDayCount: 1,
+      bucketKind: "hour",
+    };
+  }
+
+  if (preset === "week") {
+    const start = startOfLocalWeek(referenceDate);
+    const end = endOfLocalWeek(referenceDate);
+    return {
+      start,
+      end,
+      calendarDayCount: 7,
+      bucketKind: "day",
+    };
+  }
+
+  if (preset === "month") {
+    const start = new Date(
+      referenceDate.getFullYear(),
+      referenceDate.getMonth(),
+      1,
+    );
+    const end = new Date(
+      referenceDate.getFullYear(),
+      referenceDate.getMonth() + 1,
+      0,
+      23,
+      59,
+      59,
+      999,
+    );
+    return {
+      start,
+      end,
+      calendarDayCount: end.getDate(),
+      bucketKind: "day",
+    };
+  }
+
+  if (customRange === null) {
+    return null;
+  }
+
+  const customStart = parseDateInputValue(customRange.startDate);
+  const customEnd = parseDateInputValue(customRange.endDate);
+  if (customStart === null || customEnd === null) {
+    return null;
+  }
+
+  const start = startOfLocalDay(customStart);
+  const end = endOfLocalDay(customEnd);
+  if (start > end) {
+    return null;
+  }
+
+  const calendarDayCount = countInclusiveCalendarDays(start, end);
+  const bucketKind =
+    calendarDayCount <= 1 ? "hour" : calendarDayCount <= 31 ? "day" : "week";
+
+  return {
+    start,
+    end,
+    calendarDayCount,
+    bucketKind,
+  };
+}
+
 export function getCompletedRecords(records: FocusRecord[]): FocusRecord[] {
   return records.filter((record) => record.endedAt !== null);
 }
@@ -55,92 +138,87 @@ export function sumRecordSeconds(records: FocusRecord[]): number {
   );
 }
 
-export function getDailyFocusSeconds(
+export function getAnalyticsDataset(
   records: FocusRecord[],
-  referenceDate = new Date(),
-): number {
-  const dayStart = startOfLocalDay(referenceDate);
-  const dayEnd = endOfLocalDay(referenceDate);
-  return sumRecordSeconds(
-    getCompletedRecords(records).filter((record) =>
-      isTimestampInRange(record.startedAt, dayStart, dayEnd),
-    ),
+  period: AnalyticsPeriod | null,
+  activityId: string | null,
+): FocusRecord[] {
+  if (period === null) {
+    return [];
+  }
+
+  const inRange = getCompletedRecords(records).filter((record) =>
+    isTimestampInRange(record.startedAt, period.start, period.end),
+  );
+
+  if (activityId === null || activityId === "") {
+    return inRange;
+  }
+
+  return inRange.filter(
+    (record) => record.kind === "backlog" && record.sessionId === activityId,
   );
 }
 
-export function getWeeklyFocusSeconds(
+export function buildAnalyticsMetrics(
   records: FocusRecord[],
-  referenceDate = new Date(),
-): number {
-  const weekStart = startOfLocalWeek(referenceDate);
-  const weekEnd = endOfLocalWeek(referenceDate);
-  return sumRecordSeconds(
-    getCompletedRecords(records).filter((record) =>
-      isTimestampInRange(record.startedAt, weekStart, weekEnd),
-    ),
-  );
-}
-
-export function getMonthlyFocusSeconds(
-  records: FocusRecord[],
-  referenceDate = new Date(),
-): number {
-  const monthStart = new Date(
-    referenceDate.getFullYear(),
-    referenceDate.getMonth(),
-    1,
-  );
-  const monthEnd = new Date(
-    referenceDate.getFullYear(),
-    referenceDate.getMonth() + 1,
+  calendarDayCount: number,
+): AnalyticsMetrics {
+  const completedRecords = getCompletedRecords(records);
+  const totalSeconds = sumRecordSeconds(completedRecords);
+  const sessionCount = completedRecords.length;
+  const longestSessionSeconds = completedRecords.reduce(
+    (longest, record) => Math.max(longest, record.accumulatedSeconds),
     0,
-    23,
-    59,
-    59,
-    999,
   );
-  return sumRecordSeconds(
-    getCompletedRecords(records).filter((record) =>
-      isTimestampInRange(record.startedAt, monthStart, monthEnd),
-    ),
-  );
-}
-
-export function getTotalFocusSeconds(records: FocusRecord[]): number {
-  return sumRecordSeconds(records);
-}
-
-export function getRecordColorKey(record: FocusRecord): string {
-  if (record.kind === "backlog" && record.sessionId !== null) {
-    return record.sessionId;
-  }
-
-  return UNKNOWN_ANALYTICS_COLOR_KEY;
-}
-
-export function getAnalyticsPalette(
-  colorKey: string,
-  sessionColorById?: ReadonlyMap<string, string>,
-): AnalyticsPalette {
-  if (colorKey === UNKNOWN_ANALYTICS_COLOR_KEY) {
-    return { hue: 258, saturation: 16 };
-  }
-
-  const sessionColor = sessionColorById?.get(colorKey);
-  if (sessionColor !== undefined) {
-    return hexToPalette(sessionColor);
+  const activeDayKeys = new Set<string>();
+  for (const record of completedRecords) {
+    activeDayKeys.add(formatDateKey(new Date(record.startedAt)));
   }
 
   return {
-    hue: hashStringToHue(colorKey),
-    saturation: 72,
+    totalSeconds,
+    sessionCount,
+    dailyAverageSeconds:
+      calendarDayCount <= 0 ? 0 : totalSeconds / calendarDayCount,
+    averageSessionSeconds: sessionCount === 0 ? 0 : totalSeconds / sessionCount,
+    longestSessionSeconds,
+    activeDayCount: activeDayKeys.size,
+    calendarDayCount: Math.max(0, calendarDayCount),
   };
 }
 
-export function buildAnalyticsLegend(
+export function buildTimeByDay(
+  records: FocusRecord[],
+  period: AnalyticsPeriod,
+): TimeByDayBucket[] {
+  const buckets = createTimeByDayBuckets(period);
+  const bucketByKey = new Map(
+    buckets.map((bucket) => [bucket.key, bucket] as const),
+  );
+
+  for (const record of getCompletedRecords(records)) {
+    const startedAt = new Date(record.startedAt);
+    if (Number.isNaN(startedAt.getTime())) {
+      continue;
+    }
+
+    const key = getBucketKey(startedAt, period.bucketKind);
+    const bucket = bucketByKey.get(key);
+    if (bucket === undefined) {
+      continue;
+    }
+
+    bucket.totalSeconds += record.accumulatedSeconds;
+  }
+
+  return buckets;
+}
+
+export function buildTimeByActivity(
   records: FocusRecord[],
   sessions: SavedSession[],
-): AnalyticsLegendItem[] {
+): ActivityBreakdownItem[] {
   const sessionNameById = new Map(
     sessions.map((session) => [session.id, session.name]),
   );
@@ -157,6 +235,14 @@ export function buildAnalyticsLegend(
     );
   }
 
+  const grandTotal = [...totalsByColorKey.values()].reduce(
+    (total, seconds) => total + seconds,
+    0,
+  );
+  if (grandTotal <= 0) {
+    return [];
+  }
+
   return [...totalsByColorKey.entries()]
     .map(([colorKey, totalSeconds]) => {
       const palette = getAnalyticsPalette(colorKey, sessionColorById);
@@ -164,70 +250,51 @@ export function buildAnalyticsLegend(
       return {
         colorKey,
         label:
-          colorKey === UNKNOWN_ANALYTICS_COLOR_KEY
-            ? "Unknown"
-            : (sessionName ?? "Regular session"),
+          colorKey === NO_ACTIVITY_COLOR_KEY
+            ? "No Activity"
+            : (sessionName ?? "Activity"),
         hue: palette.hue,
         saturation: palette.saturation,
         totalSeconds,
+        percent: Math.round((totalSeconds / grandTotal) * 100),
       };
     })
     .sort((left, right) => {
-      if (left.colorKey === UNKNOWN_ANALYTICS_COLOR_KEY) {
+      if (left.colorKey === NO_ACTIVITY_COLOR_KEY) {
         return 1;
       }
-      if (right.colorKey === UNKNOWN_ANALYTICS_COLOR_KEY) {
+      if (right.colorKey === NO_ACTIVITY_COLOR_KEY) {
         return -1;
       }
       return right.totalSeconds - left.totalSeconds;
     });
 }
 
-export function buildHeatmapGrid(
-  records: FocusRecord[],
-  weekCount = ANALYTICS_WEEK_COUNT,
-  referenceDate = new Date(),
-): HeatmapWeekColumn[] {
-  const today = startOfLocalDay(referenceDate);
-  const currentWeekStart = startOfLocalWeek(today);
-  const completedRecords = getCompletedRecords(records);
-  const columns: HeatmapWeekColumn[] = [];
-
-  for (let weekOffset = weekCount - 1; weekOffset >= 0; weekOffset -= 1) {
-    const weekStart = new Date(currentWeekStart);
-    weekStart.setDate(currentWeekStart.getDate() - weekOffset * 7);
-    const days: HeatmapDay[] = [];
-
-    for (let dayIndex = 0; dayIndex < 7; dayIndex += 1) {
-      const date = new Date(weekStart);
-      date.setDate(weekStart.getDate() + dayIndex);
-      const dateKey = formatDateKey(date);
-      if (date > today) {
-        days.push({ dateKey, totalSeconds: 0, level: 0, colorKey: null });
-        continue;
-      }
-
-      const dayStart = startOfLocalDay(date);
-      const dayEnd = endOfLocalDay(date);
-      const dayRecords = completedRecords.filter((record) =>
-        isTimestampInRange(record.startedAt, dayStart, dayEnd),
-      );
-      const totalSeconds = sumRecordSeconds(dayRecords);
-      days.push({
-        dateKey,
-        totalSeconds,
-        level: secondsToHeatmapLevel(totalSeconds),
-        colorKey: getDominantColorKey(dayRecords),
-      });
-    }
-
-    columns.push({
-      weekStartKey: formatDateKey(weekStart),
-      days,
-    });
+export function getRecordColorKey(record: FocusRecord): string {
+  if (record.kind === "backlog" && record.sessionId !== null) {
+    return record.sessionId;
   }
 
-  return columns;
+  return NO_ACTIVITY_COLOR_KEY;
+}
+
+export function getAnalyticsPalette(
+  colorKey: string,
+  sessionColorById?: ReadonlyMap<string, string>,
+): AnalyticsPalette {
+  if (colorKey === NO_ACTIVITY_COLOR_KEY) {
+    return { hue: 258, saturation: 16 };
+  }
+
+  const sessionColor = sessionColorById?.get(colorKey);
+  if (sessionColor !== undefined) {
+    return hexToPalette(sessionColor);
+  }
+
+  return {
+    hue: hashStringToHue(colorKey),
+    saturation: 72,
+  };
 }
 
 export function startOfLocalDay(date: Date): Date {
@@ -241,6 +308,104 @@ export function startOfLocalWeek(date: Date): Date {
   start.setDate(date.getDate() - diff);
   start.setHours(0, 0, 0, 0);
   return start;
+}
+
+function createTimeByDayBuckets(period: AnalyticsPeriod): TimeByDayBucket[] {
+  if (period.bucketKind === "hour") {
+    return createHourBuckets();
+  }
+
+  if (period.bucketKind === "week") {
+    return createWeekBuckets(period.start, period.end);
+  }
+
+  return createDayBuckets(period.start, period.end, period.calendarDayCount);
+}
+
+function createHourBuckets(): TimeByDayBucket[] {
+  const buckets: TimeByDayBucket[] = [];
+  for (let hour = 0; hour < 24; hour += 1) {
+    const label = `${String(hour).padStart(2, "0")}:00`;
+    buckets.push({ key: label, label, totalSeconds: 0 });
+  }
+  return buckets;
+}
+
+function createDayBuckets(
+  start: Date,
+  end: Date,
+  calendarDayCount: number,
+): TimeByDayBucket[] {
+  const buckets: TimeByDayBucket[] = [];
+  const cursor = startOfLocalDay(start);
+  const last = startOfLocalDay(end);
+  const useWeekdayLabels = calendarDayCount <= 7;
+
+  while (cursor.getTime() <= last.getTime()) {
+    buckets.push({
+      key: formatDateKey(cursor),
+      label: useWeekdayLabels
+        ? weekdayLabel(cursor)
+        : formatNumericDate(cursor),
+      totalSeconds: 0,
+    });
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  return buckets;
+}
+
+function createWeekBuckets(start: Date, end: Date): TimeByDayBucket[] {
+  const buckets: TimeByDayBucket[] = [];
+  const cursor = startOfLocalWeek(start);
+  const last = startOfLocalDay(end);
+
+  while (cursor.getTime() <= last.getTime()) {
+    buckets.push({
+      key: formatDateKey(cursor),
+      label: formatNumericDate(cursor),
+      totalSeconds: 0,
+    });
+    cursor.setDate(cursor.getDate() + 7);
+  }
+
+  return buckets;
+}
+
+function getBucketKey(
+  startedAt: Date,
+  bucketKind: AnalyticsBucketKind,
+): string {
+  if (bucketKind === "hour") {
+    return `${String(startedAt.getHours()).padStart(2, "0")}:00`;
+  }
+
+  if (bucketKind === "week") {
+    return formatDateKey(startOfLocalWeek(startedAt));
+  }
+
+  return formatDateKey(startedAt);
+}
+
+function weekdayLabel(date: Date): string {
+  const day = date.getDay();
+  const mondayIndex = day === 0 ? 6 : day - 1;
+  return WEEKDAY_LABELS[mondayIndex] ?? "";
+}
+
+function formatNumericDate(date: Date): string {
+  return `${date.getMonth() + 1}/${date.getDate()}`;
+}
+
+function countInclusiveCalendarDays(start: Date, end: Date): number {
+  const cursor = startOfLocalDay(start);
+  const last = startOfLocalDay(end);
+  let count = 0;
+  while (cursor.getTime() <= last.getTime()) {
+    count += 1;
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return count;
 }
 
 function endOfLocalDay(date: Date): Date {
@@ -268,50 +433,11 @@ function isTimestampInRange(iso: string, start: Date, end: Date): boolean {
   return timestamp >= start && timestamp <= end;
 }
 
-function secondsToHeatmapLevel(totalSeconds: number): HeatmapLevel {
-  if (totalSeconds <= 0) {
-    return 0;
-  }
-  if (totalSeconds < 15 * 60) {
-    return 1;
-  }
-  if (totalSeconds < 30 * 60) {
-    return 2;
-  }
-  if (totalSeconds < 60 * 60) {
-    return 3;
-  }
-  return 4;
-}
-
 function formatDateKey(date: Date): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
-}
-
-function getDominantColorKey(records: FocusRecord[]): string | null {
-  const totalsByColorKey = new Map<string, number>();
-
-  for (const record of getCompletedRecords(records)) {
-    const colorKey = getRecordColorKey(record);
-    totalsByColorKey.set(
-      colorKey,
-      (totalsByColorKey.get(colorKey) ?? 0) + record.accumulatedSeconds,
-    );
-  }
-
-  let dominantColorKey: string | null = null;
-  let dominantSeconds = 0;
-  for (const [colorKey, totalSeconds] of totalsByColorKey) {
-    if (totalSeconds > dominantSeconds) {
-      dominantColorKey = colorKey;
-      dominantSeconds = totalSeconds;
-    }
-  }
-
-  return dominantColorKey;
 }
 
 function hashStringToHue(value: string): number {
@@ -360,4 +486,48 @@ function hexToPalette(hex: string): AnalyticsPalette {
     hue: Math.round(hue * 60),
     saturation: Math.round(saturation * 100),
   };
+}
+
+export type AnalyticsPeriodPreset = "today" | "week" | "month" | "custom";
+
+export type AnalyticsBucketKind = "hour" | "day" | "week";
+
+export interface AnalyticsCustomRange {
+  startDate: string;
+  endDate: string;
+}
+
+export interface AnalyticsPeriod {
+  start: Date;
+  end: Date;
+  calendarDayCount: number;
+  bucketKind: AnalyticsBucketKind;
+}
+
+export interface AnalyticsMetrics {
+  totalSeconds: number;
+  sessionCount: number;
+  dailyAverageSeconds: number;
+  averageSessionSeconds: number;
+  longestSessionSeconds: number;
+  activeDayCount: number;
+  calendarDayCount: number;
+}
+
+export interface TimeByDayBucket {
+  key: string;
+  label: string;
+  totalSeconds: number;
+}
+
+export interface AnalyticsPalette {
+  hue: number;
+  saturation: number;
+}
+
+export interface ActivityBreakdownItem extends AnalyticsPalette {
+  colorKey: string;
+  label: string;
+  totalSeconds: number;
+  percent: number;
 }

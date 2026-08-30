@@ -1,160 +1,281 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type CSSProperties, type ReactNode } from "react";
 
 import {
-  ANALYTICS_WEEK_COUNT,
-  buildAnalyticsLegend,
-  buildHeatmapGrid,
+  buildAnalyticsMetrics,
+  buildTimeByActivity,
+  buildTimeByDay,
   formatDurationLabel,
-  getAnalyticsPalette,
-  getDailyFocusSeconds,
-  getMonthlyFocusSeconds,
-  getTotalFocusSeconds,
-  getWeeklyFocusSeconds,
+  getAnalyticsDataset,
+  resolveAnalyticsPeriod,
+  type AnalyticsPeriodPreset,
+  type TimeByDayBucket,
 } from "../../../helpers/analytics.helper";
-import {
-  buildBacklogFilterOptions,
-  filterRecordsByBacklogSession,
-} from "../../../helpers/history.helper";
-
-import {
-  AnalyticsHeader,
-  AnalyticsShell,
-  FilterSelect,
-  HeatmapCell,
-  HeatmapColumn,
-  HeatmapFrame,
-  HeatmapLabelSlot,
-  HeatmapLabels,
-  HeatmapLayout,
-  HeatmapWeeks,
-  LegendItem,
-  LegendList,
-  LegendSwatch,
-  StatCard,
-  StatLabel,
-  StatValue,
-  StatsGrid,
-} from "./AnalyticsSection.styles";
-
+import { buildActivityFilterOptions } from "../../../helpers/history.helper";
 import type { FocusRecord, SavedSession } from "../../../shared/records.types";
 
-const DAY_LABELS = ["M", "T", "W", "T", "F", "S", "S"];
-const EMPTY_CELL_PALETTE = { hue: 0, saturation: 0 };
+import { cn } from "../lib/cn";
+
+const PERIOD_PRESETS: Array<{ id: AnalyticsPeriodPreset; label: string }> = [
+  { id: "today", label: "Today" },
+  { id: "week", label: "Week" },
+  { id: "month", label: "Month" },
+  { id: "custom", label: "Custom" },
+];
 
 export function AnalyticsSection({ records, sessions }: AnalyticsSectionProps) {
-  const [selectedSessionId, setSelectedSessionId] = useState("");
+  const [periodPreset, setPeriodPreset] =
+    useState<AnalyticsPeriodPreset>("week");
+  const [selectedActivityId, setSelectedActivityId] = useState("");
+  const [customStartDate, setCustomStartDate] = useState("");
+  const [customEndDate, setCustomEndDate] = useState("");
+
   const filterOptions = useMemo(
-    () => buildBacklogFilterOptions(sessions),
+    () => buildActivityFilterOptions(sessions),
     [sessions],
   );
-  const filteredRecords = useMemo(
-    () => filterRecordsByBacklogSession(records, selectedSessionId || null),
-    [records, selectedSessionId],
+  const period = useMemo(
+    () =>
+      resolveAnalyticsPeriod(
+        periodPreset,
+        new Date(),
+        periodPreset === "custom"
+          ? { startDate: customStartDate, endDate: customEndDate }
+          : null,
+      ),
+    [periodPreset, customStartDate, customEndDate],
   );
-  const columns = useMemo(
-    () => buildHeatmapGrid(filteredRecords, ANALYTICS_WEEK_COUNT),
-    [filteredRecords],
+  const dataset = useMemo(
+    () => getAnalyticsDataset(records, period, selectedActivityId || null),
+    [records, period, selectedActivityId],
   );
-  const legendItems = useMemo(
-    () => buildAnalyticsLegend(filteredRecords, sessions),
-    [filteredRecords, sessions],
+  const metrics = useMemo(
+    () => buildAnalyticsMetrics(dataset, period?.calendarDayCount ?? 0),
+    [dataset, period],
   );
-  const sessionColorById = useMemo(
-    () => new Map(sessions.map((session) => [session.id, session.color])),
-    [sessions],
+  const timeByDay = useMemo(
+    () => (period === null ? [] : buildTimeByDay(dataset, period)),
+    [dataset, period],
+  );
+  const timeByActivity = useMemo(
+    () => buildTimeByActivity(dataset, sessions),
+    [dataset, sessions],
+  );
+  const maxDaySeconds = timeByDay.reduce(
+    (maxSeconds, bucket) => Math.max(maxSeconds, bucket.totalSeconds),
+    0,
   );
 
   return (
-    <AnalyticsShell>
-      <AnalyticsHeader>
-        <FilterSelect
-          value={selectedSessionId}
-          onChange={(event) => setSelectedSessionId(event.target.value)}
+    <div className="flex flex-col gap-3.5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div
+          className="flex flex-wrap gap-1.5"
+          role="group"
+          aria-label="Date range"
+        >
+          {PERIOD_PRESETS.map((preset) => (
+            <button
+              key={preset.id}
+              type="button"
+              aria-pressed={periodPreset === preset.id}
+              className={cn(
+                "rounded-lg border px-2.5 py-1 text-xs",
+                periodPreset === preset.id
+                  ? "border-[#9b5cff] bg-[#9b5cff]/20 text-[#f4eefe]"
+                  : "border-[rgba(155,92,255,0.22)] bg-[#16101f] text-[#9b8fb0]",
+              )}
+              onClick={() => setPeriodPreset(preset.id)}
+            >
+              {preset.label}
+            </button>
+          ))}
+        </div>
+        <select
+          className="max-w-[180px] rounded-[10px] border border-[rgba(155,92,255,0.22)] bg-[#16101f] px-2.5 py-1.5 text-[#f4eefe]"
+          value={selectedActivityId}
+          onChange={(event) => setSelectedActivityId(event.target.value)}
+          aria-label="Activity"
         >
           {filterOptions.map((option) => (
             <option key={option.value || "all"} value={option.value}>
               {option.label}
             </option>
           ))}
-        </FilterSelect>
-      </AnalyticsHeader>
-      <HeatmapFrame>
-        <HeatmapLayout>
-          <HeatmapLabels>
-            {DAY_LABELS.map((label, index) => (
-              <HeatmapLabelSlot key={`${label}-${index}`}>
-                {index % 2 === 0 ? label : ""}
-              </HeatmapLabelSlot>
-            ))}
-          </HeatmapLabels>
-          <HeatmapWeeks>
-            {columns.map((column) => (
-              <HeatmapColumn key={column.weekStartKey}>
-                {column.days.map((day) => {
-                  const palette =
-                    day.colorKey === null
-                      ? EMPTY_CELL_PALETTE
-                      : getAnalyticsPalette(day.colorKey, sessionColorById);
-                  return (
-                    <HeatmapCell
-                      key={day.dateKey}
-                      $level={day.level}
-                      $hue={palette.hue}
-                      $saturation={palette.saturation}
-                      title={`${day.dateKey}: ${formatDurationLabel(day.totalSeconds)}`}
-                    />
-                  );
-                })}
-              </HeatmapColumn>
-            ))}
-          </HeatmapWeeks>
-        </HeatmapLayout>
-      </HeatmapFrame>
-      {legendItems.length > 0 ? (
-        <LegendList>
-          {legendItems.map((legendItem) => (
-            <LegendItem key={legendItem.colorKey}>
-              <LegendSwatch
-                $hue={legendItem.hue}
-                $saturation={legendItem.saturation}
-              />
-              {legendItem.label} ({formatDurationLabel(legendItem.totalSeconds)}
-              )
-            </LegendItem>
-          ))}
-        </LegendList>
+        </select>
+      </div>
+      {periodPreset === "custom" ? (
+        <div className="grid grid-cols-2 gap-2">
+          <label className="flex flex-col gap-1">
+            <span className="text-[0.7rem] uppercase tracking-wide text-[#8f84a8]">
+              From
+            </span>
+            <input
+              type="date"
+              className="rounded-[10px] border border-[rgba(155,92,255,0.22)] bg-[#16101f] px-2.5 py-1.5 text-[#f4eefe]"
+              value={customStartDate}
+              onChange={(event) => setCustomStartDate(event.target.value)}
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-[0.7rem] uppercase tracking-wide text-[#8f84a8]">
+              To
+            </span>
+            <input
+              type="date"
+              className="rounded-[10px] border border-[rgba(155,92,255,0.22)] bg-[#16101f] px-2.5 py-1.5 text-[#f4eefe]"
+              value={customEndDate}
+              onChange={(event) => setCustomEndDate(event.target.value)}
+            />
+          </label>
+        </div>
       ) : null}
-      <StatsGrid>
-        <StatCard>
-          <StatLabel>Total</StatLabel>
-          <StatValue>
-            {formatDurationLabel(getTotalFocusSeconds(filteredRecords))}
-          </StatValue>
-        </StatCard>
-        <StatCard>
-          <StatLabel>This week</StatLabel>
-          <StatValue>
-            {formatDurationLabel(getWeeklyFocusSeconds(filteredRecords))}
-          </StatValue>
-        </StatCard>
-        <StatCard>
-          <StatLabel>Today</StatLabel>
-          <StatValue>
-            {formatDurationLabel(getDailyFocusSeconds(filteredRecords))}
-          </StatValue>
-        </StatCard>
-        <StatCard>
-          <StatLabel>This month</StatLabel>
-          <StatValue>
-            {formatDurationLabel(getMonthlyFocusSeconds(filteredRecords))}
-          </StatValue>
-        </StatCard>
-      </StatsGrid>
-    </AnalyticsShell>
+      <div className="grid grid-cols-2 gap-2">
+        <StatCard
+          label="Total Time"
+          value={formatDurationLabel(metrics.totalSeconds)}
+          emphasize
+        />
+        <StatCard label="Sessions" value={String(metrics.sessionCount)} />
+        <StatCard
+          label="Daily Average"
+          value={`${formatDurationLabel(metrics.dailyAverageSeconds)} / day`}
+        />
+        <StatCard
+          label="Avg. Session"
+          value={formatDurationLabel(metrics.averageSessionSeconds)}
+        />
+        <StatCard
+          label="Longest Session"
+          value={formatDurationLabel(metrics.longestSessionSeconds)}
+        />
+        <StatCard
+          label="Active Days"
+          value={`${metrics.activeDayCount} / ${metrics.calendarDayCount}`}
+        />
+      </div>
+      <ChartBlock title="Time by Day">
+        {period === null ? (
+          <p className="m-0 text-xs text-[#9b8fb0]">Pick a custom date range.</p>
+        ) : (
+          <div className="flex max-h-64 flex-col gap-1.5 overflow-y-auto">
+            {timeByDay.map((bucket) => (
+              <TimeBarRow
+                key={bucket.key}
+                label={bucket.label}
+                valueLabel={formatDurationLabel(bucket.totalSeconds)}
+                widthPercent={barWidthPercent(bucket, maxDaySeconds)}
+              />
+            ))}
+          </div>
+        )}
+      </ChartBlock>
+      <ChartBlock title="Time by Activity">
+        {timeByActivity.length === 0 ? (
+          <p className="m-0 text-xs text-[#9b8fb0]">
+            No activity in this period.
+          </p>
+        ) : (
+          <div className="flex flex-col gap-1.5">
+            {timeByActivity.map((item) => (
+              <TimeBarRow
+                key={item.colorKey}
+                label={item.label}
+                valueLabel={`${formatDurationLabel(item.totalSeconds)}   ${item.percent}%`}
+                widthPercent={item.percent}
+                hue={item.hue}
+                saturation={item.saturation}
+              />
+            ))}
+          </div>
+        )}
+      </ChartBlock>
+    </div>
   );
+}
+
+function ChartBlock({ title, children }: ChartBlockProps) {
+  return (
+    <section className="flex flex-col gap-2">
+      <h2 className="m-0 text-[0.7rem] font-medium uppercase tracking-[0.04em] text-[#9b8fb0]">
+        {title}
+      </h2>
+      {children}
+    </section>
+  );
+}
+
+function StatCard({ label, value, emphasize = false }: StatCardProps) {
+  return (
+    <div className="rounded-xl border border-[rgba(155,92,255,0.22)] bg-[#16101f] px-3 py-2.5">
+      <p className="m-0 text-[0.7rem] uppercase tracking-[0.04em] text-[#9b8fb0]">
+        {label}
+      </p>
+      <p
+        className={cn(
+          "mt-1 font-semibold tabular-nums text-[#f4eefe]",
+          emphasize ? "text-2xl" : "text-[1.05rem]",
+        )}
+      >
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function TimeBarRow({
+  label,
+  valueLabel,
+  widthPercent,
+  hue = 258,
+  saturation = 72,
+}: TimeBarRowProps) {
+  return (
+    <div className="flex items-center gap-2 text-xs text-[#f4eefe]">
+      <span className="w-28 shrink-0 truncate text-[#9b8fb0]">{label}</span>
+      <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-white/10">
+        <div
+          className="h-full w-[var(--bar-width)] rounded-full bg-[var(--bar-color)]"
+          style={
+            {
+              "--bar-width": `${Math.max(0, Math.min(widthPercent, 100))}%`,
+              "--bar-color": `hsl(${hue} ${saturation}% 52%)`,
+            } as CSSProperties
+          }
+        />
+      </div>
+      <span className="shrink-0 tabular-nums text-[#cfc3e6]">{valueLabel}</span>
+    </div>
+  );
+}
+
+function barWidthPercent(bucket: TimeByDayBucket, maxSeconds: number): number {
+  if (maxSeconds <= 0) {
+    return 0;
+  }
+
+  return (bucket.totalSeconds / maxSeconds) * 100;
 }
 
 interface AnalyticsSectionProps {
   records: FocusRecord[];
   sessions: SavedSession[];
+}
+
+interface ChartBlockProps {
+  title: string;
+  children: ReactNode;
+}
+
+interface StatCardProps {
+  label: string;
+  value: string;
+  emphasize?: boolean;
+}
+
+interface TimeBarRowProps {
+  label: string;
+  valueLabel: string;
+  widthPercent: number;
+  hue?: number;
+  saturation?: number;
 }

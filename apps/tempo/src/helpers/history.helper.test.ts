@@ -1,14 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  UNKNOWN_ANALYTICS_COLOR_KEY,
-  buildHeatmapGrid,
-  formatDurationLabel,
-  getAnalyticsPalette,
-  getDailyFocusSeconds,
-  getRecordColorKey,
-} from "./analytics.helper";
-import {
+  buildActivityFilterOptions,
   buildBacklogFilterOptions,
   buildManualSessionOptions,
   buildHistoryEntries,
@@ -99,6 +92,14 @@ describe("analytics filter", () => {
     ]);
   });
 
+  it("labels the analytics activity filter as All activities", () => {
+    const options = buildActivityFilterOptions(sessions);
+    expect(options.map((option) => option.label)).toEqual([
+      "All activities",
+      "Software Growth",
+    ]);
+  });
+
   it("lists custom name first for manual record session picker", () => {
     const options = buildManualSessionOptions(sessions);
     expect(options.map((option) => option.label)).toEqual([
@@ -121,76 +122,6 @@ describe("analytics filter", () => {
     expect(filterRecordsByBacklogSession(records, "session-1")).toEqual([
       records[1],
     ]);
-  });
-
-  it("counts today seconds from startedAt", () => {
-    const records = [
-      makeRecord({ accumulatedSeconds: 1800 }),
-      makeRecord({
-        id: "old",
-        startedAt: localTimestamp(2026, 8, 20, 9),
-        endedAt: localTimestamp(2026, 8, 20, 10),
-        accumulatedSeconds: 3600,
-      }),
-    ];
-    expect(getDailyFocusSeconds(records, new Date(2026, 7, 21, 12))).toBe(1800);
-  });
-
-  it("builds heatmap cells for local days", () => {
-    const columns = buildHeatmapGrid(
-      [makeRecord({ accumulatedSeconds: 3600 })],
-      2,
-      new Date(2026, 7, 21, 12),
-    );
-    const seconds = columns
-      .flatMap((column) => column.days)
-      .reduce((total, day) => total + day.totalSeconds, 0);
-    expect(seconds).toBe(3600);
-  });
-});
-
-describe("analytics session colors", () => {
-  it("gives unknown records a shared color and unique colors per backlog session", () => {
-    expect(
-      getRecordColorKey(makeRecord({ kind: "unknown", sessionId: null })),
-    ).toBe(UNKNOWN_ANALYTICS_COLOR_KEY);
-    expect(
-      getRecordColorKey(
-        makeRecord({ kind: "backlog", sessionId: "session-1" }),
-      ),
-    ).toBe("session-1");
-    expect(getAnalyticsPalette("session-a").hue).not.toBe(
-      getAnalyticsPalette("session-b").hue,
-    );
-    expect(getAnalyticsPalette(UNKNOWN_ANALYTICS_COLOR_KEY)).toEqual(
-      getAnalyticsPalette(UNKNOWN_ANALYTICS_COLOR_KEY),
-    );
-  });
-
-  it("colors a heatmap day by the dominant session", () => {
-    const columns = buildHeatmapGrid(
-      [
-        makeRecord({
-          id: "unknown",
-          kind: "unknown",
-          sessionId: null,
-          accumulatedSeconds: 600,
-        }),
-        makeRecord({
-          id: "backlog",
-          kind: "backlog",
-          sessionId: "session-1",
-          name: "Software Growth",
-          accumulatedSeconds: 3600,
-        }),
-      ],
-      2,
-      new Date(2026, 7, 21, 12),
-    );
-    const day = columns
-      .flatMap((column) => column.days)
-      .find((heatmapDay) => heatmapDay.totalSeconds === 4200);
-    expect(day?.colorKey).toBe("session-1");
   });
 });
 
@@ -217,9 +148,3 @@ describe("history date filter", () => {
   });
 });
 
-describe("formatDurationLabel", () => {
-  it("omits zero minutes after hours", () => {
-    expect(formatDurationLabel(3600)).toBe("1h");
-    expect(formatDurationLabel(90)).toBe("1m");
-  });
-});

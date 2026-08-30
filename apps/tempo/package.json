@@ -24,10 +24,15 @@
     "react": "catalog:",
     "react-dom": "catalog:",
     "sql.js": "^1.13.0",
-    "styled-components": "catalog:"
+    "styled-components": "catalog:",
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^3.5.0"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
+    "autoprefixer": "^10.4.27",
+    "postcss": "^8.5.8",
+    "tailwindcss": "^3.4.17",
     "@repo/typescript-config": "workspace:*",
     "@types/node": "catalog:",
     "@types/react": "catalog:",

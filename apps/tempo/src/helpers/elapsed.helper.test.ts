@@ -302,6 +302,30 @@ describe("session helpers", () => {
     expect(record.accumulatedSeconds).toBe(120);
   });
 
+  it("builds a backlog manual record from a saved session", () => {
+    const record = buildManualRecord(
+      {
+        name: "ignored",
+        durationSeconds: 1800,
+        startedAt: "2026-08-21T09:00:00.000Z",
+        kind: "backlog",
+        sessionId: "session-1",
+        saveToBacklog: false,
+      },
+      "manual-2",
+      {
+        id: "session-1",
+        name: "Software Growth",
+        color: "#3b82f6",
+        createdAt: "2026-08-01T00:00:00.000Z",
+      },
+    );
+    expect(record.kind).toBe("backlog");
+    expect(record.sessionId).toBe("session-1");
+    expect(record.name).toBe("Software Growth");
+    expect(record.source).toBe("manual");
+  });
+
   it("updates a completed record name and duration", () => {
     const stoppedRecord = buildStoppedRecord(
       buildLiveStartRecord(
@@ -327,19 +351,50 @@ describe("session helpers", () => {
           name: "",
           durationSeconds: 120,
           startedAt,
+          kind: "unknown",
+          sessionId: null,
+          saveToBacklog: false,
         },
         nowMs,
       ),
     ).toThrow("Name is required");
-    const updated = buildUpdatedRecord(stoppedRecord, {
-      id: stoppedRecord.id,
-      name: "Deep work",
-      durationSeconds: 120,
-      startedAt: "2026-08-21T09:00:00.000Z",
-    });
+    const updated = buildUpdatedRecord(
+      stoppedRecord,
+      {
+        id: stoppedRecord.id,
+        name: "Deep work",
+        durationSeconds: 120,
+        startedAt: "2026-08-21T09:00:00.000Z",
+        kind: "unknown",
+        sessionId: null,
+        saveToBacklog: false,
+      },
+      null,
+    );
     expect(updated.name).toBe("Deep work");
     expect(updated.accumulatedSeconds).toBe(120);
     expect(updated.endedAt).toBe("2026-08-21T09:02:00.000Z");
+    const backlogUpdated = buildUpdatedRecord(
+      stoppedRecord,
+      {
+        id: stoppedRecord.id,
+        name: "ignored",
+        durationSeconds: 1800,
+        startedAt: "2026-08-21T09:00:00.000Z",
+        kind: "backlog",
+        sessionId: "session-1",
+        saveToBacklog: false,
+      },
+      {
+        id: "session-1",
+        name: "Software Growth",
+        color: "#3b82f6",
+        createdAt: "2026-08-01T00:00:00.000Z",
+      },
+    );
+    expect(backlogUpdated.kind).toBe("backlog");
+    expect(backlogUpdated.sessionId).toBe("session-1");
+    expect(backlogUpdated.name).toBe("Software Growth");
     expect(() =>
       validateDeleteRecord({ ...stoppedRecord, endedAt: null }),
     ).toThrow("Cannot delete an active session");

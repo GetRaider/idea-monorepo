@@ -39,6 +39,15 @@ export const DialogTitle = styled.h2`
   font-size: 1rem;
 `;
 
+export const SessionSelect = styled.select`
+  width: 100%;
+  border: 1px solid rgba(155, 92, 255, 0.22);
+  border-radius: 10px;
+  background: #16101f;
+  color: #f4eefe;
+  padding: 0.55rem 0.65rem;
+`;
+
 export const DialogBody = styled.p`
   margin: 0;
   color: #9b8fb0;

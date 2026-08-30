@@ -48,6 +48,9 @@ export interface UpdateRecordInput {
   name: string;
   durationSeconds: number;
   startedAt: string;
+  kind: SessionKind;
+  sessionId: string | null;
+  saveToBacklog: boolean;
 }
 
 export interface CreateSavedSessionInput {

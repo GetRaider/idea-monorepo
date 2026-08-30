@@ -719,6 +719,8 @@ export function App() {
       {isManualDialogOpen ? (
         <ManualRecordDialog
           record={editingRecord}
+          sessions={sessions}
+          defaultSaveNewSessions={settings.defaultSaveNewSessions}
           onClose={() => {
             setIsManualDialogOpen(false);
             setEditingRecord(null);

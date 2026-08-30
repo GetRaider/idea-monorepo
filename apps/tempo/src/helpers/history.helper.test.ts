@@ -10,6 +10,7 @@ import {
 } from "./analytics.helper";
 import {
   buildBacklogFilterOptions,
+  buildManualSessionOptions,
   buildHistoryEntries,
   filterRecordsByBacklogSession,
   filterRecordsByStartedAtRange,
@@ -94,6 +95,14 @@ describe("analytics filter", () => {
     const options = buildBacklogFilterOptions(sessions);
     expect(options.map((option) => option.label)).toEqual([
       "All sessions",
+      "Software Growth",
+    ]);
+  });
+
+  it("lists custom name first for manual record session picker", () => {
+    const options = buildManualSessionOptions(sessions);
+    expect(options.map((option) => option.label)).toEqual([
+      "Custom name",
       "Software Growth",
     ]);
   });

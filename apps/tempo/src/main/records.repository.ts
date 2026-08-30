@@ -137,7 +137,8 @@ export function updateCompletedRecord(input: UpdateRecordInput): FocusRecord {
   }
 
   validateUpdateRecord(existing, input, Date.now());
-  const record = buildUpdatedRecord(existing, input);
+  const savedSession = resolveSavedSessionForStart(input);
+  const record = buildUpdatedRecord(existing, input, savedSession);
   updateRecord(record);
   persistDatabase();
   return record;

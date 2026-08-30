@@ -29,6 +29,7 @@ export {
 } from "./icon.helper";
 export {
   buildBacklogFilterOptions,
+  buildManualSessionOptions,
   buildHistoryEntries,
   filterRecordsByBacklogSession,
   filterRecordsByStartedAtRange,

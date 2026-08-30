@@ -79,7 +79,11 @@ export function validateUpdateRecord(
     throw new Error("Cannot edit an active session");
   }
 
-  if (input.name.trim().length === 0) {
+  if (input.kind === "backlog") {
+    if (!input.sessionId) {
+      throw new Error("Select a backlog session");
+    }
+  } else if (!input.saveToBacklog && input.name.trim().length === 0) {
     throw new Error("Name is required");
   }
 
@@ -253,13 +257,15 @@ export function buildStoppedRecord(
 export function buildUpdatedRecord(
   existing: FocusRecord,
   input: UpdateRecordInput,
+  savedSession: SavedSession | null,
 ): FocusRecord {
+  const identity = resolveRecordIdentity(input, savedSession);
   const startedAtMs = Date.parse(input.startedAt);
   const durationSeconds = input.durationSeconds;
 
   return {
     ...existing,
-    name: input.name.trim(),
+    ...identity,
     startedAt: new Date(startedAtMs).toISOString(),
     endedAt: new Date(startedAtMs + durationSeconds * 1000).toISOString(),
     accumulatedSeconds: durationSeconds,

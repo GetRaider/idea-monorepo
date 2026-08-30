@@ -54,10 +54,25 @@ export function buildBacklogFilterOptions(
 ): Array<{ value: string; label: string }> {
   return [
     { value: "", label: "All sessions" },
-    ...[...sessions]
-      .sort((left, right) => left.name.localeCompare(right.name))
-      .map((session) => ({ value: session.id, label: session.name })),
+    ...buildSortedSessionOptions(sessions),
   ];
+}
+
+export function buildManualSessionOptions(
+  sessions: SavedSession[],
+): Array<{ value: string; label: string }> {
+  return [
+    { value: "", label: "Custom name" },
+    ...buildSortedSessionOptions(sessions),
+  ];
+}
+
+function buildSortedSessionOptions(
+  sessions: SavedSession[],
+): Array<{ value: string; label: string }> {
+  return [...sessions]
+    .sort((left, right) => left.name.localeCompare(right.name))
+    .map((session) => ({ value: session.id, label: session.name }));
 }
 
 export function filterRecordsByBacklogSession(

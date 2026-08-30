@@ -622,7 +622,7 @@ export function App() {
                   onChange={handleDurationChange}
                 />
               </SetupGrid>
-              <CollapsibleSection title="Regular Sessions">
+              <CollapsibleSection title="Regular Sessions" defaultExpanded>
                 <BacklogPicker
                   sessions={sessions}
                   selectedSessionId={selectedSessionId}

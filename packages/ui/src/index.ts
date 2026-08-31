@@ -1,6 +1,10 @@
 export * from "./components/Button/Button.component";
+export * from "./components/Checkbox";
+export * from "./components/Collapsible";
 export * from "./components/Dialog";
 export * from "./components/Header/Header.component";
 export { default as Header } from "./components/Header/Header.component";
+export * from "./components/Input/Input";
 export * from "./components/Spinner";
+export * from "./components/Tooltip";
 export { cn } from "./lib/cn";

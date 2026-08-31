@@ -14,13 +14,13 @@
 4. **Prod:** `disableSignUp` — existing users only.
 5. Web: `getSession()` + credentials. Nest `AuthGuard` on `/v1`.
 
-No guest import in v0. No GCal consent in v0.
+No guest import in v0. No GCal consent / calendar OAuth scopes in v0.
 
 ## CRUD Tasks (v0)
 
 1. Guard session.
-2. Membership for `X-Workspace-Id`.
-3. Mutate folders / boards / tasks in one Postgres transaction.
+2. Resolve workspace from the user’s sole membership (403 if 0 or >1). No `X-Workspace-Id`.
+3. Mutate folders / boards / tasks in one Postgres transaction. On task insert: increment `workspace.taskSeq`, set `taskKey = T-{n}`. Reparent: cycle check; do not rewrite `taskKey`.
 4. Bump `workspace.updatedAt`.
 
 p95 ≤ 200ms on this path. Zod validate request/response via `@repo/api/todex`.

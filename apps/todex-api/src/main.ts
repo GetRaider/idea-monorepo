@@ -1,10 +1,30 @@
-import { NestFactory } from '@nestjs/core';
-import { AppModule, ObserveInstrument } from './app.module.js';
+import { NestFactory } from "@nestjs/core";
+import { RequestMethod } from "@nestjs/common";
+
+import { AppModule } from "./modules/app.module";
+import { env } from "./env/env";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
-    instrument: ObserveInstrument,
+    bodyParser: false,
   });
-  await app.listen(process.env.PORT ?? 3000);
+
+  app.enableCors({
+    origin: env.web.baseUrl,
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  });
+
+  app.setGlobalPrefix("v1", {
+    exclude: [
+      { path: "health", method: RequestMethod.GET },
+      { path: "api/auth/{*path}", method: RequestMethod.ALL },
+    ],
+  });
+
+  const port = Number(env.port);
+  await app.listen(port);
 }
-await bootstrap();
+
+void bootstrap();

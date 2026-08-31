@@ -1,13 +1,14 @@
-import { defineConfig } from 'vitest/config';
-import tsconfigPaths from 'vite-tsconfig-paths';
+import { defineConfig, mergeConfig } from "vitest/config";
 
-export default defineConfig({
-  // Resolves the path aliases declared in tsconfig.json, including the ones
-  // added by `nest g library`.
-  plugins: [tsconfigPaths()],
-  test: {
-    globals: true,
-    root: './',
-    include: ['**/*.spec.ts'],
-  },
-});
+import nestPreset from "@repo/vitest-config/nest";
+
+export default mergeConfig(
+  nestPreset,
+  defineConfig({
+    test: {
+      include: ["src/**/*.test.ts", "src/**/*.spec.ts"],
+      setupFiles: ["test/vitest-setup.ts"],
+      passWithNoTests: true,
+    },
+  }),
+);

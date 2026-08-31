@@ -46,7 +46,7 @@ export function TasksHeader() {
     return [getBreadcrumbByType("root")];
   }, [pathname, taskBoards]);
 
-  const isRoot = getPathRegex("root").test(pathname);
+  const isRoot = tasksUrlHelper.routing.isRootPathname(pathname);
   const onPrimary = useCallback(() => {
     isRoot
       ? openCreateWorkspace()
@@ -134,11 +134,10 @@ function getBreadcrumbByType(
   return breadcrumbs[name];
 }
 
-function getPathRegex(name: string): RegExp {
+function getPathRegex(name: "today" | "tomorrow"): RegExp {
   const pathRegexes = {
-    root: /^\/tasks(?:\/|$)/,
     today: /^\/tasks\/schedule\/today(?:\/|$)/,
     tomorrow: /^\/tasks\/schedule\/tomorrow(?:\/|$)/,
   };
-  return pathRegexes[name as keyof typeof pathRegexes];
+  return pathRegexes[name];
 }

@@ -15,7 +15,11 @@ A repository where I develop, test, and validate product ideas. This monorepo co
     ├── apps
     │   ├── devinity-api              # Nest.js API for the Devinity (AI Engineering Management app)
     │   ├── devinity-web              # Next.js WEB for the Devinity (AI Engineering Management app)
-    │   └── take-and-do               # Next.js full-stack app for the Take&Do (AI Productivity Management app)
+    │   ├── take-and-do               # Next.js full-stack app for the Take&Do (AI Productivity Management app)
+    │   ├── todex-api                 # Nest.js API for Todex (Tasks / Calendar / Docs)
+    │   ├── todex-web                 # Next.js WEB for Todex
+    │   ├── personal-website           # Next.js personal site
+    │   └── tempo                     # Electron app (Tempo)
     └── packages
         ├── @repo/api                 # Shared Nest.js resources
         ├── @repo/eslint-config       # ESLint configurations (includes Prettier)
@@ -128,6 +132,9 @@ pnpm run dev:take-and-do
 
 # Start only Personal Website (+ required packages)
 pnpm run dev:personal-website
+
+# Start only Todex (+ required packages)
+pnpm run dev:todex
 
 # Start Tempo Electron app
 pnpm run dev:tempo

@@ -1,70 +1,55 @@
 "use client";
-import { ReactNode, ButtonHTMLAttributes } from "react";
-import { Button as ButtonRadix } from "@radix-ui/themes";
 
-type ButtonVariant = "solid" | "soft" | "outline" | "ghost";
-type ButtonSize = "1" | "2" | "3" | "4";
-type ButtonColor =
-  | "gray"
-  | "gold"
-  | "bronze"
-  | "brown"
-  | "orange"
-  | "amber"
-  | "yellow"
-  | "lime"
-  | "grass"
-  | "green"
-  | "mint"
-  | "teal"
-  | "cyan"
-  | "sky"
-  | "blue"
-  | "indigo"
-  | "violet"
-  | "purple"
-  | "plum"
-  | "pink"
-  | "crimson"
-  | "red"
-  | "tomato"
-  | "ruby";
+import { cva, type VariantProps } from "class-variance-authority";
+import type { ButtonHTMLAttributes } from "react";
 
-interface ButtonProps
-  extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "color"> {
-  children: ReactNode;
-  variant?: ButtonVariant;
-  size?: ButtonSize;
-  color?: ButtonColor;
-  className?: string;
-  onClick?: () => unknown;
-  disabled?: boolean;
-  type?: "button" | "submit" | "reset";
-}
+import { cn } from "../../lib/cn";
 
-export const Button = ({
-  children,
+const buttonVariants = cva(
+  "inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400 disabled:pointer-events-none disabled:opacity-50",
+  {
+    variants: {
+      variant: {
+        solid:
+          "bg-neutral-900 text-white hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-white",
+        outline:
+          "border border-neutral-300 bg-transparent text-neutral-900 hover:bg-neutral-100 dark:border-neutral-600 dark:text-neutral-100 dark:hover:bg-neutral-800",
+        ghost:
+          "bg-transparent text-neutral-900 hover:bg-neutral-100 dark:text-neutral-100 dark:hover:bg-neutral-800",
+        soft: "bg-neutral-100 text-neutral-900 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-700",
+      },
+      size: {
+        sm: "h-8 px-3",
+        md: "h-9 px-4",
+        lg: "h-10 px-5",
+        icon: "h-9 w-9 p-0",
+      },
+    },
+    defaultVariants: {
+      variant: "solid",
+      size: "md",
+    },
+  },
+);
+
+export function Button({
   className,
-  onClick,
-  variant = "solid",
-  size = "3",
-  color,
-  disabled,
+  variant,
+  size,
   type = "button",
   ...props
-}: ButtonProps) => {
+}: ButtonProps) {
   return (
-    <ButtonRadix
-      className={className}
-      size={size}
-      variant={variant}
-      color={color}
-      onClick={onClick}
-      disabled={disabled}
+    <button
       type={type}
+      className={cn(buttonVariants({ variant, size }), className)}
       {...props}
-    >
-      {children}
-    </ButtonRadix>
+    />
   );
-};
+}
+
+export { buttonVariants };
+
+interface ButtonProps
+  extends ButtonHTMLAttributes<HTMLButtonElement>,
+    VariantProps<typeof buttonVariants> {}

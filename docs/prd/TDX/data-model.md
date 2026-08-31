@@ -8,26 +8,27 @@
 
 Postgres + Drizzle. Strong consistency inside one transaction for domain CRUD.
 
-**Rule:** domain rows carry `workspaceId`. Access = `WorkspaceMember`.
+**Rule:** domain rows carry `workspaceId`. Access = `WorkspaceMember` (v0: the user’s sole membership).
 
-**v0 persists:** Better Auth tables, Workspace, WorkspaceMember, Folder (`kind=tasks`), TaskBoard, Task, Label/TaskLabel.  
-**Later:** Calendar\*, Doc, EntityLink, GoogleCalendarConnection, Folder `kind=docs`.
+**v0 persists:** Better Auth tables, Workspace (`taskSeq`), WorkspaceMember, Folder (`kind=tasks`), TaskBoard, Task.  
+**Later:** Label/TaskLabel, Calendar\*, Doc, EntityLink, GoogleCalendarConnection, Folder `kind=docs`.
 
 ```
 User ── Account (google)
   │
   └── Session
          │
-User ──── WorkspaceMember ──── Workspace
+User ──── WorkspaceMember ──── Workspace (taskSeq)
                                   │
-                    Folder(kind=tasks)     [later: Calendar, Folder(kind=docs)]
+                    Folder(kind=tasks)     [later: Calendar, Folder(kind=docs), Label]
                           │
                       TaskBoard
                           │
                         Task ── parentTaskId (deeper trees ok)
+                              └── taskKey T-{n} (stable)
 ```
 
-**Pages:** `/overview` empty; `/tasks` uses task-folders + boards. Calendar/Docs deferred.
+**Pages:** `/overview` empty; `/tasks` **list** uses task-folders + boards. Calendar/Docs/Kanban/labels deferred.
 
 ## Better Auth (user-scoped)
 
@@ -39,27 +40,29 @@ User ──── WorkspaceMember ──── Workspace
 
 ## Tenancy
 
-| Entity          | Key FKs             | Notes                                                 |
-| --------------- | ------------------- | ----------------------------------------------------- |
-| Workspace       | —                   | Created on first Google signup (dev) / allowed signup |
-| WorkspaceMember | workspaceId, userId | `owner \| member`                                     |
+| Entity          | Key FKs             | Notes                                                                            |
+| --------------- | ------------------- | -------------------------------------------------------------------------------- |
+| Workspace       | —                   | Created on first Google signup (dev) / allowed signup. `taskSeq` int, default 0. |
+| WorkspaceMember | workspaceId, userId | `owner \| member`. v0: one membership per user.                                  |
 
 ## Tasks (v0)
 
-| Entity            | Key FKs                                       | Notes                                |
-| ----------------- | --------------------------------------------- | ------------------------------------ |
-| Folder            | workspaceId, parentId?, `kind: tasks \| docs` | v0 uses `kind=tasks` only            |
-| TaskBoard         | workspaceId, folderId?                        | `folderId` nullable — root boards ok |
-| Task              | workspaceId, boardId, parentTaskId?           | See fields                           |
-| Label / TaskLabel | workspace, task M:N                           |                                      |
+| Entity    | Key FKs                                       | Notes                                |
+| --------- | --------------------------------------------- | ------------------------------------ |
+| Folder    | workspaceId, parentId?, `kind: tasks \| docs` | v0 uses `kind=tasks` only            |
+| TaskBoard | workspaceId, folderId?                        | `folderId` nullable — root boards ok |
+| Task      | workspaceId, boardId, parentTaskId?           | See fields                           |
 
-**Task fields:** `id`, `taskBoardId`, `taskKey?` (unique per workspace), `summary`, `description` (**plain string** v0), `status`, `priority`, `dueDate?`, `scheduleDate?` (for future calendar overlay), `estimationDays?` (allow `0.5`), `parentTaskId?`, `workspaceId`, `createdAt`, `updatedAt`.
+**Not in v0:** Label / TaskLabel.
 
-- Subtasks: **`parentTaskId` only**; **deeper trees allowed**.
-- Drop TAD `userId`, `isPublic`, unitless `estimation`.
+**Task fields:** `id`, `taskBoardId`, `taskKey` (required, unique per workspace), `summary`, `description` (**plain string** v0), `status`, `priority`, `dueDate?`, `scheduleDate?` (column for future calendar overlay; **not in UI**), `estimationDays?` (allow `0.5`), `parentTaskId?`, `workspaceId`, `createdAt`, `updatedAt`.
+
+- **`taskKey`:** `T-{n}` from `workspace.taskSeq` incremented in the same insert txn. Client cannot set it. **Never rewrite** on move/reparent. Depth is `parentTaskId`, not the key.
+- Subtasks: **`parentTaskId` only**; **deeper trees allowed**. Cycle (self or ancestor) is a 400.
+- Drop TAD `userId`, `isPublic`, unitless `estimation`, board-prefix keys.
 - Status: `todo \| in_progress \| done`.
 
-**Wire (`@repo/api/todex`):** ISO date strings; map Drizzle → DTO once on API.
+**Wire (`@repo/api/todex`):** ISO date strings; map Drizzle → DTO once on API; flat list (no nested `subtasks[]`).
 
 ## Calendar (later — not v0)
 
@@ -78,3 +81,7 @@ TipTap JSONB `content` + `contentText`. Folder `kind=docs`.
 ## Mentions / AI (later — not v0)
 
 `EntityLink` graph + `contentText`. No EntityLink rows in v0.
+
+## Labels (later — not v0)
+
+`Label` + `TaskLabel` M:N. Add via migration when the UI needs them.

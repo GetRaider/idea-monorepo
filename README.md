@@ -51,8 +51,10 @@ Format:
 - Allowed `SCOPE`:
   - `GEN` — general / repo-wide
   - `TAD` — take&do
+  - `TDX` — todex
   - `DVN` — devinity
   - `PRT` — personal website
+  - `TMP` — tempo
 - After `<SCOPE>-`, use a short slug: a descriptive name, a version (e.g. `v1`, `1.2.0`), or both (e.g. `1.2.0-changelog`). The segment starts with a letter or digit; the rest may use letters, digits, hyphens, and dots.
 
 **Other rules**
@@ -77,7 +79,7 @@ Format:
 Rules:
 
 - Allowed `type`: `feat`, `fix`, `test`, `chore`, `docs`, `refactor`, `style`, `release`
-- Allowed `SCOPE`: `GEN`, `TAD`, `DVN`, `PRT`, `TMP`
+- Allowed `SCOPE`: `GEN`, `TAD`, `TDX`, `DVN`, `PRT`, `TMP`
 - Max header length: **60** characters (single line), enforced by Commitlint
 - Commit body and footer are not used (enforced)
 

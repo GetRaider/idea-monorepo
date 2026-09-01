@@ -7,11 +7,16 @@
     "AI_BASE_URL",
     "AI_MODEL",
     "AI_PROVIDER",
+    "API_BASE_URL",
     "BETTER_AUTH_SECRET",
     "BETTER_AUTH_URL",
+    "DATABASE_URL",
     "DB_CONNECTION_STRING",
     "GOOGLE_CLIENT_ID",
     "GOOGLE_CLIENT_SECRET",
+    "NEXT_PUBLIC_API_BASE_URL",
+    "PORT",
+    "WEB_BASE_URL",
     "LOG_LEVEL",
     "NEXT_PUBLIC_GOOGLE_CLIENT_ID",
     "NEXT_PUBLIC_MIXPANEL_TOKEN",
@@ -62,6 +67,12 @@
     },
     "dev:personal-website": {
       "inputs": ["^dev:personal-website"],
+      "env": ["NODE_ENV=development"],
+      "cache": false,
+      "persistent": true
+    },
+    "dev:todex": {
+      "inputs": ["^dev:todex"],
       "env": ["NODE_ENV=development"],
       "cache": false,
       "persistent": true

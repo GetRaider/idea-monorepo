@@ -275,6 +275,28 @@ describe("session helpers", () => {
     expect(stoppedRecord.segmentStartedAt).toBeNull();
   });
 
+  it("caps a timer stop at the planned duration", () => {
+    const liveRecord = buildLiveStartRecord(
+      {
+        name: "Work",
+        kind: "unknown",
+        sessionId: null,
+        saveToBacklog: false,
+        mode: "timer",
+        plannedSeconds: 60,
+        scope: null,
+      },
+      "record-1",
+      startedAt,
+      null,
+    );
+    const stoppedRecord = buildStoppedRecord(
+      liveRecord,
+      Date.parse("2026-08-21T10:02:00.000Z"),
+    );
+    expect(stoppedRecord.accumulatedSeconds).toBe(60);
+  });
+
   it("rejects future manual records", () => {
     expect(() =>
       validateManualRecord(

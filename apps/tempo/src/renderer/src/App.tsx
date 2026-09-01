@@ -217,32 +217,35 @@ export function App() {
 
     handledAutoStopRecordId.current = activeRecord.id;
     playEndSound(settings);
-    if (settings.confirmOnStop) {
-      setStopDialogCanSave(elapsedSeconds > 0);
-      setIsStopDialogOpen(true);
-      return;
-    }
-
-    if (elapsedSeconds > 0) {
-      void window.tempo
-        .stop()
-        .then(() => refreshState())
-        .catch((error: unknown) => {
-          setErrorMessage(
-            error instanceof Error ? error.message : "Failed to save",
-          );
-        });
-      return;
-    }
-
-    void window.tempo
-      .discard()
-      .then(() => refreshState())
-      .catch((error: unknown) => {
+    const shouldConfirm = settings.confirmOnStop;
+    const canSave = elapsedSeconds > 0;
+    const shouldPause = activeRecord.segmentStartedAt !== null;
+    void (async () => {
+      try {
+        if (shouldPause) {
+          await window.tempo.pause();
+          await refreshState();
+        }
+        if (shouldConfirm) {
+          setStopDialogCanSave(canSave);
+          setIsStopDialogOpen(true);
+          return;
+        }
+        if (canSave) {
+          await window.tempo.stop();
+          setScope("");
+          await refreshState();
+          return;
+        }
+        await window.tempo.discard();
+        setScope("");
+        await refreshState();
+      } catch (error) {
         setErrorMessage(
-          error instanceof Error ? error.message : "Failed to discard",
+          error instanceof Error ? error.message : "Failed to stop",
         );
-      });
+      }
+    })();
   }, [activeRecord, elapsedSeconds, isStopDialogOpen, refreshState, settings]);
 
   useEffect(() => {
@@ -325,7 +328,17 @@ export function App() {
     return nextSettings;
   }
 
-  function requestStop(recordedSeconds: number, confirmOnStop: boolean) {
+  async function requestStop(recordedSeconds: number, confirmOnStop: boolean) {
+    setErrorMessage(null);
+    try {
+      await freezeRunningSession();
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Failed to pause",
+      );
+      return;
+    }
+
     if (confirmOnStop) {
       setStopDialogCanSave(recordedSeconds > 0);
       setIsStopDialogOpen(true);
@@ -333,11 +346,20 @@ export function App() {
     }
 
     if (recordedSeconds > 0) {
-      void handleSaveStop();
+      await handleSaveStop();
       return;
     }
 
-    void handleDiscardStop();
+    await handleDiscardStop();
+  }
+
+  async function freezeRunningSession() {
+    if (activeRecord === null || activeRecord.segmentStartedAt === null) {
+      return;
+    }
+
+    await window.tempo.pause();
+    await refreshState();
   }
 
   function handleSelectBacklog(sessionId: string | null) {

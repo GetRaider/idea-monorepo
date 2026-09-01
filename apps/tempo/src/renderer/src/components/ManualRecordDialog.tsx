@@ -52,7 +52,7 @@ export function ManualRecordDialog({
   const [durationInput, setDurationInput] = useState(
     record === null
       ? "25"
-      : String(Math.max(1, Math.round(record.accumulatedSeconds / 60))),
+      : String(Math.max(1, Math.floor(record.accumulatedSeconds / 60))),
   );
   const [startedAtLocal, setStartedAtLocal] = useState(
     toDatetimeLocalValue(

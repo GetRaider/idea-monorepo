@@ -244,7 +244,7 @@ export function buildStoppedRecord(
     throw new Error("Session is already stopped");
   }
 
-  const elapsedSeconds = getDisplayedElapsedSeconds(record, nowMs);
+  const elapsedSeconds = resolveStoppedElapsedSeconds(record, nowMs);
   const endedAtIso = new Date(nowMs).toISOString();
 
   return {
@@ -312,6 +312,18 @@ export function parseMinutesInput(value: string): number | null {
   }
 
   return parsed;
+}
+
+function resolveStoppedElapsedSeconds(
+  record: FocusRecord,
+  nowMs: number,
+): number {
+  const elapsedSeconds = getDisplayedElapsedSeconds(record, nowMs);
+  if (record.mode !== "timer" || record.plannedSeconds === null) {
+    return elapsedSeconds;
+  }
+
+  return Math.min(elapsedSeconds, record.plannedSeconds);
 }
 
 export function normalizeScope(scope: string | null): string | null {

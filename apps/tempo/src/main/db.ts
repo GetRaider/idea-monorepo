@@ -25,6 +25,7 @@ const CREATE_RECORDS_TABLE = `
 CREATE TABLE IF NOT EXISTS records (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
+  scope TEXT,
   started_at TEXT NOT NULL,
   ended_at TEXT,
   accumulated_seconds INTEGER NOT NULL DEFAULT 0,
@@ -118,6 +119,9 @@ function migrateRecordsTable(database: Database): void {
   }
   if (!columnNames.has("session_id")) {
     database.run(`ALTER TABLE records ADD COLUMN session_id TEXT`);
+  }
+  if (!columnNames.has("scope")) {
+    database.run(`ALTER TABLE records ADD COLUMN scope TEXT`);
   }
 }
 

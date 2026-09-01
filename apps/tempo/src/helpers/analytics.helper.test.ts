@@ -39,6 +39,7 @@ function makeRecord(overrides: Partial<FocusRecord> = {}): FocusRecord {
     source: "live",
     kind: "unknown",
     sessionId: null,
+    scope: null,
     ...overrides,
   };
 }

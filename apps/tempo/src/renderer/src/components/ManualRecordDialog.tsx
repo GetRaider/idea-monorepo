@@ -10,6 +10,7 @@ import {
   Field,
   FieldLabel,
   RequiredMark,
+  TextArea,
   TextInput,
 } from "../App.styles";
 
@@ -44,6 +45,7 @@ export function ManualRecordDialog({
     getInitialSessionId(record),
   );
   const [name, setName] = useState(record?.name ?? "");
+  const [scope, setScope] = useState(record?.scope ?? "");
   const [saveToBacklog, setSaveToBacklog] = useState(
     record === null ? defaultSaveNewSessions : false,
   );
@@ -102,6 +104,7 @@ export function ManualRecordDialog({
       if (record === null) {
         await onCreate({
           name: isBacklogSelected ? selectedSession.name : name,
+          scope,
           durationSeconds: durationMinutes * 60,
           startedAt: startedAt.toISOString(),
           kind: isBacklogSelected ? "backlog" : "unknown",
@@ -112,6 +115,7 @@ export function ManualRecordDialog({
         await onUpdate({
           id: record.id,
           name: isBacklogSelected ? selectedSession.name : name,
+          scope,
           durationSeconds: durationMinutes * 60,
           startedAt: startedAt.toISOString(),
           kind: isBacklogSelected ? "backlog" : "unknown",
@@ -158,6 +162,15 @@ export function ManualRecordDialog({
             disabled={isBacklogSelected}
             onChange={(event) => setName(event.target.value)}
             autoFocus={!showSessionPicker}
+          />
+        </Field>
+        <Field>
+          <FieldLabel>Scope</FieldLabel>
+          <TextArea
+            value={scope}
+            onChange={(event) => setScope(event.target.value)}
+            placeholder="What was done in this session"
+            rows={2}
           />
         </Field>
         {!isBacklogSelected ? (

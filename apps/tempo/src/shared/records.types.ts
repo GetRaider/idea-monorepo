@@ -14,6 +14,7 @@ export interface SavedSession {
 export interface FocusRecord {
   id: string;
   name: string;
+  scope: string | null;
   startedAt: string;
   endedAt: string | null;
   accumulatedSeconds: number;
@@ -27,6 +28,7 @@ export interface FocusRecord {
 
 export interface StartSessionInput {
   name: string;
+  scope: string | null;
   kind: SessionKind;
   sessionId: string | null;
   saveToBacklog: boolean;
@@ -36,6 +38,7 @@ export interface StartSessionInput {
 
 export interface AddManualRecordInput {
   name: string;
+  scope: string | null;
   durationSeconds: number;
   startedAt: string;
   kind: SessionKind;
@@ -46,6 +49,7 @@ export interface AddManualRecordInput {
 export interface UpdateRecordInput {
   id: string;
   name: string;
+  scope: string | null;
   durationSeconds: number;
   startedAt: string;
   kind: SessionKind;

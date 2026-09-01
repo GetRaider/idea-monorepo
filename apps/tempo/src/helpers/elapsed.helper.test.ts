@@ -19,6 +19,7 @@ import {
   buildStoppedRecord,
   buildUpdatedRecord,
   parseMinutesInput,
+  normalizeScope,
   validateDeleteRecord,
   validateManualRecord,
   validateStartSession,
@@ -175,6 +176,7 @@ describe("session helpers", () => {
           saveToBacklog: false,
           mode: "stopwatch",
           plannedSeconds: null,
+          scope: null,
         },
         false,
       ),
@@ -188,6 +190,7 @@ describe("session helpers", () => {
           saveToBacklog: false,
           mode: "timer",
           plannedSeconds: null,
+          scope: null,
         },
         false,
       ),
@@ -201,6 +204,7 @@ describe("session helpers", () => {
           saveToBacklog: false,
           mode: "stopwatch",
           plannedSeconds: null,
+          scope: null,
         },
         true,
       ),
@@ -214,6 +218,7 @@ describe("session helpers", () => {
           saveToBacklog: false,
           mode: "stopwatch",
           plannedSeconds: null,
+          scope: null,
         },
         false,
       ),
@@ -229,6 +234,7 @@ describe("session helpers", () => {
         saveToBacklog: false,
         mode: "stopwatch",
         plannedSeconds: null,
+        scope: null,
       },
       "record-1",
       startedAt,
@@ -246,10 +252,11 @@ describe("session helpers", () => {
         name: "Work",
         kind: "unknown",
         sessionId: null,
-        saveToBacklog: false,
-        mode: "timer",
-        plannedSeconds: 1500,
-      },
+          saveToBacklog: false,
+          mode: "timer",
+          plannedSeconds: 1500,
+          scope: null,
+        },
       "record-1",
       startedAt,
       null,
@@ -278,6 +285,7 @@ describe("session helpers", () => {
           kind: "unknown",
           sessionId: null,
           saveToBacklog: false,
+          scope: null,
         },
         nowMs,
       ),
@@ -293,6 +301,7 @@ describe("session helpers", () => {
         kind: "unknown",
         sessionId: null,
         saveToBacklog: false,
+        scope: "  Finish notes  ",
       },
       "manual-1",
       null,
@@ -300,6 +309,7 @@ describe("session helpers", () => {
     expect(record.source).toBe("manual");
     expect(record.endedAt).toBe("2026-08-21T09:02:00.000Z");
     expect(record.accumulatedSeconds).toBe(120);
+    expect(record.scope).toBe("Finish notes");
   });
 
   it("builds a backlog manual record from a saved session", () => {
@@ -311,6 +321,7 @@ describe("session helpers", () => {
         kind: "backlog",
         sessionId: "session-1",
         saveToBacklog: false,
+        scope: "Ship the dashboard",
       },
       "manual-2",
       {
@@ -324,6 +335,7 @@ describe("session helpers", () => {
     expect(record.sessionId).toBe("session-1");
     expect(record.name).toBe("Software Growth");
     expect(record.source).toBe("manual");
+    expect(record.scope).toBe("Ship the dashboard");
   });
 
   it("updates a completed record name and duration", () => {
@@ -336,6 +348,7 @@ describe("session helpers", () => {
           saveToBacklog: false,
           mode: "stopwatch",
           plannedSeconds: null,
+          scope: null,
         },
         "record-1",
         startedAt,
@@ -354,6 +367,7 @@ describe("session helpers", () => {
           kind: "unknown",
           sessionId: null,
           saveToBacklog: false,
+          scope: null,
         },
         nowMs,
       ),
@@ -368,12 +382,14 @@ describe("session helpers", () => {
         kind: "unknown",
         sessionId: null,
         saveToBacklog: false,
+        scope: "Review PRs",
       },
       null,
     );
     expect(updated.name).toBe("Deep work");
     expect(updated.accumulatedSeconds).toBe(120);
     expect(updated.endedAt).toBe("2026-08-21T09:02:00.000Z");
+    expect(updated.scope).toBe("Review PRs");
     const backlogUpdated = buildUpdatedRecord(
       stoppedRecord,
       {
@@ -384,6 +400,7 @@ describe("session helpers", () => {
         kind: "backlog",
         sessionId: "session-1",
         saveToBacklog: false,
+        scope: "",
       },
       {
         id: "session-1",
@@ -395,6 +412,7 @@ describe("session helpers", () => {
     expect(backlogUpdated.kind).toBe("backlog");
     expect(backlogUpdated.sessionId).toBe("session-1");
     expect(backlogUpdated.name).toBe("Software Growth");
+    expect(backlogUpdated.scope).toBeNull();
     expect(() =>
       validateDeleteRecord({ ...stoppedRecord, endedAt: null }),
     ).toThrow("Cannot delete an active session");
@@ -415,5 +433,11 @@ describe("session helpers", () => {
   it("parses minute inputs", () => {
     expect(parseMinutesInput("25m")).toBe(25);
     expect(parseMinutesInput("")).toBeNull();
+  });
+
+  it("treats blank scope as null", () => {
+    expect(normalizeScope(null)).toBeNull();
+    expect(normalizeScope("   ")).toBeNull();
+    expect(normalizeScope(" Fix bugs ")).toBe("Fix bugs");
   });
 });

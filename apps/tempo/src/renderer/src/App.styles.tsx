@@ -44,7 +44,8 @@ export const GlobalStyle = createGlobalStyle`
 
   button,
   input,
-  select {
+  select,
+  textarea {
     font: inherit;
   }
 `;
@@ -268,7 +269,7 @@ export const Select = styled.select`
   }
 `;
 
-export const TextInput = styled.input`
+const fieldControl = `
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 14px;
   background: rgba(12, 8, 18, 0.72);
@@ -288,6 +289,10 @@ export const TextInput = styled.input`
   &:disabled {
     opacity: 0.55;
   }
+`;
+
+export const TextInput = styled.input`
+  ${fieldControl}
 
   &[type="datetime-local"] {
     color-scheme: dark;
@@ -298,6 +303,12 @@ export const TextInput = styled.input`
     filter: invert(0.85);
     opacity: 0.85;
   }
+`;
+
+export const TextArea = styled.textarea`
+  ${fieldControl}
+  min-height: 4.5rem;
+  resize: vertical;
 `;
 
 export const ButtonRow = styled.div`

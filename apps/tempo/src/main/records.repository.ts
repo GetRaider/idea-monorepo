@@ -14,6 +14,7 @@ import {
   buildResumedRecord,
   buildStoppedRecord,
   buildUpdatedRecord,
+  normalizeScope,
   validateDeleteRecord,
   validateManualRecord,
   validateStartSession,
@@ -26,6 +27,7 @@ import { resolveSavedSessionForStart } from "./sessions.repository";
 const RECORD_COLUMNS = `
   id,
   name,
+  scope,
   started_at,
   ended_at,
   accumulated_seconds,
@@ -183,9 +185,9 @@ function requireActiveRecord(): FocusRecord {
 function insertRecord(record: FocusRecord): void {
   getDatabase().run(
     `INSERT INTO records (
-      id, name, started_at, ended_at, accumulated_seconds,
+      id, name, scope, started_at, ended_at, accumulated_seconds,
       segment_started_at, planned_seconds, mode, source, kind, session_id
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     serializeRecord(record),
   );
 }
@@ -194,6 +196,7 @@ function updateRecord(record: FocusRecord): void {
   getDatabase().run(
     `UPDATE records SET
       name = ?,
+      scope = ?,
       started_at = ?,
       ended_at = ?,
       accumulated_seconds = ?,
@@ -206,6 +209,7 @@ function updateRecord(record: FocusRecord): void {
     WHERE id = ?`,
     [
       record.name,
+      record.scope,
       record.startedAt,
       record.endedAt,
       record.accumulatedSeconds,
@@ -224,6 +228,7 @@ function serializeRecord(record: FocusRecord): Array<string | number | null> {
   return [
     record.id,
     record.name,
+    record.scope,
     record.startedAt,
     record.endedAt,
     record.accumulatedSeconds,
@@ -240,6 +245,7 @@ function mapRow(row: Record<string, unknown>): FocusRecord {
   return {
     id: String(row.id),
     name: String(row.name),
+    scope: normalizeScope(row.scope == null ? null : String(row.scope)),
     startedAt: String(row.started_at),
     endedAt: row.ended_at == null ? null : String(row.ended_at),
     accumulatedSeconds: Number(row.accumulated_seconds),

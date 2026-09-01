@@ -187,6 +187,7 @@ export function buildLiveStartRecord(
   return {
     id,
     ...identity,
+    scope: normalizeScope(input.scope),
     startedAt: startedAtIso,
     endedAt: null,
     accumulatedSeconds: 0,
@@ -266,6 +267,7 @@ export function buildUpdatedRecord(
   return {
     ...existing,
     ...identity,
+    scope: normalizeScope(input.scope),
     startedAt: new Date(startedAtMs).toISOString(),
     endedAt: new Date(startedAtMs + durationSeconds * 1000).toISOString(),
     accumulatedSeconds: durationSeconds,
@@ -287,6 +289,7 @@ export function buildManualRecord(
   return {
     id,
     ...identity,
+    scope: normalizeScope(input.scope),
     startedAt: new Date(startedAtMs).toISOString(),
     endedAt: endedAtIso,
     accumulatedSeconds: input.durationSeconds,
@@ -309,6 +312,13 @@ export function parseMinutesInput(value: string): number | null {
   }
 
   return parsed;
+}
+
+export function normalizeScope(scope: string | null): string | null {
+  const trimmedScope = scope?.trim() ?? "";
+  if (trimmedScope.length === 0) return null;
+
+  return trimmedScope;
 }
 
 function validateCompletedTiming(

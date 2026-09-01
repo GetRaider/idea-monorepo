@@ -43,6 +43,7 @@ export {
   buildResumedRecord,
   buildStoppedRecord,
   buildUpdatedRecord,
+  normalizeScope,
   parseMinutesInput,
   resolveRecordIdentity,
   assertSavedSessionNotInUse,

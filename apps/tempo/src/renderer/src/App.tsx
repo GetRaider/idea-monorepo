@@ -53,6 +53,7 @@ import {
   Sidebar,
   StartButtonContent,
   StartPlayIcon,
+  TextArea,
   TextInput,
 } from "./App.styles";
 import type { AppScreen } from "./App.types";
@@ -73,6 +74,7 @@ import {
 export function App() {
   const [mode, setMode] = useState<TimerMode>(DEFAULT_APP_SETTINGS.defaultMode);
   const [name, setName] = useState("");
+  const [scope, setScope] = useState("");
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(
     null,
   );
@@ -116,6 +118,7 @@ export function App() {
     if (nextActive !== null) {
       setMode(nextActive.mode);
       setName(nextActive.name);
+      setScope(nextActive.scope ?? "");
       setSelectedSessionId(nextActive.sessionId);
       didApplyLaunchSettings.current = true;
       return;
@@ -366,6 +369,7 @@ export function App() {
     try {
       await window.tempo.start({
         name,
+        scope,
         kind: isBacklogSelected ? "backlog" : "unknown",
         sessionId: selectedSessionId,
         saveToBacklog: !isBacklogSelected && saveToBacklog,
@@ -395,6 +399,7 @@ export function App() {
     try {
       await window.tempo.start({
         name: session.name,
+        scope,
         kind: "backlog",
         sessionId,
         saveToBacklog: false,
@@ -451,6 +456,7 @@ export function App() {
     setIsBusy(true);
     try {
       await window.tempo.stop();
+      setScope("");
       await closeStopDialog();
     } catch (error) {
       setErrorMessage(
@@ -467,6 +473,7 @@ export function App() {
     setIsBusy(true);
     try {
       await window.tempo.discard();
+      setScope("");
       await closeStopDialog();
     } catch (error) {
       setErrorMessage(
@@ -529,6 +536,11 @@ export function App() {
                     name={name}
                     disabled={!isIdle || isBacklogSelected}
                     onChange={setName}
+                  />
+                  <SessionScopeField
+                    scope={scope}
+                    disabled={!isIdle}
+                    onChange={setScope}
                   />
                   <Field>
                     <FieldLabel>
@@ -813,6 +825,25 @@ function SessionNameField({ name, disabled, onChange }: SessionNameFieldProps) {
   );
 }
 
+function SessionScopeField({
+  scope,
+  disabled,
+  onChange,
+}: SessionScopeFieldProps) {
+  return (
+    <Field>
+      <FieldLabel>Scope</FieldLabel>
+      <TextArea
+        value={scope}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder="What you'll work on this session"
+        rows={2}
+      />
+    </Field>
+  );
+}
+
 function playEndSound(settings: AppSettings) {
   if (!settings.soundEnabled) {
     return;
@@ -868,4 +899,10 @@ interface SessionNameFieldProps {
   name: string;
   disabled: boolean;
   onChange: (name: string) => void;
+}
+
+interface SessionScopeFieldProps {
+  scope: string;
+  disabled: boolean;
+  onChange: (scope: string) => void;
 }

@@ -200,7 +200,7 @@ Workspace tenancy ready. v0 = one human → one workspace on signup. No invites 
 
 ## Reuse from Take & Do
 
-**Port for v0 Tasks:** list UX _ideas_ (not the TAD files), TanStack Query, task fields (→ `estimationDays`, plain description, deeper `parentTaskId` trees), Zod patterns via `@repo/api/todex`.
+**Port for v0 Tasks:** list UX _ideas_ (not the TAD files), TanStack Query, task fields (→ `estimation` minutes, plain description, deeper `parentTaskId` trees), Zod patterns via `@repo/api/todex`.
 
 **Do not copy:** BFF, anonymous, Themes, Focus, Lexical, FE `Date` remappers, GCal-in-v0, Nest-in-Next, board-prefix `taskKey` rewriting, one-level reparent, nested `subtasks[]` DTOs, `ListBoard.tsx` / Kanban as-is.
 

@@ -19,7 +19,7 @@ Take & Do is a Next fullstack app with `userId` tenancy, anonymous auth, and no 
 1. Individuals (later teams) manage tasks — then calendars and docs.
 2. Google auth; workspace tenancy.
 3. Shared Zod wire (`@repo/api/todex`); local Docker Postgres.
-4. Task estimates in **days** (`estimationDays`).
+4. Task estimates as duration (`estimation` minutes; UI accepts `1h`, `30m`, `2d`).
 5. Later: bidirectional Google Calendar, guests, EntityLink / unified AI context.
 
 ## v0 scope (what we build now)
@@ -59,7 +59,7 @@ Take & Do is a Next fullstack app with `userId` tenancy, anonymous auth, and no 
 1. B2C; workspace + `WorkspaceMember`.
 2. Pages: `/overview` (empty), `/tasks` (live). Calendar/Docs in nav but disabled.
 3. CRUD Tasks (incl. folders/boards, deeper `parentTaskId` trees). List view only.
-4. Task `description` = plain string; `estimationDays`; `taskKey` = `T-{n}` (workspace counter, stable).
+4. Task `description` = plain string; `estimation` (minutes); `taskKey` = `T-{n}` (workspace counter, stable).
 
 ### Later
 

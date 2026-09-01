@@ -38,7 +38,7 @@ Scaffolds already exist (`apps/todex-api`, `apps/todex-web`) but are stock Nest 
 | Step | Work                                                                                                                                                                                      |
 | ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1.1  | Export barrel `@repo/api/todex` (`src/todex/`). Do **not** re-export from `@repo/api` main (Devinity class-validator). Add Zod to that subpath only.                                      |
-| 1.2  | Zod: Workspace, WorkspaceMember, Folder, TaskBoard, Task (+ create/update/list DTOs). ISO dates; `estimationDays`; plain `description`; `parentTaskId` (deeper trees). **No Label DTOs.** |
+| 1.2  | Zod: Workspace, WorkspaceMember, Folder, TaskBoard, Task (+ create/update/list DTOs). ISO dates; `estimation` (minutes); plain `description`; `parentTaskId` (deeper trees). **No Label DTOs.** |
 | 1.3  | Drizzle: Better Auth tables + Workspace (`taskSeq`) + WorkspaceMember + Folder (`kind=tasks`) + TaskBoard + Task. **No Label / TaskLabel.** `scheduleDate` column ok (unused in UI).      |
 | 1.4  | `taskKey`: required, `unique(workspaceId, taskKey)`, format `T-{n}`. `workspace.taskSeq` incremented in the same txn as insert. Client cannot set it. Never rewrite on move/reparent.     |
 | 1.5  | Status enum: `todo \| in_progress \| done` (not TAD `"To Do"`).                                                                                                                           |
@@ -106,7 +106,7 @@ Scaffolds already exist (`apps/todex-api`, `apps/todex-web`) but are stock Nest 
 | 5.1  | Http workspace/tasks client using `@repo/api/todex` + TanStack Query                                                                   |
 | 5.2  | Sidebar: task folders + boards (`folderId` optional for root boards)                                                                   |
 | 5.3  | **List view only.** Rebuild thin nested list (indent via `parentTaskId`). Do **not** port TAD `ListBoard` / Kanban / TaskView / Focus. |
-| 5.4  | Task fields: `taskKey` (display), summary, plain description, status, priority, dueDate, estimationDays, nested subtasks               |
+| 5.4  | Task fields: `taskKey` (display), summary, plain description, status, priority, dueDate, estimation (duration text → minutes), nested subtasks |
 | 5.5  | No labels UI. No `scheduleDate` in UI. Kanban is later.                                                                                |
 
 **Branch example:** `feat/TDX-tasks-ui`

@@ -2,7 +2,12 @@
 
 import { useState } from "react";
 import { Button, Input } from "@repo/ui";
-import { TaskPriority, TaskStatus } from "@repo/api/todex";
+import {
+  formatEstimation,
+  parseEstimation,
+  TaskPriority,
+  TaskStatus,
+} from "@repo/api/todex";
 import type { Task } from "@repo/api/todex";
 
 import { useTasks } from "./tasks-provider";
@@ -42,7 +47,7 @@ function TaskEditorForm({
     status: Task["status"];
     priority: Task["priority"];
     dueDate: string | null;
-    estimationDays: number | null;
+    estimation: number | null;
     parentTaskId: string | null;
   }) => void;
   onRemove: () => void;
@@ -52,10 +57,13 @@ function TaskEditorForm({
   const [status, setStatus] = useState(task.status);
   const [priority, setPriority] = useState(task.priority);
   const [dueDate, setDueDate] = useState(task.dueDate?.slice(0, 10) ?? "");
-  const [estimationDays, setEstimationDays] = useState(
-    task.estimationDays?.toString() ?? "",
+  const [estimationText, setEstimationText] = useState(
+    formatEstimation(task.estimation),
   );
   const [parentTaskId, setParentTaskId] = useState(task.parentTaskId ?? "");
+  const parsedEstimation = parseEstimation(estimationText);
+  const estimationInvalid =
+    estimationText.trim() !== "" && parsedEstimation === null;
 
   return (
     <aside className="h-screen w-80 shrink-0 overflow-auto border-l border-border bg-panel p-4">
@@ -102,13 +110,13 @@ function TaskEditorForm({
           onChange={(event) => setDueDate(event.target.value)}
         />
         <Input
-          type="number"
-          step="0.5"
-          min="0"
-          placeholder="Estimate (days)"
-          value={estimationDays}
-          onChange={(event) => setEstimationDays(event.target.value)}
+          placeholder="Estimate (1h, 30m, 2d)"
+          value={estimationText}
+          onChange={(event) => setEstimationText(event.target.value)}
         />
+        {estimationInvalid ? (
+          <p className="text-xs text-red-400">Use times like 1h, 30m, 2d</p>
+        ) : null}
         <select
           className={fieldClass}
           value={parentTaskId}
@@ -125,17 +133,19 @@ function TaskEditorForm({
         </select>
         <Button
           className="w-full"
-          onClick={() =>
+          disabled={estimationInvalid}
+          onClick={() => {
+            if (estimationInvalid) return;
             onSave({
               summary,
               description,
               status,
               priority,
               dueDate: dueDate ? new Date(dueDate).toISOString() : null,
-              estimationDays: estimationDays ? Number(estimationDays) : null,
+              estimation: estimationText.trim() ? parsedEstimation : null,
               parentTaskId: parentTaskId || null,
-            })
-          }
+            });
+          }}
         >
           Save
         </Button>

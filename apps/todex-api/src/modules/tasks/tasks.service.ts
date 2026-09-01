@@ -69,7 +69,7 @@ export class TasksService {
           status: body.status ?? TaskStatus.TODO,
           priority: body.priority ?? TaskPriority.MEDIUM,
           dueDate: parseIsoDate(body.dueDate),
-          estimationDays: body.estimationDays ?? null,
+          estimation: body.estimation ?? null,
           parentTaskId: body.parentTaskId ?? null,
           createdAt: now,
           updatedAt: now,
@@ -114,8 +114,8 @@ export class TasksService {
         ...(body.dueDate !== undefined
           ? { dueDate: parseIsoDate(body.dueDate) }
           : {}),
-        ...(body.estimationDays !== undefined
-          ? { estimationDays: body.estimationDays }
+        ...(body.estimation !== undefined
+          ? { estimation: body.estimation }
           : {}),
         ...(body.parentTaskId !== undefined
           ? { parentTaskId: body.parentTaskId }

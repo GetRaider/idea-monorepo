@@ -28,6 +28,7 @@ export type {
   TaskBoard,
   UpdateTaskBoardBody,
 } from "./board.ts";
+export { formatEstimation, parseEstimation } from "./estimation.ts";
 export {
   CreateTaskBodySchema,
   ListTasksQuerySchema,

@@ -55,11 +55,11 @@ User ──── WorkspaceMember ──── Workspace (taskSeq)
 
 **Not in v0:** Label / TaskLabel.
 
-**Task fields:** `id`, `taskBoardId`, `taskKey` (required, unique per workspace), `summary`, `description` (**plain string** v0), `status`, `priority`, `dueDate?`, `scheduleDate?` (column for future calendar overlay; **not in UI**), `estimationDays?` (allow `0.5`), `parentTaskId?`, `workspaceId`, `createdAt`, `updatedAt`.
+**Task fields:** `id`, `taskBoardId`, `taskKey` (required, unique per workspace), `summary`, `description` (**plain string** v0), `status`, `priority`, `dueDate?`, `scheduleDate?` (column for future calendar overlay; **not in UI**), `estimation?` (integer **minutes**), `parentTaskId?`, `workspaceId`, `createdAt`, `updatedAt`.
 
 - **`taskKey`:** `T-{n}` from `workspace.taskSeq` incremented in the same insert txn. Client cannot set it. **Never rewrite** on move/reparent. Depth is `parentTaskId`, not the key.
 - Subtasks: **`parentTaskId` only**; **deeper trees allowed**. Cycle (self or ancestor) is a 400.
-- Drop TAD `userId`, `isPublic`, unitless `estimation`, board-prefix keys.
+- Drop TAD `userId`, `isPublic`, board-prefix keys. Wire `estimation` is integer minutes. UI parses duration text (`1h`, `30m`, `2d`) via `parseEstimation`; display via `formatEstimation`. Do not store the original phrase.
 - Status: `todo \| in_progress \| done`.
 
 **Wire (`@repo/api/todex`):** ISO date strings; map Drizzle → DTO once on API; flat list (no nested `subtasks[]`).

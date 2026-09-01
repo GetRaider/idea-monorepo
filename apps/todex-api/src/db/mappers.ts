@@ -81,7 +81,7 @@ export function mapTask(row: TaskRow): Task {
     priority: row.priority,
     dueDate: toIso(row.dueDate),
     scheduleDate: toIso(row.scheduleDate),
-    estimationDays: row.estimationDays,
+    estimation: row.estimation ?? null,
     parentTaskId: row.parentTaskId,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),

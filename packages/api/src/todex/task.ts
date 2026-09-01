@@ -19,7 +19,7 @@ export const TaskSchema = z.object({
   ]),
   dueDate: IsoDateTimeSchema.nullable(),
   scheduleDate: IsoDateTimeSchema.nullable(),
-  estimationDays: z.number().nullable(),
+  estimation: z.number().int().nonnegative().nullable(),
   parentTaskId: z.string().nullable(),
   createdAt: IsoDateTimeSchema,
   updatedAt: IsoDateTimeSchema,
@@ -45,7 +45,7 @@ export const CreateTaskBodySchema = z.object({
     ])
     .optional(),
   dueDate: IsoDateTimeSchema.nullable().optional(),
-  estimationDays: z.number().nonnegative().nullable().optional(),
+  estimation: z.number().int().nonnegative().nullable().optional(),
   parentTaskId: z.string().nullable().optional(),
 });
 
@@ -65,7 +65,7 @@ export const UpdateTaskBodySchema = z.object({
     ])
     .optional(),
   dueDate: IsoDateTimeSchema.nullable().optional(),
-  estimationDays: z.number().nonnegative().nullable().optional(),
+  estimation: z.number().int().nonnegative().nullable().optional(),
   parentTaskId: z.string().nullable().optional(),
 });
 

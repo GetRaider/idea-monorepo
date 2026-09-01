@@ -4,7 +4,6 @@ import {
   pgTable,
   text,
   timestamp,
-  doublePrecision,
   uniqueIndex,
   foreignKey,
 } from "drizzle-orm/pg-core";
@@ -119,7 +118,7 @@ export const tasks = pgTable(
     priority: taskPriorityEnum("priority").notNull().default("medium"),
     dueDate: timestamp("due_date"),
     scheduleDate: timestamp("schedule_date"),
-    estimationDays: doublePrecision("estimation_days"),
+    estimation: integer("estimation"),
     parentTaskId: text("parent_task_id"),
     createdAt: timestamp("created_at")
       .$defaultFn(() => new Date())

@@ -4,6 +4,8 @@ export type RecordSource = "live" | "manual";
 
 export type SessionKind = "unknown" | "backlog";
 
+export type RecordRole = "focus" | "break";
+
 export interface SavedSession {
   id: string;
   name: string;
@@ -24,6 +26,16 @@ export interface FocusRecord {
   source: RecordSource;
   kind: SessionKind;
   sessionId: string | null;
+  recordRole: RecordRole;
+}
+
+export interface ActiveSessionState {
+  focus: FocusRecord | null;
+  break: FocusRecord | null;
+}
+
+export interface StartBreakInput {
+  plannedSeconds: number;
 }
 
 export interface StartSessionInput {

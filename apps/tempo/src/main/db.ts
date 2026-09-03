@@ -123,6 +123,11 @@ function migrateRecordsTable(database: Database): void {
   if (!columnNames.has("scope")) {
     database.run(`ALTER TABLE records ADD COLUMN scope TEXT`);
   }
+  if (!columnNames.has("record_role")) {
+    database.run(
+      `ALTER TABLE records ADD COLUMN record_role TEXT NOT NULL DEFAULT 'focus'`,
+    );
+  }
 }
 
 function migrateSessionsTable(database: Database): void {

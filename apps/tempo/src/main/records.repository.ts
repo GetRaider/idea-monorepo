@@ -1,12 +1,19 @@
 import type {
+  ActiveSessionState,
   AddManualRecordInput,
   FocusRecord,
+  RecordRole,
   RecordSource,
   SessionKind,
   StartSessionInput,
   TimerMode,
   UpdateRecordInput,
 } from "../shared/records.types";
+import {
+  buildBreakStartRecord,
+  DEFAULT_BREAK_SESSION_NAME,
+  validateStartBreak,
+} from "../helpers/break.helper";
 import {
   buildLiveStartRecord,
   buildManualRecord,
@@ -22,7 +29,10 @@ import {
 } from "../helpers/session.helper";
 
 import { getDatabase, persistDatabase } from "./db";
-import { resolveSavedSessionForStart } from "./sessions.repository";
+import {
+  createSavedSession,
+  resolveSavedSessionForStart,
+} from "./sessions.repository";
 
 const RECORD_COLUMNS = `
   id,
@@ -36,7 +46,8 @@ const RECORD_COLUMNS = `
   mode,
   source,
   kind,
-  session_id
+  session_id,
+  record_role
 `;
 
 export function listRecords(): FocusRecord[] {
@@ -53,23 +64,27 @@ export function listRecords(): FocusRecord[] {
   return records;
 }
 
+export function getActiveFocusRecord(): FocusRecord | null {
+  return getActiveRecordByRole("focus");
+}
+
+export function getActiveBreakRecord(): FocusRecord | null {
+  return getActiveRecordByRole("break");
+}
+
 export function getActiveRecord(): FocusRecord | null {
-  const statement = getDatabase().prepare(
-    `SELECT ${RECORD_COLUMNS} FROM records WHERE ended_at IS NULL LIMIT 1`,
-  );
+  return getActiveFocusRecord();
+}
 
-  if (!statement.step()) {
-    statement.free();
-    return null;
-  }
-
-  const record = mapRow(statement.getAsObject());
-  statement.free();
-  return record;
+export function getActiveSessionState(): ActiveSessionState {
+  return {
+    focus: getActiveFocusRecord(),
+    break: getActiveBreakRecord(),
+  };
 }
 
 export function startSession(input: StartSessionInput): FocusRecord {
-  validateStartSession(input, getActiveRecord() !== null);
+  validateStartSession(input, getActiveFocusRecord() !== null);
   const savedSession = resolveSavedSessionForStart(input);
   const record = buildLiveStartRecord(
     input,
@@ -82,8 +97,28 @@ export function startSession(input: StartSessionInput): FocusRecord {
   return record;
 }
 
+export function startBreakSession(plannedSeconds: number): FocusRecord {
+  const activeFocus = getActiveFocusRecord();
+  const activeBreak = getActiveBreakRecord();
+  validateStartBreak({
+    plannedSeconds,
+    activeFocus,
+    activeBreak,
+  });
+  const savedSession = createSavedSession(DEFAULT_BREAK_SESSION_NAME);
+  const record = buildBreakStartRecord(
+    plannedSeconds,
+    savedSession,
+    crypto.randomUUID(),
+    new Date().toISOString(),
+  );
+  insertRecord(record);
+  persistDatabase();
+  return record;
+}
+
 export function pauseSession(): FocusRecord {
-  const activeRecord = requireActiveRecord();
+  const activeRecord = requireActiveFocusRecord();
   const pausedRecord = buildPausedRecord(activeRecord, Date.now());
   updateRecord(pausedRecord);
   persistDatabase();
@@ -91,7 +126,7 @@ export function pauseSession(): FocusRecord {
 }
 
 export function resumeSession(): FocusRecord {
-  const activeRecord = requireActiveRecord();
+  const activeRecord = requireActiveFocusRecord();
   const resumedRecord = buildResumedRecord(
     activeRecord,
     new Date().toISOString(),
@@ -101,8 +136,28 @@ export function resumeSession(): FocusRecord {
   return resumedRecord;
 }
 
+export function pauseBreakSession(): FocusRecord {
+  const activeRecord = requireActiveBreakRecord();
+  const pausedRecord = buildPausedRecord(activeRecord, Date.now());
+  updateRecord(pausedRecord);
+  persistDatabase();
+  return pausedRecord;
+}
+
 export function stopSession(): FocusRecord | null {
-  const activeRecord = getActiveRecord();
+  const activeRecord = getActiveFocusRecord();
+  if (activeRecord === null) {
+    return null;
+  }
+
+  const stoppedRecord = buildStoppedRecord(activeRecord, Date.now());
+  updateRecord(stoppedRecord);
+  persistDatabase();
+  return stoppedRecord;
+}
+
+export function stopBreakSession(): FocusRecord | null {
+  const activeRecord = getActiveBreakRecord();
   if (activeRecord === null) {
     return null;
   }
@@ -114,7 +169,17 @@ export function stopSession(): FocusRecord | null {
 }
 
 export function discardSession(): void {
-  const activeRecord = getActiveRecord();
+  const activeRecord = getActiveFocusRecord();
+  if (activeRecord === null) {
+    return;
+  }
+
+  getDatabase().run(`DELETE FROM records WHERE id = ?`, [activeRecord.id]);
+  persistDatabase();
+}
+
+export function discardBreakSession(): void {
+  const activeRecord = getActiveBreakRecord();
   if (activeRecord === null) {
     return;
   }
@@ -157,6 +222,22 @@ export function deleteCompletedRecord(recordId: string): void {
   persistDatabase();
 }
 
+function getActiveRecordByRole(recordRole: RecordRole): FocusRecord | null {
+  const statement = getDatabase().prepare(
+    `SELECT ${RECORD_COLUMNS} FROM records WHERE ended_at IS NULL AND record_role = ? LIMIT 1`,
+  );
+  statement.bind([recordRole]);
+
+  if (!statement.step()) {
+    statement.free();
+    return null;
+  }
+
+  const record = mapRow(statement.getAsObject());
+  statement.free();
+  return record;
+}
+
 function getRecordById(recordId: string): FocusRecord | null {
   const statement = getDatabase().prepare(
     `SELECT ${RECORD_COLUMNS} FROM records WHERE id = ? LIMIT 1`,
@@ -173,10 +254,19 @@ function getRecordById(recordId: string): FocusRecord | null {
   return record;
 }
 
-function requireActiveRecord(): FocusRecord {
-  const activeRecord = getActiveRecord();
+function requireActiveFocusRecord(): FocusRecord {
+  const activeRecord = getActiveFocusRecord();
   if (activeRecord === null) {
     throw new Error("No active session");
+  }
+
+  return activeRecord;
+}
+
+function requireActiveBreakRecord(): FocusRecord {
+  const activeRecord = getActiveBreakRecord();
+  if (activeRecord === null) {
+    throw new Error("No active break");
   }
 
   return activeRecord;
@@ -186,8 +276,8 @@ function insertRecord(record: FocusRecord): void {
   getDatabase().run(
     `INSERT INTO records (
       id, name, scope, started_at, ended_at, accumulated_seconds,
-      segment_started_at, planned_seconds, mode, source, kind, session_id
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      segment_started_at, planned_seconds, mode, source, kind, session_id, record_role
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     serializeRecord(record),
   );
 }
@@ -205,7 +295,8 @@ function updateRecord(record: FocusRecord): void {
       mode = ?,
       source = ?,
       kind = ?,
-      session_id = ?
+      session_id = ?,
+      record_role = ?
     WHERE id = ?`,
     [
       record.name,
@@ -219,6 +310,7 @@ function updateRecord(record: FocusRecord): void {
       record.source,
       record.kind,
       record.sessionId,
+      record.recordRole,
       record.id,
     ],
   );
@@ -238,6 +330,7 @@ function serializeRecord(record: FocusRecord): Array<string | number | null> {
     record.source,
     record.kind,
     record.sessionId,
+    record.recordRole,
   ];
 }
 
@@ -257,5 +350,6 @@ function mapRow(row: Record<string, unknown>): FocusRecord {
     source: row.source as RecordSource,
     kind: (row.kind as SessionKind | null) ?? "unknown",
     sessionId: row.session_id == null ? null : String(row.session_id),
+    recordRole: (row.record_role as RecordRole | null) ?? "focus",
   };
 }

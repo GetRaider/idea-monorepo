@@ -96,6 +96,34 @@ export function SettingsSection({
         </RangeField>
       </SettingsGroup>
       <SettingsGroup>
+        <SettingsGroupTitle>Break</SettingsGroupTitle>
+        <CheckboxField>
+          <input
+            type="checkbox"
+            checked={settings.offerBreakTimer}
+            onChange={(event) =>
+              onChange({ offerBreakTimer: event.target.checked })
+            }
+          />
+          Offer break timer on pause and after saving
+        </CheckboxField>
+        <Field>
+          <FieldLabel>Default break duration (minutes)</FieldLabel>
+          <Select
+            value={String(settings.breakDurationMinutes)}
+            onChange={(event) =>
+              onChange({ breakDurationMinutes: Number(event.target.value) })
+            }
+          >
+            {[5, 10, 15, 20, 25, 30].map((minutes) => (
+              <option key={minutes} value={minutes}>
+                {minutes} minutes
+              </option>
+            ))}
+          </Select>
+        </Field>
+      </SettingsGroup>
+      <SettingsGroup>
         <SettingsGroupTitle>Window</SettingsGroupTitle>
         <CheckboxField>
           <input

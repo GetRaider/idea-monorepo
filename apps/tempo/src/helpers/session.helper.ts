@@ -195,6 +195,7 @@ export function buildLiveStartRecord(
     plannedSeconds: input.plannedSeconds,
     mode: input.mode,
     source: "live",
+    recordRole: "focus",
   };
 }
 
@@ -297,6 +298,7 @@ export function buildManualRecord(
     plannedSeconds: input.durationSeconds,
     mode: "stopwatch",
     source: "manual",
+    recordRole: "focus",
   };
 }
 

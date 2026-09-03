@@ -5,6 +5,7 @@ import { BrowserWindow, dialog, ipcMain, shell } from "electron";
 import type {
   AddManualRecordInput,
   CreateSavedSessionInput,
+  StartBreakInput,
   StartSessionInput,
   UpdateRecordInput,
   UpdateSavedSessionInput,
@@ -19,12 +20,17 @@ import {
 import {
   addManualRecord,
   deleteCompletedRecord,
+  discardBreakSession,
   discardSession,
   getActiveRecord,
+  getActiveSessionState,
   listRecords,
+  pauseBreakSession,
   pauseSession,
   resumeSession,
+  startBreakSession,
   startSession,
+  stopBreakSession,
   stopSession,
   updateCompletedRecord,
 } from "./records.repository";
@@ -32,6 +38,7 @@ import {
   createSavedSession,
   deleteSavedSession,
   listSavedSessions,
+  migrateRestSessionToBreak,
   updateSavedSession,
 } from "./sessions.repository";
 import { getAppSettings, updateAppSettings } from "./settings.store";
@@ -39,13 +46,20 @@ import { getAppSettings, updateAppSettings } from "./settings.store";
 export function registerRecordIpcHandlers(): void {
   ipcMain.handle("records:list", () => listRecords());
   ipcMain.handle("records:getActive", () => getActiveRecord());
+  ipcMain.handle("records:getActiveState", () => getActiveSessionState());
   ipcMain.handle("records:start", (_event, input: StartSessionInput) =>
     startSession(input),
   );
+  ipcMain.handle("records:startBreak", (_event, input: StartBreakInput) =>
+    startBreakSession(input.plannedSeconds),
+  );
   ipcMain.handle("records:pause", () => pauseSession());
   ipcMain.handle("records:resume", () => resumeSession());
+  ipcMain.handle("records:pauseBreak", () => pauseBreakSession());
   ipcMain.handle("records:stop", () => stopSession());
+  ipcMain.handle("records:stopBreak", () => stopBreakSession());
   ipcMain.handle("records:discard", () => discardSession());
+  ipcMain.handle("records:discardBreak", () => discardBreakSession());
   ipcMain.handle("records:addManual", (_event, input: AddManualRecordInput) =>
     addManualRecord(input),
   );
@@ -141,6 +155,7 @@ export function registerSettingsIpcHandlers(
     persistDatabase();
     copyFileSync(openResult.filePaths[0], getDatabaseFilePath());
     reloadDatabaseFromFile(getDatabaseFilePath());
+    migrateRestSessionToBreak();
     return true;
   });
 }

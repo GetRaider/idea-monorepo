@@ -16,4 +16,6 @@ export interface AppSettings {
   confirmOnStop: boolean;
   defaultSaveNewSessions: boolean;
   sidebarCollapsed: boolean;
+  offerBreakTimer: boolean;
+  breakDurationMinutes: number;
 }

@@ -17,6 +17,8 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   confirmOnStop: true,
   defaultSaveNewSessions: false,
   sidebarCollapsed: false,
+  offerBreakTimer: true,
+  breakDurationMinutes: 10,
 };
 
 export function mergeAppSettings(
@@ -53,6 +55,14 @@ export function mergeAppSettings(
       patch.sidebarCollapsed,
       current.sidebarCollapsed,
     ),
+    offerBreakTimer: parseBoolean(
+      patch.offerBreakTimer,
+      current.offerBreakTimer,
+    ),
+    breakDurationMinutes: parseDurationMinutes(
+      patch.breakDurationMinutes,
+      current.breakDurationMinutes,
+    ),
   };
 }
 
@@ -72,6 +82,10 @@ export function resolveDurationMinutes(settings: AppSettings): number {
     return 50;
   }
   return settings.lastDurationMinutes;
+}
+
+export function resolveBreakDurationMinutes(settings: AppSettings): number {
+  return settings.breakDurationMinutes;
 }
 
 function parseTimerMode(value: unknown, fallback: TimerMode): TimerMode {

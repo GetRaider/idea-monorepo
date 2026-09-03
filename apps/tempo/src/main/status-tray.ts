@@ -4,7 +4,7 @@ import type { NativeImage } from "electron";
 import { encodeTrayTemplatePng } from "../helpers/icon.helper";
 import { formatMenuBarClock } from "../helpers/elapsed.helper";
 
-import { getActiveRecord } from "./records.repository";
+import { getActiveBreakRecord, getActiveFocusRecord } from "./records.repository";
 import { getAppSettings } from "./settings.store";
 
 export function createStatusTray(showWindow: () => void): void {
@@ -49,7 +49,8 @@ function refreshStatusTray(): void {
   }
 
   try {
-    const record = getActiveRecord();
+    const breakRecord = getActiveBreakRecord();
+    const record = breakRecord ?? getActiveFocusRecord();
     const title = formatMenuBarClock(
       record,
       Date.now(),

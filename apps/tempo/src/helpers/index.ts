@@ -11,6 +11,13 @@ export {
   resolveAnalyticsPeriod,
 } from "./analytics.helper";
 export {
+  buildBreakStartRecord,
+  DEFAULT_BREAK_SESSION_NAME,
+  isDefaultBreakSessionName,
+  LEGACY_REST_SESSION_NAME,
+  validateStartBreak,
+} from "./break.helper";
+export {
   foldRunningSegment,
   formatClock,
   formatHmsClock,
@@ -59,6 +66,7 @@ export {
   DEFAULT_APP_SETTINGS,
   mergeAppSettings,
   parseStoredSettings,
+  resolveBreakDurationMinutes,
   resolveDurationMinutes,
 } from "./settings.helper";
 export {

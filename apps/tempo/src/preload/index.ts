@@ -4,6 +4,7 @@ import type { TempoApi } from "../shared/tempo-api.types";
 import type {
   AddManualRecordInput,
   CreateSavedSessionInput,
+  StartBreakInput,
   StartSessionInput,
   UpdateRecordInput,
   UpdateSavedSessionInput,
@@ -13,12 +14,18 @@ import type { AppSettings } from "../shared/settings.types";
 const tempoApi: TempoApi = {
   listRecords: () => ipcRenderer.invoke("records:list"),
   getActive: () => ipcRenderer.invoke("records:getActive"),
+  getActiveState: () => ipcRenderer.invoke("records:getActiveState"),
   start: (input: StartSessionInput) =>
     ipcRenderer.invoke("records:start", input),
+  startBreak: (input: StartBreakInput) =>
+    ipcRenderer.invoke("records:startBreak", input),
   pause: () => ipcRenderer.invoke("records:pause"),
   resume: () => ipcRenderer.invoke("records:resume"),
+  pauseBreak: () => ipcRenderer.invoke("records:pauseBreak"),
   stop: () => ipcRenderer.invoke("records:stop"),
+  stopBreak: () => ipcRenderer.invoke("records:stopBreak"),
   discard: () => ipcRenderer.invoke("records:discard"),
+  discardBreak: () => ipcRenderer.invoke("records:discardBreak"),
   addManual: (input: AddManualRecordInput) =>
     ipcRenderer.invoke("records:addManual", input),
   updateRecord: (input: UpdateRecordInput) =>
@@ -35,9 +42,9 @@ const tempoApi: TempoApi = {
   getSettings: () => ipcRenderer.invoke("settings:get"),
   updateSettings: (patch: Partial<AppSettings>) =>
     ipcRenderer.invoke("settings:update", patch),
-  revealData: () => ipcRenderer.invoke("data:reveal"),
-  exportData: () => ipcRenderer.invoke("data:export"),
-  importData: () => ipcRenderer.invoke("data:import"),
+  revealData: () => ipcRenderer.invoke("settings:revealData"),
+  exportData: () => ipcRenderer.invoke("settings:exportData"),
+  importData: () => ipcRenderer.invoke("settings:importData"),
 };
 
 contextBridge.exposeInMainWorld("tempo", tempoApi);

@@ -9,8 +9,10 @@ import {
   shouldNotifyStopwatchGoal,
 } from "../../helpers/elapsed.helper";
 import { parseMinutesInput } from "../../helpers/session.helper";
+import { isDefaultBreakSessionName } from "../../helpers/break.helper";
 import {
   DEFAULT_APP_SETTINGS,
+  resolveBreakDurationMinutes,
   resolveDurationMinutes,
 } from "../../helpers/settings.helper";
 import {
@@ -60,6 +62,7 @@ import type { AppScreen } from "./App.types";
 import {
   AnalyticsSection,
   BacklogPicker,
+  BreakOfferDialog,
   CollapsibleSection,
   DurationDial,
   HistorySection,
@@ -84,7 +87,12 @@ export function App() {
   const [durationMinutes, setDurationMinutes] = useState(
     resolveDurationMinutes(DEFAULT_APP_SETTINGS),
   );
-  const [activeRecord, setActiveRecord] = useState<FocusRecord | null>(null);
+  const [activeFocusRecord, setActiveFocusRecord] = useState<FocusRecord | null>(
+    null,
+  );
+  const [activeBreakRecord, setActiveBreakRecord] = useState<FocusRecord | null>(
+    null,
+  );
   const [records, setRecords] = useState<FocusRecord[]>([]);
   const [sessions, setSessions] = useState<SavedSession[]>([]);
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_APP_SETTINGS);
@@ -96,30 +104,45 @@ export function App() {
     null,
   );
   const [isStopDialogOpen, setIsStopDialogOpen] = useState(false);
+  const [stopDialogTarget, setStopDialogTarget] = useState<StopDialogTarget>(
+    "focus",
+  );
   const [stopDialogCanSave, setStopDialogCanSave] = useState(true);
+  const [isBreakOfferDialogOpen, setIsBreakOfferDialogOpen] = useState(false);
+  const [breakOfferMinutes, setBreakOfferMinutes] = useState(
+    DEFAULT_APP_SETTINGS.breakDurationMinutes,
+  );
   const [isBusy, setIsBusy] = useState(false);
   const [activeScreen, setActiveScreen] = useState<AppScreen>("focus");
   const handledAutoStopRecordId = useRef<string | null>(null);
+  const handledAutoStopBreakRecordId = useRef<string | null>(null);
   const handledGoalRecordId = useRef<string | null>(null);
   const didApplyLaunchSettings = useRef(false);
 
   const refreshState = useCallback(async () => {
-    const [nextActive, nextRecords, nextSessions, loadedSettings] =
+    const [nextActiveState, nextRecords, nextSessions, loadedSettings] =
       await Promise.all([
-        window.tempo.getActive(),
+        window.tempo.getActiveState(),
         window.tempo.listRecords(),
         window.tempo.listSessions(),
         window.tempo.getSettings(),
       ]);
-    setActiveRecord(nextActive);
+    setActiveFocusRecord(nextActiveState.focus);
+    setActiveBreakRecord(nextActiveState.break);
     setRecords(nextRecords);
     setSessions(nextSessions);
     setSettings(loadedSettings);
-    if (nextActive !== null) {
-      setMode(nextActive.mode);
-      setName(nextActive.name);
-      setScope(nextActive.scope ?? "");
-      setSelectedSessionId(nextActive.sessionId);
+    setBreakOfferMinutes(resolveBreakDurationMinutes(loadedSettings));
+    if (nextActiveState.focus !== null) {
+      setMode(nextActiveState.focus.mode);
+      setName(nextActiveState.focus.name);
+      setScope(nextActiveState.focus.scope ?? "");
+      setSelectedSessionId(nextActiveState.focus.sessionId);
+      didApplyLaunchSettings.current = true;
+      return;
+    }
+
+    if (nextActiveState.break !== null) {
       didApplyLaunchSettings.current = true;
       return;
     }
@@ -172,54 +195,66 @@ export function App() {
   }, [settings.sidebarCollapsed]);
 
   useEffect(() => {
-    if (activeRecord === null || activeRecord.segmentStartedAt === null) {
+    const isFocusRunning =
+      activeFocusRecord !== null && activeFocusRecord.segmentStartedAt !== null;
+    const isBreakRunning =
+      activeBreakRecord !== null && activeBreakRecord.segmentStartedAt !== null;
+    if (!isFocusRunning && !isBreakRunning) {
       return;
     }
 
     const intervalId = window.setInterval(() => setNowMs(Date.now()), 250);
     return () => window.clearInterval(intervalId);
-  }, [activeRecord]);
+  }, [activeFocusRecord, activeBreakRecord]);
 
-  const elapsedSeconds = useMemo(() => {
-    if (activeRecord === null) {
+  const focusElapsedSeconds = useMemo(() => {
+    if (activeFocusRecord === null) {
       return 0;
     }
 
-    return getDisplayedElapsedSeconds(activeRecord, nowMs);
-  }, [activeRecord, nowMs]);
+    return getDisplayedElapsedSeconds(activeFocusRecord, nowMs);
+  }, [activeFocusRecord, nowMs]);
+
+  const breakElapsedSeconds = useMemo(() => {
+    if (activeBreakRecord === null) {
+      return 0;
+    }
+
+    return getDisplayedElapsedSeconds(activeBreakRecord, nowMs);
+  }, [activeBreakRecord, nowMs]);
 
   useEffect(() => {
-    if (activeRecord === null) {
-      if (!isStopDialogOpen) {
+    if (activeFocusRecord === null) {
+      if (!isStopDialogOpen || stopDialogTarget !== "focus") {
         handledAutoStopRecordId.current = null;
       }
       handledGoalRecordId.current = null;
       return;
     }
 
-    if (isStopDialogOpen) {
+    if (isStopDialogOpen && stopDialogTarget === "focus") {
       return;
     }
 
     if (
       !shouldAutoStopTimer(
-        elapsedSeconds,
-        activeRecord.mode,
-        activeRecord.plannedSeconds,
+        focusElapsedSeconds,
+        activeFocusRecord.mode,
+        activeFocusRecord.plannedSeconds,
       )
     ) {
       return;
     }
 
-    if (handledAutoStopRecordId.current === activeRecord.id) {
+    if (handledAutoStopRecordId.current === activeFocusRecord.id) {
       return;
     }
 
-    handledAutoStopRecordId.current = activeRecord.id;
+    handledAutoStopRecordId.current = activeFocusRecord.id;
     playEndSound(settings);
     const shouldConfirm = settings.confirmOnStop;
-    const canSave = elapsedSeconds > 0;
-    const shouldPause = activeRecord.segmentStartedAt !== null;
+    const canSave = focusElapsedSeconds > 0;
+    const shouldPause = activeFocusRecord.segmentStartedAt !== null;
     void (async () => {
       try {
         if (shouldPause) {
@@ -227,6 +262,7 @@ export function App() {
           await refreshState();
         }
         if (shouldConfirm) {
+          setStopDialogTarget("focus");
           setStopDialogCanSave(canSave);
           setIsStopDialogOpen(true);
           return;
@@ -235,6 +271,10 @@ export function App() {
           await window.tempo.stop();
           setScope("");
           await refreshState();
+          if (settings.offerBreakTimer) {
+            setBreakOfferMinutes(resolveBreakDurationMinutes(settings));
+            setIsBreakOfferDialogOpen(true);
+          }
           return;
         }
         await window.tempo.discard();
@@ -246,63 +286,148 @@ export function App() {
         );
       }
     })();
-  }, [activeRecord, elapsedSeconds, isStopDialogOpen, refreshState, settings]);
+  }, [
+    activeFocusRecord,
+    focusElapsedSeconds,
+    isStopDialogOpen,
+    refreshState,
+    settings,
+    stopDialogTarget,
+  ]);
 
   useEffect(() => {
-    if (activeRecord === null || activeRecord.segmentStartedAt === null) {
+    if (activeBreakRecord === null) {
+      if (!isStopDialogOpen || stopDialogTarget !== "break") {
+        handledAutoStopBreakRecordId.current = null;
+      }
+      return;
+    }
+
+    if (isStopDialogOpen && stopDialogTarget === "break") {
       return;
     }
 
     if (
-      !shouldNotifyStopwatchGoal(
-        elapsedSeconds,
-        activeRecord.mode,
-        activeRecord.plannedSeconds,
+      !shouldAutoStopTimer(
+        breakElapsedSeconds,
+        activeBreakRecord.mode,
+        activeBreakRecord.plannedSeconds,
       )
     ) {
       return;
     }
 
-    if (handledGoalRecordId.current === activeRecord.id) {
+    if (handledAutoStopBreakRecordId.current === activeBreakRecord.id) {
       return;
     }
 
-    handledGoalRecordId.current = activeRecord.id;
-    playGoalSound(settings);
-  }, [activeRecord, elapsedSeconds, settings]);
+    handledAutoStopBreakRecordId.current = activeBreakRecord.id;
+    playEndSound(settings);
+    const shouldConfirm = settings.confirmOnStop;
+    const canSave = breakElapsedSeconds > 0;
+    const shouldPause = activeBreakRecord.segmentStartedAt !== null;
+    void (async () => {
+      try {
+        if (shouldPause) {
+          await window.tempo.pauseBreak();
+          await refreshState();
+        }
+        if (shouldConfirm) {
+          setStopDialogTarget("break");
+          setStopDialogCanSave(canSave);
+          setIsStopDialogOpen(true);
+          return;
+        }
+        if (canSave) {
+          await window.tempo.stopBreak();
+          await refreshState();
+          return;
+        }
+        await window.tempo.discardBreak();
+        await refreshState();
+      } catch (error) {
+        setErrorMessage(
+          error instanceof Error ? error.message : "Failed to stop break",
+        );
+      }
+    })();
+  }, [
+    activeBreakRecord,
+    breakElapsedSeconds,
+    isStopDialogOpen,
+    refreshState,
+    settings,
+    stopDialogTarget,
+  ]);
 
-  const remainingSeconds = getRemainingSeconds(
-    elapsedSeconds,
-    activeRecord?.plannedSeconds ??
+  useEffect(() => {
+    if (activeFocusRecord === null || activeFocusRecord.segmentStartedAt === null) {
+      return;
+    }
+
+    if (
+      !shouldNotifyStopwatchGoal(
+        focusElapsedSeconds,
+        activeFocusRecord.mode,
+        activeFocusRecord.plannedSeconds,
+      )
+    ) {
+      return;
+    }
+
+    if (handledGoalRecordId.current === activeFocusRecord.id) {
+      return;
+    }
+
+    handledGoalRecordId.current = activeFocusRecord.id;
+    playGoalSound(settings);
+  }, [activeFocusRecord, focusElapsedSeconds, settings]);
+
+  const focusRemainingSeconds = getRemainingSeconds(
+    focusElapsedSeconds,
+    activeFocusRecord?.plannedSeconds ??
       (durationMinutes > 0 ? durationMinutes * 60 : null),
   );
-  const isRunning =
-    activeRecord !== null && activeRecord.segmentStartedAt !== null;
-  const isPaused =
-    activeRecord !== null && activeRecord.segmentStartedAt === null;
-  const isIdle = activeRecord === null;
-  const clockValue =
-    mode === "timer"
+  const breakRemainingSeconds = getRemainingSeconds(
+    breakElapsedSeconds,
+    activeBreakRecord?.plannedSeconds ?? null,
+  );
+  const isFocusRunning =
+    activeFocusRecord !== null && activeFocusRecord.segmentStartedAt !== null;
+  const isFocusPaused =
+    activeFocusRecord !== null && activeFocusRecord.segmentStartedAt === null;
+  const isBreakRunning =
+    activeBreakRecord !== null && activeBreakRecord.segmentStartedAt !== null;
+  const isBreakActive = activeBreakRecord !== null;
+  const isIdle = activeFocusRecord === null && activeBreakRecord === null;
+  const showBreakClock = isBreakActive;
+  const clockValue = showBreakClock
+    ? formatTimerClock(breakRemainingSeconds ?? 0)
+    : mode === "timer"
       ? formatTimerClock(
-          remainingSeconds ??
+          focusRemainingSeconds ??
             (durationMinutes > 0 ? durationMinutes * 60 : 0),
         )
-      : formatHmsClock(elapsedSeconds);
+      : formatHmsClock(focusElapsedSeconds);
   const hasReachedGoal =
     mode === "stopwatch" &&
-    remainingSeconds !== null &&
-    remainingSeconds === 0 &&
-    (activeRecord?.plannedSeconds ??
+    focusRemainingSeconds !== null &&
+    focusRemainingSeconds === 0 &&
+    (activeFocusRecord?.plannedSeconds ??
       (durationMinutes > 0 ? durationMinutes * 60 : 0)) > 0;
   const clockCaption = isIdle
     ? null
-    : resolveClockCaption(
-        mode,
-        isRunning,
-        isPaused,
-        remainingSeconds,
-        hasReachedGoal,
-      );
+    : showBreakClock
+      ? isBreakRunning
+        ? "Break remaining"
+        : "Break paused"
+      : resolveClockCaption(
+          mode,
+          isFocusRunning,
+          isFocusPaused,
+          focusRemainingSeconds,
+          hasReachedGoal,
+        );
   const hasSessionName = name.trim().length > 0;
   const selectedSession = sessions.find(
     (session) => session.id === selectedSessionId,
@@ -328,10 +453,20 @@ export function App() {
     return nextSettings;
   }
 
+  async function finalizeFocusStop(offerBreak = true) {
+    await window.tempo.stop();
+    setScope("");
+    await refreshState();
+    if (offerBreak && settings.offerBreakTimer) {
+      setBreakOfferMinutes(resolveBreakDurationMinutes(settings));
+      setIsBreakOfferDialogOpen(true);
+    }
+  }
+
   async function requestStop(recordedSeconds: number, confirmOnStop: boolean) {
     setErrorMessage(null);
     try {
-      await freezeRunningSession();
+      await freezeRunningFocus();
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : "Failed to pause",
@@ -340,6 +475,7 @@ export function App() {
     }
 
     if (confirmOnStop) {
+      setStopDialogTarget("focus");
       setStopDialogCanSave(recordedSeconds > 0);
       setIsStopDialogOpen(true);
       return;
@@ -353,12 +489,56 @@ export function App() {
     await handleDiscardStop();
   }
 
-  async function freezeRunningSession() {
-    if (activeRecord === null || activeRecord.segmentStartedAt === null) {
+  async function requestBreakStop(
+    recordedSeconds: number,
+    confirmOnStop: boolean,
+  ) {
+    setErrorMessage(null);
+    try {
+      await freezeRunningBreak();
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Failed to pause break",
+      );
+      return;
+    }
+
+    if (confirmOnStop) {
+      setStopDialogTarget("break");
+      setStopDialogCanSave(recordedSeconds > 0);
+      setIsStopDialogOpen(true);
+      return;
+    }
+
+    if (recordedSeconds > 0) {
+      await handleSaveBreakStop();
+      return;
+    }
+
+    await handleDiscardBreakStop();
+  }
+
+  async function freezeRunningFocus() {
+    if (
+      activeFocusRecord === null ||
+      activeFocusRecord.segmentStartedAt === null
+    ) {
       return;
     }
 
     await window.tempo.pause();
+    await refreshState();
+  }
+
+  async function freezeRunningBreak() {
+    if (
+      activeBreakRecord === null ||
+      activeBreakRecord.segmentStartedAt === null
+    ) {
+      return;
+    }
+
+    await window.tempo.pauseBreak();
     await refreshState();
   }
 
@@ -419,15 +599,21 @@ export function App() {
     setIsBusy(true);
     unlockTimerSound();
     try {
-      await window.tempo.start({
-        name: session.name,
-        scope,
-        kind: "backlog",
-        sessionId,
-        saveToBacklog: false,
-        mode,
-        plannedSeconds: durationMinutes > 0 ? durationMinutes * 60 : null,
-      });
+      if (isDefaultBreakSessionName(session.name)) {
+        await window.tempo.startBreak({
+          plannedSeconds: settings.breakDurationMinutes * 60,
+        });
+      } else {
+        await window.tempo.start({
+          name: session.name,
+          scope,
+          kind: "backlog",
+          sessionId,
+          saveToBacklog: false,
+          mode,
+          plannedSeconds: durationMinutes > 0 ? durationMinutes * 60 : null,
+        });
+      }
       await refreshState();
     } catch (error) {
       setErrorMessage(
@@ -444,6 +630,10 @@ export function App() {
     try {
       await window.tempo.pause();
       await refreshState();
+      if (settings.offerBreakTimer) {
+        setBreakOfferMinutes(resolveBreakDurationMinutes(settings));
+        setIsBreakOfferDialogOpen(true);
+      }
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : "Failed to pause",
@@ -454,6 +644,10 @@ export function App() {
   }
 
   async function handleResume() {
+    if (isBreakRunning) {
+      return;
+    }
+
     setErrorMessage(null);
     setIsBusy(true);
     try {
@@ -462,6 +656,25 @@ export function App() {
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : "Failed to resume",
+      );
+    } finally {
+      setIsBusy(false);
+    }
+  }
+
+  async function handleStartBreak(plannedMinutes: number) {
+    setErrorMessage(null);
+    setIsBusy(true);
+    unlockTimerSound();
+    try {
+      await window.tempo.startBreak({
+        plannedSeconds: plannedMinutes * 60,
+      });
+      setIsBreakOfferDialogOpen(false);
+      await refreshState();
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Failed to start break",
       );
     } finally {
       setIsBusy(false);
@@ -477,8 +690,7 @@ export function App() {
     setErrorMessage(null);
     setIsBusy(true);
     try {
-      await window.tempo.stop();
-      setScope("");
+      await finalizeFocusStop();
       await closeStopDialog();
     } catch (error) {
       setErrorMessage(
@@ -500,6 +712,38 @@ export function App() {
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : "Failed to discard",
+      );
+      await closeStopDialog();
+    } finally {
+      setIsBusy(false);
+    }
+  }
+
+  async function handleSaveBreakStop() {
+    setErrorMessage(null);
+    setIsBusy(true);
+    try {
+      await window.tempo.stopBreak();
+      await closeStopDialog();
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Failed to save break",
+      );
+      await closeStopDialog();
+    } finally {
+      setIsBusy(false);
+    }
+  }
+
+  async function handleDiscardBreakStop() {
+    setErrorMessage(null);
+    setIsBusy(true);
+    try {
+      await window.tempo.discardBreak();
+      await closeStopDialog();
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Failed to discard break",
       );
       await closeStopDialog();
     } finally {
@@ -596,6 +840,12 @@ export function App() {
                       onChange={setSaveToBacklog}
                     />
                   ) : null}
+                  {isFocusPaused && isBreakActive && activeFocusRecord ? (
+                    <ErrorText>
+                      {activeFocusRecord.name} paused ·{" "}
+                      {formatHmsClock(focusElapsedSeconds)}
+                    </ErrorText>
+                  ) : null}
                   {errorMessage ? <ErrorText>{errorMessage}</ErrorText> : null}
                   {isIdle ? (
                     <Button
@@ -611,7 +861,7 @@ export function App() {
                     </Button>
                   ) : (
                     <ButtonRow>
-                      {isRunning ? (
+                      {isFocusRunning ? (
                         <Button
                           type="button"
                           disabled={isBusy}
@@ -620,7 +870,7 @@ export function App() {
                           Pause
                         </Button>
                       ) : null}
-                      {isPaused ? (
+                      {isFocusPaused && !isBreakRunning ? (
                         <Button
                           type="button"
                           disabled={isBusy}
@@ -629,28 +879,51 @@ export function App() {
                           Resume
                         </Button>
                       ) : null}
-                      {activeRecord !== null ? (
+                      {activeFocusRecord !== null ? (
                         <Button
                           type="button"
                           $variant="danger"
                           disabled={isBusy}
                           onClick={() => {
-                            if (activeRecord !== null) {
-                              handledAutoStopRecordId.current = activeRecord.id;
+                            if (activeFocusRecord !== null) {
+                              handledAutoStopRecordId.current =
+                                activeFocusRecord.id;
                             }
-                            requestStop(elapsedSeconds, settings.confirmOnStop);
+                            void requestStop(
+                              focusElapsedSeconds,
+                              settings.confirmOnStop,
+                            );
                           }}
                         >
                           Stop
+                        </Button>
+                      ) : null}
+                      {isBreakActive ? (
+                        <Button
+                          type="button"
+                          $variant="danger"
+                          disabled={isBusy}
+                          onClick={() => {
+                            if (activeBreakRecord !== null) {
+                              handledAutoStopBreakRecordId.current =
+                                activeBreakRecord.id;
+                            }
+                            void requestBreakStop(
+                              breakElapsedSeconds,
+                              settings.confirmOnStop,
+                            );
+                          }}
+                        >
+                          Stop break
                         </Button>
                       ) : null}
                     </ButtonRow>
                   )}
                 </SetupFields>
                 <DurationDial
-                  minutes={durationMinutes}
+                  minutes={showBreakClock ? breakOfferMinutes : durationMinutes}
                   displayValue={clockValue}
-                  unitLabel={mode === "timer" ? "mins" : "secs"}
+                  unitLabel={showBreakClock || mode === "timer" ? "mins" : "secs"}
                   caption={clockCaption}
                   disabled={!isIdle}
                   onChange={handleDurationChange}
@@ -771,13 +1044,45 @@ export function App() {
       ) : null}
       {isStopDialogOpen ? (
         <StopDialog
+          title={
+            stopDialogTarget === "break" ? "Stop break?" : "Stop session?"
+          }
+          body={
+            stopDialogTarget === "break"
+              ? "Save keeps this break in history. Discard removes it."
+              : undefined
+          }
           canSave={stopDialogCanSave}
           isBusy={isBusy}
           onSave={() => {
+            if (stopDialogTarget === "break") {
+              void handleSaveBreakStop();
+              return;
+            }
             void handleSaveStop();
           }}
           onDiscard={() => {
+            if (stopDialogTarget === "break") {
+              void handleDiscardBreakStop();
+              return;
+            }
             void handleDiscardStop();
+          }}
+        />
+      ) : null}
+      {isBreakOfferDialogOpen ? (
+        <BreakOfferDialog
+          durationMinutes={breakOfferMinutes}
+          isBusy={isBusy}
+          onDurationChange={(value) => {
+            const parsed = parseMinutesInput(value);
+            setBreakOfferMinutes(parsed ?? breakOfferMinutes);
+          }}
+          onStartBreak={() => {
+            void handleStartBreak(breakOfferMinutes);
+          }}
+          onDismiss={() => {
+            setIsBreakOfferDialogOpen(false);
           }}
         />
       ) : null}
@@ -928,3 +1233,5 @@ interface SessionScopeFieldProps {
   disabled: boolean;
   onChange: (scope: string) => void;
 }
+
+type StopDialogTarget = "focus" | "break";

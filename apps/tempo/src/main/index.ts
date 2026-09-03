@@ -76,6 +76,8 @@ app.whenReady().then(async () => {
 
   try {
     await initDatabase(app.getPath("userData"));
+    const { migrateRestSessionToBreak } = await import("./sessions.repository");
+    migrateRestSessionToBreak();
     const settings = loadAppSettings();
     registerRecordIpcHandlers();
     registerSettingsIpcHandlers(applyWindowChrome);

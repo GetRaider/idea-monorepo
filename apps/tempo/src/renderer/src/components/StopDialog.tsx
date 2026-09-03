@@ -7,20 +7,24 @@ import {
 } from "./ManualRecordDialog.styles";
 
 export function StopDialog({
+  title = "Stop session?",
+  body,
   canSave,
   isBusy,
   onSave,
   onDiscard,
 }: StopDialogProps) {
+  const dialogBody =
+    body ??
+    (canSave
+      ? "Save keeps this session in history. Discard removes it."
+      : "No time recorded yet — you can only discard this session.");
+
   return (
     <Overlay>
       <DialogPanel>
-        <DialogTitle>Stop session?</DialogTitle>
-        <DialogBody>
-          {canSave
-            ? "Save keeps this session in history. Discard removes it."
-            : "No time recorded yet — you can only discard this session."}
-        </DialogBody>
+        <DialogTitle>{title}</DialogTitle>
+        <DialogBody>{dialogBody}</DialogBody>
         <ButtonRow>
           <Button
             type="button"
@@ -42,6 +46,8 @@ export function StopDialog({
 }
 
 interface StopDialogProps {
+  title?: string;
+  body?: string;
   canSave: boolean;
   isBusy: boolean;
   onSave: () => void;

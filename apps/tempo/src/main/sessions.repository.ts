@@ -8,6 +8,10 @@ import {
   validateSavedSessionName,
   validateUpdateSavedSession,
 } from "../helpers/session.helper";
+import {
+  DEFAULT_BREAK_SESSION_NAME,
+  LEGACY_REST_SESSION_NAME,
+} from "../helpers/break.helper";
 
 import { getDatabase, persistDatabase } from "./db";
 
@@ -69,7 +73,11 @@ export function updateSavedSession(
     throw new Error("Backlog session not found");
   }
 
-  assertSavedSessionNotInUse(session.id, getActiveSessionId(), "edit");
+  assertSavedSessionNotInUse(
+    session.id,
+    isSavedSessionActive(session.id) ? session.id : null,
+    "edit",
+  );
   const validated = validateUpdateSavedSession(input);
   const existing = getSavedSessionByName(validated.name);
   if (existing !== null && existing.id !== session.id) {
@@ -86,7 +94,11 @@ export function updateSavedSession(
 }
 
 export function deleteSavedSession(sessionId: string): void {
-  assertSavedSessionNotInUse(sessionId, getActiveSessionId(), "delete");
+  assertSavedSessionNotInUse(
+    sessionId,
+    isSavedSessionActive(sessionId) ? sessionId : null,
+    "delete",
+  );
   getDatabase().run(
     `UPDATE records SET kind = 'unknown', session_id = NULL WHERE session_id = ?`,
     [sessionId],
@@ -121,18 +133,42 @@ export function resolveSavedSessionForStart(options: {
   return null;
 }
 
-function getActiveSessionId(): string | null {
-  const statement = getDatabase().prepare(
-    `SELECT session_id FROM records WHERE ended_at IS NULL LIMIT 1`,
-  );
-  if (!statement.step()) {
-    statement.free();
-    return null;
+export function migrateRestSessionToBreak(): void {
+  const restSession = getSavedSessionByName(LEGACY_REST_SESSION_NAME);
+  if (restSession === null) {
+    return;
   }
 
-  const row = statement.getAsObject();
+  const breakSession = getSavedSessionByName(DEFAULT_BREAK_SESSION_NAME);
+  if (breakSession === null) {
+    getDatabase().run(`UPDATE sessions SET name = ? WHERE id = ?`, [
+      DEFAULT_BREAK_SESSION_NAME,
+      restSession.id,
+    ]);
+    getDatabase().run(
+      `UPDATE records SET name = ?, record_role = 'break' WHERE session_id = ?`,
+      [DEFAULT_BREAK_SESSION_NAME, restSession.id],
+    );
+    persistDatabase();
+    return;
+  }
+
+  getDatabase().run(
+    `UPDATE records SET session_id = ?, name = ?, record_role = 'break' WHERE session_id = ?`,
+    [breakSession.id, DEFAULT_BREAK_SESSION_NAME, restSession.id],
+  );
+  getDatabase().run(`DELETE FROM sessions WHERE id = ?`, [restSession.id]);
+  persistDatabase();
+}
+
+function isSavedSessionActive(sessionId: string): boolean {
+  const statement = getDatabase().prepare(
+    `SELECT 1 FROM records WHERE ended_at IS NULL AND session_id = ? LIMIT 1`,
+  );
+  statement.bind([sessionId]);
+  const isActive = statement.step();
   statement.free();
-  return row.session_id == null ? null : String(row.session_id);
+  return isActive;
 }
 
 function getSavedSessionByName(name: string): SavedSession | null {

@@ -1,5 +1,6 @@
 export { AnalyticsSection } from "./AnalyticsSection";
 export { BacklogPicker } from "./BacklogPicker";
+export { BreakOfferDialog } from "./BreakOfferDialog";
 export { ClockDisplay } from "./ClockDisplay";
 export { CollapsibleSection } from "./CollapsibleSection";
 export { DurationDial } from "./DurationDial";

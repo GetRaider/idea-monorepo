@@ -44,6 +44,11 @@
       "import": "./dist/helpers/index.js",
       "require": "./dist/helpers/index.js"
     },
+    "./todex": {
+      "types": "./dist/todex/index.d.ts",
+      "import": "./dist/todex/index.js",
+      "require": "./dist/todex/index.js"
+    },
     "./*": {
       "import": "./dist/*.js",
       "require": "./dist/*.js"
@@ -57,7 +62,8 @@
     "@nestjs/platform-express": "catalog:",
     "axios": "catalog:",
     "pino": "^10.3.0",
-    "tsx": "^4.21.0"
+    "tsx": "^4.21.0",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",

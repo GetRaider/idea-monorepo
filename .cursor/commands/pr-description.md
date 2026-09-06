@@ -3,7 +3,7 @@ Generate a **PR description** from the current branch diff against `main`.
 ## Steps
 
 1. Run `git diff main...HEAD --stat` and `git log main..HEAD --oneline` to understand scope.
-2. Identify primary **SCOPE** (`GEN`, `TAD`, `DVN`, `PRT`, `TMP`) from changed paths.
+2. Identify primary **SCOPE** (`GEN`, `TAD`, `DVN`, `PRT`, `TMP`, `TDX`) from changed paths.
 3. Write the PR description below.
 
 ## Output format

@@ -14,7 +14,7 @@ Format: `<type>/<SCOPE>-<slug>`
 | Field | Allowed values |
 |-------|----------------|
 | `type` | `feat`, `fix`, `test`, `chore`, `docs`, `refactor`, `style`, `release` |
-| `SCOPE` | `GEN`, `TAD`, `DVN`, `PRT`, `TMP` |
+| `SCOPE` | `GEN`, `TAD`, `DVN`, `PRT`, `TMP`, `TDX` |
 | `slug` | Starts with letter or digit; then letters, digits, hyphens, dots |
 
 **Constraints**
@@ -37,7 +37,7 @@ Format: `<type>(<SCOPE>): <subject>`
 | Field | Allowed values |
 |-------|----------------|
 | `type` | Same as branch types |
-| `SCOPE` | `GEN`, `TAD`, `DVN`, `PRT`, `TMP` — **required** (`scope-empty: never`) |
+| `SCOPE` | `GEN`, `TAD`, `DVN`, `PRT`, `TMP`, `TDX` — **required** (`scope-empty: never`) |
 | `subject` | Imperative, concise |
 
 **Constraints**
@@ -57,6 +57,7 @@ Format: `<type>(<SCOPE>): <subject>`
 
 - `GEN` — monorepo tooling, shared packages used across apps, CI, eslint/tsconfig
 - `TAD` — `apps/take-and-do`
+- `TDX` — `apps/todex-api`, `apps/todex-web`, `@repo/api/todex`
 - `DVN` — `apps/devinity-api`, `apps/devinity-web`
 - `PRT` — `apps/personal-website`
 - `TMP` — `apps/tempo` (Tempo)

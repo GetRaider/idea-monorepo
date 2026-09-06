@@ -12,10 +12,12 @@ apps/
   devinity-api/     # NestJS API (DVN)
   devinity-web/     # Next.js frontend (DVN)
   take-and-do/      # Next.js full-stack app (TAD)
+  todex-api/        # NestJS API Todex (TDX)
+  todex-web/        # Next.js frontend Todex (TDX)
   personal-website/ # Next.js site (PRT)
   tempo/            # Electron app Tempo (TMP)
 packages/
-  @repo/api         # Shared models, DTOs, HTTP helpers
+  @repo/api         # Shared models, DTOs, HTTP helpers (+ /todex Zod barrel)
   @repo/ui          # Shared React components
   @repo/shared      # Shared TS utilities
   @repo/eslint-config
@@ -45,6 +47,7 @@ When adding a new package or app task, register it in `turbo.json` and `pnpm-wor
 
 - `pnpm dev:devinity` — devinity-api + devinity-web + @repo/api + @repo/ui
 - `pnpm dev:take-and-do` — take-and-do + @repo/ui + @repo/api + @repo/shared
+- `pnpm dev:todex` — todex-api + todex-web + @repo/api + @repo/ui (when wired)
 - `pnpm dev:personal-website` — personal-website + @repo/ui
 - `pnpm dev:tempo` — Tempo
 
@@ -54,6 +57,7 @@ When adding a new package or app task, register it in `turbo.json` and `pnpm-wor
 |-------|------------|
 | `GEN` | Repo-wide / tooling |
 | `TAD` | take-and-do |
+| `TDX` | todex-api + todex-web (+ `@repo/api/todex`) |
 | `DVN` | devinity-api + devinity-web |
 | `PRT` | personal-website |
 | `TMP` | tempo (Tempo) |

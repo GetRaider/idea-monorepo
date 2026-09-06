@@ -105,9 +105,13 @@ export const tasksUrlHelper = {
       return match ? decodeURIComponent(match[1]) : null;
     },
 
-    getActiveViewFromPathname(pathname: string): string {
+    isRootPathname(pathname: string): boolean {
       const normalized = pathname.replace(/\/+$/, "") || "/";
-      if (normalized === Route.TASKS) {
+      return normalized === Route.TASKS;
+    },
+
+    getActiveViewFromPathname(pathname: string): string {
+      if (tasksUrlHelper.routing.isRootPathname(pathname)) {
         return TASKS_ROOT_VIEW_ID;
       }
       if (/^\/tasks\/schedule\/today(?:\/|$)/.test(pathname)) return "today";

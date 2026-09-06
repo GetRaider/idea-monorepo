@@ -14,7 +14,7 @@ Format: `<type>(<SCOPE>): <subject>`
 
 **Types:** `feat`, `fix`, `test`, `chore`, `docs`, `refactor`, `style`, `release`
 
-**Scopes:** `GEN`, `TAD`, `DVN`, `PRT`, `TMP` — required
+**Scopes:** `GEN`, `TAD`, `DVN`, `PRT`, `TMP`, `TDX` — required
 
 **Max header length:** 70 characters
 
@@ -28,6 +28,8 @@ Use imperative mood: "add", "fix", "remove" — not "added" or "fixes".
 - `TAD` — apps/take-and-do
 - `DVN` — apps/devinity-api, apps/devinity-web
 - `PRT` — apps/personal-website
+- `TMP` — apps/tempo
+- `TDX` — apps/todex-api, apps/todex-web, `@repo/api/todex`
 
 If changes span multiple apps, pick the primary scope or `GEN`.
 

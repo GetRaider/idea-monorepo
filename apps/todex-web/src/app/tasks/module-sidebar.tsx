@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { Button, Input, cn } from "@repo/ui";
+import { Button, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, cn } from "@repo/ui";
 
 import { BoardIcon, ClockIcon, PlusIcon } from "@components/icons";
 
@@ -22,7 +22,7 @@ export function TasksModuleSidebar() {
   return (
     <aside className="flex h-screen w-[220px] shrink-0 flex-col gap-6 overflow-auto border-r border-border bg-sidebar px-3 py-4">
       <section>
-        <h2 className="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-muted">
+        <h2 className="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           Schedules
         </h2>
         <NavRow
@@ -40,12 +40,12 @@ export function TasksModuleSidebar() {
       </section>
       <section className="min-h-0 flex-1">
         <div className="mb-2 flex items-center justify-between px-2">
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Boards
           </h2>
           <button
             type="button"
-            className="rounded-md p-1 text-muted hover:bg-surface hover:text-foreground"
+            className="rounded-md p-1 text-muted-foreground hover:bg-surface hover:text-foreground"
             onClick={() => setCreating(creating === "board" ? null : "board")}
           >
             <PlusIcon size={14} />
@@ -68,7 +68,7 @@ export function TasksModuleSidebar() {
           );
           return (
             <div key={folder.id} className="mt-3">
-              <div className="px-2 pb-1 text-xs text-muted">{folder.name}</div>
+              <div className="px-2 pb-1 text-xs text-muted-foreground">{folder.name}</div>
               {folderBoards.map((board) => (
                 <NavRow
                   key={board.id}
@@ -100,18 +100,26 @@ export function TasksModuleSidebar() {
               onChange={(event) => setBoardName(event.target.value)}
             />
             {folders.length > 0 ? (
-              <select
-                className="h-9 w-full rounded-md border border-border bg-background px-2 text-sm"
-                value={boardFolderId}
-                onChange={(event) => setBoardFolderId(event.target.value)}
-              >
-                <option value="">Root</option>
-                {folders.map((folder) => (
-                  <option key={folder.id} value={folder.id}>
-                    {folder.name}
-                  </option>
-                ))}
-              </select>
+              <Field label="Folder">
+                <Select
+                  value={boardFolderId || "root"}
+                  onValueChange={(value) =>
+                    setBoardFolderId(value === "root" ? "" : value)
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Root" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="root">Root</SelectItem>
+                    {folders.map((folder) => (
+                      <SelectItem key={folder.id} value={folder.id}>
+                        {folder.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
             ) : null}
             <Button type="submit" size="sm" className="w-full">
               Add board
@@ -142,7 +150,7 @@ export function TasksModuleSidebar() {
         ) : (
           <button
             type="button"
-            className="mt-3 px-2 text-xs text-muted hover:text-foreground"
+            className="mt-3 px-2 text-xs text-muted-foreground hover:text-foreground"
             onClick={() => setCreating("folder")}
           >
             New folder
@@ -162,7 +170,7 @@ function NavRow({ active, onClick, icon, label }: NavRowProps) {
         "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm transition-colors",
         active
           ? "bg-surface text-foreground"
-          : "text-muted hover:bg-surface hover:text-foreground",
+          : "text-muted-foreground hover:bg-surface hover:text-foreground",
       )}
     >
       {icon}
@@ -176,4 +184,19 @@ interface NavRowProps {
   onClick: () => void;
   icon: ReactNode;
   label: string;
+}
+
+function Field({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="space-y-2">
+      <Label className="text-xs text-muted-foreground">{label}</Label>
+      {children}
+    </div>
+  );
 }

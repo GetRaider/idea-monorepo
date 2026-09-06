@@ -54,8 +54,8 @@ export function TaskList() {
     <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-auto px-6 py-6">
       <div className="mb-6 flex items-center justify-between gap-4">
         <div className="flex min-w-0 items-center gap-3 text-2xl font-semibold tracking-tight">
-          <span className="text-muted">Tasks</span>
-          <span className="text-muted">›</span>
+          <span className="text-muted-foreground">Tasks</span>
+          <span className="text-muted-foreground">›</span>
           <span className="flex min-w-0 items-center gap-2 truncate">
             {view.kind === "board" ? <BoardGlyph /> : null}
             {title}
@@ -99,17 +99,17 @@ export function TaskList() {
                   <ChevronIcon
                     size={14}
                     className={cn(
-                      "text-muted transition-transform",
+                      "text-muted-foreground transition-transform",
                       open[status] && "rotate-90",
                     )}
                   />
                   <StatusGlyph status={status} />
                   <span>{STATUS_LABEL[status]}</span>
-                  <span className="text-muted">{nodes.length}</span>
+                  <span className="text-muted-foreground">{nodes.length}</span>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   {nodes.length === 0 ? (
-                    <p className="px-8 py-2 text-sm text-muted">No tasks</p>
+                    <p className="px-8 py-2 text-sm text-muted-foreground">No tasks</p>
                   ) : (
                     <TaskTree
                       nodes={nodes}
@@ -148,7 +148,7 @@ function SearchField() {
       value={search}
       onChange={(event) => setSearch(event.target.value)}
       placeholder="Search"
-      className="h-9 w-40 rounded-md border border-border bg-transparent px-3 text-sm outline-none placeholder:text-muted"
+      className="h-9 w-40 rounded-md border border-border bg-transparent px-3 text-sm outline-none placeholder:text-muted-foreground"
     />
   );
 }
@@ -195,14 +195,14 @@ function TaskTree({
               className="min-w-0 flex-1 text-left text-sm"
               onClick={() => onSelect(node.id)}
             >
-              <span className="mr-2 font-mono text-xs text-muted">
+              <span className="mr-2 font-mono text-xs text-muted-foreground">
                 {node.taskKey}
               </span>
               {node.summary}
             </button>
             <button
               type="button"
-              className="invisible rounded-md px-1.5 text-xs text-muted group-hover:visible hover:text-foreground"
+              className="invisible rounded-md px-1.5 text-xs text-muted-foreground group-hover:visible hover:text-foreground"
               onClick={() => onCreateSubtask(node.id)}
             >
               +
@@ -229,12 +229,12 @@ function StatusGlyph({ status }: { status: Task["status"] }) {
     return <StatusDoneIcon size={14} className="text-emerald-400" />;
   if (status === TaskStatus.IN_PROGRESS)
     return <StatusInProgressIcon size={14} className="text-yellow-400" />;
-  return <StatusTodoIcon size={14} className="text-muted" />;
+  return <StatusTodoIcon size={14} className="text-muted-foreground" />;
 }
 
 function BoardGlyph() {
   return (
-    <span className="flex h-6 w-6 items-center justify-center rounded-md bg-surface text-muted">
+    <span className="flex h-6 w-6 items-center justify-center rounded-md bg-surface text-muted-foreground">
       <svg
         width="14"
         height="14"

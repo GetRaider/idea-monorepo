@@ -165,23 +165,32 @@ export function buildAnalyticsMetrics(
   calendarDayCount: number,
 ): AnalyticsMetrics {
   const completedRecords = getCompletedRecords(records);
-  const totalSeconds = sumRecordSeconds(completedRecords);
-  const sessionCount = completedRecords.length;
-  const longestSessionSeconds = completedRecords.reduce(
+  const focusRecords = completedRecords.filter(
+    (record) => record.recordRole === "focus",
+  );
+  const breakRecords = completedRecords.filter(
+    (record) => record.recordRole === "break",
+  );
+  const focusSeconds = sumRecordSeconds(focusRecords);
+  const breakSeconds = sumRecordSeconds(breakRecords);
+  const sessionCount = focusRecords.length;
+  const longestSessionSeconds = focusRecords.reduce(
     (longest, record) => Math.max(longest, record.accumulatedSeconds),
     0,
   );
   const activeDayKeys = new Set<string>();
-  for (const record of completedRecords) {
+  for (const record of focusRecords) {
     activeDayKeys.add(formatDateKey(new Date(record.startedAt)));
   }
 
   return {
-    totalSeconds,
+    totalSeconds: focusSeconds,
+    focusSeconds,
+    breakSeconds,
     sessionCount,
     dailyAverageSeconds:
-      calendarDayCount <= 0 ? 0 : totalSeconds / calendarDayCount,
-    averageSessionSeconds: sessionCount === 0 ? 0 : totalSeconds / sessionCount,
+      calendarDayCount <= 0 ? 0 : focusSeconds / calendarDayCount,
+    averageSessionSeconds: sessionCount === 0 ? 0 : focusSeconds / sessionCount,
     longestSessionSeconds,
     activeDayCount: activeDayKeys.size,
     calendarDayCount: Math.max(0, calendarDayCount),
@@ -198,6 +207,10 @@ export function buildTimeByDay(
   );
 
   for (const record of getCompletedRecords(records)) {
+    if (record.recordRole !== "focus") {
+      continue;
+    }
+
     const startedAt = new Date(record.startedAt);
     if (Number.isNaN(startedAt.getTime())) {
       continue;
@@ -506,6 +519,8 @@ export interface AnalyticsPeriod {
 
 export interface AnalyticsMetrics {
   totalSeconds: number;
+  focusSeconds: number;
+  breakSeconds: number;
   sessionCount: number;
   dailyAverageSeconds: number;
   averageSessionSeconds: number;

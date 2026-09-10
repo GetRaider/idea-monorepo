@@ -1,10 +1,10 @@
-import { Button, ButtonRow } from "../App.styles";
+import { Button } from "./ui/button";
 import {
-  DialogBody,
-  DialogPanel,
+  Dialog,
+  DialogContent,
+  DialogDescription,
   DialogTitle,
-  Overlay,
-} from "./ManualRecordDialog.styles";
+} from "./ui/dialog";
 
 export function StopDialog({
   title = "Stop session?",
@@ -13,6 +13,7 @@ export function StopDialog({
   isBusy,
   onSave,
   onDiscard,
+  onDismiss,
 }: StopDialogProps) {
   const dialogBody =
     body ??
@@ -21,27 +22,29 @@ export function StopDialog({
       : "No time recorded yet — you can only discard this session.");
 
   return (
-    <Overlay>
-      <DialogPanel>
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open && !isBusy) {
+          onDismiss();
+        }
+      }}
+    >
+      <DialogContent overlayDismiss={false}>
         <DialogTitle>{title}</DialogTitle>
-        <DialogBody>{dialogBody}</DialogBody>
-        <ButtonRow>
-          <Button
-            type="button"
-            $variant="ghost"
-            disabled={isBusy}
-            onClick={onDiscard}
-          >
+        <DialogDescription>{dialogBody}</DialogDescription>
+        <div className="mt-4 flex justify-end gap-2">
+          <Button variant="ghost" disabled={isBusy} onClick={onDiscard}>
             Discard
           </Button>
           {canSave ? (
-            <Button type="button" disabled={isBusy} onClick={onSave}>
+            <Button disabled={isBusy} onClick={onSave}>
               Save
             </Button>
           ) : null}
-        </ButtonRow>
-      </DialogPanel>
-    </Overlay>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -52,4 +55,5 @@ interface StopDialogProps {
   isBusy: boolean;
   onSave: () => void;
   onDiscard: () => void;
+  onDismiss: () => void;
 }

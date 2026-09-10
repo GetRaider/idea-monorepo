@@ -1,14 +1,13 @@
+export { ActivityPills } from "./ActivityPills";
 export { AnalyticsSection } from "./AnalyticsSection";
-export { BacklogPicker } from "./BacklogPicker";
+export { AppTopBar } from "./AppTopBar";
 export { BreakOfferDialog } from "./BreakOfferDialog";
 export { ClockDisplay } from "./ClockDisplay";
-export { CollapsibleSection } from "./CollapsibleSection";
-export { DurationDial } from "./DurationDial";
 export { HistorySection } from "./HistorySection";
 export { ManualRecordDialog } from "./ManualRecordDialog";
 export { ModeToggle } from "./ModeToggle";
-export { NavIcon } from "./NavIcon";
 export { OverflowMenu } from "./OverflowMenu";
+export { PeriodFilter } from "./PeriodFilter";
 export { SavedSessionDialog } from "./SavedSessionDialog";
 export { SettingsSection } from "./SettingsSection";
 export { StopDialog } from "./StopDialog";

@@ -1,39 +1,19 @@
-import {
-  ClockCaption,
-  ClockUnitSeparator,
-  ClockUnits,
-  ClockValue,
-  ClockWrap,
-} from "./ClockDisplay.styles";
+import { cn } from "../lib/cn";
 
-export function ClockDisplay({
-  value,
-  caption,
-  showUnits = false,
-  overGoal = false,
-}: ClockDisplayProps) {
+export function ClockDisplay({ value, overGoal = false }: ClockDisplayProps) {
   return (
-    <ClockWrap>
-      <ClockValue $overGoal={overGoal}>{value}</ClockValue>
-      {showUnits ? (
-        <ClockUnits>
-          <span>H</span>
-          <ClockUnitSeparator>:</ClockUnitSeparator>
-          <span>M</span>
-          <ClockUnitSeparator>:</ClockUnitSeparator>
-          <span>S</span>
-        </ClockUnits>
-      ) : null}
-      {caption !== null && caption.length > 0 ? (
-        <ClockCaption>{caption}</ClockCaption>
-      ) : null}
-    </ClockWrap>
+    <div
+      className={cn(
+        "z-[1] font-display text-[clamp(78px,17vw,168px)] font-[250] leading-[0.9] tracking-[-0.05em] tabular-nums [font-feature-settings:'tnum'_1] text-tempo-text transition-colors",
+        overGoal ? "text-tempo-accent" : null,
+      )}
+    >
+      {value}
+    </div>
   );
 }
 
 interface ClockDisplayProps {
   value: string;
-  caption: string | null;
-  showUnits?: boolean;
   overGoal?: boolean;
 }

@@ -5,6 +5,7 @@ import {
   formatClock,
   formatHmsClock,
   formatMenuBarClock,
+  formatStageClock,
   formatTimerClock,
   getDisplayedElapsedSeconds,
   getRemainingSeconds,
@@ -76,6 +77,17 @@ describe("formatClock", () => {
   it("formats minutes and hours", () => {
     expect(formatClock(75)).toBe("01:15");
     expect(formatClock(3661)).toBe("1:01:01");
+  });
+});
+
+describe("formatStageClock", () => {
+  it("hides hours until 3600 seconds", () => {
+    expect(formatStageClock(0)).toBe("00:00");
+    expect(formatStageClock(59)).toBe("00:59");
+    expect(formatStageClock(60)).toBe("01:00");
+    expect(formatStageClock(3599)).toBe("59:59");
+    expect(formatStageClock(3600)).toBe("01:00:00");
+    expect(formatStageClock(3601)).toBe("01:00:01");
   });
 });
 

@@ -2,24 +2,13 @@ import { FormEvent, useMemo, useState } from "react";
 
 import { buildManualSessionOptions } from "../../../helpers/history.helper";
 import { parseMinutesInput } from "../../../helpers/session.helper";
-import {
-  Button,
-  ButtonRow,
-  CheckboxField,
-  ErrorText,
-  Field,
-  FieldLabel,
-  RequiredMark,
-  TextArea,
-  TextInput,
-} from "../App.styles";
 
+import { Button } from "./ui/button";
 import {
-  DialogCard,
+  Dialog,
+  DialogContent,
   DialogTitle,
-  Overlay,
-  SessionSelect,
-} from "./ManualRecordDialog.styles";
+} from "./ui/dialog";
 
 import type {
   AddManualRecordInput,
@@ -132,85 +121,95 @@ export function ManualRecordDialog({
   }
 
   return (
-    <Overlay>
-      <DialogCard onSubmit={handleSubmit}>
-        <DialogTitle>
-          {isEditing ? "Edit focus record" : "Add focus record"}
-        </DialogTitle>
-        {showSessionPicker ? (
-          <Field>
-            <FieldLabel>Regular Session</FieldLabel>
-            <SessionSelect
-              value={selectedSessionId ?? ""}
-              onChange={(event) => handleSessionChange(event.target.value)}
-            >
-              {sessionOptions.map((option) => (
-                <option key={option.value || "custom"} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </SessionSelect>
-          </Field>
-        ) : null}
-        <Field>
-          <FieldLabel>
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) {
+          onClose();
+        }
+      }}
+    >
+      <DialogContent overlayDismiss={false}>
+        <form className="flex flex-col gap-3" onSubmit={handleSubmit}>
+          <DialogTitle>
+            {isEditing ? "Edit focus record" : "Add focus record"}
+          </DialogTitle>
+          {showSessionPicker ? (
+            <label className="flex flex-col gap-1 text-sm text-tempo-muted">
+              Activity
+              <select
+                className="rounded-[10px] border border-tempo-line bg-transparent px-2.5 py-1.5 text-tempo-text"
+                value={selectedSessionId ?? ""}
+                onChange={(event) => handleSessionChange(event.target.value)}
+              >
+                {sessionOptions.map((option) => (
+                  <option key={option.value || "custom"} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+          <label className="flex flex-col gap-1 text-sm text-tempo-muted">
             Name
-            <RequiredMark>*</RequiredMark>
-          </FieldLabel>
-          <TextInput
-            value={name}
-            disabled={isBacklogSelected}
-            onChange={(event) => setName(event.target.value)}
-            autoFocus={!showSessionPicker}
-          />
-        </Field>
-        <Field>
-          <FieldLabel>Scope</FieldLabel>
-          <TextArea
-            value={scope}
-            onChange={(event) => setScope(event.target.value)}
-            placeholder="What was done in this session"
-            rows={2}
-          />
-        </Field>
-        {!isBacklogSelected ? (
-          <CheckboxField>
             <input
-              type="checkbox"
-              checked={saveToBacklog}
-              onChange={(event) => setSaveToBacklog(event.target.checked)}
+              className="rounded-[10px] border border-tempo-line bg-transparent px-2.5 py-1.5 text-tempo-text"
+              value={name}
+              disabled={isBacklogSelected}
+              onChange={(event) => setName(event.target.value)}
+              autoFocus={!showSessionPicker}
             />
-            Save as Regular
-          </CheckboxField>
-        ) : null}
-        <Field>
-          <FieldLabel>
-            Duration
-            <RequiredMark>*</RequiredMark>
-          </FieldLabel>
-          <TextInput
-            value={durationInput}
-            onChange={(event) => setDurationInput(event.target.value)}
-            placeholder="45m"
-          />
-        </Field>
-        <Field>
-          <FieldLabel>Date & time</FieldLabel>
-          <TextInput
-            type="datetime-local"
-            value={startedAtLocal}
-            onChange={(event) => setStartedAtLocal(event.target.value)}
-          />
-        </Field>
-        {errorMessage ? <ErrorText>{errorMessage}</ErrorText> : null}
-        <ButtonRow>
-          <Button type="button" $variant="ghost" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button type="submit">Save</Button>
-        </ButtonRow>
-      </DialogCard>
-    </Overlay>
+          </label>
+          <label className="flex flex-col gap-1 text-sm text-tempo-muted">
+            Scope
+            <textarea
+              className="rounded-[11px] border border-tempo-line bg-tempo-panel px-2.5 py-1.5 text-tempo-text"
+              value={scope}
+              onChange={(event) => setScope(event.target.value)}
+              placeholder="What was done in this session"
+              rows={2}
+            />
+          </label>
+          {!isBacklogSelected ? (
+            <label className="flex items-center gap-2 text-sm text-tempo-muted">
+              <input
+                type="checkbox"
+                checked={saveToBacklog}
+                onChange={(event) => setSaveToBacklog(event.target.checked)}
+              />
+              Save as activity
+            </label>
+          ) : null}
+          <label className="flex flex-col gap-1 text-sm text-tempo-muted">
+            Duration (minutes)
+            <input
+              className="rounded-[10px] border border-tempo-line bg-transparent px-2.5 py-1.5 text-tempo-text"
+              value={durationInput}
+              onChange={(event) => setDurationInput(event.target.value)}
+              placeholder="45"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm text-tempo-muted">
+            Date & time
+            <input
+              type="datetime-local"
+              className="rounded-[10px] border border-tempo-line bg-transparent px-2.5 py-1.5 text-tempo-text"
+              value={startedAtLocal}
+              onChange={(event) => setStartedAtLocal(event.target.value)}
+            />
+          </label>
+          {errorMessage ? (
+            <p className="m-0 text-sm text-tempo-danger">{errorMessage}</p>
+          ) : null}
+          <div className="mt-1 flex justify-end gap-2">
+            <Button variant="ghost" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit">Save</Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 

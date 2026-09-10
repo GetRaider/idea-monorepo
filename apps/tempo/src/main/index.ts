@@ -28,7 +28,7 @@ function createWindow(alwaysOnTop: boolean): void {
     minWidth: 720,
     minHeight: 640,
     title: "Tempo",
-    backgroundColor: "#0c0814",
+    backgroundColor: "#08090C",
     icon: createAppIconImage(),
     alwaysOnTop,
     webPreferences: {

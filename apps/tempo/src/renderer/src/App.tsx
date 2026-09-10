@@ -2,14 +2,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   formatHmsClock,
-  formatTimerClock,
+  formatStageClock,
   getDisplayedElapsedSeconds,
   getRemainingSeconds,
   shouldAutoStopTimer,
   shouldNotifyStopwatchGoal,
 } from "../../helpers/elapsed.helper";
-import { parseMinutesInput } from "../../helpers/session.helper";
 import { isDefaultBreakSessionName } from "../../helpers/break.helper";
+import { resolveFocusViewState } from "../../helpers/focus-view.helper";
 import {
   DEFAULT_APP_SETTINGS,
   resolveBreakDurationMinutes,
@@ -27,52 +27,19 @@ import type {
 } from "../../shared/records.types";
 import type { AppSettings } from "../../shared/settings.types";
 
-import {
-  AppShell,
-  Brand,
-  BrandCopy,
-  BrandLogo,
-  BrandLogoButton,
-  BrandName,
-  BrandVersion,
-  Button,
-  ButtonRow,
-  CheckboxField,
-  ErrorText,
-  Field,
-  FieldLabel,
-  FocusScreen,
-  GlobalStyle,
-  Main,
-  MainHeader,
-  NavButton,
-  NavLabel,
-  RequiredMark,
-  SaveFieldSlot,
-  ScreenTitle,
-  SetupFields,
-  SetupGrid,
-  Sidebar,
-  StartButtonContent,
-  StartPlayIcon,
-  TextArea,
-  TextInput,
-} from "./App.styles";
 import type { AppScreen } from "./App.types";
 import {
   AnalyticsSection,
-  BacklogPicker,
+  AppTopBar,
   BreakOfferDialog,
-  CollapsibleSection,
-  DurationDial,
   HistorySection,
   ManualRecordDialog,
-  ModeToggle,
-  NavIcon,
   SavedSessionDialog,
   SettingsSection,
   StopDialog,
 } from "./components";
+import { formatGoalLabel } from "./components/ProgressRail";
+import { FocusStage } from "./focus/FocusStage";
 
 export function App() {
   const [mode, setMode] = useState<TimerMode>(DEFAULT_APP_SETTINGS.defaultMode);
@@ -175,24 +142,6 @@ export function App() {
     }, 400);
     return () => window.clearTimeout(timeoutId);
   }, [durationMinutes]);
-
-  useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent) {
-      if (
-        !(event.metaKey || event.ctrlKey) ||
-        event.key.toLowerCase() !== "b"
-      ) {
-        return;
-      }
-      event.preventDefault();
-      void window.tempo
-        .updateSettings({ sidebarCollapsed: !settings.sidebarCollapsed })
-        .then(setSettings);
-    }
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [settings.sidebarCollapsed]);
 
   useEffect(() => {
     const isFocusRunning =
@@ -383,56 +332,38 @@ export function App() {
     playGoalSound(settings);
   }, [activeFocusRecord, focusElapsedSeconds, settings]);
 
-  const focusRemainingSeconds = getRemainingSeconds(
-    focusElapsedSeconds,
-    activeFocusRecord?.plannedSeconds ??
-      (durationMinutes > 0 ? durationMinutes * 60 : null),
-  );
-  const breakRemainingSeconds = getRemainingSeconds(
-    breakElapsedSeconds,
-    activeBreakRecord?.plannedSeconds ?? null,
-  );
-  const isFocusRunning =
-    activeFocusRecord !== null && activeFocusRecord.segmentStartedAt !== null;
-  const isFocusPaused =
-    activeFocusRecord !== null && activeFocusRecord.segmentStartedAt === null;
+  const viewState = resolveFocusViewState(activeFocusRecord, activeBreakRecord);
   const isBreakRunning =
     activeBreakRecord !== null && activeBreakRecord.segmentStartedAt !== null;
-  const isBreakActive = activeBreakRecord !== null;
-  const isIdle = activeFocusRecord === null && activeBreakRecord === null;
-  const showBreakClock = isBreakActive;
-  const clockValue = showBreakClock
-    ? formatTimerClock(breakRemainingSeconds ?? 0)
-    : mode === "timer"
-      ? formatTimerClock(
-          focusRemainingSeconds ??
-            (durationMinutes > 0 ? durationMinutes * 60 : 0),
-        )
-      : formatHmsClock(focusElapsedSeconds);
-  const hasReachedGoal =
-    mode === "stopwatch" &&
-    focusRemainingSeconds !== null &&
-    focusRemainingSeconds === 0 &&
-    (activeFocusRecord?.plannedSeconds ??
-      (durationMinutes > 0 ? durationMinutes * 60 : 0)) > 0;
-  const clockCaption = isIdle
-    ? null
-    : showBreakClock
-      ? isBreakRunning
-        ? "Break remaining"
-        : "Break paused"
-      : resolveClockCaption(
-          mode,
-          isFocusRunning,
-          isFocusPaused,
-          focusRemainingSeconds,
-          hasReachedGoal,
-        );
-  const hasSessionName = name.trim().length > 0;
+  const isIdle = viewState === "idle";
   const selectedSession = sessions.find(
     (session) => session.id === selectedSessionId,
   );
   const isBacklogSelected = selectedSession !== undefined;
+  const isBreakSelected =
+    selectedSession !== undefined &&
+    isDefaultBreakSessionName(selectedSession.name);
+  const hasSessionName = name.trim().length > 0;
+  const canStart =
+    hasSessionName &&
+    (isBreakSelected || mode !== "timer" || durationMinutes >= 1);
+  const composerPlannedSeconds =
+    durationMinutes > 0 ? durationMinutes * 60 : 0;
+  const stageClock = resolveStageClock({
+    viewState,
+    mode,
+    durationMinutes,
+    composerPlannedSeconds,
+    focusElapsedSeconds,
+    breakElapsedSeconds,
+    focusRecord: activeFocusRecord,
+    breakRecord: activeBreakRecord,
+  });
+  const headerStatus = resolveHeaderStatus(viewState, isBreakRunning);
+  const pausedFocusLabel =
+    viewState === "focusPausedBreakRunning" && activeFocusRecord
+      ? `${activeFocusRecord.name} paused · ${formatHmsClock(focusElapsedSeconds)}`
+      : null;
 
   async function patchSettings(
     patch: Partial<AppSettings>,
@@ -552,16 +483,10 @@ export function App() {
     if (session) {
       setName(session.name);
       setSaveToBacklog(false);
+      if (isDefaultBreakSessionName(session.name)) {
+        setDurationMinutes(settings.breakDurationMinutes);
+      }
     }
-  }
-
-  function handleDurationChange(minutes: number) {
-    setDurationMinutes(minutes);
-  }
-
-  function handleDurationInputChange(value: string) {
-    const parsed = parseMinutesInput(value);
-    setDurationMinutes(parsed ?? 0);
   }
 
   async function handleStart() {
@@ -569,47 +494,17 @@ export function App() {
     setIsBusy(true);
     unlockTimerSound();
     try {
-      await window.tempo.start({
-        name,
-        scope,
-        kind: isBacklogSelected ? "backlog" : "unknown",
-        sessionId: selectedSessionId,
-        saveToBacklog: !isBacklogSelected && saveToBacklog,
-        mode,
-        plannedSeconds: durationMinutes > 0 ? durationMinutes * 60 : null,
-      });
-      await refreshState();
-    } catch (error) {
-      setErrorMessage(
-        error instanceof Error ? error.message : "Failed to start",
-      );
-    } finally {
-      setIsBusy(false);
-    }
-  }
-
-  async function handlePlayBacklog(sessionId: string) {
-    const session = sessions.find((item) => item.id === sessionId);
-    if (session === undefined || !isIdle) {
-      return;
-    }
-
-    handleSelectBacklog(sessionId);
-    setErrorMessage(null);
-    setIsBusy(true);
-    unlockTimerSound();
-    try {
-      if (isDefaultBreakSessionName(session.name)) {
+      if (isBreakSelected) {
         await window.tempo.startBreak({
           plannedSeconds: settings.breakDurationMinutes * 60,
         });
       } else {
         await window.tempo.start({
-          name: session.name,
+          name,
           scope,
-          kind: "backlog",
-          sessionId,
-          saveToBacklog: false,
+          kind: isBacklogSelected ? "backlog" : "unknown",
+          sessionId: selectedSessionId,
+          saveToBacklog: !isBacklogSelected && saveToBacklog,
           mode,
           plannedSeconds: durationMinutes > 0 ? durationMinutes * 60 : null,
         });
@@ -752,264 +647,117 @@ export function App() {
   }
 
   return (
-    <>
-      <GlobalStyle />
-      <AppShell>
-        <Sidebar $collapsed={settings.sidebarCollapsed}>
-          <Brand $collapsed={settings.sidebarCollapsed}>
-            <BrandMark
-              ariaLabel={
-                settings.sidebarCollapsed
-                  ? "Expand sidebar"
-                  : "Collapse sidebar"
-              }
-              onClick={() => {
-                void patchSettings({
-                  sidebarCollapsed: !settings.sidebarCollapsed,
-                });
-              }}
-            />
-            {settings.sidebarCollapsed ? null : (
-              <BrandCopy>
-                <BrandName>Tempo</BrandName>
-                <BrandVersion>v0.1.0</BrandVersion>
-              </BrandCopy>
-            )}
-          </Brand>
-          {NAV_ITEMS.map((item) => (
-            <NavButton
-              key={item.id}
-              type="button"
-              title={settings.sidebarCollapsed ? item.label : undefined}
-              $collapsed={settings.sidebarCollapsed}
-              $active={activeScreen === item.id}
-              onClick={() => setActiveScreen(item.id)}
-            >
-              <NavIcon screen={item.id} active={activeScreen === item.id} />
-              <NavLabel $collapsed={settings.sidebarCollapsed}>
-                {item.label}
-              </NavLabel>
-            </NavButton>
-          ))}
-        </Sidebar>
-        <Main>
-          {activeScreen === "focus" ? (
-            <FocusScreen>
-              <ModeToggle mode={mode} disabled={!isIdle} onChange={setMode} />
-              <SetupGrid>
-                <SetupFields>
-                  <SessionNameField
-                    name={name}
-                    disabled={!isIdle || isBacklogSelected}
-                    onChange={setName}
-                  />
-                  <SessionScopeField
-                    scope={scope}
-                    disabled={!isIdle}
-                    onChange={setScope}
-                  />
-                  <Field>
-                    <FieldLabel>
-                      {mode === "timer" ? (
-                        <>
-                          Duration
-                          <RequiredMark>*</RequiredMark>
-                        </>
-                      ) : (
-                        "Goal (optional)"
-                      )}
-                    </FieldLabel>
-                    <TextInput
-                      value={
-                        durationMinutes > 0 ? `${durationMinutes}m` : ""
-                      }
-                      disabled={!isIdle}
-                      onChange={(event) =>
-                        handleDurationInputChange(event.target.value)
-                      }
-                      placeholder={
-                        mode === "timer" ? "e.g. 45m" : "e.g. 25m"
-                      }
-                    />
-                  </Field>
-                  {isIdle && !isBacklogSelected ? (
-                    <SaveToBacklogField
-                      visible
-                      checked={saveToBacklog}
-                      disabled={!isIdle}
-                      onChange={setSaveToBacklog}
-                    />
-                  ) : null}
-                  {isFocusPaused && isBreakActive && activeFocusRecord ? (
-                    <ErrorText>
-                      {activeFocusRecord.name} paused ·{" "}
-                      {formatHmsClock(focusElapsedSeconds)}
-                    </ErrorText>
-                  ) : null}
-                  {errorMessage ? <ErrorText>{errorMessage}</ErrorText> : null}
-                  {isIdle ? (
-                    <Button
-                      type="button"
-                      $variant="glow"
-                      disabled={isBusy || !hasSessionName}
-                      onClick={handleStart}
-                    >
-                      <StartButtonContent>
-                        Start
-                        <StartPlayIcon aria-hidden>▶</StartPlayIcon>
-                      </StartButtonContent>
-                    </Button>
-                  ) : (
-                    <ButtonRow>
-                      {isFocusRunning ? (
-                        <Button
-                          type="button"
-                          disabled={isBusy}
-                          onClick={handlePause}
-                        >
-                          Pause
-                        </Button>
-                      ) : null}
-                      {isFocusPaused && !isBreakRunning ? (
-                        <Button
-                          type="button"
-                          disabled={isBusy}
-                          onClick={handleResume}
-                        >
-                          Resume
-                        </Button>
-                      ) : null}
-                      {activeFocusRecord !== null ? (
-                        <Button
-                          type="button"
-                          $variant="danger"
-                          disabled={isBusy}
-                          onClick={() => {
-                            if (activeFocusRecord !== null) {
-                              handledAutoStopRecordId.current =
-                                activeFocusRecord.id;
-                            }
-                            void requestStop(
-                              focusElapsedSeconds,
-                              settings.confirmOnStop,
-                            );
-                          }}
-                        >
-                          Stop
-                        </Button>
-                      ) : null}
-                      {isBreakActive ? (
-                        <Button
-                          type="button"
-                          $variant="danger"
-                          disabled={isBusy}
-                          onClick={() => {
-                            if (activeBreakRecord !== null) {
-                              handledAutoStopBreakRecordId.current =
-                                activeBreakRecord.id;
-                            }
-                            void requestBreakStop(
-                              breakElapsedSeconds,
-                              settings.confirmOnStop,
-                            );
-                          }}
-                        >
-                          Stop break
-                        </Button>
-                      ) : null}
-                    </ButtonRow>
-                  )}
-                </SetupFields>
-                <DurationDial
-                  minutes={showBreakClock ? breakOfferMinutes : durationMinutes}
-                  displayValue={clockValue}
-                  unitLabel={showBreakClock || mode === "timer" ? "mins" : "secs"}
-                  caption={clockCaption}
-                  disabled={!isIdle}
-                  onChange={handleDurationChange}
-                />
-              </SetupGrid>
-              <CollapsibleSection title="Regular Sessions" defaultExpanded>
-                <BacklogPicker
-                  sessions={sessions}
-                  selectedSessionId={selectedSessionId}
-                  disabled={!isIdle}
-                  onSelect={handleSelectBacklog}
-                  onPlay={(sessionId) => {
-                    void handlePlayBacklog(sessionId);
-                  }}
-                  onEdit={(session) => setEditingSession(session)}
-                  onDelete={async (sessionId) => {
-                    await window.tempo.deleteSession(sessionId);
-                    if (selectedSessionId === sessionId) {
-                      setSelectedSessionId(null);
-                      setName("");
-                    }
-                    await refreshState();
-                  }}
-                />
-              </CollapsibleSection>
-            </FocusScreen>
-          ) : null}
-          {activeScreen === "history" ? (
-            <>
-              <MainHeader>
-                <ScreenTitle>History</ScreenTitle>
-                <Button
-                  type="button"
-                  $variant="ghost"
-                  onClick={() => {
-                    setEditingRecord(null);
-                    setIsManualDialogOpen(true);
-                  }}
-                >
-                  Add record
-                </Button>
-              </MainHeader>
-              <HistorySection
-                records={records}
-                sessions={sessions}
-                onEdit={(record) => {
-                  setEditingRecord(record);
-                  setIsManualDialogOpen(true);
-                }}
-                onDelete={async (recordId) => {
-                  await window.tempo.deleteRecord(recordId);
-                  await refreshState();
-                }}
-              />
-            </>
-          ) : null}
-          {activeScreen === "analytics" ? (
-            <>
-              <MainHeader>
-                <ScreenTitle>Analytics</ScreenTitle>
-              </MainHeader>
-              <AnalyticsSection records={records} sessions={sessions} />
-            </>
-          ) : null}
-          {activeScreen === "settings" ? (
-            <>
-              <MainHeader>
-                <ScreenTitle>Settings</ScreenTitle>
-              </MainHeader>
-              <SettingsSection
-                settings={settings}
-                onChange={(patch) => {
-                  void patchSettings(patch);
-                }}
-                onImport={async () => {
-                  const imported = await window.tempo.importData();
-                  if (imported) {
-                    didApplyLaunchSettings.current = false;
-                    await refreshState();
-                  }
-                }}
-              />
-            </>
-          ) : null}
-        </Main>
-      </AppShell>
+    <div className="tempo-grain flex h-full min-h-full flex-col bg-tempo-bg text-tempo-text">
+      <AppTopBar
+        activeScreen={activeScreen}
+        statusLabel={headerStatus.label}
+        isLive={headerStatus.isLive}
+        onNavigate={setActiveScreen}
+      />
+      {activeScreen === "focus" ? (
+        <FocusStage
+          viewState={viewState}
+          mode={mode}
+          name={
+            viewState === "breakOnly" && activeBreakRecord
+              ? activeBreakRecord.name
+              : name
+          }
+          scope={scope}
+          durationMinutes={durationMinutes}
+          sessions={sessions}
+          selectedSessionId={selectedSessionId}
+          saveToBacklog={saveToBacklog}
+          isBacklogSelected={isBacklogSelected}
+          isBreakSelected={isBreakSelected}
+          breakDurationMinutes={settings.breakDurationMinutes}
+          clockValue={stageClock.value}
+          overGoal={stageClock.overGoal}
+          elapsedSeconds={stageClock.elapsedSeconds}
+          targetSeconds={stageClock.targetSeconds}
+          leftLabel={stageClock.leftLabel}
+          rightLabel={stageClock.rightLabel}
+          railDone={stageClock.railDone}
+          isBusy={isBusy}
+          canStart={canStart}
+          startHint="Enter a session name to start"
+          errorMessage={errorMessage}
+          pausedFocusLabel={pausedFocusLabel}
+          isLive={headerStatus.isLive}
+          onModeChange={setMode}
+          onNameChange={setName}
+          onScopeChange={setScope}
+          onDurationChange={setDurationMinutes}
+          onSaveToBacklogChange={setSaveToBacklog}
+          onSelectActivity={handleSelectBacklog}
+          onEditActivity={setEditingSession}
+          onDeleteActivity={async (sessionId) => {
+            await window.tempo.deleteSession(sessionId);
+            if (selectedSessionId === sessionId) {
+              setSelectedSessionId(null);
+              setName("");
+            }
+            await refreshState();
+          }}
+          onStart={() => {
+            void handleStart();
+          }}
+          onPause={() => {
+            void handlePause();
+          }}
+          onResume={() => {
+            void handleResume();
+          }}
+          onStop={() => {
+            if (activeFocusRecord !== null) {
+              handledAutoStopRecordId.current = activeFocusRecord.id;
+            }
+            void requestStop(focusElapsedSeconds, settings.confirmOnStop);
+          }}
+          onStopBreak={() => {
+            if (activeBreakRecord !== null) {
+              handledAutoStopBreakRecordId.current = activeBreakRecord.id;
+            }
+            void requestBreakStop(breakElapsedSeconds, settings.confirmOnStop);
+          }}
+        />
+      ) : null}
+      {activeScreen === "history" ? (
+        <HistorySection
+          records={records}
+          sessions={sessions}
+          onAdd={() => {
+            setEditingRecord(null);
+            setIsManualDialogOpen(true);
+          }}
+          onEdit={(record) => {
+            setEditingRecord(record);
+            setIsManualDialogOpen(true);
+          }}
+          onDelete={async (recordId) => {
+            await window.tempo.deleteRecord(recordId);
+            await refreshState();
+          }}
+        />
+      ) : null}
+      {activeScreen === "analytics" ? (
+        <AnalyticsSection records={records} sessions={sessions} />
+      ) : null}
+      {activeScreen === "settings" ? (
+        <SettingsSection
+          settings={settings}
+          onChange={(patch) => {
+            void patchSettings(patch);
+          }}
+          onImport={async () => {
+            const imported = await window.tempo.importData();
+            if (imported) {
+              didApplyLaunchSettings.current = false;
+              await refreshState();
+            }
+          }}
+        />
+      ) : null}
       {editingSession !== null ? (
         <SavedSessionDialog
           session={editingSession}
@@ -1054,6 +802,9 @@ export function App() {
           }
           canSave={stopDialogCanSave}
           isBusy={isBusy}
+          onDismiss={() => {
+            void closeStopDialog();
+          }}
           onSave={() => {
             if (stopDialogTarget === "break") {
               void handleSaveBreakStop();
@@ -1074,9 +825,10 @@ export function App() {
         <BreakOfferDialog
           durationMinutes={breakOfferMinutes}
           isBusy={isBusy}
-          onDurationChange={(value) => {
-            const parsed = parseMinutesInput(value);
-            setBreakOfferMinutes(parsed ?? breakOfferMinutes);
+          onDurationChange={(minutes) => {
+            if (Number.isFinite(minutes) && minutes >= 1 && minutes <= 60) {
+              setBreakOfferMinutes(Math.round(minutes));
+            }
           }}
           onStartBreak={() => {
             void handleStartBreak(breakOfferMinutes);
@@ -1086,88 +838,7 @@ export function App() {
           }}
         />
       ) : null}
-    </>
-  );
-}
-
-function BrandMark({ ariaLabel, onClick }: BrandMarkProps) {
-  return (
-    <BrandLogoButton type="button" aria-label={ariaLabel} onClick={onClick}>
-      <BrandLogo viewBox="0 0 32 32" aria-hidden="true">
-        <circle
-          cx="16"
-          cy="16"
-          r="10.5"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="3.2"
-        />
-      </BrandLogo>
-    </BrandLogoButton>
-  );
-}
-
-interface BrandMarkProps {
-  ariaLabel: string;
-  onClick: () => void;
-}
-
-function SaveToBacklogField({
-  visible,
-  checked,
-  disabled,
-  onChange,
-}: SaveToBacklogFieldProps) {
-  return (
-    <SaveFieldSlot>
-      {visible ? (
-        <CheckboxField>
-          <input
-            type="checkbox"
-            checked={checked}
-            disabled={disabled}
-            onChange={(event) => onChange(event.target.checked)}
-          />
-          Save as Regular
-        </CheckboxField>
-      ) : null}
-    </SaveFieldSlot>
-  );
-}
-
-function SessionNameField({ name, disabled, onChange }: SessionNameFieldProps) {
-  return (
-    <Field>
-      <FieldLabel>
-        Session Name
-        <RequiredMark>*</RequiredMark>
-      </FieldLabel>
-      <TextInput
-        value={name}
-        disabled={disabled}
-        onChange={(event) => onChange(event.target.value)}
-        placeholder="Code Review - Project Alpha"
-      />
-    </Field>
-  );
-}
-
-function SessionScopeField({
-  scope,
-  disabled,
-  onChange,
-}: SessionScopeFieldProps) {
-  return (
-    <Field>
-      <FieldLabel>Scope</FieldLabel>
-      <TextArea
-        value={scope}
-        disabled={disabled}
-        onChange={(event) => onChange(event.target.value)}
-        placeholder="What you'll work on this session"
-        rows={2}
-      />
-    </Field>
+    </div>
   );
 }
 
@@ -1187,51 +858,118 @@ function playGoalSound(settings: AppSettings) {
   playGoalReachedSound(settings.soundVolume);
 }
 
-function resolveClockCaption(
-  mode: TimerMode,
-  isRunning: boolean,
-  isPaused: boolean,
-  remainingSeconds: number | null,
-  hasReachedGoal: boolean,
-): string | null {
-  if (isPaused) {
-    return hasReachedGoal ? "Goal reached" : null;
+function resolveHeaderStatus(
+  viewState: ReturnType<typeof resolveFocusViewState>,
+  isBreakRunning: boolean,
+): { label: string; isLive: boolean } {
+  if (viewState === "idle") {
+    return { label: "Ready", isLive: false };
   }
+  if (viewState === "focusRunning") {
+    return { label: "Running", isLive: true };
+  }
+  if (viewState === "focusPaused") {
+    return { label: "Paused", isLive: false };
+  }
+  if (viewState === "breakOnly" || viewState === "focusPausedBreakRunning") {
+    return {
+      label: isBreakRunning ? "Break" : "Paused",
+      isLive: isBreakRunning,
+    };
+  }
+  return { label: "Ready", isLive: false };
+}
+
+function resolveStageClock({
+  viewState,
+  mode,
+  durationMinutes,
+  composerPlannedSeconds,
+  focusElapsedSeconds,
+  breakElapsedSeconds,
+  focusRecord,
+  breakRecord,
+}: StageClockInput): StageClock {
+  const showBreakClock =
+    viewState === "breakOnly" || viewState === "focusPausedBreakRunning";
+  if (showBreakClock && breakRecord !== null) {
+    const remaining =
+      getRemainingSeconds(breakElapsedSeconds, breakRecord.plannedSeconds) ?? 0;
+    const target = breakRecord.plannedSeconds ?? 0;
+    const done = target > 0 && remaining === 0;
+    return {
+      value: formatStageClock(remaining),
+      elapsedSeconds: breakElapsedSeconds,
+      targetSeconds: target,
+      leftLabel: "left",
+      rightLabel: done ? "goal reached" : formatGoalLabel(Math.round(target / 60)),
+      railDone: done,
+      overGoal: done,
+    };
+  }
+
+  const plannedSeconds =
+    focusRecord?.plannedSeconds ??
+    (composerPlannedSeconds > 0 ? composerPlannedSeconds : 0);
+  const hasGoal = plannedSeconds > 0;
+  const remaining = getRemainingSeconds(focusElapsedSeconds, plannedSeconds);
+  const done =
+    hasGoal &&
+    ((mode === "timer" && remaining === 0 && viewState !== "idle") ||
+      (mode === "stopwatch" &&
+        remaining === 0 &&
+        viewState !== "idle"));
 
   if (mode === "timer") {
-    if (remainingSeconds === null) {
-      return "Set a duration to start";
-    }
-    return isRunning ? "Remaining" : "Ready";
+    const displaySeconds =
+      viewState === "idle"
+        ? composerPlannedSeconds
+        : (remaining ?? composerPlannedSeconds);
+    return {
+      value: formatStageClock(displaySeconds),
+      elapsedSeconds: viewState === "idle" ? 0 : focusElapsedSeconds,
+      targetSeconds: plannedSeconds,
+      leftLabel: "left",
+      rightLabel: done ? "goal reached" : formatGoalLabel(durationMinutes),
+      railDone: done,
+      overGoal: done,
+    };
   }
 
-  return hasReachedGoal ? "Goal reached" : null;
+  return {
+    value: formatStageClock(viewState === "idle" ? 0 : focusElapsedSeconds),
+    elapsedSeconds: viewState === "idle" ? 0 : focusElapsedSeconds,
+    targetSeconds: plannedSeconds,
+    leftLabel: "elapsed",
+    rightLabel: done
+      ? "goal reached"
+      : hasGoal
+        ? formatGoalLabel(Math.round(plannedSeconds / 60))
+        : "no goal",
+    railDone: done,
+    overGoal: done,
+  };
 }
 
-const NAV_ITEMS: { id: AppScreen; label: string }[] = [
-  { id: "focus", label: "Focus" },
-  { id: "history", label: "History" },
-  { id: "analytics", label: "Analytics" },
-  { id: "settings", label: "Settings" },
-];
-
-interface SaveToBacklogFieldProps {
-  visible: boolean;
-  checked: boolean;
-  disabled: boolean;
-  onChange: (checked: boolean) => void;
+interface StageClock {
+  value: string;
+  elapsedSeconds: number;
+  targetSeconds: number;
+  leftLabel: string;
+  rightLabel: string;
+  railDone: boolean;
+  overGoal: boolean;
 }
 
-interface SessionNameFieldProps {
-  name: string;
-  disabled: boolean;
-  onChange: (name: string) => void;
-}
-
-interface SessionScopeFieldProps {
-  scope: string;
-  disabled: boolean;
-  onChange: (scope: string) => void;
+interface StageClockInput {
+  viewState: ReturnType<typeof resolveFocusViewState>;
+  mode: TimerMode;
+  durationMinutes: number;
+  composerPlannedSeconds: number;
+  focusElapsedSeconds: number;
+  breakElapsedSeconds: number;
+  focusRecord: FocusRecord | null;
+  breakRecord: FocusRecord | null;
 }
 
 type StopDialogTarget = "focus" | "break";

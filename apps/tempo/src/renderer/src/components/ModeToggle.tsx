@@ -1,27 +1,47 @@
-import { ToggleButton, ToggleRow } from "./ModeToggle.styles";
+import { cn } from "../lib/cn";
 
 import type { TimerMode } from "../../../shared/records.types";
 
 export function ModeToggle({ mode, disabled, onChange }: ModeToggleProps) {
   return (
-    <ToggleRow>
-      <ToggleButton
-        type="button"
-        $active={mode === "stopwatch"}
+    <div className="z-[1] flex gap-1" role="group" aria-label="Timer mode">
+      <ModeButton
+        pressed={mode === "stopwatch"}
         disabled={disabled}
         onClick={() => onChange("stopwatch")}
       >
         Stopwatch
-      </ToggleButton>
-      <ToggleButton
-        type="button"
-        $active={mode === "timer"}
+      </ModeButton>
+      <ModeButton
+        pressed={mode === "timer"}
         disabled={disabled}
         onClick={() => onChange("timer")}
       >
         Timer
-      </ToggleButton>
-    </ToggleRow>
+      </ModeButton>
+    </div>
+  );
+}
+
+function ModeButton({
+  pressed,
+  disabled,
+  onClick,
+  children,
+}: ModeButtonProps) {
+  return (
+    <button
+      type="button"
+      aria-pressed={pressed}
+      disabled={disabled}
+      className={cn(
+        "rounded-[20px] border border-transparent bg-transparent px-3.5 py-1.5 text-[13px] font-medium text-tempo-faint transition-colors hover:text-tempo-muted disabled:opacity-40",
+        pressed ? "border-tempo-line bg-tempo-panel text-tempo-text" : null,
+      )}
+      onClick={onClick}
+    >
+      {children}
+    </button>
   );
 }
 
@@ -29,4 +49,11 @@ interface ModeToggleProps {
   mode: TimerMode;
   disabled: boolean;
   onChange: (mode: TimerMode) => void;
+}
+
+interface ModeButtonProps {
+  pressed: boolean;
+  disabled: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
 }

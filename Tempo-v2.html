@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Tempo — focus timer</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,200..700&family=Inter+Tight:wght@400;500;600&display=swap');
+
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+.t2-root{
+  --bg:#08090C; --panel:rgba(255,255,255,.03); --line:rgba(255,255,255,.08);
+  --line2:rgba(255,255,255,.16); --text:#F4F3F0; --muted:#7E828C; --faint:#4B4E58;
+  --accent:#8B7CFF;
+  min-height:100vh; display:flex; flex-direction:column; color:var(--text);
+  background:var(--bg); font-family:'Inter Tight',system-ui,sans-serif; letter-spacing:-.01em;
+  position:relative; overflow:hidden; -webkit-font-smoothing:antialiased;
+}
+.t2-root::before{ /* grain */
+  content:""; position:fixed; inset:0; pointer-events:none; opacity:.4; mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* top bar */
+.t2-top{
+  display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:20px;
+  padding:20px 32px; border-bottom:1px solid var(--line);
+  background:rgba(8,9,12,.6); backdrop-filter:blur(14px); position:sticky; top:0; z-index:5;
+}
+.t2-brand{display:flex; align-items:center; gap:10px; font-family:'Bricolage Grotesque'; font-weight:600; font-size:19px}
+.t2-mark{width:16px; height:16px; border-radius:50%; border:2px solid var(--accent)}
+.t2-nav{display:flex; gap:26px; justify-content:center}
+.t2-nav a{font-size:14px; color:var(--muted); cursor:pointer; transition:.15s}
+.t2-nav a:hover{color:var(--text)}
+.t2-nav a.on{color:var(--text)}
+.t2-state{justify-self:end; display:flex; align-items:center; gap:8px; font-size:13px; color:var(--muted)}
+.t2-pip{width:6px; height:6px; border-radius:50%; background:var(--faint); transition:.2s}
+.t2-state.live{color:var(--text)} .t2-state.live .t2-pip{background:#5FE0AE; box-shadow:0 0 0 3px rgba(95,224,174,.2)}
+
+/* stage */
+.t2-stage{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px 24px; gap:22px; position:relative}
+.t2-glow{position:absolute; top:34%; width:560px; height:560px; border-radius:50%; pointer-events:none;
+  background:radial-gradient(circle, rgba(139,124,255,.20), transparent 62%); filter:blur(30px); transition:opacity .6s}
+
+.t2-switch{display:flex; gap:4px; position:relative; z-index:1}
+.t2-switch button{border:0; background:transparent; color:var(--faint); font:inherit; font-size:13px; font-weight:500;
+  padding:6px 14px; border-radius:20px; cursor:pointer; transition:.18s}
+.t2-switch button:hover{color:var(--muted)}
+.t2-switch button.on{color:var(--text); background:var(--panel); border:1px solid var(--line)}
+
+.t2-title{background:transparent; border:0; text-align:center; color:var(--text); font:inherit; font-size:18px; font-weight:500;
+  padding:6px 12px; border-radius:8px; width:min(420px,80vw); transition:.15s; z-index:1}
+.t2-title::placeholder{color:var(--faint)}
+.t2-title:focus{outline:0; background:var(--panel)}
+
+.t2-time{font-family:'Bricolage Grotesque'; font-weight:250; font-size:clamp(78px,17vw,168px); line-height:.9;
+  letter-spacing:-.05em; font-variant-numeric:tabular-nums; font-feature-settings:'tnum' 1; z-index:1;
+  transition:color .3s}
+.t2-time.done{color:var(--accent)}
+
+.t2-track{width:min(440px,86vw); z-index:1}
+.t2-meta{display:flex; justify-content:space-between; font-size:12px; color:var(--muted); margin-bottom:10px; letter-spacing:.01em}
+.t2-rail{position:relative; height:3px; background:var(--line); border-radius:3px}
+.t2-fill{position:absolute; left:0; top:0; height:100%; background:var(--accent); border-radius:3px; transition:width .15s linear}
+.t2-fill.done{background:#5FE0AE}
+.t2-head{position:absolute; top:50%; width:11px; height:11px; border-radius:50%; background:var(--text);
+  transform:translate(-50%,-50%); transition:left .15s linear; box-shadow:0 0 0 4px var(--bg)}
+
+.t2-controls{display:flex; gap:10px; z-index:1; margin-top:4px}
+.t2-primary{border:0; border-radius:12px; padding:14px 40px; font:inherit; font-size:15px; font-weight:600;
+  background:var(--text); color:#0B0B0E; cursor:pointer; transition:.15s}
+.t2-primary:hover{opacity:.86}
+.t2-primary:active{transform:scale(.98)}
+.t2-sec{border:1px solid var(--line2); background:transparent; color:var(--muted); border-radius:12px;
+  padding:14px 22px; font:inherit; font-size:15px; font-weight:500; cursor:pointer; transition:.15s}
+.t2-sec:hover:not(:disabled){color:var(--text)}
+.t2-sec:disabled{opacity:.3; cursor:not-allowed}
+
+.t2-opts{display:flex; align-items:center; gap:14px; z-index:1}
+.t2-steps{display:flex; gap:6px}
+.t2-steps button{border:1px solid var(--line); background:transparent; color:var(--muted); border-radius:8px;
+  padding:7px 13px; font:inherit; font-size:12.5px; font-weight:500; cursor:pointer; transition:.15s}
+.t2-steps button:hover{color:var(--text); border-color:var(--line2)}
+.t2-steps button.on{color:var(--text); border-color:var(--accent); background:rgba(139,124,255,.1)}
+.t2-scopebtn{border:0; background:transparent; color:var(--faint); font:inherit; font-size:12.5px; cursor:pointer; transition:.15s}
+.t2-scopebtn:hover{color:var(--muted)}
+.t2-scope{width:min(440px,86vw); background:var(--panel); border:1px solid var(--line); border-radius:11px;
+  padding:12px 14px; color:var(--text); font:inherit; font-size:14px; resize:none; z-index:1}
+.t2-scope::placeholder{color:var(--faint)} .t2-scope:focus{outline:0; border-color:var(--line2)}
+
+/* quick */
+.t2-quick{display:flex; align-items:center; gap:18px; padding:18px 32px; border-top:1px solid var(--line);
+  background:rgba(8,9,12,.5); backdrop-filter:blur(14px); flex-wrap:wrap}
+.t2-qlabel{font-size:12px; color:var(--faint); font-weight:500}
+.t2-qrow{display:flex; gap:8px; flex-wrap:wrap}
+.t2-q{display:flex; align-items:center; gap:9px; border:1px solid var(--line); background:transparent; color:var(--text);
+  font:inherit; font-size:13px; font-weight:500; padding:8px 14px; border-radius:10px; cursor:pointer; transition:.15s}
+.t2-q:hover{border-color:var(--line2); background:var(--panel)}
+.t2-q.on{border-color:var(--accent)}
+.t2-qdot{width:7px; height:7px; border-radius:50%}
+.t2-q em{font-style:normal; color:var(--faint); font-size:11.5px}
+
+@media (max-width:640px){
+  .t2-top{grid-template-columns:1fr auto; padding:16px 18px}
+  .t2-nav{display:none}
+  .t2-stage{padding:28px 18px}
+  .t2-quick{padding:14px 18px}
+}
+@media (prefers-reduced-motion:reduce){ .t2-primary:active{transform:none} }
+</style>
+</head>
+<body>
+<div class="t2-root">
+  <header class="t2-top">
+    <div class="t2-brand"><span class="t2-mark"></span> Tempo</div>
+    <nav class="t2-nav" id="nav"></nav>
+    <div class="t2-state" id="state"><span class="t2-pip"></span><span id="stateText">Ready</span></div>
+  </header>
+
+  <main class="t2-stage">
+    <div class="t2-glow" id="glow" style="opacity:.5"></div>
+
+    <div class="t2-switch" id="switch">
+      <button data-mode="stopwatch" class="on">Stopwatch</button>
+      <button data-mode="timer">Timer</button>
+    </div>
+
+    <input class="t2-title" id="title" value="Software Growth" spellcheck="false" placeholder="Untitled session" />
+
+    <div class="t2-time" id="time">00:00</div>
+
+    <div class="t2-track">
+      <div class="t2-meta"><span id="metaLeft">elapsed</span><span id="metaRight">goal · 10m</span></div>
+      <div class="t2-rail">
+        <div class="t2-fill" id="fill" style="width:0%"></div>
+        <div class="t2-head" id="head" style="left:0%"></div>
+      </div>
+    </div>
+
+    <div class="t2-controls">
+      <button class="t2-primary" id="primary">Start</button>
+      <button class="t2-sec" id="sec" disabled>Reset</button>
+    </div>
+
+    <div class="t2-opts">
+      <div class="t2-steps" id="steps"></div>
+      <button class="t2-scopebtn" id="scopebtn">+ Scope</button>
+    </div>
+
+    <textarea class="t2-scope" id="scope" rows="2" placeholder="What you'll work on this session" style="display:none"></textarea>
+  </main>
+
+  <footer class="t2-quick">
+    <span class="t2-qlabel">Quick start</span>
+    <div class="t2-qrow" id="quick"></div>
+  </footer>
+</div>
+
+<script>
+(function () {
+  var QUICK = [
+    { name: "Deep Work", dot: "#8B7CFF", goal: 50 * 60 },
+    { name: "Break", dot: "#5FE0AE", goal: 10 * 60 },
+    { name: "Job Search", dot: "#5AA9FF", goal: 30 * 60 },
+    { name: "Personal", dot: "#F5B454", goal: 20 * 60 }
+  ];
+  var NAV = ["Focus", "History", "Analytics", "Settings"];
+
+  var state = {
+    mode: "stopwatch", running: false,
+    goal: 10 * 60, duration: 25 * 60, elapsed: 0, active: null, showScope: false
+  };
+  var startTs = null, base = 0, raf = null, lastMode = null;
+  var $ = function (id) { return document.getElementById(id); };
+
+  function fmt(s) {
+    s = Math.max(0, Math.floor(s));
+    var h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+    var p = function (n) { return String(n).padStart(2, "0"); };
+    return h > 0 ? p(h) + ":" + p(m) + ":" + p(sec) : p(m) + ":" + p(sec);
+  }
+  function label(s) { var m = Math.floor(s / 60); return m >= 60 ? (m / 60) + "h" : m + "m"; }
+
+  /* ---- build static bits ---- */
+  function buildNav() {
+    $("nav").innerHTML = NAV.map(function (n, i) {
+      return '<a class="' + (i === 0 ? "on" : "") + '">' + n + '</a>';
+    }).join("");
+  }
+  function buildQuick() {
+    $("quick").innerHTML = QUICK.map(function (q) {
+      return '<button class="t2-q" data-name="' + q.name + '" data-goal="' + q.goal + '">' +
+        '<span class="t2-qdot" style="background:' + q.dot + '"></span>' + q.name +
+        '<em>' + (q.goal / 60) + 'm</em></button>';
+    }).join("");
+    $("quick").querySelectorAll(".t2-q").forEach(function (el) {
+      el.addEventListener("click", function () {
+        state.active = el.dataset.name;
+        $("title").value = el.dataset.name;
+        if (state.mode === "stopwatch") state.goal = parseInt(el.dataset.goal, 10);
+        reset(); renderChrome();
+      });
+    });
+  }
+  function buildSteps() {
+    var vals = state.mode === "timer" ? [15, 25, 45] : [10, 30, 50];
+    $("steps").innerHTML = vals.map(function (min) {
+      var on = (state.mode === "timer" ? state.duration : state.goal) === min * 60;
+      return '<button class="' + (on ? "on" : "") + '" data-min="' + min + '">' + min + 'm</button>';
+    }).join("");
+    $("steps").querySelectorAll("button").forEach(function (el) {
+      el.addEventListener("click", function () {
+        var v = parseInt(el.dataset.min, 10) * 60;
+        if (state.mode === "timer") { state.duration = v; reset(); }
+        else state.goal = v;
+        buildSteps(); renderFrame();
+      });
+    });
+    lastMode = state.mode;
+  }
+
+  /* ---- render ---- */
+  function renderChrome() {
+    $("switch").querySelectorAll("button").forEach(function (el) {
+      el.classList.toggle("on", el.dataset.mode === state.mode);
+    });
+    $("quick").querySelectorAll(".t2-q").forEach(function (el) {
+      el.classList.toggle("on", el.dataset.name === state.active);
+    });
+    if (lastMode !== state.mode) buildSteps();
+    renderFrame();
+  }
+  function renderFrame() {
+    var remaining = state.mode === "timer" ? Math.max(0, state.duration - state.elapsed) : state.elapsed;
+    var target = state.mode === "timer" ? state.duration : state.goal;
+    var progress = target > 0 ? Math.min(1, state.elapsed / target) : 0;
+    var done = state.mode === "timer" ? state.elapsed >= state.duration : state.elapsed >= state.goal;
+
+    var t = $("time");
+    t.textContent = fmt(remaining);
+    t.classList.toggle("done", done);
+
+    $("metaLeft").textContent = state.mode === "timer" ? "left" : "elapsed";
+    $("metaRight").textContent = done ? "goal reached" : "goal · " + label(target);
+
+    var fill = $("fill");
+    fill.style.width = (progress * 100) + "%";
+    fill.classList.toggle("done", done);
+    $("head").style.left = (progress * 100) + "%";
+
+    $("stateText").textContent = state.running ? "Running" : state.elapsed > 0 ? "Paused" : "Ready";
+    $("state").classList.toggle("live", state.running);
+    $("glow").style.opacity = state.running ? 0.9 : 0.5;
+
+    $("primary").textContent = state.running ? "Pause" : state.elapsed > 0 ? "Resume" : "Start";
+    $("sec").disabled = state.elapsed === 0 && !state.running;
+  }
+
+  /* ---- timer ---- */
+  function loop() {
+    var e = base + (performance.now() - startTs) / 1000;
+    if (state.mode === "timer" && e >= state.duration) {
+      state.elapsed = state.duration; state.running = false; base = state.duration;
+      renderFrame(); return;
+    }
+    state.elapsed = e; renderFrame(); raf = requestAnimationFrame(loop);
+  }
+  function toggle() {
+    base = state.elapsed;
+    state.running = !state.running;
+    if (state.running) { startTs = performance.now(); raf = requestAnimationFrame(loop); }
+    else if (raf) cancelAnimationFrame(raf);
+    renderFrame();
+  }
+  function reset() {
+    state.running = false; state.elapsed = 0; base = 0;
+    if (raf) cancelAnimationFrame(raf);
+    renderFrame();
+  }
+
+  /* ---- wire ---- */
+  $("switch").querySelectorAll("button").forEach(function (el) {
+    el.addEventListener("click", function () { state.mode = el.dataset.mode; reset(); renderChrome(); });
+  });
+  $("primary").addEventListener("click", toggle);
+  $("sec").addEventListener("click", reset);
+  $("scopebtn").addEventListener("click", function () {
+    state.showScope = !state.showScope;
+    $("scope").style.display = state.showScope ? "" : "none";
+    $("scopebtn").textContent = state.showScope ? "− Scope" : "+ Scope";
+  });
+
+  buildNav(); buildQuick(); buildSteps(); renderChrome();
+})();
+</script>
+</body>
+</html>

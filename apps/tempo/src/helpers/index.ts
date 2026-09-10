@@ -17,11 +17,14 @@ export {
   LEGACY_REST_SESSION_NAME,
   validateStartBreak,
 } from "./break.helper";
+export { resolveFocusViewState } from "./focus-view.helper";
+export type { FocusViewState } from "./focus-view.helper";
 export {
   foldRunningSegment,
   formatClock,
   formatHmsClock,
   formatMenuBarClock,
+  formatStageClock,
   formatTimerClock,
   getDisplayedElapsedSeconds,
   getRemainingSeconds,
@@ -37,6 +40,7 @@ export {
   buildActivityFilterOptions,
   buildBacklogFilterOptions,
   buildManualSessionOptions,
+  buildHistoryDayGroups,
   buildHistoryEntries,
   filterRecordsByBacklogSession,
   filterRecordsByStartedAtRange,

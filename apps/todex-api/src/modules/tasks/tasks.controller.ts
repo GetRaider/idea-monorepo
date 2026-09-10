@@ -38,7 +38,7 @@ export class TasksController {
     @Req() request: WorkspaceRequest,
     @Query(zodPipe(ListTasksQuerySchema)) query: ListTasksQuery,
   ) {
-    return this.tasksService.list(request.workspaceId, query.boardId);
+    return this.tasksService.list(request.workspaceId, query);
   }
 
   @Post()

@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import dynamic from "next/dynamic";
 import {
   Button,
+  ConfirmDialog,
   Input,
   Label,
   Select,
@@ -14,7 +16,6 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
-  Textarea,
 } from "@repo/ui";
 import {
   formatEstimation,
@@ -22,9 +23,28 @@ import {
   TaskPriority,
   TaskStatus,
 } from "@repo/api/todex";
-import type { Task } from "@repo/api/todex";
+import type { Task, UpdateTaskBody } from "@repo/api/todex";
 
+import {
+  dateInputToLocalDayStartIso,
+  isoToDateInput,
+} from "./task-helpers";
 import { useTasks } from "./tasks-provider";
+
+const TaskDescriptionEditor = dynamic(
+  () =>
+    import("./task-description-editor").then(
+      (module) => module.TaskDescriptionEditor,
+    ),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="min-h-24 rounded-md border border-input bg-background px-3 py-2 text-sm text-muted-foreground">
+        Loading editor…
+      </div>
+    ),
+  },
+);
 
 export function TaskEditor() {
   const {
@@ -39,7 +59,7 @@ export function TaskEditor() {
         if (!open) setSelectedTaskId(null);
       }}
     >
-      <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-md">
+      <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-lg">
         {selectedTask ? (
           <TaskEditorForm
             key={selectedTask.id}
@@ -62,26 +82,22 @@ function TaskEditorForm({
 }: {
   task: Task;
   tasks: Task[];
-  onSave: (body: {
-    summary: string;
-    description: string;
-    status: Task["status"];
-    priority: Task["priority"];
-    dueDate: string | null;
-    estimation: number | null;
-    parentTaskId: string | null;
-  }) => void;
+  onSave: (body: UpdateTaskBody) => void;
   onRemove: () => void;
 }) {
   const [summary, setSummary] = useState(task.summary);
   const [description, setDescription] = useState(task.description);
   const [status, setStatus] = useState(task.status);
   const [priority, setPriority] = useState(task.priority);
-  const [dueDate, setDueDate] = useState(task.dueDate?.slice(0, 10) ?? "");
+  const [scheduleDate, setScheduleDate] = useState(
+    isoToDateInput(task.scheduleDate),
+  );
+  const [dueDate, setDueDate] = useState(isoToDateInput(task.dueDate));
   const [estimationText, setEstimationText] = useState(
     formatEstimation(task.estimation),
   );
   const [parentTaskId, setParentTaskId] = useState(task.parentTaskId ?? "");
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const parsedEstimation = parseEstimation(estimationText);
   const estimationInvalid =
     estimationText.trim() !== "" && parsedEstimation === null;
@@ -101,10 +117,9 @@ function TaskEditorForm({
           />
         </Field>
         <Field label="Description">
-          <Textarea
-            className="min-h-24"
-            value={description}
-            onChange={(event) => setDescription(event.target.value)}
+          <TaskDescriptionEditor
+            content={description}
+            onChange={setDescription}
           />
         </Field>
         <Field label="Status">
@@ -140,7 +155,14 @@ function TaskEditorForm({
             </SelectContent>
           </Select>
         </Field>
-        <Field label="Due date">
+        <Field label="Schedule" hint="When you plan to do it">
+          <Input
+            type="date"
+            value={scheduleDate}
+            onChange={(event) => setScheduleDate(event.target.value)}
+          />
+        </Field>
+        <Field label="Due" hint="Last day it should be done">
           <Input
             type="date"
             value={dueDate}
@@ -191,7 +213,8 @@ function TaskEditorForm({
               description,
               status,
               priority,
-              dueDate: dueDate ? new Date(dueDate).toISOString() : null,
+              scheduleDate: dateInputToLocalDayStartIso(scheduleDate),
+              dueDate: dateInputToLocalDayStartIso(dueDate),
               estimation: estimationText.trim() ? parsedEstimation : null,
               parentTaskId: parentTaskId || null,
             });
@@ -199,25 +222,41 @@ function TaskEditorForm({
         >
           Save
         </Button>
-        <Button className="w-full" variant="outline" onClick={onRemove}>
+        <Button
+          className="w-full"
+          variant="outline"
+          onClick={() => setIsDeleteOpen(true)}
+        >
           Delete
         </Button>
       </div>
+      {isDeleteOpen ? (
+        <ConfirmDialog
+          title="Delete task"
+          description={`Delete "${task.summary}"?`}
+          confirmLabel="Delete"
+          onClose={() => setIsDeleteOpen(false)}
+          onConfirm={onRemove}
+        />
+      ) : null}
     </>
   );
 }
 
 function Field({
   label,
+  hint,
   children,
 }: {
   label: string;
+  hint?: string;
   children: ReactNode;
 }) {
   return (
     <div className="space-y-2">
       <Label className="text-muted-foreground">{label}</Label>
       {children}
+      {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
     </div>
   );
 }

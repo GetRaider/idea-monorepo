@@ -81,12 +81,24 @@ export const todexClient = {
       call("delete", `/v1/boards/${boardId}`, z.object({ ok: z.boolean() })),
   },
   tasks: {
-    list: (boardId: string) =>
-      call(
+    list: (
+      query:
+        | { boardId: string }
+        | { scheduleFrom: string; scheduleTo: string },
+    ) => {
+      const searchParams =
+        "boardId" in query
+          ? new URLSearchParams({ boardId: query.boardId })
+          : new URLSearchParams({
+              scheduleFrom: query.scheduleFrom,
+              scheduleTo: query.scheduleTo,
+            });
+      return call(
         "get",
-        `/v1/tasks?boardId=${encodeURIComponent(boardId)}`,
+        `/v1/tasks?${searchParams.toString()}`,
         z.array(TaskSchema),
-      ),
+      );
+    },
     create: (body: unknown) =>
       call("post", "/v1/tasks", TaskSchema, CreateTaskBodySchema.parse(body)),
     update: (taskId: string, body: unknown) =>

@@ -177,6 +177,30 @@ export function StatusInProgressIcon(props: IconProps) {
   );
 }
 
+export function FolderIcon(props: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      {...iconSvgProps(props)}
+    >
+      <path d="M4 7.5A1.5 1.5 0 0 1 5.5 6h4.2l1.6 2H18.5A1.5 1.5 0 0 1 20 9.5v8A1.5 1.5 0 0 1 18.5 19h-13A1.5 1.5 0 0 1 4 17.5v-10Z" />
+    </svg>
+  );
+}
+
+export function EllipsisIcon(props: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" {...iconSvgProps(props)}>
+      <circle cx="6" cy="12" r="1.5" />
+      <circle cx="12" cy="12" r="1.5" />
+      <circle cx="18" cy="12" r="1.5" />
+    </svg>
+  );
+}
+
 export function StatusDoneIcon(props: IconProps) {
   return (
     <svg

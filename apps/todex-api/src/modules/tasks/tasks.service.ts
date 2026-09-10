@@ -4,11 +4,15 @@ import {
   Inject,
   Injectable,
 } from "@nestjs/common";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, gte, lt, sql } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { TaskPriority, TaskStatus } from "@repo/api/todex";
-import type { CreateTaskBody, UpdateTaskBody } from "@repo/api/todex";
+import type {
+  CreateTaskBody,
+  ListTasksQuery,
+  UpdateTaskBody,
+} from "@repo/api/todex";
 
 import { DRIZZLE_DB } from "../../db/tokens";
 import { tasks, workspaces } from "../../db/schema";
@@ -17,6 +21,7 @@ import {
   formatTaskKey,
   hasParentCycle,
 } from "../../helpers/parent-cycle.helper";
+import { sanitizeTaskHtml } from "../../helpers/sanitize-task-html.helper";
 import { BoardsService } from "../boards/boards.service";
 import { WorkspaceService } from "../workspace/workspace.service";
 
@@ -28,15 +33,20 @@ export class TasksService {
     private readonly workspaceService: WorkspaceService,
   ) {}
 
-  async list(workspaceId: string, boardId: string) {
-    await this.boardsService.requireInWorkspace(workspaceId, boardId);
-    const rows = await this.db
-      .select()
-      .from(tasks)
-      .where(
-        and(eq(tasks.workspaceId, workspaceId), eq(tasks.taskBoardId, boardId)),
+  async list(workspaceId: string, query: ListTasksQuery) {
+    if (query.boardId) {
+      return this.listByBoard(workspaceId, query.boardId);
+    }
+    if (!query.scheduleFrom || !query.scheduleTo) {
+      throw new BadRequestException(
+        "Provide boardId or both scheduleFrom and scheduleTo",
       );
-    return rows.map(mapTask);
+    }
+    return this.listByScheduleRange(
+      workspaceId,
+      new Date(query.scheduleFrom),
+      new Date(query.scheduleTo),
+    );
   }
 
   async create(workspaceId: string, body: CreateTaskBody) {
@@ -65,10 +75,11 @@ export class TasksService {
           taskBoardId: body.taskBoardId,
           taskKey: formatTaskKey(workspace.taskSeq),
           summary: body.summary,
-          description: body.description ?? "",
+          description: sanitizeTaskHtml(body.description ?? ""),
           status: body.status ?? TaskStatus.TODO,
           priority: body.priority ?? TaskPriority.MEDIUM,
           dueDate: parseIsoDate(body.dueDate),
+          scheduleDate: parseIsoDate(body.scheduleDate),
           estimation: body.estimation ?? null,
           parentTaskId: body.parentTaskId ?? null,
           createdAt: now,
@@ -107,12 +118,15 @@ export class TasksService {
           : {}),
         ...(body.summary !== undefined ? { summary: body.summary } : {}),
         ...(body.description !== undefined
-          ? { description: body.description }
+          ? { description: sanitizeTaskHtml(body.description) }
           : {}),
         ...(body.status !== undefined ? { status: body.status } : {}),
         ...(body.priority !== undefined ? { priority: body.priority } : {}),
         ...(body.dueDate !== undefined
           ? { dueDate: parseIsoDate(body.dueDate) }
+          : {}),
+        ...(body.scheduleDate !== undefined
+          ? { scheduleDate: parseIsoDate(body.scheduleDate) }
           : {}),
         ...(body.estimation !== undefined
           ? { estimation: body.estimation }
@@ -134,6 +148,35 @@ export class TasksService {
     const existing = await this.requireTaskInWorkspace(workspaceId, taskId);
     await this.db.delete(tasks).where(eq(tasks.id, existing.id));
     await this.workspaceService.bumpUpdatedAt(workspaceId);
+  }
+
+  private async listByBoard(workspaceId: string, boardId: string) {
+    await this.boardsService.requireInWorkspace(workspaceId, boardId);
+    const rows = await this.db
+      .select()
+      .from(tasks)
+      .where(
+        and(eq(tasks.workspaceId, workspaceId), eq(tasks.taskBoardId, boardId)),
+      );
+    return rows.map(mapTask);
+  }
+
+  private async listByScheduleRange(
+    workspaceId: string,
+    from: Date,
+    to: Date,
+  ) {
+    const rows = await this.db
+      .select()
+      .from(tasks)
+      .where(
+        and(
+          eq(tasks.workspaceId, workspaceId),
+          gte(tasks.scheduleDate, from),
+          lt(tasks.scheduleDate, to),
+        ),
+      );
+    return rows.map(mapTask);
   }
 
   private async requireTaskInWorkspace(workspaceId: string, taskId: string) {

@@ -25,9 +25,48 @@ export const TaskSchema = z.object({
   updatedAt: IsoDateTimeSchema,
 });
 
-export const ListTasksQuerySchema = z.object({
-  boardId: z.string().min(1),
-});
+export const ListTasksQuerySchema = z
+  .object({
+    boardId: z.string().min(1).optional(),
+    scheduleFrom: IsoDateTimeSchema.optional(),
+    scheduleTo: IsoDateTimeSchema.optional(),
+  })
+  .superRefine((value, context) => {
+    const hasBoard = value.boardId != null;
+    const hasFrom = value.scheduleFrom != null;
+    const hasTo = value.scheduleTo != null;
+    if (hasBoard && (hasFrom || hasTo)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Provide either boardId or a schedule range, not both",
+      });
+      return;
+    }
+    if (!hasBoard && !hasFrom && !hasTo) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Provide boardId or both scheduleFrom and scheduleTo",
+      });
+      return;
+    }
+    if (!hasBoard && hasFrom !== hasTo) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "scheduleFrom and scheduleTo are both required",
+      });
+      return;
+    }
+    if (hasFrom && hasTo) {
+      const fromTime = Date.parse(value.scheduleFrom!);
+      const toTime = Date.parse(value.scheduleTo!);
+      if (!(fromTime < toTime)) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "scheduleTo must be after scheduleFrom",
+        });
+      }
+    }
+  });
 
 export const CreateTaskBodySchema = z.object({
   taskBoardId: z.string().min(1),
@@ -45,6 +84,7 @@ export const CreateTaskBodySchema = z.object({
     ])
     .optional(),
   dueDate: IsoDateTimeSchema.nullable().optional(),
+  scheduleDate: IsoDateTimeSchema.nullable().optional(),
   estimation: z.number().int().nonnegative().nullable().optional(),
   parentTaskId: z.string().nullable().optional(),
 });
@@ -65,6 +105,7 @@ export const UpdateTaskBodySchema = z.object({
     ])
     .optional(),
   dueDate: IsoDateTimeSchema.nullable().optional(),
+  scheduleDate: IsoDateTimeSchema.nullable().optional(),
   estimation: z.number().int().nonnegative().nullable().optional(),
   parentTaskId: z.string().nullable().optional(),
 });

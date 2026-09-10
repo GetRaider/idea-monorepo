@@ -1,4 +1,4 @@
-import { TaskStatus } from "@repo/api/todex";
+import { TaskPriority, TaskStatus } from "@repo/api/todex";
 import type { Task } from "@repo/api/todex";
 
 export const STATUS_ORDER = [
@@ -42,16 +42,6 @@ export function groupRootsByStatus(
   return groups;
 }
 
-export function isSameLocalDay(iso: string | null, day: Date): boolean {
-  if (!iso) return false;
-  const date = new Date(iso);
-  return (
-    date.getFullYear() === day.getFullYear() &&
-    date.getMonth() === day.getMonth() &&
-    date.getDate() === day.getDate()
-  );
-}
-
 export function startOfLocalDay(offsetDays = 0): Date {
   const date = new Date();
   date.setHours(0, 0, 0, 0);
@@ -59,6 +49,110 @@ export function startOfLocalDay(offsetDays = 0): Date {
   return date;
 }
 
+export function localDayScheduleQuery(offsetDays = 0): {
+  scheduleFrom: string;
+  scheduleTo: string;
+} {
+  return {
+    scheduleFrom: startOfLocalDay(offsetDays).toISOString(),
+    scheduleTo: startOfLocalDay(offsetDays + 1).toISOString(),
+  };
+}
+
+export function dateInputToLocalDayStartIso(
+  yearMonthDay: string,
+): string | null {
+  if (!yearMonthDay) return null;
+  const [yearText, monthText, dayText] = yearMonthDay.split("-");
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+  if (!year || !month || !day) return null;
+  const date = new Date(year, month - 1, day);
+  date.setHours(0, 0, 0, 0);
+  return date.toISOString();
+}
+
+export function isoToDateInput(iso: string | null): string {
+  if (!iso) return "";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  const year = String(date.getFullYear());
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+export const DEFAULT_LIST_SORT: ListSortState = {
+  enabled: false,
+  field: "title",
+  direction: "asc",
+};
+
+export function compareTasksForListSort(
+  left: Task,
+  right: Task,
+  field: ListSortField,
+): number {
+  if (field === "title") {
+    return left.summary.localeCompare(right.summary, undefined, {
+      sensitivity: "base",
+    });
+  }
+  if (field === "schedule") {
+    const leftTime = left.scheduleDate ? Date.parse(left.scheduleDate) : null;
+    const rightTime = right.scheduleDate
+      ? Date.parse(right.scheduleDate)
+      : null;
+    if (leftTime == null && rightTime == null) return 0;
+    if (leftTime == null) return 1;
+    if (rightTime == null) return -1;
+    return leftTime - rightTime;
+  }
+  return PRIORITY_RANK[left.priority] - PRIORITY_RANK[right.priority];
+}
+
+export function sortNestedTasks(
+  nodes: NestedTask[],
+  sort: ListSortState,
+): NestedTask[] {
+  if (!sort.enabled) return nodes;
+  const direction = sort.direction === "asc" ? 1 : -1;
+  return [...nodes].sort(
+    (left, right) =>
+      direction * compareTasksForListSort(left, right, sort.field),
+  );
+}
+
+export function sortGroupsByListSort(
+  groups: Record<Task["status"], NestedTask[]>,
+  sort: ListSortState,
+): Record<Task["status"], NestedTask[]> {
+  return {
+    [TaskStatus.TODO]: sortNestedTasks(groups[TaskStatus.TODO], sort),
+    [TaskStatus.IN_PROGRESS]: sortNestedTasks(
+      groups[TaskStatus.IN_PROGRESS],
+      sort,
+    ),
+    [TaskStatus.DONE]: sortNestedTasks(groups[TaskStatus.DONE], sort),
+  };
+}
+
+const PRIORITY_RANK: Record<Task["priority"], number> = {
+  [TaskPriority.LOW]: 0,
+  [TaskPriority.MEDIUM]: 1,
+  [TaskPriority.HIGH]: 2,
+  [TaskPriority.CRITICAL]: 3,
+};
+
 export interface NestedTask extends Task {
   children: NestedTask[];
+}
+
+export type ListSortField = "title" | "schedule" | "priority";
+export type ListSortDirection = "asc" | "desc";
+export interface ListSortState {
+  enabled: boolean;
+  field: ListSortField;
+  direction: ListSortDirection;
 }

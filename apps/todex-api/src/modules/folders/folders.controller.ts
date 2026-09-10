@@ -10,6 +10,8 @@ import {
   Req,
   UseGuards,
 } from "@nestjs/common";
+import { AllowAnonymous } from "@thallesp/nestjs-better-auth";
+
 import {
   CreateFolderBodySchema,
   FolderKind,
@@ -26,6 +28,7 @@ import { zodPipe } from "../../pipes/zod-validation.pipe";
 import { FoldersService } from "./folders.service";
 
 @Controller("folders")
+@AllowAnonymous()
 @UseGuards(WorkspaceGuard)
 export class FoldersController {
   constructor(private readonly foldersService: FoldersService) {}

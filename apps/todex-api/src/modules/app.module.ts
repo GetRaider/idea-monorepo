@@ -6,6 +6,7 @@ import { AuthModule } from "@thallesp/nestjs-better-auth";
 import { HttpExceptionFilter } from "@repo/api/helpers/httpExceptionFilter.helper";
 
 import { auth } from "../auth";
+import { env } from "../env/env";
 import { DatabaseModule } from "../db/database.module";
 import { BoardsModule } from "./boards/boards.module";
 import { FoldersModule } from "./folders/folders.module";
@@ -20,6 +21,7 @@ import { WorkspaceModule } from "./workspace/workspace.module";
     AuthModule.forRoot({
       auth,
       disableTrustedOriginsCors: true,
+      disableGlobalAuthGuard: env.auth.disabled,
     }),
     WorkspaceModule,
     FoldersModule,

@@ -83,6 +83,40 @@ export function isoToDateInput(iso: string | null): string {
   return `${year}-${month}-${day}`;
 }
 
+export function formatScheduleLabel(
+  iso: string | null,
+  now = new Date(),
+): string | null {
+  if (!iso) return null;
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return null;
+  const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startTarget = new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate(),
+  );
+  const diffDays = Math.round(
+    (startTarget.getTime() - startToday.getTime()) / MS_PER_DAY,
+  );
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Tomorrow";
+  if (diffDays === -1) return "Yesterday";
+  return startTarget.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  });
+}
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+export const PRIORITY_LABEL: Record<Task["priority"], string> = {
+  [TaskPriority.LOW]: "Low",
+  [TaskPriority.MEDIUM]: "Medium",
+  [TaskPriority.HIGH]: "High",
+  [TaskPriority.CRITICAL]: "Critical",
+};
+
 export const DEFAULT_LIST_SORT: ListSortState = {
   enabled: false,
   field: "title",
@@ -138,6 +172,13 @@ export function sortGroupsByListSort(
   };
 }
 
+export function subtaskCompletion(childTasks: Task[]): SubtaskCompletion {
+  const done = childTasks.filter(
+    (child) => child.status === TaskStatus.DONE,
+  ).length;
+  return { done, total: childTasks.length };
+}
+
 const PRIORITY_RANK: Record<Task["priority"], number> = {
   [TaskPriority.LOW]: 0,
   [TaskPriority.MEDIUM]: 1,
@@ -147,6 +188,11 @@ const PRIORITY_RANK: Record<Task["priority"], number> = {
 
 export interface NestedTask extends Task {
   children: NestedTask[];
+}
+
+export interface SubtaskCompletion {
+  done: number;
+  total: number;
 }
 
 export type ListSortField = "title" | "schedule" | "priority";

@@ -1,10 +1,21 @@
 "use client";
 
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@repo/ui";
 
 import { signIn } from "@lib/auth-client";
+import { env } from "@lib/env";
 
 export default function SignInPage() {
+  const router = useRouter();
+
+  useEffect(() => {
+    if (env.auth.disabled) router.replace("/overview");
+  }, [router]);
+
+  if (env.auth.disabled) return null;
+
   return (
     <main className="flex min-h-screen items-center justify-center">
       <div className="w-full max-w-sm rounded-xl border border-border bg-panel p-8">

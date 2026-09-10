@@ -9,16 +9,23 @@ import { eq } from "drizzle-orm";
 import type { Request } from "express";
 
 import { db } from "../db/client";
+import { ensureLocalDevUser } from "../db/ensure-local-dev-user";
 import { ensureOwnerWorkspace } from "../db/ensure-workspace";
+import { env } from "../env/env";
 import { workspaceMembers } from "../db/schema";
 
 @Injectable()
 export class WorkspaceGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<WorkspaceRequest>();
-    const userId = request.session?.user?.id;
+    let userId = request.session?.user?.id;
+    let userName = request.session?.user?.name ?? null;
     if (!userId) {
-      throw new UnauthorizedException("Not authenticated");
+      if (!env.auth.disabled) {
+        throw new UnauthorizedException("Not authenticated");
+      }
+      userId = await ensureLocalDevUser(db);
+      userName = "Local Dev";
     }
 
     let memberships = await db
@@ -27,7 +34,7 @@ export class WorkspaceGuard implements CanActivate {
       .where(eq(workspaceMembers.userId, userId));
 
     if (memberships.length === 0) {
-      await ensureOwnerWorkspace(db, userId, request.session?.user?.name);
+      await ensureOwnerWorkspace(db, userId, userName);
       memberships = await db
         .select()
         .from(workspaceMembers)

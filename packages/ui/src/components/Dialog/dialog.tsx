@@ -218,9 +218,11 @@ export function Dialog({
   subtitle,
   onClose,
   children,
+  headerActions,
   showCloseButton = true,
   maxWidth = 500,
   minHeight,
+  className,
 }: DialogProps) {
   const titleId = useId();
   const subtitleId = useId();
@@ -262,6 +264,20 @@ export function Dialog({
 
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
+        const target = e.target;
+        if (
+          target instanceof Element &&
+          target.closest("[data-slash-menu='open']")
+        ) {
+          return;
+        }
+        if (
+          document.querySelector(
+            "[data-radix-menu-content][data-state='open'], [data-radix-select-content][data-state='open'], [data-radix-popper-content-wrapper]",
+          )
+        ) {
+          return;
+        }
         e.preventDefault();
         onCloseRef.current();
         return;
@@ -315,6 +331,7 @@ export function Dialog({
       <DialogContainer
         ref={dialogRef}
         onClick={(e) => e.stopPropagation()}
+        className={className}
         maxWidth={maxWidth}
         minHeight={minHeight}
         role="dialog"
@@ -330,6 +347,9 @@ export function Dialog({
               <DialogSubtitle id={subtitleId}>{subtitle}</DialogSubtitle>
             )}
           </div>
+          {headerActions ? (
+            <div className="flex shrink-0 items-center gap-1">{headerActions}</div>
+          ) : null}
           {showCloseButton && (
             <DialogCloseButton onClick={onClose}>
               <CloseIcon />
@@ -351,7 +371,9 @@ interface DialogProps {
   subtitle?: ReactNode;
   onClose: () => void;
   children: ReactNode;
+  headerActions?: ReactNode;
   showCloseButton?: boolean;
   maxWidth?: number;
   minHeight?: number;
+  className?: string;
 }

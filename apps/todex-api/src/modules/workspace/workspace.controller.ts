@@ -1,4 +1,5 @@
 import { Controller, Get, Req, UseGuards } from "@nestjs/common";
+import { AllowAnonymous } from "@thallesp/nestjs-better-auth";
 
 import {
   WorkspaceGuard,
@@ -7,6 +8,7 @@ import {
 import { WorkspaceService } from "./workspace.service";
 
 @Controller("workspaces")
+@AllowAnonymous()
 @UseGuards(WorkspaceGuard)
 export class WorkspaceController {
   constructor(private readonly workspaceService: WorkspaceService) {}

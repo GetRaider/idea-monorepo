@@ -39,13 +39,15 @@ export const auth = betterAuth({
     },
   },
   emailAndPassword: { enabled: false },
-  socialProviders: {
-    google: {
-      clientId: env.google.clientId,
-      clientSecret: env.google.clientSecret,
-      ...(isDevelopment ? {} : { disableSignUp: true }),
-    },
-  },
+  socialProviders: env.auth.disabled
+    ? {}
+    : {
+        google: {
+          clientId: env.google.clientId,
+          clientSecret: env.google.clientSecret,
+          ...(isDevelopment ? {} : { disableSignUp: true }),
+        },
+      },
   databaseHooks: {
     user: {
       create: {

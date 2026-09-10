@@ -1,5 +1,7 @@
+export * from "./command";
 export * from "./dropdown-menu";
 export * from "./label";
+export * from "./popover";
 export * from "./select";
 export * from "./separator";
 export * from "./sheet";

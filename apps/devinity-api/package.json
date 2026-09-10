@@ -19,6 +19,8 @@
     "auth:migrate": "pnpm dlx @better-auth/cli@latest migrate --config src/modules/auth/auth.module.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
     "vercel-build": "pnpm build"
   },
   "dependencies": {

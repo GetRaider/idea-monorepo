@@ -45,7 +45,7 @@ export function AppNavRail() {
                 key={item.href}
                 label={`${item.label} — Coming soon`}
               >
-                <span className="flex h-10 w-10 cursor-not-allowed items-center justify-center rounded-lg text-muted opacity-30">
+                <span className="flex h-10 w-10 cursor-not-allowed items-center justify-center rounded-lg text-muted-foreground opacity-30">
                   {icon}
                 </span>
               </RailTooltip>
@@ -56,7 +56,7 @@ export function AppNavRail() {
               <Link
                 href={item.href}
                 className={cn(
-                  "relative flex h-10 w-10 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface hover:text-foreground",
+                  "relative flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-surface hover:text-foreground",
                   active &&
                     "bg-surface text-foreground before:absolute before:left-[-8px] before:top-1/2 before:h-5 before:w-[3px] before:-translate-y-1/2 before:rounded-sm before:bg-white before:content-['']",
                 )}
@@ -72,7 +72,7 @@ export function AppNavRail() {
           <button
             type="button"
             onClick={() => signOut()}
-            className="flex h-10 w-10 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface hover:text-foreground"
+            className="flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-surface hover:text-foreground"
           >
             <SettingsIcon size={22} />
           </button>

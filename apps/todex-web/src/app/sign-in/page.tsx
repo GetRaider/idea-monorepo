@@ -9,7 +9,7 @@ export default function SignInPage() {
     <main className="flex min-h-screen items-center justify-center">
       <div className="w-full max-w-sm rounded-xl border border-border bg-panel p-8">
         <h1 className="mb-2 text-xl font-semibold">Todex</h1>
-        <p className="mb-6 text-sm text-muted">
+        <p className="mb-6 text-sm text-muted-foreground">
           Sign in with Google to continue.
         </p>
         <Button

@@ -7,4 +7,5 @@ export { default as Header } from "./components/Header/Header.component";
 export * from "./components/Input/Input";
 export * from "./components/Spinner";
 export * from "./components/Tooltip";
+export * from "./components/ui";
 export { cn } from "./lib/cn";

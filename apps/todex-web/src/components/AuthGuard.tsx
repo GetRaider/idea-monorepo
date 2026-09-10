@@ -17,7 +17,7 @@ export function AuthGuard({ children }: { children: ReactNode }) {
 
   if (isPending) {
     return (
-      <div className="flex min-h-screen items-center justify-center text-muted">
+      <div className="flex min-h-screen items-center justify-center text-muted-foreground">
         Loading…
       </div>
     );

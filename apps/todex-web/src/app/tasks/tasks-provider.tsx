@@ -15,6 +15,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
+import { toast } from "sonner";
 import type { Folder, Task, TaskBoard, UpdateTaskBody } from "@repo/api/todex";
 
 import { todexClient } from "@lib/todex-client";
@@ -113,9 +114,11 @@ export function TasksProvider({ children }: { children: ReactNode }) {
   const createFolder = useMutation({
     mutationFn: (name: string) =>
       todexClient.folders.create({ name, kind: "tasks" }),
-    onSuccess: () => {
+    onSuccess: (folder) => {
       void queryClient.invalidateQueries({ queryKey: ["folders"] });
+      toast.success(`Folder "${folder.name}" created`);
     },
+    onError: () => toast.error("Could not create folder"),
   });
 
   const createBoard = useMutation({
@@ -125,7 +128,9 @@ export function TasksProvider({ children }: { children: ReactNode }) {
       setLastBoardId(board.id);
       setView({ kind: "board", boardId: board.id });
       void queryClient.invalidateQueries({ queryKey: ["boards"] });
+      toast.success(`Board "${board.name}" created`);
     },
+    onError: () => toast.error("Could not create board"),
   });
 
   const createTask = useMutation({
@@ -137,13 +142,21 @@ export function TasksProvider({ children }: { children: ReactNode }) {
         parentTaskId: input.parentTaskId,
       });
     },
-    onSuccess: () => invalidateTasks(createBoardId),
+    onSuccess: (task) => {
+      invalidateTasks(createBoardId);
+      toast.success(`Task "${task.summary}" created`);
+    },
+    onError: () => toast.error("Could not create task"),
   });
 
   const updateTask = useMutation({
     mutationFn: (input: { taskId: string; body: UpdateTaskBody }) =>
       todexClient.tasks.update(input.taskId, input.body),
-    onSuccess: (task) => invalidateTasks(task.taskBoardId),
+    onSuccess: (task) => {
+      invalidateTasks(task.taskBoardId);
+      toast.success("Task saved");
+    },
+    onError: () => toast.error("Could not save task"),
   });
 
   const removeTask = useMutation({
@@ -151,7 +164,9 @@ export function TasksProvider({ children }: { children: ReactNode }) {
     onSuccess: () => {
       setSelectedTaskId(null);
       invalidateTasks();
+      toast.success("Task deleted");
     },
+    onError: () => toast.error("Could not delete task"),
   });
 
   const selectBoard = (boardId: string) => {

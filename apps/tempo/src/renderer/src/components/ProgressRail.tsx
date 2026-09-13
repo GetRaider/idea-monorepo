@@ -35,11 +35,22 @@ export function ProgressRail({
   );
 }
 
-export function formatGoalLabel(minutes: number): string {
-  if (minutes <= 0) {
+export function formatGoalLabel(totalSeconds: number): string {
+  if (totalSeconds <= 0) {
     return "no goal";
   }
-  return `goal · ${formatDurationLabel(minutes * 60)}`;
+
+  const leftoverSeconds = totalSeconds % 60;
+  if (leftoverSeconds === 0) {
+    return `goal · ${formatDurationLabel(totalSeconds)}`;
+  }
+
+  const minutes = Math.floor(totalSeconds / 60);
+  if (minutes > 0) {
+    return `goal · ${minutes}m ${leftoverSeconds}s`;
+  }
+
+  return `goal · ${leftoverSeconds}s`;
 }
 
 interface ProgressRailProps {

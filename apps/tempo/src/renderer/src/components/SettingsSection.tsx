@@ -1,4 +1,5 @@
-import { cn } from "../lib/cn";
+import { Checkbox } from "./ui/checkbox";
+import { SelectMenu } from "./ui/dropdown-menu";
 
 import type {
   AppSettings,
@@ -17,48 +18,51 @@ export function SettingsSection({
       <h1 className="m-0 text-xl font-medium">Settings</h1>
       <SettingsGroup title="Defaults">
         <Field label="Default mode">
-          <Select
+          <SelectMenu
             value={settings.defaultMode}
-            onChange={(event) =>
-              onChange({ defaultMode: event.target.value as TimerMode })
+            options={[
+              { value: "stopwatch", label: "Stopwatch" },
+              { value: "timer", label: "Timer" },
+            ]}
+            onValueChange={(value) =>
+              onChange({ defaultMode: value as TimerMode })
             }
-          >
-            <option value="stopwatch">Stopwatch</option>
-            <option value="timer">Timer</option>
-          </Select>
+          />
         </Field>
         <Field label="Default duration">
-          <Select
+          <SelectMenu
             value={settings.durationPreset}
-            onChange={(event) =>
-              onChange({ durationPreset: event.target.value as DurationPreset })
+            options={[
+              { value: "last", label: "Last used" },
+              { value: "10", label: "10 minutes" },
+              { value: "30", label: "30 minutes" },
+              { value: "60", label: "1 hour" },
+            ]}
+            onValueChange={(value) =>
+              onChange({ durationPreset: value as DurationPreset })
             }
-          >
-            <option value="last">Last used</option>
-            <option value="25">25 minutes</option>
-            <option value="50">50 minutes</option>
-          </Select>
+          />
         </Field>
-        <Checkbox
+        <SettingsCheckbox
           checked={settings.defaultSaveNewSessions}
           onChange={(checked) => onChange({ defaultSaveNewSessions: checked })}
         >
           Save new names as activities
-        </Checkbox>
-        <Checkbox
+        </SettingsCheckbox>
+        <SettingsCheckbox
           checked={settings.confirmOnStop}
           onChange={(checked) => onChange({ confirmOnStop: checked })}
         >
           Confirm before saving or discarding
-        </Checkbox>
+        </SettingsCheckbox>
       </SettingsGroup>
       <SettingsGroup title="Sound">
-        <Checkbox
+        <SettingsCheckbox
           checked={settings.soundEnabled}
           onChange={(checked) => onChange({ soundEnabled: checked })}
         >
           Play timer and goal sounds
-        </Checkbox>
+        </SettingsCheckbox>
         <label className="flex flex-col gap-1 text-sm text-tempo-muted">
           Volume ({Math.round(settings.soundVolume * 100)}%)
           <input
@@ -75,12 +79,12 @@ export function SettingsSection({
         </label>
       </SettingsGroup>
       <SettingsGroup title="Break">
-        <Checkbox
+        <SettingsCheckbox
           checked={settings.offerBreakTimer}
           onChange={(checked) => onChange({ offerBreakTimer: checked })}
         >
           Offer break timer on pause and after saving
-        </Checkbox>
+        </SettingsCheckbox>
         <Field label="Default break duration (minutes)">
           <input
             type="number"
@@ -97,34 +101,39 @@ export function SettingsSection({
         </Field>
       </SettingsGroup>
       <SettingsGroup title="Window">
-        <Checkbox
+        <SettingsCheckbox
           checked={settings.alwaysOnTop}
           onChange={(checked) => onChange({ alwaysOnTop: checked })}
         >
           Always on top
-        </Checkbox>
-        <Checkbox
+        </SettingsCheckbox>
+        <SettingsCheckbox
           checked={settings.menuBarClockVisible}
           onChange={(checked) => onChange({ menuBarClockVisible: checked })}
         >
           Show clock in the menu bar
-        </Checkbox>
+        </SettingsCheckbox>
         <Field label="Menu bar clock">
-          <Select
+          <SelectMenu
             value={settings.menuBarClockStyle}
             disabled={!settings.menuBarClockVisible}
-            onChange={(event) =>
+            options={[
+              {
+                value: "auto",
+                label: "Auto (timer remaining / stopwatch elapsed)",
+              },
+              { value: "elapsed", label: "Always elapsed" },
+              {
+                value: "remaining",
+                label: "Remaining when a duration is set",
+              },
+            ]}
+            onValueChange={(value) =>
               onChange({
-                menuBarClockStyle: event.target.value as MenuBarClockStyle,
+                menuBarClockStyle: value as MenuBarClockStyle,
               })
             }
-          >
-            <option value="auto">
-              Auto (timer remaining / stopwatch elapsed)
-            </option>
-            <option value="elapsed">Always elapsed</option>
-            <option value="remaining">Remaining when a duration is set</option>
-          </Select>
+          />
         </Field>
       </SettingsGroup>
       <SettingsGroup title="Data">
@@ -189,14 +198,7 @@ function Field({
   );
 }
 
-function Select({
-  className,
-  ...props
-}: React.SelectHTMLAttributes<HTMLSelectElement>) {
-  return <select className={cn(inputClassName, className)} {...props} />;
-}
-
-function Checkbox({
+function SettingsCheckbox({
   checked,
   onChange,
   children,
@@ -206,11 +208,10 @@ function Checkbox({
   children: React.ReactNode;
 }) {
   return (
-    <label className="flex items-center gap-2 text-sm text-tempo-muted">
-      <input
-        type="checkbox"
+    <label className="flex cursor-pointer items-center gap-2 text-sm text-tempo-muted">
+      <Checkbox
         checked={checked}
-        onChange={(event) => onChange(event.target.checked)}
+        onCheckedChange={(value) => onChange(value === true)}
       />
       {children}
     </label>
@@ -227,7 +228,7 @@ function GhostButton({
   return (
     <button
       type="button"
-      className="rounded-xl border border-tempo-line bg-transparent px-3 py-2 text-sm text-tempo-muted hover:text-tempo-text"
+      className="cursor-pointer rounded-xl border border-tempo-line bg-transparent px-3 py-2 text-sm text-tempo-muted hover:text-tempo-text"
       onClick={onClick}
     >
       {children}

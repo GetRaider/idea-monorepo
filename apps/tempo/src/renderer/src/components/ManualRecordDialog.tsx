@@ -4,6 +4,8 @@ import { buildManualSessionOptions } from "../../../helpers/history.helper";
 import { parseMinutesInput } from "../../../helpers/session.helper";
 
 import { Button } from "./ui/button";
+import { Checkbox } from "./ui/checkbox";
+import { SelectMenu } from "./ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -137,17 +139,11 @@ export function ManualRecordDialog({
           {showSessionPicker ? (
             <label className="flex flex-col gap-1 text-sm text-tempo-muted">
               Activity
-              <select
-                className="rounded-[10px] border border-tempo-line bg-transparent px-2.5 py-1.5 text-tempo-text"
+              <SelectMenu
                 value={selectedSessionId ?? ""}
-                onChange={(event) => handleSessionChange(event.target.value)}
-              >
-                {sessionOptions.map((option) => (
-                  <option key={option.value || "custom"} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+                options={sessionOptions}
+                onValueChange={handleSessionChange}
+              />
             </label>
           ) : null}
           <label className="flex flex-col gap-1 text-sm text-tempo-muted">
@@ -171,13 +167,14 @@ export function ManualRecordDialog({
             />
           </label>
           {!isBacklogSelected ? (
-            <label className="flex items-center gap-2 text-sm text-tempo-muted">
-              <input
-                type="checkbox"
+            <label className="flex cursor-pointer items-center gap-2 text-sm text-tempo-muted">
+              <Checkbox
                 checked={saveToBacklog}
-                onChange={(event) => setSaveToBacklog(event.target.checked)}
+                onCheckedChange={(checked) =>
+                  setSaveToBacklog(checked === true)
+                }
               />
-              Save as activity
+              Save as Activity
             </label>
           ) : null}
           <label className="flex flex-col gap-1 text-sm text-tempo-muted">

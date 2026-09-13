@@ -139,7 +139,7 @@ export function HistorySection({
                         <>
                           <button
                             type="button"
-                            className="border-0 bg-transparent text-xs text-tempo-danger"
+                            className="cursor-pointer border-0 bg-transparent text-xs text-tempo-danger"
                             onClick={() => {
                               void onDelete(entry.id);
                               setPendingDeleteId(null);
@@ -149,7 +149,7 @@ export function HistorySection({
                           </button>
                           <button
                             type="button"
-                            className="border-0 bg-transparent text-xs text-tempo-muted"
+                            className="cursor-pointer border-0 bg-transparent text-xs text-tempo-muted"
                             onClick={() => setPendingDeleteId(null)}
                           >
                             Cancel

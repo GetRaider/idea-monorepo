@@ -7,8 +7,8 @@ import type {
 
 export const DEFAULT_APP_SETTINGS: AppSettings = {
   defaultMode: "stopwatch",
-  durationPreset: "last",
-  lastDurationMinutes: 25,
+  durationPreset: "10",
+  lastDurationMinutes: 10,
   soundEnabled: true,
   soundVolume: 0.8,
   menuBarClockVisible: true,
@@ -75,13 +75,32 @@ export function parseStoredSettings(value: unknown): AppSettings {
 }
 
 export function resolveDurationMinutes(settings: AppSettings): number {
-  if (settings.durationPreset === "25") {
-    return 25;
+  if (settings.durationPreset === "10") {
+    return 10;
   }
-  if (settings.durationPreset === "50") {
-    return 50;
+  if (settings.durationPreset === "30") {
+    return 30;
+  }
+  if (settings.durationPreset === "60") {
+    return 60;
   }
   return settings.lastDurationMinutes;
+}
+
+export function parseDurationPreset(
+  value: unknown,
+  fallback: DurationPreset,
+): DurationPreset {
+  if (value === "last" || value === "10" || value === "30" || value === "60") {
+    return value;
+  }
+  if (value === "25") {
+    return "30";
+  }
+  if (value === "50") {
+    return "60";
+  }
+  return fallback;
 }
 
 export function resolveBreakDurationMinutes(settings: AppSettings): number {
@@ -90,15 +109,6 @@ export function resolveBreakDurationMinutes(settings: AppSettings): number {
 
 function parseTimerMode(value: unknown, fallback: TimerMode): TimerMode {
   return value === "timer" || value === "stopwatch" ? value : fallback;
-}
-
-function parseDurationPreset(
-  value: unknown,
-  fallback: DurationPreset,
-): DurationPreset {
-  return value === "last" || value === "25" || value === "50"
-    ? value
-    : fallback;
 }
 
 function parseMenuBarClockStyle(

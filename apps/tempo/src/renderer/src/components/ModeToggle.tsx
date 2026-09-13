@@ -35,7 +35,7 @@ function ModeButton({
       aria-pressed={pressed}
       disabled={disabled}
       className={cn(
-        "rounded-[20px] border border-transparent bg-transparent px-3.5 py-1.5 text-[13px] font-medium text-tempo-faint transition-colors hover:text-tempo-muted disabled:opacity-40",
+        "cursor-pointer rounded-[20px] border border-transparent bg-transparent px-3.5 py-1.5 text-[13px] font-medium text-tempo-faint transition-colors hover:text-tempo-muted disabled:cursor-not-allowed disabled:opacity-40",
         pressed ? "border-tempo-line bg-tempo-panel text-tempo-text" : null,
       )}
       onClick={onClick}

@@ -1,5 +1,7 @@
 import { cn } from "../lib/cn";
 
+import { TempoLogo } from "./TempoLogo";
+
 import type { AppScreen } from "../App.types";
 
 const NAV_ITEMS: { id: AppScreen; label: string }[] = [
@@ -18,10 +20,7 @@ export function AppTopBar({
   return (
     <header className="sticky top-0 z-10 grid grid-cols-[1fr_auto_1fr] items-center gap-5 border-b border-tempo-line bg-[rgba(8,9,12,0.6)] px-8 py-5 backdrop-blur-[14px]">
       <div className="flex items-center gap-2.5 font-display text-[19px] font-semibold">
-        <span
-          className="h-4 w-4 rounded-full border-2 border-tempo-accent"
-          aria-hidden
-        />
+        <TempoLogo className="h-5 w-5 shrink-0" />
         Tempo
       </div>
       <nav className="flex flex-wrap justify-center gap-[26px]" aria-label="Primary">
@@ -31,7 +30,7 @@ export function AppTopBar({
             type="button"
             aria-current={activeScreen === item.id ? "page" : undefined}
             className={cn(
-              "border-0 bg-transparent text-sm transition-colors",
+              "cursor-pointer border-0 bg-transparent text-sm transition-colors",
               activeScreen === item.id ? "text-tempo-text" : "text-tempo-muted hover:text-tempo-text",
             )}
             onClick={() => onNavigate(item.id)}

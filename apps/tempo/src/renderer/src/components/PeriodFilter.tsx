@@ -1,4 +1,5 @@
 import { cn } from "../lib/cn";
+import { SelectMenu } from "./ui/dropdown-menu";
 
 import type { AnalyticsPeriodPreset } from "../../../helpers/analytics.helper";
 
@@ -30,7 +31,7 @@ export function PeriodFilter({
               type="button"
               aria-pressed={periodPreset === preset.id}
               className={cn(
-                "rounded-lg border px-2.5 py-1 text-xs",
+                "cursor-pointer rounded-lg border px-2.5 py-1 text-xs",
                 periodPreset === preset.id
                   ? "border-tempo-accent bg-tempo-accent-wash text-tempo-text"
                   : "border-tempo-line bg-tempo-panel text-tempo-muted",
@@ -41,18 +42,14 @@ export function PeriodFilter({
             </button>
           ))}
         </div>
-        <select
-          className="max-w-[180px] rounded-[10px] border border-tempo-line bg-transparent px-2.5 py-1.5 text-tempo-text"
-          value={activityId}
-          onChange={(event) => onActivityChange(event.target.value)}
-          aria-label="Activity"
-        >
-          {activityOptions.map((option) => (
-            <option key={option.value || "all"} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
+        <div className="max-w-[180px]">
+          <SelectMenu
+            value={activityId}
+            options={activityOptions}
+            ariaLabel="Activity"
+            onValueChange={onActivityChange}
+          />
+        </div>
       </div>
       {periodPreset === "custom" ? (
         <div className="grid grid-cols-2 gap-2">

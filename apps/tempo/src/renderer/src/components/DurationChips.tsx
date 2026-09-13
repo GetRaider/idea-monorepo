@@ -1,44 +1,50 @@
+import {
+  DURATION_PRESET_MINUTES,
+  formatDurationChipLabel,
+  isPresetDurationSeconds,
+} from "../../../helpers/duration-preset.helper";
 import { cn } from "../lib/cn";
 
-import type { TimerMode } from "../../../shared/records.types";
-
-export const STOPWATCH_DURATION_CHIPS = [10, 30, 50] as const;
-export const TIMER_DURATION_CHIPS = [15, 25, 45] as const;
+import { DurationCustomPopover } from "./DurationCustomPopover";
 
 export function DurationChips({
-  mode,
-  durationMinutes,
+  durationSeconds,
   disabled,
   onChange,
 }: DurationChipsProps) {
-  const chips =
-    mode === "timer" ? TIMER_DURATION_CHIPS : STOPWATCH_DURATION_CHIPS;
+  const isCustomSelected =
+    durationSeconds > 0 && !isPresetDurationSeconds(durationSeconds);
 
   return (
-    <div className="z-[1] flex gap-1.5">
-      {chips.map((minutes) => (
+    <div className="z-[1] flex flex-wrap items-center justify-center gap-1.5">
+      {DURATION_PRESET_MINUTES.map((minutes) => (
         <button
           key={minutes}
           type="button"
           disabled={disabled}
           className={cn(
-            "rounded-lg border border-tempo-line bg-transparent px-[13px] py-[7px] text-[12.5px] font-medium text-tempo-muted transition-colors hover:border-tempo-line-2 hover:text-tempo-text disabled:opacity-40",
-            durationMinutes === minutes
+            "cursor-pointer rounded-lg border border-tempo-line bg-transparent px-[13px] py-[7px] text-[12.5px] font-medium text-tempo-muted transition-colors hover:border-tempo-line-2 hover:text-tempo-text disabled:cursor-not-allowed disabled:opacity-40",
+            durationSeconds === minutes * 60
               ? "border-tempo-accent bg-tempo-accent-wash text-tempo-text"
               : null,
           )}
-          onClick={() => onChange(minutes)}
+          onClick={() => onChange(minutes * 60)}
         >
-          {minutes}m
+          {formatDurationChipLabel(minutes)}
         </button>
       ))}
+      <DurationCustomPopover
+        durationSeconds={durationSeconds}
+        selected={isCustomSelected}
+        disabled={disabled}
+        onApply={onChange}
+      />
     </div>
   );
 }
 
 interface DurationChipsProps {
-  mode: TimerMode;
-  durationMinutes: number;
+  durationSeconds: number;
   disabled: boolean;
-  onChange: (minutes: number) => void;
+  onChange: (seconds: number) => void;
 }

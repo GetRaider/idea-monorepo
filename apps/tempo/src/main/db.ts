@@ -137,6 +137,30 @@ function migrateSessionsTable(database: Database): void {
       `ALTER TABLE sessions ADD COLUMN color TEXT NOT NULL DEFAULT '${DEFAULT_SESSION_COLOR}'`,
     );
   }
+  if (!columnNames.has("sort_order")) {
+    database.run(
+      `ALTER TABLE sessions ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0`,
+    );
+    backfillSessionSortOrder(database);
+  }
+}
+
+function backfillSessionSortOrder(database: Database): void {
+  const statement = database.prepare(
+    `SELECT id FROM sessions ORDER BY name COLLATE NOCASE ASC`,
+  );
+  const sessionIds: string[] = [];
+  while (statement.step()) {
+    sessionIds.push(String(statement.getAsObject().id));
+  }
+  statement.free();
+
+  sessionIds.forEach((sessionId, index) => {
+    database.run(`UPDATE sessions SET sort_order = ? WHERE id = ?`, [
+      index,
+      sessionId,
+    ]);
+  });
 }
 
 function getTableColumnNames(

@@ -1,0 +1,1 @@
+export { useScopeDictation } from "./useScopeDictation";

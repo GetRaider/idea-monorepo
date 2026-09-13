@@ -1,11 +1,11 @@
-import { cn } from "../lib/cn";
-
-import { ActivityPills } from "../components/ActivityPills";
 import { ClockDisplay } from "../components/ClockDisplay";
 import { DurationChips } from "../components/DurationChips";
 import { ModeToggle } from "../components/ModeToggle";
 import { ProgressRail } from "../components/ProgressRail";
+import { ScopeComposer } from "../components/ScopeComposer";
+import { SessionCombobox } from "../components/SessionCombobox";
 import { Button } from "../components/ui/button";
+import { cn } from "../lib/cn";
 
 import type { FocusViewState } from "../../../helpers/focus-view.helper";
 import type { SavedSession, TimerMode } from "../../../shared/records.types";
@@ -15,11 +15,10 @@ export function FocusStage({
   mode,
   name,
   scope,
-  durationMinutes,
+  durationSeconds,
   sessions,
   selectedSessionId,
   saveToBacklog,
-  isBacklogSelected,
   isBreakSelected,
   breakDurationMinutes,
   clockValue,
@@ -31,8 +30,8 @@ export function FocusStage({
   railDone,
   isBusy,
   canStart,
-  startHint,
   errorMessage,
+  activityErrorMessage,
   pausedFocusLabel,
   isLive,
   onModeChange,
@@ -51,10 +50,7 @@ export function FocusStage({
 }: FocusStageProps) {
   const isIdle = viewState === "idle";
   const showModeToggle =
-    viewState !== "breakOnly" &&
-    viewState !== "focusPausedBreakRunning" &&
-    !isBreakSelected;
-  const showComposer = isIdle;
+    viewState !== "breakOnly" && viewState !== "focusPausedBreakRunning";
   const showStop = viewState === "focusRunning" || viewState === "focusPaused";
   const showStopBreak =
     viewState === "breakOnly" || viewState === "focusPausedBreakRunning";
@@ -70,29 +66,43 @@ export function FocusStage({
           className={cn("tempo-glow", isLive ? "opacity-90" : "opacity-50")}
         />
         {showModeToggle ? (
-          <ModeToggle mode={mode} disabled={!isIdle} onChange={onModeChange} />
+          <ModeToggle
+            mode={isBreakSelected ? "timer" : mode}
+            disabled={!isIdle || isBreakSelected}
+            onChange={onModeChange}
+          />
         ) : null}
-        <input
-          className="z-[1] w-[min(420px,80vw)] rounded-lg border-0 bg-transparent px-3 py-1.5 text-center text-lg font-medium text-tempo-text placeholder:text-tempo-faint focus:bg-tempo-panel"
-          value={name}
-          disabled={!isIdle || isBacklogSelected}
-          spellCheck={false}
-          placeholder="Untitled session"
-          onChange={(event) => onNameChange(event.target.value)}
+        <SessionCombobox
+          name={name}
+          sessions={sessions}
+          selectedSessionId={selectedSessionId}
+          saveToBacklog={saveToBacklog}
+          disabled={!isIdle}
+          breakDurationMinutes={breakDurationMinutes}
+          errorMessage={activityErrorMessage}
+          onNameChange={onNameChange}
+          onSelectActivity={onSelectActivity}
+          onSaveToBacklogChange={onSaveToBacklogChange}
+          onEdit={onEditActivity}
+          onDelete={onDeleteActivity}
         />
         <ClockDisplay value={clockValue} overGoal={overGoal} />
-        <ProgressRail
-          elapsedSeconds={elapsedSeconds}
-          targetSeconds={targetSeconds}
-          leftLabel={leftLabel}
-          rightLabel={rightLabel}
-          done={railDone}
-        />
+        {isIdle ? null : (
+          <ProgressRail
+            elapsedSeconds={elapsedSeconds}
+            targetSeconds={targetSeconds}
+            leftLabel={leftLabel}
+            rightLabel={rightLabel}
+            done={railDone}
+          />
+        )}
         <div className="z-[1] mt-1 flex gap-2.5">
           {isIdle ? (
-            <Button disabled={isBusy || !canStart} onClick={onStart}>
-              Start
-            </Button>
+            <IdleStartButton
+              disabled={isBusy || !canStart}
+              showHint={!canStart && name.trim().length === 0}
+              onClick={onStart}
+            />
           ) : null}
           {showPause ? (
             <Button disabled={isBusy} onClick={onPause}>
@@ -123,57 +133,43 @@ export function FocusStage({
         {pausedFocusLabel ? (
           <p className="z-[1] m-0 text-xs text-tempo-muted">{pausedFocusLabel}</p>
         ) : null}
-        {isIdle && !canStart ? (
-          <p className="z-[1] m-0 text-xs text-tempo-muted">{startHint}</p>
-        ) : null}
         {errorMessage ? (
           <p className="z-[1] m-0 text-xs text-tempo-danger">{errorMessage}</p>
         ) : null}
-        {showComposer ? (
-          <>
-            <DurationChips
-              mode={mode}
-              durationMinutes={durationMinutes}
-              disabled={!isIdle}
-              onChange={onDurationChange}
-            />
-            <textarea
-              className="z-[1] w-[min(440px,86vw)] resize-none rounded-[11px] border border-tempo-line bg-tempo-panel px-3.5 py-3 text-sm text-tempo-text placeholder:text-tempo-faint focus:border-tempo-line-2"
-              value={scope}
-              disabled={!isIdle}
-              rows={2}
-              placeholder="What you'll work on this session"
-              onChange={(event) => onScopeChange(event.target.value)}
-            />
-            {!isBacklogSelected ? (
-              <label className="z-[1] flex items-center gap-2 text-sm text-tempo-muted">
-                <input
-                  type="checkbox"
-                  checked={saveToBacklog}
-                  disabled={!isIdle}
-                  onChange={(event) =>
-                    onSaveToBacklogChange(event.target.checked)
-                  }
-                />
-                Save as activity
-              </label>
-            ) : null}
-          </>
-        ) : null}
-      </main>
-      <footer className="flex flex-wrap items-center gap-[18px] border-t border-tempo-line bg-[rgba(8,9,12,0.5)] px-8 py-[18px] backdrop-blur-[14px]">
-        <span className="text-xs font-medium text-tempo-faint">My Activities</span>
-        <ActivityPills
-          sessions={sessions}
-          selectedSessionId={selectedSessionId}
-          breakDurationMinutes={breakDurationMinutes}
+        <DurationChips
+          durationSeconds={durationSeconds}
           disabled={!isIdle}
-          onSelect={onSelectActivity}
-          onEdit={onEditActivity}
-          onDelete={onDeleteActivity}
+          onChange={onDurationChange}
         />
-      </footer>
+        <ScopeComposer
+          value={scope}
+          disabled={!isIdle}
+          onChange={onScopeChange}
+        />
+      </main>
     </div>
+  );
+}
+
+function IdleStartButton({
+  disabled,
+  showHint,
+  onClick,
+}: IdleStartButtonProps) {
+  return (
+    <span className="group relative z-[1] inline-flex">
+      <Button disabled={disabled} onClick={onClick}>
+        Start
+      </Button>
+      {showHint ? (
+        <span
+          role="tooltip"
+          className="pointer-events-none absolute bottom-full left-1/2 mb-2 -translate-x-1/2 whitespace-nowrap rounded-[10px] border border-tempo-line bg-tempo-panel px-2.5 py-1.5 text-xs text-tempo-muted opacity-0 shadow-xl transition-opacity group-hover:opacity-100"
+        >
+          Select or Create an Activity
+        </span>
+      ) : null}
+    </span>
   );
 }
 
@@ -182,11 +178,10 @@ interface FocusStageProps {
   mode: TimerMode;
   name: string;
   scope: string;
-  durationMinutes: number;
+  durationSeconds: number;
   sessions: SavedSession[];
   selectedSessionId: string | null;
   saveToBacklog: boolean;
-  isBacklogSelected: boolean;
   isBreakSelected: boolean;
   breakDurationMinutes: number;
   clockValue: string;
@@ -198,14 +193,14 @@ interface FocusStageProps {
   railDone: boolean;
   isBusy: boolean;
   canStart: boolean;
-  startHint: string;
   errorMessage: string | null;
+  activityErrorMessage: string | null;
   pausedFocusLabel: string | null;
   isLive: boolean;
   onModeChange: (mode: TimerMode) => void;
   onNameChange: (name: string) => void;
   onScopeChange: (scope: string) => void;
-  onDurationChange: (minutes: number) => void;
+  onDurationChange: (seconds: number) => void;
   onSaveToBacklogChange: (checked: boolean) => void;
   onSelectActivity: (sessionId: string | null) => void;
   onEditActivity: (session: SavedSession) => void;
@@ -215,4 +210,10 @@ interface FocusStageProps {
   onResume: () => void;
   onStop: () => void;
   onStopBreak: () => void;
+}
+
+interface IdleStartButtonProps {
+  disabled: boolean;
+  showHint: boolean;
+  onClick: () => void;
 }

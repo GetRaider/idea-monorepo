@@ -6,6 +6,7 @@ import {
   assertSavedSessionNotInUse,
   pickDefaultSessionColor,
   validateSavedSessionName,
+  validateSavedSessionReorder,
   validateUpdateSavedSession,
 } from "../helpers/session.helper";
 import {
@@ -15,9 +16,11 @@ import {
 
 import { getDatabase, persistDatabase } from "./db";
 
+const SESSION_SELECT = `SELECT id, name, color, created_at, sort_order FROM sessions`;
+
 export function listSavedSessions(): SavedSession[] {
   const statement = getDatabase().prepare(
-    `SELECT id, name, color, created_at FROM sessions ORDER BY name COLLATE NOCASE ASC`,
+    `${SESSION_SELECT} ORDER BY sort_order ASC, name COLLATE NOCASE ASC`,
   );
   const sessions: SavedSession[] = [];
 
@@ -30,9 +33,7 @@ export function listSavedSessions(): SavedSession[] {
 }
 
 export function getSavedSession(sessionId: string): SavedSession | null {
-  const statement = getDatabase().prepare(
-    `SELECT id, name, color, created_at FROM sessions WHERE id = ?`,
-  );
+  const statement = getDatabase().prepare(`${SESSION_SELECT} WHERE id = ?`);
   statement.bind([sessionId]);
   if (!statement.step()) {
     statement.free();
@@ -56,10 +57,17 @@ export function createSavedSession(name: string): SavedSession {
     name: trimmedName,
     color: pickDefaultSessionColor(trimmedName),
     createdAt: new Date().toISOString(),
+    sortOrder: nextSavedSessionSortOrder(),
   };
   getDatabase().run(
-    `INSERT INTO sessions (id, name, color, created_at) VALUES (?, ?, ?, ?)`,
-    [session.id, session.name, session.color, session.createdAt],
+    `INSERT INTO sessions (id, name, color, created_at, sort_order) VALUES (?, ?, ?, ?, ?)`,
+    [
+      session.id,
+      session.name,
+      session.color,
+      session.createdAt,
+      session.sortOrder,
+    ],
   );
   persistDatabase();
   return session;
@@ -104,7 +112,21 @@ export function deleteSavedSession(sessionId: string): void {
     [sessionId],
   );
   getDatabase().run(`DELETE FROM sessions WHERE id = ?`, [sessionId]);
+  compactSavedSessionSortOrder();
   persistDatabase();
+}
+
+export function reorderSavedSessions(orderedIds: string[]): SavedSession[] {
+  const existingIds = listSavedSessions().map((session) => session.id);
+  validateSavedSessionReorder(orderedIds, existingIds);
+  orderedIds.forEach((sessionId, index) => {
+    getDatabase().run(`UPDATE sessions SET sort_order = ? WHERE id = ?`, [
+      index,
+      sessionId,
+    ]);
+  });
+  persistDatabase();
+  return listSavedSessions();
 }
 
 export function resolveSavedSessionForStart(options: {
@@ -173,7 +195,7 @@ function isSavedSessionActive(sessionId: string): boolean {
 
 function getSavedSessionByName(name: string): SavedSession | null {
   const statement = getDatabase().prepare(
-    `SELECT id, name, color, created_at FROM sessions WHERE name = ? COLLATE NOCASE`,
+    `${SESSION_SELECT} WHERE name = ? COLLATE NOCASE`,
   );
   statement.bind([name]);
   if (!statement.step()) {
@@ -186,7 +208,27 @@ function getSavedSessionByName(name: string): SavedSession | null {
   return session;
 }
 
+function nextSavedSessionSortOrder(): number {
+  const statement = getDatabase().prepare(
+    `SELECT COALESCE(MAX(sort_order), -1) AS max_sort FROM sessions`,
+  );
+  statement.step();
+  const maxSort = Number(statement.getAsObject().max_sort);
+  statement.free();
+  return Number.isFinite(maxSort) ? maxSort + 1 : 0;
+}
+
+function compactSavedSessionSortOrder(): void {
+  listSavedSessions().forEach((session, index) => {
+    getDatabase().run(`UPDATE sessions SET sort_order = ? WHERE id = ?`, [
+      index,
+      session.id,
+    ]);
+  });
+}
+
 function mapSavedSession(row: Record<string, unknown>): SavedSession {
+  const sortOrder = Number(row.sort_order);
   return {
     id: String(row.id),
     name: String(row.name),
@@ -195,5 +237,6 @@ function mapSavedSession(row: Record<string, unknown>): SavedSession {
         ? pickDefaultSessionColor(String(row.name))
         : String(row.color),
     createdAt: String(row.created_at),
+    sortOrder: Number.isFinite(sortOrder) ? sortOrder : 0,
   };
 }

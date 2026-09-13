@@ -84,6 +84,7 @@ describe("analytics filter", () => {
       name: "Software Growth",
       color: "#3b82f6",
       createdAt: "2026-08-01T00:00:00.000Z",
+      sortOrder: 0,
     },
   ];
 

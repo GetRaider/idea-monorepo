@@ -11,6 +11,7 @@ export interface SavedSession {
   name: string;
   color: string;
   createdAt: string;
+  sortOrder: number;
 }
 
 export interface FocusRecord {

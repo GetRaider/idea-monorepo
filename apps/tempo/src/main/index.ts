@@ -6,13 +6,15 @@ import {
   BrowserWindow,
   dialog,
   nativeImage,
+  session,
   type NativeImage,
 } from "electron";
 
 import { encodeAppIconPng } from "../helpers/icon.helper";
+import { resolveZoomFactor } from "../helpers/window-zoom.helper";
 
 import { initDatabase, persistDatabase } from "./db";
-import { registerRecordIpcHandlers, registerSettingsIpcHandlers } from "./ipc";
+import { registerMediaIpcHandlers, registerRecordIpcHandlers, registerSettingsIpcHandlers } from "./ipc";
 import { configureTempoUserDataPath } from "./migrate-legacy-user-data";
 import { loadAppSettings, getAppSettings } from "./settings.store";
 import {
@@ -37,6 +39,11 @@ function createWindow(alwaysOnTop: boolean): void {
       nodeIntegration: false,
       sandbox: true,
     },
+  });
+
+  applyWindowZoom(mainWindow);
+  mainWindow.on("resize", () => {
+    applyWindowZoom(mainWindow);
   });
 
   const rendererUrl = process.env.ELECTRON_RENDERER_URL;
@@ -64,6 +71,10 @@ function showMainWindow(): void {
 }
 
 configureTempoUserDataPath();
+app.commandLine.appendSwitch(
+  "disable-features",
+  "OnDeviceWebSpeech,OnDeviceWebSpeechAvailable",
+);
 
 app.whenReady().then(async () => {
   app.on("activate", () => {
@@ -80,7 +91,9 @@ app.whenReady().then(async () => {
     migrateRestSessionToBreak();
     const settings = loadAppSettings();
     registerRecordIpcHandlers();
+    registerMediaIpcHandlers();
     registerSettingsIpcHandlers(applyWindowChrome);
+    configureRendererMediaPermissions();
     applyWindowChrome(settings);
     createWindow(settings.alwaysOnTop);
   } catch (error: unknown) {
@@ -133,6 +146,26 @@ function writeStartupError(error: unknown): void {
   } catch {
     // app paths can be unavailable during very early crashes
   }
+}
+
+function configureRendererMediaPermissions(): void {
+  const defaultSession = session.defaultSession;
+  defaultSession.setPermissionRequestHandler(
+    (_webContents, permission, callback) => {
+      callback(permission === "media" || permission === "fullscreen");
+    },
+  );
+  defaultSession.setPermissionCheckHandler((_webContents, permission) => {
+    return permission === "media" || permission === "fullscreen";
+  });
+}
+
+function applyWindowZoom(window: BrowserWindow): void {
+  const [width, height] = window.getContentSize();
+  if (width === undefined || height === undefined) {
+    return;
+  }
+  window.webContents.setZoomFactor(resolveZoomFactor(width, height));
 }
 
 function createAppIconImage(): NativeImage {

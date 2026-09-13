@@ -1,6 +1,10 @@
 import { FormEvent, useState } from "react";
 
-import { validateSavedSessionName } from "../../../helpers/session.helper";
+import {
+  clampSessionName,
+  SESSION_NAME_MAX_LENGTH,
+  validateSavedSessionName,
+} from "../../../helpers/session.helper";
 
 import { ColorPicker } from "./ColorPicker";
 import { Button } from "./ui/button";
@@ -58,7 +62,8 @@ export function SavedSessionDialog({
             <input
               className="rounded-[10px] border border-tempo-line bg-transparent px-2.5 py-1.5 text-tempo-text"
               value={name}
-              onChange={(event) => setName(event.target.value)}
+              maxLength={SESSION_NAME_MAX_LENGTH}
+              onChange={(event) => setName(clampSessionName(event.target.value))}
               autoFocus
             />
           </label>

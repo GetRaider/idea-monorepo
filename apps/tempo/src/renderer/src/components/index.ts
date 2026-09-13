@@ -1,4 +1,4 @@
-export { ActivityPills } from "./ActivityPills";
+export { SessionCombobox } from "./SessionCombobox";
 export { AnalyticsSection } from "./AnalyticsSection";
 export { AppTopBar } from "./AppTopBar";
 export { BreakOfferDialog } from "./BreakOfferDialog";
@@ -9,5 +9,7 @@ export { ModeToggle } from "./ModeToggle";
 export { OverflowMenu } from "./OverflowMenu";
 export { PeriodFilter } from "./PeriodFilter";
 export { SavedSessionDialog } from "./SavedSessionDialog";
+export { ScopeComposer } from "./ScopeComposer";
 export { SettingsSection } from "./SettingsSection";
 export { StopDialog } from "./StopDialog";
+export { TempoLogo } from "./TempoLogo";

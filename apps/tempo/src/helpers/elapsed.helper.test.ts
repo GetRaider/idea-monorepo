@@ -363,6 +363,7 @@ describe("session helpers", () => {
         name: "Software Growth",
         color: "#3b82f6",
         createdAt: "2026-08-01T00:00:00.000Z",
+        sortOrder: 0,
       },
     );
     expect(record.kind).toBe("backlog");
@@ -441,6 +442,7 @@ describe("session helpers", () => {
         name: "Software Growth",
         color: "#3b82f6",
         createdAt: "2026-08-01T00:00:00.000Z",
+        sortOrder: 0,
       },
     );
     expect(backlogUpdated.kind).toBe("backlog");

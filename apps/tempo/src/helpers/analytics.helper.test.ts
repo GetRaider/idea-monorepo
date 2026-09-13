@@ -285,12 +285,14 @@ describe("buildTimeByActivity", () => {
       name: "Software Growth",
       color: "#3b82f6",
       createdAt: "2026-08-01T00:00:00.000Z",
+      sortOrder: 0,
     },
     {
       id: "session-2",
       name: "Work",
       color: "#22c55e",
       createdAt: "2026-08-01T00:00:00.000Z",
+      sortOrder: 0,
     },
   ];
 

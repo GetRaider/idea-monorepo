@@ -56,19 +56,42 @@ export {
   buildUpdatedRecord,
   normalizeScope,
   parseMinutesInput,
+  clampSessionName,
+  SESSION_NAME_MAX_LENGTH,
   resolveRecordIdentity,
   assertSavedSessionNotInUse,
   validateDeleteRecord,
   validateManualRecord,
   validateSavedSessionName,
+  validateSavedSessionReorder,
+  shouldOfferSaveAsActivity,
   validateStartSession,
   validateUpdateRecord,
   validateUpdateSavedSession,
   pickDefaultSessionColor,
 } from "./session.helper";
 export {
+  DICTATION_WAVEFORM_BAR_COUNT,
+  DICTATION_WAVEFORM_SAMPLE_INTERVAL_MS,
+  createIdleWaveformLevels,
+  getRmsAmplitude,
+  pushWaveformLevel,
+} from "./dictation-waveform.helper";
+export {
+  DURATION_PRESET_MINUTES,
+  combineDurationHms,
+  formatDurationChipLabel,
+  formatDurationHms,
+  isPresetDurationMinutes,
+  isPresetDurationSeconds,
+  padDurationUnit,
+  splitDurationHms,
+} from "./duration-preset.helper";
+export { resolveZoomFactor } from "./window-zoom.helper";
+export {
   DEFAULT_APP_SETTINGS,
   mergeAppSettings,
+  parseDurationPreset,
   parseStoredSettings,
   resolveBreakDurationMinutes,
   resolveDurationMinutes,

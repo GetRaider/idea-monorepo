@@ -20,10 +20,11 @@ import {
   playTimerEndedSound,
   unlockTimerSound,
 } from "../../helpers/timer-sound.helper";
-import type {
-  FocusRecord,
-  SavedSession,
-  TimerMode,
+import {
+  TIMER_MIN_PLANNED_SECONDS,
+  type FocusRecord,
+  type SavedSession,
+  type TimerMode,
 } from "../../shared/records.types";
 import type { AppSettings } from "../../shared/settings.types";
 
@@ -51,8 +52,8 @@ export function App() {
   const [saveToBacklog, setSaveToBacklog] = useState(
     DEFAULT_APP_SETTINGS.defaultSaveNewSessions,
   );
-  const [durationMinutes, setDurationMinutes] = useState(
-    resolveDurationMinutes(DEFAULT_APP_SETTINGS),
+  const [durationSeconds, setDurationSeconds] = useState(
+    resolveDurationMinutes(DEFAULT_APP_SETTINGS) * 60,
   );
   const [activeFocusRecord, setActiveFocusRecord] = useState<FocusRecord | null>(
     null,
@@ -65,6 +66,9 @@ export function App() {
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_APP_SETTINGS);
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [activityErrorMessage, setActivityErrorMessage] = useState<string | null>(
+    null,
+  );
   const [isManualDialogOpen, setIsManualDialogOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<FocusRecord | null>(null);
   const [editingSession, setEditingSession] = useState<SavedSession | null>(
@@ -116,7 +120,7 @@ export function App() {
 
     if (!didApplyLaunchSettings.current) {
       setMode(loadedSettings.defaultMode);
-      setDurationMinutes(resolveDurationMinutes(loadedSettings));
+      setDurationSeconds(resolveDurationMinutes(loadedSettings) * 60);
       setSaveToBacklog(loadedSettings.defaultSaveNewSessions);
       didApplyLaunchSettings.current = true;
     }
@@ -131,17 +135,20 @@ export function App() {
   }, [refreshState]);
 
   useEffect(() => {
-    if (!didApplyLaunchSettings.current || durationMinutes <= 0) {
+    if (!didApplyLaunchSettings.current || durationSeconds <= 0) {
       return;
     }
 
     const timeoutId = window.setTimeout(() => {
       void window.tempo.updateSettings({
-        lastDurationMinutes: durationMinutes,
+        lastDurationMinutes: Math.min(
+          60,
+          Math.max(1, Math.round(durationSeconds / 60)),
+        ),
       });
     }, 400);
     return () => window.clearTimeout(timeoutId);
-  }, [durationMinutes]);
+  }, [durationSeconds]);
 
   useEffect(() => {
     const isFocusRunning =
@@ -346,13 +353,13 @@ export function App() {
   const hasSessionName = name.trim().length > 0;
   const canStart =
     hasSessionName &&
-    (isBreakSelected || mode !== "timer" || durationMinutes >= 1);
-  const composerPlannedSeconds =
-    durationMinutes > 0 ? durationMinutes * 60 : 0;
+    (isBreakSelected ||
+      mode !== "timer" ||
+      durationSeconds >= TIMER_MIN_PLANNED_SECONDS);
+  const composerPlannedSeconds = durationSeconds > 0 ? durationSeconds : 0;
   const stageClock = resolveStageClock({
     viewState,
     mode,
-    durationMinutes,
     composerPlannedSeconds,
     focusElapsedSeconds,
     breakElapsedSeconds,
@@ -375,7 +382,7 @@ export function App() {
         setMode(nextSettings.defaultMode);
       }
       if (patch.durationPreset !== undefined) {
-        setDurationMinutes(resolveDurationMinutes(nextSettings));
+        setDurationSeconds(resolveDurationMinutes(nextSettings) * 60);
       }
       if (patch.defaultSaveNewSessions !== undefined && !isBacklogSelected) {
         setSaveToBacklog(nextSettings.defaultSaveNewSessions);
@@ -473,6 +480,14 @@ export function App() {
     await refreshState();
   }
 
+  function handleComposerNameChange(nextName: string) {
+    setName(nextName);
+    if (selectedSessionId !== null) {
+      setSelectedSessionId(null);
+      setSaveToBacklog(settings.defaultSaveNewSessions);
+    }
+  }
+
   function handleSelectBacklog(sessionId: string | null) {
     setSelectedSessionId(sessionId);
     if (sessionId === null) {
@@ -484,7 +499,8 @@ export function App() {
       setName(session.name);
       setSaveToBacklog(false);
       if (isDefaultBreakSessionName(session.name)) {
-        setDurationMinutes(settings.breakDurationMinutes);
+        setMode("timer");
+        setDurationSeconds(settings.breakDurationMinutes * 60);
       }
     }
   }
@@ -506,7 +522,7 @@ export function App() {
           sessionId: selectedSessionId,
           saveToBacklog: !isBacklogSelected && saveToBacklog,
           mode,
-          plannedSeconds: durationMinutes > 0 ? durationMinutes * 60 : null,
+          plannedSeconds: durationSeconds > 0 ? durationSeconds : null,
         });
       }
       await refreshState();
@@ -664,11 +680,10 @@ export function App() {
               : name
           }
           scope={scope}
-          durationMinutes={durationMinutes}
+          durationSeconds={durationSeconds}
           sessions={sessions}
           selectedSessionId={selectedSessionId}
           saveToBacklog={saveToBacklog}
-          isBacklogSelected={isBacklogSelected}
           isBreakSelected={isBreakSelected}
           breakDurationMinutes={settings.breakDurationMinutes}
           clockValue={stageClock.value}
@@ -680,24 +695,41 @@ export function App() {
           railDone={stageClock.railDone}
           isBusy={isBusy}
           canStart={canStart}
-          startHint="Enter a session name to start"
           errorMessage={errorMessage}
+          activityErrorMessage={activityErrorMessage}
           pausedFocusLabel={pausedFocusLabel}
           isLive={headerStatus.isLive}
-          onModeChange={setMode}
-          onNameChange={setName}
+          onModeChange={(nextMode) => {
+            setMode(nextMode);
+            if (
+              nextMode === "timer" &&
+              durationSeconds < TIMER_MIN_PLANNED_SECONDS
+            ) {
+              setDurationSeconds(10 * 60);
+            }
+          }}
+          onNameChange={handleComposerNameChange}
           onScopeChange={setScope}
-          onDurationChange={setDurationMinutes}
+          onDurationChange={setDurationSeconds}
           onSaveToBacklogChange={setSaveToBacklog}
           onSelectActivity={handleSelectBacklog}
           onEditActivity={setEditingSession}
           onDeleteActivity={async (sessionId) => {
-            await window.tempo.deleteSession(sessionId);
-            if (selectedSessionId === sessionId) {
-              setSelectedSessionId(null);
-              setName("");
+            setActivityErrorMessage(null);
+            try {
+              await window.tempo.deleteSession(sessionId);
+              if (selectedSessionId === sessionId) {
+                setSelectedSessionId(null);
+                setName("");
+              }
+              await refreshState();
+            } catch (error) {
+              setActivityErrorMessage(
+                error instanceof Error
+                  ? error.message
+                  : "Could not delete activity",
+              );
             }
-            await refreshState();
           }}
           onStart={() => {
             void handleStart();
@@ -883,7 +915,6 @@ function resolveHeaderStatus(
 function resolveStageClock({
   viewState,
   mode,
-  durationMinutes,
   composerPlannedSeconds,
   focusElapsedSeconds,
   breakElapsedSeconds,
@@ -902,7 +933,7 @@ function resolveStageClock({
       elapsedSeconds: breakElapsedSeconds,
       targetSeconds: target,
       leftLabel: "left",
-      rightLabel: done ? "goal reached" : formatGoalLabel(Math.round(target / 60)),
+      rightLabel: done ? "goal reached" : formatGoalLabel(target),
       railDone: done,
       overGoal: done,
     };
@@ -930,7 +961,7 @@ function resolveStageClock({
       elapsedSeconds: viewState === "idle" ? 0 : focusElapsedSeconds,
       targetSeconds: plannedSeconds,
       leftLabel: "left",
-      rightLabel: done ? "goal reached" : formatGoalLabel(durationMinutes),
+      rightLabel: done ? "goal reached" : formatGoalLabel(plannedSeconds),
       railDone: done,
       overGoal: done,
     };
@@ -944,7 +975,7 @@ function resolveStageClock({
     rightLabel: done
       ? "goal reached"
       : hasGoal
-        ? formatGoalLabel(Math.round(plannedSeconds / 60))
+        ? formatGoalLabel(plannedSeconds)
         : "no goal",
     railDone: done,
     overGoal: done,
@@ -964,7 +995,6 @@ interface StageClock {
 interface StageClockInput {
   viewState: ReturnType<typeof resolveFocusViewState>;
   mode: TimerMode;
-  durationMinutes: number;
   composerPlannedSeconds: number;
   focusElapsedSeconds: number;
   breakElapsedSeconds: number;

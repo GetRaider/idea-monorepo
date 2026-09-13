@@ -1,6 +1,6 @@
 import { copyFileSync } from "node:fs";
 
-import { BrowserWindow, dialog, ipcMain, shell } from "electron";
+import { BrowserWindow, dialog, ipcMain, shell, systemPreferences } from "electron";
 
 import type {
   AddManualRecordInput,
@@ -39,6 +39,7 @@ import {
   deleteSavedSession,
   listSavedSessions,
   migrateRestSessionToBreak,
+  reorderSavedSessions,
   updateSavedSession,
 } from "./sessions.repository";
 import { getAppSettings, updateAppSettings } from "./settings.store";
@@ -79,6 +80,33 @@ export function registerRecordIpcHandlers(): void {
   ipcMain.handle("sessions:delete", (_event, sessionId: string) =>
     deleteSavedSession(sessionId),
   );
+  ipcMain.handle("sessions:reorder", (_event, orderedIds: unknown) => {
+    if (
+      !Array.isArray(orderedIds) ||
+      orderedIds.some((sessionId) => typeof sessionId !== "string")
+    ) {
+      throw new Error("Activity list is out of date");
+    }
+    return reorderSavedSessions(orderedIds);
+  });
+}
+
+export function registerMediaIpcHandlers(): void {
+  ipcMain.handle("media:requestMicrophone", async () => {
+    if (process.platform !== "darwin") {
+      return true;
+    }
+
+    const accessStatus = systemPreferences.getMediaAccessStatus("microphone");
+    if (accessStatus === "granted") {
+      return true;
+    }
+    if (accessStatus === "denied" || accessStatus === "restricted") {
+      return false;
+    }
+
+    return systemPreferences.askForMediaAccess("microphone");
+  });
 }
 
 export function registerSettingsIpcHandlers(

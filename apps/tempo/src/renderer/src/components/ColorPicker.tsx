@@ -23,7 +23,7 @@ export function ColorPicker({ value, onChange }: ColorPickerProps) {
             aria-label={`Select colour ${color}`}
             aria-pressed={value === color}
             className={cn(
-              "h-7 w-7 rounded-full border-2 bg-[var(--picker-swatch)]",
+              "h-7 w-7 cursor-pointer rounded-full border-2 bg-[var(--picker-swatch)]",
               value === color ? "border-tempo-text" : "border-transparent",
             )}
             style={{ "--picker-swatch": color } as CSSProperties}

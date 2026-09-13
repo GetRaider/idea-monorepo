@@ -10,6 +10,8 @@ import {
   Req,
   UseGuards,
 } from "@nestjs/common";
+import { AllowAnonymous } from "@thallesp/nestjs-better-auth";
+
 import {
   CreateTaskBodySchema,
   ListTasksQuerySchema,
@@ -29,6 +31,7 @@ import { zodPipe } from "../../pipes/zod-validation.pipe";
 import { TasksService } from "./tasks.service";
 
 @Controller("tasks")
+@AllowAnonymous()
 @UseGuards(WorkspaceGuard)
 export class TasksController {
   constructor(private readonly tasksService: TasksService) {}

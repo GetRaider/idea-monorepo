@@ -42,7 +42,6 @@ export function TasksProvider({ children }: { children: ReactNode }) {
   const [selectedTaskId, setSelectedTaskIdState] = useState<string | null>(
     null,
   );
-  const [search, setSearch] = useState("");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [scheduleTargetBoardId, setScheduleTargetBoardId] = useState<
     string | null
@@ -106,23 +105,13 @@ export function TasksProvider({ children }: { children: ReactNode }) {
     [view.kind, scheduleTasksQuery.data, boardTasksQuery.data],
   );
 
-  const visibleTasks = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    if (!query) return loadedTasks;
-    return loadedTasks.filter(
-      (task) =>
-        task.summary.toLowerCase().includes(query) ||
-        task.taskKey.toLowerCase().includes(query),
-    );
-  }, [loadedTasks, search]);
-
   const tasks = loadedTasks;
   const isTasksLoading =
     view.kind === "schedule"
       ? scheduleTasksQuery.isLoading
       : boardTasksQuery.isLoading;
 
-  const tree = useMemo(() => nestTasks(visibleTasks), [visibleTasks]);
+  const tree = useMemo(() => nestTasks(tasks), [tasks]);
   const groups = useMemo(() => groupRootsByStatus(tree), [tree]);
   const selectedTask = tasks.find((task) => task.id === selectedTaskId) ?? null;
 
@@ -264,14 +253,24 @@ export function TasksProvider({ children }: { children: ReactNode }) {
   });
 
   const createTask = useMutation({
-    mutationFn: (input: { summary: string; parentTaskId?: string | null }) => {
+    mutationFn: (input: CreateTaskInput) => {
       if (!createBoardId) throw new Error("No board");
+      const scheduleDate =
+        input.scheduleDate !== undefined
+          ? input.scheduleDate
+          : view.kind === "schedule" && scheduleQuery
+            ? scheduleQuery.scheduleFrom
+            : undefined;
       return todexClient.tasks.create({
         taskBoardId: createBoardId,
         summary: input.summary,
         ...(input.parentTaskId ? { parentTaskId: input.parentTaskId } : {}),
-        ...(view.kind === "schedule" && scheduleQuery
-          ? { scheduleDate: scheduleQuery.scheduleFrom }
+        ...(input.status ? { status: input.status } : {}),
+        ...(input.priority ? { priority: input.priority } : {}),
+        ...(scheduleDate !== undefined ? { scheduleDate } : {}),
+        ...(input.dueDate !== undefined ? { dueDate: input.dueDate } : {}),
+        ...(input.estimation !== undefined
+          ? { estimation: input.estimation }
           : {}),
       });
     },
@@ -338,13 +337,11 @@ export function TasksProvider({ children }: { children: ReactNode }) {
       selectedBoard,
       selectedTask,
       selectedTaskId,
-      search,
       createBoardId,
       isCreateDialogOpen,
     },
     actions: {
       setSelectedTaskId,
-      setSearch,
       setScheduleTargetBoardId,
       openCreateDialog: () => setIsCreateDialogOpen(true),
       closeCreateDialog: () => setIsCreateDialogOpen(false),
@@ -361,9 +358,13 @@ export function TasksProvider({ children }: { children: ReactNode }) {
       removeBoard: async (boardId) => {
         await removeBoard.mutateAsync(boardId);
       },
-      createTask: (summary, parentTaskId) =>
-        createTask.mutate({ summary, parentTaskId }),
-      updateTask: (taskId, body) => updateTask.mutate({ taskId, body }),
+      createTask: (input) => createTask.mutate(input),
+      updateTask: (taskId, body, options) =>
+        updateTask.mutate({
+          taskId,
+          body,
+          optimistic: options?.optimistic,
+        }),
       updateTaskStatus: (taskId, status) =>
         updateTask.mutate({ taskId, body: { status }, optimistic: true }),
       removeTask: (taskId) => removeTask.mutate(taskId),
@@ -413,6 +414,16 @@ export type TasksView =
   | { kind: "board"; boardId: string | null; boardName: string }
   | { kind: "schedule"; schedule: "today" | "tomorrow" };
 
+export interface CreateTaskInput {
+  summary: string;
+  parentTaskId?: string | null;
+  status?: Task["status"];
+  priority?: Task["priority"];
+  scheduleDate?: string | null;
+  dueDate?: string | null;
+  estimation?: number | null;
+}
+
 interface TasksContextValue {
   state: {
     folders: Folder[];
@@ -423,13 +434,11 @@ interface TasksContextValue {
     selectedBoard: TaskBoard | null;
     selectedTask: Task | null;
     selectedTaskId: string | null;
-    search: string;
     createBoardId: string | null;
     isCreateDialogOpen: boolean;
   };
   actions: {
     setSelectedTaskId: (taskId: string | null) => void;
-    setSearch: (search: string) => void;
     setScheduleTargetBoardId: (boardId: string) => void;
     openCreateDialog: () => void;
     closeCreateDialog: () => void;
@@ -442,8 +451,12 @@ interface TasksContextValue {
       body: UpdateTaskBoardBody,
     ) => Promise<TaskBoard>;
     removeBoard: (boardId: string) => Promise<void>;
-    createTask: (summary: string, parentTaskId?: string | null) => void;
-    updateTask: (taskId: string, body: UpdateTaskBody) => void;
+    createTask: (input: CreateTaskInput) => void;
+    updateTask: (
+      taskId: string,
+      body: UpdateTaskBody,
+      options?: { optimistic?: boolean },
+    ) => void;
     updateTaskStatus: (taskId: string, status: Task["status"]) => void;
     removeTask: (taskId: string) => void;
   };

@@ -4,11 +4,40 @@ import { TaskPriority, TaskStatus } from "@repo/api/todex";
 import {
   compareTasksForListSort,
   dateInputToLocalDayStartIso,
+  formatScheduleLabel,
   isoToDateInput,
   localDayScheduleQuery,
   sortNestedTasks,
+  subtaskCompletion,
   type NestedTask,
 } from "./task-helpers";
+
+describe("formatScheduleLabel", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("labels today, tomorrow, yesterday, and a short date", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 8, 10, 15, 0, 0));
+    expect(formatScheduleLabel(new Date(2026, 8, 10).toISOString())).toBe(
+      "Today",
+    );
+    expect(formatScheduleLabel(new Date(2026, 8, 11).toISOString())).toBe(
+      "Tomorrow",
+    );
+    expect(formatScheduleLabel(new Date(2026, 8, 9).toISOString())).toBe(
+      "Yesterday",
+    );
+    expect(formatScheduleLabel(new Date(2026, 8, 20).toISOString())).toBe(
+      new Date(2026, 8, 20).toLocaleDateString(undefined, {
+        month: "short",
+        day: "numeric",
+      }),
+    );
+    expect(formatScheduleLabel(null)).toBeNull();
+  });
+});
 
 describe("localDayScheduleQuery", () => {
   afterEach(() => {
@@ -87,6 +116,19 @@ describe("list sort", () => {
       direction: "asc",
     });
     expect(sorted.map((node) => node.id)).toEqual(["sooner", "later", "none"]);
+  });
+});
+
+describe("subtaskCompletion", () => {
+  it("counts done children", () => {
+    expect(subtaskCompletion([])).toEqual({ done: 0, total: 0 });
+    expect(
+      subtaskCompletion([
+        task({ id: "a", status: TaskStatus.DONE }),
+        task({ id: "b", status: TaskStatus.TODO }),
+        task({ id: "c", status: TaskStatus.IN_PROGRESS }),
+      ]),
+    ).toEqual({ done: 1, total: 3 });
   });
 });
 

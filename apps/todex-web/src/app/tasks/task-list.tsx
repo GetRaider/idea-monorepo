@@ -1,14 +1,16 @@
 "use client";
 
-import { useMemo, useState, type FormEvent } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import {
   DndContext,
+  DragOverlay,
   PointerSensor,
   closestCorners,
   useSensor,
   useSensors,
   type DragEndEvent,
+  type DragStartEvent,
 } from "@dnd-kit/core";
 import {
   Button,
@@ -52,15 +54,19 @@ import {
   type BoardListSubmode,
   type BoardViewMode,
 } from "./task-board-preferences";
-import { TaskKanban } from "./task-kanban";
+import { QuickCreateTaskRow } from "./quick-create-task-row";
+import { TaskCommand } from "./task-command";
+import { requestQuickCreateTask } from "./task-create-events";
 import {
   STATUS_LABEL,
   STATUS_ORDER,
+  localDayScheduleQuery,
   sortGroupsByListSort,
   sortNestedTasks,
   type ListSortField,
   type NestedTask,
 } from "./task-helpers";
+import { KanbanCardView, TaskKanban } from "./task-kanban";
 import { useTasks } from "./tasks-provider";
 
 export function TaskList() {
@@ -72,19 +78,19 @@ export function TaskList() {
       view,
       selectedBoard,
       boards,
-      search,
       tasks,
     },
     actions: {
       setSelectedTaskId,
       createTask,
+      updateTask,
       updateTaskStatus,
       setScheduleTargetBoardId,
       openCreateDialog,
     },
     meta: { createInputRef },
   } = useTasks();
-  const [createSummary, setCreateSummary] = useState("");
+  const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const contextKey =
     view.kind === "board"
       ? view.boardId
@@ -118,14 +124,12 @@ export function TaskList() {
       : (selectedBoard?.name ?? "Select a board");
   const showBoardName = view.kind === "schedule";
 
-  const submitCreate = (event: FormEvent) => {
-    event.preventDefault();
-    if (!createSummary.trim() || !createBoardId) return;
-    createTask(createSummary.trim());
-    setCreateSummary("");
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveTaskId(String(event.active.id));
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
+    setActiveTaskId(null);
     const overId = event.over?.id;
     if (overId == null) return;
     const columnStatus = parseStatusDroppableId(overId);
@@ -137,8 +141,41 @@ export function TaskList() {
     updateTaskStatus(taskId, nextStatus);
   };
 
-  const showEmptySchedule =
-    view.kind === "schedule" && !hasScheduledTasks && !search.trim();
+  const showEmptySchedule = view.kind === "schedule" && !hasScheduledTasks;
+  const activeTask = tasks.find((task) => task.id === activeTaskId) ?? null;
+  const quickCreate = (
+    <QuickCreateTaskRow
+      disabled={!createBoardId}
+      inputRef={createInputRef}
+      defaultScheduleDate={
+        view.kind === "schedule"
+          ? localDayScheduleQuery(view.schedule === "today" ? 0 : 1)
+              .scheduleFrom
+          : null
+      }
+      onCreate={(input) => createTask(input)}
+      leading={
+        view.kind === "schedule" ? (
+          <Select
+            value={createBoardId ?? undefined}
+            onValueChange={setScheduleTargetBoardId}
+            disabled={boards.length === 0}
+          >
+            <SelectTrigger className="h-8 w-36 shrink-0">
+              <SelectValue placeholder="Board" />
+            </SelectTrigger>
+            <SelectContent>
+              {boards.map((board) => (
+                <SelectItem key={board.id} value={board.id}>
+                  {board.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : null
+      }
+    />
+  );
 
   return (
     <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-auto px-6 py-6">
@@ -157,7 +194,7 @@ export function TaskList() {
           </span>
         </div>
         <div className="flex items-center gap-2">
-          <SearchField />
+          <TaskCommand />
           <ViewSettingsMenu
             viewMode={viewMode}
             listSubmode={listSubmode}
@@ -168,7 +205,7 @@ export function TaskList() {
           />
           <Button
             size="sm"
-            onClick={() => createInputRef.current?.focus()}
+            onClick={requestQuickCreateTask}
             disabled={!createBoardId}
           >
             <PlusIcon size={16} />
@@ -184,80 +221,75 @@ export function TaskList() {
           </Button>
         </div>
       ) : null}
-      <form
-        onSubmit={submitCreate}
-        className="mb-3 flex items-center gap-2"
-        onPointerDown={(event) => event.stopPropagation()}
-      >
-        {view.kind === "schedule" ? (
-          <Select
-            value={createBoardId ?? undefined}
-            onValueChange={setScheduleTargetBoardId}
-            disabled={boards.length === 0}
-          >
-            <SelectTrigger className="h-9 w-44 shrink-0">
-              <SelectValue placeholder="Board" />
-            </SelectTrigger>
-            <SelectContent>
-              {boards.map((board) => (
-                <SelectItem key={board.id} value={board.id}>
-                  {board.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        ) : null}
-        <input
-          ref={createInputRef}
-          value={createSummary}
-          onChange={(event) => setCreateSummary(event.target.value)}
-          placeholder="+ Create a new task"
-          disabled={!createBoardId}
-          className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm text-foreground shadow-sm outline-none placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-        />
-      </form>
       {showEmptySchedule ? (
-        <p className="px-2 py-8 text-center text-sm text-muted-foreground">
-          Nothing scheduled
-        </p>
-      ) : (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCorners}
-          onDragEnd={handleDragEnd}
-        >
-          {viewMode === "kanban" ? (
-            <TaskKanban
-              groups={groups}
+        <p className="mb-3 text-sm text-muted-foreground">Nothing scheduled</p>
+      ) : null}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCorners}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        onDragCancel={() => setActiveTaskId(null)}
+      >
+        {viewMode === "kanban" ? (
+          <TaskKanban
+            groups={groups}
+            boardNameById={boardNameById}
+            showBoardName={showBoardName}
+            todoTopSlot={quickCreate}
+          />
+        ) : (
+          <div className="flex min-h-0 flex-1 flex-col overflow-x-auto rounded-xl border border-border bg-panel p-3">
+            <ListSections
+              submode={listSubmode}
+              groups={sortedGroups}
+              listSort={listSort}
+              selectedTaskId={selectedTaskId}
               boardNameById={boardNameById}
               showBoardName={showBoardName}
+              createSlot={quickCreate}
+              onSelect={setSelectedTaskId}
+              onToggleDone={(task) =>
+                updateTaskStatus(
+                  task.id,
+                  task.status === TaskStatus.DONE
+                    ? TaskStatus.TODO
+                    : TaskStatus.DONE,
+                )
+              }
+                onCreateSubtask={(parentTaskId) =>
+                  createTask({
+                    summary: "New subtask",
+                    parentTaskId,
+                  })
+                }
+              onPriorityChange={(taskId, priority) =>
+                updateTask(taskId, { priority }, { optimistic: true })
+              }
+              onScheduleChange={(taskId, scheduleDate) =>
+                updateTask(taskId, { scheduleDate }, { optimistic: true })
+              }
             />
-          ) : (
-            <div className="flex min-h-0 flex-1 flex-col rounded-xl border border-border bg-panel p-3">
-              <ListSections
-                submode={listSubmode}
-                groups={sortedGroups}
-                listSort={listSort}
-                selectedTaskId={selectedTaskId}
+          </div>
+        )}
+        <DragOverlay>
+          {activeTask ? (
+            viewMode === "kanban" ? (
+              <KanbanCardView
+                node={{ ...activeTask, children: [] }}
                 boardNameById={boardNameById}
                 showBoardName={showBoardName}
-                onSelect={setSelectedTaskId}
-                onToggleDone={(task) =>
-                  updateTaskStatus(
-                    task.id,
-                    task.status === TaskStatus.DONE
-                      ? TaskStatus.TODO
-                      : TaskStatus.DONE,
-                  )
-                }
-                onCreateSubtask={(parentTaskId) =>
-                  createTask("New subtask", parentTaskId)
-                }
+                className="cursor-grabbing shadow-lg"
               />
-            </div>
-          )}
-        </DndContext>
-      )}
+            ) : (
+              <ListDragPreview
+                taskKey={activeTask.taskKey}
+                summary={activeTask.summary}
+              />
+            )
+          ) : null}
+        </DragOverlay>
+      </DndContext>
     </section>
   );
 }
@@ -269,9 +301,12 @@ function ListSections({
   selectedTaskId,
   boardNameById,
   showBoardName,
+  createSlot,
   onSelect,
   onToggleDone,
   onCreateSubtask,
+  onPriorityChange,
+  onScheduleChange,
 }: {
   submode: BoardListSubmode;
   groups: Record<Task["status"], NestedTask[]>;
@@ -283,9 +318,12 @@ function ListSections({
   selectedTaskId: string | null;
   boardNameById: Map<string, string>;
   showBoardName: boolean;
+  createSlot: ReactNode;
   onSelect: (taskId: string) => void;
   onToggleDone: (task: NestedTask) => void;
   onCreateSubtask: (parentTaskId: string) => void;
+  onPriorityChange: (taskId: string, priority: Task["priority"]) => void;
+  onScheduleChange: (taskId: string, scheduleDate: string | null) => void;
 }) {
   const sections =
     submode === "single"
@@ -325,12 +363,17 @@ function ListSections({
           status={section.status}
           nodes={section.nodes}
           defaultOpen={section.status !== TaskStatus.DONE}
+          createSlot={
+            section.status === TaskStatus.TODO ? createSlot : undefined
+          }
           selectedTaskId={selectedTaskId}
           boardNameById={boardNameById}
           showBoardName={showBoardName}
           onSelect={onSelect}
           onToggleDone={onToggleDone}
           onCreateSubtask={onCreateSubtask}
+          onPriorityChange={onPriorityChange}
+          onScheduleChange={onScheduleChange}
         />
       ))}
     </>
@@ -342,23 +385,29 @@ function ListSection({
   status,
   nodes,
   defaultOpen,
+  createSlot,
   selectedTaskId,
   boardNameById,
   showBoardName,
   onSelect,
   onToggleDone,
   onCreateSubtask,
+  onPriorityChange,
+  onScheduleChange,
 }: {
   label: string;
   status: Task["status"];
   nodes: NestedTask[];
   defaultOpen: boolean;
+  createSlot?: ReactNode;
   selectedTaskId: string | null;
   boardNameById: Map<string, string>;
   showBoardName: boolean;
   onSelect: (taskId: string) => void;
   onToggleDone: (task: NestedTask) => void;
   onCreateSubtask: (parentTaskId: string) => void;
+  onPriorityChange: (taskId: string, priority: Task["priority"]) => void;
+  onScheduleChange: (taskId: string, scheduleDate: string | null) => void;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
@@ -378,76 +427,33 @@ function ListSection({
         </CollapsibleTrigger>
         <CollapsibleContent>
           <StatusDroppable status={status} className="min-h-8">
+            {createSlot ? <div className="px-1 pb-2">{createSlot}</div> : null}
             {nodes.length === 0 ? (
               <p className="px-8 py-2 text-sm text-muted-foreground">
                 No tasks
               </p>
             ) : (
-              <TaskTree
-                nodes={nodes}
-                selectedTaskId={selectedTaskId}
-                boardNameById={boardNameById}
-                showBoardName={showBoardName}
-                onSelect={onSelect}
-                onToggleDone={onToggleDone}
-                onCreateSubtask={onCreateSubtask}
-              />
+              <ul>
+                {nodes.map((node) => (
+                  <TaskRow
+                    key={node.id}
+                    node={node}
+                    selectedTaskId={selectedTaskId}
+                    boardNameById={boardNameById}
+                    showBoardName={showBoardName}
+                    onSelect={onSelect}
+                    onToggleDone={onToggleDone}
+                    onCreateSubtask={onCreateSubtask}
+                    onPriorityChange={onPriorityChange}
+                    onScheduleChange={onScheduleChange}
+                  />
+                ))}
+              </ul>
             )}
           </StatusDroppable>
         </CollapsibleContent>
       </section>
     </Collapsible>
-  );
-}
-
-function TaskTree({
-  nodes,
-  selectedTaskId,
-  boardNameById,
-  showBoardName,
-  onSelect,
-  onToggleDone,
-  onCreateSubtask,
-  depth = 0,
-}: {
-  nodes: NestedTask[];
-  selectedTaskId: string | null;
-  boardNameById: Map<string, string>;
-  showBoardName: boolean;
-  onSelect: (taskId: string) => void;
-  onToggleDone: (task: NestedTask) => void;
-  onCreateSubtask: (parentTaskId: string) => void;
-  depth?: number;
-}) {
-  return (
-    <ul>
-      {nodes.map((node) => (
-        <li key={node.id}>
-          <TaskRow
-            node={node}
-            selectedTaskId={selectedTaskId}
-            boardNameById={boardNameById}
-            showBoardName={showBoardName}
-            depth={depth}
-            onSelect={onSelect}
-            onToggleDone={onToggleDone}
-            onCreateSubtask={onCreateSubtask}
-          />
-          {node.children.length > 0 ? (
-            <TaskTree
-              nodes={node.children}
-              selectedTaskId={selectedTaskId}
-              boardNameById={boardNameById}
-              showBoardName={showBoardName}
-              onSelect={onSelect}
-              onToggleDone={onToggleDone}
-              onCreateSubtask={onCreateSubtask}
-              depth={depth + 1}
-            />
-          ) : null}
-        </li>
-      ))}
-    </ul>
   );
 }
 
@@ -563,18 +569,22 @@ function ViewSettingsMenu({
   );
 }
 
-function SearchField() {
-  const {
-    state: { search },
-    actions: { setSearch },
-  } = useTasks();
+function ListDragPreview({
+  taskKey,
+  summary,
+}: {
+  taskKey: string;
+  summary: string;
+}) {
   return (
-    <input
-      value={search}
-      onChange={(event) => setSearch(event.target.value)}
-      placeholder="Search"
-      className="h-9 w-40 rounded-md border border-border bg-transparent px-3 text-sm outline-none placeholder:text-muted-foreground"
-    />
+    <div className="grid min-w-[560px] grid-cols-[minmax(0,1fr)_minmax(6.5rem,7.5rem)] items-center gap-2 rounded-md border border-border bg-background px-3 py-1.5 shadow-lg">
+      <div className="min-w-0 text-sm">
+        <span className="mr-2 font-mono text-xs text-muted-foreground">
+          {taskKey}
+        </span>
+        <span>{summary}</span>
+      </div>
+    </div>
   );
 }
 

@@ -7,6 +7,7 @@ import type { ReactNode } from "react";
 import { cn, Tooltip, TooltipContent, TooltipTrigger } from "@repo/ui";
 
 import { signOut } from "@lib/auth-client";
+import { env } from "@lib/env";
 import {
   CalendarIcon,
   DocsIcon,
@@ -67,17 +68,19 @@ export function AppNavRail() {
           );
         })}
       </nav>
-      <div className="mt-auto">
-        <RailTooltip label="Sign out">
-          <button
-            type="button"
-            onClick={() => signOut()}
-            className="flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-surface hover:text-foreground"
-          >
-            <SettingsIcon size={22} />
-          </button>
-        </RailTooltip>
-      </div>
+      {env.auth.disabled ? null : (
+        <div className="mt-auto">
+          <RailTooltip label="Sign out">
+            <button
+              type="button"
+              onClick={() => signOut()}
+              className="flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-surface hover:text-foreground"
+            >
+              <SettingsIcon size={22} />
+            </button>
+          </RailTooltip>
+        </div>
+      )}
     </aside>
   );
 }

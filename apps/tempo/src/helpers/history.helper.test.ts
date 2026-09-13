@@ -4,6 +4,7 @@ import {
   buildActivityFilterOptions,
   buildBacklogFilterOptions,
   buildManualSessionOptions,
+  buildHistoryDayGroups,
   buildHistoryEntries,
   filterRecordsByBacklogSession,
   filterRecordsByStartedAtRange,
@@ -83,13 +84,14 @@ describe("analytics filter", () => {
       name: "Software Growth",
       color: "#3b82f6",
       createdAt: "2026-08-01T00:00:00.000Z",
+      sortOrder: 0,
     },
   ];
 
   it("only lists backlog sessions as filter options", () => {
     const options = buildBacklogFilterOptions(sessions);
     expect(options.map((option) => option.label)).toEqual([
-      "All sessions",
+      "All activities",
       "Software Growth",
     ]);
   });
@@ -147,6 +149,31 @@ describe("history date filter", () => {
       Date.parse(localTimestamp(2026, 8, 21, 12)),
     );
     expect(filtered.map((record) => record.id)).toEqual(["morning"]);
+  });
+});
+
+describe("history day groups", () => {
+  it("groups newest day first and includes recordRole", () => {
+    const entries = buildHistoryEntries([
+      makeRecord({
+        id: "today-break",
+        name: "Break",
+        recordRole: "break",
+        accumulatedSeconds: 600,
+        startedAt: localTimestamp(2026, 8, 22, 9),
+        endedAt: localTimestamp(2026, 8, 22, 9, 10),
+      }),
+      makeRecord({
+        id: "yesterday",
+        startedAt: localTimestamp(2026, 8, 21, 9),
+        endedAt: localTimestamp(2026, 8, 21, 10),
+      }),
+    ]);
+    expect(entries[0]?.recordRole).toBe("break");
+    const groups = buildHistoryDayGroups(entries);
+    expect(groups.map((group) => group.entries.map((entry) => entry.id))).toEqual(
+      [["today-break"], ["yesterday"]],
+    );
   });
 });
 

@@ -39,6 +39,9 @@ const tempoApi: TempoApi = {
     ipcRenderer.invoke("sessions:update", input),
   deleteSession: (sessionId: string) =>
     ipcRenderer.invoke("sessions:delete", sessionId),
+  reorderSessions: (orderedIds: string[]) =>
+    ipcRenderer.invoke("sessions:reorder", orderedIds),
+  requestMicrophoneAccess: () => ipcRenderer.invoke("media:requestMicrophone"),
   getSettings: () => ipcRenderer.invoke("settings:get"),
   updateSettings: (patch: Partial<AppSettings>) =>
     ipcRenderer.invoke("settings:update", patch),

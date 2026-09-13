@@ -96,10 +96,40 @@ export function validateDeleteRecord(existing: FocusRecord): void {
   }
 }
 
+export const SESSION_NAME_MAX_LENGTH = 30;
+
+export function clampSessionName(value: string): string {
+  return value.slice(0, SESSION_NAME_MAX_LENGTH);
+}
+
+export function shouldOfferSaveAsActivity(
+  name: string,
+  selectedSessionId: string | null,
+  sessionNames: string[],
+): boolean {
+  if (selectedSessionId !== null) {
+    return false;
+  }
+
+  const trimmedName = name.trim();
+  if (trimmedName.length === 0) {
+    return false;
+  }
+
+  const normalizedName = trimmedName.toLowerCase();
+  return !sessionNames.some(
+    (sessionName) => sessionName.trim().toLowerCase() === normalizedName,
+  );
+}
+
 export function validateSavedSessionName(name: string): string {
   const trimmed = name.trim();
   if (trimmed.length === 0) {
     throw new Error("Session name is required");
+  }
+
+  if (trimmed.length > SESSION_NAME_MAX_LENGTH) {
+    throw new Error(`Session name must be ${SESSION_NAME_MAX_LENGTH} characters or fewer`);
   }
 
   return trimmed;
@@ -115,6 +145,29 @@ export function validateSavedSessionColor(color: string): string {
   }
 
   return allowedColor;
+}
+
+export function validateSavedSessionReorder(
+  orderedIds: string[],
+  existingIds: string[],
+): string[] {
+  if (orderedIds.length !== existingIds.length) {
+    throw new Error("Activity list is out of date");
+  }
+
+  const uniqueOrderedIds = new Set(orderedIds);
+  if (uniqueOrderedIds.size !== orderedIds.length) {
+    throw new Error("Activity list is out of date");
+  }
+
+  const existingIdSet = new Set(existingIds);
+  for (const sessionId of orderedIds) {
+    if (!existingIdSet.has(sessionId)) {
+      throw new Error("Activity list is out of date");
+    }
+  }
+
+  return orderedIds;
 }
 
 export function validateUpdateSavedSession(input: UpdateSavedSessionInput): {

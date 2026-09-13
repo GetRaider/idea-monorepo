@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   DEFAULT_APP_SETTINGS,
   mergeAppSettings,
+  parseDurationPreset,
   parseStoredSettings,
   resolveDurationMinutes,
 } from "./settings.helper";
@@ -22,7 +23,7 @@ describe("parseStoredSettings", () => {
       }),
     ).toMatchObject({
       defaultMode: "timer",
-      durationPreset: "50",
+      durationPreset: "60",
       soundVolume: 0.4,
       confirmOnStop: true,
     });
@@ -55,10 +56,20 @@ describe("resolveDurationMinutes", () => {
 
   it("uses fixed presets", () => {
     expect(
-      resolveDurationMinutes({ ...DEFAULT_APP_SETTINGS, durationPreset: "25" }),
-    ).toBe(25);
+      resolveDurationMinutes({ ...DEFAULT_APP_SETTINGS, durationPreset: "10" }),
+    ).toBe(10);
     expect(
-      resolveDurationMinutes({ ...DEFAULT_APP_SETTINGS, durationPreset: "50" }),
-    ).toBe(50);
+      resolveDurationMinutes({ ...DEFAULT_APP_SETTINGS, durationPreset: "30" }),
+    ).toBe(30);
+    expect(
+      resolveDurationMinutes({ ...DEFAULT_APP_SETTINGS, durationPreset: "60" }),
+    ).toBe(60);
+  });
+});
+
+describe("parseDurationPreset", () => {
+  it("maps legacy 25 and 50 presets", () => {
+    expect(parseDurationPreset("25", "last")).toBe("30");
+    expect(parseDurationPreset("50", "last")).toBe("60");
   });
 });

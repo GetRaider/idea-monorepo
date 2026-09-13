@@ -51,13 +51,15 @@ function refreshStatusTray(): void {
   try {
     const breakRecord = getActiveBreakRecord();
     const record = breakRecord ?? getActiveFocusRecord();
-    const title = formatMenuBarClock(
+    const clock = formatMenuBarClock(
       record,
       Date.now(),
       getAppSettings().menuBarClockStyle,
     );
-    statusTray.setTitle(title, { fontType: "monospacedDigit" });
-    statusTray.setToolTip(record === null ? "Tempo" : record.name);
+    statusTray.setTitle(clock, { fontType: "monospacedDigit" });
+    statusTray.setToolTip(
+      record === null ? "Tempo" : `${record.name} · ${clock || "Ready"}`,
+    );
   } catch {
     statusTray.setTitle("");
   }

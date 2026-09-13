@@ -31,6 +31,8 @@ export interface TempoApi {
   createSession: (input: CreateSavedSessionInput) => Promise<SavedSession>;
   updateSession: (input: UpdateSavedSessionInput) => Promise<SavedSession>;
   deleteSession: (sessionId: string) => Promise<void>;
+  reorderSessions: (orderedIds: string[]) => Promise<SavedSession[]>;
+  requestMicrophoneAccess: () => Promise<boolean>;
   getSettings: () => Promise<AppSettings>;
   updateSettings: (patch: Partial<AppSettings>) => Promise<AppSettings>;
   revealData: () => Promise<void>;

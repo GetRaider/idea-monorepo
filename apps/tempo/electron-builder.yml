@@ -19,3 +19,6 @@ mac:
   target:
     - dir
   category: public.app-category.productivity
+  extendInfo:
+    NSMicrophoneUsageDescription: Tempo uses the microphone to dictate what you will work on this session.
+    NSSpeechRecognitionUsageDescription: Tempo uses speech recognition to fill session scope from dictation.

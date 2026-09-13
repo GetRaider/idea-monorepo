@@ -1,10 +1,9 @@
-import { Button, ButtonRow, Field, FieldLabel, TextInput } from "../App.styles";
+import { Button } from "./ui/button";
 import {
-  DialogBody,
-  DialogPanel,
+  Dialog,
+  DialogContent,
   DialogTitle,
-  Overlay,
-} from "./ManualRecordDialog.styles";
+} from "./ui/dialog";
 
 export function BreakOfferDialog({
   durationMinutes,
@@ -14,52 +13,49 @@ export function BreakOfferDialog({
   onDismiss,
 }: BreakOfferDialogProps) {
   return (
-    <Overlay
-      onClick={() => {
-        if (!isBusy) {
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open && !isBusy) {
           onDismiss();
         }
       }}
     >
-      <DialogPanel
-        onClick={(event) => {
-          event.stopPropagation();
-        }}
-      >
+      <DialogContent overlayDismiss>
         <DialogTitle>Take a break?</DialogTitle>
-        <DialogBody>
-          <Field>
-            <FieldLabel>Duration</FieldLabel>
-            <TextInput
-              value={`${durationMinutes}m`}
-              disabled={isBusy}
-              onChange={(event) => onDurationChange(event.target.value)}
-              placeholder="e.g. 10m"
-            />
-          </Field>
-        </DialogBody>
-        <ButtonRow>
-          <Button
-            type="button"
-            $variant="ghost"
-            disabled={isBusy}
-            onClick={onDismiss}
-          >
+        <div className="mt-3">
+            <label className="flex flex-col gap-1 text-sm text-tempo-muted">
+              Duration (minutes)
+              <input
+                type="number"
+                min={1}
+                max={60}
+                className="rounded-[10px] border border-tempo-line bg-transparent px-2.5 py-1.5 text-tempo-text"
+                value={durationMinutes}
+                disabled={isBusy}
+                onChange={(event) =>
+                  onDurationChange(Number(event.target.value))
+                }
+              />
+            </label>
+          </div>
+        <div className="mt-4 flex justify-end gap-2">
+          <Button variant="ghost" disabled={isBusy} onClick={onDismiss}>
             Not now
           </Button>
-          <Button type="button" disabled={isBusy} onClick={onStartBreak}>
+          <Button disabled={isBusy} onClick={onStartBreak}>
             Start break
           </Button>
-        </ButtonRow>
-      </DialogPanel>
-    </Overlay>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
 interface BreakOfferDialogProps {
   durationMinutes: number;
   isBusy: boolean;
-  onDurationChange: (value: string) => void;
+  onDurationChange: (minutes: number) => void;
   onStartBreak: () => void;
   onDismiss: () => void;
 }

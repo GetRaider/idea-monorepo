@@ -1,6 +1,6 @@
 import type { TimerMode } from "./records.types";
 
-export type DurationPreset = "last" | "25" | "50";
+export type DurationPreset = "last" | "10" | "30" | "60";
 
 export type MenuBarClockStyle = "auto" | "elapsed" | "remaining";
 

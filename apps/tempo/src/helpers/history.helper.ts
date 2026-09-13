@@ -3,15 +3,6 @@ import { DEFAULT_SESSION_COLOR } from "../shared/session-colors";
 
 import { formatDurationLabel } from "./analytics.helper";
 
-export interface HistoryEntry {
-  id: string;
-  title: string;
-  detail: string;
-  hasManual: boolean;
-  mode: FocusRecord["mode"];
-  sortKey: string;
-}
-
 export function resolveRecordColor(
   record: FocusRecord,
   sessionColorById: ReadonlyMap<string, string>,
@@ -32,9 +23,37 @@ export function buildHistoryEntries(records: FocusRecord[]): HistoryEntry[] {
       detail: formatHistoryTimestamp(record.startedAt),
       hasManual: record.source === "manual",
       mode: record.mode,
+      recordRole: record.recordRole,
+      startedAt: record.startedAt,
       sortKey: record.endedAt ?? record.startedAt,
     }))
     .sort((left, right) => right.sortKey.localeCompare(left.sortKey));
+}
+
+export function buildHistoryDayGroups(
+  entries: HistoryEntry[],
+): HistoryDayGroup[] {
+  const groups = new Map<string, HistoryEntry[]>();
+
+  for (const entry of entries) {
+    const dayKey = formatLocalDayKey(entry.startedAt);
+    const dayEntries = groups.get(dayKey);
+    if (dayEntries === undefined) {
+      groups.set(dayKey, [entry]);
+    } else {
+      dayEntries.push(entry);
+    }
+  }
+
+  return [...groups.entries()]
+    .sort((left, right) => right[0].localeCompare(left[0]))
+    .map(([dayKey, dayEntries]) => ({
+      dayKey,
+      heading: formatDayHeading(dayKey),
+      entries: [...dayEntries].sort((left, right) =>
+        right.sortKey.localeCompare(left.sortKey),
+      ),
+    }));
 }
 
 export function findCompletedRecord(
@@ -53,7 +72,7 @@ export function buildBacklogFilterOptions(
   sessions: SavedSession[],
 ): Array<{ value: string; label: string }> {
   return [
-    { value: "", label: "All sessions" },
+    { value: "", label: "All activities" },
     ...buildSortedSessionOptions(sessions),
   ];
 }
@@ -141,4 +160,54 @@ function formatHistoryTimestamp(startedAt: string): string {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(startedAtDate);
+}
+
+function formatLocalDayKey(startedAt: string): string {
+  const startedAtDate = new Date(startedAt);
+  if (Number.isNaN(startedAtDate.getTime())) {
+    return "invalid";
+  }
+
+  const year = startedAtDate.getFullYear();
+  const month = String(startedAtDate.getMonth() + 1).padStart(2, "0");
+  const day = String(startedAtDate.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function formatDayHeading(dayKey: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dayKey);
+  if (match === null) {
+    return dayKey;
+  }
+
+  const year = match[1];
+  const month = match[2];
+  const day = match[3];
+  if (year === undefined || month === undefined || day === undefined) {
+    return dayKey;
+  }
+
+  const headingDate = new Date(Number(year), Number(month) - 1, Number(day));
+  return new Intl.DateTimeFormat(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  }).format(headingDate);
+}
+
+export interface HistoryEntry {
+  id: string;
+  title: string;
+  detail: string;
+  hasManual: boolean;
+  mode: FocusRecord["mode"];
+  recordRole: FocusRecord["recordRole"];
+  startedAt: string;
+  sortKey: string;
+}
+
+export interface HistoryDayGroup {
+  dayKey: string;
+  heading: string;
+  entries: HistoryEntry[];
 }

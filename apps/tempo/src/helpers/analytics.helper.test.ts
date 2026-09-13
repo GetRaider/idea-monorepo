@@ -191,6 +191,8 @@ describe("buildAnalyticsMetrics", () => {
     const metrics = buildAnalyticsMetrics(records, 7);
     expect(metrics.sessionCount).toBe(5);
     expect(metrics.totalSeconds).toBe(21600);
+    expect(metrics.focusSeconds).toBe(21600);
+    expect(metrics.breakSeconds).toBe(0);
     expect(metrics.dailyAverageSeconds).toBe(21600 / 7);
     expect(metrics.averageSessionSeconds).toBe(21600 / 5);
     expect(metrics.longestSessionSeconds).toBe(7200);
@@ -201,6 +203,8 @@ describe("buildAnalyticsMetrics", () => {
   it("returns zeros for an empty range", () => {
     expect(buildAnalyticsMetrics([], 7)).toEqual({
       totalSeconds: 0,
+      focusSeconds: 0,
+      breakSeconds: 0,
       sessionCount: 0,
       dailyAverageSeconds: 0,
       averageSessionSeconds: 0,
@@ -208,6 +212,26 @@ describe("buildAnalyticsMetrics", () => {
       activeDayCount: 0,
       calendarDayCount: 7,
     });
+  });
+
+  it("keeps break seconds out of focus metrics and daily average", () => {
+    const metrics = buildAnalyticsMetrics(
+      [
+        makeRecord({ accumulatedSeconds: 3600, recordRole: "focus" }),
+        makeRecord({
+          id: "break-1",
+          name: "Break",
+          accumulatedSeconds: 600,
+          recordRole: "break",
+        }),
+      ],
+      7,
+    );
+    expect(metrics.focusSeconds).toBe(3600);
+    expect(metrics.breakSeconds).toBe(600);
+    expect(metrics.totalSeconds).toBe(3600);
+    expect(metrics.sessionCount).toBe(1);
+    expect(metrics.dailyAverageSeconds).toBe(3600 / 7);
   });
 });
 
@@ -261,12 +285,14 @@ describe("buildTimeByActivity", () => {
       name: "Software Growth",
       color: "#3b82f6",
       createdAt: "2026-08-01T00:00:00.000Z",
+      sortOrder: 0,
     },
     {
       id: "session-2",
       name: "Work",
       color: "#22c55e",
       createdAt: "2026-08-01T00:00:00.000Z",
+      sortOrder: 0,
     },
   ];
 

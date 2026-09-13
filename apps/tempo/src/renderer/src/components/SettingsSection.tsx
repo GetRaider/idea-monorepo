@@ -1,20 +1,5 @@
-import {
-  Button,
-  CheckboxField,
-  Field,
-  FieldLabel,
-  Select,
-  SettingsCopy,
-} from "../App.styles";
-
-import {
-  DataActions,
-  RangeField,
-  RangeInput,
-  SettingsForm,
-  SettingsGroup,
-  SettingsGroupTitle,
-} from "./SettingsSection.styles";
+import { Checkbox } from "./ui/checkbox";
+import { SelectMenu } from "./ui/dropdown-menu";
 
 import type {
   AppSettings,
@@ -29,60 +14,58 @@ export function SettingsSection({
   onImport,
 }: SettingsSectionProps) {
   return (
-    <SettingsForm>
-      <SettingsGroup>
-        <SettingsGroupTitle>Defaults</SettingsGroupTitle>
-        <Field>
-          <FieldLabel>Default mode</FieldLabel>
-          <Select
+    <form className="flex min-h-0 flex-1 flex-col gap-8 overflow-y-auto px-8 py-6">
+      <h1 className="m-0 text-xl font-medium">Settings</h1>
+      <SettingsGroup title="Defaults">
+        <Field label="Default mode">
+          <SelectMenu
             value={settings.defaultMode}
-            onChange={(event) =>
-              onChange({ defaultMode: event.target.value as TimerMode })
+            options={[
+              { value: "stopwatch", label: "Stopwatch" },
+              { value: "timer", label: "Timer" },
+            ]}
+            onValueChange={(value) =>
+              onChange({ defaultMode: value as TimerMode })
             }
-          >
-            <option value="stopwatch">Stopwatch</option>
-            <option value="timer">Timer</option>
-          </Select>
+          />
         </Field>
-        <Field>
-          <FieldLabel>Default duration</FieldLabel>
-          <Select
+        <Field label="Default duration">
+          <SelectMenu
             value={settings.durationPreset}
-            onChange={(event) =>
-              onChange({ durationPreset: event.target.value as DurationPreset })
+            options={[
+              { value: "last", label: "Last used" },
+              { value: "10", label: "10 minutes" },
+              { value: "30", label: "30 minutes" },
+              { value: "60", label: "1 hour" },
+            ]}
+            onValueChange={(value) =>
+              onChange({ durationPreset: value as DurationPreset })
             }
-          >
-            <option value="last">Last used</option>
-            <option value="25">25 minutes</option>
-            <option value="50">50 minutes</option>
-          </Select>
+          />
         </Field>
-        <CheckboxField>
-          <input
-            type="checkbox"
-            checked={settings.defaultSaveNewSessions}
-            onChange={(event) =>
-              onChange({ defaultSaveNewSessions: event.target.checked })
-            }
-          />
-          Save new names to Regular Sessions
-        </CheckboxField>
+        <SettingsCheckbox
+          checked={settings.defaultSaveNewSessions}
+          onChange={(checked) => onChange({ defaultSaveNewSessions: checked })}
+        >
+          Save new names as activities
+        </SettingsCheckbox>
+        <SettingsCheckbox
+          checked={settings.confirmOnStop}
+          onChange={(checked) => onChange({ confirmOnStop: checked })}
+        >
+          Confirm before saving or discarding
+        </SettingsCheckbox>
       </SettingsGroup>
-      <SettingsGroup>
-        <SettingsGroupTitle>Sound</SettingsGroupTitle>
-        <CheckboxField>
-          <input
-            type="checkbox"
-            checked={settings.soundEnabled}
-            onChange={(event) =>
-              onChange({ soundEnabled: event.target.checked })
-            }
-          />
+      <SettingsGroup title="Sound">
+        <SettingsCheckbox
+          checked={settings.soundEnabled}
+          onChange={(checked) => onChange({ soundEnabled: checked })}
+        >
           Play timer and goal sounds
-        </CheckboxField>
-        <RangeField>
+        </SettingsCheckbox>
+        <label className="flex flex-col gap-1 text-sm text-tempo-muted">
           Volume ({Math.round(settings.soundVolume * 100)}%)
-          <RangeInput
+          <input
             type="range"
             min="0"
             max="1"
@@ -93,120 +76,168 @@ export function SettingsSection({
               onChange({ soundVolume: Number(event.target.value) })
             }
           />
-        </RangeField>
+        </label>
       </SettingsGroup>
-      <SettingsGroup>
-        <SettingsGroupTitle>Break</SettingsGroupTitle>
-        <CheckboxField>
-          <input
-            type="checkbox"
-            checked={settings.offerBreakTimer}
-            onChange={(event) =>
-              onChange({ offerBreakTimer: event.target.checked })
-            }
-          />
+      <SettingsGroup title="Break">
+        <SettingsCheckbox
+          checked={settings.offerBreakTimer}
+          onChange={(checked) => onChange({ offerBreakTimer: checked })}
+        >
           Offer break timer on pause and after saving
-        </CheckboxField>
-        <Field>
-          <FieldLabel>Default break duration (minutes)</FieldLabel>
-          <Select
-            value={String(settings.breakDurationMinutes)}
-            onChange={(event) =>
-              onChange({ breakDurationMinutes: Number(event.target.value) })
-            }
-          >
-            {[5, 10, 15, 20, 25, 30].map((minutes) => (
-              <option key={minutes} value={minutes}>
-                {minutes} minutes
-              </option>
-            ))}
-          </Select>
-        </Field>
-      </SettingsGroup>
-      <SettingsGroup>
-        <SettingsGroupTitle>Window</SettingsGroupTitle>
-        <CheckboxField>
+        </SettingsCheckbox>
+        <Field label="Default break duration (minutes)">
           <input
-            type="checkbox"
-            checked={settings.alwaysOnTop}
-            onChange={(event) =>
-              onChange({ alwaysOnTop: event.target.checked })
-            }
-          />
-          Always on top
-        </CheckboxField>
-        <CheckboxField>
-          <input
-            type="checkbox"
-            checked={settings.confirmOnStop}
-            onChange={(event) =>
-              onChange({ confirmOnStop: event.target.checked })
-            }
-          />
-          Confirm before saving or discarding
-        </CheckboxField>
-        <CheckboxField>
-          <input
-            type="checkbox"
-            checked={settings.menuBarClockVisible}
-            onChange={(event) =>
-              onChange({ menuBarClockVisible: event.target.checked })
-            }
-          />
-          Show clock in the menu bar
-        </CheckboxField>
-        <Field>
-          <FieldLabel>Menu bar clock</FieldLabel>
-          <Select
-            value={settings.menuBarClockStyle}
-            disabled={!settings.menuBarClockVisible}
+            type="number"
+            min={1}
+            max={60}
+            className={inputClassName}
+            value={settings.breakDurationMinutes}
             onChange={(event) =>
               onChange({
-                menuBarClockStyle: event.target.value as MenuBarClockStyle,
+                breakDurationMinutes: Number(event.target.value),
               })
             }
-          >
-            <option value="auto">
-              Auto (timer remaining / stopwatch elapsed)
-            </option>
-            <option value="elapsed">Always elapsed</option>
-            <option value="remaining">Remaining when a duration is set</option>
-          </Select>
+          />
         </Field>
       </SettingsGroup>
-      <SettingsGroup>
-        <SettingsGroupTitle>Data</SettingsGroupTitle>
-        <SettingsCopy>
+      <SettingsGroup title="Window">
+        <SettingsCheckbox
+          checked={settings.alwaysOnTop}
+          onChange={(checked) => onChange({ alwaysOnTop: checked })}
+        >
+          Always on top
+        </SettingsCheckbox>
+        <SettingsCheckbox
+          checked={settings.menuBarClockVisible}
+          onChange={(checked) => onChange({ menuBarClockVisible: checked })}
+        >
+          Show clock in the menu bar
+        </SettingsCheckbox>
+        <Field label="Menu bar clock">
+          <SelectMenu
+            value={settings.menuBarClockStyle}
+            disabled={!settings.menuBarClockVisible}
+            options={[
+              {
+                value: "auto",
+                label: "Auto (timer remaining / stopwatch elapsed)",
+              },
+              { value: "elapsed", label: "Always elapsed" },
+              {
+                value: "remaining",
+                label: "Remaining when a duration is set",
+              },
+            ]}
+            onValueChange={(value) =>
+              onChange({
+                menuBarClockStyle: value as MenuBarClockStyle,
+              })
+            }
+          />
+        </Field>
+      </SettingsGroup>
+      <SettingsGroup title="Data">
+        <p className="m-0 text-sm text-tempo-muted">
           Sessions and records are stored locally in SQLite on this Mac. No
           account, no cloud.
-        </SettingsCopy>
-        <DataActions>
-          <Button
-            type="button"
-            $variant="ghost"
-            onClick={() => void window.tempo.revealData()}
-          >
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <GhostButton onClick={() => void window.tempo.revealData()}>
             Reveal in Finder
-          </Button>
-          <Button
-            type="button"
-            $variant="ghost"
-            onClick={() => void window.tempo.exportData()}
-          >
+          </GhostButton>
+          <GhostButton onClick={() => void window.tempo.exportData()}>
             Export
-          </Button>
-          <Button
-            type="button"
-            $variant="ghost"
-            onClick={() => void onImport()}
+          </GhostButton>
+          <GhostButton
+            onClick={() => {
+              const confirmed = window.confirm(
+                "Import replaces sessions and records on this Mac",
+              );
+              if (confirmed) {
+                void onImport();
+              }
+            }}
           >
             Import
-          </Button>
-        </DataActions>
+          </GhostButton>
+        </div>
       </SettingsGroup>
-    </SettingsForm>
+    </form>
   );
 }
+
+function SettingsGroup({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="flex max-w-xl flex-col gap-3">
+      <h2 className="m-0 text-xs font-medium uppercase tracking-wide text-tempo-muted">
+        {title}
+      </h2>
+      {children}
+    </section>
+  );
+}
+
+function Field({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <label className="flex flex-col gap-1 text-sm text-tempo-muted">
+      {label}
+      {children}
+    </label>
+  );
+}
+
+function SettingsCheckbox({
+  checked,
+  onChange,
+  children,
+}: {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <label className="flex cursor-pointer items-center gap-2 text-sm text-tempo-muted">
+      <Checkbox
+        checked={checked}
+        onCheckedChange={(value) => onChange(value === true)}
+      />
+      {children}
+    </label>
+  );
+}
+
+function GhostButton({
+  children,
+  onClick,
+}: {
+  children: React.ReactNode;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className="cursor-pointer rounded-xl border border-tempo-line bg-transparent px-3 py-2 text-sm text-tempo-muted hover:text-tempo-text"
+      onClick={onClick}
+    >
+      {children}
+    </button>
+  );
+}
+
+const inputClassName =
+  "rounded-[10px] border border-tempo-line bg-transparent px-2.5 py-1.5 text-tempo-text";
 
 interface SettingsSectionProps {
   settings: AppSettings;

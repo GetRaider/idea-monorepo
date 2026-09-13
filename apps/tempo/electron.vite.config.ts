@@ -35,7 +35,13 @@ export default defineConfig({
         "@renderer": resolve("src/renderer/src"),
         "@shared": resolve("src/shared"),
         "@helpers": resolve("src/helpers"),
+        "@huggingface/transformers": resolve(
+          "node_modules/@huggingface/transformers/dist/transformers.web.js",
+        ),
       },
+    },
+    optimizeDeps: {
+      exclude: ["onnxruntime-node", "sharp"],
     },
     plugins: [react()],
   },

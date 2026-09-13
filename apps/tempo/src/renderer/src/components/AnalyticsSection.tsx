@@ -13,14 +13,8 @@ import {
 import { buildActivityFilterOptions } from "../../../helpers/history.helper";
 import type { FocusRecord, SavedSession } from "../../../shared/records.types";
 
+import { PeriodFilter } from "./PeriodFilter";
 import { cn } from "../lib/cn";
-
-const PERIOD_PRESETS: Array<{ id: AnalyticsPeriodPreset; label: string }> = [
-  { id: "today", label: "Today" },
-  { id: "week", label: "Week" },
-  { id: "month", label: "Month" },
-  { id: "custom", label: "Custom" },
-];
 
 export function AnalyticsSection({ records, sessions }: AnalyticsSectionProps) {
   const [periodPreset, setPeriodPreset] =
@@ -66,74 +60,28 @@ export function AnalyticsSection({ records, sessions }: AnalyticsSectionProps) {
   );
 
   return (
-    <div className="flex flex-col gap-3.5">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div
-          className="flex flex-wrap gap-1.5"
-          role="group"
-          aria-label="Date range"
-        >
-          {PERIOD_PRESETS.map((preset) => (
-            <button
-              key={preset.id}
-              type="button"
-              aria-pressed={periodPreset === preset.id}
-              className={cn(
-                "rounded-lg border px-2.5 py-1 text-xs",
-                periodPreset === preset.id
-                  ? "border-[#9b5cff] bg-[#9b5cff]/20 text-[#f4eefe]"
-                  : "border-[rgba(155,92,255,0.22)] bg-[#16101f] text-[#9b8fb0]",
-              )}
-              onClick={() => setPeriodPreset(preset.id)}
-            >
-              {preset.label}
-            </button>
-          ))}
-        </div>
-        <select
-          className="max-w-[180px] rounded-[10px] border border-[rgba(155,92,255,0.22)] bg-[#16101f] px-2.5 py-1.5 text-[#f4eefe]"
-          value={selectedActivityId}
-          onChange={(event) => setSelectedActivityId(event.target.value)}
-          aria-label="Activity"
-        >
-          {filterOptions.map((option) => (
-            <option key={option.value || "all"} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </div>
-      {periodPreset === "custom" ? (
-        <div className="grid grid-cols-2 gap-2">
-          <label className="flex flex-col gap-1">
-            <span className="text-[0.7rem] uppercase tracking-wide text-[#8f84a8]">
-              From
-            </span>
-            <input
-              type="date"
-              className="rounded-[10px] border border-[rgba(155,92,255,0.22)] bg-[#16101f] px-2.5 py-1.5 text-[#f4eefe]"
-              value={customStartDate}
-              onChange={(event) => setCustomStartDate(event.target.value)}
-            />
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className="text-[0.7rem] uppercase tracking-wide text-[#8f84a8]">
-              To
-            </span>
-            <input
-              type="date"
-              className="rounded-[10px] border border-[rgba(155,92,255,0.22)] bg-[#16101f] px-2.5 py-1.5 text-[#f4eefe]"
-              value={customEndDate}
-              onChange={(event) => setCustomEndDate(event.target.value)}
-            />
-          </label>
-        </div>
-      ) : null}
+    <div className="flex min-h-0 flex-1 flex-col gap-3.5 overflow-y-auto px-8 py-6">
+      <h1 className="m-0 text-xl font-medium">Analytics</h1>
+      <PeriodFilter
+        periodPreset={periodPreset}
+        customStartDate={customStartDate}
+        customEndDate={customEndDate}
+        activityId={selectedActivityId}
+        activityOptions={filterOptions}
+        onPeriodChange={setPeriodPreset}
+        onCustomStartChange={setCustomStartDate}
+        onCustomEndChange={setCustomEndDate}
+        onActivityChange={setSelectedActivityId}
+      />
       <div className="grid grid-cols-2 gap-2">
         <StatCard
-          label="Total Time"
-          value={formatDurationLabel(metrics.totalSeconds)}
+          label="Focus Time"
+          value={formatDurationLabel(metrics.focusSeconds)}
           emphasize
+        />
+        <StatCard
+          label="Break Time"
+          value={formatDurationLabel(metrics.breakSeconds)}
         />
         <StatCard label="Sessions" value={String(metrics.sessionCount)} />
         <StatCard
@@ -155,7 +103,7 @@ export function AnalyticsSection({ records, sessions }: AnalyticsSectionProps) {
       </div>
       <ChartBlock title="Time by Day">
         {period === null ? (
-          <p className="m-0 text-xs text-[#9b8fb0]">Pick a custom date range.</p>
+          <p className="m-0 text-xs text-tempo-muted">Pick a custom date range.</p>
         ) : (
           <div className="flex max-h-64 flex-col gap-1.5 overflow-y-auto">
             {timeByDay.map((bucket) => (
@@ -171,7 +119,7 @@ export function AnalyticsSection({ records, sessions }: AnalyticsSectionProps) {
       </ChartBlock>
       <ChartBlock title="Time by Activity">
         {timeByActivity.length === 0 ? (
-          <p className="m-0 text-xs text-[#9b8fb0]">
+          <p className="m-0 text-xs text-tempo-muted">
             No activity in this period.
           </p>
         ) : (
@@ -196,7 +144,7 @@ export function AnalyticsSection({ records, sessions }: AnalyticsSectionProps) {
 function ChartBlock({ title, children }: ChartBlockProps) {
   return (
     <section className="flex flex-col gap-2">
-      <h2 className="m-0 text-[0.7rem] font-medium uppercase tracking-[0.04em] text-[#9b8fb0]">
+      <h2 className="m-0 text-[0.7rem] font-medium uppercase tracking-[0.04em] text-tempo-muted">
         {title}
       </h2>
       {children}
@@ -206,13 +154,13 @@ function ChartBlock({ title, children }: ChartBlockProps) {
 
 function StatCard({ label, value, emphasize = false }: StatCardProps) {
   return (
-    <div className="rounded-xl border border-[rgba(155,92,255,0.22)] bg-[#16101f] px-3 py-2.5">
-      <p className="m-0 text-[0.7rem] uppercase tracking-[0.04em] text-[#9b8fb0]">
+    <div className="rounded-xl border border-tempo-line bg-tempo-panel px-3 py-2.5">
+      <p className="m-0 text-[0.7rem] uppercase tracking-[0.04em] text-tempo-muted">
         {label}
       </p>
       <p
         className={cn(
-          "mt-1 font-semibold tabular-nums text-[#f4eefe]",
+          "mt-1 font-semibold tabular-nums text-tempo-text",
           emphasize ? "text-2xl" : "text-[1.05rem]",
         )}
       >
@@ -230,8 +178,8 @@ function TimeBarRow({
   saturation = 72,
 }: TimeBarRowProps) {
   return (
-    <div className="flex items-center gap-2 text-xs text-[#f4eefe]">
-      <span className="w-28 shrink-0 truncate text-[#9b8fb0]">{label}</span>
+    <div className="flex items-center gap-2 text-xs text-tempo-text">
+      <span className="w-28 shrink-0 truncate text-tempo-muted">{label}</span>
       <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-white/10">
         <div
           className="h-full w-[var(--bar-width)] rounded-full bg-[var(--bar-color)]"
@@ -243,7 +191,7 @@ function TimeBarRow({
           }
         />
       </div>
-      <span className="shrink-0 tabular-nums text-[#cfc3e6]">{valueLabel}</span>
+      <span className="shrink-0 tabular-nums text-tempo-muted">{valueLabel}</span>
     </div>
   );
 }

@@ -1,13 +1,15 @@
 "use client";
 
+import type { ComponentProps } from "react";
 import { TaskStatus } from "@repo/api/todex";
 import type { Task } from "@repo/api/todex";
 import { Checkbox, cn } from "@repo/ui";
 
+import { TaskComposer, type TaskComposerValues } from "./task-composer";
 import { useTasks } from "./tasks-provider";
 import {
   DraggableTask,
-  PRIORITY_DOT,
+  PriorityGlyph,
   StatusDroppable,
   StatusGlyph,
 } from "./task-board.ui";
@@ -17,10 +19,12 @@ export function TaskKanban({
   groups,
   boardNameById,
   showBoardName,
+  fastCreate,
 }: {
   groups: Record<Task["status"], NestedTask[]>;
   boardNameById: Map<string, string>;
   showBoardName: boolean;
+  fastCreate?: FastCreate;
 }) {
   const {
     state: { selectedTaskId },
@@ -42,26 +46,42 @@ export function TaskKanban({
               <span>{STATUS_LABEL[status]}</span>
               <span className="text-muted-foreground">{nodes.length}</span>
             </div>
+            {status === TaskStatus.TODO && fastCreate ? (
+              <div className="mb-2">
+                <TaskComposer
+                  titleRef={fastCreate.titleRef}
+                  open={fastCreate.isOpen}
+                  onOpenChange={(next) =>
+                    next ? fastCreate.onOpen() : fastCreate.onClose()
+                  }
+                  onCreate={fastCreate.onCreate}
+                />
+              </div>
+            ) : null}
             <ul className="flex min-h-24 flex-1 flex-col gap-1 overflow-auto">
-              {nodes.map((node) => (
-                <li key={node.id}>
-                  <KanbanCard
-                    node={node}
-                    selectedTaskId={selectedTaskId}
-                    boardNameById={boardNameById}
-                    showBoardName={showBoardName}
-                    onSelect={setSelectedTaskId}
-                    onToggleDone={() =>
-                      updateTaskStatus(
-                        node.id,
-                        node.status === TaskStatus.DONE
-                          ? TaskStatus.TODO
-                          : TaskStatus.DONE,
-                      )
-                    }
-                  />
-                </li>
-              ))}
+              {nodes.length === 0 ? (
+                <li className="px-1 py-2 text-sm text-muted-foreground"></li>
+              ) : (
+                nodes.map((node) => (
+                  <li key={node.id}>
+                    <KanbanCard
+                      node={node}
+                      selectedTaskId={selectedTaskId}
+                      boardNameById={boardNameById}
+                      showBoardName={showBoardName}
+                      onSelect={setSelectedTaskId}
+                      onToggleDone={() =>
+                        updateTaskStatus(
+                          node.id,
+                          node.status === TaskStatus.DONE
+                            ? TaskStatus.TODO
+                            : TaskStatus.DONE,
+                        )
+                      }
+                    />
+                  </li>
+                ))
+              )}
             </ul>
           </StatusDroppable>
         );
@@ -102,12 +122,7 @@ function KanbanCard({
         />
         <span className="flex min-w-0 flex-1 flex-col gap-1">
           <span className="flex items-center gap-2">
-            <span
-              className={cn(
-                "h-2 w-2 shrink-0 rounded-full",
-                PRIORITY_DOT[node.priority],
-              )}
-            />
+            <PriorityGlyph priority={node.priority} />
             <span className="font-mono text-xs text-muted-foreground">
               {node.taskKey}
             </span>
@@ -122,4 +137,12 @@ function KanbanCard({
       </button>
     </DraggableTask>
   );
+}
+
+interface FastCreate {
+  isOpen: boolean;
+  titleRef: ComponentProps<"input">["ref"];
+  onOpen: () => void;
+  onClose: () => void;
+  onCreate: (values: TaskComposerValues) => void;
 }

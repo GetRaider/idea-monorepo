@@ -1,16 +1,16 @@
 "use client";
 
 import type { CSSProperties, ReactNode } from "react";
+import Link from "next/link";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { Checkbox, cn } from "@repo/ui";
 import { TaskPriority, TaskStatus } from "@repo/api/todex";
 import type { Task } from "@repo/api/todex";
 
-import {
-  StatusDoneIcon,
-  StatusInProgressIcon,
-  StatusTodoIcon,
-} from "@components/icons";
+import { ChevronIcon } from "@components/icons";
+import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
+
+import { useTasks } from "./tasks-provider";
 
 import type { NestedTask } from "./task-helpers";
 
@@ -41,7 +41,7 @@ export function StatusDroppable({
   return (
     <div
       ref={setNodeRef}
-      className={cn(className, isOver && "bg-white/[0.04]")}
+      className={cn(className, isOver && "bg-surface")}
     >
       {children}
     </div>
@@ -84,6 +84,8 @@ export function TaskRow({
   boardNameById,
   showBoardName,
   depth = 0,
+  expanded = false,
+  onToggleExpanded,
   onSelect,
   onToggleDone,
   onCreateSubtask,
@@ -93,10 +95,13 @@ export function TaskRow({
   boardNameById: Map<string, string>;
   showBoardName: boolean;
   depth?: number;
+  expanded?: boolean;
+  onToggleExpanded?: () => void;
   onSelect: (taskId: string) => void;
   onToggleDone: (task: NestedTask) => void;
   onCreateSubtask: (parentTaskId: string) => void;
 }) {
+  const hasChildren = node.children.length > 0;
   return (
     <DraggableTask taskId={node.id}>
       <div
@@ -106,17 +111,31 @@ export function TaskRow({
         )}
         style={{ paddingLeft: `${depth * 16 + 8}px` } as CSSProperties}
       >
+        {hasChildren ? (
+          <button
+            type="button"
+            aria-expanded={expanded}
+            aria-label={expanded ? "Collapse subtasks" : "Expand subtasks"}
+            className="flex h-4 w-4 shrink-0 items-center justify-center text-muted-foreground hover:text-foreground"
+            onClick={(event) => {
+              event.stopPropagation();
+              onToggleExpanded?.();
+            }}
+          >
+            <ChevronIcon
+              size={12}
+              className={cn("transition-transform", expanded && "rotate-90")}
+            />
+          </button>
+        ) : (
+          <span className="h-4 w-4 shrink-0" />
+        )}
         <Checkbox
           checked={node.status === TaskStatus.DONE}
           onClick={(event) => event.stopPropagation()}
           onCheckedChange={() => onToggleDone(node)}
         />
-        <span
-          className={cn(
-            "h-2 w-2 shrink-0 rounded-full",
-            PRIORITY_DOT[node.priority],
-          )}
-        />
+        <PriorityGlyph priority={node.priority} />
         <button
           type="button"
           className="min-w-0 flex-1 text-left text-sm"
@@ -144,12 +163,99 @@ export function TaskRow({
   );
 }
 
+export function TaskSearchField() {
+  const {
+    state: { search },
+    actions: { setSearch },
+  } = useTasks();
+  return (
+    <input
+      value={search}
+      onChange={(event) => setSearch(event.target.value)}
+      placeholder="Search"
+      aria-label="Search"
+      className="h-9 w-40 rounded-md border border-border bg-transparent px-3 text-sm outline-none placeholder:text-muted-foreground"
+    />
+  );
+}
+
+export function TasksBreadcrumb({
+  boardName,
+  boardHref,
+  taskKey,
+  trailing,
+  className,
+}: {
+  boardName?: string;
+  boardHref?: string;
+  taskKey?: string;
+  trailing?: ReactNode;
+  className?: string;
+}) {
+  const {
+    actions: { setSelectedTaskId },
+  } = useTasks();
+  return (
+    <div className={cn("flex min-w-0 items-center gap-3", className)}>
+      <Link
+        href={tasksUrlHelper.routing.buildRootUrl()}
+        className="shrink-0 text-muted-foreground hover:text-foreground"
+      >
+        Tasks
+      </Link>
+      {boardName ? (
+        <>
+          <span className="shrink-0 text-muted-foreground">›</span>
+          <span className="flex min-w-0 items-center gap-2 truncate">
+            {trailing}
+            {boardHref ? (
+              <Link
+                href={boardHref}
+                className="truncate text-muted-foreground hover:text-foreground"
+                onClick={(event) => {
+                  event.preventDefault();
+                  setSelectedTaskId(null);
+                }}
+              >
+                {boardName}
+              </Link>
+            ) : (
+              <span className="truncate">{boardName}</span>
+            )}
+          </span>
+        </>
+      ) : null}
+      {taskKey ? (
+        <>
+          <span className="shrink-0 text-muted-foreground">›</span>
+          <span className="truncate">{taskKey}</span>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
 export function StatusGlyph({ status }: { status: Task["status"] }) {
-  if (status === TaskStatus.DONE)
-    return <StatusDoneIcon size={14} className="text-emerald-400" />;
-  if (status === TaskStatus.IN_PROGRESS)
-    return <StatusInProgressIcon size={14} className="text-yellow-400" />;
-  return <StatusTodoIcon size={14} className="text-muted-foreground" />;
+  const glyph = STATUS_GLYPH[status];
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "inline-flex h-3.5 w-3.5 items-center justify-center text-sm leading-none",
+        glyph.className,
+      )}
+    >
+      {glyph.mark}
+    </span>
+  );
+}
+
+export function PriorityGlyph({ priority }: { priority: Task["priority"] }) {
+  return (
+    <span aria-hidden className="inline-flex text-xs leading-none">
+      {PRIORITY_ICON[priority]}
+    </span>
+  );
 }
 
 export function BoardGlyph() {
@@ -170,9 +276,18 @@ export function BoardGlyph() {
   );
 }
 
-export const PRIORITY_DOT: Record<Task["priority"], string> = {
-  [TaskPriority.LOW]: "bg-neutral-500",
-  [TaskPriority.MEDIUM]: "bg-yellow-400",
-  [TaskPriority.HIGH]: "bg-orange-500",
-  [TaskPriority.CRITICAL]: "bg-red-500",
+const STATUS_GLYPH: Record<
+  Task["status"],
+  { mark: string; className: string }
+> = {
+  [TaskStatus.TODO]: { mark: "◯", className: "text-[#888]" },
+  [TaskStatus.IN_PROGRESS]: { mark: "◐", className: "text-amber-500" },
+  [TaskStatus.DONE]: { mark: "✓", className: "text-emerald-500" },
+};
+
+export const PRIORITY_ICON: Record<Task["priority"], string> = {
+  [TaskPriority.LOW]: "🔵",
+  [TaskPriority.MEDIUM]: "🟡",
+  [TaskPriority.HIGH]: "🔴",
+  [TaskPriority.CRITICAL]: "🟣",
 };

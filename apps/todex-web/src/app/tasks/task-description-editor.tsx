@@ -10,6 +10,7 @@ import { cn } from "@repo/ui";
 export function TaskDescriptionEditor({
   content,
   onChange,
+  appearance = "field",
 }: TaskDescriptionEditorProps) {
   const editor = useEditor({
     extensions: [
@@ -27,14 +28,24 @@ export function TaskDescriptionEditor({
     },
     editorProps: {
       attributes: {
-        class: "min-h-20 outline-none",
+        class: cn(
+          "outline-none",
+          appearance === "plain" ? "min-h-40" : "min-h-20",
+        ),
       },
     },
   });
 
   if (!editor) {
     return (
-      <div className="min-h-24 rounded-md border border-input bg-background px-3 py-2 text-sm text-muted-foreground">
+      <div
+        className={cn(
+          "text-sm text-muted-foreground",
+          appearance === "plain"
+            ? "min-h-40 px-0 py-2"
+            : "min-h-24 rounded-md border border-input bg-background px-3 py-2",
+        )}
+      >
         Loading editor…
       </div>
     );
@@ -43,7 +54,10 @@ export function TaskDescriptionEditor({
   return (
     <div
       className={cn(
-        "rounded-md border border-input bg-background px-3 py-2 text-sm",
+        "text-sm",
+        appearance === "plain"
+          ? "bg-transparent px-0 py-1"
+          : "rounded-md border border-input bg-background px-3 py-2",
         "[&_.tiptap_p]:my-1",
         "[&_.tiptap_ul]:list-disc [&_.tiptap_ul]:pl-5",
         "[&_.tiptap_ol]:list-decimal [&_.tiptap_ol]:pl-5",
@@ -139,4 +153,5 @@ function BubbleButton({
 interface TaskDescriptionEditorProps {
   content: string;
   onChange: (html: string) => void;
+  appearance?: "field" | "plain";
 }

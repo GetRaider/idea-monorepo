@@ -1,7 +1,6 @@
 "use client";
 
-import { useMemo, useState, type FormEvent } from "react";
-import Link from "next/link";
+import { useEffect, useMemo, useState, type ComponentProps, type FormEvent } from "react";
 import {
   DndContext,
   PointerSensor,
@@ -33,25 +32,20 @@ import {
 import { TaskStatus } from "@repo/api/todex";
 import type { Task } from "@repo/api/todex";
 
-import {
-  ChevronIcon,
-  PlusIcon,
-  SettingsIcon,
-} from "@components/icons";
-import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
+import { ChevronIcon, PlusIcon, SettingsIcon } from "@components/icons";
 
 import {
   BoardGlyph,
   StatusDroppable,
   StatusGlyph,
   TaskRow,
+  TaskSearchField,
+  TasksBreadcrumb,
   parseStatusDroppableId,
 } from "./task-board.ui";
-import {
-  useTaskBoardPreferences,
-  type BoardListSubmode,
-  type BoardViewMode,
-} from "./task-board-preferences";
+import { useBoardPreferences } from "./board-preferences-provider";
+import type { BoardListSubmode, BoardViewMode } from "./task-board-preferences";
+import { TaskComposer, type TaskComposerValues } from "./task-composer";
 import { TaskKanban } from "./task-kanban";
 import {
   STATUS_LABEL,
@@ -85,12 +79,7 @@ export function TaskList() {
     meta: { createInputRef },
   } = useTasks();
   const [createSummary, setCreateSummary] = useState("");
-  const contextKey =
-    view.kind === "board"
-      ? view.boardId
-      : view.kind === "schedule"
-        ? `schedule:${view.schedule}`
-        : null;
+  const [isComposerOpen, setIsComposerOpen] = useState(false);
   const {
     viewMode,
     listSubmode,
@@ -98,7 +87,7 @@ export function TaskList() {
     setViewMode,
     setListSubmode,
     setListSort,
-  } = useTaskBoardPreferences(contextKey);
+  } = useBoardPreferences();
   const sensors = useSensors(
     useSensor(BoardPointerSensor, { activationConstraint: { distance: 8 } }),
   );
@@ -139,40 +128,66 @@ export function TaskList() {
 
   const showEmptySchedule =
     view.kind === "schedule" && !hasScheduledTasks && !search.trim();
+  const isBoard = view.kind === "board";
+  const hasVisibleTasks = STATUS_ORDER.some(
+    (status) => (sortedGroups[status] ?? []).length > 0,
+  );
+
+  useEffect(() => {
+    if (!isComposerOpen) return;
+    createInputRef.current?.focus();
+  }, [createInputRef, isComposerOpen, viewMode]);
+
+  function openComposer() {
+    setIsComposerOpen(true);
+  }
+
+  function closeComposer() {
+    setIsComposerOpen(false);
+  }
+
+  function submitComposer(values: TaskComposerValues) {
+    createTask(values.summary, null, {
+      status: values.status,
+      priority: values.priority,
+      estimation: values.estimation,
+      taskBoardId: values.taskBoardId ?? undefined,
+      scheduleDate: values.scheduleDate,
+      dueDate: values.dueDate,
+    });
+    closeComposer();
+  }
 
   return (
-    <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-auto px-6 py-6">
+    <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-auto px-6 pb-6 pt-3">
       <div className="mb-6 flex items-center justify-between gap-4">
-        <div className="flex min-w-0 items-center gap-3 text-2xl font-semibold tracking-tight">
-          <Link
-            href={tasksUrlHelper.routing.buildRootUrl()}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            Tasks
-          </Link>
-          <span className="text-muted-foreground">›</span>
-          <span className="flex min-w-0 items-center gap-2 truncate">
-            {view.kind === "board" ? <BoardGlyph /> : null}
-            {title}
-          </span>
-        </div>
+        <TasksBreadcrumb
+          className="text-2xl font-semibold tracking-tight"
+          boardName={title}
+          trailing={view.kind === "board" ? <BoardGlyph /> : null}
+        />
         <div className="flex items-center gap-2">
-          <SearchField />
+          <ViewModeSwitch viewMode={viewMode} onViewModeChange={setViewMode} />
+          <TaskSearchField />
           <ViewSettingsMenu
-            viewMode={viewMode}
             listSubmode={listSubmode}
             listSort={listSort}
-            onViewModeChange={setViewMode}
             onListSubmodeChange={setListSubmode}
             onListSortChange={setListSort}
           />
           <Button
             size="sm"
-            onClick={() => createInputRef.current?.focus()}
+            onClick={() => {
+              if (isBoard) {
+                openComposer();
+                return;
+              }
+              createInputRef.current?.focus();
+            }}
             disabled={!createBoardId}
           >
             <PlusIcon size={16} />
-            Create Task
+            New Task
           </Button>
         </div>
       </div>
@@ -184,12 +199,12 @@ export function TaskList() {
           </Button>
         </div>
       ) : null}
-      <form
-        onSubmit={submitCreate}
-        className="mb-3 flex items-center gap-2"
-        onPointerDown={(event) => event.stopPropagation()}
-      >
-        {view.kind === "schedule" ? (
+      {view.kind === "schedule" ? (
+        <form
+          onSubmit={submitCreate}
+          className="mb-3 flex items-center gap-2"
+          onPointerDown={(event) => event.stopPropagation()}
+        >
           <Select
             value={createBoardId ?? undefined}
             onValueChange={setScheduleTargetBoardId}
@@ -206,16 +221,21 @@ export function TaskList() {
               ))}
             </SelectContent>
           </Select>
-        ) : null}
-        <input
-          ref={createInputRef}
-          value={createSummary}
-          onChange={(event) => setCreateSummary(event.target.value)}
-          placeholder="+ Create a new task"
-          disabled={!createBoardId}
-          className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm text-foreground shadow-sm outline-none placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-        />
-      </form>
+          <input
+            ref={createInputRef}
+            value={createSummary}
+            onChange={(event) => setCreateSummary(event.target.value)}
+            placeholder="+ Create a new task"
+            disabled={!createBoardId}
+            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm text-foreground shadow-sm outline-none placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+          />
+        </form>
+      ) : null}
+      {search.trim() && !hasVisibleTasks && !showEmptySchedule ? (
+        <p className="mb-3 text-sm text-muted-foreground">
+          No tasks match “{search.trim()}”.
+        </p>
+      ) : null}
       {showEmptySchedule ? (
         <p className="px-2 py-8 text-center text-sm text-muted-foreground">
           Nothing scheduled
@@ -231,9 +251,20 @@ export function TaskList() {
               groups={groups}
               boardNameById={boardNameById}
               showBoardName={showBoardName}
+              fastCreate={
+                isBoard
+                  ? {
+                      isOpen: isComposerOpen,
+                      titleRef: createInputRef,
+                      onOpen: openComposer,
+                      onClose: closeComposer,
+                      onCreate: submitComposer,
+                    }
+                  : undefined
+              }
             />
           ) : (
-            <div className="flex min-h-0 flex-1 flex-col rounded-xl border border-border bg-panel p-3">
+            <div className="flex min-h-0 flex-1 flex-col gap-3">
               <ListSections
                 submode={listSubmode}
                 groups={sortedGroups}
@@ -241,6 +272,17 @@ export function TaskList() {
                 selectedTaskId={selectedTaskId}
                 boardNameById={boardNameById}
                 showBoardName={showBoardName}
+                fastCreate={
+                  isBoard
+                    ? {
+                        isOpen: isComposerOpen,
+                        titleRef: createInputRef,
+                        onOpen: openComposer,
+                        onClose: closeComposer,
+                        onCreate: submitComposer,
+                      }
+                    : undefined
+                }
                 onSelect={setSelectedTaskId}
                 onToggleDone={(task) =>
                   updateTaskStatus(
@@ -269,6 +311,7 @@ function ListSections({
   selectedTaskId,
   boardNameById,
   showBoardName,
+  fastCreate,
   onSelect,
   onToggleDone,
   onCreateSubtask,
@@ -283,6 +326,7 @@ function ListSections({
   selectedTaskId: string | null;
   boardNameById: Map<string, string>;
   showBoardName: boolean;
+  fastCreate?: ListFastCreate;
   onSelect: (taskId: string) => void;
   onToggleDone: (task: NestedTask) => void;
   onCreateSubtask: (parentTaskId: string) => void;
@@ -328,6 +372,9 @@ function ListSections({
           selectedTaskId={selectedTaskId}
           boardNameById={boardNameById}
           showBoardName={showBoardName}
+          fastCreate={
+            section.status === TaskStatus.TODO ? fastCreate : undefined
+          }
           onSelect={onSelect}
           onToggleDone={onToggleDone}
           onCreateSubtask={onCreateSubtask}
@@ -345,6 +392,7 @@ function ListSection({
   selectedTaskId,
   boardNameById,
   showBoardName,
+  fastCreate,
   onSelect,
   onToggleDone,
   onCreateSubtask,
@@ -356,6 +404,7 @@ function ListSection({
   selectedTaskId: string | null;
   boardNameById: Map<string, string>;
   showBoardName: boolean;
+  fastCreate?: ListFastCreate;
   onSelect: (taskId: string) => void;
   onToggleDone: (task: NestedTask) => void;
   onCreateSubtask: (parentTaskId: string) => void;
@@ -363,8 +412,8 @@ function ListSection({
   const [open, setOpen] = useState(defaultOpen);
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
-      <section className="border-b border-border py-1 last:border-b-0">
-        <CollapsibleTrigger className="flex items-center gap-2 rounded-md px-1 py-2 text-sm font-semibold hover:bg-white/[0.04]">
+      <section className="rounded-lg border border-border bg-panel px-2 py-1">
+        <CollapsibleTrigger className="flex w-full items-center gap-2 rounded-md px-1 py-2 text-sm font-semibold hover:bg-surface">
           <ChevronIcon
             size={14}
             className={cn(
@@ -376,6 +425,18 @@ function ListSection({
           <span>{label}</span>
           <span className="text-muted-foreground">{nodes.length}</span>
         </CollapsibleTrigger>
+        {fastCreate ? (
+          <div className="mb-2 px-1">
+            <TaskComposer
+              titleRef={fastCreate.titleRef}
+              open={fastCreate.isOpen}
+              onOpenChange={(next) =>
+                next ? fastCreate.onOpen() : fastCreate.onClose()
+              }
+              onCreate={fastCreate.onCreate}
+            />
+          </div>
+        ) : null}
         <CollapsibleContent>
           <StatusDroppable status={status} className="min-h-8">
             {nodes.length === 0 ? (
@@ -419,6 +480,19 @@ function TaskTree({
   onCreateSubtask: (parentTaskId: string) => void;
   depth?: number;
 }) {
+  const [expandedIds, setExpandedIds] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
+
+  function toggleExpanded(taskId: string) {
+    setExpandedIds((current) => {
+      const next = new Set(current);
+      if (next.has(taskId)) next.delete(taskId);
+      else next.add(taskId);
+      return next;
+    });
+  }
+
   return (
     <ul>
       {nodes.map((node) => (
@@ -429,11 +503,13 @@ function TaskTree({
             boardNameById={boardNameById}
             showBoardName={showBoardName}
             depth={depth}
+            expanded={expandedIds.has(node.id)}
+            onToggleExpanded={() => toggleExpanded(node.id)}
             onSelect={onSelect}
             onToggleDone={onToggleDone}
             onCreateSubtask={onCreateSubtask}
           />
-          {node.children.length > 0 ? (
+          {node.children.length > 0 && expandedIds.has(node.id) ? (
             <TaskTree
               nodes={node.children}
               selectedTaskId={selectedTaskId}
@@ -452,21 +528,17 @@ function TaskTree({
 }
 
 function ViewSettingsMenu({
-  viewMode,
   listSubmode,
   listSort,
-  onViewModeChange,
   onListSubmodeChange,
   onListSortChange,
 }: {
-  viewMode: BoardViewMode;
   listSubmode: BoardListSubmode;
   listSort: {
     enabled: boolean;
     field: ListSortField;
     direction: "asc" | "desc";
   };
-  onViewModeChange: (next: BoardViewMode) => void;
   onListSubmodeChange: (next: BoardListSubmode) => void;
   onListSortChange: (next: {
     enabled: boolean;
@@ -488,18 +560,7 @@ function ViewSettingsMenu({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-52">
-        <DropdownMenuLabel>View</DropdownMenuLabel>
-        <DropdownMenuRadioGroup
-          value={viewMode}
-          onValueChange={(value) => onViewModeChange(value as BoardViewMode)}
-        >
-          <DropdownMenuRadioItem value="kanban">Kanban</DropdownMenuRadioItem>
-          <DropdownMenuRadioItem value="list">List</DropdownMenuRadioItem>
-        </DropdownMenuRadioGroup>
-        {viewMode === "list" ? (
-          <>
-            <DropdownMenuSeparator />
-            <DropdownMenuLabel>List layout</DropdownMenuLabel>
+        <DropdownMenuLabel>List layout</DropdownMenuLabel>
             <DropdownMenuRadioGroup
               value={listSubmode}
               onValueChange={(value) =>
@@ -556,25 +617,37 @@ function ViewSettingsMenu({
                 Descending
               </DropdownMenuRadioItem>
             </DropdownMenuRadioGroup>
-          </>
-        ) : null}
       </DropdownMenuContent>
     </DropdownMenu>
   );
 }
 
-function SearchField() {
-  const {
-    state: { search },
-    actions: { setSearch },
-  } = useTasks();
+function ViewModeSwitch({
+  viewMode,
+  onViewModeChange,
+}: {
+  viewMode: BoardViewMode;
+  onViewModeChange: (next: BoardViewMode) => void;
+}) {
   return (
-    <input
-      value={search}
-      onChange={(event) => setSearch(event.target.value)}
-      placeholder="Search"
-      className="h-9 w-40 rounded-md border border-border bg-transparent px-3 text-sm outline-none placeholder:text-muted-foreground"
-    />
+    <div className="flex h-9 items-center rounded-md border border-border p-0.5">
+      {(["kanban", "list"] as const).map((mode) => (
+        <button
+          key={mode}
+          type="button"
+          aria-pressed={viewMode === mode}
+          className={cn(
+            "h-8 rounded px-2.5 text-sm",
+            viewMode === mode
+              ? "bg-surface text-foreground"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+          onClick={() => onViewModeChange(mode)}
+        >
+          {mode === "kanban" ? "Kanban" : "List"}
+        </button>
+      ))}
+    </div>
   );
 }
 
@@ -597,4 +670,12 @@ class BoardPointerSensor extends PointerSensor {
       },
     },
   ];
+}
+
+interface ListFastCreate {
+  isOpen: boolean;
+  titleRef: ComponentProps<"input">["ref"];
+  onOpen: () => void;
+  onClose: () => void;
+  onCreate: (values: TaskComposerValues) => void;
 }

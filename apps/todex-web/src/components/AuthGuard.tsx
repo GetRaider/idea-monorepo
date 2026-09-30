@@ -4,16 +4,18 @@ import { useEffect, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 
 import { useSession } from "@lib/auth-client";
+import { env } from "@lib/env";
 
 export function AuthGuard({ children }: { children: ReactNode }) {
   const { data: session, isPending } = useSession();
   const router = useRouter();
 
   useEffect(() => {
-    if (!isPending && !session?.user) {
-      router.push("/sign-in");
-    }
-  }, [session, isPending, router]);
+    if (!env.auth.enabled || isPending || session?.user) return;
+    router.replace("/sign-in");
+  }, [isPending, router, session]);
+
+  if (!env.auth.enabled) return children;
 
   if (isPending) {
     return (
@@ -24,5 +26,5 @@ export function AuthGuard({ children }: { children: ReactNode }) {
   }
 
   if (!session?.user) return null;
-  return <>{children}</>;
+  return children;
 }

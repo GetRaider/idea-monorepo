@@ -1,4 +1,6 @@
+export * from "./calendar";
 export * from "./dropdown-menu";
+export * from "./popover";
 export * from "./label";
 export * from "./select";
 export * from "./separator";

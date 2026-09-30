@@ -68,8 +68,8 @@ export function SettingsIcon(props: IconProps) {
       strokeWidth="1.75"
       {...iconSvgProps(props)}
     >
+      <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
       <circle cx="12" cy="12" r="3" />
-      <path d="M12 3v2.2M12 18.8V21M4.9 6.5l1.6 1.6M17.5 15.9l1.6 1.6M3 12h2.2M18.8 12H21M4.9 17.5l1.6-1.6M17.5 8.1l1.6-1.6" />
     </svg>
   );
 }
@@ -118,7 +118,7 @@ export function PlusIcon(props: IconProps) {
   );
 }
 
-export function SearchIcon(props: IconProps) {
+export function BellIcon(props: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -127,8 +127,8 @@ export function SearchIcon(props: IconProps) {
       strokeWidth="1.75"
       {...iconSvgProps(props)}
     >
-      <circle cx="11" cy="11" r="6" />
-      <path d="M16 16l4 4" />
+      <path d="M6 16h12l-1.2-2.2V10a4.8 4.8 0 0 0-9.6 0v3.8L6 16Z" />
+      <path d="M10 16.5a2 2 0 0 0 4 0" />
     </svg>
   );
 }

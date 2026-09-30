@@ -4,9 +4,14 @@ import { TaskPriority, TaskStatus } from "@repo/api/todex";
 import {
   compareTasksForListSort,
   dateInputToLocalDayStartIso,
+  isInboxTask,
+  isOverdueTask,
+  isUnscheduledTask,
   isoToDateInput,
   localDayScheduleQuery,
   sortNestedTasks,
+  tasksByCompletedDescending,
+  tasksByCreatedAtDescending,
   type NestedTask,
 } from "./task-helpers";
 
@@ -54,6 +59,63 @@ describe("date input local-day conversion", () => {
 
   it("clears an empty date input", () => {
     expect(dateInputToLocalDayStartIso("")).toBeNull();
+  });
+});
+
+describe("quick access", () => {
+  const now = new Date(2026, 8, 10, 15, 0, 0);
+
+  it("treats an untriaged todo as inbox and unscheduled", () => {
+    const untriaged = task({ id: "inbox" });
+    expect(isInboxTask(untriaged)).toBe(true);
+    expect(isUnscheduledTask(untriaged)).toBe(true);
+    expect(isOverdueTask(untriaged, now)).toBe(false);
+  });
+
+  it("keeps a dated todo out of inbox and marks a past due date overdue", () => {
+    const planned = task({
+      id: "planned",
+      scheduleDate: "2026-09-10T00:00:00.000Z",
+      dueDate: "2026-09-09T00:00:00.000Z",
+    });
+    expect(isInboxTask(planned)).toBe(false);
+    expect(isUnscheduledTask(planned)).toBe(false);
+    expect(isOverdueTask(planned, now)).toBe(true);
+  });
+
+  it("excludes done tasks from inbox, unscheduled, and overdue", () => {
+    const done = task({
+      id: "done",
+      status: TaskStatus.DONE,
+      dueDate: "2026-09-01T00:00:00.000Z",
+    });
+    expect(isInboxTask(done)).toBe(false);
+    expect(isUnscheduledTask(done)).toBe(false);
+    expect(isOverdueTask(done, now)).toBe(false);
+  });
+
+  it("orders recent and completed tasks", () => {
+    const older = task({
+      id: "older",
+      createdAt: "2026-09-01T00:00:00.000Z",
+      updatedAt: "2026-09-02T00:00:00.000Z",
+      status: TaskStatus.DONE,
+    });
+    const newer = task({
+      id: "newer",
+      createdAt: "2026-09-08T00:00:00.000Z",
+      updatedAt: "2026-09-09T00:00:00.000Z",
+      status: TaskStatus.DONE,
+    });
+    const open = task({ id: "open", createdAt: "2026-09-10T00:00:00.000Z" });
+    expect(tasksByCreatedAtDescending([older, open, newer], 2).map((item) => item.id)).toEqual([
+      "open",
+      "newer",
+    ]);
+    expect(tasksByCompletedDescending([older, open, newer], 5).map((item) => item.id)).toEqual([
+      "newer",
+      "older",
+    ]);
   });
 });
 

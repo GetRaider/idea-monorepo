@@ -27,9 +27,11 @@ import { TASKS_ROOT_VIEW_ID, tasksUrlHelper } from "@/helpers/tasks-url.helper";
 
 import {
   groupRootsByStatus,
+  INBOX_BOARD_NAME,
   localDayScheduleQuery,
   nestTasks,
   type NestedTask,
+  type TaskCreateDraft,
 } from "./task-helpers";
 
 const TasksContext = createContext<TasksContextValue | null>(null);
@@ -39,6 +41,9 @@ export function TasksProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname() ?? "";
   const createInputRef = useRef<HTMLInputElement>(null);
+  const dismissedTaskKeyRef = useRef<string | null>(null);
+  const pathnameRef = useRef(pathname);
+  const didEnsureInboxRef = useRef(false);
   const [selectedTaskId, setSelectedTaskIdState] = useState<string | null>(
     null,
   );
@@ -68,11 +73,14 @@ export function TasksProvider({ children }: { children: ReactNode }) {
     view.kind === "schedule"
       ? localDayScheduleQuery(view.schedule === "today" ? 0 : 1)
       : null;
+  const inboxBoardId =
+    boards.find((board) => board.name === INBOX_BOARD_NAME)?.id ?? null;
   const resolvedScheduleBoardId =
     (scheduleTargetBoardId &&
     boards.some((board) => board.id === scheduleTargetBoardId)
       ? scheduleTargetBoardId
       : null) ??
+    inboxBoardId ??
     boards[0]?.id ??
     null;
   const createBoardId =
@@ -82,6 +90,15 @@ export function TasksProvider({ children }: { children: ReactNode }) {
         ? resolvedScheduleBoardId
         : null;
 
+  const rootBoardKey = boards.map((board) => board.id).join("\n");
+  const rootTasksQuery = useQuery({
+    queryKey: ["tasks", "root", rootBoardKey],
+    queryFn: () =>
+      Promise.all(
+        boards.map((board) => todexClient.tasks.list({ boardId: board.id })),
+      ).then((lists) => lists.flat()),
+    enabled: view.kind === "root" && boards.length > 0,
+  });
   const boardTasksQuery = useQuery({
     queryKey: ["tasks", selectedBoardId],
     queryFn: () => todexClient.tasks.list({ boardId: selectedBoardId! }),
@@ -98,13 +115,16 @@ export function TasksProvider({ children }: { children: ReactNode }) {
     enabled: view.kind === "schedule" && !!scheduleQuery,
   });
 
-  const loadedTasks = useMemo(
-    () =>
-      view.kind === "schedule"
-        ? (scheduleTasksQuery.data ?? [])
-        : (boardTasksQuery.data ?? []),
-    [view.kind, scheduleTasksQuery.data, boardTasksQuery.data],
-  );
+  const loadedTasks = useMemo(() => {
+    if (view.kind === "schedule") return scheduleTasksQuery.data ?? [];
+    if (view.kind === "root") return rootTasksQuery.data ?? [];
+    return boardTasksQuery.data ?? [];
+  }, [
+    view.kind,
+    scheduleTasksQuery.data,
+    rootTasksQuery.data,
+    boardTasksQuery.data,
+  ]);
 
   const visibleTasks = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -120,13 +140,21 @@ export function TasksProvider({ children }: { children: ReactNode }) {
   const isTasksLoading =
     view.kind === "schedule"
       ? scheduleTasksQuery.isLoading
-      : boardTasksQuery.isLoading;
+      : view.kind === "root"
+        ? boards.length > 0 && rootTasksQuery.isLoading
+        : boardTasksQuery.isLoading;
 
   const tree = useMemo(() => nestTasks(visibleTasks), [visibleTasks]);
   const groups = useMemo(() => groupRootsByStatus(tree), [tree]);
   const selectedTask = tasks.find((task) => task.id === selectedTaskId) ?? null;
 
   const setSelectedTaskId = (taskId: string | null) => {
+    if (taskId == null) {
+      dismissedTaskKeyRef.current =
+        tasksUrlHelper.routing.getTaskKeyFromPathname(pathname) ?? null;
+    } else {
+      dismissedTaskKeyRef.current = null;
+    }
     setSelectedTaskIdState(taskId);
     const taskKey =
       taskId == null
@@ -141,13 +169,18 @@ export function TasksProvider({ children }: { children: ReactNode }) {
   const viewHref = hrefForTasksView(view);
 
   useEffect(() => {
+    const previousPathname = pathnameRef.current;
+    pathnameRef.current = pathname;
     if (view.kind === "root") {
+      dismissedTaskKeyRef.current = null;
       setSelectedTaskIdState(null);
       return;
     }
     if (isTasksLoading) return;
     const taskKey = tasksUrlHelper.routing.getTaskKeyFromPathname(pathname);
+    if (taskKey && taskKey === dismissedTaskKeyRef.current) return;
     if (taskKey) {
+      dismissedTaskKeyRef.current = null;
       const match = loadedTasks.find((task) => task.taskKey === taskKey);
       if (match) {
         setSelectedTaskIdState(match.id);
@@ -159,10 +192,10 @@ export function TasksProvider({ children }: { children: ReactNode }) {
       }
       return;
     }
-    if (
-      selectedTaskId &&
-      !loadedTasks.some((task) => task.id === selectedTaskId)
-    ) {
+    const previousTaskKey =
+      tasksUrlHelper.routing.getTaskKeyFromPathname(previousPathname);
+    if (previousPathname !== pathname && previousTaskKey) {
+      dismissedTaskKeyRef.current = null;
       setSelectedTaskIdState(null);
     }
   }, [
@@ -170,7 +203,6 @@ export function TasksProvider({ children }: { children: ReactNode }) {
     loadedTasks,
     pathname,
     router,
-    selectedTaskId,
     view.kind,
     viewHref,
   ]);
@@ -216,17 +248,46 @@ export function TasksProvider({ children }: { children: ReactNode }) {
   });
 
   const createBoard = useMutation({
-    mutationFn: (input: { name: string; folderId: string | null }) =>
-      todexClient.boards.create(input),
-    onSuccess: (board) => {
+    mutationFn: (input: {
+      name: string;
+      folderId: string | null;
+      quiet?: boolean;
+    }) =>
+      todexClient.boards.create({
+        name: input.name,
+        folderId: input.folderId,
+      }),
+    onSuccess: (board, input) => {
       queryClient.setQueryData<TaskBoard[]>(["boards"], (current) =>
         current ? [...current, board] : [board],
       );
+      if (input.quiet) return;
       toast.success(`Board "${board.name}" created`);
       router.push(tasksUrlHelper.routing.buildBoardUrl(board.name));
     },
-    onError: () => toast.error("Could not create board"),
+    onError: (_error, input) => {
+      if (input.quiet) didEnsureInboxRef.current = false;
+      toast.error("Could not create board");
+    },
   });
+
+  useEffect(() => {
+    const currentBoards = boardsQuery.data ?? [];
+    if (boardsQuery.isLoading || boardsQuery.isError) return;
+    if (currentBoards.some((board) => board.name === INBOX_BOARD_NAME)) return;
+    if (didEnsureInboxRef.current) return;
+    didEnsureInboxRef.current = true;
+    createBoard.mutate({
+      name: INBOX_BOARD_NAME,
+      folderId: null,
+      quiet: true,
+    });
+  }, [
+    boardsQuery.data,
+    boardsQuery.isError,
+    boardsQuery.isLoading,
+    createBoard,
+  ]);
 
   const updateBoard = useMutation({
     mutationFn: (input: { boardId: string; body: UpdateTaskBoardBody }) =>
@@ -264,15 +325,26 @@ export function TasksProvider({ children }: { children: ReactNode }) {
   });
 
   const createTask = useMutation({
-    mutationFn: (input: { summary: string; parentTaskId?: string | null }) => {
-      if (!createBoardId) throw new Error("No board");
+    mutationFn: (
+      input: { summary: string; parentTaskId?: string | null } & TaskCreateDraft,
+    ) => {
+      const taskBoardId = input.taskBoardId ?? createBoardId;
+      if (!taskBoardId) throw new Error("No board");
       return todexClient.tasks.create({
-        taskBoardId: createBoardId,
+        taskBoardId,
         summary: input.summary,
         ...(input.parentTaskId ? { parentTaskId: input.parentTaskId } : {}),
-        ...(view.kind === "schedule" && scheduleQuery
-          ? { scheduleDate: scheduleQuery.scheduleFrom }
+        ...(input.status ? { status: input.status } : {}),
+        ...(input.priority ? { priority: input.priority } : {}),
+        ...(input.estimation !== undefined
+          ? { estimation: input.estimation }
           : {}),
+        ...(input.dueDate !== undefined ? { dueDate: input.dueDate } : {}),
+        ...(input.scheduleDate !== undefined
+          ? { scheduleDate: input.scheduleDate }
+          : view.kind === "schedule" && scheduleQuery
+            ? { scheduleDate: scheduleQuery.scheduleFrom }
+            : {}),
       });
     },
     onSuccess: (task) => {
@@ -361,9 +433,10 @@ export function TasksProvider({ children }: { children: ReactNode }) {
       removeBoard: async (boardId) => {
         await removeBoard.mutateAsync(boardId);
       },
-      createTask: (summary, parentTaskId) =>
-        createTask.mutate({ summary, parentTaskId }),
-      updateTask: (taskId, body) => updateTask.mutate({ taskId, body }),
+      createTask: (summary, parentTaskId, draft) =>
+        createTask.mutate({ summary, parentTaskId, ...draft }),
+      updateTask: (taskId, body, options) =>
+        updateTask.mutate({ taskId, body, optimistic: options?.quiet }),
       updateTaskStatus: (taskId, status) =>
         updateTask.mutate({ taskId, body: { status }, optimistic: true }),
       removeTask: (taskId) => removeTask.mutate(taskId),
@@ -442,8 +515,16 @@ interface TasksContextValue {
       body: UpdateTaskBoardBody,
     ) => Promise<TaskBoard>;
     removeBoard: (boardId: string) => Promise<void>;
-    createTask: (summary: string, parentTaskId?: string | null) => void;
-    updateTask: (taskId: string, body: UpdateTaskBody) => void;
+    createTask: (
+      summary: string,
+      parentTaskId?: string | null,
+      draft?: TaskCreateDraft,
+    ) => void;
+    updateTask: (
+      taskId: string,
+      body: UpdateTaskBody,
+      options?: { quiet?: boolean },
+    ) => void;
     updateTaskStatus: (taskId: string, status: Task["status"]) => void;
     removeTask: (taskId: string) => void;
   };

@@ -168,18 +168,23 @@ function CreateSpaceDialog({
     <Dialog title="Create board or folder" onClose={onClose}>
       <form className="space-y-4" onSubmit={submit}>
         <Field label="Type">
-          <Select
-            value={kind}
-            onValueChange={(value) => setKind(value as "board" | "folder")}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="board">Board</SelectItem>
-              <SelectItem value="folder">Folder</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="flex gap-2">
+            {(["board", "folder"] as const).map((option) => (
+              <button
+                key={option}
+                type="button"
+                aria-pressed={kind === option}
+                className={`h-9 flex-1 rounded-md border text-sm ${
+                  kind === option
+                    ? "border-foreground bg-surface text-foreground"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                }`}
+                onClick={() => setKind(option)}
+              >
+                {option === "board" ? "Board" : "Folder"}
+              </button>
+            ))}
+          </div>
         </Field>
         <Field label="Name">
           <Input
@@ -199,7 +204,7 @@ function CreateSpaceDialog({
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="z-[5000]">
                 <SelectItem value="root">Root</SelectItem>
                 {folders.map((folder) => (
                   <SelectItem key={folder.id} value={folder.id}>
@@ -310,7 +315,7 @@ function MoveBoardDialog({
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="z-[5000]">
               <SelectItem value="root">Root</SelectItem>
               {folders.map((folder) => (
                 <SelectItem key={folder.id} value={folder.id}>

@@ -17,9 +17,9 @@ export function AppFrame({ children }: { children: ReactNode }) {
   return (
     <TooltipProvider>
       <AuthGuard>
-        <div className="flex min-h-screen">
+        <div className="flex h-screen overflow-hidden bg-background">
           <AppNavRail />
-          <div className="min-h-screen min-w-0 flex-1">{children}</div>
+          <div className="flex min-h-0 min-w-0 flex-1">{children}</div>
         </div>
       </AuthGuard>
     </TooltipProvider>

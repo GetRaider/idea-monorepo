@@ -124,6 +124,47 @@ export function sortNestedTasks(
   );
 }
 
+export function isInboxTask(task: Task): boolean {
+  return (
+    task.parentTaskId == null &&
+    task.status === TaskStatus.TODO &&
+    task.scheduleDate == null &&
+    task.dueDate == null
+  );
+}
+
+export function isUnscheduledTask(task: Task): boolean {
+  return task.status !== TaskStatus.DONE && task.scheduleDate == null;
+}
+
+export function isOverdueTask(task: Task, now: Date): boolean {
+  if (task.status === TaskStatus.DONE || task.dueDate == null) return false;
+  const startOfToday = new Date(now);
+  startOfToday.setHours(0, 0, 0, 0);
+  return Date.parse(task.dueDate) < startOfToday.getTime();
+}
+
+export function tasksByCreatedAtDescending(tasks: Task[], limit: number): Task[] {
+  return [...tasks]
+    .sort((left, right) => {
+      const createdDelta = right.createdAt.localeCompare(left.createdAt);
+      if (createdDelta !== 0) return createdDelta;
+      return right.taskKey.localeCompare(left.taskKey);
+    })
+    .slice(0, limit);
+}
+
+export function tasksByCompletedDescending(tasks: Task[], limit: number): Task[] {
+  return [...tasks]
+    .filter((task) => task.status === TaskStatus.DONE)
+    .sort((left, right) => {
+      const updatedDelta = right.updatedAt.localeCompare(left.updatedAt);
+      if (updatedDelta !== 0) return updatedDelta;
+      return right.taskKey.localeCompare(left.taskKey);
+    })
+    .slice(0, limit);
+}
+
 export function sortGroupsByListSort(
   groups: Record<Task["status"], NestedTask[]>,
   sort: ListSortState,
@@ -155,4 +196,15 @@ export interface ListSortState {
   enabled: boolean;
   field: ListSortField;
   direction: ListSortDirection;
+}
+
+export const INBOX_BOARD_NAME = "Inbox";
+
+export interface TaskCreateDraft {
+  status?: Task["status"];
+  priority?: Task["priority"];
+  estimation?: number | null;
+  taskBoardId?: string;
+  scheduleDate?: string | null;
+  dueDate?: string | null;
 }

@@ -2,47 +2,85 @@
 
 import type { CSSProperties, ReactNode } from "react";
 import Link from "next/link";
-import { useDraggable, useDroppable } from "@dnd-kit/core";
+import { useDndContext, useDraggable, useDroppable } from "@dnd-kit/core";
 import { Checkbox, cn } from "@repo/ui";
-import { TaskPriority, TaskStatus } from "@repo/api/todex";
+import { formatEstimation, TaskPriority, TaskStatus } from "@repo/api/todex";
 import type { Task } from "@repo/api/todex";
 
-import { ChevronIcon } from "@components/icons";
+import { CalendarIcon, ChevronIcon, ClockIcon } from "@components/icons";
 import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
 
+import { boardDropId, type BoardDropData } from "./task-board-dnd";
 import { useTasks } from "./tasks-provider";
 
-import type { NestedTask } from "./task-helpers";
+import { formatTaskDay, type NestedTask } from "./task-helpers";
 
-export function statusDroppableId(status: Task["status"]): string {
-  return `status:${status}`;
-}
-
-export function parseStatusDroppableId(id: string | number): Task["status"] | null {
-  if (id === statusDroppableId(TaskStatus.TODO)) return TaskStatus.TODO;
-  if (id === statusDroppableId(TaskStatus.IN_PROGRESS))
-    return TaskStatus.IN_PROGRESS;
-  if (id === statusDroppableId(TaskStatus.DONE)) return TaskStatus.DONE;
-  return null;
-}
-
-export function StatusDroppable({
+export function BoardDropZone({
   status,
+  index,
+  kind,
+  combinedOpen,
+  taskId,
+  compact,
   className,
   children,
 }: {
   status: Task["status"];
+  index: number | null;
+  kind: BoardDropData["kind"];
+  combinedOpen?: boolean;
+  taskId?: string;
+  compact?: boolean;
   className?: string;
-  children: ReactNode;
+  children?: ReactNode;
 }) {
+  const data: BoardDropData = {
+    type: "reorder",
+    status,
+    index,
+    kind,
+    combinedOpen,
+  };
   const { setNodeRef, isOver } = useDroppable({
-    id: statusDroppableId(status),
+    id: boardDropId({ ...data, taskId }),
+    data,
   });
+  const { active, over } = useDndContext();
+  const overData = over?.data.current as BoardDropData | undefined;
+  const sameSlot =
+    overData?.type === "reorder" &&
+    overData.status === status &&
+    overData.index === index &&
+    Boolean(overData.combinedOpen) === Boolean(combinedOpen);
+  const showIndicator =
+    Boolean(active) &&
+    kind !== "card" &&
+    (isOver || (kind === "gap" && sameSlot));
   return (
     <div
       ref={setNodeRef}
-      className={cn(className, isOver && "bg-surface")}
+      className={cn(
+        kind === "gap" &&
+          "pointer-events-none relative h-3 w-full shrink-0 transition-[height,margin] duration-150",
+        kind === "empty" && (compact ? "relative" : "relative min-h-16 flex-1"),
+        kind === "fill" &&
+          (compact ? "relative h-2 shrink-0" : "relative mt-1 min-h-16 flex-1"),
+        showIndicator && kind === "gap" && "my-1 h-14",
+        showIndicator &&
+          compact &&
+          (kind === "fill" || kind === "empty") &&
+          "min-h-14",
+        className,
+      )}
     >
+      {showIndicator ? (
+        <span
+          className={cn(
+            "pointer-events-none absolute inset-x-1 z-10 rounded-lg border border-dotted border-muted-foreground/80 bg-transparent",
+            kind === "gap" ? "inset-y-1" : "top-1 h-12",
+          )}
+        />
+      ) : null}
       {children}
     </div>
   );
@@ -57,19 +95,18 @@ export function DraggableTask({
   className?: string;
   children: ReactNode;
 }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } =
-    useDraggable({ id: taskId });
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: taskId,
+    data: { taskId },
+  });
   return (
     <div
       ref={setNodeRef}
-      className={cn(className, isDragging && "opacity-60")}
-      style={
-        transform
-          ? ({
-              transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
-            } as CSSProperties)
-          : undefined
-      }
+      className={cn(
+        "cursor-grab active:cursor-grabbing",
+        className,
+        isDragging && "opacity-0",
+      )}
       {...listeners}
       {...attributes}
     >
@@ -89,6 +126,7 @@ export function TaskRow({
   onSelect,
   onToggleDone,
   onCreateSubtask,
+  statusDrop,
 }: {
   node: NestedTask;
   selectedTaskId: string | null;
@@ -100,66 +138,125 @@ export function TaskRow({
   onSelect: (taskId: string) => void;
   onToggleDone: (task: NestedTask) => void;
   onCreateSubtask: (parentTaskId: string) => void;
+  statusDrop?: boolean;
 }) {
   const hasChildren = node.children.length > 0;
-  return (
-    <DraggableTask taskId={node.id}>
-      <div
-        className={cn(
-          "group flex items-center gap-2 rounded-md py-1.5 pr-2 hover:bg-surface",
-          selectedTaskId === node.id && "bg-surface",
-        )}
-        style={{ paddingLeft: `${depth * 16 + 8}px` } as CSSProperties}
+  const row = (
+    <div
+      className={cn(
+        "group flex items-center gap-2 rounded-md py-1.5 pr-2 hover:bg-surface",
+        selectedTaskId === node.id && "bg-surface",
+      )}
+      style={{ paddingLeft: `${depth * 16 + 8}px` } as CSSProperties}
+    >
+      {hasChildren ? (
+        <button
+          type="button"
+          aria-expanded={expanded}
+          aria-label={expanded ? "Collapse subtasks" : "Expand subtasks"}
+          data-no-dnd=""
+          className="flex h-4 w-4 shrink-0 items-center justify-center text-muted-foreground hover:text-foreground"
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={(event) => {
+            event.stopPropagation();
+            onToggleExpanded?.();
+          }}
+        >
+          <ChevronIcon
+            size={12}
+            className={cn("transition-transform", expanded && "rotate-90")}
+          />
+        </button>
+      ) : (
+        <span className="h-4 w-4 shrink-0" />
+      )}
+      <Checkbox
+        data-no-dnd=""
+        checked={node.status === TaskStatus.DONE}
+        onPointerDown={(event) => event.stopPropagation()}
+        onClick={(event) => event.stopPropagation()}
+        onCheckedChange={() => onToggleDone(node)}
+      />
+      <PriorityGlyph priority={node.priority} />
+      <button
+        type="button"
+        className="min-w-0 flex-1 text-left text-sm"
+        onClick={() => onSelect(node.id)}
       >
-        {hasChildren ? (
-          <button
-            type="button"
-            aria-expanded={expanded}
-            aria-label={expanded ? "Collapse subtasks" : "Expand subtasks"}
-            className="flex h-4 w-4 shrink-0 items-center justify-center text-muted-foreground hover:text-foreground"
-            onClick={(event) => {
-              event.stopPropagation();
-              onToggleExpanded?.();
-            }}
-          >
-            <ChevronIcon
-              size={12}
-              className={cn("transition-transform", expanded && "rotate-90")}
-            />
-          </button>
-        ) : (
-          <span className="h-4 w-4 shrink-0" />
-        )}
-        <Checkbox
-          checked={node.status === TaskStatus.DONE}
-          onClick={(event) => event.stopPropagation()}
-          onCheckedChange={() => onToggleDone(node)}
-        />
-        <PriorityGlyph priority={node.priority} />
-        <button
-          type="button"
-          className="min-w-0 flex-1 text-left text-sm"
-          onClick={() => onSelect(node.id)}
-        >
-          <span className="mr-2 font-mono text-xs text-muted-foreground">
-            {node.taskKey}
+        <span className="mr-2 font-mono text-xs text-muted-foreground">
+          {node.taskKey}
+        </span>
+        {node.summary}
+        {showBoardName ? (
+          <span className="ml-2 text-xs text-muted-foreground">
+            {boardNameById.get(node.taskBoardId)}
           </span>
-          {node.summary}
-          {showBoardName ? (
-            <span className="ml-2 text-xs text-muted-foreground">
-              {boardNameById.get(node.taskBoardId)}
-            </span>
-          ) : null}
-        </button>
-        <button
-          type="button"
-          className="invisible rounded-md px-1.5 text-xs text-muted-foreground group-hover:visible hover:text-foreground"
-          onClick={() => onCreateSubtask(node.id)}
-        >
-          +
-        </button>
-      </div>
-    </DraggableTask>
+        ) : null}
+      </button>
+      <TaskFacts task={node} />
+      <button
+        type="button"
+        data-no-dnd=""
+        className="invisible rounded-md px-1.5 text-xs text-muted-foreground group-hover:visible hover:text-foreground"
+        onPointerDown={(event) => event.stopPropagation()}
+        onClick={() => onCreateSubtask(node.id)}
+      >
+        +
+      </button>
+    </div>
+  );
+  if (depth > 0) return row;
+  const draggable = <DraggableTask taskId={node.id}>{row}</DraggableTask>;
+  if (!statusDrop) return draggable;
+  return (
+    <BoardDropZone
+      kind="row"
+      status={node.status}
+      index={null}
+      taskId={node.id}
+    >
+      {draggable}
+    </BoardDropZone>
+  );
+}
+
+export function TaskFacts({
+  task,
+  className,
+}: {
+  task: Pick<Task, "scheduleDate" | "dueDate" | "estimation">;
+  className?: string;
+}) {
+  const schedule = formatTaskDay(task.scheduleDate);
+  const due = formatTaskDay(task.dueDate);
+  const estimate = formatEstimation(task.estimation);
+  if (!schedule && !due && !estimate) return null;
+  return (
+    <span
+      className={cn(
+        "flex shrink-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground",
+        className,
+      )}
+    >
+      {schedule ? (
+        <span className="inline-flex items-center gap-1">
+          <CalendarIcon size={12} />
+          Schedule {schedule}
+        </span>
+      ) : null}
+      {due ? (
+        <span className="inline-flex items-center gap-1">
+          <CalendarIcon size={12} />
+          Due {due}
+        </span>
+      ) : null}
+      {estimate ? (
+        <span className="inline-flex items-center gap-1">
+          <ClockIcon size={12} />
+          {estimate}
+        </span>
+      ) : null}
+    </span>
   );
 }
 

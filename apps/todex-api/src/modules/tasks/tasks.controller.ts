@@ -13,11 +13,13 @@ import {
 import {
   CreateTaskBodySchema,
   ListTasksQuerySchema,
+  MoveTaskBodySchema,
   UpdateTaskBodySchema,
 } from "@repo/api/todex";
 import type {
   CreateTaskBody,
   ListTasksQuery,
+  MoveTaskBody,
   UpdateTaskBody,
 } from "@repo/api/todex";
 
@@ -47,6 +49,15 @@ export class TasksController {
     @Body(zodPipe(CreateTaskBodySchema)) body: CreateTaskBody,
   ) {
     return this.tasksService.create(request.workspaceId, body);
+  }
+
+  @Post(":id/move")
+  async move(
+    @Req() request: WorkspaceRequest,
+    @Param("id") taskId: string,
+    @Body(zodPipe(MoveTaskBodySchema)) body: MoveTaskBody,
+  ) {
+    return this.tasksService.move(request.workspaceId, taskId, body);
   }
 
   @Patch(":id")

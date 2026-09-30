@@ -15,6 +15,13 @@
       "when": 1789062200000,
       "tag": "0001_estimation_minutes",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789065600000,
+      "tag": "0002_task_position",
+      "breakpoints": true
     }
   ]
 }

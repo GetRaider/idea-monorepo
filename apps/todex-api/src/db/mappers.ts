@@ -83,6 +83,7 @@ export function mapTask(row: TaskRow): Task {
     scheduleDate: toIso(row.scheduleDate),
     estimation: row.estimation ?? null,
     parentTaskId: row.parentTaskId,
+    position: row.position,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };

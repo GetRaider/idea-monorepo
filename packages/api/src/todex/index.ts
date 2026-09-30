@@ -32,12 +32,14 @@ export { formatEstimation, parseEstimation } from "./estimation.ts";
 export {
   CreateTaskBodySchema,
   ListTasksQuerySchema,
+  MoveTaskBodySchema,
   TaskSchema,
   UpdateTaskBodySchema,
 } from "./task.ts";
 export type {
   CreateTaskBody,
   ListTasksQuery,
+  MoveTaskBody,
   Task,
   UpdateTaskBody,
 } from "./task.ts";

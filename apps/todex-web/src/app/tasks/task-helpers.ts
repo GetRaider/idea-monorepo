@@ -25,6 +25,9 @@ export function nestTasks(tasks: Task[]): NestedTask[] {
       roots.push(task);
     }
   }
+  for (const task of byId.values()) {
+    task.children.sort(compareTaskOrder);
+  }
   return roots;
 }
 
@@ -39,7 +42,107 @@ export function groupRootsByStatus(
   for (const root of roots) {
     groups[root.status].push(root);
   }
+  for (const status of STATUS_ORDER) {
+    groups[status].sort(compareTaskOrder);
+  }
   return groups;
+}
+
+export function compareTaskOrder(left: Task, right: Task): number {
+  const positionDelta = left.position - right.position;
+  if (positionDelta !== 0) return positionDelta;
+  const createdDelta = left.createdAt.localeCompare(right.createdAt);
+  if (createdDelta !== 0) return createdDelta;
+  return left.id.localeCompare(right.id);
+}
+
+export function sameBoardDropIndex(
+  nodes: BoardDropNode[],
+  taskId: string,
+  taskBoardId: string,
+  dropIndex: number,
+): number {
+  let index = 0;
+  const limit = Math.max(0, Math.min(dropIndex, nodes.length));
+  for (let cursor = 0; cursor < limit; cursor += 1) {
+    const node = nodes[cursor];
+    if (!node || node.id === taskId) continue;
+    if (node.taskBoardId === taskBoardId) index += 1;
+  }
+  return index;
+}
+
+export function resolveCombinedOpenDrop(
+  todoNodes: BoardDropNode[],
+  inProgressNodes: BoardDropNode[],
+  taskId: string,
+  taskBoardId: string,
+  dropIndex: number,
+): { status: Task["status"]; index: number } {
+  const todoCount = todoNodes.length;
+  if (inProgressNodes.length > 0 && dropIndex === todoCount) {
+    return {
+      status: TaskStatus.IN_PROGRESS,
+      index: sameBoardDropIndex(inProgressNodes, taskId, taskBoardId, 0),
+    };
+  }
+  if (dropIndex <= todoCount) {
+    return {
+      status: TaskStatus.TODO,
+      index: sameBoardDropIndex(todoNodes, taskId, taskBoardId, dropIndex),
+    };
+  }
+  return {
+    status: TaskStatus.IN_PROGRESS,
+    index: sameBoardDropIndex(
+      inProgressNodes,
+      taskId,
+      taskBoardId,
+      dropIndex - todoCount,
+    ),
+  };
+}
+
+export function applyRootMove(
+  tasks: Task[],
+  taskId: string,
+  status: Task["status"],
+  index: number,
+): Task[] {
+  const task = tasks.find((item) => item.id === taskId);
+  if (!task || task.parentTaskId) return tasks;
+
+  const columnIds = (columnStatus: Task["status"]) =>
+    tasks
+      .filter(
+        (item) =>
+          item.parentTaskId == null &&
+          item.taskBoardId === task.taskBoardId &&
+          item.status === columnStatus,
+      )
+      .sort(compareTaskOrder)
+      .map((item) => item.id);
+
+  const destinationIds = columnIds(status).filter((id) => id !== taskId);
+  const clamped = Math.max(0, Math.min(index, destinationIds.length));
+  destinationIds.splice(clamped, 0, taskId);
+  const positionById = new Map(
+    destinationIds.map((id, position) => [id, position]),
+  );
+  if (task.status !== status) {
+    columnIds(task.status)
+      .filter((id) => id !== taskId)
+      .forEach((id, position) => positionById.set(id, position));
+  }
+
+  return tasks.map((item) => {
+    const position = positionById.get(item.id);
+    if (item.id === taskId) {
+      return { ...item, status, position: position ?? 0 };
+    }
+    if (position == null) return item;
+    return { ...item, position };
+  });
 }
 
 export function startOfLocalDay(offsetDays = 0): Date {
@@ -71,6 +174,19 @@ export function dateInputToLocalDayStartIso(
   const date = new Date(year, month - 1, day);
   date.setHours(0, 0, 0, 0);
   return date.toISOString();
+}
+
+export function formatTaskDay(iso: string | null): string | null {
+  const value = isoToDateInput(iso);
+  if (!value) return null;
+  const [yearText, monthText, dayText] = value.split("-");
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+  if (!year || !month || !day) return null;
+  const monthLabel = TASK_DAY_MONTHS[month - 1];
+  if (!monthLabel) return null;
+  return `${monthLabel} ${day}`;
 }
 
 export function isoToDateInput(iso: string | null): string {
@@ -144,7 +260,10 @@ export function isOverdueTask(task: Task, now: Date): boolean {
   return Date.parse(task.dueDate) < startOfToday.getTime();
 }
 
-export function tasksByCreatedAtDescending(tasks: Task[], limit: number): Task[] {
+export function tasksByCreatedAtDescending(
+  tasks: Task[],
+  limit: number,
+): Task[] {
   return [...tasks]
     .sort((left, right) => {
       const createdDelta = right.createdAt.localeCompare(left.createdAt);
@@ -154,7 +273,10 @@ export function tasksByCreatedAtDescending(tasks: Task[], limit: number): Task[]
     .slice(0, limit);
 }
 
-export function tasksByCompletedDescending(tasks: Task[], limit: number): Task[] {
+export function tasksByCompletedDescending(
+  tasks: Task[],
+  limit: number,
+): Task[] {
   return [...tasks]
     .filter((task) => task.status === TaskStatus.DONE)
     .sort((left, right) => {
@@ -179,12 +301,32 @@ export function sortGroupsByListSort(
   };
 }
 
+const TASK_DAY_MONTHS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+] as const;
+
 const PRIORITY_RANK: Record<Task["priority"], number> = {
   [TaskPriority.LOW]: 0,
   [TaskPriority.MEDIUM]: 1,
   [TaskPriority.HIGH]: 2,
   [TaskPriority.CRITICAL]: 3,
 };
+
+export interface BoardDropNode {
+  id: string;
+  taskBoardId: string;
+}
 
 export interface NestedTask extends Task {
   children: NestedTask[];

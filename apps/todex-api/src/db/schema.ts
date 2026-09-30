@@ -120,6 +120,7 @@ export const tasks = pgTable(
     scheduleDate: timestamp("schedule_date"),
     estimation: integer("estimation"),
     parentTaskId: text("parent_task_id"),
+    position: integer("position").notNull().default(0),
     createdAt: timestamp("created_at")
       .$defaultFn(() => new Date())
       .notNull(),

@@ -15,6 +15,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type {
   Folder,
+  MoveTaskBody,
   Task,
   TaskBoard,
   UpdateFolderBody,
@@ -26,6 +27,7 @@ import { todexClient } from "@lib/todex-client";
 import { TASKS_ROOT_VIEW_ID, tasksUrlHelper } from "@/helpers/tasks-url.helper";
 
 import {
+  applyRootMove,
   groupRootsByStatus,
   INBOX_BOARD_NAME,
   localDayScheduleQuery,
@@ -198,14 +200,7 @@ export function TasksProvider({ children }: { children: ReactNode }) {
       dismissedTaskKeyRef.current = null;
       setSelectedTaskIdState(null);
     }
-  }, [
-    isTasksLoading,
-    loadedTasks,
-    pathname,
-    router,
-    view.kind,
-    viewHref,
-  ]);
+  }, [isTasksLoading, loadedTasks, pathname, router, view.kind, viewHref]);
 
   const invalidateTasks = () => {
     void queryClient.invalidateQueries({ queryKey: ["tasks"] });
@@ -303,7 +298,10 @@ export function TasksProvider({ children }: { children: ReactNode }) {
       toast.success(`Board "${board.name}" saved`);
       if (selectedBoardId === board.id) {
         router.replace(
-          tasksUrlHelper.routing.buildBoardUrl(board.name, selectedTask?.taskKey),
+          tasksUrlHelper.routing.buildBoardUrl(
+            board.name,
+            selectedTask?.taskKey,
+          ),
         );
       }
     },
@@ -326,7 +324,10 @@ export function TasksProvider({ children }: { children: ReactNode }) {
 
   const createTask = useMutation({
     mutationFn: (
-      input: { summary: string; parentTaskId?: string | null } & TaskCreateDraft,
+      input: {
+        summary: string;
+        parentTaskId?: string | null;
+      } & TaskCreateDraft,
     ) => {
       const taskBoardId = input.taskBoardId ?? createBoardId;
       if (!taskBoardId) throw new Error("No board");
@@ -366,12 +367,8 @@ export function TasksProvider({ children }: { children: ReactNode }) {
       const previous = queryClient.getQueriesData<Task[]>({
         queryKey: ["tasks"],
       });
-      queryClient.setQueriesData<Task[]>(
-        { queryKey: ["tasks"] },
-        (current) =>
-          current?.map((task) =>
-            task.id === input.taskId ? { ...task, ...input.body } : task,
-          ) ?? current,
+      queryClient.setQueriesData<Task[]>({ queryKey: ["tasks"] }, (current) =>
+        applyOptimisticTaskPatch(current, input.taskId, input.body),
       );
       return { previous };
     },
@@ -384,6 +381,42 @@ export function TasksProvider({ children }: { children: ReactNode }) {
     onSuccess: (_task, input) => {
       if (input.optimistic) return;
       toast.success("Task saved");
+    },
+    onSettled: () => {
+      invalidateTasks();
+    },
+  });
+
+  const moveTask = useMutation({
+    mutationFn: (input: { taskId: string; body: MoveTaskBody }) =>
+      todexClient.tasks.move(input.taskId, input.body),
+    onMutate: async (input) => {
+      await queryClient.cancelQueries({ queryKey: ["tasks"] });
+      const previous = queryClient.getQueriesData<Task[]>({
+        queryKey: ["tasks"],
+      });
+      queryClient.setQueriesData<Task[]>({ queryKey: ["tasks"] }, (current) => {
+        if (!current) return current;
+        const task = current.find((item) => item.id === input.taskId);
+        if (!task || task.parentTaskId) return current;
+        const index =
+          input.body.index ??
+          current.filter(
+            (item) =>
+              item.parentTaskId == null &&
+              item.taskBoardId === task.taskBoardId &&
+              item.status === input.body.status &&
+              item.id !== task.id,
+          ).length;
+        return applyRootMove(current, input.taskId, input.body.status, index);
+      });
+      return { previous };
+    },
+    onError: (_error, _input, context) => {
+      context?.previous?.forEach(([queryKey, data]) => {
+        queryClient.setQueryData(queryKey, data);
+      });
+      toast.error("Could not move task");
     },
     onSettled: () => {
       invalidateTasks();
@@ -439,6 +472,7 @@ export function TasksProvider({ children }: { children: ReactNode }) {
         updateTask.mutate({ taskId, body, optimistic: options?.quiet }),
       updateTaskStatus: (taskId, status) =>
         updateTask.mutate({ taskId, body: { status }, optimistic: true }),
+      moveTask: (taskId, body) => moveTask.mutate({ taskId, body }),
       removeTask: (taskId) => removeTask.mutate(taskId),
     },
     meta: {
@@ -457,6 +491,40 @@ export function useTasks() {
   const value = use(TasksContext);
   if (!value) throw new Error("useTasks must be used within TasksProvider");
   return value;
+}
+
+function applyOptimisticTaskPatch(
+  tasks: Task[] | undefined,
+  taskId: string,
+  body: UpdateTaskBody,
+): Task[] | undefined {
+  if (!tasks) return tasks;
+  const statusOnly =
+    body.status != null &&
+    body.taskBoardId == null &&
+    body.summary == null &&
+    body.description == null &&
+    body.priority == null &&
+    body.dueDate === undefined &&
+    body.scheduleDate === undefined &&
+    body.estimation === undefined &&
+    body.parentTaskId === undefined;
+  if (statusOnly && body.status) {
+    const task = tasks.find((item) => item.id === taskId);
+    if (task && task.parentTaskId == null && task.status !== body.status) {
+      const index = tasks.filter(
+        (item) =>
+          item.parentTaskId == null &&
+          item.taskBoardId === task.taskBoardId &&
+          item.status === body.status &&
+          item.id !== task.id,
+      ).length;
+      return applyRootMove(tasks, taskId, body.status, index);
+    }
+  }
+  return tasks.map((task) =>
+    task.id === taskId ? { ...task, ...body } : task,
+  );
 }
 
 function hrefForTasksView(view: TasksView, taskKey?: string): string | null {
@@ -526,6 +594,7 @@ interface TasksContextValue {
       options?: { quiet?: boolean },
     ) => void;
     updateTaskStatus: (taskId: string, status: Task["status"]) => void;
+    moveTask: (taskId: string, body: MoveTaskBody) => void;
     removeTask: (taskId: string) => void;
   };
   meta: {

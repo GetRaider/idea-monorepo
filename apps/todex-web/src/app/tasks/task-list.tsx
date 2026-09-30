@@ -1,13 +1,21 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ComponentProps, type FormEvent } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type ComponentProps,
+  type FormEvent,
+} from "react";
 import {
   DndContext,
+  DragOverlay,
+  MeasuringStrategy,
   PointerSensor,
-  closestCorners,
   useSensor,
   useSensors,
   type DragEndEvent,
+  type DragStartEvent,
 } from "@dnd-kit/core";
 import {
   Button,
@@ -34,14 +42,14 @@ import type { Task } from "@repo/api/todex";
 
 import { ChevronIcon, PlusIcon, SettingsIcon } from "@components/icons";
 
+import { boardCollisionDetection, type BoardDropData } from "./task-board-dnd";
 import {
+  BoardDropZone,
   BoardGlyph,
-  StatusDroppable,
   StatusGlyph,
   TaskRow,
   TaskSearchField,
   TasksBreadcrumb,
-  parseStatusDroppableId,
 } from "./task-board.ui";
 import { useBoardPreferences } from "./board-preferences-provider";
 import type { BoardListSubmode, BoardViewMode } from "./task-board-preferences";
@@ -50,6 +58,8 @@ import { TaskKanban } from "./task-kanban";
 import {
   STATUS_LABEL,
   STATUS_ORDER,
+  resolveCombinedOpenDrop,
+  sameBoardDropIndex,
   sortGroupsByListSort,
   sortNestedTasks,
   type ListSortField,
@@ -73,6 +83,7 @@ export function TaskList() {
       setSelectedTaskId,
       createTask,
       updateTaskStatus,
+      moveTask,
       setScheduleTargetBoardId,
       openCreateDialog,
     },
@@ -80,6 +91,7 @@ export function TaskList() {
   } = useTasks();
   const [createSummary, setCreateSummary] = useState("");
   const [isComposerOpen, setIsComposerOpen] = useState(false);
+  const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const {
     viewMode,
     listSubmode,
@@ -114,16 +126,51 @@ export function TaskList() {
     setCreateSummary("");
   };
 
+  const reorderEnabled =
+    view.kind === "board" &&
+    !search.trim() &&
+    (viewMode === "kanban" || !listSort.enabled);
+  const activeTask = tasks.find((task) => task.id === activeTaskId) ?? null;
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveTaskId(String(event.active.id));
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
-    const overId = event.over?.id;
-    if (overId == null) return;
-    const columnStatus = parseStatusDroppableId(overId);
-    const overTask = tasks.find((item) => item.id === String(overId));
-    const nextStatus = columnStatus ?? overTask?.status ?? null;
-    const taskId = String(event.active.id);
-    const task = tasks.find((item) => item.id === taskId);
-    if (!nextStatus || !task || task.status === nextStatus) return;
-    updateTaskStatus(taskId, nextStatus);
+    setActiveTaskId(null);
+    const drop = event.over?.data.current as BoardDropData | undefined;
+    if (!drop || drop.type !== "reorder") return;
+    const task = tasks.find((item) => item.id === String(event.active.id));
+    if (!task || task.parentTaskId) return;
+    if (!reorderEnabled || drop.index == null) {
+      if (task.status === drop.status) return;
+      moveTask(task.id, { status: drop.status });
+      return;
+    }
+    const resolved = drop.combinedOpen
+      ? resolveCombinedOpenDrop(
+          groups[TaskStatus.TODO] ?? [],
+          groups[TaskStatus.IN_PROGRESS] ?? [],
+          task.id,
+          task.taskBoardId,
+          drop.index,
+        )
+      : {
+          status: drop.status,
+          index: sameBoardDropIndex(
+            groups[drop.status] ?? [],
+            task.id,
+            task.taskBoardId,
+            drop.index,
+          ),
+        };
+    const currentIndex = (groups[task.status] ?? [])
+      .filter((node) => node.taskBoardId === task.taskBoardId)
+      .findIndex((node) => node.id === task.id);
+    if (resolved.status === task.status && resolved.index === currentIndex) {
+      return;
+    }
+    moveTask(task.id, resolved);
   };
 
   const showEmptySchedule =
@@ -243,7 +290,11 @@ export function TaskList() {
       ) : (
         <DndContext
           sensors={sensors}
-          collisionDetection={closestCorners}
+          collisionDetection={boardCollisionDetection}
+          measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
+          autoScroll={{ threshold: { x: 0, y: 0.15 } }}
+          onDragStart={handleDragStart}
+          onDragCancel={() => setActiveTaskId(null)}
           onDragEnd={handleDragEnd}
         >
           {viewMode === "kanban" ? (
@@ -251,6 +302,7 @@ export function TaskList() {
               groups={groups}
               boardNameById={boardNameById}
               showBoardName={showBoardName}
+              reorderEnabled={reorderEnabled}
               fastCreate={
                 isBoard
                   ? {
@@ -264,7 +316,7 @@ export function TaskList() {
               }
             />
           ) : (
-            <div className="flex min-h-0 flex-1 flex-col gap-3">
+            <div className="flex flex-col gap-3">
               <ListSections
                 submode={listSubmode}
                 groups={sortedGroups}
@@ -295,9 +347,20 @@ export function TaskList() {
                 onCreateSubtask={(parentTaskId) =>
                   createTask("New subtask", parentTaskId)
                 }
+                reorderEnabled={reorderEnabled}
               />
             </div>
           )}
+          <DragOverlay dropAnimation={null}>
+            {activeTask ? (
+              <div className="cursor-grabbing rounded-md border border-border bg-panel px-3 py-2 text-sm shadow-lg">
+                <span className="mr-2 font-mono text-xs text-muted-foreground">
+                  {activeTask.taskKey}
+                </span>
+                {activeTask.summary}
+              </div>
+            ) : null}
+          </DragOverlay>
         </DndContext>
       )}
     </section>
@@ -315,6 +378,7 @@ function ListSections({
   onSelect,
   onToggleDone,
   onCreateSubtask,
+  reorderEnabled,
 }: {
   submode: BoardListSubmode;
   groups: Record<Task["status"], NestedTask[]>;
@@ -330,6 +394,7 @@ function ListSections({
   onSelect: (taskId: string) => void;
   onToggleDone: (task: NestedTask) => void;
   onCreateSubtask: (parentTaskId: string) => void;
+  reorderEnabled: boolean;
 }) {
   const sections =
     submode === "single"
@@ -378,6 +443,10 @@ function ListSections({
           onSelect={onSelect}
           onToggleDone={onToggleDone}
           onCreateSubtask={onCreateSubtask}
+          reorderEnabled={reorderEnabled}
+          combinedOpen={
+            submode === "single" && section.status === TaskStatus.TODO
+          }
         />
       ))}
     </>
@@ -396,6 +465,8 @@ function ListSection({
   onSelect,
   onToggleDone,
   onCreateSubtask,
+  reorderEnabled,
+  combinedOpen,
 }: {
   label: string;
   status: Task["status"];
@@ -408,11 +479,13 @@ function ListSection({
   onSelect: (taskId: string) => void;
   onToggleDone: (task: NestedTask) => void;
   onCreateSubtask: (parentTaskId: string) => void;
+  reorderEnabled: boolean;
+  combinedOpen: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
-      <section className="rounded-lg border border-border bg-panel px-2 py-1">
+      <section className="shrink-0 rounded-lg border border-border bg-panel px-2 py-1">
         <CollapsibleTrigger className="flex w-full items-center gap-2 rounded-md px-1 py-2 text-sm font-semibold hover:bg-surface">
           <ChevronIcon
             size={14}
@@ -438,23 +511,81 @@ function ListSection({
           </div>
         ) : null}
         <CollapsibleContent>
-          <StatusDroppable status={status} className="min-h-8">
-            {nodes.length === 0 ? (
+          {reorderEnabled ? (
+            nodes.length === 0 ? (
+              <BoardDropZone
+                kind="empty"
+                status={status}
+                index={0}
+                combinedOpen={combinedOpen}
+                compact
+              >
+                <p className="px-8 py-2 text-sm text-muted-foreground">
+                  No tasks
+                </p>
+              </BoardDropZone>
+            ) : (
+              <div>
+                {nodes.map((node, index) => (
+                  <div key={node.id}>
+                    <BoardDropZone
+                      kind="gap"
+                      status={status}
+                      index={index}
+                      combinedOpen={combinedOpen}
+                      compact
+                    />
+                    <BoardDropZone
+                      kind="card"
+                      status={status}
+                      index={index}
+                      combinedOpen={combinedOpen}
+                    >
+                      <TaskTree
+                        nodes={[node]}
+                        selectedTaskId={selectedTaskId}
+                        boardNameById={boardNameById}
+                        showBoardName={showBoardName}
+                        onSelect={onSelect}
+                        onToggleDone={onToggleDone}
+                        onCreateSubtask={onCreateSubtask}
+                      />
+                    </BoardDropZone>
+                  </div>
+                ))}
+                <BoardDropZone
+                  kind="fill"
+                  status={status}
+                  index={nodes.length}
+                  combinedOpen={combinedOpen}
+                  compact
+                />
+              </div>
+            )
+          ) : nodes.length === 0 ? (
+            <BoardDropZone
+              kind="empty"
+              status={status}
+              index={null}
+              combinedOpen={combinedOpen}
+              compact
+            >
               <p className="px-8 py-2 text-sm text-muted-foreground">
                 No tasks
               </p>
-            ) : (
-              <TaskTree
-                nodes={nodes}
-                selectedTaskId={selectedTaskId}
-                boardNameById={boardNameById}
-                showBoardName={showBoardName}
-                onSelect={onSelect}
-                onToggleDone={onToggleDone}
-                onCreateSubtask={onCreateSubtask}
-              />
-            )}
-          </StatusDroppable>
+            </BoardDropZone>
+          ) : (
+            <TaskTree
+              nodes={nodes}
+              selectedTaskId={selectedTaskId}
+              boardNameById={boardNameById}
+              showBoardName={showBoardName}
+              statusDrop
+              onSelect={onSelect}
+              onToggleDone={onToggleDone}
+              onCreateSubtask={onCreateSubtask}
+            />
+          )}
         </CollapsibleContent>
       </section>
     </Collapsible>
@@ -469,6 +600,7 @@ function TaskTree({
   onSelect,
   onToggleDone,
   onCreateSubtask,
+  statusDrop = false,
   depth = 0,
 }: {
   nodes: NestedTask[];
@@ -478,6 +610,7 @@ function TaskTree({
   onSelect: (taskId: string) => void;
   onToggleDone: (task: NestedTask) => void;
   onCreateSubtask: (parentTaskId: string) => void;
+  statusDrop?: boolean;
   depth?: number;
 }) {
   const [expandedIds, setExpandedIds] = useState<ReadonlySet<string>>(
@@ -508,6 +641,7 @@ function TaskTree({
             onSelect={onSelect}
             onToggleDone={onToggleDone}
             onCreateSubtask={onCreateSubtask}
+            statusDrop={statusDrop && depth === 0}
           />
           {node.children.length > 0 && expandedIds.has(node.id) ? (
             <TaskTree
@@ -561,62 +695,56 @@ function ViewSettingsMenu({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-52">
         <DropdownMenuLabel>List layout</DropdownMenuLabel>
-            <DropdownMenuRadioGroup
-              value={listSubmode}
-              onValueChange={(value) =>
-                onListSubmodeChange(value as BoardListSubmode)
-              }
-            >
-              <DropdownMenuRadioItem value="grouped">
-                Grouped
-              </DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="single">
-                Single list
-              </DropdownMenuRadioItem>
-            </DropdownMenuRadioGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuLabel>Sort</DropdownMenuLabel>
-            <DropdownMenuCheckboxItem
-              checked={listSort.enabled}
-              onCheckedChange={(enabled) =>
-                onListSortChange({ ...listSort, enabled: Boolean(enabled) })
-              }
-            >
-              Enabled
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuRadioGroup
-              value={listSort.field}
-              onValueChange={(value) =>
-                onListSortChange({
-                  ...listSort,
-                  field: value as ListSortField,
-                })
-              }
-            >
-              <DropdownMenuRadioItem value="title">Title</DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="schedule">
-                Schedule
-              </DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="priority">
-                Priority
-              </DropdownMenuRadioItem>
-            </DropdownMenuRadioGroup>
-            <DropdownMenuRadioGroup
-              value={listSort.direction}
-              onValueChange={(value) =>
-                onListSortChange({
-                  ...listSort,
-                  direction: value as "asc" | "desc",
-                })
-              }
-            >
-              <DropdownMenuRadioItem value="asc">
-                Ascending
-              </DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="desc">
-                Descending
-              </DropdownMenuRadioItem>
-            </DropdownMenuRadioGroup>
+        <DropdownMenuRadioGroup
+          value={listSubmode}
+          onValueChange={(value) =>
+            onListSubmodeChange(value as BoardListSubmode)
+          }
+        >
+          <DropdownMenuRadioItem value="grouped">Grouped</DropdownMenuRadioItem>
+          <DropdownMenuRadioItem value="single">
+            Single list
+          </DropdownMenuRadioItem>
+        </DropdownMenuRadioGroup>
+        <DropdownMenuSeparator />
+        <DropdownMenuLabel>Sort</DropdownMenuLabel>
+        <DropdownMenuCheckboxItem
+          checked={listSort.enabled}
+          onCheckedChange={(enabled) =>
+            onListSortChange({ ...listSort, enabled: Boolean(enabled) })
+          }
+        >
+          Enabled
+        </DropdownMenuCheckboxItem>
+        <DropdownMenuRadioGroup
+          value={listSort.field}
+          onValueChange={(value) =>
+            onListSortChange({
+              ...listSort,
+              field: value as ListSortField,
+            })
+          }
+        >
+          <DropdownMenuRadioItem value="title">Title</DropdownMenuRadioItem>
+          <DropdownMenuRadioItem value="schedule">
+            Schedule
+          </DropdownMenuRadioItem>
+          <DropdownMenuRadioItem value="priority">
+            Priority
+          </DropdownMenuRadioItem>
+        </DropdownMenuRadioGroup>
+        <DropdownMenuRadioGroup
+          value={listSort.direction}
+          onValueChange={(value) =>
+            onListSortChange({
+              ...listSort,
+              direction: value as "asc" | "desc",
+            })
+          }
+        >
+          <DropdownMenuRadioItem value="asc">Ascending</DropdownMenuRadioItem>
+          <DropdownMenuRadioItem value="desc">Descending</DropdownMenuRadioItem>
+        </DropdownMenuRadioGroup>
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -661,7 +789,7 @@ class BoardPointerSensor extends PointerSensor {
         if (
           target instanceof Element &&
           target.closest(
-            "input, textarea, select, option, button, a, [contenteditable='true']",
+            "input, textarea, select, option, a, [contenteditable='true'], [data-no-dnd]",
           )
         ) {
           return false;

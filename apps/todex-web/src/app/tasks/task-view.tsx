@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 import {
   Checkbox,
   ConfirmDialog,
@@ -66,7 +72,9 @@ export function TaskView() {
   if (!selectedTask) return null;
 
   const orderedTasks = [...tasks].sort(compareTasksForNavigation);
-  const taskIndex = orderedTasks.findIndex((item) => item.id === selectedTask.id);
+  const taskIndex = orderedTasks.findIndex(
+    (item) => item.id === selectedTask.id,
+  );
   const previousTask = taskIndex > 0 ? orderedTasks[taskIndex - 1] : null;
   const nextTask =
     taskIndex >= 0 && taskIndex < orderedTasks.length - 1
@@ -83,9 +91,7 @@ export function TaskView() {
           className="text-2xl font-semibold tracking-tight"
           boardName={boardName}
           boardHref={
-            board
-              ? tasksUrlHelper.routing.buildBoardUrl(board.name)
-              : undefined
+            board ? tasksUrlHelper.routing.buildBoardUrl(board.name) : undefined
           }
           taskKey={selectedTask.taskKey}
           trailing={<BoardGlyph />}
@@ -243,7 +249,8 @@ function TaskViewBody({
               pendingUpdateRef.current = next;
               return;
             }
-            if (nextSummary !== task.summary) queueUpdate({ summary: nextSummary });
+            if (nextSummary !== task.summary)
+              queueUpdate({ summary: nextSummary });
             flushPendingUpdate();
           }}
         />
@@ -256,7 +263,7 @@ function TaskViewBody({
               if (html === task.description) return;
               queueUpdate({ description: html });
             }}
-            />
+          />
         </div>
       </div>
       <aside className="flex w-full shrink-0 flex-col gap-3 border-t border-border bg-background p-4 lg:w-[22rem] lg:overflow-y-auto lg:border-l lg:border-t-0">
@@ -269,7 +276,10 @@ function TaskViewBody({
                 <ProgressMeter done={doneCount} total={children.length} />
               </DetailRow>
             ) : null}
-            <DetailRow icon={<StatusGlyph status={task.status} />} label="Status">
+            <DetailRow
+              icon={<StatusGlyph status={task.status} />}
+              label="Status"
+            >
               <Select
                 value={task.status}
                 onValueChange={(value) =>
@@ -347,6 +357,28 @@ function TaskViewBody({
                 <span className="text-sm">{boardName}</span>
               )}
             </DetailRow>
+            <DetailRow icon={<ClockIcon size={16} />} label="Estimate">
+              <div className="min-w-0 flex-1">
+                <EstimatePicker
+                  appearance="plain"
+                  value={estimationText}
+                  onChange={setEstimationText}
+                  onCommit={(next) => {
+                    const parsed = parseEstimation(next);
+                    const invalid = next.trim() !== "" && parsed === null;
+                    if (invalid) return;
+                    const nextEstimation = next.trim() ? parsed : null;
+                    if (nextEstimation !== task.estimation) {
+                      queueUpdate({ estimation: nextEstimation });
+                    }
+                    flushPendingUpdate();
+                  }}
+                />
+                {estimationInvalid ? (
+                  <p className="text-xs text-destructive">Use 1h, 30m, or 2d</p>
+                ) : null}
+              </div>
+            </DetailRow>
             {space ? (
               <DetailRow icon={<FolderIcon size={16} />} label="Space">
                 <span className="text-sm">
@@ -377,28 +409,6 @@ function TaskViewBody({
                   })
                 }
               />
-            </DetailRow>
-            <DetailRow icon={<ClockIcon size={16} />} label="Estimate">
-              <div className="min-w-0 flex-1">
-                <EstimatePicker
-                  appearance="plain"
-                  value={estimationText}
-                  onChange={setEstimationText}
-                  onCommit={(next) => {
-                    const parsed = parseEstimation(next);
-                    const invalid = next.trim() !== "" && parsed === null;
-                    if (invalid) return;
-                    const nextEstimation = next.trim() ? parsed : null;
-                    if (nextEstimation !== task.estimation) {
-                      queueUpdate({ estimation: nextEstimation });
-                    }
-                    flushPendingUpdate();
-                  }}
-                />
-                {estimationInvalid ? (
-                  <p className="text-xs text-destructive">Use 1h, 30m, or 2d</p>
-                ) : null}
-              </div>
             </DetailRow>
             <DetailRow icon={<ParentMark />} label="Parent">
               <Select
@@ -514,7 +524,11 @@ function SubtasksSection({
   );
 }
 
-function SubtaskComposer({ onCreate }: { onCreate: (summary: string) => void }) {
+function SubtaskComposer({
+  onCreate,
+}: {
+  onCreate: (summary: string) => void;
+}) {
   const [summary, setSummary] = useState("");
 
   function handleSubmit(event: FormEvent) {
@@ -642,7 +656,9 @@ function ProgressMeter({ done, total }: { done: number; total: number }) {
 }
 
 function StatusDoneIconMark() {
-  return <span className="h-3.5 w-3.5 rounded-full border-2 border-emerald-400" />;
+  return (
+    <span className="h-3.5 w-3.5 rounded-full border-2 border-emerald-400" />
+  );
 }
 
 function BoardMark() {

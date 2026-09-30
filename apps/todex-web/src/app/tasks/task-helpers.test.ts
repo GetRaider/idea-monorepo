@@ -2,8 +2,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { TaskPriority, TaskStatus } from "@repo/api/todex";
 
 import {
+  applyRootMove,
   compareTasksForListSort,
   dateInputToLocalDayStartIso,
+  resolveCombinedOpenDrop,
+  sameBoardDropIndex,
   isInboxTask,
   isOverdueTask,
   isUnscheduledTask,
@@ -108,14 +111,16 @@ describe("quick access", () => {
       status: TaskStatus.DONE,
     });
     const open = task({ id: "open", createdAt: "2026-09-10T00:00:00.000Z" });
-    expect(tasksByCreatedAtDescending([older, open, newer], 2).map((item) => item.id)).toEqual([
-      "open",
-      "newer",
-    ]);
-    expect(tasksByCompletedDescending([older, open, newer], 5).map((item) => item.id)).toEqual([
-      "newer",
-      "older",
-    ]);
+    expect(
+      tasksByCreatedAtDescending([older, open, newer], 2).map(
+        (item) => item.id,
+      ),
+    ).toEqual(["open", "newer"]);
+    expect(
+      tasksByCompletedDescending([older, open, newer], 5).map(
+        (item) => item.id,
+      ),
+    ).toEqual(["newer", "older"]);
   });
 });
 
@@ -140,15 +145,73 @@ describe("list sort", () => {
       dueDate: "2026-09-01T00:00:00.000Z",
     });
     expect(compareTasksForListSort(sooner, later, "schedule")).toBeLessThan(0);
-    expect(compareTasksForListSort(unscheduled, sooner, "schedule")).toBeGreaterThan(
-      0,
-    );
+    expect(
+      compareTasksForListSort(unscheduled, sooner, "schedule"),
+    ).toBeGreaterThan(0);
     const sorted = sortNestedTasks([later, unscheduled, sooner], {
       enabled: true,
       field: "schedule",
       direction: "asc",
     });
     expect(sorted.map((node) => node.id)).toEqual(["sooner", "later", "none"]);
+  });
+});
+
+describe("board drop indexes", () => {
+  const board = "board";
+  const nodes = [
+    { id: "a1", taskBoardId: board },
+    { id: "b1", taskBoardId: "other" },
+    { id: "a2", taskBoardId: board },
+  ];
+
+  it("counts same-board roots before the gap, skipping the dragged task", () => {
+    expect(sameBoardDropIndex(nodes, "a2", board, 0)).toBe(0);
+    expect(sameBoardDropIndex(nodes, "a2", board, 1)).toBe(1);
+    expect(sameBoardDropIndex(nodes, "a2", board, 3)).toBe(1);
+    expect(sameBoardDropIndex(nodes, "a1", board, 3)).toBe(1);
+  });
+
+  it("sends the boundary gap to the start of in progress", () => {
+    const todo = [{ id: "t1", taskBoardId: board }];
+    const inProgress = [{ id: "p1", taskBoardId: board }];
+    expect(resolveCombinedOpenDrop(todo, inProgress, "t1", board, 1)).toEqual({
+      status: TaskStatus.IN_PROGRESS,
+      index: 0,
+    });
+    expect(resolveCombinedOpenDrop(todo, [], "t1", board, 1)).toEqual({
+      status: TaskStatus.TODO,
+      index: 0,
+    });
+  });
+
+  it("rewrites positions inside the destination column", () => {
+    const tasks = [
+      task({ id: "a", position: 0 }),
+      task({ id: "b", position: 1 }),
+      task({ id: "c", position: 2 }),
+    ];
+    const moved = applyRootMove(tasks, "a", TaskStatus.TODO, 2);
+    expect(moved.map((item) => [item.id, item.position])).toEqual([
+      ["a", 2],
+      ["b", 0],
+      ["c", 1],
+    ]);
+  });
+
+  it("appends when a root changes status", () => {
+    const tasks = [
+      task({ id: "a", status: TaskStatus.TODO, position: 0 }),
+      task({ id: "b", status: TaskStatus.TODO, position: 1 }),
+      task({ id: "c", status: TaskStatus.DONE, position: 0 }),
+    ];
+    const moved = applyRootMove(tasks, "a", TaskStatus.DONE, 1);
+    expect(moved.find((item) => item.id === "a")).toMatchObject({
+      status: TaskStatus.DONE,
+      position: 1,
+    });
+    expect(moved.find((item) => item.id === "b")?.position).toBe(0);
+    expect(moved.find((item) => item.id === "c")?.position).toBe(0);
   });
 });
 
@@ -166,6 +229,7 @@ function task(overrides: Partial<NestedTask>): NestedTask {
     scheduleDate: null,
     estimation: null,
     parentTaskId: null,
+    position: 0,
     createdAt: "2026-09-10T00:00:00.000Z",
     updatedAt: "2026-09-10T00:00:00.000Z",
     children: [],

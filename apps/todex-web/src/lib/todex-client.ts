@@ -4,6 +4,7 @@ import {
   CreateTaskBoardBodySchema,
   CreateTaskBodySchema,
   FolderSchema,
+  MoveTaskBodySchema,
   TaskBoardSchema,
   TaskSchema,
   UpdateFolderBodySchema,
@@ -82,9 +83,7 @@ export const todexClient = {
   },
   tasks: {
     list: (
-      query:
-        | { boardId: string }
-        | { scheduleFrom: string; scheduleTo: string },
+      query: { boardId: string } | { scheduleFrom: string; scheduleTo: string },
     ) => {
       const searchParams =
         "boardId" in query
@@ -107,6 +106,13 @@ export const todexClient = {
         `/v1/tasks/${taskId}`,
         TaskSchema,
         UpdateTaskBodySchema.parse(body),
+      ),
+    move: (taskId: string, body: unknown) =>
+      call(
+        "post",
+        `/v1/tasks/${taskId}/move`,
+        TaskSchema,
+        MoveTaskBodySchema.parse(body),
       ),
     remove: (taskId: string) =>
       call("delete", `/v1/tasks/${taskId}`, z.object({ ok: z.boolean() })),

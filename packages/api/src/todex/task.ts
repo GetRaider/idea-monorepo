@@ -21,6 +21,7 @@ export const TaskSchema = z.object({
   scheduleDate: IsoDateTimeSchema.nullable(),
   estimation: z.number().int().nonnegative().nullable(),
   parentTaskId: z.string().nullable(),
+  position: z.number().int().nonnegative(),
   createdAt: IsoDateTimeSchema,
   updatedAt: IsoDateTimeSchema,
 });
@@ -110,7 +111,13 @@ export const UpdateTaskBodySchema = z.object({
   parentTaskId: z.string().nullable().optional(),
 });
 
+export const MoveTaskBodySchema = z.object({
+  status: z.enum([TaskStatus.TODO, TaskStatus.IN_PROGRESS, TaskStatus.DONE]),
+  index: z.number().int().nonnegative().optional(),
+});
+
 export type Task = z.infer<typeof TaskSchema>;
 export type ListTasksQuery = z.infer<typeof ListTasksQuerySchema>;
 export type CreateTaskBody = z.infer<typeof CreateTaskBodySchema>;
 export type UpdateTaskBody = z.infer<typeof UpdateTaskBodySchema>;
+export type MoveTaskBody = z.infer<typeof MoveTaskBodySchema>;

@@ -4,18 +4,19 @@ import {
   Inject,
   Injectable,
 } from "@nestjs/common";
-import { and, eq, gte, lt, sql } from "drizzle-orm";
+import { and, asc, eq, gte, isNull, lt, sql } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { TaskPriority, TaskStatus } from "@repo/api/todex";
 import type {
   CreateTaskBody,
   ListTasksQuery,
+  MoveTaskBody,
   UpdateTaskBody,
 } from "@repo/api/todex";
 
 import { DRIZZLE_DB } from "../../db/tokens";
-import { tasks, workspaces } from "../../db/schema";
+import { tasks, workspaces, type TaskRow } from "../../db/schema";
 import { mapTask, parseIsoDate } from "../../db/mappers";
 import {
   formatTaskKey,
@@ -67,6 +68,16 @@ export class TasksService {
       if (!workspace) throw new ForbiddenException();
 
       const now = new Date();
+      const status = body.status ?? TaskStatus.TODO;
+      const parentTaskId = body.parentTaskId ?? null;
+      const position = parentTaskId
+        ? 0
+        : await this.nextRootPosition(
+            tx,
+            workspaceId,
+            body.taskBoardId,
+            status,
+          );
       const [row] = await tx
         .insert(tasks)
         .values({
@@ -76,12 +87,13 @@ export class TasksService {
           taskKey: formatTaskKey(workspace.taskSeq),
           summary: body.summary,
           description: sanitizeTaskHtml(body.description ?? ""),
-          status: body.status ?? TaskStatus.TODO,
+          status,
           priority: body.priority ?? TaskPriority.MEDIUM,
           dueDate: parseIsoDate(body.dueDate),
           scheduleDate: parseIsoDate(body.scheduleDate),
           estimation: body.estimation ?? null,
-          parentTaskId: body.parentTaskId ?? null,
+          parentTaskId,
+          position,
           createdAt: now,
           updatedAt: now,
         })
@@ -140,13 +152,61 @@ export class TasksService {
       .returning();
     if (!updated) throw new ForbiddenException();
 
+    await this.relocateRoot(existing, updated);
     await this.workspaceService.bumpUpdatedAt(workspaceId);
     return mapTask(updated);
+  }
+
+  async move(workspaceId: string, taskId: string, body: MoveTaskBody) {
+    const existing = await this.requireTaskInWorkspace(workspaceId, taskId);
+    if (existing.parentTaskId) {
+      throw new BadRequestException("Only root tasks can be reordered");
+    }
+
+    const destinationIds = (
+      await this.rootIds(workspaceId, existing.taskBoardId, body.status)
+    ).filter((id) => id !== existing.id);
+    const index =
+      body.index == null
+        ? destinationIds.length
+        : clampIndex(body.index, destinationIds.length);
+    destinationIds.splice(index, 0, existing.id);
+
+    const sourceIds =
+      existing.status === body.status
+        ? null
+        : (
+            await this.rootIds(
+              workspaceId,
+              existing.taskBoardId,
+              existing.status,
+            )
+          ).filter((id) => id !== existing.id);
+
+    await this.db.transaction(async (tx) => {
+      await this.writePositions(tx, destinationIds, {
+        movedId: existing.id,
+        status: body.status,
+      });
+      if (sourceIds) {
+        await this.writePositions(tx, sourceIds, {});
+      }
+    });
+
+    await this.workspaceService.bumpUpdatedAt(workspaceId);
+    const moved = await this.requireTaskInWorkspace(workspaceId, taskId);
+    return mapTask(moved);
   }
 
   async remove(workspaceId: string, taskId: string) {
     const existing = await this.requireTaskInWorkspace(workspaceId, taskId);
     await this.db.delete(tasks).where(eq(tasks.id, existing.id));
+    if (!existing.parentTaskId) {
+      const ids = (
+        await this.rootIds(workspaceId, existing.taskBoardId, existing.status)
+      ).filter((id) => id !== existing.id);
+      await this.writePositions(this.db, ids, {});
+    }
     await this.workspaceService.bumpUpdatedAt(workspaceId);
   }
 
@@ -157,15 +217,12 @@ export class TasksService {
       .from(tasks)
       .where(
         and(eq(tasks.workspaceId, workspaceId), eq(tasks.taskBoardId, boardId)),
-      );
+      )
+      .orderBy(asc(tasks.position), asc(tasks.createdAt), asc(tasks.id));
     return rows.map(mapTask);
   }
 
-  private async listByScheduleRange(
-    workspaceId: string,
-    from: Date,
-    to: Date,
-  ) {
+  private async listByScheduleRange(workspaceId: string, from: Date, to: Date) {
     const rows = await this.db
       .select()
       .from(tasks)
@@ -175,7 +232,8 @@ export class TasksService {
           gte(tasks.scheduleDate, from),
           lt(tasks.scheduleDate, to),
         ),
-      );
+      )
+      .orderBy(asc(tasks.position), asc(tasks.createdAt), asc(tasks.id));
     return rows.map(mapTask);
   }
 
@@ -205,4 +263,105 @@ export class TasksService {
       throw new BadRequestException("Task parent would create a cycle");
     }
   }
+
+  private async relocateRoot(before: TaskRow, after: TaskRow) {
+    const wasRoot = before.parentTaskId == null;
+    const isRoot = after.parentTaskId == null;
+    const leftColumn =
+      wasRoot &&
+      (!isRoot ||
+        before.taskBoardId !== after.taskBoardId ||
+        before.status !== after.status);
+    const enteredColumn =
+      isRoot &&
+      (!wasRoot ||
+        before.taskBoardId !== after.taskBoardId ||
+        before.status !== after.status);
+    if (!leftColumn && !enteredColumn) return;
+
+    if (leftColumn) {
+      const ids = (
+        await this.rootIds(
+          before.workspaceId,
+          before.taskBoardId,
+          before.status,
+        )
+      ).filter((id) => id !== after.id);
+      await this.writePositions(this.db, ids, {});
+    }
+    if (enteredColumn) {
+      const ids = (
+        await this.rootIds(after.workspaceId, after.taskBoardId, after.status)
+      ).filter((id) => id !== after.id);
+      ids.push(after.id);
+      await this.writePositions(this.db, ids, {});
+    }
+  }
+
+  private async nextRootPosition(
+    tx: NodePgDatabase,
+    workspaceId: string,
+    taskBoardId: string,
+    status: TaskRow["status"],
+  ) {
+    const [row] = await tx
+      .select({ value: sql<number>`count(*)::int` })
+      .from(tasks)
+      .where(
+        and(
+          eq(tasks.workspaceId, workspaceId),
+          eq(tasks.taskBoardId, taskBoardId),
+          eq(tasks.status, status),
+          isNull(tasks.parentTaskId),
+        ),
+      );
+    return Number(row?.value ?? 0);
+  }
+
+  private async rootIds(
+    workspaceId: string,
+    taskBoardId: string,
+    status: TaskRow["status"],
+  ) {
+    const rows = await this.db
+      .select({ id: tasks.id })
+      .from(tasks)
+      .where(
+        and(
+          eq(tasks.workspaceId, workspaceId),
+          eq(tasks.taskBoardId, taskBoardId),
+          eq(tasks.status, status),
+          isNull(tasks.parentTaskId),
+        ),
+      )
+      .orderBy(asc(tasks.position), asc(tasks.createdAt), asc(tasks.id));
+    return rows.map((row) => row.id);
+  }
+
+  private async writePositions(
+    tx: NodePgDatabase,
+    ids: string[],
+    options: { movedId?: string; status?: TaskRow["status"] },
+  ) {
+    const now = new Date();
+    for (let position = 0; position < ids.length; position += 1) {
+      const id = ids[position];
+      if (!id) continue;
+      await tx
+        .update(tasks)
+        .set({
+          position,
+          ...(options.movedId === id && options.status
+            ? { status: options.status, updatedAt: now }
+            : {}),
+        })
+        .where(eq(tasks.id, id));
+    }
+  }
+}
+
+function clampIndex(index: number, length: number) {
+  if (index < 0) return 0;
+  if (index > length) return length;
+  return index;
 }

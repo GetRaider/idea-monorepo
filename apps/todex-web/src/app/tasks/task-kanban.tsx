@@ -8,10 +8,11 @@ import { Checkbox, cn } from "@repo/ui";
 import { TaskComposer, type TaskComposerValues } from "./task-composer";
 import { useTasks } from "./tasks-provider";
 import {
+  BoardDropZone,
   DraggableTask,
   PriorityGlyph,
-  StatusDroppable,
   StatusGlyph,
+  TaskFacts,
 } from "./task-board.ui";
 import { STATUS_LABEL, STATUS_ORDER, type NestedTask } from "./task-helpers";
 
@@ -20,11 +21,13 @@ export function TaskKanban({
   boardNameById,
   showBoardName,
   fastCreate,
+  reorderEnabled,
 }: {
   groups: Record<Task["status"], NestedTask[]>;
   boardNameById: Map<string, string>;
   showBoardName: boolean;
   fastCreate?: FastCreate;
+  reorderEnabled: boolean;
 }) {
   const {
     state: { selectedTaskId },
@@ -36,9 +39,8 @@ export function TaskKanban({
       {STATUS_ORDER.map((status) => {
         const nodes = groups[status] ?? [];
         return (
-          <StatusDroppable
+          <section
             key={status}
-            status={status}
             className="flex min-h-0 flex-col rounded-lg border border-border bg-panel p-2"
           >
             <div className="mb-2 flex items-center gap-2 px-1 py-1 text-sm font-semibold">
@@ -58,13 +60,59 @@ export function TaskKanban({
                 />
               </div>
             ) : null}
-            <ul className="flex min-h-24 flex-1 flex-col gap-1 overflow-auto">
-              {nodes.length === 0 ? (
-                <li className="px-1 py-2 text-sm text-muted-foreground"></li>
+            <div className="flex min-h-24 flex-1 flex-col overflow-auto">
+              {reorderEnabled ? (
+                nodes.length === 0 ? (
+                  <BoardDropZone kind="empty" status={status} index={0} />
+                ) : (
+                  <>
+                    {nodes.map((node, index) => (
+                      <div key={node.id}>
+                        <BoardDropZone
+                          kind="gap"
+                          status={status}
+                          index={index}
+                        />
+                        <BoardDropZone
+                          kind="card"
+                          status={status}
+                          index={index}
+                        >
+                          <KanbanCard
+                            node={node}
+                            selectedTaskId={selectedTaskId}
+                            boardNameById={boardNameById}
+                            showBoardName={showBoardName}
+                            onSelect={setSelectedTaskId}
+                            onToggleDone={() =>
+                              updateTaskStatus(
+                                node.id,
+                                node.status === TaskStatus.DONE
+                                  ? TaskStatus.TODO
+                                  : TaskStatus.DONE,
+                              )
+                            }
+                          />
+                        </BoardDropZone>
+                      </div>
+                    ))}
+                    <BoardDropZone
+                      kind="fill"
+                      status={status}
+                      index={nodes.length}
+                    />
+                  </>
+                )
               ) : (
-                nodes.map((node) => (
-                  <li key={node.id}>
+                <BoardDropZone
+                  kind="column"
+                  status={status}
+                  index={null}
+                  className="flex min-h-24 flex-1 flex-col gap-1"
+                >
+                  {nodes.map((node) => (
                     <KanbanCard
+                      key={node.id}
                       node={node}
                       selectedTaskId={selectedTaskId}
                       boardNameById={boardNameById}
@@ -79,11 +127,11 @@ export function TaskKanban({
                         )
                       }
                     />
-                  </li>
-                ))
+                  ))}
+                </BoardDropZone>
               )}
-            </ul>
-          </StatusDroppable>
+            </div>
+          </section>
         );
       })}
     </div>
@@ -116,7 +164,9 @@ function KanbanCard({
         onClick={() => onSelect(node.id)}
       >
         <Checkbox
+          data-no-dnd=""
           checked={node.status === TaskStatus.DONE}
+          onPointerDown={(event) => event.stopPropagation()}
           onClick={(event) => event.stopPropagation()}
           onCheckedChange={onToggleDone}
         />
@@ -128,6 +178,7 @@ function KanbanCard({
             </span>
           </span>
           <span className="text-sm">{node.summary}</span>
+          <TaskFacts task={node} />
           {showBoardName ? (
             <span className="text-xs text-muted-foreground">
               {boardNameById.get(node.taskBoardId)}

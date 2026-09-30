@@ -254,8 +254,10 @@ function TaskViewBody({
             flushPendingUpdate();
           }}
         />
-        <div className="mt-6">
-          <p className="mb-3 text-sm text-muted-foreground">Description</p>
+        <div className="mt-1">
+          <p className="mb-3 text-lg font-medium text-muted-foreground">
+            Description
+          </p>
           <TaskDescriptionEditor
             appearance="plain"
             content={task.description}

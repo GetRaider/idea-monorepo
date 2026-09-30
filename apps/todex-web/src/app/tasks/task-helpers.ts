@@ -249,6 +249,16 @@ export function isInboxTask(task: Task): boolean {
   );
 }
 
+export function normalizeDescriptionHtml(html: string): string {
+  if (!html.trim()) return "";
+  const text = html
+    .replace(/<[^>]*>/g, "")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/\u200b/g, "")
+    .trim();
+  return text.length === 0 ? "" : html;
+}
+
 export function isUnscheduledTask(task: Task): boolean {
   return task.status !== TaskStatus.DONE && task.scheduleDate == null;
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useEditor, EditorContent, type Editor } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react/menus";
 import StarterKit from "@tiptap/starter-kit";
@@ -7,11 +8,93 @@ import Placeholder from "@tiptap/extension-placeholder";
 import { TaskList, TaskItem } from "@tiptap/extension-list";
 import { cn } from "@repo/ui";
 
+import { normalizeDescriptionHtml } from "./task-helpers";
+
+const DESCRIPTION_PLACEHOLDER = "Type / for formatting";
+const SLASH_MENU_MAX_HEIGHT = 320;
+const SLASH_MENU_ITEM_HEIGHT = 36;
+const SLASH_MENU_VERTICAL_OFFSET = 8;
+
+const SLASH_COMMANDS: SlashCommandItem[] = [
+  {
+    title: "Text",
+    aliases: ["text", "paragraph", "normal"],
+    command: (editor, range) =>
+      editor.chain().focus().deleteRange(range).setParagraph().run(),
+  },
+  {
+    title: "Heading 1",
+    shortcut: "H1",
+    aliases: ["h1", "heading", "heading1", "title"],
+    command: (editor, range) =>
+      editor.chain().focus().deleteRange(range).setHeading({ level: 2 }).run(),
+  },
+  {
+    title: "Heading 2",
+    shortcut: "H2",
+    aliases: ["h2", "heading2", "subtitle"],
+    command: (editor, range) =>
+      editor.chain().focus().deleteRange(range).setHeading({ level: 3 }).run(),
+  },
+  {
+    title: "Heading 3",
+    shortcut: "H3",
+    aliases: ["h3", "heading3"],
+    command: (editor, range) =>
+      editor.chain().focus().deleteRange(range).setHeading({ level: 4 }).run(),
+  },
+  {
+    title: "Bulleted list",
+    shortcut: "•",
+    aliases: ["bullet", "bulleted", "ul", "list"],
+    command: (editor, range) =>
+      editor.chain().focus().deleteRange(range).toggleBulletList().run(),
+  },
+  {
+    title: "Numbered list",
+    shortcut: "1.",
+    aliases: ["numbered", "ordered", "ol", "list"],
+    command: (editor, range) =>
+      editor.chain().focus().deleteRange(range).toggleOrderedList().run(),
+  },
+  {
+    title: "Checklist",
+    shortcut: "☑",
+    aliases: ["check", "checklist", "todo", "task"],
+    command: (editor, range) =>
+      editor.chain().focus().deleteRange(range).toggleTaskList().run(),
+  },
+  {
+    title: "Blockquote",
+    shortcut: "“”",
+    aliases: ["quote", "blockquote"],
+    command: (editor, range) =>
+      editor.chain().focus().deleteRange(range).toggleBlockquote().run(),
+  },
+  {
+    title: "Code block",
+    shortcut: "</>",
+    aliases: ["code", "pre"],
+    command: (editor, range) =>
+      editor.chain().focus().deleteRange(range).toggleCodeBlock().run(),
+  },
+];
+
 export function TaskDescriptionEditor({
   content,
   onChange,
   appearance = "field",
 }: TaskDescriptionEditorProps) {
+  const rootRef = useRef<HTMLDivElement>(null);
+  const onChangeRef = useRef(onChange);
+  const slashKeyDownRef = useRef<(event: KeyboardEvent) => boolean>(
+    () => false,
+  );
+  const suppressSlashRef = useRef(false);
+  const [slashMenu, setSlashMenu] = useState<SlashMenuState | null>(null);
+  const [activeSlashIndex, setActiveSlashIndex] = useState(0);
+  onChangeRef.current = onChange;
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -19,12 +102,12 @@ export function TaskDescriptionEditor({
       }),
       TaskList,
       TaskItem.configure({ nested: true }),
-      Placeholder.configure({ placeholder: "Add a description…" }),
+      Placeholder.configure({ placeholder: DESCRIPTION_PLACEHOLDER }),
     ],
     content,
     immediatelyRender: false,
     onUpdate: ({ editor: nextEditor }) => {
-      onChange(nextEditor.getHTML());
+      onChangeRef.current(normalizeDescriptionHtml(nextEditor.getHTML()));
     },
     editorProps: {
       attributes: {
@@ -33,8 +116,93 @@ export function TaskDescriptionEditor({
           appearance === "plain" ? "min-h-40" : "min-h-20",
         ),
       },
+      handleKeyDown: (_view, event) => slashKeyDownRef.current(event),
     },
   });
+
+  const visibleSlashItems = useMemo(() => {
+    if (!slashMenu) return [];
+    return SLASH_COMMANDS.filter((item) =>
+      matchesSlashQuery(item, slashMenu.query),
+    );
+  }, [slashMenu]);
+
+  slashKeyDownRef.current = (event) => {
+    if (!slashMenu || visibleSlashItems.length === 0) return false;
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setActiveSlashIndex(
+        (commandIndex) => (commandIndex + 1) % visibleSlashItems.length,
+      );
+      return true;
+    }
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setActiveSlashIndex(
+        (commandIndex) =>
+          (commandIndex - 1 + visibleSlashItems.length) %
+          visibleSlashItems.length,
+      );
+      return true;
+    }
+    if (event.key === "Enter" || event.key === "Tab") {
+      event.preventDefault();
+      const selectedItem = visibleSlashItems[activeSlashIndex];
+      if (selectedItem && editor)
+        selectSlashItem(editor, slashMenu, selectedItem);
+      setSlashMenu(null);
+      return true;
+    }
+    if (event.key === "Escape") {
+      event.preventDefault();
+      suppressSlashRef.current = true;
+      setSlashMenu(null);
+      return true;
+    }
+    return false;
+  };
+
+  useEffect(() => {
+    if (!editor) return;
+
+    const closeSlashMenu = () => setSlashMenu(null);
+    const updateSlashMenu = () => {
+      const root = rootRef.current;
+      if (!root || !editor.isEditable) {
+        suppressSlashRef.current = false;
+        closeSlashMenu();
+        return;
+      }
+      const nextMenu = getSlashMenuState(editor, root);
+      if (!nextMenu) suppressSlashRef.current = false;
+      if (suppressSlashRef.current) {
+        closeSlashMenu();
+        return;
+      }
+      setSlashMenu(nextMenu);
+    };
+
+    updateSlashMenu();
+    editor.on("update", updateSlashMenu);
+    editor.on("selectionUpdate", updateSlashMenu);
+    editor.on("blur", closeSlashMenu);
+
+    return () => {
+      editor.off("update", updateSlashMenu);
+      editor.off("selectionUpdate", updateSlashMenu);
+      editor.off("blur", closeSlashMenu);
+    };
+  }, [editor]);
+
+  useEffect(() => {
+    setActiveSlashIndex(0);
+  }, [slashMenu?.query]);
+
+  useEffect(() => {
+    if (activeSlashIndex >= visibleSlashItems.length) {
+      setActiveSlashIndex(Math.max(visibleSlashItems.length - 1, 0));
+    }
+  }, [activeSlashIndex, visibleSlashItems.length]);
 
   if (!editor) {
     return (
@@ -53,26 +221,117 @@ export function TaskDescriptionEditor({
 
   return (
     <div
+      ref={rootRef}
       className={cn(
-        "text-sm",
+        "relative text-sm",
         appearance === "plain"
           ? "bg-transparent px-0 py-1"
           : "rounded-md border border-input bg-background px-3 py-2",
         "[&_.tiptap_p]:my-1",
+        "[&_.tiptap_p.is-editor-empty:first-child::before]:pointer-events-none",
+        "[&_.tiptap_p.is-editor-empty:first-child::before]:float-left",
+        "[&_.tiptap_p.is-editor-empty:first-child::before]:h-0",
+        "[&_.tiptap_p.is-editor-empty:first-child::before]:text-muted-foreground",
+        "[&_.tiptap_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)]",
         "[&_.tiptap_ul]:list-disc [&_.tiptap_ul]:pl-5",
         "[&_.tiptap_ol]:list-decimal [&_.tiptap_ol]:pl-5",
         "[&_.tiptap_ul[data-type='taskList']]:list-none [&_.tiptap_ul[data-type='taskList']]:pl-0",
-        "[&_.tiptap_ul[data-type='taskList']_li]:flex [&_.tiptap_ul[data-type='taskList']_li]:gap-2",
+        "[&_.tiptap_ul[data-type='taskList']_li]:flex [&_.tiptap_ul[data-type='taskList']_li]:items-start [&_.tiptap_ul[data-type='taskList']_li]:gap-2",
+        "[&_.tiptap_ul[data-type='taskList']_li_label]:flex [&_.tiptap_ul[data-type='taskList']_li_label]:h-5 [&_.tiptap_ul[data-type='taskList']_li_label]:shrink-0 [&_.tiptap_ul[data-type='taskList']_li_label]:items-center",
+        "[&_.tiptap_ul[data-type='taskList']_label_span]:hidden",
+        "[&_.tiptap_ul[data-type='taskList']_input]:m-0 [&_.tiptap_ul[data-type='taskList']_input]:size-3.5",
+        "[&_.tiptap_ul[data-type='taskList']_li_div]:min-w-0 [&_.tiptap_ul[data-type='taskList']_li_div]:flex-1",
+        "[&_.tiptap_ul[data-type='taskList']_li_p]:my-0",
         "[&_.tiptap_blockquote]:border-l-2 [&_.tiptap_blockquote]:border-border [&_.tiptap_blockquote]:pl-3",
         "[&_.tiptap_pre]:rounded-md [&_.tiptap_pre]:bg-muted [&_.tiptap_pre]:p-2",
         "[&_.tiptap_h2]:text-base [&_.tiptap_h2]:font-semibold",
         "[&_.tiptap_h3]:text-sm [&_.tiptap_h3]:font-semibold",
+        "[&_.tiptap_h4]:text-sm [&_.tiptap_h4]:font-medium",
       )}
     >
       <EditorContent editor={editor} />
       <DescriptionBubbleMenu editor={editor} />
+      {slashMenu && visibleSlashItems.length > 0 ? (
+        <SlashCommandMenu
+          activeIndex={activeSlashIndex}
+          items={visibleSlashItems}
+          top={slashMenu.top}
+          left={slashMenu.left}
+          onSelect={(item) => {
+            selectSlashItem(editor, slashMenu, item);
+            setSlashMenu(null);
+          }}
+        />
+      ) : null}
     </div>
   );
+}
+
+function selectSlashItem(
+  editor: Editor,
+  slashMenu: SlashMenuState,
+  item: SlashCommandItem,
+) {
+  item.command(editor, slashMenu.range);
+}
+
+function matchesSlashQuery(item: SlashCommandItem, query: string): boolean {
+  const normalizedQuery = query.trim().toLowerCase();
+  if (!normalizedQuery) return true;
+  return [item.title, ...item.aliases].some((value) =>
+    value.toLowerCase().includes(normalizedQuery),
+  );
+}
+
+function getSlashMenuState(
+  editor: Editor,
+  root: HTMLDivElement,
+): SlashMenuState | null {
+  const { state, view } = editor;
+  const { selection } = state;
+  if (!selection.empty) return null;
+
+  const { $from } = selection;
+  const textBeforeCursor = $from.parent.textBetween(
+    0,
+    $from.parentOffset,
+    "\n",
+    "\n",
+  );
+  const match = textBeforeCursor.match(/^\/([\w-]*)$/);
+  if (!match || match[1] == null) return null;
+
+  const query = match[1].toLowerCase();
+  const coords = view.coordsAtPos(selection.from);
+  const rootRect = root.getBoundingClientRect();
+  const visibleItemCount = SLASH_COMMANDS.filter((item) =>
+    matchesSlashQuery(item, query),
+  ).length;
+  const estimatedMenuHeight = Math.min(
+    SLASH_MENU_MAX_HEIGHT,
+    Math.max(1, visibleItemCount) * SLASH_MENU_ITEM_HEIGHT + 12,
+  );
+  const spaceBelow = window.innerHeight - coords.bottom;
+  const spaceAbove = coords.top;
+  const placeAbove =
+    spaceBelow < estimatedMenuHeight + SLASH_MENU_VERTICAL_OFFSET &&
+    spaceAbove > spaceBelow;
+  const top = placeAbove
+    ? coords.top -
+      rootRect.top -
+      estimatedMenuHeight -
+      SLASH_MENU_VERTICAL_OFFSET
+    : coords.bottom - rootRect.top + SLASH_MENU_VERTICAL_OFFSET;
+
+  return {
+    query,
+    top: Math.max(0, top),
+    left: Math.max(0, coords.left - rootRect.left),
+    range: {
+      from: selection.from - match[0].length,
+      to: selection.from,
+    },
+  };
 }
 
 function DescriptionBubbleMenu({ editor }: { editor: Editor }) {
@@ -150,8 +409,63 @@ function BubbleButton({
   );
 }
 
+function SlashCommandMenu({
+  activeIndex,
+  items,
+  top,
+  left,
+  onSelect,
+}: SlashCommandMenuProps) {
+  return (
+    <div
+      className="absolute z-50 max-h-80 w-60 overflow-y-auto rounded-xl border border-border bg-popover p-1.5 shadow-md"
+      style={{ top, left }}
+      onMouseDown={(event) => event.preventDefault()}
+    >
+      {items.map((item, itemIndex) => (
+        <button
+          key={item.title}
+          type="button"
+          className={cn(
+            "flex min-h-9 w-full items-center justify-between gap-3 rounded-lg px-2.5 py-2 text-left text-sm text-popover-foreground hover:bg-surface",
+            itemIndex === activeIndex && "bg-surface",
+          )}
+          onClick={() => onSelect(item)}
+        >
+          <span>{item.title}</span>
+          {item.shortcut ? (
+            <kbd className="text-xs text-muted-foreground">{item.shortcut}</kbd>
+          ) : null}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 interface TaskDescriptionEditorProps {
   content: string;
   onChange: (html: string) => void;
   appearance?: "field" | "plain";
+}
+
+interface SlashMenuState {
+  query: string;
+  top: number;
+  left: number;
+  range: { from: number; to: number };
+}
+
+interface SlashCommandItem {
+  title: string;
+  shortcut?: string;
+  aliases: string[];
+  command: (editor: Editor, range: SlashMenuState["range"]) => void;
+}
+
+interface SlashCommandMenuProps {
+  activeIndex: number;
+  items: SlashCommandItem[];
+  top: number;
+  left: number;
+  onSelect: (item: SlashCommandItem) => void;
 }

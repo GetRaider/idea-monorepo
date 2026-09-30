@@ -9,6 +9,7 @@ import {
   sameBoardDropIndex,
   isInboxTask,
   isOverdueTask,
+  normalizeDescriptionHtml,
   isUnscheduledTask,
   isoToDateInput,
   localDayScheduleQuery,
@@ -212,6 +213,23 @@ describe("board drop indexes", () => {
     });
     expect(moved.find((item) => item.id === "b")?.position).toBe(0);
     expect(moved.find((item) => item.id === "c")?.position).toBe(0);
+  });
+});
+
+describe("normalizeDescriptionHtml", () => {
+  it("stores blank editor markup as an empty string", () => {
+    expect(normalizeDescriptionHtml("")).toBe("");
+    expect(normalizeDescriptionHtml("   ")).toBe("");
+    expect(normalizeDescriptionHtml("<p></p>")).toBe("");
+    expect(normalizeDescriptionHtml("<p><br></p>")).toBe("");
+    expect(normalizeDescriptionHtml("<p>&nbsp;</p>")).toBe("");
+  });
+
+  it("keeps html that has visible text", () => {
+    expect(normalizeDescriptionHtml("<p>Ship it</p>")).toBe("<p>Ship it</p>");
+    expect(normalizeDescriptionHtml("<h2>Title</h2><p>Body</p>")).toBe(
+      "<h2>Title</h2><p>Body</p>",
+    );
   });
 });
 

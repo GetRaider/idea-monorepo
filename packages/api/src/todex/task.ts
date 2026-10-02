@@ -3,6 +3,29 @@ import { z } from "zod";
 import { TaskPriority, TaskStatus } from "./enums.ts";
 import { IsoDateTimeSchema } from "./iso.ts";
 
+export const AcceptanceCriterionSchema = z.object({
+  id: z.string().trim().min(1).max(64),
+  text: z.string().trim().min(1).max(280),
+  done: z.boolean(),
+});
+
+export const AcceptanceCriteriaSchema = z
+  .array(AcceptanceCriterionSchema)
+  .max(30)
+  .superRefine((criteria, context) => {
+    const seenIds = new Set<string>();
+    for (const [index, criterion] of criteria.entries()) {
+      if (seenIds.has(criterion.id)) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Duplicate acceptance criterion id",
+          path: [index, "id"],
+        });
+      }
+      seenIds.add(criterion.id);
+    }
+  });
+
 export const TaskSchema = z.object({
   id: z.string(),
   workspaceId: z.string(),
@@ -20,6 +43,7 @@ export const TaskSchema = z.object({
   dueDate: IsoDateTimeSchema.nullable(),
   scheduleDate: IsoDateTimeSchema.nullable(),
   estimation: z.number().int().nonnegative().nullable(),
+  acceptanceCriteria: AcceptanceCriteriaSchema.default([]),
   parentTaskId: z.string().nullable(),
   position: z.number().int().nonnegative(),
   createdAt: IsoDateTimeSchema,
@@ -87,6 +111,7 @@ export const CreateTaskBodySchema = z.object({
   dueDate: IsoDateTimeSchema.nullable().optional(),
   scheduleDate: IsoDateTimeSchema.nullable().optional(),
   estimation: z.number().int().nonnegative().nullable().optional(),
+  acceptanceCriteria: AcceptanceCriteriaSchema.optional(),
   parentTaskId: z.string().nullable().optional(),
 });
 
@@ -108,6 +133,7 @@ export const UpdateTaskBodySchema = z.object({
   dueDate: IsoDateTimeSchema.nullable().optional(),
   scheduleDate: IsoDateTimeSchema.nullable().optional(),
   estimation: z.number().int().nonnegative().nullable().optional(),
+  acceptanceCriteria: AcceptanceCriteriaSchema.optional(),
   parentTaskId: z.string().nullable().optional(),
 });
 
@@ -116,6 +142,7 @@ export const MoveTaskBodySchema = z.object({
   index: z.number().int().nonnegative().optional(),
 });
 
+export type AcceptanceCriterion = z.infer<typeof AcceptanceCriterionSchema>;
 export type Task = z.infer<typeof TaskSchema>;
 export type ListTasksQuery = z.infer<typeof ListTasksQuerySchema>;
 export type CreateTaskBody = z.infer<typeof CreateTaskBodySchema>;

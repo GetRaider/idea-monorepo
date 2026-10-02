@@ -30,6 +30,8 @@ export type {
 } from "./board.ts";
 export { formatEstimation, parseEstimation } from "./estimation.ts";
 export {
+  AcceptanceCriteriaSchema,
+  AcceptanceCriterionSchema,
   CreateTaskBodySchema,
   ListTasksQuerySchema,
   MoveTaskBodySchema,
@@ -37,6 +39,7 @@ export {
   UpdateTaskBodySchema,
 } from "./task.ts";
 export type {
+  AcceptanceCriterion,
   CreateTaskBody,
   ListTasksQuery,
   MoveTaskBody,

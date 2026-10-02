@@ -27,7 +27,13 @@ import {
   TaskPriority,
   TaskStatus,
 } from "@repo/api/todex";
-import type { Folder, Task, TaskBoard, UpdateTaskBody } from "@repo/api/todex";
+import type {
+  AcceptanceCriterion,
+  Folder,
+  Task,
+  TaskBoard,
+  UpdateTaskBody,
+} from "@repo/api/todex";
 
 import {
   CalendarIcon,
@@ -45,10 +51,13 @@ import {
   BoardGlyph,
   PriorityGlyph,
   StatusGlyph,
+  TaskProgressBar,
   TasksBreadcrumb,
 } from "./task-board.ui";
 import {
+  acceptanceCriteriaAreMet,
   dateInputToLocalDayStartIso,
+  taskChecklistProgress,
   isoToDateInput,
   STATUS_LABEL,
   STATUS_ORDER,
@@ -202,10 +211,15 @@ function TaskViewBody({
   const doneCount = children.filter(
     (item) => item.status === TaskStatus.DONE,
   ).length;
+  const progress = taskChecklistProgress({
+    acceptanceCriteria: task.acceptanceCriteria,
+    subtasks: children,
+  });
   const descendantIds = collectDescendantIds(tasks, task.id);
   const parentOptions = tasks.filter(
     (item) => item.id !== task.id && !descendantIds.has(item.id),
   );
+  const criteriaMet = acceptanceCriteriaAreMet(task.acceptanceCriteria);
   const parsedEstimation = parseEstimation(estimationText);
   const estimationInvalid =
     estimationText.trim() !== "" && parsedEstimation === null;
@@ -273,40 +287,55 @@ function TaskViewBody({
         <section className="rounded-xl border border-border bg-background p-4">
           <h2 className="text-sm font-medium text-foreground">Task Details</h2>
           <div className="mt-4 flex flex-col gap-3">
-            {children.length > 0 ? (
+            {progress.total > 0 ? (
               <DetailRow icon={<StatusDoneIconMark />} label="Progress">
-                <ProgressMeter done={doneCount} total={children.length} />
+                <TaskProgressBar
+                  done={progress.done}
+                  total={progress.total}
+                  className="text-sm"
+                />
               </DetailRow>
             ) : null}
             <DetailRow
               icon={<StatusGlyph status={task.status} />}
               label="Status"
             >
-              <Select
-                value={task.status}
-                onValueChange={(value) =>
-                  onUpdateStatus(task.id, value as Task["status"])
-                }
-              >
-                <SelectTrigger
-                  className={cn(
-                    "h-7 w-fit gap-1.5 rounded-full px-2.5 text-xs font-medium shadow-none",
-                    STATUS_PILL[task.status],
-                  )}
+              <div className="flex flex-wrap items-center gap-2">
+                <Select
+                  value={task.status}
+                  onValueChange={(value) =>
+                    onUpdateStatus(task.id, value as Task["status"])
+                  }
                 >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {STATUS_ORDER.map((status) => (
-                    <SelectItem key={status} value={status}>
-                      <span className="flex items-center gap-2">
-                        <StatusGlyph status={status} />
-                        {STATUS_LABEL[status]}
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                  <SelectTrigger
+                    className={cn(
+                      "h-7 w-fit gap-1.5 rounded-full px-2.5 text-xs font-medium shadow-none",
+                      STATUS_PILL[task.status],
+                    )}
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {STATUS_ORDER.map((status) => (
+                      <SelectItem key={status} value={status}>
+                        <span className="flex items-center gap-2">
+                          <StatusGlyph status={status} />
+                          {STATUS_LABEL[status]}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {criteriaMet && task.status !== TaskStatus.DONE ? (
+                  <button
+                    type="button"
+                    className="text-xs font-medium text-emerald-300 hover:text-emerald-200"
+                    onClick={() => onUpdateStatus(task.id, TaskStatus.DONE)}
+                  >
+                    Mark done
+                  </button>
+                ) : null}
+              </div>
             </DetailRow>
             <DetailRow
               icon={<PriorityGlyph priority={task.priority} />}
@@ -434,6 +463,10 @@ function TaskViewBody({
             </DetailRow>
           </div>
         </section>
+        <AcceptanceCriteriaSection
+          criteria={task.acceptanceCriteria}
+          onChange={(acceptanceCriteria) => onUpdate({ acceptanceCriteria })}
+        />
         <SubtasksSection
           tasks={children}
           doneCount={doneCount}
@@ -443,6 +476,142 @@ function TaskViewBody({
         />
       </aside>
     </div>
+  );
+}
+
+function AcceptanceCriteriaSection({
+  criteria,
+  onChange,
+}: {
+  criteria: AcceptanceCriterion[];
+  onChange: (criteria: AcceptanceCriterion[]) => void;
+}) {
+  const [draft, setDraft] = useState("");
+  const doneCount = criteria.filter((criterion) => criterion.done).length;
+
+  function addCriterion(text: string) {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    onChange([
+      ...criteria,
+      { id: crypto.randomUUID(), text: trimmed, done: false },
+    ]);
+    setDraft("");
+  }
+
+  return (
+    <section className="rounded-xl border border-border bg-background p-4">
+      <div className="flex items-center gap-2">
+        <h2 className="text-sm font-medium text-foreground">
+          Acceptance criteria
+        </h2>
+        {criteria.length > 0 ? (
+          <span className="ml-auto text-xs tabular-nums text-muted-foreground">
+            {doneCount}/{criteria.length}
+          </span>
+        ) : null}
+      </div>
+      {criteria.length > 0 ? (
+        <ul className="mt-3 flex flex-col gap-2">
+          {criteria.map((criterion) => (
+            <AcceptanceCriterionRow
+              key={criterion.id}
+              criterion={criterion}
+              onToggle={(done) =>
+                onChange(
+                  criteria.map((item) =>
+                    item.id === criterion.id ? { ...item, done } : item,
+                  ),
+                )
+              }
+              onRename={(text) =>
+                onChange(
+                  criteria.map((item) =>
+                    item.id === criterion.id ? { ...item, text } : item,
+                  ),
+                )
+              }
+              onRemove={() =>
+                onChange(criteria.filter((item) => item.id !== criterion.id))
+              }
+            />
+          ))}
+        </ul>
+      ) : null}
+      <form
+        className="mt-3 flex items-center gap-2"
+        onSubmit={(event) => {
+          event.preventDefault();
+          addCriterion(draft);
+        }}
+      >
+        <PlusIcon size={14} className="shrink-0 text-muted-foreground" />
+        <input
+          aria-label="Add acceptance criterion"
+          value={draft}
+          placeholder="Add criterion"
+          className="min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+          onChange={(event) => setDraft(event.target.value)}
+        />
+      </form>
+    </section>
+  );
+}
+
+function AcceptanceCriterionRow({
+  criterion,
+  onToggle,
+  onRename,
+  onRemove,
+}: {
+  criterion: AcceptanceCriterion;
+  onToggle: (done: boolean) => void;
+  onRename: (text: string) => void;
+  onRemove: () => void;
+}) {
+  const [text, setText] = useState(criterion.text);
+
+  return (
+    <li className="flex items-start gap-2">
+      <Checkbox
+        checked={criterion.done}
+        aria-label={`Mark "${criterion.text}" done`}
+        className="mt-0.5"
+        onCheckedChange={(checked) => onToggle(checked === true)}
+      />
+      <input
+        aria-label="Criterion"
+        value={text}
+        className={cn(
+          "min-w-0 flex-1 bg-transparent text-sm outline-none",
+          criterion.done
+            ? "text-muted-foreground line-through"
+            : "text-foreground",
+        )}
+        onChange={(event) => setText(event.target.value)}
+        onBlur={() => {
+          const trimmed = text.trim();
+          if (!trimmed) {
+            setText(criterion.text);
+            return;
+          }
+          if (trimmed !== criterion.text) onRename(trimmed);
+        }}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            event.currentTarget.blur();
+          }
+        }}
+      />
+      <button
+        type="button"
+        aria-label={`Remove "${criterion.text}"`}
+        className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-surface hover:text-foreground"
+        onClick={onRemove}
+      >
+        ×
+      </button>
+    </li>
   );
 }
 
@@ -635,24 +804,6 @@ function DetailRow({
         {label}
       </span>
       <div className="min-w-0 flex-1">{children}</div>
-    </div>
-  );
-}
-
-function ProgressMeter({ done, total }: { done: number; total: number }) {
-  const percent = total === 0 ? 0 : Math.round((done / total) * 100);
-
-  return (
-    <div className="flex items-center gap-3">
-      <span className="shrink-0 text-sm tabular-nums">
-        {done}/{total}
-      </span>
-      <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-surface">
-        <div
-          className="h-full rounded-full bg-emerald-500"
-          style={{ width: `${percent}%` }}
-        />
-      </div>
     </div>
   );
 }

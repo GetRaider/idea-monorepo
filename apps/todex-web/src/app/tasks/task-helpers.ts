@@ -13,6 +13,28 @@ export const STATUS_LABEL: Record<Task["status"], string> = {
   [TaskStatus.DONE]: "Done",
 };
 
+export function acceptanceCriteriaAreMet(
+  criteria: Task["acceptanceCriteria"],
+): boolean {
+  return criteria.length > 0 && criteria.every((criterion) => criterion.done);
+}
+
+export function taskChecklistProgress(input: {
+  acceptanceCriteria: Task["acceptanceCriteria"];
+  subtasks: Array<{ status: Task["status"] }>;
+}): { done: number; total: number } {
+  const criteriaDone = input.acceptanceCriteria.filter(
+    (criterion) => criterion.done,
+  ).length;
+  const subtasksDone = input.subtasks.filter(
+    (subtask) => subtask.status === TaskStatus.DONE,
+  ).length;
+  return {
+    done: criteriaDone + subtasksDone,
+    total: input.acceptanceCriteria.length + input.subtasks.length,
+  };
+}
+
 export function nestTasks(tasks: Task[]): NestedTask[] {
   const byId = new Map<string, NestedTask>(
     tasks.map((task) => [task.id, { ...task, children: [] }]),

@@ -82,6 +82,7 @@ export function mapTask(row: TaskRow): Task {
     dueDate: toIso(row.dueDate),
     scheduleDate: toIso(row.scheduleDate),
     estimation: row.estimation ?? null,
+    acceptanceCriteria: row.acceptanceCriteria ?? [],
     parentTaskId: row.parentTaskId,
     position: row.position,
     createdAt: row.createdAt.toISOString(),

@@ -69,4 +69,23 @@ describe("task date bodies", () => {
     const body = UpdateTaskBodySchema.parse({ scheduleDate: null });
     expect(body).toEqual({ scheduleDate: null });
   });
+
+  it("accepts an acceptance criteria checklist", () => {
+    const body = UpdateTaskBodySchema.parse({
+      acceptanceCriteria: [
+        { id: "criterion-1", text: " Reviewed ", done: false },
+      ],
+    });
+    expect(body.acceptanceCriteria).toEqual([
+      { id: "criterion-1", text: "Reviewed", done: false },
+    ]);
+  });
+
+  it("rejects a blank acceptance criterion", () => {
+    expect(
+      UpdateTaskBodySchema.safeParse({
+        acceptanceCriteria: [{ id: "criterion-1", text: "  ", done: false }],
+      }).success,
+    ).toBe(false);
+  });
 });

@@ -13,8 +13,14 @@ import {
   PriorityGlyph,
   StatusGlyph,
   TaskFacts,
+  TaskProgressBar,
 } from "./task-board.ui";
-import { STATUS_LABEL, STATUS_ORDER, type NestedTask } from "./task-helpers";
+import {
+  STATUS_LABEL,
+  STATUS_ORDER,
+  taskChecklistProgress,
+  type NestedTask,
+} from "./task-helpers";
 
 export function TaskKanban({
   groups,
@@ -153,6 +159,11 @@ function KanbanCard({
   onSelect: (taskId: string) => void;
   onToggleDone: () => void;
 }) {
+  const progress = taskChecklistProgress({
+    acceptanceCriteria: node.acceptanceCriteria,
+    subtasks: node.children,
+  });
+
   return (
     <DraggableTask taskId={node.id}>
       <button
@@ -178,6 +189,11 @@ function KanbanCard({
             </span>
           </span>
           <span className="text-sm">{node.summary}</span>
+          <TaskProgressBar
+            done={progress.done}
+            total={progress.total}
+            className="text-xs text-muted-foreground"
+          />
           <TaskFacts task={node} />
           {showBoardName ? (
             <span className="text-xs text-muted-foreground">

@@ -92,6 +92,7 @@ export class TasksService {
           dueDate: parseIsoDate(body.dueDate),
           scheduleDate: parseIsoDate(body.scheduleDate),
           estimation: body.estimation ?? null,
+          acceptanceCriteria: body.acceptanceCriteria ?? [],
           parentTaskId,
           position,
           createdAt: now,
@@ -142,6 +143,9 @@ export class TasksService {
           : {}),
         ...(body.estimation !== undefined
           ? { estimation: body.estimation }
+          : {}),
+        ...(body.acceptanceCriteria !== undefined
+          ? { acceptanceCriteria: body.acceptanceCriteria }
           : {}),
         ...(body.parentTaskId !== undefined
           ? { parentTaskId: body.parentTaskId }

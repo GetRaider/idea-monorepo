@@ -508,6 +508,7 @@ function applyOptimisticTaskPatch(
     body.dueDate === undefined &&
     body.scheduleDate === undefined &&
     body.estimation === undefined &&
+    body.acceptanceCriteria === undefined &&
     body.parentTaskId === undefined;
   if (statusOnly && body.status) {
     const task = tasks.find((item) => item.id === taskId);

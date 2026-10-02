@@ -220,6 +220,31 @@ export function TaskRow({
   );
 }
 
+export function TaskProgressBar({
+  done,
+  total,
+  className,
+}: {
+  done: number;
+  total: number;
+  className?: string;
+}) {
+  if (total === 0) return null;
+  const percent = Math.round((done / total) * 100);
+
+  return (
+    <div className={cn("flex items-center gap-2", className)}>
+      <span className="shrink-0 tabular-nums">{percent}%</span>
+      <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-surface">
+        <div
+          className="h-full rounded-full bg-emerald-500"
+          style={{ width: `${percent}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
 export function TaskFacts({
   task,
   className,

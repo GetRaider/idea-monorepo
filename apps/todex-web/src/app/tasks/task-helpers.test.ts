@@ -2,6 +2,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { TaskPriority, TaskStatus } from "@repo/api/todex";
 
 import {
+  acceptanceCriteriaAreMet,
+  taskChecklistProgress,
   applyRootMove,
   compareTasksForListSort,
   dateInputToLocalDayStartIso,
@@ -216,6 +218,51 @@ describe("board drop indexes", () => {
   });
 });
 
+describe("acceptanceCriteriaAreMet", () => {
+  it("is false when there are no criteria", () => {
+    expect(acceptanceCriteriaAreMet([])).toBe(false);
+  });
+
+  it("is false while any criterion is open", () => {
+    expect(
+      acceptanceCriteriaAreMet([
+        { id: "a", text: "Reviewed", done: true },
+        { id: "b", text: "Deployed", done: false },
+      ]),
+    ).toBe(false);
+  });
+
+  it("is true when every criterion is done", () => {
+    expect(
+      acceptanceCriteriaAreMet([{ id: "a", text: "Reviewed", done: true }]),
+    ).toBe(true);
+  });
+});
+
+describe("taskChecklistProgress", () => {
+  it("counts checked criteria and done subtasks together", () => {
+    expect(
+      taskChecklistProgress({
+        acceptanceCriteria: [
+          { id: "a", text: "Reviewed", done: true },
+          { id: "b", text: "Deployed", done: false },
+        ],
+        subtasks: [
+          { status: TaskStatus.DONE },
+          { status: TaskStatus.TODO },
+          { status: TaskStatus.IN_PROGRESS },
+        ],
+      }),
+    ).toEqual({ done: 2, total: 5 });
+  });
+
+  it("is empty when the task has neither criteria nor subtasks", () => {
+    expect(
+      taskChecklistProgress({ acceptanceCriteria: [], subtasks: [] }),
+    ).toEqual({ done: 0, total: 0 });
+  });
+});
+
 describe("normalizeDescriptionHtml", () => {
   it("stores blank editor markup as an empty string", () => {
     expect(normalizeDescriptionHtml("")).toBe("");
@@ -241,6 +288,7 @@ function task(overrides: Partial<NestedTask>): NestedTask {
     taskKey: "T-1",
     summary: "Task",
     description: "",
+    acceptanceCriteria: [],
     status: TaskStatus.TODO,
     priority: TaskPriority.MEDIUM,
     dueDate: null,

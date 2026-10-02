@@ -1,11 +1,13 @@
+import { sql } from "drizzle-orm";
 import {
+  foreignKey,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   text,
   timestamp,
   uniqueIndex,
-  foreignKey,
 } from "drizzle-orm/pg-core";
 
 import { users } from "./auth-schema";
@@ -119,6 +121,10 @@ export const tasks = pgTable(
     dueDate: timestamp("due_date"),
     scheduleDate: timestamp("schedule_date"),
     estimation: integer("estimation"),
+    acceptanceCriteria: jsonb("acceptance_criteria")
+      .$type<TaskAcceptanceCriterion[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
     parentTaskId: text("parent_task_id"),
     position: integer("position").notNull().default(0),
     createdAt: timestamp("created_at")
@@ -145,3 +151,9 @@ export type WorkspaceMemberRow = typeof workspaceMembers.$inferSelect;
 export type FolderRow = typeof folders.$inferSelect;
 export type TaskBoardRow = typeof taskBoards.$inferSelect;
 export type TaskRow = typeof tasks.$inferSelect;
+
+interface TaskAcceptanceCriterion {
+  id: string;
+  text: string;
+  done: boolean;
+}

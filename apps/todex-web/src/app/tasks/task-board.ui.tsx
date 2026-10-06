@@ -70,15 +70,17 @@ export function BoardDropZone({
     Boolean(active) &&
     kind !== "card" &&
     (isOver || (kind === "gap" && sameSlot));
+  const seamTarget = compact && (kind === "gap" || kind === "fill");
   return (
     <div
-      ref={setNodeRef}
+      ref={seamTarget ? undefined : setNodeRef}
       className={cn(
         kind === "gap" &&
-          "pointer-events-none relative h-3 w-full shrink-0 transition-[height,margin] duration-150",
+          "pointer-events-none relative w-full shrink-0 transition-[height,margin] duration-150",
+        kind === "gap" && (compact ? "h-0" : "h-3"),
         kind === "empty" && (compact ? "relative" : "relative min-h-16 flex-1"),
         kind === "fill" &&
-          (compact ? "relative h-2 shrink-0" : "relative mt-1 min-h-16 flex-1"),
+          (compact ? "relative h-0 shrink-0" : "relative mt-1 min-h-16 flex-1"),
         kind === "column" && "relative",
         showIndicator && kind === "gap" && "my-1 h-14",
         showIndicator &&
@@ -88,6 +90,15 @@ export function BoardDropZone({
         className,
       )}
     >
+      {seamTarget ? (
+        <div
+          ref={setNodeRef}
+          className={cn(
+            "pointer-events-none absolute inset-x-0 h-6",
+            kind === "gap" ? "top-1/2 -translate-y-1/2" : "bottom-0 translate-y-1/2",
+          )}
+        />
+      ) : null}
       {showIndicator ? (
         <span
           className={cn(

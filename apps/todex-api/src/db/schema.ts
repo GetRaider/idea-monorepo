@@ -1,4 +1,10 @@
-import type { TaskRecurrence } from "@repo/api/todex";
+import {
+  DocMentionTarget,
+  DocType,
+  type DocBody,
+  type DocPlainText,
+  type TaskRecurrence,
+} from "@repo/api/todex";
 import { sql } from "drizzle-orm";
 import {
   boolean,
@@ -8,6 +14,7 @@ import {
   jsonb,
   pgEnum,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uniqueIndex,
@@ -30,6 +37,14 @@ export const taskPriorityEnum = pgEnum("task_priority", [
 
 export const folderKindEnum = pgEnum("folder_kind", ["tasks", "docs"]);
 
+export const docTypeEnum = pgEnum("doc_type", [DocType.COMMON, DocType.GOAL]);
+
+export const docMentionTargetEnum = pgEnum("doc_mention_target", [
+  DocMentionTarget.TASK,
+  DocMentionTarget.DOC,
+  DocMentionTarget.EVENT,
+]);
+
 export const workspaceMemberRoleEnum = pgEnum("workspace_member_role", [
   "owner",
   "member",
@@ -39,6 +54,7 @@ export const workspaces = pgTable("workspaces", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   taskSeq: integer("task_seq").notNull().default(0),
+  docSeq: integer("doc_seq").notNull().default(0),
   createdAt: timestamp("created_at")
     .$defaultFn(() => new Date())
     .notNull(),
@@ -219,6 +235,71 @@ export const tasks = pgTable(
   ],
 );
 
+export const docs = pgTable(
+  "docs",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    folderId: text("folder_id").references(() => folders.id, {
+      onDelete: "set null",
+    }),
+    type: docTypeEnum("type").notNull(),
+    docKey: text("doc_key").notNull(),
+    title: text("title").notNull(),
+    body: jsonb("body").$type<DocBody>().notNull(),
+    plainText: jsonb("plain_text").$type<DocPlainText>().notNull(),
+    createdAt: timestamp("created_at")
+      .$defaultFn(() => new Date())
+      .notNull(),
+    updatedAt: timestamp("updated_at")
+      .$defaultFn(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("docs_workspace_doc_key_unique").on(
+      table.workspaceId,
+      table.docKey,
+    ),
+    index("docs_workspace_id_idx").on(table.workspaceId),
+    index("docs_folder_id_idx").on(table.folderId),
+  ],
+);
+
+export const docTasks = pgTable(
+  "doc_tasks",
+  {
+    docId: text("doc_id")
+      .notNull()
+      .references(() => docs.id, { onDelete: "cascade" }),
+    taskId: text("task_id")
+      .notNull()
+      .references(() => tasks.id, { onDelete: "cascade" }),
+  },
+  (table) => [
+    primaryKey({ columns: [table.docId, table.taskId] }),
+    index("doc_tasks_task_id_idx").on(table.taskId),
+  ],
+);
+
+export const docMentions = pgTable(
+  "doc_mentions",
+  {
+    docId: text("doc_id")
+      .notNull()
+      .references(() => docs.id, { onDelete: "cascade" }),
+    targetType: docMentionTargetEnum("target_type").notNull(),
+    targetId: text("target_id").notNull(),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.docId, table.targetType, table.targetId],
+    }),
+    index("doc_mentions_target_idx").on(table.targetType, table.targetId),
+  ],
+);
+
 export type WorkspaceRow = typeof workspaces.$inferSelect;
 export type WorkspaceMemberRow = typeof workspaceMembers.$inferSelect;
 export type FolderRow = typeof folders.$inferSelect;
@@ -226,6 +307,7 @@ export type TaskBoardRow = typeof taskBoards.$inferSelect;
 export type BoardAreaRow = typeof boardAreas.$inferSelect;
 export type BoardProgressStageRow = typeof boardProgressStages.$inferSelect;
 export type TaskRow = typeof tasks.$inferSelect;
+export type DocRow = typeof docs.$inferSelect;
 
 interface TaskAcceptanceCriterion {
   id: string;

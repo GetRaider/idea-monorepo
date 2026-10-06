@@ -4,9 +4,13 @@ import {
   BoardAreaSchema,
   BoardProgressStageSchema,
   CreateBoardAreaBodySchema,
+  CreateDocBodySchema,
   CreateFolderBodySchema,
   CreateTaskBoardBodySchema,
   CreateTaskBodySchema,
+  DocSchema,
+  DocSummarySchema,
+  FolderKind,
   FolderSchema,
   MoveTaskBodySchema,
   ReplaceBoardProgressStagesBodySchema,
@@ -16,6 +20,7 @@ import {
   UpdateBoardAreaBodySchema,
   UpdateFolderBodySchema,
   UpdateTaskBoardBodySchema,
+  UpdateDocBodySchema,
   UpdateTaskBodySchema,
   WorkspaceSchema,
 } from "@repo/api/todex";
@@ -51,7 +56,8 @@ export const todexClient = {
     list: () => call("get", "/v1/workspaces", WorkspaceListSchema),
   },
   folders: {
-    list: () => call("get", "/v1/folders?kind=tasks", z.array(FolderSchema)),
+    list: (kind: "tasks" | "docs" = FolderKind.TASKS) =>
+      call("get", `/v1/folders?kind=${kind}`, z.array(FolderSchema)),
     create: (body: unknown) =>
       call(
         "post",
@@ -159,5 +165,26 @@ export const todexClient = {
       ),
     remove: (taskId: string) =>
       call("delete", `/v1/tasks/${taskId}`, z.object({ ok: z.boolean() })),
+  },
+  docs: {
+    list: (query?: { type?: "common" | "goal"; folderId?: string }) => {
+      const searchParams = new URLSearchParams();
+      if (query?.type) searchParams.set("type", query.type);
+      if (query?.folderId) searchParams.set("folderId", query.folderId);
+      const suffix = searchParams.size > 0 ? `?${searchParams}` : "";
+      return call("get", `/v1/docs${suffix}`, z.array(DocSummarySchema));
+    },
+    get: (docId: string) => call("get", `/v1/docs/${docId}`, DocSchema),
+    create: (body: unknown) =>
+      call("post", "/v1/docs", DocSchema, CreateDocBodySchema.parse(body)),
+    update: (docId: string, body: unknown) =>
+      call(
+        "patch",
+        `/v1/docs/${docId}`,
+        DocSchema,
+        UpdateDocBodySchema.parse(body),
+      ),
+    remove: (docId: string) =>
+      call("delete", `/v1/docs/${docId}`, z.object({ ok: z.boolean() })),
   },
 };

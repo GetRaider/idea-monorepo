@@ -16,6 +16,7 @@
     "@repo/api": "workspace:*",
     "@repo/ui": "workspace:*",
     "@tanstack/react-query": "catalog:",
+    "@tiptap/core": "3.22.4",
     "@tiptap/extension-list": "^3.22.4",
     "@tiptap/extension-placeholder": "^3.22.4",
     "@tiptap/react": "^3.22.4",

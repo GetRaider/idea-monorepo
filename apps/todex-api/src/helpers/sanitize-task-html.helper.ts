@@ -39,9 +39,10 @@ const TASK_HTML_TAGS = [
 ] as const;
 
 const TASK_HTML_ATTRIBUTES: sanitizeHtml.IOptions["allowedAttributes"] = {
-  a: ["href", "target", "rel"],
+  a: ["href", "target", "rel", "data-target-type", "data-target-id", "data-label"],
   ul: ["data-type"],
   ol: ["data-type"],
   li: ["data-type", "data-checked"],
   code: ["class"],
+  span: ["data-target-type", "data-target-id", "data-label"],
 };

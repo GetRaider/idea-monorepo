@@ -1,5 +1,7 @@
 export {
   DEFAULT_AREA_NAME,
+  DocMentionTarget,
+  DocType,
   FolderKind,
   PROGRESS_STAGE_TEMPLATES,
   ProgressStageTemplate,
@@ -17,6 +19,37 @@ export type {
   CreateBoardAreaBody,
   UpdateBoardAreaBody,
 } from "./area.ts";
+export {
+  CommonDocBodySchema,
+  CommonDocSchema,
+  CreateDocBodySchema,
+  DocSchema,
+  DocSummarySchema,
+  GoalDocBodySchema,
+  GoalDocSchema,
+  ListDocsQuerySchema,
+  UpdateCommonDocBodySchema,
+  UpdateDocBodySchema,
+  UpdateGoalDocBodySchema,
+  emptyCommonDocBody,
+  emptyGoalDocBody,
+  readGoalDocBody,
+} from "./doc.ts";
+export type {
+  CommonDoc,
+  CommonDocBody,
+  CreateDocBody,
+  Doc,
+  DocBody,
+  DocPlainText,
+  DocSummary,
+  GoalDoc,
+  GoalDocBody,
+  ListDocsQuery,
+  UpdateCommonDocBody,
+  UpdateDocBody,
+  UpdateGoalDocBody,
+} from "./doc.ts";
 export {
   CreateFolderBodySchema,
   FolderSchema,
@@ -55,6 +88,13 @@ export type {
   ReplaceBoardProgressStagesBody,
 } from "./progress-stage.ts";
 export { formatEstimation, parseEstimation } from "./estimation.ts";
+export {
+  EMPTY_PROSE_DOC,
+  ProseDocSchema,
+  collectMentions,
+  projectProse,
+} from "./prose.ts";
+export type { DocMentionRef, ProseDoc, ProseNode } from "./prose.ts";
 export {
   completeRecurringTask,
   defaultTaskRecurrence,

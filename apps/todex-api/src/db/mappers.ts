@@ -1,7 +1,12 @@
 import {
+  DocType,
+  readGoalDocBody,
   readTaskRecurrence,
   type BoardArea,
   type BoardProgressStage,
+  type CommonDocBody,
+  type Doc,
+  type DocSummary,
   type Folder,
   type Task,
   type TaskBoard,
@@ -12,6 +17,7 @@ import {
 import type {
   BoardAreaRow,
   BoardProgressStageRow,
+  DocRow,
   FolderRow,
   TaskBoardRow,
   TaskRow,
@@ -99,7 +105,37 @@ export function mapBoardProgressStage(
   };
 }
 
-export function mapTask(row: TaskRow): Task {
+export function mapDocSummary(row: DocSummaryRow): DocSummary {
+  return {
+    id: row.id,
+    workspaceId: row.workspaceId,
+    folderId: row.folderId,
+    type: row.type,
+    docKey: row.docKey,
+    title: row.title,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
+export function mapDoc(row: DocRow, linkedTaskIds: string[]): Doc {
+  const summary = mapDocSummary(row);
+  if (row.type === DocType.COMMON) {
+    return {
+      ...summary,
+      type: DocType.COMMON,
+      body: row.body as CommonDocBody,
+    };
+  }
+  return {
+    ...summary,
+    type: DocType.GOAL,
+    body: readGoalDocBody(row.body),
+    linkedTaskIds: [...linkedTaskIds].sort(),
+  };
+}
+
+export function mapTask(row: TaskRow, goalId: string | null = null): Task {
   return {
     id: row.id,
     workspaceId: row.workspaceId,
@@ -117,8 +153,20 @@ export function mapTask(row: TaskRow): Task {
     areaId: row.areaId,
     progressStageId: row.progressStageId,
     parentTaskId: row.parentTaskId,
+    goalId,
     position: row.position,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
+}
+
+interface DocSummaryRow {
+  id: string;
+  workspaceId: string;
+  folderId: string | null;
+  type: DocRow["type"];
+  docKey: string;
+  title: string;
+  createdAt: Date;
+  updatedAt: Date;
 }

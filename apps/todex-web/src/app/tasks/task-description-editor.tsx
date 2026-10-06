@@ -6,11 +6,20 @@ import { BubbleMenu } from "@tiptap/react/menus";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import { TaskList, TaskItem } from "@tiptap/extension-list";
+import { ProseDocSchema, type ProseDoc } from "@repo/api/todex";
 import { cn } from "@repo/ui";
 
+import {
+  applyMentionEntry,
+  mentionEmptyLabel,
+  mentionMenuItems,
+  readMentionTrigger,
+} from "./editor-mentions";
+import { MentionMenu, useMentionCandidates } from "./editor-mentions.ui";
+import { MentionNode } from "./mention-node";
 import { normalizeDescriptionHtml } from "./task-helpers";
 
-const DESCRIPTION_PLACEHOLDER = "Type / for formatting";
+const DESCRIPTION_PLACEHOLDER = "Type / for formatting, @ to mention";
 const SLASH_MENU_MAX_HEIGHT = 320;
 const SLASH_MENU_ITEM_HEIGHT = 36;
 const SLASH_MENU_VERTICAL_OFFSET = 8;
@@ -82,18 +91,30 @@ const SLASH_COMMANDS: SlashCommandItem[] = [
 
 export function TaskDescriptionEditor({
   content,
+  document,
   onChange,
+  onDocumentChange,
+  excludeDocId,
   appearance = "field",
 }: TaskDescriptionEditorProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const onChangeRef = useRef(onChange);
+  const onDocumentChangeRef = useRef(onDocumentChange);
   const slashKeyDownRef = useRef<(event: KeyboardEvent) => boolean>(
     () => false,
   );
+  const mentionKeyDownRef = useRef<(event: KeyboardEvent) => boolean>(
+    () => false,
+  );
   const suppressSlashRef = useRef(false);
+  const suppressMentionRef = useRef(false);
+  const mentionCandidates = useMentionCandidates(excludeDocId);
   const [slashMenu, setSlashMenu] = useState<SlashMenuState | null>(null);
   const [activeSlashIndex, setActiveSlashIndex] = useState(0);
+  const [mentionMenu, setMentionMenu] = useState<MentionMenuState | null>(null);
+  const [activeMentionIndex, setActiveMentionIndex] = useState(0);
   onChangeRef.current = onChange;
+  onDocumentChangeRef.current = onDocumentChange;
 
   const editor = useEditor({
     extensions: [
@@ -102,12 +123,19 @@ export function TaskDescriptionEditor({
       }),
       TaskList,
       TaskItem.configure({ nested: true }),
+      MentionNode,
       Placeholder.configure({ placeholder: DESCRIPTION_PLACEHOLDER }),
     ],
-    content,
+    content: document ?? content,
     immediatelyRender: false,
     onUpdate: ({ editor: nextEditor }) => {
-      onChangeRef.current(normalizeDescriptionHtml(nextEditor.getHTML()));
+      const publishDocument = onDocumentChangeRef.current;
+      if (publishDocument) {
+        const parsed = ProseDocSchema.safeParse(nextEditor.getJSON());
+        if (parsed.success) publishDocument(parsed.data);
+        return;
+      }
+      onChangeRef.current?.(normalizeDescriptionHtml(nextEditor.getHTML()));
     },
     editorProps: {
       attributes: {
@@ -116,9 +144,16 @@ export function TaskDescriptionEditor({
           appearance === "plain" ? "min-h-40" : "min-h-20",
         ),
       },
-      handleKeyDown: (_view, event) => slashKeyDownRef.current(event),
+      handleKeyDown: (_view, event) =>
+        mentionKeyDownRef.current(event) || slashKeyDownRef.current(event),
     },
   });
+
+  const visibleMentionItems = useMemo(
+    () =>
+      mentionMenu ? mentionMenuItems(mentionCandidates, mentionMenu.query) : [],
+    [mentionCandidates, mentionMenu],
+  );
 
   const visibleSlashItems = useMemo(() => {
     if (!slashMenu) return [];
@@ -162,6 +197,51 @@ export function TaskDescriptionEditor({
     return false;
   };
 
+  mentionKeyDownRef.current = (event) => {
+    if (!mentionMenu) return false;
+    if (visibleMentionItems.length === 0) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        suppressMentionRef.current = true;
+        setMentionMenu(null);
+        return true;
+      }
+      return false;
+    }
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setActiveMentionIndex(
+        (itemIndex) => (itemIndex + 1) % visibleMentionItems.length,
+      );
+      return true;
+    }
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setActiveMentionIndex(
+        (itemIndex) =>
+          (itemIndex - 1 + visibleMentionItems.length) %
+          visibleMentionItems.length,
+      );
+      return true;
+    }
+    if (event.key === "Enter" || event.key === "Tab") {
+      event.preventDefault();
+      const selectedItem = visibleMentionItems[activeMentionIndex];
+      if (selectedItem && editor) {
+        applyMentionEntry(editor, mentionMenu.range, selectedItem);
+      }
+      if (selectedItem?.kind === "target") setMentionMenu(null);
+      return true;
+    }
+    if (event.key === "Escape") {
+      event.preventDefault();
+      suppressMentionRef.current = true;
+      setMentionMenu(null);
+      return true;
+    }
+    return false;
+  };
+
   useEffect(() => {
     if (!editor) return;
 
@@ -195,14 +275,56 @@ export function TaskDescriptionEditor({
   }, [editor]);
 
   useEffect(() => {
+    if (!editor) return;
+
+    const closeMentionMenu = () => setMentionMenu(null);
+    const updateMentionMenu = () => {
+      const root = rootRef.current;
+      if (!root || !editor.isEditable) {
+        suppressMentionRef.current = false;
+        closeMentionMenu();
+        return;
+      }
+      const nextMenu = getMentionMenuState(editor, root);
+      if (!nextMenu) suppressMentionRef.current = false;
+      if (suppressMentionRef.current) {
+        closeMentionMenu();
+        return;
+      }
+      setMentionMenu(nextMenu);
+    };
+
+    updateMentionMenu();
+    editor.on("update", updateMentionMenu);
+    editor.on("selectionUpdate", updateMentionMenu);
+    editor.on("blur", closeMentionMenu);
+
+    return () => {
+      editor.off("update", updateMentionMenu);
+      editor.off("selectionUpdate", updateMentionMenu);
+      editor.off("blur", closeMentionMenu);
+    };
+  }, [editor]);
+
+  useEffect(() => {
     setActiveSlashIndex(0);
   }, [slashMenu?.query]);
+
+  useEffect(() => {
+    setActiveMentionIndex(0);
+  }, [mentionMenu?.query]);
 
   useEffect(() => {
     if (activeSlashIndex >= visibleSlashItems.length) {
       setActiveSlashIndex(Math.max(visibleSlashItems.length - 1, 0));
     }
   }, [activeSlashIndex, visibleSlashItems.length]);
+
+  useEffect(() => {
+    if (activeMentionIndex >= visibleMentionItems.length) {
+      setActiveMentionIndex(Math.max(visibleMentionItems.length - 1, 0));
+    }
+  }, [activeMentionIndex, visibleMentionItems.length]);
 
   if (!editor) {
     return (
@@ -247,6 +369,7 @@ export function TaskDescriptionEditor({
         "[&_.tiptap_h2]:text-base [&_.tiptap_h2]:font-semibold",
         "[&_.tiptap_h3]:text-sm [&_.tiptap_h3]:font-semibold",
         "[&_.tiptap_h4]:text-sm [&_.tiptap_h4]:font-medium",
+        "[&_span[data-target-type]]:rounded-md [&_span[data-target-type]]:bg-surface [&_span[data-target-type]]:px-1 [&_span[data-target-type]]:text-foreground",
       )}
     >
       <EditorContent editor={editor} />
@@ -260,6 +383,19 @@ export function TaskDescriptionEditor({
           onSelect={(item) => {
             selectSlashItem(editor, slashMenu, item);
             setSlashMenu(null);
+          }}
+        />
+      ) : null}
+      {mentionMenu ? (
+        <MentionMenu
+          activeIndex={activeMentionIndex}
+          items={visibleMentionItems}
+          top={mentionMenu.top}
+          left={mentionMenu.left}
+          emptyLabel={mentionEmptyLabel(mentionMenu.query)}
+          onSelect={(item) => {
+            applyMentionEntry(editor, mentionMenu.range, item);
+            if (item.kind === "target") setMentionMenu(null);
           }}
         />
       ) : null}
@@ -329,6 +465,39 @@ function getSlashMenuState(
     left: Math.max(0, coords.left - rootRect.left),
     range: {
       from: selection.from - match[0].length,
+      to: selection.from,
+    },
+  };
+}
+
+function getMentionMenuState(
+  editor: Editor,
+  root: HTMLDivElement,
+): MentionMenuState | null {
+  const { state, view } = editor;
+  const { selection } = state;
+  if (!selection.empty) return null;
+
+  const { $from } = selection;
+  const textBeforeCursor = $from.parent.textBetween(
+    0,
+    $from.parentOffset,
+    "\n",
+    "\n",
+  );
+  const trigger = readMentionTrigger(textBeforeCursor);
+  if (!trigger) return null;
+
+  const coords = view.coordsAtPos(selection.from);
+  const rootRect = root.getBoundingClientRect();
+  const top = coords.bottom - rootRect.top + SLASH_MENU_VERTICAL_OFFSET;
+
+  return {
+    query: trigger.query,
+    top: Math.max(0, top),
+    left: Math.max(0, coords.left - rootRect.left),
+    range: {
+      from: selection.from - trigger.length,
       to: selection.from,
     },
   };
@@ -444,8 +613,18 @@ function SlashCommandMenu({
 
 interface TaskDescriptionEditorProps {
   content: string;
-  onChange: (html: string) => void;
+  document?: ProseDoc;
+  onChange?: (html: string) => void;
+  onDocumentChange?: (document: ProseDoc) => void;
+  excludeDocId?: string;
   appearance?: "field" | "plain";
+}
+
+interface MentionMenuState {
+  query: string;
+  top: number;
+  left: number;
+  range: { from: number; to: number };
 }
 
 interface SlashMenuState {

@@ -407,8 +407,11 @@ export function TasksProvider({ children }: { children: ReactNode }) {
       if (input.optimistic) return;
       toast.success("Task saved");
     },
-    onSettled: () => {
+    onSettled: (_task, _error, input) => {
       invalidateTasks();
+      if (input.body.goalId !== undefined) {
+        void queryClient.invalidateQueries({ queryKey: ["docs"] });
+      }
     },
   });
 
@@ -626,7 +629,8 @@ function applyOptimisticTaskPatch(
     body.recurrence === undefined &&
     body.areaId === undefined &&
     body.progressStageId === undefined &&
-    body.parentTaskId === undefined;
+    body.parentTaskId === undefined &&
+    body.goalId === undefined;
   if (statusOnly && body.status) {
     const task = tasks.find((item) => item.id === taskId);
     if (task && task.parentTaskId == null && task.status !== body.status) {

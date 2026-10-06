@@ -24,6 +24,18 @@ describe("sanitizeTaskHtml", () => {
     expect(sanitized).not.toMatch(/javascript:/i);
   });
 
+  it("keeps mention chips", () => {
+    const html =
+      '<p>See <span data-target-type="task" data-target-id="task-1" data-label="TDX-4 Ship">@TDX-4 Ship</span></p>';
+    expect(sanitizeTaskHtml(html)).toBe(html);
+  });
+
+  it("keeps mention links", () => {
+    const html =
+      '<p>See <a href="/docs/doc-1" data-target-type="doc" data-target-id="doc-1" data-label="Launch">@Launch</a></p>';
+    expect(sanitizeTaskHtml(html)).toBe(html);
+  });
+
   it("keeps TipTap list and checklist markup", () => {
     const html =
       '<ul data-type="taskList"><li data-type="taskItem" data-checked="true"><p>done</p></li></ul>';

@@ -8,6 +8,7 @@ import { HttpExceptionFilter } from "@repo/api/helpers/httpExceptionFilter.helpe
 import { auth } from "../auth";
 import { DatabaseModule } from "../db/database.module";
 import { BoardsModule } from "./boards/boards.module";
+import { DocsModule } from "./docs/docs.module";
 import { FoldersModule } from "./folders/folders.module";
 import { HealthController } from "./health/health.controller";
 import { TasksModule } from "./tasks/tasks.module";
@@ -23,6 +24,7 @@ import { WorkspaceModule } from "./workspace/workspace.module";
     }),
     WorkspaceModule,
     FoldersModule,
+    DocsModule,
     BoardsModule,
     TasksModule,
   ],

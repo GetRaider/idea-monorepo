@@ -34,6 +34,7 @@ export async function ensureOwnerWorkspace(
       id: workspaceId,
       name,
       taskSeq: 0,
+      docSeq: 0,
       createdAt: now,
       updatedAt: now,
     });

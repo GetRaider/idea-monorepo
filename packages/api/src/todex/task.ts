@@ -49,6 +49,7 @@ export const TaskSchema = z.object({
   areaId: z.string(),
   progressStageId: z.string().nullable(),
   parentTaskId: z.string().nullable(),
+  goalId: z.string().nullable(),
   position: z.number().int().nonnegative(),
   createdAt: IsoDateTimeSchema,
   updatedAt: IsoDateTimeSchema,
@@ -145,6 +146,7 @@ export const UpdateTaskBodySchema = z.object({
   areaId: z.string().min(1).optional(),
   progressStageId: z.string().min(1).nullable().optional(),
   parentTaskId: z.string().nullable().optional(),
+  goalId: z.string().nullable().optional(),
 });
 
 export const MoveTaskBodySchema = z.object({

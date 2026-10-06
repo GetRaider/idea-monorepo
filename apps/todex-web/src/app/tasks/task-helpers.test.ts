@@ -403,6 +403,7 @@ function task(overrides: Partial<NestedTask>): NestedTask {
     progressStageId: null,
     estimation: null,
     parentTaskId: null,
+    goalId: null,
     position: 0,
     createdAt: "2026-09-10T00:00:00.000Z",
     updatedAt: "2026-09-10T00:00:00.000Z",

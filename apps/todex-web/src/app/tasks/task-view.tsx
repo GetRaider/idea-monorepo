@@ -7,6 +7,7 @@ import {
   type FormEvent,
   type ReactNode,
 } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   Checkbox,
   ConfirmDialog,
@@ -22,6 +23,7 @@ import {
   cn,
 } from "@repo/ui";
 import {
+  DocType,
   formatEstimation,
   parseEstimation,
   TaskPriority,
@@ -45,7 +47,9 @@ import {
   ExpandIcon,
   PlusIcon,
   RepeatIcon,
+  StatusDoneIcon,
 } from "@components/icons";
+import { todexClient } from "@lib/todex-client";
 import {
   readTaskPanelWidth,
   readTaskViewMode,
@@ -272,8 +276,15 @@ function TaskViewBody({
   const onUpdateRef = useRef(onUpdate);
   onUpdateRef.current = onUpdate;
   const boardAxes = useBoardAxes(task.taskBoardId);
+  const goalsQuery = useQuery({
+    queryKey: ["docs", "goal"],
+    queryFn: () => todexClient.docs.list({ type: DocType.GOAL }),
+  });
   const areas = boardAxes.data?.areas ?? [];
   const stages = boardAxes.data?.progressStages ?? [];
+  const goals = [...(goalsQuery.data ?? [])].sort((left, right) =>
+    left.title.localeCompare(right.title),
+  );
 
   function flushPendingUpdate() {
     if (saveTimerRef.current != null) {
@@ -612,6 +623,31 @@ function TaskViewBody({
                   flushPendingUpdate();
                 }}
               />
+            </DetailRow>
+            <DetailRow icon={<StatusDoneIcon size={16} />} label="Goal">
+              <Select
+                value={task.goalId ?? "none"}
+                onValueChange={(value) => {
+                  queueUpdate({ goalId: value === "none" ? null : value });
+                  flushPendingUpdate();
+                }}
+              >
+                <SelectTrigger className="h-8 w-full border-0 bg-transparent px-0 text-sm shadow-none">
+                  <SelectValue placeholder="None" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  {task.goalId &&
+                  !goals.some((goal) => goal.id === task.goalId) ? (
+                    <SelectItem value={task.goalId}>Goal</SelectItem>
+                  ) : null}
+                  {goals.map((goal) => (
+                    <SelectItem key={goal.id} value={goal.id}>
+                      {goal.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </DetailRow>
             <DetailRow icon={<ParentMark />} label="Parent">
               <Select

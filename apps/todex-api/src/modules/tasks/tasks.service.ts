@@ -4,11 +4,12 @@ import {
   Inject,
   Injectable,
 } from "@nestjs/common";
-import { and, asc, eq, gte, isNull, lt, sql } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, isNull, lt, sql } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import {
   completeRecurringTask,
+  DocType,
   readTaskRecurrence,
   TaskPriority,
   TaskStatus,
@@ -22,7 +23,7 @@ import type {
 } from "@repo/api/todex";
 
 import { DRIZZLE_DB } from "../../db/tokens";
-import { tasks, workspaces, type TaskRow } from "../../db/schema";
+import { docs, docTasks, tasks, workspaces, type TaskRow } from "../../db/schema";
 import { mapTask, parseIsoDate, toIso } from "../../db/mappers";
 import {
   formatTaskKey,
@@ -183,13 +184,18 @@ export class TasksService {
       if (row && completion.spawn) {
         await this.insertNextOccurrence(tx, row, completion.spawn);
       }
+      if (row && body.goalId !== undefined) {
+        await this.writeTaskGoal(tx, workspaceId, row.id, body.goalId);
+      }
       return [row];
     });
     if (!updated) throw new ForbiddenException();
 
     await this.relocateRoot(existing, updated);
     await this.workspaceService.bumpUpdatedAt(workspaceId);
-    return mapTask(updated);
+    const [task] = await this.withGoalIds([updated]);
+    if (!task) throw new ForbiddenException();
+    return task;
   }
 
   async move(workspaceId: string, taskId: string, body: MoveTaskBody) {
@@ -253,7 +259,9 @@ export class TasksService {
 
     await this.workspaceService.bumpUpdatedAt(workspaceId);
     const moved = await this.requireTaskInWorkspace(workspaceId, taskId);
-    return mapTask(moved);
+    const [task] = await this.withGoalIds([moved]);
+    if (!task) throw new ForbiddenException();
+    return task;
   }
 
   async remove(workspaceId: string, taskId: string) {
@@ -277,7 +285,7 @@ export class TasksService {
         and(eq(tasks.workspaceId, workspaceId), eq(tasks.taskBoardId, boardId)),
       )
       .orderBy(asc(tasks.position), asc(tasks.createdAt), asc(tasks.id));
-    return rows.map(mapTask);
+    return this.withGoalIds(rows);
   }
 
   private async listByScheduleRange(workspaceId: string, from: Date, to: Date) {
@@ -292,7 +300,60 @@ export class TasksService {
         ),
       )
       .orderBy(asc(tasks.position), asc(tasks.createdAt), asc(tasks.id));
-    return rows.map(mapTask);
+    return this.withGoalIds(rows);
+  }
+
+  private async withGoalIds(rows: TaskRow[]) {
+    if (rows.length === 0) return [];
+    const links = await this.db
+      .select({ taskId: docTasks.taskId, docId: docTasks.docId })
+      .from(docTasks)
+      .innerJoin(docs, eq(docs.id, docTasks.docId))
+      .where(
+        and(
+          inArray(
+            docTasks.taskId,
+            rows.map((row) => row.id),
+          ),
+          eq(docs.type, DocType.GOAL),
+        ),
+      );
+    const goalIdByTaskId = new Map<string, string>();
+    for (const link of links) {
+      const current = goalIdByTaskId.get(link.taskId);
+      if (!current || link.docId < current) {
+        goalIdByTaskId.set(link.taskId, link.docId);
+      }
+    }
+    return rows.map((row) => mapTask(row, goalIdByTaskId.get(row.id) ?? null));
+  }
+
+  private async writeTaskGoal(
+    tx: NodePgDatabase,
+    workspaceId: string,
+    taskId: string,
+    goalId: string | null,
+  ) {
+    if (goalId) {
+      const [goal] = await tx
+        .select({
+          id: docs.id,
+          workspaceId: docs.workspaceId,
+          type: docs.type,
+        })
+        .from(docs)
+        .where(eq(docs.id, goalId))
+        .limit(1);
+      if (!goal || goal.workspaceId !== workspaceId) {
+        throw new ForbiddenException();
+      }
+      if (goal.type !== DocType.GOAL) {
+        throw new BadRequestException("Doc is not a goal");
+      }
+    }
+    await tx.delete(docTasks).where(eq(docTasks.taskId, taskId));
+    if (!goalId) return;
+    await tx.insert(docTasks).values({ docId: goalId, taskId });
   }
 
   private async requireTaskInWorkspace(workspaceId: string, taskId: string) {

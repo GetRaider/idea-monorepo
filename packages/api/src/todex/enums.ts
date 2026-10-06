@@ -16,6 +16,17 @@ export const FolderKind = {
   DOCS: "docs",
 } as const;
 
+export const DocType = {
+  COMMON: "common",
+  GOAL: "goal",
+} as const;
+
+export const DocMentionTarget = {
+  TASK: "task",
+  DOC: "doc",
+  EVENT: "event",
+} as const;
+
 export const WorkspaceMemberRole = {
   OWNER: "owner",
   MEMBER: "member",
@@ -37,6 +48,9 @@ export const PROGRESS_STAGE_TEMPLATES = {
 export type TaskStatus = (typeof TaskStatus)[keyof typeof TaskStatus];
 export type TaskPriority = (typeof TaskPriority)[keyof typeof TaskPriority];
 export type FolderKind = (typeof FolderKind)[keyof typeof FolderKind];
+export type DocType = (typeof DocType)[keyof typeof DocType];
+export type DocMentionTarget =
+  (typeof DocMentionTarget)[keyof typeof DocMentionTarget];
 export type WorkspaceMemberRole =
   (typeof WorkspaceMemberRole)[keyof typeof WorkspaceMemberRole];
 export type ProgressStageTemplate =

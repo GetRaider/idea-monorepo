@@ -5,6 +5,7 @@ import {
   useMemo,
   useState,
   type ComponentProps,
+  type ReactNode,
 } from "react";
 import {
   DndContext,
@@ -21,20 +22,26 @@ import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
   cn,
 } from "@repo/ui";
 import { TaskStatus } from "@repo/api/todex";
 import type { Task } from "@repo/api/todex";
 
-import { ChevronIcon, PlusIcon, SettingsIcon } from "@components/icons";
+import {
+  ChevronIcon,
+  PlusIcon,
+  RowsIcon,
+  SettingsIcon,
+  SortIcon,
+} from "@components/icons";
 
 import { boardCollisionDetection, type BoardDropData } from "./task-board-dnd";
 import {
@@ -762,28 +769,26 @@ function TaskTree({
   );
 }
 
+const SORT_FIELD_OPTIONS = [
+  { value: "title", label: "Title" },
+  { value: "schedule", label: "Schedule" },
+  { value: "priority", label: "Priority" },
+] as const satisfies ReadonlyArray<SettingsOption<ListSortField>>;
+
+const SORT_DIRECTION_OPTIONS = [
+  { value: "asc", label: "Ascending" },
+  { value: "desc", label: "Descending" },
+] as const satisfies ReadonlyArray<SettingsOption<"asc" | "desc">>;
+
 function ViewSettingsMenu({
   listSubmode,
   listSort,
   onListSubmodeChange,
   onListSortChange,
-}: {
-  listSubmode: BoardListSubmode;
-  listSort: {
-    enabled: boolean;
-    field: ListSortField;
-    direction: "asc" | "desc";
-  };
-  onListSubmodeChange: (next: BoardListSubmode) => void;
-  onListSortChange: (next: {
-    enabled: boolean;
-    field: ListSortField;
-    direction: "asc" | "desc";
-  }) => void;
-}) {
+}: ViewSettingsMenuProps) {
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
+    <Popover>
+      <PopoverTrigger asChild>
         <Button
           type="button"
           size="icon"
@@ -793,61 +798,136 @@ function ViewSettingsMenu({
         >
           <SettingsIcon size={16} />
         </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-52">
-        <DropdownMenuLabel>List layout</DropdownMenuLabel>
-        <DropdownMenuRadioGroup
-          value={listSubmode}
-          onValueChange={(value) =>
-            onListSubmodeChange(value as BoardListSubmode)
+      </PopoverTrigger>
+      <PopoverContent
+        align="end"
+        sideOffset={8}
+        className="w-80 rounded-xl border-border bg-panel p-1.5 shadow-lg"
+        onInteractOutside={(event) => {
+          const target = event.target;
+          if (
+            target instanceof Element &&
+            target.closest("[data-board-settings-select]")
+          ) {
+            event.preventDefault();
           }
-        >
-          <DropdownMenuRadioItem value="grouped">Grouped</DropdownMenuRadioItem>
-          <DropdownMenuRadioItem value="single">
-            Single list
-          </DropdownMenuRadioItem>
-        </DropdownMenuRadioGroup>
-        <DropdownMenuSeparator />
-        <DropdownMenuLabel>Sort</DropdownMenuLabel>
-        <DropdownMenuCheckboxItem
-          checked={listSort.enabled}
-          onCheckedChange={(enabled) =>
-            onListSortChange({ ...listSort, enabled: Boolean(enabled) })
+        }}
+      >
+        <SettingsRow
+          icon={<RowsIcon size={16} />}
+          label="Layout"
+          control={
+            <SettingsChoice
+              label={listSubmode === "grouped" ? "Grouped" : "Single"}
+              onClick={() =>
+                onListSubmodeChange(
+                  listSubmode === "grouped" ? "single" : "grouped",
+                )
+              }
+            />
           }
-        >
-          Enabled
-        </DropdownMenuCheckboxItem>
-        <DropdownMenuRadioGroup
-          value={listSort.field}
-          onValueChange={(value) =>
-            onListSortChange({
-              ...listSort,
-              field: value as ListSortField,
-            })
+        />
+        <SettingsRow
+          icon={<SortIcon size={16} />}
+          label="Sort"
+          control={
+            <SettingsChoice
+              label={listSort.enabled ? "On" : "Off"}
+              pressed={listSort.enabled}
+              onClick={() =>
+                onListSortChange({ ...listSort, enabled: !listSort.enabled })
+              }
+            />
           }
-        >
-          <DropdownMenuRadioItem value="title">Title</DropdownMenuRadioItem>
-          <DropdownMenuRadioItem value="schedule">
-            Schedule
-          </DropdownMenuRadioItem>
-          <DropdownMenuRadioItem value="priority">
-            Priority
-          </DropdownMenuRadioItem>
-        </DropdownMenuRadioGroup>
-        <DropdownMenuRadioGroup
-          value={listSort.direction}
-          onValueChange={(value) =>
-            onListSortChange({
-              ...listSort,
-              direction: value as "asc" | "desc",
-            })
+        />
+        <div className="mx-2 my-1 h-px bg-border" />
+        <SettingsRow
+          icon={<SortIcon size={16} />}
+          label="Sort by"
+          control={
+            <SettingsSelect
+              value={listSort.field}
+              disabled={!listSort.enabled}
+              options={SORT_FIELD_OPTIONS}
+              onValueChange={(field) =>
+                onListSortChange({ ...listSort, field })
+              }
+            />
           }
-        >
-          <DropdownMenuRadioItem value="asc">Ascending</DropdownMenuRadioItem>
-          <DropdownMenuRadioItem value="desc">Descending</DropdownMenuRadioItem>
-        </DropdownMenuRadioGroup>
-      </DropdownMenuContent>
-    </DropdownMenu>
+        />
+        <SettingsRow
+          icon={<ChevronIcon size={16} className="rotate-90" />}
+          label="Order"
+          control={
+            <SettingsSelect
+              value={listSort.direction}
+              disabled={!listSort.enabled}
+              options={SORT_DIRECTION_OPTIONS}
+              onValueChange={(direction) =>
+                onListSortChange({ ...listSort, direction })
+              }
+            />
+          }
+        />
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function SettingsRow({ icon, label, control }: SettingsRowProps) {
+  return (
+    <div className="flex items-center gap-3 px-2.5 py-2">
+      <span className="text-muted-foreground">{icon}</span>
+      <span className="min-w-0 flex-1 text-sm text-foreground">{label}</span>
+      {control}
+    </div>
+  );
+}
+
+function SettingsChoice({
+  label,
+  pressed = false,
+  onClick,
+}: SettingsChoiceProps) {
+  return (
+    <button
+      type="button"
+      aria-pressed={pressed}
+      className={cn(
+        "h-8 min-w-[4.75rem] rounded-md border border-border px-3 text-sm text-foreground",
+        "hover:bg-surface",
+        pressed && "bg-surface",
+      )}
+      onClick={onClick}
+    >
+      {label}
+    </button>
+  );
+}
+
+function SettingsSelect<Value extends string>({
+  value,
+  disabled,
+  options,
+  onValueChange,
+}: SettingsSelectProps<Value>) {
+  return (
+    <Select
+      value={value}
+      disabled={disabled}
+      onValueChange={(next) => onValueChange(next as Value)}
+    >
+      <SelectTrigger className="h-8 w-[8.25rem] rounded-md border-border bg-transparent px-2.5 text-sm shadow-none focus:ring-0 disabled:cursor-not-allowed disabled:opacity-40">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent data-board-settings-select="" className="rounded-lg">
+        {options.map((option) => (
+          <SelectItem key={option.value} value={option.value}>
+            {option.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
 
@@ -899,6 +979,45 @@ class BoardPointerSensor extends PointerSensor {
       },
     },
   ];
+}
+
+interface ViewSettingsMenuProps {
+  listSubmode: BoardListSubmode;
+  listSort: {
+    enabled: boolean;
+    field: ListSortField;
+    direction: "asc" | "desc";
+  };
+  onListSubmodeChange: (next: BoardListSubmode) => void;
+  onListSortChange: (next: {
+    enabled: boolean;
+    field: ListSortField;
+    direction: "asc" | "desc";
+  }) => void;
+}
+
+interface SettingsRowProps {
+  icon: ReactNode;
+  label: string;
+  control: ReactNode;
+}
+
+interface SettingsChoiceProps {
+  label: string;
+  pressed?: boolean;
+  onClick: () => void;
+}
+
+interface SettingsOption<Value extends string> {
+  value: Value;
+  label: string;
+}
+
+interface SettingsSelectProps<Value extends string> {
+  value: Value;
+  disabled: boolean;
+  options: ReadonlyArray<SettingsOption<Value>>;
+  onValueChange: (value: Value) => void;
 }
 
 interface ListFastCreate {

@@ -88,7 +88,15 @@ export function BoardAxes({
             onClose={() => setRenamingAreaId(null)}
           />
         ) : (
-          <span key={area.id} className="inline-flex items-center">
+          <span
+            key={area.id}
+            className={cn(
+              "group inline-flex items-center rounded-md",
+              areaId === area.id
+                ? "bg-surface text-foreground"
+                : "text-muted-foreground hover:bg-surface hover:text-foreground",
+            )}
+          >
             <AxisChip
               active={areaId === area.id}
               onClick={() => onAreaId(area.id)}
@@ -287,7 +295,7 @@ function AreaMenu({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         aria-label={`Edit ${area.name}`}
-        className="flex h-7 w-5 items-center justify-center text-xs text-muted-foreground hover:text-foreground"
+        className="pointer-events-none flex h-7 w-5 items-center justify-center text-xs text-muted-foreground opacity-0 hover:text-foreground group-hover:pointer-events-auto group-hover:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100 data-[state=open]:pointer-events-auto data-[state=open]:opacity-100"
       >
         ···
       </PopoverTrigger>
@@ -364,12 +372,7 @@ function AxisChip({
     <button
       type="button"
       aria-pressed={active}
-      className={cn(
-        "h-7 rounded-md px-2 text-sm",
-        active
-          ? "bg-surface text-foreground"
-          : "text-muted-foreground hover:bg-surface hover:text-foreground",
-      )}
+      className="h-7 rounded-md px-2 text-sm"
       onClick={onClick}
     >
       {children}

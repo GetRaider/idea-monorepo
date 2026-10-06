@@ -3,6 +3,22 @@
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  pointerWithin,
+  rectIntersection,
+  useDndContext,
+  useDraggable,
+  useDroppable,
+  useSensor,
+  useSensors,
+  type CollisionDetection,
+  type DragEndEvent,
+  type DraggableAttributes,
+  type DraggableSyntheticListeners,
+} from "@dnd-kit/core";
+import {
   Button,
   Collapsible,
   CollapsibleContent,
@@ -49,15 +65,27 @@ import { useSpaceDialogs } from "./space-dialogs";
 export function TasksModuleSidebar() {
   const {
     state: { folders, boards, view },
-    actions: { openCreateDialog },
+    actions: { openCreateDialog, updateBoard },
   } = useTasks();
   const [isOpen, setIsOpen] = useState(true);
   const [width, setWidth] = useState(TASKS_SIDEBAR_DEFAULT_WIDTH);
+  const sensors = useSensors(
+    useSensor(SpacePointerSensor, { activationConstraint: { distance: 8 } }),
+  );
 
   useEffect(() => {
     setIsOpen(readTasksSidebarOpen());
     setWidth(readTasksSidebarWidth());
   }, []);
+
+  function handleSpaceDragEnd(event: DragEndEvent) {
+    const drag = event.active.data.current;
+    const drop = event.over?.data.current;
+    if (!isSpaceDrag(drag) || !isSpaceDrop(drop)) return;
+    const folderId = drop.kind === "folder" ? drop.folderId : null;
+    if (drag.folderId === folderId) return;
+    void updateBoard(drag.boardId, { folderId });
+  }
 
   const activeBoardId = view.kind === "board" ? view.boardId : null;
   const inboxBoard = boards.find((board) => board.name === INBOX_BOARD_NAME);
@@ -146,37 +174,54 @@ export function TasksModuleSidebar() {
               </TooltipContent>
             </Tooltip>
           </div>
-          {isOpen
-            ? folders.map((folder) => (
-                <FolderGroup
-                  key={folder.id}
-                  folder={folder}
-                  boards={boards.filter(
-                    (board) => board.folderId === folder.id,
-                  )}
-                  activeBoardId={activeBoardId}
-                />
-              ))
-            : null}
-          {(isOpen ? rootBoards : boards).map((board) => (
-            <NavRow
-              key={board.id}
-              href={tasksUrlHelper.routing.buildBoardUrl(board.name)}
-              active={activeBoardId === board.id}
-              icon={<BoardIcon size={16} />}
-              label={board.name}
-              collapsed={!isOpen}
-              menu={isOpen ? <BoardMenu board={board} /> : null}
-            />
-          ))}
+          {isOpen ? (
+            <DndContext
+              sensors={sensors}
+              collisionDetection={spaceCollisionDetection}
+              onDragEnd={handleSpaceDragEnd}
+            >
+              <RootSpaceList
+                boards={rootBoards.map((board) => (
+                  <SpaceBoardRow
+                    key={board.id}
+                    boardId={board.id}
+                    folderId={board.folderId}
+                    href={tasksUrlHelper.routing.buildBoardUrl(board.name)}
+                    active={activeBoardId === board.id}
+                    icon={<BoardIcon size={16} />}
+                    label={board.name}
+                    menu={<BoardMenu board={board} />}
+                  />
+                ))}
+              >
+                {folders.map((folder) => (
+                  <FolderGroup
+                    key={folder.id}
+                    folder={folder}
+                    boards={boards.filter(
+                      (board) => board.folderId === folder.id,
+                    )}
+                    activeBoardId={activeBoardId}
+                  />
+                ))}
+              </RootSpaceList>
+              <SpaceDragOverlay />
+            </DndContext>
+          ) : (
+            boards.map((board) => (
+              <NavRow
+                key={board.id}
+                href={tasksUrlHelper.routing.buildBoardUrl(board.name)}
+                active={activeBoardId === board.id}
+                icon={<BoardIcon size={16} />}
+                label={board.name}
+                collapsed
+              />
+            ))
+          )}
         </section>
       </div>
-      <div
-        className={cn(
-          "shrink-0 border-t border-border p-2",
-          !isOpen && "px-1.5",
-        )}
-      >
+      <div className={cn("shrink-0 p-2", !isOpen && "px-1.5")}>
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
@@ -208,42 +253,131 @@ export function TasksModuleSidebar() {
 
 function FolderGroup({ folder, boards, activeBoardId }: FolderGroupProps) {
   const [isExpanded, setIsExpanded] = useState(true);
+  const { setNodeRef, isOver } = useDroppable({
+    id: `space-folder:${folder.id}`,
+    data: { kind: "folder", folderId: folder.id } satisfies SpaceDropData,
+  });
+  const { active } = useDndContext();
+  const drag = active?.data.current;
+  const showDrop =
+    isOver && isSpaceDrag(drag) && drag.folderId !== folder.id;
 
   return (
     <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
-      <div className="my-1 flex items-center">
-        <CollapsibleTrigger asChild>
-          <button
-            type="button"
-            className="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-muted-foreground hover:bg-surface hover:text-foreground"
-          >
-            <ChevronIcon
-              size={12}
-              className={cn(
-                "shrink-0 transition-transform",
-                isExpanded && "rotate-90",
-              )}
+      <div ref={setNodeRef} className="relative rounded-lg">
+        {showDrop ? <DropSlot /> : null}
+        <div className="group relative my-1 flex items-center rounded-lg text-muted-foreground hover:bg-surface hover:text-foreground">
+          <CollapsibleTrigger asChild>
+            <button
+              type="button"
+              className="flex min-w-0 flex-1 items-center gap-2 rounded-lg py-1.5 pl-2 pr-8 text-left text-sm"
+            >
+              <ChevronIcon
+                size={12}
+                className={cn(
+                  "shrink-0 transition-transform",
+                  isExpanded && "rotate-90",
+                )}
+              />
+              <FolderIcon size={16} />
+              <span className="min-w-0 truncate">{folder.name}</span>
+            </button>
+          </CollapsibleTrigger>
+          <div className="absolute right-0.5 top-1/2 -translate-y-1/2">
+            <FolderMenu folder={folder} />
+          </div>
+        </div>
+        <CollapsibleContent>
+          {boards.map((board) => (
+            <SpaceBoardRow
+              key={board.id}
+              boardId={board.id}
+              folderId={board.folderId}
+              href={tasksUrlHelper.routing.buildBoardUrl(board.name)}
+              active={activeBoardId === board.id}
+              icon={<BoardIcon size={16} />}
+              label={board.name}
+              nested
+              menu={<BoardMenu board={board} />}
             />
-            <FolderIcon size={16} />
-            <span className="min-w-0 truncate">{folder.name}</span>
-          </button>
-        </CollapsibleTrigger>
-        <FolderMenu folder={folder} />
+          ))}
+        </CollapsibleContent>
       </div>
-      <CollapsibleContent>
-        {boards.map((board) => (
-          <NavRow
-            key={board.id}
-            href={tasksUrlHelper.routing.buildBoardUrl(board.name)}
-            active={activeBoardId === board.id}
-            icon={<BoardIcon size={16} />}
-            label={board.name}
-            nested
-            menu={<BoardMenu board={board} />}
-          />
-        ))}
-      </CollapsibleContent>
     </Collapsible>
+  );
+}
+
+function RootSpaceList({
+  children,
+  boards,
+}: {
+  children: ReactNode;
+  boards: ReactNode;
+}) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: "space-root",
+    data: { kind: "root" } satisfies SpaceDropData,
+  });
+  const { active } = useDndContext();
+  const drag = active?.data.current;
+  const draggingFromFolder = isSpaceDrag(drag) && drag.folderId != null;
+
+  return (
+    <div ref={setNodeRef} className="relative flex min-h-0 flex-1 flex-col">
+      {children}
+      {draggingFromFolder ? (
+        <div
+          className={cn(
+            "relative my-1 h-10 shrink-0 rounded-lg",
+            isOver && "bg-surface/40",
+          )}
+        >
+          <DropSlot />
+        </div>
+      ) : null}
+      {boards}
+    </div>
+  );
+}
+
+function DropSlot() {
+  return (
+    <span className="pointer-events-none absolute inset-x-1 inset-y-1 z-10 rounded-lg border border-dotted border-muted-foreground/80" />
+  );
+}
+
+function SpaceDragOverlay() {
+  const { active } = useDndContext();
+  const drag = active?.data.current;
+  if (!isSpaceDrag(drag)) return null;
+  return (
+    <DragOverlay dropAnimation={null}>
+      <div className="cursor-grabbing rounded-md border border-border bg-panel px-3 py-2 text-sm shadow-lg">
+        {drag.label}
+      </div>
+    </DragOverlay>
+  );
+}
+
+function SpaceBoardRow({
+  boardId,
+  folderId,
+  ...row
+}: NavRowProps & { boardId: string; folderId: string | null }) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `space-board:${boardId}`,
+    data: {
+      kind: "board",
+      boardId,
+      folderId,
+      label: row.label,
+    } satisfies SpaceDragData,
+  });
+
+  return (
+    <div ref={setNodeRef} className={cn(isDragging && "opacity-0")}>
+      <NavRow {...row} drag={{ attributes, listeners }} />
+    </div>
   );
 }
 
@@ -255,19 +389,22 @@ function NavRow({
   collapsed = false,
   nested = false,
   menu,
+  drag,
 }: NavRowProps) {
   const row = (
     <Link
       href={href}
       aria-label={label}
       className={cn(
-        "flex min-w-0 items-center gap-3 rounded-lg py-1.5 text-sm transition-colors",
+        "flex min-w-0 items-center gap-3 rounded-lg py-1.5 text-sm",
         collapsed ? "justify-center px-0" : "flex-1 px-3 text-left",
         nested && !collapsed && "pl-8",
-        active
-          ? "bg-surface text-foreground"
-          : "text-muted-foreground hover:bg-surface hover:text-foreground",
+        menu && !collapsed && "pr-8",
+        drag && "cursor-grab active:cursor-grabbing",
       )}
+      draggable={drag ? false : undefined}
+      {...drag?.listeners}
+      {...drag?.attributes}
     >
       {icon}
       {collapsed ? null : <span className="min-w-0 truncate">{label}</span>}
@@ -284,9 +421,18 @@ function NavRow({
   }
 
   return (
-    <div className="my-1 flex items-center gap-0.5">
+    <div
+      className={cn(
+        "group relative my-1 flex items-center rounded-lg",
+        active
+          ? "bg-surface text-foreground"
+          : "text-muted-foreground hover:bg-surface hover:text-foreground",
+      )}
+    >
       {row}
-      {menu}
+      {menu ? (
+        <div className="absolute right-0.5 top-1/2 -translate-y-1/2">{menu}</div>
+      ) : null}
     </div>
   );
 }
@@ -338,7 +484,7 @@ function RowMenu({ children }: { children: ReactNode }) {
           type="button"
           size="icon"
           variant="ghost"
-          className="h-7 w-7 shrink-0 text-muted-foreground"
+          className="pointer-events-none h-7 w-7 shrink-0 text-muted-foreground opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100 data-[state=open]:pointer-events-auto data-[state=open]:opacity-100"
           aria-label="Space actions"
         >
           <EllipsisIcon size={14} />
@@ -347,6 +493,56 @@ function RowMenu({ children }: { children: ReactNode }) {
       <DropdownMenuContent align="end">{children}</DropdownMenuContent>
     </DropdownMenu>
   );
+}
+
+function isSpaceDrag(value: unknown): value is SpaceDragData {
+  if (typeof value !== "object" || value === null) return false;
+  if (!("kind" in value) || value.kind !== "board") return false;
+  if (!("boardId" in value) || typeof value.boardId !== "string") return false;
+  if (!("folderId" in value)) return false;
+  if (!("label" in value) || typeof value.label !== "string") return false;
+  return value.folderId === null || typeof value.folderId === "string";
+}
+
+const spaceCollisionDetection: CollisionDetection = (args) => {
+  const pointerHits = pointerWithin(args);
+  const hits = pointerHits.length > 0 ? pointerHits : rectIntersection(args);
+  const folder = hits.find((hit) => String(hit.id).startsWith("space-folder:"));
+  if (folder) return [folder];
+  const root = hits.find((hit) => hit.id === "space-root");
+  if (root) return [root];
+  return hits[0] ? [hits[0]] : [];
+};
+
+function isSpaceDrop(value: unknown): value is SpaceDropData {
+  if (typeof value !== "object" || value === null || !("kind" in value)) {
+    return false;
+  }
+  if (value.kind === "root") return true;
+  return (
+    value.kind === "folder" &&
+    "folderId" in value &&
+    typeof value.folderId === "string"
+  );
+}
+
+class SpacePointerSensor extends PointerSensor {
+  static activators = [
+    {
+      eventName: "onPointerDown" as const,
+      handler: ({ nativeEvent }: { nativeEvent: PointerEvent }) => {
+        if (!nativeEvent.isPrimary || nativeEvent.button !== 0) return false;
+        const target = nativeEvent.target;
+        if (
+          target instanceof Element &&
+          target.closest("button, input, textarea, select, [data-no-dnd]")
+        ) {
+          return false;
+        }
+        return true;
+      },
+    },
+  ];
 }
 
 interface FolderGroupProps {
@@ -363,4 +559,19 @@ interface NavRowProps {
   collapsed?: boolean;
   nested?: boolean;
   menu?: ReactNode;
+  drag?: {
+    attributes: DraggableAttributes;
+    listeners: DraggableSyntheticListeners;
+  };
 }
+
+interface SpaceDragData {
+  kind: "board";
+  boardId: string;
+  folderId: string | null;
+  label: string;
+}
+
+type SpaceDropData =
+  | { kind: "folder"; folderId: string }
+  | { kind: "root" };

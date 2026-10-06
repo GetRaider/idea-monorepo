@@ -36,6 +36,13 @@
       "when": 1789074000000,
       "tag": "0004_task_recurrence",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791299664503,
+      "tag": "0005_board_areas_and_stages",
+      "breakpoints": true
     }
   ]
 }

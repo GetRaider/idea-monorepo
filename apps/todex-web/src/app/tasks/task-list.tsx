@@ -59,11 +59,18 @@ import {
   type BoardViewMode,
 } from "./task-board-preferences";
 import { ScheduleBoards } from "./schedule-boards";
+import {
+  BoardAxes,
+  ProgressStageSettings,
+  StageNameProvider,
+  useBoardAxes,
+} from "./board-axes";
 import { TaskComposer, type TaskComposerValues } from "./task-composer";
 import { TaskKanban } from "./task-kanban";
 import {
   STATUS_LABEL,
   STATUS_ORDER,
+  filterStatusGroups,
   isoToDateInput,
   localDayScheduleQuery,
   resolveCombinedOpenDrop,
@@ -101,6 +108,15 @@ export function TaskList() {
   const [isComposerOpen, setIsComposerOpen] = useState(false);
   const [composerBoardId, setComposerBoardId] = useState<string | null>(null);
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
+  const [areaFilter, setAreaFilter] = useState<string | null>(null);
+  const boardDetail = useBoardAxes(
+    view.kind === "board" ? (selectedBoard?.id ?? null) : null,
+  );
+  const boardAreas = boardDetail.data?.areas ?? [];
+  const selectedAreaId =
+    boardAreas.find((area) => area.id === areaFilter)?.id ??
+    boardAreas.find((area) => area.isDefault)?.id ??
+    null;
   const {
     viewMode,
     listSubmode,
@@ -117,9 +133,20 @@ export function TaskList() {
     view.kind === "schedule" ? `schedule:${view.schedule}` : null;
   const { collapsedBoardIds, toggleBoardCollapsed } =
     useCollapsedScheduleBoards(scheduleContextKey);
+  const visibleGroups = useMemo(() => {
+    if (view.kind !== "board") return groups;
+    if (!selectedAreaId) {
+      return {
+        [TaskStatus.TODO]: [],
+        [TaskStatus.IN_PROGRESS]: [],
+        [TaskStatus.DONE]: [],
+      };
+    }
+    return filterStatusGroups(groups, selectedAreaId);
+  }, [groups, selectedAreaId, view.kind]);
   const sortedGroups = useMemo(
-    () => sortGroupsByListSort(groups, listSort),
-    [groups, listSort],
+    () => sortGroupsByListSort(visibleGroups, listSort),
+    [listSort, visibleGroups],
   );
   const scheduleSections = useMemo(() => {
     if (view.kind !== "schedule") return [];
@@ -171,7 +198,7 @@ export function TaskList() {
       return;
     }
     const columnNodes = (status: Task["status"]) => {
-      const nodes = groups[status] ?? [];
+      const nodes = visibleGroups[status] ?? [];
       if (!drop.boardId) return nodes;
       return nodes.filter((node) => node.taskBoardId === drop.boardId);
     };
@@ -197,7 +224,7 @@ export function TaskList() {
             drop.index,
           ),
         };
-    const currentIndex = (groups[task.status] ?? [])
+    const currentIndex = (visibleGroups[task.status] ?? [])
       .filter((node) => node.taskBoardId === task.taskBoardId)
       .findIndex((node) => node.id === task.id);
     if (resolved.status === task.status && resolved.index === currentIndex) {
@@ -214,6 +241,10 @@ export function TaskList() {
   const hasVisibleTasks = STATUS_ORDER.some(
     (status) => (sortedGroups[status] ?? []).length > 0,
   );
+
+  useEffect(() => {
+    setAreaFilter(null);
+  }, [selectedBoard?.id]);
 
   useEffect(() => {
     if (!isComposerOpen && !composerBoardId) return;
@@ -235,6 +266,7 @@ export function TaskList() {
       priority: values.priority,
       estimation: values.estimation,
       taskBoardId: boardId ?? values.taskBoardId ?? undefined,
+      areaId: selectedAreaId ?? undefined,
       scheduleDate: values.scheduleDate,
       dueDate: values.dueDate,
     });
@@ -252,6 +284,14 @@ export function TaskList() {
         setComposerBoardId((current) => (current === boardId ? null : current)),
       onCreate: (values: TaskComposerValues) => submitComposer(values, boardId),
     };
+  }
+
+  function createSubtask(parentTaskId: string) {
+    const parent = tasks.find((item) => item.id === parentTaskId);
+    createTask("New subtask", parentTaskId, {
+      areaId: parent?.areaId,
+      progressStageId: parent?.progressStageId,
+    });
   }
 
   function toggleDone(task: NestedTask) {
@@ -292,9 +332,7 @@ export function TaskList() {
                   fastCreate={fastCreateFor(section.board.id)}
                   onSelect={setSelectedTaskId}
                   onToggleDone={toggleDone}
-                  onCreateSubtask={(parentTaskId) =>
-                    createTask("New subtask", parentTaskId)
-                  }
+                  onCreateSubtask={createSubtask}
                   reorderEnabled={reorderEnabled}
                 />
               </div>
@@ -306,7 +344,7 @@ export function TaskList() {
     if (viewMode === "kanban") {
       return (
         <TaskKanban
-          groups={groups}
+          groups={visibleGroups}
           boardNameById={boardNameById}
           showBoardName={false}
           reorderEnabled={reorderEnabled}
@@ -346,27 +384,41 @@ export function TaskList() {
           }
           onSelect={setSelectedTaskId}
           onToggleDone={toggleDone}
-          onCreateSubtask={(parentTaskId) =>
-            createTask("New subtask", parentTaskId)
-          }
+          onCreateSubtask={createSubtask}
           reorderEnabled={reorderEnabled}
         />
       </div>
     );
   }
 
+  const stageBoardIds = useMemo(
+    () => [...new Set(tasks.map((task) => task.taskBoardId))],
+    [tasks],
+  );
+
   return (
+    <StageNameProvider boardIds={stageBoardIds}>
     <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-auto px-6 pb-6 pt-3">
-      <div className="mb-6 flex items-center justify-between gap-4">
-        <TasksBreadcrumb
-          className="text-2xl font-semibold tracking-tight"
-          boardName={title}
-          trailing={view.kind === "board" ? <BoardGlyph /> : null}
-        />
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div className="flex min-w-0 flex-col gap-3">
+          <TasksBreadcrumb
+            className="text-2xl font-semibold tracking-tight"
+            boardName={title}
+            trailing={view.kind === "board" ? <BoardGlyph /> : null}
+          />
+          {isBoard && selectedBoard ? (
+            <BoardAxes
+              boardId={selectedBoard.id}
+              areaId={selectedAreaId}
+              onAreaId={setAreaFilter}
+            />
+          ) : null}
+        </div>
         <div className="flex items-center gap-2">
           <ViewModeSwitch viewMode={viewMode} onViewModeChange={setViewMode} />
           <TaskSearchField />
           <ViewSettingsMenu
+            boardId={isBoard ? selectedBoard?.id : null}
             listSubmode={listSubmode}
             listSort={listSort}
             onListSubmodeChange={setListSubmode}
@@ -434,6 +486,7 @@ export function TaskList() {
         </DndContext>
       )}
     </section>
+    </StageNameProvider>
   );
 }
 
@@ -781,6 +834,7 @@ const SORT_DIRECTION_OPTIONS = [
 ] as const satisfies ReadonlyArray<SettingsOption<"asc" | "desc">>;
 
 function ViewSettingsMenu({
+  boardId,
   listSubmode,
   listSort,
   onListSubmodeChange,
@@ -869,6 +923,12 @@ function ViewSettingsMenu({
             />
           }
         />
+        {boardId ? (
+          <>
+            <div className="mx-2 my-1 h-px bg-border" />
+            <ProgressStageSettings boardId={boardId} />
+          </>
+        ) : null}
       </PopoverContent>
     </Popover>
   );
@@ -982,6 +1042,7 @@ class BoardPointerSensor extends PointerSensor {
 }
 
 interface ViewSettingsMenuProps {
+  boardId?: string | null;
   listSubmode: BoardListSubmode;
   listSort: {
     enabled: boolean;

@@ -1,7 +1,9 @@
 import type { TaskRecurrence } from "@repo/api/todex";
 import { sql } from "drizzle-orm";
 import {
+  boolean,
   foreignKey,
+  index,
   integer,
   jsonb,
   pgEnum,
@@ -104,6 +106,66 @@ export const taskBoards = pgTable("task_boards", {
     .notNull(),
 });
 
+export const boardAreas = pgTable(
+  "board_areas",
+  {
+    id: text("id").primaryKey(),
+    boardId: text("board_id")
+      .notNull()
+      .references(() => taskBoards.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    position: integer("position").notNull().default(0),
+    isDefault: boolean("is_default").notNull().default(false),
+    createdAt: timestamp("created_at")
+      .$defaultFn(() => new Date())
+      .notNull(),
+    updatedAt: timestamp("updated_at")
+      .$defaultFn(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("board_areas_board_position_unique").on(
+      table.boardId,
+      table.position,
+    ),
+    uniqueIndex("board_areas_board_name_unique").on(
+      table.boardId,
+      sql`lower(${table.name})`,
+    ),
+    uniqueIndex("board_areas_default_unique")
+      .on(table.boardId)
+      .where(sql`${table.isDefault} = true`),
+  ],
+);
+
+export const boardProgressStages = pgTable(
+  "board_progress_stages",
+  {
+    id: text("id").primaryKey(),
+    boardId: text("board_id")
+      .notNull()
+      .references(() => taskBoards.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    position: integer("position").notNull().default(0),
+    createdAt: timestamp("created_at")
+      .$defaultFn(() => new Date())
+      .notNull(),
+    updatedAt: timestamp("updated_at")
+      .$defaultFn(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("board_progress_stages_board_position_unique").on(
+      table.boardId,
+      table.position,
+    ),
+    uniqueIndex("board_progress_stages_board_name_unique").on(
+      table.boardId,
+      sql`lower(${table.name})`,
+    ),
+  ],
+);
+
 export const tasks = pgTable(
   "tasks",
   {
@@ -127,6 +189,13 @@ export const tasks = pgTable(
       .notNull()
       .default(sql`'[]'::jsonb`),
     recurrence: jsonb("recurrence").$type<TaskRecurrence | null>(),
+    areaId: text("area_id")
+      .notNull()
+      .references(() => boardAreas.id, { onDelete: "restrict" }),
+    progressStageId: text("progress_stage_id").references(
+      () => boardProgressStages.id,
+      { onDelete: "set null" },
+    ),
     parentTaskId: text("parent_task_id"),
     position: integer("position").notNull().default(0),
     createdAt: timestamp("created_at")
@@ -141,6 +210,8 @@ export const tasks = pgTable(
       table.workspaceId,
       table.taskKey,
     ),
+    index("tasks_area_id_idx").on(table.areaId),
+    index("tasks_progress_stage_id_idx").on(table.progressStageId),
     foreignKey({
       columns: [table.parentTaskId],
       foreignColumns: [table.id],
@@ -152,6 +223,8 @@ export type WorkspaceRow = typeof workspaces.$inferSelect;
 export type WorkspaceMemberRow = typeof workspaceMembers.$inferSelect;
 export type FolderRow = typeof folders.$inferSelect;
 export type TaskBoardRow = typeof taskBoards.$inferSelect;
+export type BoardAreaRow = typeof boardAreas.$inferSelect;
+export type BoardProgressStageRow = typeof boardProgressStages.$inferSelect;
 export type TaskRow = typeof tasks.$inferSelect;
 
 interface TaskAcceptanceCriterion {

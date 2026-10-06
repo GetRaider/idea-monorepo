@@ -21,8 +21,23 @@ export const WorkspaceMemberRole = {
   MEMBER: "member",
 } as const;
 
+export const ProgressStageTemplate = {
+  FOUNDER: "founder",
+} as const;
+
+export const DEFAULT_AREA_NAME = "General";
+
+export const PROGRESS_STAGE_TEMPLATES = {
+  founder: ["Discovery", "Product", "Design", "Development", "Validation"],
+} as const satisfies Record<
+  (typeof ProgressStageTemplate)[keyof typeof ProgressStageTemplate],
+  readonly string[]
+>;
+
 export type TaskStatus = (typeof TaskStatus)[keyof typeof TaskStatus];
 export type TaskPriority = (typeof TaskPriority)[keyof typeof TaskPriority];
 export type FolderKind = (typeof FolderKind)[keyof typeof FolderKind];
 export type WorkspaceMemberRole =
   (typeof WorkspaceMemberRole)[keyof typeof WorkspaceMemberRole];
+export type ProgressStageTemplate =
+  (typeof ProgressStageTemplate)[keyof typeof ProgressStageTemplate];

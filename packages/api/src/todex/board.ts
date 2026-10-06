@@ -1,6 +1,8 @@
 import { z } from "zod";
 
+import { BoardAreaSchema } from "./area.ts";
 import { IsoDateTimeSchema } from "./iso.ts";
+import { BoardProgressStageSchema } from "./progress-stage.ts";
 
 export const TaskBoardSchema = z.object({
   id: z.string(),
@@ -28,7 +30,13 @@ export const UpdateTaskBoardBodySchema = z.object({
   emoji: z.string().nullable().optional(),
 });
 
+export const TaskBoardDetailSchema = TaskBoardSchema.extend({
+  areas: z.array(BoardAreaSchema),
+  progressStages: z.array(BoardProgressStageSchema),
+});
+
 export type TaskBoard = z.infer<typeof TaskBoardSchema>;
+export type TaskBoardDetail = z.infer<typeof TaskBoardDetailSchema>;
 export type ListTaskBoardsQuery = z.infer<typeof ListTaskBoardsQuerySchema>;
 export type CreateTaskBoardBody = z.infer<typeof CreateTaskBoardBodySchema>;
 export type UpdateTaskBoardBody = z.infer<typeof UpdateTaskBoardBodySchema>;

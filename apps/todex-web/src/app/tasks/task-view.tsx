@@ -62,6 +62,7 @@ import {
 } from "@/helpers/panel-layout";
 import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
 
+import { useBoardAxes } from "./board-axes";
 import { DatePicker, EstimatePicker } from "./task-pickers";
 import { TaskRecurrencePicker } from "./task-recurrence-picker";
 import { TaskDescriptionEditor } from "./task-description-editor";
@@ -230,7 +231,12 @@ export function TaskView() {
         onUpdate={(body) => updateTask(selectedTask.id, body, { quiet: true })}
         onUpdateStatus={(taskId, status) => updateTaskStatus(taskId, status)}
         onOpenTask={setSelectedTaskId}
-        onCreateSubtask={(summary) => createTask(summary, selectedTask.id)}
+        onCreateSubtask={(summary) =>
+          createTask(summary, selectedTask.id, {
+            areaId: selectedTask.areaId,
+            progressStageId: selectedTask.progressStageId,
+          })
+        }
       />
     </div>
   );
@@ -265,6 +271,9 @@ function TaskViewBody({
   const saveTimerRef = useRef<number | null>(null);
   const onUpdateRef = useRef(onUpdate);
   onUpdateRef.current = onUpdate;
+  const boardAxes = useBoardAxes(task.taskBoardId);
+  const areas = boardAxes.data?.areas ?? [];
+  const stages = boardAxes.data?.progressStages ?? [];
 
   function flushPendingUpdate() {
     if (saveTimerRef.current != null) {
@@ -435,6 +444,34 @@ function TaskViewBody({
                 ) : null}
               </div>
             </DetailRow>
+            {stages.length > 0 ? (
+            <DetailRow icon={<StageMark />} label="Stage">
+              <Select
+                value={
+                  stages.some((stage) => stage.id === task.progressStageId)
+                    ? (task.progressStageId ?? "none")
+                    : "none"
+                }
+                onValueChange={(value) =>
+                  onUpdate({
+                    progressStageId: value === "none" ? null : value,
+                  })
+                }
+              >
+                <SelectTrigger className="h-8 w-full border-0 bg-transparent px-0 text-sm shadow-none">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  {stages.map((stage) => (
+                    <SelectItem key={stage.id} value={stage.id}>
+                      {stage.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </DetailRow>
+            ) : null}
             <DetailRow
               icon={<PriorityGlyph priority={task.priority} />}
               label="Priority"
@@ -484,6 +521,27 @@ function TaskViewBody({
                 </Select>
               ) : (
                 <span className="text-sm">{boardName}</span>
+              )}
+            </DetailRow>
+            <DetailRow icon={<AreaMark />} label="Area">
+              {areas.some((area) => area.id === task.areaId) ? (
+                <Select
+                  value={task.areaId}
+                  onValueChange={(value) => onUpdate({ areaId: value })}
+                >
+                  <SelectTrigger className="h-8 w-full border-0 bg-transparent px-0 text-sm shadow-none">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {areas.map((area) => (
+                      <SelectItem key={area.id} value={area.id}>
+                        {area.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <span className="text-sm text-muted-foreground">General</span>
               )}
             </DetailRow>
             <DetailRow icon={<ClockIcon size={16} />} label="Estimate">
@@ -946,6 +1004,14 @@ function StatusDoneIconMark() {
   return (
     <span className="h-3.5 w-3.5 rounded-full border-2 border-emerald-400" />
   );
+}
+
+function StageMark() {
+  return <span className="h-3.5 w-3.5 rounded-full border border-current" />;
+}
+
+function AreaMark() {
+  return <span className="h-3 w-3 rounded-sm border border-current" />;
 }
 
 function BoardMark() {

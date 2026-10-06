@@ -1,12 +1,19 @@
 import { httpClient } from "@repo/api/helpers";
 import {
+  ApplyProgressStageTemplateBodySchema,
+  BoardAreaSchema,
+  BoardProgressStageSchema,
+  CreateBoardAreaBodySchema,
   CreateFolderBodySchema,
   CreateTaskBoardBodySchema,
   CreateTaskBodySchema,
   FolderSchema,
   MoveTaskBodySchema,
+  ReplaceBoardProgressStagesBodySchema,
+  TaskBoardDetailSchema,
   TaskBoardSchema,
   TaskSchema,
+  UpdateBoardAreaBodySchema,
   UpdateFolderBodySchema,
   UpdateTaskBoardBodySchema,
   UpdateTaskBodySchema,
@@ -22,7 +29,7 @@ const WorkspaceListSchema = z.object({
 });
 
 async function call<T>(
-  method: "get" | "post" | "patch" | "delete",
+  method: "get" | "post" | "patch" | "put" | "delete",
   path: string,
   schema: z.ZodType<T>,
   body?: unknown,
@@ -80,6 +87,42 @@ export const todexClient = {
       ),
     remove: (boardId: string) =>
       call("delete", `/v1/boards/${boardId}`, z.object({ ok: z.boolean() })),
+    get: (boardId: string) =>
+      call("get", `/v1/boards/${boardId}`, TaskBoardDetailSchema),
+    createArea: (boardId: string, body: unknown) =>
+      call(
+        "post",
+        `/v1/boards/${boardId}/areas`,
+        BoardAreaSchema,
+        CreateBoardAreaBodySchema.parse(body),
+      ),
+    updateArea: (boardId: string, areaId: string, body: unknown) =>
+      call(
+        "patch",
+        `/v1/boards/${boardId}/areas/${areaId}`,
+        BoardAreaSchema,
+        UpdateBoardAreaBodySchema.parse(body),
+      ),
+    removeArea: (boardId: string, areaId: string) =>
+      call(
+        "delete",
+        `/v1/boards/${boardId}/areas/${areaId}`,
+        z.object({ ok: z.boolean() }),
+      ),
+    replaceProgressStages: (boardId: string, body: unknown) =>
+      call(
+        "put",
+        `/v1/boards/${boardId}/progress-stages`,
+        z.array(BoardProgressStageSchema),
+        ReplaceBoardProgressStagesBodySchema.parse(body),
+      ),
+    applyProgressStageTemplate: (boardId: string, body: unknown) =>
+      call(
+        "post",
+        `/v1/boards/${boardId}/progress-stages/apply`,
+        z.array(BoardProgressStageSchema),
+        ApplyProgressStageTemplateBodySchema.parse(body),
+      ),
   },
   tasks: {
     list: (

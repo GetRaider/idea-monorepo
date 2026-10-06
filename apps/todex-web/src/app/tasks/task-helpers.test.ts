@@ -7,6 +7,7 @@ import {
   applyRootMove,
   compareTasksForListSort,
   dateInputToLocalDayStartIso,
+  filterStatusGroups,
   resolveCombinedOpenDrop,
   sameBoardDropIndex,
   isInboxTask,
@@ -361,6 +362,29 @@ describe("projectCompletedTask", () => {
   });
 });
 
+describe("filterStatusGroups", () => {
+  it("keeps every task when no area is selected", () => {
+    const groups = {
+      [TaskStatus.TODO]: [task({ id: "a", areaId: "general" })],
+      [TaskStatus.IN_PROGRESS]: [task({ id: "b", areaId: "launch" })],
+      [TaskStatus.DONE]: [],
+    };
+    expect(filterStatusGroups(groups, null)).toBe(groups);
+  });
+
+  it("keeps tasks in the selected area", () => {
+    const launch = task({ id: "launch", areaId: "launch" });
+    const groups = {
+      [TaskStatus.TODO]: [task({ id: "general", areaId: "general" }), launch],
+      [TaskStatus.IN_PROGRESS]: [],
+      [TaskStatus.DONE]: [],
+    };
+    expect(filterStatusGroups(groups, "launch")[TaskStatus.TODO]).toEqual([
+      launch,
+    ]);
+  });
+});
+
 function task(overrides: Partial<NestedTask>): NestedTask {
   return {
     id: "id",
@@ -375,6 +399,8 @@ function task(overrides: Partial<NestedTask>): NestedTask {
     dueDate: null,
     scheduleDate: null,
     recurrence: null,
+    areaId: "area",
+    progressStageId: null,
     estimation: null,
     parentTaskId: null,
     position: 0,

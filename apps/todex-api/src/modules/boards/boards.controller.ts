@@ -6,18 +6,27 @@ import {
   Param,
   Patch,
   Post,
+  Put,
   Query,
   Req,
   UseGuards,
 } from "@nestjs/common";
 import {
+  ApplyProgressStageTemplateBodySchema,
+  CreateBoardAreaBodySchema,
   CreateTaskBoardBodySchema,
   ListTaskBoardsQuerySchema,
+  ReplaceBoardProgressStagesBodySchema,
+  UpdateBoardAreaBodySchema,
   UpdateTaskBoardBodySchema,
 } from "@repo/api/todex";
 import type {
+  ApplyProgressStageTemplateBody,
+  CreateBoardAreaBody,
   CreateTaskBoardBody,
   ListTaskBoardsQuery,
+  ReplaceBoardProgressStagesBody,
+  UpdateBoardAreaBody,
   UpdateTaskBoardBody,
 } from "@repo/api/todex";
 
@@ -41,6 +50,11 @@ export class BoardsController {
     return this.boardsService.list(request.workspaceId, query.folderId);
   }
 
+  @Get(":id")
+  async get(@Req() request: WorkspaceRequest, @Param("id") boardId: string) {
+    return this.boardsService.get(request.workspaceId, boardId);
+  }
+
   @Post()
   async create(
     @Req() request: WorkspaceRequest,
@@ -62,5 +76,67 @@ export class BoardsController {
   async remove(@Req() request: WorkspaceRequest, @Param("id") boardId: string) {
     await this.boardsService.remove(request.workspaceId, boardId);
     return { ok: true };
+  }
+
+  @Post(":id/areas")
+  async createArea(
+    @Req() request: WorkspaceRequest,
+    @Param("id") boardId: string,
+    @Body(zodPipe(CreateBoardAreaBodySchema)) body: CreateBoardAreaBody,
+  ) {
+    return this.boardsService.createArea(request.workspaceId, boardId, body);
+  }
+
+  @Patch(":id/areas/:areaId")
+  async updateArea(
+    @Req() request: WorkspaceRequest,
+    @Param("id") boardId: string,
+    @Param("areaId") areaId: string,
+    @Body(zodPipe(UpdateBoardAreaBodySchema)) body: UpdateBoardAreaBody,
+  ) {
+    return this.boardsService.updateArea(
+      request.workspaceId,
+      boardId,
+      areaId,
+      body,
+    );
+  }
+
+  @Delete(":id/areas/:areaId")
+  async removeArea(
+    @Req() request: WorkspaceRequest,
+    @Param("id") boardId: string,
+    @Param("areaId") areaId: string,
+  ) {
+    await this.boardsService.removeArea(request.workspaceId, boardId, areaId);
+    return { ok: true };
+  }
+
+  @Put(":id/progress-stages")
+  async replaceProgressStages(
+    @Req() request: WorkspaceRequest,
+    @Param("id") boardId: string,
+    @Body(zodPipe(ReplaceBoardProgressStagesBodySchema))
+    body: ReplaceBoardProgressStagesBody,
+  ) {
+    return this.boardsService.replaceProgressStages(
+      request.workspaceId,
+      boardId,
+      body,
+    );
+  }
+
+  @Post(":id/progress-stages/apply")
+  async applyProgressStageTemplate(
+    @Req() request: WorkspaceRequest,
+    @Param("id") boardId: string,
+    @Body(zodPipe(ApplyProgressStageTemplateBodySchema))
+    body: ApplyProgressStageTemplateBody,
+  ) {
+    return this.boardsService.applyProgressStageTemplate(
+      request.workspaceId,
+      boardId,
+      body,
+    );
   }
 }

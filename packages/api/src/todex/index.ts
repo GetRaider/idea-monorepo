@@ -1,9 +1,22 @@
 export {
+  DEFAULT_AREA_NAME,
   FolderKind,
+  PROGRESS_STAGE_TEMPLATES,
+  ProgressStageTemplate,
   TaskPriority,
   TaskStatus,
   WorkspaceMemberRole,
 } from "./enums.ts";
+export {
+  BoardAreaSchema,
+  CreateBoardAreaBodySchema,
+  UpdateBoardAreaBodySchema,
+} from "./area.ts";
+export type {
+  BoardArea,
+  CreateBoardAreaBody,
+  UpdateBoardAreaBody,
+} from "./area.ts";
 export {
   CreateFolderBodySchema,
   FolderSchema,
@@ -19,6 +32,7 @@ export type {
 export {
   CreateTaskBoardBodySchema,
   ListTaskBoardsQuerySchema,
+  TaskBoardDetailSchema,
   TaskBoardSchema,
   UpdateTaskBoardBodySchema,
 } from "./board.ts";
@@ -26,8 +40,20 @@ export type {
   CreateTaskBoardBody,
   ListTaskBoardsQuery,
   TaskBoard,
+  TaskBoardDetail,
   UpdateTaskBoardBody,
 } from "./board.ts";
+export {
+  ApplyProgressStageTemplateBodySchema,
+  BoardProgressStageSchema,
+  ReplaceBoardProgressStagesBodySchema,
+} from "./progress-stage.ts";
+export type {
+  ApplyProgressStageTemplateBody,
+  BoardProgressStage,
+  ProgressStageInput,
+  ReplaceBoardProgressStagesBody,
+} from "./progress-stage.ts";
 export { formatEstimation, parseEstimation } from "./estimation.ts";
 export {
   completeRecurringTask,

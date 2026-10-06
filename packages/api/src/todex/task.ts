@@ -46,6 +46,8 @@ export const TaskSchema = z.object({
   estimation: z.number().int().nonnegative().nullable(),
   acceptanceCriteria: AcceptanceCriteriaSchema.default([]),
   recurrence: TaskRecurrenceSchema.nullable(),
+  areaId: z.string(),
+  progressStageId: z.string().nullable(),
   parentTaskId: z.string().nullable(),
   position: z.number().int().nonnegative(),
   createdAt: IsoDateTimeSchema,
@@ -115,6 +117,8 @@ export const CreateTaskBodySchema = z.object({
   estimation: z.number().int().nonnegative().nullable().optional(),
   acceptanceCriteria: AcceptanceCriteriaSchema.optional(),
   recurrence: TaskRecurrenceSchema.nullable().optional(),
+  areaId: z.string().min(1).optional(),
+  progressStageId: z.string().min(1).nullable().optional(),
   parentTaskId: z.string().nullable().optional(),
 });
 
@@ -138,6 +142,8 @@ export const UpdateTaskBodySchema = z.object({
   estimation: z.number().int().nonnegative().nullable().optional(),
   acceptanceCriteria: AcceptanceCriteriaSchema.optional(),
   recurrence: TaskRecurrenceSchema.nullable().optional(),
+  areaId: z.string().min(1).optional(),
+  progressStageId: z.string().min(1).nullable().optional(),
   parentTaskId: z.string().nullable().optional(),
 });
 

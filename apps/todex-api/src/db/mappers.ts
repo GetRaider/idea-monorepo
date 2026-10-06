@@ -1,5 +1,7 @@
 import {
   readTaskRecurrence,
+  type BoardArea,
+  type BoardProgressStage,
   type Folder,
   type Task,
   type TaskBoard,
@@ -8,6 +10,8 @@ import {
 } from "@repo/api/todex";
 
 import type {
+  BoardAreaRow,
+  BoardProgressStageRow,
   FolderRow,
   TaskBoardRow,
   TaskRow,
@@ -70,6 +74,31 @@ export function mapTaskBoard(row: TaskBoardRow): TaskBoard {
   };
 }
 
+export function mapBoardArea(row: BoardAreaRow): BoardArea {
+  return {
+    id: row.id,
+    boardId: row.boardId,
+    name: row.name,
+    position: row.position,
+    isDefault: row.isDefault,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
+export function mapBoardProgressStage(
+  row: BoardProgressStageRow,
+): BoardProgressStage {
+  return {
+    id: row.id,
+    boardId: row.boardId,
+    name: row.name,
+    position: row.position,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
 export function mapTask(row: TaskRow): Task {
   return {
     id: row.id,
@@ -85,6 +114,8 @@ export function mapTask(row: TaskRow): Task {
     estimation: row.estimation ?? null,
     acceptanceCriteria: row.acceptanceCriteria ?? [],
     recurrence: readTaskRecurrence(row.recurrence),
+    areaId: row.areaId,
+    progressStageId: row.progressStageId,
     parentTaskId: row.parentTaskId,
     position: row.position,
     createdAt: row.createdAt.toISOString(),

@@ -339,6 +339,10 @@ export function TasksProvider({ children }: { children: ReactNode }) {
         ...(input.parentTaskId ? { parentTaskId: input.parentTaskId } : {}),
         ...(input.status ? { status: input.status } : {}),
         ...(input.priority ? { priority: input.priority } : {}),
+        ...(input.areaId ? { areaId: input.areaId } : {}),
+        ...(input.progressStageId !== undefined
+          ? { progressStageId: input.progressStageId }
+          : {}),
         ...(input.estimation !== undefined
           ? { estimation: input.estimation }
           : {}),
@@ -527,6 +531,8 @@ function applyOptimisticTaskPatch(
     body.estimation === undefined &&
     body.acceptanceCriteria === undefined &&
     body.recurrence === undefined &&
+    body.areaId === undefined &&
+    body.progressStageId === undefined &&
     body.parentTaskId === undefined;
   if (statusOnly && body.status) {
     const task = tasks.find((item) => item.id === taskId);

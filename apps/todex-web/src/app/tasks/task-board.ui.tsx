@@ -22,6 +22,7 @@ import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
 
 import { boardDropId, type BoardDropData } from "./task-board-dnd";
 import { useTasks } from "./tasks-provider";
+import { useStageName } from "./board-axes";
 
 import { formatTaskDay, type NestedTask } from "./task-helpers";
 
@@ -281,7 +282,10 @@ export function TaskFacts({
   task,
   className,
 }: {
-  task: Pick<Task, "scheduleDate" | "dueDate" | "estimation" | "recurrence">;
+  task: Pick<
+    Task,
+    "scheduleDate" | "dueDate" | "estimation" | "recurrence" | "progressStageId"
+  >;
   className?: string;
 }) {
   const schedule = formatTaskDay(task.scheduleDate);
@@ -290,7 +294,8 @@ export function TaskFacts({
   const recurrence = task.recurrence
     ? formatTaskRecurrence(task.recurrence)
     : null;
-  if (!schedule && !due && !estimate && !recurrence) return null;
+  const stageName = useStageName(task.progressStageId);
+  if (!schedule && !due && !estimate && !recurrence && !stageName) return null;
   return (
     <span
       className={cn(
@@ -298,6 +303,7 @@ export function TaskFacts({
         className,
       )}
     >
+      {stageName ? <span>{stageName}</span> : null}
       {schedule ? (
         <span className="inline-flex items-center gap-1">
           <CalendarIcon size={12} />

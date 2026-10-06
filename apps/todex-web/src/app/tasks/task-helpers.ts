@@ -74,6 +74,20 @@ export function scheduleBoards<TBoard extends { id: string }>(
   });
 }
 
+export function filterStatusGroups(
+  groups: Record<Task["status"], NestedTask[]>,
+  areaId: string | null,
+): Record<Task["status"], NestedTask[]> {
+  if (!areaId) return groups;
+  const filtered = {} as Record<Task["status"], NestedTask[]>;
+  for (const status of STATUS_ORDER) {
+    filtered[status] = (groups[status] ?? []).filter(
+      (task) => task.areaId === areaId,
+    );
+  }
+  return filtered;
+}
+
 export function groupRootsByStatus(
   roots: NestedTask[],
 ): Record<Task["status"], NestedTask[]> {
@@ -464,6 +478,8 @@ export interface TaskCreateDraft {
   priority?: Task["priority"];
   estimation?: number | null;
   taskBoardId?: string;
+  areaId?: string;
+  progressStageId?: string | null;
   scheduleDate?: string | null;
   dueDate?: string | null;
 }

@@ -31,6 +31,7 @@ import {
 import { sanitizeTaskHtml } from "../../helpers/sanitize-task-html.helper";
 import { BoardsService } from "../boards/boards.service";
 import { WorkspaceService } from "../workspace/workspace.service";
+import { resolveTaskPlacement, TaskPlacementError } from "./task-placement";
 
 @Injectable()
 export class TasksService {
@@ -61,6 +62,7 @@ export class TasksService {
     if (body.parentTaskId) {
       await this.requireTaskInWorkspace(workspaceId, body.parentTaskId);
     }
+    const placement = await this.placementFor(null, body.taskBoardId, body);
 
     const created = await this.db.transaction(async (tx) => {
       const [workspace] = await tx
@@ -100,6 +102,8 @@ export class TasksService {
           estimation: body.estimation ?? null,
           acceptanceCriteria: body.acceptanceCriteria ?? [],
           recurrence: body.recurrence ?? null,
+          areaId: placement.areaId,
+          progressStageId: placement.progressStageId,
           parentTaskId,
           position,
           createdAt: now,
@@ -122,6 +126,12 @@ export class TasksService {
         body.taskBoardId,
       );
     }
+    const destinationBoardId = body.taskBoardId ?? existing.taskBoardId;
+    const placement = await this.placementFor(
+      existing,
+      destinationBoardId,
+      body,
+    );
 
     if (body.parentTaskId !== undefined) {
       await this.assertAcyclic(workspaceId, taskId, body.parentTaskId);
@@ -133,39 +143,43 @@ export class TasksService {
     const completion = resolveCompletion(existing, body);
     const [updated] = await this.db.transaction(async (tx) => {
       const [row] = await tx
-      .update(tasks)
-      .set({
-        ...(body.taskBoardId !== undefined
-          ? { taskBoardId: body.taskBoardId }
-          : {}),
-        ...(body.summary !== undefined ? { summary: body.summary } : {}),
-        ...(body.description !== undefined
-          ? { description: sanitizeTaskHtml(body.description) }
-          : {}),
-        ...(completion.status !== undefined ? { status: completion.status } : {}),
-        ...(body.priority !== undefined ? { priority: body.priority } : {}),
-        ...(completion.dueDate !== undefined
-          ? { dueDate: completion.dueDate }
-          : {}),
-        ...(completion.scheduleDate !== undefined
-          ? { scheduleDate: completion.scheduleDate }
-          : {}),
-        ...(body.estimation !== undefined
-          ? { estimation: body.estimation }
-          : {}),
-        ...(completion.acceptanceCriteria !== undefined
-          ? { acceptanceCriteria: completion.acceptanceCriteria }
-          : {}),
-        ...(completion.recurrence !== undefined
-          ? { recurrence: completion.recurrence }
-          : {}),
-        ...(body.parentTaskId !== undefined
-          ? { parentTaskId: body.parentTaskId }
-          : {}),
-        updatedAt: new Date(),
-      })
-      .where(eq(tasks.id, existing.id))
-      .returning();
+        .update(tasks)
+        .set({
+          ...(body.taskBoardId !== undefined
+            ? { taskBoardId: body.taskBoardId }
+            : {}),
+          areaId: placement.areaId,
+          progressStageId: placement.progressStageId,
+          ...(body.summary !== undefined ? { summary: body.summary } : {}),
+          ...(body.description !== undefined
+            ? { description: sanitizeTaskHtml(body.description) }
+            : {}),
+          ...(completion.status !== undefined
+            ? { status: completion.status }
+            : {}),
+          ...(body.priority !== undefined ? { priority: body.priority } : {}),
+          ...(completion.dueDate !== undefined
+            ? { dueDate: completion.dueDate }
+            : {}),
+          ...(completion.scheduleDate !== undefined
+            ? { scheduleDate: completion.scheduleDate }
+            : {}),
+          ...(body.estimation !== undefined
+            ? { estimation: body.estimation }
+            : {}),
+          ...(completion.acceptanceCriteria !== undefined
+            ? { acceptanceCriteria: completion.acceptanceCriteria }
+            : {}),
+          ...(completion.recurrence !== undefined
+            ? { recurrence: completion.recurrence }
+            : {}),
+          ...(body.parentTaskId !== undefined
+            ? { parentTaskId: body.parentTaskId }
+            : {}),
+          updatedAt: new Date(),
+        })
+        .where(eq(tasks.id, existing.id))
+        .returning();
       if (row && completion.spawn) {
         await this.insertNextOccurrence(tx, row, completion.spawn);
       }
@@ -216,7 +230,10 @@ export class TasksService {
       if (sourceIds) {
         await this.writePositions(tx, sourceIds, {});
       }
-      if (completion?.type === "finish-series" || completion?.type === "advance") {
+      if (
+        completion?.type === "finish-series" ||
+        completion?.type === "advance"
+      ) {
         await tx
           .update(tasks)
           .set({ recurrence: null, updatedAt: new Date() })
@@ -305,6 +322,42 @@ export class TasksService {
     }
   }
 
+  private async placementFor(
+    existing: TaskRow | null,
+    boardId: string,
+    body: { areaId?: string; progressStageId?: string | null },
+  ) {
+    const defaultAreaId = await this.boardsService.defaultAreaId(boardId);
+    const areaOnDestination =
+      body.areaId === undefined
+        ? true
+        : await this.boardsService.areaBelongsToBoard(boardId, body.areaId);
+    const stageOnDestination =
+      body.progressStageId == null
+        ? true
+        : await this.boardsService.stageBelongsToBoard(
+            boardId,
+            body.progressStageId,
+          );
+    try {
+      return resolveTaskPlacement({
+        boardChanged: existing == null || existing.taskBoardId !== boardId,
+        currentAreaId: existing?.areaId ?? defaultAreaId,
+        currentProgressStageId: existing?.progressStageId ?? null,
+        requestedAreaId: body.areaId,
+        requestedProgressStageId: body.progressStageId,
+        defaultAreaId,
+        areaOnDestination,
+        stageOnDestination,
+      });
+    } catch (error) {
+      if (error instanceof TaskPlacementError) {
+        throw new BadRequestException(error.message);
+      }
+      throw error;
+    }
+  }
+
   private async relocateRoot(before: TaskRow, after: TaskRow) {
     const wasRoot = before.parentTaskId == null;
     const isRoot = after.parentTaskId == null;
@@ -377,6 +430,8 @@ export class TasksService {
       estimation: completed.estimation,
       acceptanceCriteria: next.acceptanceCriteria ?? [],
       recurrence: next.recurrence,
+      areaId: completed.areaId,
+      progressStageId: completed.progressStageId,
       parentTaskId: completed.parentTaskId,
       position,
       createdAt: now,
@@ -481,7 +536,8 @@ function resolveCompletion(
       body.recurrence !== undefined
         ? body.recurrence
         : readTaskRecurrence(existing.recurrence),
-    acceptanceCriteria: body.acceptanceCriteria ?? existing.acceptanceCriteria ?? [],
+    acceptanceCriteria:
+      body.acceptanceCriteria ?? existing.acceptanceCriteria ?? [],
   });
   if (effect.type === "advance") {
     return {

@@ -218,6 +218,49 @@ export function EllipsisIcon(props: IconProps) {
   );
 }
 
+export function CloseIcon(props: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      {...iconSvgProps(props)}
+    >
+      <path d="M7 7l10 10M17 7 7 17" />
+    </svg>
+  );
+}
+
+export function ExpandIcon(props: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      {...iconSvgProps(props)}
+    >
+      <path d="M9 4H4v5M15 4h5v5M20 15v5h-5M4 15v5h5" />
+    </svg>
+  );
+}
+
+export function DockRightIcon(props: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      {...iconSvgProps(props)}
+    >
+      <rect x="4" y="4" width="16" height="16" rx="2" />
+      <path d="M14 4v16" />
+    </svg>
+  );
+}
+
 export function StatusDoneIcon(props: IconProps) {
   return (
     <svg

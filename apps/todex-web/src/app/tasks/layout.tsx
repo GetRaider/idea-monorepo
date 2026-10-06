@@ -18,8 +18,12 @@ export default function TasksLayout({ children }: { children: ReactNode }) {
           <div className="my-2 mr-2 flex w-full min-w-0 overflow-hidden rounded-xl border border-border bg-sidebar">
             <TasksModuleSidebar />
             <CanvasColumn>
-              {children}
-              <TaskView />
+              <div className="flex min-h-0 min-w-0 flex-1">
+                <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+                  {children}
+                </div>
+                <TaskView />
+              </div>
             </CanvasColumn>
           </div>
         </BoardPreferencesProvider>

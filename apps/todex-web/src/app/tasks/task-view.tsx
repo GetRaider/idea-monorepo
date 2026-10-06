@@ -35,15 +35,31 @@ import type {
   UpdateTaskBody,
 } from "@repo/api/todex";
 
+import { ResizeHandle } from "@components/resize-handle";
 import {
   CalendarIcon,
   ChevronIcon,
   ClockIcon,
+  CloseIcon,
+  DockRightIcon,
   EllipsisIcon,
+  ExpandIcon,
   FolderIcon,
   PlusIcon,
   RepeatIcon,
 } from "@components/icons";
+import {
+  readTaskPanelWidth,
+  readTaskViewMode,
+  writeTaskPanelWidth,
+  writeTaskViewMode,
+} from "@/helpers/task-view-layout";
+import {
+  TASK_PANEL_DEFAULT_WIDTH,
+  TASK_PANEL_MAX_WIDTH,
+  TASK_PANEL_MIN_WIDTH,
+  type TaskViewMode,
+} from "@/helpers/panel-layout";
 import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
 
 import { DatePicker, EstimatePicker } from "./task-pickers";
@@ -68,6 +84,7 @@ import {
 import { useTasks } from "./tasks-provider";
 
 const SAVE_DEBOUNCE_MS = 600;
+const LG_QUERY = "(min-width: 1024px)";
 
 export function TaskView() {
   const {
@@ -80,8 +97,18 @@ export function TaskView() {
       removeTask,
     },
   } = useTasks();
+  const isLargeScreen = useMinWidthLg();
+  const [mode, setMode] = useState<TaskViewMode>("docked");
+  const [panelWidth, setPanelWidth] = useState(TASK_PANEL_DEFAULT_WIDTH);
+
+  useEffect(() => {
+    setMode(readTaskViewMode());
+    setPanelWidth(readTaskPanelWidth());
+  }, []);
 
   if (!selectedTask) return null;
+
+  const isDocked = isLargeScreen && mode === "docked";
 
   const orderedTasks = [...tasks].sort(compareTasksForNavigation);
   const taskIndex = orderedTasks.findIndex(
@@ -97,17 +124,101 @@ export function TaskView() {
   const boardName = board?.name ?? "Board";
 
   return (
-    <div className="absolute inset-0 z-20 flex min-h-0 flex-col bg-canvas text-foreground">
-      <header className="border-b border-border px-6 py-3">
-        <TasksBreadcrumb
-          className="text-2xl font-semibold tracking-tight"
-          boardName={boardName}
-          boardHref={
-            board ? tasksUrlHelper.routing.buildBoardUrl(board.name) : undefined
-          }
-          taskKey={selectedTask.taskKey}
-          trailing={<BoardGlyph />}
+    <div
+      className={
+        isDocked
+          ? "relative flex min-h-0 shrink-0 flex-col border-l border-border bg-canvas text-foreground"
+          : "absolute inset-0 z-20 flex min-h-0 flex-col bg-canvas text-foreground"
+      }
+      style={isDocked ? { width: panelWidth } : undefined}
+    >
+      {isDocked ? (
+        <ResizeHandle
+          label="Resize task panel"
+          edge="leading"
+          width={panelWidth}
+          min={TASK_PANEL_MIN_WIDTH}
+          max={TASK_PANEL_MAX_WIDTH}
+          onWidth={setPanelWidth}
+          onCommit={writeTaskPanelWidth}
         />
+      ) : null}
+      <header
+        className={cn(
+          "flex items-center gap-3 border-b border-border",
+          isDocked ? "px-3 py-1.5" : "px-6 py-3",
+        )}
+      >
+        {isDocked ? (
+          <span className="min-w-0 flex-1 truncate text-sm font-medium tabular-nums text-muted-foreground">
+            {selectedTask.taskKey}
+          </span>
+        ) : (
+          <TasksBreadcrumb
+            className="min-w-0 flex-1 text-2xl font-semibold tracking-tight"
+            boardName={boardName}
+            boardHref={
+              board
+                ? tasksUrlHelper.routing.buildBoardUrl(board.name)
+                : undefined
+            }
+            taskKey={selectedTask.taskKey}
+            trailing={<BoardGlyph />}
+          />
+        )}
+        <div className="flex shrink-0 items-center gap-0.5">
+          {taskIndex >= 0 ? (
+            <>
+              <PagerButton
+                label="Previous task"
+                disabled={!previousTask}
+                onClick={() => {
+                  if (previousTask) setSelectedTaskId(previousTask.id);
+                }}
+              >
+                <ChevronIcon size={14} className="rotate-180" />
+              </PagerButton>
+              <span className="min-w-8 text-center text-[11px] tabular-nums text-muted-foreground">
+                {taskIndex + 1}/{orderedTasks.length}
+              </span>
+              <PagerButton
+                label="Next task"
+                disabled={!nextTask}
+                onClick={() => {
+                  if (nextTask) setSelectedTaskId(nextTask.id);
+                }}
+              >
+                <ChevronIcon size={14} />
+              </PagerButton>
+            </>
+          ) : null}
+          <TaskViewMenu
+            summary={selectedTask.summary}
+            onDelete={() => removeTask(selectedTask.id)}
+          />
+          {isLargeScreen ? (
+            <PagerButton
+              label={isDocked ? "Expand task" : "Dock task to the side"}
+              onClick={() => {
+                const nextMode = isDocked ? "fullscreen" : "docked";
+                setMode(nextMode);
+                writeTaskViewMode(nextMode);
+              }}
+            >
+              {isDocked ? (
+                <ExpandIcon size={14} />
+              ) : (
+                <DockRightIcon size={14} />
+              )}
+            </PagerButton>
+          ) : null}
+          <PagerButton
+            label="Close task"
+            onClick={() => setSelectedTaskId(null)}
+          >
+            <CloseIcon size={14} />
+          </PagerButton>
+        </div>
       </header>
       <TaskViewBody
         key={selectedTask.id}
@@ -115,39 +226,7 @@ export function TaskView() {
         tasks={tasks}
         boards={boards}
         folders={folders}
-        switcher={
-          <div className="flex items-center justify-end gap-1">
-            {taskIndex >= 0 ? (
-              <>
-                <PagerButton
-                  label="Previous task"
-                  disabled={!previousTask}
-                  onClick={() => {
-                    if (previousTask) setSelectedTaskId(previousTask.id);
-                  }}
-                >
-                  <ChevronIcon size={16} className="rotate-180" />
-                </PagerButton>
-                <span className="min-w-12 text-center text-xs tabular-nums text-muted-foreground">
-                  {taskIndex + 1}/{orderedTasks.length}
-                </span>
-                <PagerButton
-                  label="Next task"
-                  disabled={!nextTask}
-                  onClick={() => {
-                    if (nextTask) setSelectedTaskId(nextTask.id);
-                  }}
-                >
-                  <ChevronIcon size={16} />
-                </PagerButton>
-              </>
-            ) : null}
-            <TaskViewMenu
-              summary={selectedTask.summary}
-              onDelete={() => removeTask(selectedTask.id)}
-            />
-          </div>
-        }
+        stacked={isDocked}
         onUpdate={(body) => updateTask(selectedTask.id, body, { quiet: true })}
         onUpdateStatus={(taskId, status) => updateTaskStatus(taskId, status)}
         onOpenTask={setSelectedTaskId}
@@ -162,7 +241,7 @@ function TaskViewBody({
   tasks,
   boards,
   folders,
-  switcher,
+  stacked,
   onUpdate,
   onUpdateStatus,
   onOpenTask,
@@ -172,7 +251,7 @@ function TaskViewBody({
   tasks: Task[];
   boards: TaskBoard[];
   folders: Folder[];
-  switcher: ReactNode;
+  stacked: boolean;
   onUpdate: (body: UpdateTaskBody) => void;
   onUpdateStatus: (taskId: string, status: Task["status"]) => void;
   onOpenTask: (taskId: string) => void;
@@ -237,8 +316,18 @@ function TaskViewBody({
   }, []);
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto lg:flex-row lg:overflow-hidden">
-      <div className="min-w-0 flex-1 px-6 py-6 sm:px-10 lg:overflow-y-auto">
+    <div
+      className={cn(
+        "flex min-h-0 flex-1 flex-col overflow-y-auto",
+        stacked ? null : "lg:flex-row lg:overflow-hidden",
+      )}
+    >
+      <div
+        className={cn(
+          "min-w-0 flex-1 py-6",
+          stacked ? "px-4" : "px-6 sm:px-10 lg:overflow-y-auto",
+        )}
+      >
         <textarea
           aria-label="Summary"
           value={summary}
@@ -285,8 +374,14 @@ function TaskViewBody({
           />
         </div>
       </div>
-      <aside className="flex w-full shrink-0 flex-col gap-3 border-t border-border bg-background p-4 lg:w-[22rem] lg:overflow-y-auto lg:border-l lg:border-t-0">
-        {switcher}
+      <aside
+        className={cn(
+          "flex w-full shrink-0 flex-col gap-3 border-t border-border bg-background p-4",
+          stacked
+            ? null
+            : "lg:w-[22rem] lg:overflow-y-auto lg:border-l lg:border-t-0",
+        )}
+      >
         <section className="rounded-xl border border-border bg-background p-4">
           <h2 className="text-sm font-medium text-foreground">Task Details</h2>
           <div className="mt-4 flex flex-col gap-3">
@@ -765,9 +860,9 @@ function TaskViewMenu({
           <button
             type="button"
             aria-label="Task actions"
-            className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-surface hover:text-foreground"
+            className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-surface hover:text-foreground"
           >
-            <EllipsisIcon size={16} />
+            <EllipsisIcon size={14} />
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
@@ -789,6 +884,20 @@ function TaskViewMenu({
   );
 }
 
+function useMinWidthLg() {
+  const [matches, setMatches] = useState(true);
+
+  useEffect(() => {
+    const media = window.matchMedia(LG_QUERY);
+    const update = () => setMatches(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+
+  return matches;
+}
+
 function PagerButton({
   label,
   disabled,
@@ -796,7 +905,7 @@ function PagerButton({
   children,
 }: {
   label: string;
-  disabled: boolean;
+  disabled?: boolean;
   onClick: () => void;
   children: ReactNode;
 }) {
@@ -805,7 +914,7 @@ function PagerButton({
       type="button"
       aria-label={label}
       disabled={disabled}
-      className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-surface hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
+      className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-surface hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
       onClick={onClick}
     >
       {children}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import {
   Button,
@@ -28,6 +28,18 @@ import {
   FolderIcon,
   PlusIcon,
 } from "@components/icons";
+import { ResizeHandle } from "@components/resize-handle";
+import {
+  TASKS_SIDEBAR_DEFAULT_WIDTH,
+  TASKS_SIDEBAR_MAX_WIDTH,
+  TASKS_SIDEBAR_MIN_WIDTH,
+} from "@/helpers/panel-layout";
+import {
+  readTasksSidebarOpen,
+  readTasksSidebarWidth,
+  writeTasksSidebarOpen,
+  writeTasksSidebarWidth,
+} from "@/helpers/tasks-sidebar-open";
 import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
 
 import { INBOX_BOARD_NAME } from "./task-helpers";
@@ -39,7 +51,13 @@ export function TasksModuleSidebar() {
     state: { folders, boards, view },
     actions: { openCreateDialog },
   } = useTasks();
-  const isOpen = true;
+  const [isOpen, setIsOpen] = useState(true);
+  const [width, setWidth] = useState(TASKS_SIDEBAR_DEFAULT_WIDTH);
+
+  useEffect(() => {
+    setIsOpen(readTasksSidebarOpen());
+    setWidth(readTasksSidebarWidth());
+  }, []);
 
   const activeBoardId = view.kind === "board" ? view.boardId : null;
   const inboxBoard = boards.find((board) => board.name === INBOX_BOARD_NAME);
@@ -48,8 +66,30 @@ export function TasksModuleSidebar() {
   );
 
   return (
-    <aside className="flex h-full w-[240px] shrink-0 flex-col">
-      <div className="flex min-h-0 flex-1 flex-col px-3 pb-3 pt-3">
+    <aside
+      className={cn(
+        "relative flex h-full shrink-0 flex-col",
+        isOpen ? null : "w-12",
+      )}
+      style={isOpen ? { width } : undefined}
+    >
+      {isOpen ? (
+        <ResizeHandle
+          label="Resize sidebar"
+          edge="trailing"
+          width={width}
+          min={TASKS_SIDEBAR_MIN_WIDTH}
+          max={TASKS_SIDEBAR_MAX_WIDTH}
+          onWidth={setWidth}
+          onCommit={writeTasksSidebarWidth}
+        />
+      ) : null}
+      <div
+        className={cn(
+          "flex min-h-0 flex-1 flex-col pb-3 pt-3",
+          isOpen ? "px-3" : "px-1.5",
+        )}
+      >
         <section className="mb-4 w-full">
           {isOpen ? (
             <h2 className="mb-2 px-2 text-sm text-muted-foreground">Views</h2>
@@ -131,6 +171,37 @@ export function TasksModuleSidebar() {
           ))}
         </section>
       </div>
+      <div
+        className={cn(
+          "shrink-0 border-t border-border p-2",
+          !isOpen && "px-1.5",
+        )}
+      >
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              className="h-7 w-7 text-muted-foreground"
+              aria-label={isOpen ? "Collapse sidebar" : "Expand sidebar"}
+              onClick={() => {
+                const next = !isOpen;
+                setIsOpen(next);
+                writeTasksSidebarOpen(next);
+              }}
+            >
+              <ChevronIcon
+                size={14}
+                className={isOpen ? "rotate-180" : undefined}
+              />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="right">
+            {isOpen ? "Collapse sidebar" : "Expand sidebar"}
+          </TooltipContent>
+        </Tooltip>
+      </div>
     </aside>
   );
 }
@@ -188,6 +259,7 @@ function NavRow({
   const row = (
     <Link
       href={href}
+      aria-label={label}
       className={cn(
         "flex min-w-0 items-center gap-3 rounded-lg py-1.5 text-sm transition-colors",
         collapsed ? "justify-center px-0" : "flex-1 px-3 text-left",

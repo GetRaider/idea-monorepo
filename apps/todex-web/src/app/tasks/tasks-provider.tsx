@@ -37,6 +37,10 @@ import {
   type NestedTask,
   type TaskCreateDraft,
 } from "./task-helpers";
+import {
+  applyTaskSelection,
+  selectionForContextTarget,
+} from "./task-selection";
 
 const TasksContext = createContext<TasksContextValue | null>(null);
 
@@ -51,6 +55,10 @@ export function TasksProvider({ children }: { children: ReactNode }) {
   const [selectedTaskId, setSelectedTaskIdState] = useState<string | null>(
     null,
   );
+  const [selectedTaskIds, setSelectedTaskIds] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
+  const anchorIdRef = useRef<string | null>(null);
   const [search, setSearch] = useState("");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [scheduleTargetBoardId, setScheduleTargetBoardId] = useState<
@@ -160,6 +168,8 @@ export function TasksProvider({ children }: { children: ReactNode }) {
       dismissedTaskKeyRef.current = null;
     }
     setSelectedTaskIdState(taskId);
+    anchorIdRef.current = taskId;
+    setSelectedTaskIds(taskId ? new Set([taskId]) : new Set());
     const taskKey =
       taskId == null
         ? undefined
@@ -175,6 +185,10 @@ export function TasksProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const previousPathname = pathnameRef.current;
     pathnameRef.current = pathname;
+    if (previousPathname !== pathname) {
+      anchorIdRef.current = null;
+      setSelectedTaskIds(new Set());
+    }
     if (view.kind === "root") {
       dismissedTaskKeyRef.current = null;
       setSelectedTaskIdState(null);
@@ -188,6 +202,11 @@ export function TasksProvider({ children }: { children: ReactNode }) {
       const match = loadedTasks.find((task) => task.taskKey === taskKey);
       if (match) {
         setSelectedTaskIdState(match.id);
+        setSelectedTaskIds((current) => {
+          if (current.has(match.id)) return current;
+          anchorIdRef.current = match.id;
+          return new Set([match.id]);
+        });
         return;
       }
       setSelectedTaskIdState(null);
@@ -445,6 +464,75 @@ export function TasksProvider({ children }: { children: ReactNode }) {
     onError: () => toast.error("Could not delete task"),
   });
 
+  function selectTask(
+    taskId: string,
+    gesture: { shift: boolean; toggle: boolean },
+    orderedIds: readonly string[],
+  ) {
+    if (!gesture.shift && !gesture.toggle) {
+      setSelectedTaskId(taskId);
+      return;
+    }
+    setSelectedTaskIds((current) => {
+      const selectedIds =
+        current.size > 0
+          ? current
+          : selectedTaskId
+            ? new Set([selectedTaskId])
+            : current;
+      const next = applyTaskSelection({
+        selectedIds,
+        anchorId: anchorIdRef.current ?? selectedTaskId,
+        taskId,
+        orderedIds,
+        shift: gesture.shift,
+        toggle: gesture.toggle,
+      });
+      anchorIdRef.current = next.anchorId;
+      return next.selectedIds;
+    });
+  }
+
+  function focusTaskSelection(taskId: string) {
+    setSelectedTaskIds((current) => {
+      const selectedIds =
+        current.size > 0
+          ? current
+          : selectedTaskId
+            ? new Set([selectedTaskId])
+            : current;
+      return selectionForContextTarget(selectedIds, taskId);
+    });
+    anchorIdRef.current = taskId;
+  }
+
+  function clearTaskSelection() {
+    anchorIdRef.current = selectedTaskId;
+    setSelectedTaskIds(selectedTaskId ? new Set([selectedTaskId]) : new Set());
+  }
+
+  function removeTasks(taskIds: string[]) {
+    void Promise.all(taskIds.map((taskId) => todexClient.tasks.remove(taskId)))
+      .then(() => {
+        if (selectedTaskId && taskIds.includes(selectedTaskId)) {
+          setSelectedTaskId(null);
+        } else {
+          setSelectedTaskIds((current) => {
+            const next = new Set(current);
+            for (const taskId of taskIds) next.delete(taskId);
+            return next;
+          });
+        }
+        invalidateTasks();
+        toast.success(
+          taskIds.length === 1
+            ? "Task deleted"
+            : `${taskIds.length} tasks deleted`,
+        );
+      })
+      .catch(() => toast.error("Could not delete task"));
+  }
+
   const value: TasksContextValue = {
     state: {
       folders,
@@ -455,12 +543,16 @@ export function TasksProvider({ children }: { children: ReactNode }) {
       selectedBoard,
       selectedTask,
       selectedTaskId,
+      selectedTaskIds,
       search,
       createBoardId,
       isCreateDialogOpen,
     },
     actions: {
       setSelectedTaskId,
+      selectTask,
+      focusTaskSelection,
+      clearTaskSelection,
       setSearch,
       setScheduleTargetBoardId,
       openCreateDialog: () => setIsCreateDialogOpen(true),
@@ -486,6 +578,7 @@ export function TasksProvider({ children }: { children: ReactNode }) {
         updateTask.mutate({ taskId, body: { status }, optimistic: true }),
       moveTask: (taskId, body) => moveTask.mutate({ taskId, body }),
       removeTask: (taskId) => removeTask.mutate(taskId),
+      removeTasks,
     },
     meta: {
       createInputRef,
@@ -589,12 +682,20 @@ interface TasksContextValue {
     selectedBoard: TaskBoard | null;
     selectedTask: Task | null;
     selectedTaskId: string | null;
+    selectedTaskIds: ReadonlySet<string>;
     search: string;
     createBoardId: string | null;
     isCreateDialogOpen: boolean;
   };
   actions: {
     setSelectedTaskId: (taskId: string | null) => void;
+    selectTask: (
+      taskId: string,
+      gesture: { shift: boolean; toggle: boolean },
+      orderedIds: readonly string[],
+    ) => void;
+    focusTaskSelection: (taskId: string) => void;
+    clearTaskSelection: () => void;
     setSearch: (search: string) => void;
     setScheduleTargetBoardId: (boardId: string) => void;
     openCreateDialog: () => void;
@@ -621,6 +722,7 @@ interface TasksContextValue {
     updateTaskStatus: (taskId: string, status: Task["status"]) => void;
     moveTask: (taskId: string, body: MoveTaskBody) => void;
     removeTask: (taskId: string) => void;
+    removeTasks: (taskIds: string[]) => void;
   };
   meta: {
     createInputRef: RefObject<HTMLInputElement>;

@@ -129,7 +129,9 @@ function RecurrenceDraft({
           <Select
             value={draft.frequency}
             onValueChange={(value) =>
-              onDraft(withFrequency(draft, value as TaskRecurrence["frequency"]))
+              onDraft(
+                withFrequency(draft, value as TaskRecurrence["frequency"]),
+              )
             }
           >
             <SelectTrigger className="h-8 w-28">
@@ -210,7 +212,8 @@ function RecurrenceDraft({
             className="h-8 w-20 rounded-md border border-border bg-transparent px-2 text-sm"
             onChange={(event) => {
               const count = Number(event.target.value);
-              if (!Number.isInteger(count) || draft.end.type !== "count") return;
+              if (!Number.isInteger(count) || draft.end.type !== "count")
+                return;
               onDraft({
                 ...draft,
                 end: {
@@ -254,6 +257,35 @@ function RecurrenceDraft({
   );
 }
 
+export function TaskRecurrenceEditor({
+  recurrence,
+  scheduleDate,
+  dueDate,
+  onChange,
+}: TaskRecurrencePickerProps) {
+  const [draft, setDraft] = useState<TaskRecurrence>(
+    () =>
+      recurrence ??
+      defaultTaskRecurrence({
+        scheduleDate,
+        dueDate,
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      }),
+  );
+
+  return (
+    <RecurrenceDraft
+      draft={draft}
+      scheduleDate={scheduleDate}
+      dueDate={dueDate}
+      canRemove={recurrence != null}
+      onDraft={setDraft}
+      onApply={() => onChange(recurrenceForSave(draft))}
+      onRemove={() => onChange(null)}
+    />
+  );
+}
+
 function recurrenceForSave(draft: TaskRecurrence): TaskRecurrence {
   if (draft.frequency === "weekly") return draft;
   return {
@@ -278,7 +310,10 @@ function withFrequency(
   return { ...draft, frequency };
 }
 
-function toggleWeekday(draft: TaskRecurrence, weekday: TaskWeekday): TaskRecurrence {
+function toggleWeekday(
+  draft: TaskRecurrence,
+  weekday: TaskWeekday,
+): TaskRecurrence {
   const current = draft.weekdays ?? [];
   const next = current.includes(weekday)
     ? current.filter((item) => item !== weekday)
@@ -304,11 +339,16 @@ function endFor(
   return {
     type: "until",
     until:
-      draft.end.type === "until" ? draft.end.until : defaultUntil(scheduleDate, dueDate),
+      draft.end.type === "until"
+        ? draft.end.until
+        : defaultUntil(scheduleDate, dueDate),
   };
 }
 
-function defaultUntil(scheduleDate: string | null, dueDate: string | null): string {
+function defaultUntil(
+  scheduleDate: string | null,
+  dueDate: string | null,
+): string {
   const anchor = isoToDateInput(scheduleDate ?? dueDate);
   const date = anchor ? dateFromInput(anchor) : new Date();
   date.setDate(date.getDate() + 28);

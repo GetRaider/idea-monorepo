@@ -1,6 +1,6 @@
 "use client";
 
-import type { CSSProperties, ReactNode } from "react";
+import type { CSSProperties, MouseEvent, ReactNode } from "react";
 import Link from "next/link";
 import { useDndContext, useDraggable, useDroppable } from "@dnd-kit/core";
 import { Checkbox, cn } from "@repo/ui";
@@ -21,6 +21,8 @@ import {
 import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
 
 import { boardDropId, type BoardDropData } from "./task-board-dnd";
+import { TaskContextMenu } from "./task-context-menu";
+import { isToggleClick, orderedTaskIds } from "./task-selection";
 import { useTasks } from "./tasks-provider";
 import { useStageName } from "./board-axes";
 
@@ -96,7 +98,9 @@ export function BoardDropZone({
           ref={setNodeRef}
           className={cn(
             "pointer-events-none absolute inset-x-0 h-6",
-            kind === "gap" ? "top-1/2 -translate-y-1/2" : "bottom-0 translate-y-1/2",
+            kind === "gap"
+              ? "top-1/2 -translate-y-1/2"
+              : "bottom-0 translate-y-1/2",
           )}
         />
       ) : null}
@@ -146,96 +150,124 @@ export function DraggableTask({
 
 export function TaskRow({
   node,
-  selectedTaskId,
   boardNameById,
   showBoardName,
   depth = 0,
   expanded = false,
   onToggleExpanded,
-  onSelect,
   onToggleDone,
   onCreateSubtask,
   statusDrop,
   boardId,
 }: {
   node: NestedTask;
-  selectedTaskId: string | null;
   boardNameById: Map<string, string>;
   showBoardName: boolean;
   depth?: number;
   expanded?: boolean;
   onToggleExpanded?: () => void;
-  onSelect: (taskId: string) => void;
   onToggleDone: (task: NestedTask) => void;
   onCreateSubtask: (parentTaskId: string) => void;
   statusDrop?: boolean;
   boardId?: string;
 }) {
+  const {
+    state: { selectedTaskIds },
+    actions: { selectTask },
+  } = useTasks();
   const hasChildren = node.children.length > 0;
+  const selected = selectedTaskIds.has(node.id);
+
+  function selectFromPointer(event: MouseEvent<HTMLElement>) {
+    selectTask(
+      node.id,
+      {
+        shift: event.shiftKey,
+        toggle: isToggleClick(event, navigator.platform),
+      },
+      orderedTaskIds(event.currentTarget.closest("[data-task-surface]")),
+    );
+  }
+
   const row = (
-    <div
-      className={cn(
-        "group flex items-center gap-2 rounded-md py-1.5 pr-2 hover:bg-surface",
-        node.status === TaskStatus.DONE && "bg-black/30 text-muted-foreground",
-        selectedTaskId === node.id && "bg-surface text-foreground",
-      )}
-      style={{ paddingLeft: `${depth * 16 + 8}px` } as CSSProperties}
-    >
-      {hasChildren ? (
+    <TaskContextMenu taskId={node.id}>
+      <div
+        data-task-id={node.id}
+        aria-selected={selected}
+        className={cn(
+          "group flex items-center gap-2 rounded-md py-1.5 pr-2 hover:bg-surface",
+          node.status === TaskStatus.DONE &&
+            "bg-black/30 text-muted-foreground",
+          selected && "bg-surface text-foreground",
+        )}
+        style={{ paddingLeft: `${depth * 16 + 8}px` } as CSSProperties}
+        onMouseDown={(event) => {
+          if (event.shiftKey) event.preventDefault();
+        }}
+        onClick={selectFromPointer}
+      >
+        {hasChildren ? (
+          <button
+            type="button"
+            aria-expanded={expanded}
+            aria-label={expanded ? "Collapse subtasks" : "Expand subtasks"}
+            data-no-dnd=""
+            className="flex h-4 w-4 shrink-0 items-center justify-center text-muted-foreground hover:text-foreground"
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              event.stopPropagation();
+              onToggleExpanded?.();
+            }}
+          >
+            <ChevronIcon
+              size={12}
+              className={cn("transition-transform", expanded && "rotate-90")}
+            />
+          </button>
+        ) : (
+          <span className="h-4 w-4 shrink-0" />
+        )}
+        <Checkbox
+          data-no-dnd=""
+          checked={node.status === TaskStatus.DONE}
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={(event) => event.stopPropagation()}
+          onCheckedChange={() => onToggleDone(node)}
+        />
+        <PriorityGlyph priority={node.priority} />
         <button
           type="button"
-          aria-expanded={expanded}
-          aria-label={expanded ? "Collapse subtasks" : "Expand subtasks"}
+          className="min-w-0 flex-1 text-left text-sm"
+          onClick={(event) => {
+            event.stopPropagation();
+            selectFromPointer(event);
+          }}
+        >
+          <span className="mr-2 font-mono text-xs text-muted-foreground">
+            {node.taskKey}
+          </span>
+          {node.summary}
+          {showBoardName ? (
+            <span className="ml-2 text-xs text-muted-foreground">
+              {boardNameById.get(node.taskBoardId)}
+            </span>
+          ) : null}
+        </button>
+        <TaskFacts task={node} />
+        <button
+          type="button"
           data-no-dnd=""
-          className="flex h-4 w-4 shrink-0 items-center justify-center text-muted-foreground hover:text-foreground"
+          className="invisible rounded-md px-1.5 text-xs text-muted-foreground group-hover:visible hover:text-foreground"
           onPointerDown={(event) => event.stopPropagation()}
           onClick={(event) => {
             event.stopPropagation();
-            onToggleExpanded?.();
+            onCreateSubtask(node.id);
           }}
         >
-          <ChevronIcon
-            size={12}
-            className={cn("transition-transform", expanded && "rotate-90")}
-          />
+          +
         </button>
-      ) : (
-        <span className="h-4 w-4 shrink-0" />
-      )}
-      <Checkbox
-        data-no-dnd=""
-        checked={node.status === TaskStatus.DONE}
-        onPointerDown={(event) => event.stopPropagation()}
-        onClick={(event) => event.stopPropagation()}
-        onCheckedChange={() => onToggleDone(node)}
-      />
-      <PriorityGlyph priority={node.priority} />
-      <button
-        type="button"
-        className="min-w-0 flex-1 text-left text-sm"
-        onClick={() => onSelect(node.id)}
-      >
-        <span className="mr-2 font-mono text-xs text-muted-foreground">
-          {node.taskKey}
-        </span>
-        {node.summary}
-        {showBoardName ? (
-          <span className="ml-2 text-xs text-muted-foreground">
-            {boardNameById.get(node.taskBoardId)}
-          </span>
-        ) : null}
-      </button>
-      <TaskFacts task={node} />
-      <button
-        type="button"
-        data-no-dnd=""
-        className="invisible rounded-md px-1.5 text-xs text-muted-foreground group-hover:visible hover:text-foreground"
-        onPointerDown={(event) => event.stopPropagation()}
-        onClick={() => onCreateSubtask(node.id)}
-      >
-        +
-      </button>
-    </div>
+      </div>
+    </TaskContextMenu>
   );
   if (depth > 0) return row;
   const draggable = <DraggableTask taskId={node.id}>{row}</DraggableTask>;
@@ -424,6 +456,47 @@ export function PriorityGlyph({ priority }: { priority: Task["priority"] }) {
     <span aria-hidden className="inline-flex text-xs leading-none">
       {PRIORITY_ICON[priority]}
     </span>
+  );
+}
+
+export function StageMark() {
+  return <span className="h-3.5 w-3.5 rounded-full border border-current" />;
+}
+
+export function AreaMark() {
+  return <span className="h-3 w-3 rounded-sm border border-current" />;
+}
+
+export function BoardMark() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="16"
+      height="16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+    >
+      <rect x="4" y="5" width="16" height="14" rx="2" />
+      <path d="M10 5v14" />
+    </svg>
+  );
+}
+
+export function ParentMark() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="16"
+      height="16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+    >
+      <circle cx="8" cy="7" r="2.25" />
+      <circle cx="16" cy="17" r="2.25" />
+      <path d="M9.5 8.5 14.5 15" />
+    </svg>
   );
 }
 

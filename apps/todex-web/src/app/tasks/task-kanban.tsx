@@ -1,11 +1,13 @@
 "use client";
 
-import type { ComponentProps } from "react";
+import type { ComponentProps, MouseEvent } from "react";
 import { TaskStatus } from "@repo/api/todex";
 import type { Task } from "@repo/api/todex";
 import { Checkbox, cn } from "@repo/ui";
 
 import { TaskComposer, type TaskComposerValues } from "./task-composer";
+import { TaskContextMenu } from "./task-context-menu";
+import { isToggleClick, orderedTaskIds } from "./task-selection";
 import { useTasks } from "./tasks-provider";
 import {
   BoardDropZone,
@@ -40,16 +42,28 @@ export function TaskKanban({
   layout?: "fill" | "stack";
 }) {
   const {
-    state: { selectedTaskId },
-    actions: { setSelectedTaskId, updateTaskStatus },
+    state: { selectedTaskIds },
+    actions: { updateTaskStatus, clearTaskSelection },
   } = useTasks();
 
   return (
     <div
+      data-task-surface=""
       className={cn(
         "grid grid-cols-3 gap-3",
         layout === "fill" ? "min-h-0 flex-1" : "shrink-0",
       )}
+      onClick={(event) => {
+        if (!(event.target instanceof Element)) return;
+        if (
+          event.target.closest(
+            "[data-task-id], input, textarea, button, a, [contenteditable='true']",
+          )
+        ) {
+          return;
+        }
+        clearTaskSelection();
+      }}
     >
       {STATUS_ORDER.map((status) => {
         const nodes = groups[status] ?? [];
@@ -112,10 +126,9 @@ export function TaskKanban({
                         >
                           <KanbanCard
                             node={node}
-                            selectedTaskId={selectedTaskId}
+                            selected={selectedTaskIds.has(node.id)}
                             boardNameById={boardNameById}
                             showBoardName={showBoardName}
-                            onSelect={setSelectedTaskId}
                             onToggleDone={() =>
                               updateTaskStatus(
                                 node.id,
@@ -148,10 +161,9 @@ export function TaskKanban({
                     <KanbanCard
                       key={node.id}
                       node={node}
-                      selectedTaskId={selectedTaskId}
+                      selected={selectedTaskIds.has(node.id)}
                       boardNameById={boardNameById}
                       showBoardName={showBoardName}
-                      onSelect={setSelectedTaskId}
                       onToggleDone={() =>
                         updateTaskStatus(
                           node.id,
@@ -174,17 +186,15 @@ export function TaskKanban({
 
 function KanbanCard({
   node,
-  selectedTaskId,
+  selected,
   boardNameById,
   showBoardName,
-  onSelect,
   onToggleDone,
 }: {
   node: NestedTask;
-  selectedTaskId: string | null;
+  selected: boolean;
   boardNameById: Map<string, string>;
   showBoardName: boolean;
-  onSelect: (taskId: string) => void;
   onToggleDone: () => void;
 }) {
   const progress = taskChecklistProgress({
@@ -192,45 +202,67 @@ function KanbanCard({
     subtasks: node.children,
   });
 
+  const {
+    actions: { selectTask },
+  } = useTasks();
+
+  function selectFromPointer(event: MouseEvent<HTMLElement>) {
+    selectTask(
+      node.id,
+      {
+        shift: event.shiftKey,
+        toggle: isToggleClick(event, navigator.platform),
+      },
+      orderedTaskIds(event.currentTarget.closest("[data-task-surface]")),
+    );
+  }
+
   return (
     <DraggableTask taskId={node.id}>
-      <button
-        type="button"
-        className={cn(
-          "flex w-full items-start gap-2 rounded-md border border-border px-2.5 py-2 text-left hover:bg-surface",
-          node.status === TaskStatus.DONE && "bg-black/30 text-muted-foreground",
-          selectedTaskId === node.id && "bg-surface text-foreground",
-        )}
-        onClick={() => onSelect(node.id)}
-      >
-        <Checkbox
-          data-no-dnd=""
-          checked={node.status === TaskStatus.DONE}
-          onPointerDown={(event) => event.stopPropagation()}
-          onClick={(event) => event.stopPropagation()}
-          onCheckedChange={onToggleDone}
-        />
-        <span className="flex min-w-0 flex-1 flex-col gap-1">
-          <span className="flex items-center gap-2">
-            <PriorityGlyph priority={node.priority} />
-            <span className="font-mono text-xs text-muted-foreground">
-              {node.taskKey}
-            </span>
-          </span>
-          <span className="text-sm">{node.summary}</span>
-          <TaskProgressBar
-            done={progress.done}
-            total={progress.total}
-            className="text-xs text-muted-foreground"
+      <TaskContextMenu taskId={node.id}>
+        <button
+          type="button"
+          data-task-id={node.id}
+          className={cn(
+            "flex w-full items-start gap-2 rounded-md border border-border px-2.5 py-2 text-left hover:bg-surface",
+            node.status === TaskStatus.DONE &&
+              "bg-black/30 text-muted-foreground",
+            selected && "bg-surface text-foreground",
+          )}
+          onMouseDown={(event) => {
+            if (event.shiftKey) event.preventDefault();
+          }}
+          onClick={selectFromPointer}
+        >
+          <Checkbox
+            data-no-dnd=""
+            checked={node.status === TaskStatus.DONE}
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={(event) => event.stopPropagation()}
+            onCheckedChange={onToggleDone}
           />
-          <TaskFacts task={node} />
-          {showBoardName ? (
-            <span className="text-xs text-muted-foreground">
-              {boardNameById.get(node.taskBoardId)}
+          <span className="flex min-w-0 flex-1 flex-col gap-1">
+            <span className="flex items-center gap-2">
+              <PriorityGlyph priority={node.priority} />
+              <span className="font-mono text-xs text-muted-foreground">
+                {node.taskKey}
+              </span>
             </span>
-          ) : null}
-        </span>
-      </button>
+            <span className="text-sm">{node.summary}</span>
+            <TaskProgressBar
+              done={progress.done}
+              total={progress.total}
+              className="text-xs text-muted-foreground"
+            />
+            <TaskFacts task={node} />
+            {showBoardName ? (
+              <span className="text-xs text-muted-foreground">
+                {boardNameById.get(node.taskBoardId)}
+              </span>
+            ) : null}
+          </span>
+        </button>
+      </TaskContextMenu>
     </DraggableTask>
   );
 }

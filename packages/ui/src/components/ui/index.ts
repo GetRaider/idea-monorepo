@@ -1,4 +1,5 @@
 export * from "./calendar";
+export * from "./context-menu";
 export * from "./dropdown-menu";
 export * from "./popover";
 export * from "./label";

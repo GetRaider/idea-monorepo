@@ -29,7 +29,6 @@ import {
 } from "@repo/api/todex";
 import type {
   AcceptanceCriterion,
-  Folder,
   Task,
   TaskBoard,
   UpdateTaskBody,
@@ -44,7 +43,6 @@ import {
   DockRightIcon,
   EllipsisIcon,
   ExpandIcon,
-  FolderIcon,
   PlusIcon,
   RepeatIcon,
 } from "@components/icons";
@@ -67,8 +65,12 @@ import { DatePicker, EstimatePicker } from "./task-pickers";
 import { TaskRecurrencePicker } from "./task-recurrence-picker";
 import { TaskDescriptionEditor } from "./task-description-editor";
 import {
+  AreaMark,
   BoardGlyph,
+  BoardMark,
+  ParentMark,
   PriorityGlyph,
+  StageMark,
   StatusGlyph,
   TaskProgressBar,
   TasksBreadcrumb,
@@ -82,6 +84,7 @@ import {
   STATUS_LABEL,
   STATUS_ORDER,
 } from "./task-helpers";
+import { collectDescendantIds } from "./task-selection";
 import { useTasks } from "./tasks-provider";
 
 const SAVE_DEBOUNCE_MS = 600;
@@ -89,7 +92,7 @@ const LG_QUERY = "(min-width: 1024px)";
 
 export function TaskView() {
   const {
-    state: { selectedTask, tasks, boards, folders },
+    state: { selectedTask, tasks, boards },
     actions: {
       setSelectedTaskId,
       updateTask,
@@ -226,7 +229,6 @@ export function TaskView() {
         task={selectedTask}
         tasks={tasks}
         boards={boards}
-        folders={folders}
         stacked={isDocked}
         onUpdate={(body) => updateTask(selectedTask.id, body, { quiet: true })}
         onUpdateStatus={(taskId, status) => updateTaskStatus(taskId, status)}
@@ -246,7 +248,6 @@ function TaskViewBody({
   task,
   tasks,
   boards,
-  folders,
   stacked,
   onUpdate,
   onUpdateStatus,
@@ -256,7 +257,6 @@ function TaskViewBody({
   task: Task;
   tasks: Task[];
   boards: TaskBoard[];
-  folders: Folder[];
   stacked: boolean;
   onUpdate: (body: UpdateTaskBody) => void;
   onUpdateStatus: (taskId: string, status: Task["status"]) => void;
@@ -316,7 +316,6 @@ function TaskViewBody({
     estimationText.trim() !== "" && parsedEstimation === null;
   const board = boards.find((item) => item.id === task.taskBoardId);
   const boardName = board?.name ?? "Board";
-  const space = folders.find((folder) => folder.id === board?.folderId);
 
   useEffect(() => {
     return () => {
@@ -444,7 +443,6 @@ function TaskViewBody({
                 ) : null}
               </div>
             </DetailRow>
-            {stages.length > 0 ? (
             <DetailRow icon={<StageMark />} label="Stage">
               <Select
                 value={
@@ -452,13 +450,17 @@ function TaskViewBody({
                     ? (task.progressStageId ?? "none")
                     : "none"
                 }
+                disabled={stages.length === 0}
                 onValueChange={(value) =>
                   onUpdate({
                     progressStageId: value === "none" ? null : value,
                   })
                 }
               >
-                <SelectTrigger className="h-8 w-full border-0 bg-transparent px-0 text-sm shadow-none">
+                <SelectTrigger
+                  className="h-8 w-full border-0 bg-transparent px-0 text-sm shadow-none disabled:opacity-50"
+                  disabled={stages.length === 0}
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -471,7 +473,6 @@ function TaskViewBody({
                 </SelectContent>
               </Select>
             </DetailRow>
-            ) : null}
             <DetailRow
               icon={<PriorityGlyph priority={task.priority} />}
               label="Priority"
@@ -566,13 +567,6 @@ function TaskViewBody({
                 ) : null}
               </div>
             </DetailRow>
-            {space ? (
-              <DetailRow icon={<FolderIcon size={16} />} label="Space">
-                <span className="text-sm">
-                  {space.emoji ? `${space.emoji} ${space.name}` : space.name}
-                </span>
-              </DetailRow>
-            ) : null}
             <DetailRow icon={<CalendarIcon size={16} />} label="Schedule">
               <DatePicker
                 appearance="plain"
@@ -1006,69 +1000,10 @@ function StatusDoneIconMark() {
   );
 }
 
-function StageMark() {
-  return <span className="h-3.5 w-3.5 rounded-full border border-current" />;
-}
-
-function AreaMark() {
-  return <span className="h-3 w-3 rounded-sm border border-current" />;
-}
-
-function BoardMark() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      width="16"
-      height="16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.75"
-    >
-      <rect x="4" y="5" width="16" height="14" rx="2" />
-      <path d="M10 5v14" />
-    </svg>
-  );
-}
-
-function ParentMark() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      width="16"
-      height="16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.75"
-    >
-      <circle cx="8" cy="7" r="2.25" />
-      <circle cx="16" cy="17" r="2.25" />
-      <path d="M9.5 8.5 14.5 15" />
-    </svg>
-  );
-}
-
 function compareTasksForNavigation(left: Task, right: Task): number {
   const createdDelta = left.createdAt.localeCompare(right.createdAt);
   if (createdDelta !== 0) return createdDelta;
   return left.taskKey.localeCompare(right.taskKey);
-}
-
-function collectDescendantIds(tasks: Task[], rootId: string): Set<string> {
-  const descendantIds = new Set<string>();
-  const pending = tasks
-    .filter((task) => task.parentTaskId === rootId)
-    .map((task) => task.id);
-
-  while (pending.length > 0) {
-    const taskId = pending.pop();
-    if (!taskId || descendantIds.has(taskId)) continue;
-    descendantIds.add(taskId);
-    for (const task of tasks) {
-      if (task.parentTaskId === taskId) pending.push(task.id);
-    }
-  }
-
-  return descendantIds;
 }
 
 const PRIORITY_OPTIONS = [

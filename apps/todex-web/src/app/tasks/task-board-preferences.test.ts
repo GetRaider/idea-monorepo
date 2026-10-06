@@ -10,6 +10,8 @@ import {
   readBoardListSort,
   readBoardListSubmode,
   readBoardViewMode,
+  readCollapsedBoardIds,
+  writeCollapsedBoardIds,
   writeJsonObject,
 } from "./task-board-preferences";
 
@@ -66,11 +68,20 @@ describe("task board preferences", () => {
     });
   });
 
+  it("stores collapsed schedule boards per day", () => {
+    writeCollapsedBoardIds("schedule:today", ["board-a", "board-b"]);
+    writeCollapsedBoardIds("schedule:tomorrow", ["board-c"]);
+    expect(readCollapsedBoardIds("schedule:today")).toEqual([
+      "board-a",
+      "board-b",
+    ]);
+    expect(readCollapsedBoardIds("schedule:tomorrow")).toEqual(["board-c"]);
+    expect(readCollapsedBoardIds("schedule:missing")).toEqual([]);
+  });
+
   it("rejects invalid stored values", () => {
     expect(isBoardViewMode("calendar")).toBe(false);
     expect(isBoardListSubmode("kanban")).toBe(false);
-    expect(isListSortState({ field: "dueDate", direction: "asc" })).toBe(
-      false,
-    );
+    expect(isListSortState({ field: "dueDate", direction: "asc" })).toBe(false);
   });
 });

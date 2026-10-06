@@ -7,10 +7,12 @@ import {
 import type { Task } from "@repo/api/todex";
 
 export function boardDropId(drop: BoardDropData & { taskId?: string }): string {
-  if (drop.kind === "row" && drop.taskId) return `drop-row:${drop.taskId}`;
+  const board = drop.boardId ? `${drop.boardId}:` : "";
+  if (drop.kind === "row" && drop.taskId)
+    return `drop-row:${board}${drop.taskId}`;
   const index = drop.index == null ? "end" : String(drop.index);
   const section = drop.combinedOpen ? "open" : drop.status;
-  return `drop:${drop.kind}:${section}:${index}`;
+  return `drop:${board}${drop.kind}:${section}:${index}`;
 }
 
 export const boardCollisionDetection: CollisionDetection = (args) => {
@@ -56,6 +58,7 @@ export interface BoardDropData {
   type: "reorder";
   status: Task["status"];
   index: number | null;
+  boardId?: string;
   combinedOpen?: boolean;
   kind: "gap" | "fill" | "empty" | "column" | "row" | "card";
 }

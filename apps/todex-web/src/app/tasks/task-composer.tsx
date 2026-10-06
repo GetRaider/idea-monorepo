@@ -26,6 +26,7 @@ export function TaskComposer({
   titleRef,
   boards,
   defaultBoardId,
+  defaultScheduleDate = "",
   open = false,
   onOpenChange,
   onCreate,
@@ -33,6 +34,7 @@ export function TaskComposer({
   titleRef?: ComponentProps<"input">["ref"];
   boards?: ComposerBoard[];
   defaultBoardId?: string | null;
+  defaultScheduleDate?: string;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   onCreate: (values: TaskComposerValues) => void;
@@ -41,7 +43,7 @@ export function TaskComposer({
   const [estimationText, setEstimationText] = useState("");
   const [priority, setPriority] = useState<Task["priority"]>(TaskPriority.MEDIUM);
   const [status, setStatus] = useState<Task["status"]>(TaskStatus.TODO);
-  const [scheduleDate, setScheduleDate] = useState("");
+  const [scheduleDate, setScheduleDate] = useState(defaultScheduleDate);
   const [dueDate, setDueDate] = useState("");
   const [taskBoardId, setTaskBoardId] = useState(
     defaultBoardId ?? boards?.[0]?.id ?? "",
@@ -53,12 +55,16 @@ export function TaskComposer({
     if (defaultBoardId) setTaskBoardId(defaultBoardId);
   }, [defaultBoardId]);
 
+  useEffect(() => {
+    setScheduleDate(defaultScheduleDate);
+  }, [defaultScheduleDate]);
+
   function reset() {
     setSummary("");
     setEstimationText("");
     setPriority(TaskPriority.MEDIUM);
     setStatus(TaskStatus.TODO);
-    setScheduleDate("");
+    setScheduleDate(defaultScheduleDate);
     setDueDate("");
     setEstimationInvalid(false);
     onOpenChange?.(false);

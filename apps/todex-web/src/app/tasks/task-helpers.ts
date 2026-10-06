@@ -1,4 +1,8 @@
-import { completeRecurringTask, TaskPriority, TaskStatus } from "@repo/api/todex";
+import {
+  completeRecurringTask,
+  TaskPriority,
+  TaskStatus,
+} from "@repo/api/todex";
 import type { Task } from "@repo/api/todex";
 
 export const STATUS_ORDER = [
@@ -51,6 +55,23 @@ export function nestTasks(tasks: Task[]): NestedTask[] {
     task.children.sort(compareTaskOrder);
   }
   return roots;
+}
+
+export function scheduleBoards<TBoard extends { id: string }>(
+  boards: TBoard[],
+  roots: NestedTask[],
+): ScheduleBoardSection<TBoard>[] {
+  const rootsByBoardId = new Map<string, NestedTask[]>();
+  for (const root of roots) {
+    const boardRoots = rootsByBoardId.get(root.taskBoardId) ?? [];
+    boardRoots.push(root);
+    rootsByBoardId.set(root.taskBoardId, boardRoots);
+  }
+  return boards.flatMap((board) => {
+    const boardRoots = rootsByBoardId.get(board.id);
+    if (!boardRoots?.length) return [];
+    return [{ board, groups: groupRootsByStatus(boardRoots) }];
+  });
 }
 
 export function groupRootsByStatus(
@@ -421,6 +442,11 @@ export interface BoardDropNode {
 
 export interface NestedTask extends Task {
   children: NestedTask[];
+}
+
+export interface ScheduleBoardSection<TBoard extends { id: string }> {
+  board: TBoard;
+  groups: Record<Task["status"], NestedTask[]>;
 }
 
 export type ListSortField = "title" | "schedule" | "priority";

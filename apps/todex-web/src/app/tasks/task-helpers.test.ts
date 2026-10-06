@@ -16,6 +16,7 @@ import {
   isUnscheduledTask,
   isoToDateInput,
   localDayScheduleQuery,
+  scheduleBoards,
   sortNestedTasks,
   tasksByCompletedDescending,
   tasksByCreatedAtDescending,
@@ -158,6 +159,36 @@ describe("list sort", () => {
       direction: "asc",
     });
     expect(sorted.map((node) => node.id)).toEqual(["sooner", "later", "none"]);
+  });
+});
+
+describe("scheduleBoards", () => {
+  it("groups roots by board in board-list order and drops empty boards", () => {
+    const inbox = task({ id: "inbox-task", taskBoardId: "inbox", position: 1 });
+    const work = task({
+      id: "work-task",
+      taskBoardId: "work",
+      status: TaskStatus.IN_PROGRESS,
+      position: 0,
+    });
+    const sections = scheduleBoards(
+      [
+        { id: "work", name: "Work" },
+        { id: "inbox", name: "Inbox" },
+        { id: "empty", name: "Empty" },
+      ],
+      [inbox, work],
+    );
+    expect(sections.map((section) => section.board.id)).toEqual([
+      "work",
+      "inbox",
+    ]);
+    expect(
+      sections[0]?.groups[TaskStatus.IN_PROGRESS].map((node) => node.id),
+    ).toEqual(["work-task"]);
+    expect(sections[1]?.groups[TaskStatus.TODO].map((node) => node.id)).toEqual(
+      ["inbox-task"],
+    );
   });
 });
 

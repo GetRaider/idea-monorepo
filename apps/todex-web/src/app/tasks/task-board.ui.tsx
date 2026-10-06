@@ -29,6 +29,7 @@ export function BoardDropZone({
   status,
   index,
   kind,
+  boardId,
   combinedOpen,
   taskId,
   compact,
@@ -38,6 +39,7 @@ export function BoardDropZone({
   status: Task["status"];
   index: number | null;
   kind: BoardDropData["kind"];
+  boardId?: string;
   combinedOpen?: boolean;
   taskId?: string;
   compact?: boolean;
@@ -49,6 +51,7 @@ export function BoardDropZone({
     status,
     index,
     kind,
+    boardId,
     combinedOpen,
   };
   const { setNodeRef, isOver } = useDroppable({
@@ -61,6 +64,7 @@ export function BoardDropZone({
     overData?.type === "reorder" &&
     overData.status === status &&
     overData.index === index &&
+    overData.boardId === boardId &&
     Boolean(overData.combinedOpen) === Boolean(combinedOpen);
   const showIndicator =
     Boolean(active) &&
@@ -137,6 +141,7 @@ export function TaskRow({
   onToggleDone,
   onCreateSubtask,
   statusDrop,
+  boardId,
 }: {
   node: NestedTask;
   selectedTaskId: string | null;
@@ -149,6 +154,7 @@ export function TaskRow({
   onToggleDone: (task: NestedTask) => void;
   onCreateSubtask: (parentTaskId: string) => void;
   statusDrop?: boolean;
+  boardId?: string;
 }) {
   const hasChildren = node.children.length > 0;
   const row = (
@@ -224,6 +230,7 @@ export function TaskRow({
       status={node.status}
       index={null}
       taskId={node.id}
+      boardId={boardId}
     >
       {draggable}
     </BoardDropZone>

@@ -5,7 +5,6 @@ import {
   useMemo,
   useState,
   type ComponentProps,
-  type FormEvent,
 } from "react";
 import {
   DndContext,
@@ -30,11 +29,6 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
   cn,
 } from "@repo/ui";
 import { TaskStatus } from "@repo/api/todex";
@@ -52,14 +46,22 @@ import {
   TasksBreadcrumb,
 } from "./task-board.ui";
 import { useBoardPreferences } from "./board-preferences-provider";
-import type { BoardListSubmode, BoardViewMode } from "./task-board-preferences";
+import {
+  useCollapsedScheduleBoards,
+  type BoardListSubmode,
+  type BoardViewMode,
+} from "./task-board-preferences";
+import { ScheduleBoards } from "./schedule-boards";
 import { TaskComposer, type TaskComposerValues } from "./task-composer";
 import { TaskKanban } from "./task-kanban";
 import {
   STATUS_LABEL,
   STATUS_ORDER,
+  isoToDateInput,
+  localDayScheduleQuery,
   resolveCombinedOpenDrop,
   sameBoardDropIndex,
+  scheduleBoards,
   sortGroupsByListSort,
   sortNestedTasks,
   type ListSortField,
@@ -82,15 +84,15 @@ export function TaskList() {
     actions: {
       setSelectedTaskId,
       createTask,
+      updateTask,
       updateTaskStatus,
       moveTask,
-      setScheduleTargetBoardId,
       openCreateDialog,
     },
     meta: { createInputRef },
   } = useTasks();
-  const [createSummary, setCreateSummary] = useState("");
   const [isComposerOpen, setIsComposerOpen] = useState(false);
+  const [composerBoardId, setComposerBoardId] = useState<string | null>(null);
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const {
     viewMode,
@@ -104,30 +106,41 @@ export function TaskList() {
     useSensor(BoardPointerSensor, { activationConstraint: { distance: 8 } }),
   );
   const boardNameById = new Map(boards.map((board) => [board.id, board.name]));
+  const scheduleContextKey =
+    view.kind === "schedule" ? `schedule:${view.schedule}` : null;
+  const { collapsedBoardIds, toggleBoardCollapsed } =
+    useCollapsedScheduleBoards(scheduleContextKey);
   const sortedGroups = useMemo(
     () => sortGroupsByListSort(groups, listSort),
     [groups, listSort],
   );
-  const hasScheduledTasks = STATUS_ORDER.some(
-    (status) => (groups[status] ?? []).length > 0,
-  );
+  const scheduleSections = useMemo(() => {
+    if (view.kind !== "schedule") return [];
+    const roots = STATUS_ORDER.flatMap((status) => groups[status] ?? []);
+    return scheduleBoards(boards, roots).map((section) => ({
+      ...section,
+      groups:
+        viewMode === "list"
+          ? sortGroupsByListSort(section.groups, listSort)
+          : section.groups,
+    }));
+  }, [boards, groups, listSort, view.kind, viewMode]);
   const title =
     view.kind === "schedule"
       ? view.schedule === "today"
         ? "Today"
         : "Tomorrow"
       : (selectedBoard?.name ?? "Select a board");
-  const showBoardName = view.kind === "schedule";
-
-  const submitCreate = (event: FormEvent) => {
-    event.preventDefault();
-    if (!createSummary.trim() || !createBoardId) return;
-    createTask(createSummary.trim());
-    setCreateSummary("");
-  };
+  const scheduleDayInput =
+    view.kind === "schedule"
+      ? isoToDateInput(
+          localDayScheduleQuery(view.schedule === "today" ? 0 : 1)
+            .scheduleFrom,
+        )
+      : "";
 
   const reorderEnabled =
-    view.kind === "board" &&
+    (view.kind === "board" || view.kind === "schedule") &&
     !search.trim() &&
     (viewMode === "kanban" || !listSort.enabled);
   const activeTask = tasks.find((task) => task.id === activeTaskId) ?? null;
@@ -142,6 +155,19 @@ export function TaskList() {
     if (!drop || drop.type !== "reorder") return;
     const task = tasks.find((item) => item.id === String(event.active.id));
     if (!task || task.parentTaskId) return;
+    if (drop.boardId && drop.boardId !== task.taskBoardId) {
+      updateTask(
+        task.id,
+        { taskBoardId: drop.boardId, status: drop.status },
+        { quiet: true },
+      );
+      return;
+    }
+    const columnNodes = (status: Task["status"]) => {
+      const nodes = groups[status] ?? [];
+      if (!drop.boardId) return nodes;
+      return nodes.filter((node) => node.taskBoardId === drop.boardId);
+    };
     if (!reorderEnabled || drop.index == null) {
       if (task.status === drop.status) return;
       moveTask(task.id, { status: drop.status });
@@ -149,8 +175,8 @@ export function TaskList() {
     }
     const resolved = drop.combinedOpen
       ? resolveCombinedOpenDrop(
-          groups[TaskStatus.TODO] ?? [],
-          groups[TaskStatus.IN_PROGRESS] ?? [],
+          columnNodes(TaskStatus.TODO),
+          columnNodes(TaskStatus.IN_PROGRESS),
           task.id,
           task.taskBoardId,
           drop.index,
@@ -158,7 +184,7 @@ export function TaskList() {
       : {
           status: drop.status,
           index: sameBoardDropIndex(
-            groups[drop.status] ?? [],
+            columnNodes(drop.status),
             task.id,
             task.taskBoardId,
             drop.index,
@@ -174,16 +200,18 @@ export function TaskList() {
   };
 
   const showEmptySchedule =
-    view.kind === "schedule" && !hasScheduledTasks && !search.trim();
+    view.kind === "schedule" &&
+    scheduleSections.length === 0 &&
+    !search.trim();
   const isBoard = view.kind === "board";
   const hasVisibleTasks = STATUS_ORDER.some(
     (status) => (sortedGroups[status] ?? []).length > 0,
   );
 
   useEffect(() => {
-    if (!isComposerOpen) return;
+    if (!isComposerOpen && !composerBoardId) return;
     createInputRef.current?.focus();
-  }, [createInputRef, isComposerOpen, viewMode]);
+  }, [composerBoardId, createInputRef, isComposerOpen, viewMode]);
 
   function openComposer() {
     setIsComposerOpen(true);
@@ -191,18 +219,133 @@ export function TaskList() {
 
   function closeComposer() {
     setIsComposerOpen(false);
+    setComposerBoardId(null);
   }
 
-  function submitComposer(values: TaskComposerValues) {
+  function submitComposer(values: TaskComposerValues, boardId?: string) {
     createTask(values.summary, null, {
       status: values.status,
       priority: values.priority,
       estimation: values.estimation,
-      taskBoardId: values.taskBoardId ?? undefined,
+      taskBoardId: boardId ?? values.taskBoardId ?? undefined,
       scheduleDate: values.scheduleDate,
       dueDate: values.dueDate,
     });
     closeComposer();
+  }
+
+  function fastCreateFor(boardId: string) {
+    return {
+      isOpen: composerBoardId === boardId,
+      titleRef: composerBoardId === boardId ? createInputRef : undefined,
+      defaultBoardId: boardId,
+      defaultScheduleDate: scheduleDayInput,
+      onOpen: () => setComposerBoardId(boardId),
+      onClose: () =>
+        setComposerBoardId((current) => (current === boardId ? null : current)),
+      onCreate: (values: TaskComposerValues) => submitComposer(values, boardId),
+    };
+  }
+
+  function toggleDone(task: NestedTask) {
+    updateTaskStatus(
+      task.id,
+      task.status === TaskStatus.DONE ? TaskStatus.TODO : TaskStatus.DONE,
+    );
+  }
+
+  function renderBoardSurface() {
+    if (view.kind === "schedule") {
+      return (
+        <ScheduleBoards
+          sections={scheduleSections}
+          collapsedBoardIds={collapsedBoardIds}
+          onToggleBoard={toggleBoardCollapsed}
+          renderBoard={(section) =>
+            viewMode === "kanban" ? (
+              <TaskKanban
+                groups={section.groups}
+                boardNameById={boardNameById}
+                showBoardName={false}
+                reorderEnabled={reorderEnabled}
+                boardId={section.board.id}
+                layout="stack"
+                fastCreate={fastCreateFor(section.board.id)}
+              />
+            ) : (
+              <div className="flex flex-col gap-3">
+                <ListSections
+                  submode={listSubmode}
+                  groups={section.groups}
+                  listSort={listSort}
+                  selectedTaskId={selectedTaskId}
+                  boardNameById={boardNameById}
+                  showBoardName={false}
+                  boardId={section.board.id}
+                  fastCreate={fastCreateFor(section.board.id)}
+                  onSelect={setSelectedTaskId}
+                  onToggleDone={toggleDone}
+                  onCreateSubtask={(parentTaskId) =>
+                    createTask("New subtask", parentTaskId)
+                  }
+                  reorderEnabled={reorderEnabled}
+                />
+              </div>
+            )
+          }
+        />
+      );
+    }
+    if (viewMode === "kanban") {
+      return (
+        <TaskKanban
+          groups={groups}
+          boardNameById={boardNameById}
+          showBoardName={false}
+          reorderEnabled={reorderEnabled}
+          fastCreate={
+            isBoard
+              ? {
+                  isOpen: isComposerOpen,
+                  titleRef: createInputRef,
+                  onOpen: openComposer,
+                  onClose: closeComposer,
+                  onCreate: submitComposer,
+                }
+              : undefined
+          }
+        />
+      );
+    }
+    return (
+      <div className="flex flex-col gap-3">
+        <ListSections
+          submode={listSubmode}
+          groups={sortedGroups}
+          listSort={listSort}
+          selectedTaskId={selectedTaskId}
+          boardNameById={boardNameById}
+          showBoardName={false}
+          fastCreate={
+            isBoard
+              ? {
+                  isOpen: isComposerOpen,
+                  titleRef: createInputRef,
+                  onOpen: openComposer,
+                  onClose: closeComposer,
+                  onCreate: submitComposer,
+                }
+              : undefined
+          }
+          onSelect={setSelectedTaskId}
+          onToggleDone={toggleDone}
+          onCreateSubtask={(parentTaskId) =>
+            createTask("New subtask", parentTaskId)
+          }
+          reorderEnabled={reorderEnabled}
+        />
+      </div>
+    );
   }
 
   return (
@@ -225,11 +368,16 @@ export function TaskList() {
           <Button
             size="sm"
             onClick={() => {
-              if (isBoard) {
-                openComposer();
+              if (view.kind === "schedule") {
+                const boardId = scheduleSections[0]?.board.id;
+                if (!boardId) return;
+                if (collapsedBoardIds.has(boardId)) {
+                  toggleBoardCollapsed(boardId);
+                }
+                setComposerBoardId(boardId);
                 return;
               }
-              createInputRef.current?.focus();
+              openComposer();
             }}
             disabled={!createBoardId}
           >
@@ -245,38 +393,6 @@ export function TaskList() {
             Create board
           </Button>
         </div>
-      ) : null}
-      {view.kind === "schedule" ? (
-        <form
-          onSubmit={submitCreate}
-          className="mb-3 flex items-center gap-2"
-          onPointerDown={(event) => event.stopPropagation()}
-        >
-          <Select
-            value={createBoardId ?? undefined}
-            onValueChange={setScheduleTargetBoardId}
-            disabled={boards.length === 0}
-          >
-            <SelectTrigger className="h-9 w-44 shrink-0">
-              <SelectValue placeholder="Board" />
-            </SelectTrigger>
-            <SelectContent>
-              {boards.map((board) => (
-                <SelectItem key={board.id} value={board.id}>
-                  {board.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <input
-            ref={createInputRef}
-            value={createSummary}
-            onChange={(event) => setCreateSummary(event.target.value)}
-            placeholder="+ Create a new task"
-            disabled={!createBoardId}
-            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm text-foreground shadow-sm outline-none placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-          />
-        </form>
       ) : null}
       {search.trim() && !hasVisibleTasks && !showEmptySchedule ? (
         <p className="mb-3 text-sm text-muted-foreground">
@@ -297,60 +413,7 @@ export function TaskList() {
           onDragCancel={() => setActiveTaskId(null)}
           onDragEnd={handleDragEnd}
         >
-          {viewMode === "kanban" ? (
-            <TaskKanban
-              groups={groups}
-              boardNameById={boardNameById}
-              showBoardName={showBoardName}
-              reorderEnabled={reorderEnabled}
-              fastCreate={
-                isBoard
-                  ? {
-                      isOpen: isComposerOpen,
-                      titleRef: createInputRef,
-                      onOpen: openComposer,
-                      onClose: closeComposer,
-                      onCreate: submitComposer,
-                    }
-                  : undefined
-              }
-            />
-          ) : (
-            <div className="flex flex-col gap-3">
-              <ListSections
-                submode={listSubmode}
-                groups={sortedGroups}
-                listSort={listSort}
-                selectedTaskId={selectedTaskId}
-                boardNameById={boardNameById}
-                showBoardName={showBoardName}
-                fastCreate={
-                  isBoard
-                    ? {
-                        isOpen: isComposerOpen,
-                        titleRef: createInputRef,
-                        onOpen: openComposer,
-                        onClose: closeComposer,
-                        onCreate: submitComposer,
-                      }
-                    : undefined
-                }
-                onSelect={setSelectedTaskId}
-                onToggleDone={(task) =>
-                  updateTaskStatus(
-                    task.id,
-                    task.status === TaskStatus.DONE
-                      ? TaskStatus.TODO
-                      : TaskStatus.DONE,
-                  )
-                }
-                onCreateSubtask={(parentTaskId) =>
-                  createTask("New subtask", parentTaskId)
-                }
-                reorderEnabled={reorderEnabled}
-              />
-            </div>
-          )}
+          {renderBoardSurface()}
           <DragOverlay dropAnimation={null}>
             {activeTask ? (
               <div className="cursor-grabbing rounded-md border border-border bg-panel px-3 py-2 text-sm shadow-lg">
@@ -374,6 +437,7 @@ function ListSections({
   selectedTaskId,
   boardNameById,
   showBoardName,
+  boardId,
   fastCreate,
   onSelect,
   onToggleDone,
@@ -390,6 +454,7 @@ function ListSections({
   selectedTaskId: string | null;
   boardNameById: Map<string, string>;
   showBoardName: boolean;
+  boardId?: string;
   fastCreate?: ListFastCreate;
   onSelect: (taskId: string) => void;
   onToggleDone: (task: NestedTask) => void;
@@ -437,6 +502,7 @@ function ListSections({
           selectedTaskId={selectedTaskId}
           boardNameById={boardNameById}
           showBoardName={showBoardName}
+          boardId={boardId}
           fastCreate={
             section.status === TaskStatus.TODO ? fastCreate : undefined
           }
@@ -461,6 +527,7 @@ function ListSection({
   selectedTaskId,
   boardNameById,
   showBoardName,
+  boardId,
   fastCreate,
   onSelect,
   onToggleDone,
@@ -475,6 +542,7 @@ function ListSection({
   selectedTaskId: string | null;
   boardNameById: Map<string, string>;
   showBoardName: boolean;
+  boardId?: string;
   fastCreate?: ListFastCreate;
   onSelect: (taskId: string) => void;
   onToggleDone: (task: NestedTask) => void;
@@ -502,6 +570,8 @@ function ListSection({
           <div className="mb-2 px-1">
             <TaskComposer
               titleRef={fastCreate.titleRef}
+              defaultBoardId={fastCreate.defaultBoardId}
+              defaultScheduleDate={fastCreate.defaultScheduleDate}
               open={fastCreate.isOpen}
               onOpenChange={(next) =>
                 next ? fastCreate.onOpen() : fastCreate.onClose()
@@ -517,6 +587,7 @@ function ListSection({
                 kind="empty"
                 status={status}
                 index={0}
+                boardId={boardId}
                 combinedOpen={combinedOpen}
                 compact
               >
@@ -532,6 +603,7 @@ function ListSection({
                       kind="gap"
                       status={status}
                       index={index}
+                      boardId={boardId}
                       combinedOpen={combinedOpen}
                       compact
                     />
@@ -539,6 +611,7 @@ function ListSection({
                       kind="card"
                       status={status}
                       index={index}
+                      boardId={boardId}
                       combinedOpen={combinedOpen}
                     >
                       <TaskTree
@@ -546,6 +619,7 @@ function ListSection({
                         selectedTaskId={selectedTaskId}
                         boardNameById={boardNameById}
                         showBoardName={showBoardName}
+                        boardId={boardId}
                         onSelect={onSelect}
                         onToggleDone={onToggleDone}
                         onCreateSubtask={onCreateSubtask}
@@ -557,6 +631,7 @@ function ListSection({
                   kind="fill"
                   status={status}
                   index={nodes.length}
+                  boardId={boardId}
                   combinedOpen={combinedOpen}
                   compact
                 />
@@ -567,6 +642,7 @@ function ListSection({
               kind="empty"
               status={status}
               index={null}
+              boardId={boardId}
               combinedOpen={combinedOpen}
               compact
             >
@@ -580,6 +656,7 @@ function ListSection({
               selectedTaskId={selectedTaskId}
               boardNameById={boardNameById}
               showBoardName={showBoardName}
+              boardId={boardId}
               statusDrop
               onSelect={onSelect}
               onToggleDone={onToggleDone}
@@ -597,6 +674,7 @@ function TaskTree({
   selectedTaskId,
   boardNameById,
   showBoardName,
+  boardId,
   onSelect,
   onToggleDone,
   onCreateSubtask,
@@ -607,6 +685,7 @@ function TaskTree({
   selectedTaskId: string | null;
   boardNameById: Map<string, string>;
   showBoardName: boolean;
+  boardId?: string;
   onSelect: (taskId: string) => void;
   onToggleDone: (task: NestedTask) => void;
   onCreateSubtask: (parentTaskId: string) => void;
@@ -635,6 +714,7 @@ function TaskTree({
             selectedTaskId={selectedTaskId}
             boardNameById={boardNameById}
             showBoardName={showBoardName}
+            boardId={boardId}
             depth={depth}
             expanded={expandedIds.has(node.id)}
             onToggleExpanded={() => toggleExpanded(node.id)}
@@ -649,6 +729,7 @@ function TaskTree({
               selectedTaskId={selectedTaskId}
               boardNameById={boardNameById}
               showBoardName={showBoardName}
+              boardId={boardId}
               onSelect={onSelect}
               onToggleDone={onToggleDone}
               onCreateSubtask={onCreateSubtask}
@@ -803,6 +884,8 @@ class BoardPointerSensor extends PointerSensor {
 interface ListFastCreate {
   isOpen: boolean;
   titleRef: ComponentProps<"input">["ref"];
+  defaultBoardId?: string;
+  defaultScheduleDate?: string;
   onOpen: () => void;
   onClose: () => void;
   onCreate: (values: TaskComposerValues) => void;

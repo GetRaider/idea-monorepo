@@ -2,14 +2,13 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-import {
-  DEFAULT_LIST_SORT,
-  type ListSortState,
-} from "./task-helpers";
+import { DEFAULT_LIST_SORT, type ListSortState } from "./task-helpers";
 
 export const BOARD_VIEW_MODE_STORAGE_KEY = "todex:board-view-mode:v1";
 export const BOARD_LIST_SUBMODE_STORAGE_KEY = "todex:board-list-submode:v1";
 export const BOARD_LIST_SORT_STORAGE_KEY = "todex:board-list-sort:v1";
+export const SCHEDULE_COLLAPSED_BOARDS_STORAGE_KEY =
+  "todex:schedule-collapsed-boards:v1";
 
 export const DEFAULT_BOARD_VIEW_MODE: BoardViewMode = "kanban";
 export const DEFAULT_BOARD_LIST_SUBMODE: BoardListSubmode = "grouped";
@@ -73,6 +72,51 @@ export function readBoardListSubmode(contextKey: string): BoardListSubmode {
   return isBoardListSubmode(stored) ? stored : DEFAULT_BOARD_LIST_SUBMODE;
 }
 
+export function readCollapsedBoardIds(contextKey: string): string[] {
+  const stored = readJsonObject(SCHEDULE_COLLAPSED_BOARDS_STORAGE_KEY)[
+    contextKey
+  ];
+  if (!Array.isArray(stored)) return [];
+  return stored.filter(
+    (boardId): boardId is string => typeof boardId === "string",
+  );
+}
+
+export function writeCollapsedBoardIds(
+  contextKey: string,
+  boardIds: Iterable<string>,
+): void {
+  const map = readJsonObject(SCHEDULE_COLLAPSED_BOARDS_STORAGE_KEY);
+  map[contextKey] = [...boardIds];
+  writeJsonObject(SCHEDULE_COLLAPSED_BOARDS_STORAGE_KEY, map);
+}
+
+export function useCollapsedScheduleBoards(contextKey: string | null) {
+  const [collapsedBoardIds, setCollapsedBoardIds] = useState<Set<string>>(
+    () => new Set(),
+  );
+
+  useEffect(() => {
+    if (!contextKey) return;
+    setCollapsedBoardIds(new Set(readCollapsedBoardIds(contextKey)));
+  }, [contextKey]);
+
+  const toggleBoardCollapsed = useCallback(
+    (boardId: string) => {
+      setCollapsedBoardIds((current) => {
+        const next = new Set(current);
+        if (next.has(boardId)) next.delete(boardId);
+        else next.add(boardId);
+        if (contextKey) writeCollapsedBoardIds(contextKey, next);
+        return next;
+      });
+    },
+    [contextKey],
+  );
+
+  return { collapsedBoardIds, toggleBoardCollapsed };
+}
+
 export function readBoardListSort(contextKey: string): ListSortState {
   const stored = readJsonObject(BOARD_LIST_SORT_STORAGE_KEY)[contextKey];
   return isListSortState(stored) ? stored : DEFAULT_LIST_SORT;
@@ -85,7 +129,8 @@ export function useTaskBoardPreferences(contextKey: string | null) {
   const [listSubmode, setListSubmodeState] = useState<BoardListSubmode>(
     DEFAULT_BOARD_LIST_SUBMODE,
   );
-  const [listSort, setListSortState] = useState<ListSortState>(DEFAULT_LIST_SORT);
+  const [listSort, setListSortState] =
+    useState<ListSortState>(DEFAULT_LIST_SORT);
 
   useEffect(() => {
     if (!contextKey) return;

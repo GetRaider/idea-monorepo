@@ -28,12 +28,16 @@ export function TaskKanban({
   showBoardName,
   fastCreate,
   reorderEnabled,
+  boardId,
+  layout = "fill",
 }: {
   groups: Record<Task["status"], NestedTask[]>;
   boardNameById: Map<string, string>;
   showBoardName: boolean;
   fastCreate?: FastCreate;
   reorderEnabled: boolean;
+  boardId?: string;
+  layout?: "fill" | "stack";
 }) {
   const {
     state: { selectedTaskId },
@@ -41,13 +45,21 @@ export function TaskKanban({
   } = useTasks();
 
   return (
-    <div className="grid min-h-0 flex-1 grid-cols-3 gap-3">
+    <div
+      className={cn(
+        "grid grid-cols-3 gap-3",
+        layout === "fill" ? "min-h-0 flex-1" : "shrink-0",
+      )}
+    >
       {STATUS_ORDER.map((status) => {
         const nodes = groups[status] ?? [];
         return (
           <section
             key={status}
-            className="flex min-h-0 flex-col rounded-lg border border-border bg-panel p-2"
+            className={cn(
+              "flex flex-col rounded-lg border border-border bg-panel p-2",
+              layout === "fill" && "min-h-0",
+            )}
           >
             <div className="mb-2 flex items-center gap-2 px-1 py-1 text-sm font-semibold">
               <StatusGlyph status={status} />
@@ -58,6 +70,8 @@ export function TaskKanban({
               <div className="mb-2">
                 <TaskComposer
                   titleRef={fastCreate.titleRef}
+                  defaultBoardId={fastCreate.defaultBoardId}
+                  defaultScheduleDate={fastCreate.defaultScheduleDate}
                   open={fastCreate.isOpen}
                   onOpenChange={(next) =>
                     next ? fastCreate.onOpen() : fastCreate.onClose()
@@ -66,10 +80,20 @@ export function TaskKanban({
                 />
               </div>
             ) : null}
-            <div className="flex min-h-24 flex-1 flex-col overflow-auto">
+            <div
+              className={cn(
+                "flex min-h-24 flex-col",
+                layout === "fill" && "min-h-0 flex-1 overflow-auto",
+              )}
+            >
               {reorderEnabled ? (
                 nodes.length === 0 ? (
-                  <BoardDropZone kind="empty" status={status} index={0} />
+                  <BoardDropZone
+                    kind="empty"
+                    status={status}
+                    index={0}
+                    boardId={boardId}
+                  />
                 ) : (
                   <>
                     {nodes.map((node, index) => (
@@ -78,11 +102,13 @@ export function TaskKanban({
                           kind="gap"
                           status={status}
                           index={index}
+                          boardId={boardId}
                         />
                         <BoardDropZone
                           kind="card"
                           status={status}
                           index={index}
+                          boardId={boardId}
                         >
                           <KanbanCard
                             node={node}
@@ -106,6 +132,7 @@ export function TaskKanban({
                       kind="fill"
                       status={status}
                       index={nodes.length}
+                      boardId={boardId}
                     />
                   </>
                 )
@@ -114,6 +141,7 @@ export function TaskKanban({
                   kind="column"
                   status={status}
                   index={null}
+                  boardId={boardId}
                   className="flex min-h-24 flex-1 flex-col gap-1"
                 >
                   {nodes.map((node) => (
@@ -209,6 +237,8 @@ function KanbanCard({
 interface FastCreate {
   isOpen: boolean;
   titleRef: ComponentProps<"input">["ref"];
+  defaultBoardId?: string;
+  defaultScheduleDate?: string;
   onOpen: () => void;
   onClose: () => void;
   onCreate: (values: TaskComposerValues) => void;

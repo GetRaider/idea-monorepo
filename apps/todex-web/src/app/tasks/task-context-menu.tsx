@@ -710,7 +710,8 @@ function menuStatus(value: string | null): Task["status"] {
   if (
     value === TaskStatus.TODO ||
     value === TaskStatus.IN_PROGRESS ||
-    value === TaskStatus.DONE
+    value === TaskStatus.DONE ||
+    value === TaskStatus.CANCELLED
   ) {
     return value;
   }

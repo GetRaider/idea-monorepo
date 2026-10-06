@@ -236,7 +236,11 @@ export class TasksService {
       if (sourceIds) {
         await this.writePositions(tx, sourceIds, {});
       }
+      const cancelling =
+        body.status === TaskStatus.CANCELLED &&
+        existing.status !== TaskStatus.CANCELLED;
       if (
+        cancelling ||
         completion?.type === "finish-series" ||
         completion?.type === "advance"
       ) {
@@ -574,6 +578,19 @@ function resolveCompletion(
     body.dueDate !== undefined ? parseIsoDate(body.dueDate) : undefined;
   const recurrence = body.recurrence;
   const acceptanceCriteria = body.acceptanceCriteria;
+  if (
+    body.status === TaskStatus.CANCELLED &&
+    existing.status !== TaskStatus.CANCELLED
+  ) {
+    return {
+      status: TaskStatus.CANCELLED,
+      scheduleDate,
+      dueDate,
+      recurrence: null,
+      acceptanceCriteria,
+      spawn: null,
+    };
+  }
   if (body.status !== TaskStatus.DONE || existing.status === TaskStatus.DONE) {
     return {
       status: body.status,

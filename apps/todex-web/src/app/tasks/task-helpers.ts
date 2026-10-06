@@ -9,13 +9,23 @@ export const STATUS_ORDER = [
   TaskStatus.TODO,
   TaskStatus.IN_PROGRESS,
   TaskStatus.DONE,
+  TaskStatus.CANCELLED,
 ] as const;
 
 export const STATUS_LABEL: Record<Task["status"], string> = {
   [TaskStatus.TODO]: "To Do",
   [TaskStatus.IN_PROGRESS]: "In Progress",
   [TaskStatus.DONE]: "Done",
+  [TaskStatus.CANCELLED]: "Cancelled",
 };
+
+export function isClosedStatus(status: Task["status"]): boolean {
+  return status === TaskStatus.DONE || status === TaskStatus.CANCELLED;
+}
+
+export function statusAfterDoneToggle(status: Task["status"]): Task["status"] {
+  return isClosedStatus(status) ? TaskStatus.TODO : TaskStatus.DONE;
+}
 
 export function acceptanceCriteriaAreMet(
   criteria: Task["acceptanceCriteria"],
@@ -95,6 +105,7 @@ export function groupRootsByStatus(
     [TaskStatus.TODO]: [],
     [TaskStatus.IN_PROGRESS]: [],
     [TaskStatus.DONE]: [],
+    [TaskStatus.CANCELLED]: [],
   };
   for (const root of roots) {
     groups[root.status].push(root);
@@ -376,11 +387,11 @@ export function normalizeDescriptionHtml(html: string): string {
 }
 
 export function isUnscheduledTask(task: Task): boolean {
-  return task.status !== TaskStatus.DONE && task.scheduleDate == null;
+  return !isClosedStatus(task.status) && task.scheduleDate == null;
 }
 
 export function isOverdueTask(task: Task, now: Date): boolean {
-  if (task.status === TaskStatus.DONE || task.dueDate == null) return false;
+  if (isClosedStatus(task.status) || task.dueDate == null) return false;
   const startOfToday = new Date(now);
   startOfToday.setHours(0, 0, 0, 0);
   return Date.parse(task.dueDate) < startOfToday.getTime();
@@ -424,6 +435,7 @@ export function sortGroupsByListSort(
       sort,
     ),
     [TaskStatus.DONE]: sortNestedTasks(groups[TaskStatus.DONE], sort),
+    [TaskStatus.CANCELLED]: sortNestedTasks(groups[TaskStatus.CANCELLED], sort),
   };
 }
 

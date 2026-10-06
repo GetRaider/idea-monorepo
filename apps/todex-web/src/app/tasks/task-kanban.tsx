@@ -20,6 +20,7 @@ import {
 import {
   STATUS_LABEL,
   STATUS_ORDER,
+  statusAfterDoneToggle,
   taskChecklistProgress,
   type NestedTask,
 } from "./task-helpers";
@@ -50,7 +51,7 @@ export function TaskKanban({
     <div
       data-task-surface=""
       className={cn(
-        "grid grid-cols-3 gap-3",
+        "grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4",
         layout === "fill" ? "min-h-0 flex-1" : "shrink-0",
       )}
       onClick={(event) => {
@@ -132,9 +133,7 @@ export function TaskKanban({
                             onToggleDone={() =>
                               updateTaskStatus(
                                 node.id,
-                                node.status === TaskStatus.DONE
-                                  ? TaskStatus.TODO
-                                  : TaskStatus.DONE,
+                                statusAfterDoneToggle(node.status),
                               )
                             }
                           />
@@ -167,9 +166,7 @@ export function TaskKanban({
                       onToggleDone={() =>
                         updateTaskStatus(
                           node.id,
-                          node.status === TaskStatus.DONE
-                            ? TaskStatus.TODO
-                            : TaskStatus.DONE,
+                          statusAfterDoneToggle(node.status),
                         )
                       }
                     />
@@ -227,6 +224,8 @@ function KanbanCard({
             "flex w-full items-start gap-2 rounded-md border border-border px-2.5 py-2 text-left hover:bg-surface",
             node.status === TaskStatus.DONE &&
               "bg-black/30 text-muted-foreground",
+            node.status === TaskStatus.CANCELLED &&
+              "text-muted-foreground line-through",
             selected && "bg-surface text-foreground",
           )}
           onMouseDown={(event) => {

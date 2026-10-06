@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Button, Spinner, cn } from "@repo/ui";
-import { TaskStatus } from "@repo/api/todex";
 import type { Task } from "@repo/api/todex";
 
 import { PlusIcon } from "@components/icons";
@@ -13,6 +12,7 @@ import { TaskComposer } from "./task-composer";
 import { TaskSearchField } from "./task-board.ui";
 import {
   INBOX_BOARD_NAME,
+  isClosedStatus,
   isInboxTask,
   isOverdueTask,
   isUnscheduledTask,
@@ -199,7 +199,7 @@ function HubTaskSection({
                   <span
                     className={cn(
                       "min-w-0 flex-1 truncate",
-                      task.status === TaskStatus.DONE &&
+                      isClosedStatus(task.status) &&
                         "text-muted-foreground line-through",
                     )}
                   >

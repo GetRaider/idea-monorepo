@@ -2,6 +2,7 @@ export const TaskStatus = {
   TODO: "todo",
   IN_PROGRESS: "in_progress",
   DONE: "done",
+  CANCELLED: "cancelled",
 } as const;
 
 export const TaskPriority = {

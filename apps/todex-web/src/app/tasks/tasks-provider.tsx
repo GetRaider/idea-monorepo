@@ -442,7 +442,11 @@ export function TasksProvider({ children }: { children: ReactNode }) {
               item.status === input.body.status &&
               item.id !== task.id,
           ).length;
-        return applyRootMove(current, input.taskId, input.body.status, index);
+        return clearRecurrenceOnCancel(
+          applyRootMove(current, input.taskId, input.body.status, index),
+          input.taskId,
+          input.body.status,
+        );
       });
       return { previous };
     },
@@ -641,11 +645,29 @@ function applyOptimisticTaskPatch(
           item.status === body.status &&
           item.id !== task.id,
       ).length;
-      return applyRootMove(tasks, taskId, body.status, index);
+      return clearRecurrenceOnCancel(
+        applyRootMove(tasks, taskId, body.status, index),
+        taskId,
+        body.status,
+      );
     }
   }
-  return tasks.map((task) =>
+  const patched = tasks.map((task) =>
     task.id === taskId ? { ...task, ...body } : task,
+  );
+  return body.status
+    ? clearRecurrenceOnCancel(patched, taskId, body.status)
+    : patched;
+}
+
+function clearRecurrenceOnCancel(
+  tasks: Task[],
+  taskId: string,
+  status: Task["status"],
+): Task[] {
+  if (status !== TaskStatus.CANCELLED) return tasks;
+  return tasks.map((task) =>
+    task.id === taskId ? { ...task, recurrence: null } : task,
   );
 }
 

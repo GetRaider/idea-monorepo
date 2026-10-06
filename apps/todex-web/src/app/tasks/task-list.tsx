@@ -70,6 +70,7 @@ import { TaskKanban } from "./task-kanban";
 import {
   STATUS_LABEL,
   STATUS_ORDER,
+  statusAfterDoneToggle,
   filterStatusGroups,
   isoToDateInput,
   localDayScheduleQuery,
@@ -138,6 +139,7 @@ export function TaskList() {
         [TaskStatus.TODO]: [],
         [TaskStatus.IN_PROGRESS]: [],
         [TaskStatus.DONE]: [],
+        [TaskStatus.CANCELLED]: [],
       };
     }
     return filterStatusGroups(groups, selectedAreaId);
@@ -290,10 +292,7 @@ export function TaskList() {
   }
 
   function toggleDone(task: NestedTask) {
-    updateTaskStatus(
-      task.id,
-      task.status === TaskStatus.DONE ? TaskStatus.TODO : TaskStatus.DONE,
-    );
+    updateTaskStatus(task.id, statusAfterDoneToggle(task.status));
   }
 
   function renderBoardSurface() {
@@ -532,6 +531,12 @@ function ListSections({
             status: TaskStatus.DONE,
             nodes: groups[TaskStatus.DONE] ?? [],
           },
+          {
+            key: "cancelled",
+            label: "Cancelled",
+            status: TaskStatus.CANCELLED,
+            nodes: groups[TaskStatus.CANCELLED] ?? [],
+          },
         ]
       : STATUS_ORDER.map((status) => ({
           key: status,
@@ -566,7 +571,10 @@ function ListSections({
           label={section.label}
           status={section.status}
           nodes={section.nodes}
-          defaultOpen={section.status !== TaskStatus.DONE}
+          defaultOpen={
+            section.status !== TaskStatus.DONE &&
+            section.status !== TaskStatus.CANCELLED
+          }
           boardNameById={boardNameById}
           showBoardName={showBoardName}
           boardId={boardId}

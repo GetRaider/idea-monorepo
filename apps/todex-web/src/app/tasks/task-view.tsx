@@ -84,6 +84,8 @@ import {
   dateInputToLocalDayStartIso,
   isoToDateInput,
   startOfLocalDay,
+  isClosedStatus,
+  statusAfterDoneToggle,
   taskChecklistProgress,
   STATUS_LABEL,
   STATUS_ORDER,
@@ -353,7 +355,7 @@ function TaskViewBody({
           rows={2}
           className={cn(
             "w-full resize-none bg-transparent text-2xl font-semibold leading-tight outline-none placeholder:text-muted-foreground",
-            task.status === TaskStatus.DONE
+            isClosedStatus(task.status)
               ? "text-muted-foreground line-through"
               : "text-foreground",
           )}
@@ -443,7 +445,7 @@ function TaskViewBody({
                     ))}
                   </SelectContent>
                 </Select>
-                {criteriaMet && task.status !== TaskStatus.DONE ? (
+                {criteriaMet && !isClosedStatus(task.status) ? (
                   <button
                     type="button"
                     className="text-xs font-medium text-emerald-300 hover:text-emerald-200"
@@ -869,10 +871,10 @@ function SubtasksSection({
                   checked={child.status === TaskStatus.DONE}
                   aria-label={`Mark ${child.summary} done`}
                   className="mt-0.5"
-                  onCheckedChange={(checked) =>
+                  onCheckedChange={() =>
                     onUpdateStatus(
                       child.id,
-                      checked === true ? TaskStatus.DONE : TaskStatus.TODO,
+                      statusAfterDoneToggle(child.status),
                     )
                   }
                 />
@@ -880,7 +882,7 @@ function SubtasksSection({
                   type="button"
                   className={cn(
                     "min-w-0 flex-1 text-left text-sm hover:text-foreground",
-                    child.status === TaskStatus.DONE
+                    isClosedStatus(child.status)
                       ? "text-muted-foreground line-through"
                       : "text-foreground",
                   )}
@@ -1060,6 +1062,7 @@ const STATUS_PILL: Record<Task["status"], string> = {
   [TaskStatus.TODO]: "border-transparent bg-amber-400/15 text-amber-200",
   [TaskStatus.IN_PROGRESS]: "border-transparent bg-sky-400/15 text-sky-200",
   [TaskStatus.DONE]: "border-transparent bg-emerald-400/15 text-emerald-200",
+  [TaskStatus.CANCELLED]: "border-transparent bg-zinc-400/15 text-zinc-300",
 };
 
 const PRIORITY_PILL: Record<Task["priority"], string> = {

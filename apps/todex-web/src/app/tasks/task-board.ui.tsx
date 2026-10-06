@@ -198,6 +198,8 @@ export function TaskRow({
           "group flex items-center gap-2 rounded-md py-1.5 pr-2 hover:bg-surface",
           node.status === TaskStatus.DONE &&
             "bg-black/30 text-muted-foreground",
+          node.status === TaskStatus.CANCELLED &&
+            "text-muted-foreground line-through",
           selected && "bg-surface text-foreground",
         )}
         style={{ paddingLeft: `${depth * 16 + 8}px` } as CSSProperties}
@@ -525,6 +527,7 @@ const STATUS_GLYPH: Record<
   [TaskStatus.TODO]: { mark: "◯", className: "text-[#888]" },
   [TaskStatus.IN_PROGRESS]: { mark: "◐", className: "text-amber-500" },
   [TaskStatus.DONE]: { mark: "✓", className: "text-emerald-500" },
+  [TaskStatus.CANCELLED]: { mark: "—", className: "text-zinc-400" },
 };
 
 export const PRIORITY_ICON: Record<Task["priority"], string> = {

@@ -27,6 +27,13 @@ export const AcceptanceCriteriaSchema = z
     }
   });
 
+const taskStatusSchema = z.enum([
+  TaskStatus.TODO,
+  TaskStatus.IN_PROGRESS,
+  TaskStatus.DONE,
+  TaskStatus.CANCELLED,
+]);
+
 export const TaskSchema = z.object({
   id: z.string(),
   workspaceId: z.string(),
@@ -34,7 +41,7 @@ export const TaskSchema = z.object({
   taskKey: z.string(),
   summary: z.string(),
   description: z.string(),
-  status: z.enum([TaskStatus.TODO, TaskStatus.IN_PROGRESS, TaskStatus.DONE]),
+  status: taskStatusSchema,
   priority: z.enum([
     TaskPriority.LOW,
     TaskPriority.MEDIUM,
@@ -102,9 +109,7 @@ export const CreateTaskBodySchema = z.object({
   taskBoardId: z.string().min(1),
   summary: z.string().min(1),
   description: z.string().optional().default(""),
-  status: z
-    .enum([TaskStatus.TODO, TaskStatus.IN_PROGRESS, TaskStatus.DONE])
-    .optional(),
+  status: taskStatusSchema.optional(),
   priority: z
     .enum([
       TaskPriority.LOW,
@@ -127,9 +132,7 @@ export const UpdateTaskBodySchema = z.object({
   taskBoardId: z.string().min(1).optional(),
   summary: z.string().min(1).optional(),
   description: z.string().optional(),
-  status: z
-    .enum([TaskStatus.TODO, TaskStatus.IN_PROGRESS, TaskStatus.DONE])
-    .optional(),
+  status: taskStatusSchema.optional(),
   priority: z
     .enum([
       TaskPriority.LOW,
@@ -150,7 +153,7 @@ export const UpdateTaskBodySchema = z.object({
 });
 
 export const MoveTaskBodySchema = z.object({
-  status: z.enum([TaskStatus.TODO, TaskStatus.IN_PROGRESS, TaskStatus.DONE]),
+  status: taskStatusSchema,
   index: z.number().int().nonnegative().optional(),
 });
 

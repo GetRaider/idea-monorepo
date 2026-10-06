@@ -12,6 +12,7 @@ import {
   sameBoardDropIndex,
   isInboxTask,
   isOverdueTask,
+  statusAfterDoneToggle,
   normalizeDescriptionHtml,
   projectCompletedTask,
   isUnscheduledTask,
@@ -101,6 +102,23 @@ describe("quick access", () => {
     expect(isInboxTask(done)).toBe(false);
     expect(isUnscheduledTask(done)).toBe(false);
     expect(isOverdueTask(done, now)).toBe(false);
+  });
+
+  it("excludes cancelled tasks from inbox, unscheduled, and overdue", () => {
+    const cancelled = task({
+      id: "cancelled",
+      status: TaskStatus.CANCELLED,
+      dueDate: "2026-09-01T00:00:00.000Z",
+    });
+    expect(isInboxTask(cancelled)).toBe(false);
+    expect(isUnscheduledTask(cancelled)).toBe(false);
+    expect(isOverdueTask(cancelled, now)).toBe(false);
+  });
+
+  it("reopens a cancelled task from the done checkbox", () => {
+    expect(statusAfterDoneToggle(TaskStatus.CANCELLED)).toBe(TaskStatus.TODO);
+    expect(statusAfterDoneToggle(TaskStatus.DONE)).toBe(TaskStatus.TODO);
+    expect(statusAfterDoneToggle(TaskStatus.IN_PROGRESS)).toBe(TaskStatus.DONE);
   });
 
   it("orders recent and completed tasks", () => {
@@ -368,6 +386,7 @@ describe("filterStatusGroups", () => {
       [TaskStatus.TODO]: [task({ id: "a", areaId: "general" })],
       [TaskStatus.IN_PROGRESS]: [task({ id: "b", areaId: "launch" })],
       [TaskStatus.DONE]: [],
+      [TaskStatus.CANCELLED]: [],
     };
     expect(filterStatusGroups(groups, null)).toBe(groups);
   });
@@ -378,6 +397,7 @@ describe("filterStatusGroups", () => {
       [TaskStatus.TODO]: [task({ id: "general", areaId: "general" }), launch],
       [TaskStatus.IN_PROGRESS]: [],
       [TaskStatus.DONE]: [],
+      [TaskStatus.CANCELLED]: [],
     };
     expect(filterStatusGroups(groups, "launch")[TaskStatus.TODO]).toEqual([
       launch,

@@ -551,21 +551,41 @@ function ListSection({
   combinedOpen: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
+  const sectionHeader = (
+    <>
+      <ChevronIcon
+        size={14}
+        className={cn(
+          "text-muted-foreground transition-transform",
+          open && "rotate-90",
+        )}
+      />
+      <StatusGlyph status={status} />
+      <span>{label}</span>
+      <span className="text-muted-foreground">{nodes.length}</span>
+    </>
+  );
+  const trigger = (
+    <CollapsibleTrigger className="flex w-full items-center gap-2 rounded-md px-1 py-2 text-sm font-semibold hover:bg-surface">
+      {sectionHeader}
+    </CollapsibleTrigger>
+  );
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
       <section className="shrink-0 rounded-lg border border-border bg-panel px-2 py-1">
-        <CollapsibleTrigger className="flex w-full items-center gap-2 rounded-md px-1 py-2 text-sm font-semibold hover:bg-surface">
-          <ChevronIcon
-            size={14}
-            className={cn(
-              "text-muted-foreground transition-transform",
-              open && "rotate-90",
-            )}
-          />
-          <StatusGlyph status={status} />
-          <span>{label}</span>
-          <span className="text-muted-foreground">{nodes.length}</span>
-        </CollapsibleTrigger>
+        {open ? (
+          trigger
+        ) : (
+          <BoardDropZone
+            kind="column"
+            status={status}
+            index={reorderEnabled ? nodes.length : null}
+            boardId={boardId}
+            combinedOpen={combinedOpen}
+          >
+            {trigger}
+          </BoardDropZone>
+        )}
         {fastCreate ? (
           <div className="mb-2 px-1">
             <TaskComposer

@@ -198,7 +198,8 @@ function KanbanCard({
         type="button"
         className={cn(
           "flex w-full items-start gap-2 rounded-md border border-border px-2.5 py-2 text-left hover:bg-surface",
-          selectedTaskId === node.id && "bg-surface",
+          node.status === TaskStatus.DONE && "bg-black/30 text-muted-foreground",
+          selectedTaskId === node.id && "bg-surface text-foreground",
         )}
         onClick={() => onSelect(node.id)}
       >

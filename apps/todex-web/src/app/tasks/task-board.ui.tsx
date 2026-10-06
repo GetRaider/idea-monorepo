@@ -79,6 +79,7 @@ export function BoardDropZone({
         kind === "empty" && (compact ? "relative" : "relative min-h-16 flex-1"),
         kind === "fill" &&
           (compact ? "relative h-2 shrink-0" : "relative mt-1 min-h-16 flex-1"),
+        kind === "column" && "relative",
         showIndicator && kind === "gap" && "my-1 h-14",
         showIndicator &&
           compact &&
@@ -90,8 +91,10 @@ export function BoardDropZone({
       {showIndicator ? (
         <span
           className={cn(
-            "pointer-events-none absolute inset-x-1 z-10 rounded-lg border border-dotted border-muted-foreground/80 bg-transparent",
-            kind === "gap" ? "inset-y-1" : "top-1 h-12",
+            "pointer-events-none absolute z-10 rounded-lg border border-dotted border-muted-foreground/80 bg-transparent",
+            kind === "column" && "inset-1",
+            kind === "gap" && "inset-x-1 inset-y-1",
+            kind !== "column" && kind !== "gap" && "inset-x-1 top-1 h-12",
           )}
         />
       ) : null}
@@ -161,7 +164,8 @@ export function TaskRow({
     <div
       className={cn(
         "group flex items-center gap-2 rounded-md py-1.5 pr-2 hover:bg-surface",
-        selectedTaskId === node.id && "bg-surface",
+        node.status === TaskStatus.DONE && "bg-black/30 text-muted-foreground",
+        selectedTaskId === node.id && "bg-surface text-foreground",
       )}
       style={{ paddingLeft: `${depth * 16 + 8}px` } as CSSProperties}
     >

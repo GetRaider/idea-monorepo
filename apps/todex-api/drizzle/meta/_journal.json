@@ -29,6 +29,13 @@
       "when": 1789070000000,
       "tag": "0003_acceptance_criteria",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1789074000000,
+      "tag": "0004_task_recurrence",
+      "breakpoints": true
     }
   ]
 }

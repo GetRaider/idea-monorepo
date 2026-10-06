@@ -7,17 +7,23 @@ import {
 import { and, asc, eq, gte, isNull, lt, sql } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import { TaskPriority, TaskStatus } from "@repo/api/todex";
+import {
+  completeRecurringTask,
+  readTaskRecurrence,
+  TaskPriority,
+  TaskStatus,
+} from "@repo/api/todex";
 import type {
   CreateTaskBody,
   ListTasksQuery,
   MoveTaskBody,
+  TaskRecurrence,
   UpdateTaskBody,
 } from "@repo/api/todex";
 
 import { DRIZZLE_DB } from "../../db/tokens";
 import { tasks, workspaces, type TaskRow } from "../../db/schema";
-import { mapTask, parseIsoDate } from "../../db/mappers";
+import { mapTask, parseIsoDate, toIso } from "../../db/mappers";
 import {
   formatTaskKey,
   hasParentCycle,
@@ -93,6 +99,7 @@ export class TasksService {
           scheduleDate: parseIsoDate(body.scheduleDate),
           estimation: body.estimation ?? null,
           acceptanceCriteria: body.acceptanceCriteria ?? [],
+          recurrence: body.recurrence ?? null,
           parentTaskId,
           position,
           createdAt: now,
@@ -123,7 +130,9 @@ export class TasksService {
       }
     }
 
-    const [updated] = await this.db
+    const completion = resolveCompletion(existing, body);
+    const [updated] = await this.db.transaction(async (tx) => {
+      const [row] = await tx
       .update(tasks)
       .set({
         ...(body.taskBoardId !== undefined
@@ -133,19 +142,22 @@ export class TasksService {
         ...(body.description !== undefined
           ? { description: sanitizeTaskHtml(body.description) }
           : {}),
-        ...(body.status !== undefined ? { status: body.status } : {}),
+        ...(completion.status !== undefined ? { status: completion.status } : {}),
         ...(body.priority !== undefined ? { priority: body.priority } : {}),
-        ...(body.dueDate !== undefined
-          ? { dueDate: parseIsoDate(body.dueDate) }
+        ...(completion.dueDate !== undefined
+          ? { dueDate: completion.dueDate }
           : {}),
-        ...(body.scheduleDate !== undefined
-          ? { scheduleDate: parseIsoDate(body.scheduleDate) }
+        ...(completion.scheduleDate !== undefined
+          ? { scheduleDate: completion.scheduleDate }
           : {}),
         ...(body.estimation !== undefined
           ? { estimation: body.estimation }
           : {}),
-        ...(body.acceptanceCriteria !== undefined
-          ? { acceptanceCriteria: body.acceptanceCriteria }
+        ...(completion.acceptanceCriteria !== undefined
+          ? { acceptanceCriteria: completion.acceptanceCriteria }
+          : {}),
+        ...(completion.recurrence !== undefined
+          ? { recurrence: completion.recurrence }
           : {}),
         ...(body.parentTaskId !== undefined
           ? { parentTaskId: body.parentTaskId }
@@ -154,6 +166,11 @@ export class TasksService {
       })
       .where(eq(tasks.id, existing.id))
       .returning();
+      if (row && completion.spawn) {
+        await this.insertNextOccurrence(tx, row, completion.spawn);
+      }
+      return [row];
+    });
     if (!updated) throw new ForbiddenException();
 
     await this.relocateRoot(existing, updated);
@@ -167,6 +184,10 @@ export class TasksService {
       throw new BadRequestException("Only root tasks can be reordered");
     }
 
+    const completion =
+      body.status === TaskStatus.DONE && existing.status !== TaskStatus.DONE
+        ? completeRecurringTask(recurrenceSnapshot(existing))
+        : null;
     const destinationIds = (
       await this.rootIds(workspaceId, existing.taskBoardId, body.status)
     ).filter((id) => id !== existing.id);
@@ -194,6 +215,22 @@ export class TasksService {
       });
       if (sourceIds) {
         await this.writePositions(tx, sourceIds, {});
+      }
+      if (completion?.type === "finish-series" || completion?.type === "advance") {
+        await tx
+          .update(tasks)
+          .set({ recurrence: null, updatedAt: new Date() })
+          .where(eq(tasks.id, existing.id));
+      }
+      if (completion?.type === "advance") {
+        const [completed] = await tx
+          .select()
+          .from(tasks)
+          .where(eq(tasks.id, existing.id))
+          .limit(1);
+        if (completed) {
+          await this.insertNextOccurrence(tx, completed, completion);
+        }
       }
     });
 
@@ -302,6 +339,51 @@ export class TasksService {
     }
   }
 
+  private async insertNextOccurrence(
+    tx: NodePgDatabase,
+    completed: TaskRow,
+    next: NextOccurrence,
+  ) {
+    const [workspace] = await tx
+      .update(workspaces)
+      .set({
+        taskSeq: sql`${workspaces.taskSeq} + 1`,
+        updatedAt: new Date(),
+      })
+      .where(eq(workspaces.id, completed.workspaceId))
+      .returning();
+    if (!workspace) throw new ForbiddenException();
+
+    const now = new Date();
+    const position = completed.parentTaskId
+      ? 0
+      : await this.nextRootPosition(
+          tx,
+          completed.workspaceId,
+          completed.taskBoardId,
+          TaskStatus.TODO,
+        );
+    await tx.insert(tasks).values({
+      id: randomUUID(),
+      workspaceId: completed.workspaceId,
+      taskBoardId: completed.taskBoardId,
+      taskKey: formatTaskKey(workspace.taskSeq),
+      summary: completed.summary,
+      description: completed.description,
+      status: TaskStatus.TODO,
+      priority: completed.priority,
+      dueDate: parseIsoDate(next.dueDate),
+      scheduleDate: parseIsoDate(next.scheduleDate),
+      estimation: completed.estimation,
+      acceptanceCriteria: next.acceptanceCriteria ?? [],
+      recurrence: next.recurrence,
+      parentTaskId: completed.parentTaskId,
+      position,
+      createdAt: now,
+      updatedAt: now,
+    });
+  }
+
   private async nextRootPosition(
     tx: NodePgDatabase,
     workspaceId: string,
@@ -364,8 +446,101 @@ export class TasksService {
   }
 }
 
+function resolveCompletion(
+  existing: TaskRow,
+  body: UpdateTaskBody,
+): CompletionUpdate {
+  const scheduleDate =
+    body.scheduleDate !== undefined
+      ? parseIsoDate(body.scheduleDate)
+      : undefined;
+  const dueDate =
+    body.dueDate !== undefined ? parseIsoDate(body.dueDate) : undefined;
+  const recurrence = body.recurrence;
+  const acceptanceCriteria = body.acceptanceCriteria;
+  if (body.status !== TaskStatus.DONE || existing.status === TaskStatus.DONE) {
+    return {
+      status: body.status,
+      scheduleDate,
+      dueDate,
+      recurrence,
+      acceptanceCriteria,
+      spawn: null,
+    };
+  }
+
+  const effect = completeRecurringTask({
+    status: existing.status,
+    scheduleDate:
+      body.scheduleDate !== undefined
+        ? body.scheduleDate
+        : toIso(existing.scheduleDate),
+    dueDate:
+      body.dueDate !== undefined ? body.dueDate : toIso(existing.dueDate),
+    recurrence:
+      body.recurrence !== undefined
+        ? body.recurrence
+        : readTaskRecurrence(existing.recurrence),
+    acceptanceCriteria: body.acceptanceCriteria ?? existing.acceptanceCriteria ?? [],
+  });
+  if (effect.type === "advance") {
+    return {
+      status: TaskStatus.DONE,
+      scheduleDate,
+      dueDate,
+      recurrence: null,
+      acceptanceCriteria,
+      spawn: effect,
+    };
+  }
+  if (effect.type === "finish-series") {
+    return {
+      status: TaskStatus.DONE,
+      scheduleDate,
+      dueDate,
+      recurrence: null,
+      acceptanceCriteria,
+      spawn: null,
+    };
+  }
+  return {
+    status: TaskStatus.DONE,
+    scheduleDate,
+    dueDate,
+    recurrence,
+    acceptanceCriteria,
+    spawn: null,
+  };
+}
+
+function recurrenceSnapshot(row: TaskRow) {
+  return {
+    status: row.status,
+    scheduleDate: toIso(row.scheduleDate),
+    dueDate: toIso(row.dueDate),
+    recurrence: readTaskRecurrence(row.recurrence),
+    acceptanceCriteria: row.acceptanceCriteria ?? [],
+  };
+}
+
 function clampIndex(index: number, length: number) {
   if (index < 0) return 0;
   if (index > length) return length;
   return index;
+}
+
+interface NextOccurrence {
+  scheduleDate: string | null;
+  dueDate: string | null;
+  recurrence: TaskRecurrence;
+  acceptanceCriteria: NonNullable<TaskRow["acceptanceCriteria"]>;
+}
+
+interface CompletionUpdate {
+  status?: TaskRow["status"];
+  scheduleDate?: Date | null;
+  dueDate?: Date | null;
+  recurrence?: TaskRecurrence | null;
+  acceptanceCriteria?: TaskRow["acceptanceCriteria"];
+  spawn: NextOccurrence | null;
 }

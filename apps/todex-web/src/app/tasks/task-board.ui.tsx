@@ -4,10 +4,20 @@ import type { CSSProperties, ReactNode } from "react";
 import Link from "next/link";
 import { useDndContext, useDraggable, useDroppable } from "@dnd-kit/core";
 import { Checkbox, cn } from "@repo/ui";
-import { formatEstimation, TaskPriority, TaskStatus } from "@repo/api/todex";
+import {
+  formatEstimation,
+  formatTaskRecurrence,
+  TaskPriority,
+  TaskStatus,
+} from "@repo/api/todex";
 import type { Task } from "@repo/api/todex";
 
-import { CalendarIcon, ChevronIcon, ClockIcon } from "@components/icons";
+import {
+  CalendarIcon,
+  ChevronIcon,
+  ClockIcon,
+  RepeatIcon,
+} from "@components/icons";
 import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
 
 import { boardDropId, type BoardDropData } from "./task-board-dnd";
@@ -249,13 +259,16 @@ export function TaskFacts({
   task,
   className,
 }: {
-  task: Pick<Task, "scheduleDate" | "dueDate" | "estimation">;
+  task: Pick<Task, "scheduleDate" | "dueDate" | "estimation" | "recurrence">;
   className?: string;
 }) {
   const schedule = formatTaskDay(task.scheduleDate);
   const due = formatTaskDay(task.dueDate);
   const estimate = formatEstimation(task.estimation);
-  if (!schedule && !due && !estimate) return null;
+  const recurrence = task.recurrence
+    ? formatTaskRecurrence(task.recurrence)
+    : null;
+  if (!schedule && !due && !estimate && !recurrence) return null;
   return (
     <span
       className={cn(
@@ -279,6 +292,12 @@ export function TaskFacts({
         <span className="inline-flex items-center gap-1">
           <ClockIcon size={12} />
           {estimate}
+        </span>
+      ) : null}
+      {recurrence ? (
+        <span className="inline-flex items-center gap-1">
+          <RepeatIcon size={12} />
+          {recurrence}
         </span>
       ) : null}
     </span>

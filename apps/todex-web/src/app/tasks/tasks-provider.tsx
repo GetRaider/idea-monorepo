@@ -13,6 +13,7 @@ import {
 import { usePathname, useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { TaskStatus } from "@repo/api/todex";
 import type {
   Folder,
   MoveTaskBody,
@@ -29,6 +30,7 @@ import { TASKS_ROOT_VIEW_ID, tasksUrlHelper } from "@/helpers/tasks-url.helper";
 import {
   applyRootMove,
   groupRootsByStatus,
+  projectCompletedTask,
   INBOX_BOARD_NAME,
   localDayScheduleQuery,
   nestTasks,
@@ -399,6 +401,12 @@ export function TasksProvider({ children }: { children: ReactNode }) {
         if (!current) return current;
         const task = current.find((item) => item.id === input.taskId);
         if (!task || task.parentTaskId) return current;
+        if (
+          input.body.status === TaskStatus.DONE &&
+          task.status !== TaskStatus.DONE
+        ) {
+          return projectCompletedTask(current, input.taskId);
+        }
         const index =
           input.body.index ??
           current.filter(
@@ -499,6 +507,15 @@ function applyOptimisticTaskPatch(
   body: UpdateTaskBody,
 ): Task[] | undefined {
   if (!tasks) return tasks;
+  if (body.status === TaskStatus.DONE) {
+    const task = tasks.find((item) => item.id === taskId);
+    if (task && task.status !== TaskStatus.DONE) {
+      const seeded = tasks.map((item) =>
+        item.id === taskId ? { ...item, ...body, status: item.status } : item,
+      );
+      return projectCompletedTask(seeded, taskId);
+    }
+  }
   const statusOnly =
     body.status != null &&
     body.taskBoardId == null &&
@@ -509,6 +526,7 @@ function applyOptimisticTaskPatch(
     body.scheduleDate === undefined &&
     body.estimation === undefined &&
     body.acceptanceCriteria === undefined &&
+    body.recurrence === undefined &&
     body.parentTaskId === undefined;
   if (statusOnly && body.status) {
     const task = tasks.find((item) => item.id === taskId);

@@ -42,10 +42,12 @@ import {
   EllipsisIcon,
   FolderIcon,
   PlusIcon,
+  RepeatIcon,
 } from "@components/icons";
 import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
 
 import { DatePicker, EstimatePicker } from "./task-pickers";
+import { TaskRecurrencePicker } from "./task-recurrence-picker";
 import { TaskDescriptionEditor } from "./task-description-editor";
 import {
   BoardGlyph,
@@ -57,8 +59,9 @@ import {
 import {
   acceptanceCriteriaAreMet,
   dateInputToLocalDayStartIso,
-  taskChecklistProgress,
   isoToDateInput,
+  startOfLocalDay,
+  taskChecklistProgress,
   STATUS_LABEL,
   STATUS_ORDER,
 } from "./task-helpers";
@@ -439,6 +442,28 @@ function TaskViewBody({
                     dueDate: dateInputToLocalDayStartIso(next),
                   })
                 }
+              />
+            </DetailRow>
+            <DetailRow icon={<RepeatIcon size={16} />} label="Repeat">
+              <TaskRecurrencePicker
+                recurrence={task.recurrence}
+                scheduleDate={task.scheduleDate}
+                dueDate={task.dueDate}
+                onChange={(recurrence) => {
+                  if (
+                    recurrence &&
+                    task.scheduleDate == null &&
+                    task.dueDate == null
+                  ) {
+                    queueUpdate({
+                      recurrence,
+                      scheduleDate: startOfLocalDay().toISOString(),
+                    });
+                  } else {
+                    queueUpdate({ recurrence });
+                  }
+                  flushPendingUpdate();
+                }}
               />
             </DetailRow>
             <DetailRow icon={<ParentMark />} label="Parent">

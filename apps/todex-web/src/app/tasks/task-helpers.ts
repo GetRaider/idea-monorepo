@@ -1,4 +1,4 @@
-import { TaskPriority, TaskStatus } from "@repo/api/todex";
+import { completeRecurringTask, TaskPriority, TaskStatus } from "@repo/api/todex";
 import type { Task } from "@repo/api/todex";
 
 export const STATUS_ORDER = [
@@ -123,6 +123,65 @@ export function resolveCombinedOpenDrop(
       dropIndex - todoCount,
     ),
   };
+}
+
+export function projectCompletedTask(tasks: Task[], taskId: string): Task[] {
+  const task = tasks.find((item) => item.id === taskId);
+  if (!task || task.status === TaskStatus.DONE) return tasks;
+  const effect = completeRecurringTask(task);
+  const completed: Task = {
+    ...task,
+    status: TaskStatus.DONE,
+    recurrence: effect.type === "complete" ? task.recurrence : null,
+  };
+  const doneTasks = placeCompletedTask(tasks, task, completed);
+  if (effect.type !== "advance") return doneTasks;
+  const position = task.parentTaskId
+    ? 0
+    : doneTasks.filter(
+        (item) =>
+          item.parentTaskId == null &&
+          item.taskBoardId === task.taskBoardId &&
+          item.status === TaskStatus.TODO,
+      ).length;
+  const now = new Date().toISOString();
+  return [
+    ...doneTasks,
+    {
+      ...task,
+      id: `next:${task.id}`,
+      taskKey: "",
+      status: TaskStatus.TODO,
+      scheduleDate: effect.scheduleDate,
+      dueDate: effect.dueDate,
+      recurrence: effect.recurrence,
+      acceptanceCriteria: effect.acceptanceCriteria,
+      position,
+      createdAt: now,
+      updatedAt: now,
+    },
+  ];
+}
+
+function placeCompletedTask(
+  tasks: Task[],
+  task: Task,
+  completed: Task,
+): Task[] {
+  if (task.parentTaskId) {
+    return tasks.map((item) => (item.id === task.id ? completed : item));
+  }
+  const staged = tasks.map((item) =>
+    item.id === task.id ? { ...completed, status: task.status } : item,
+  );
+  const index = staged.filter(
+    (item) =>
+      item.parentTaskId == null &&
+      item.taskBoardId === task.taskBoardId &&
+      item.status === TaskStatus.DONE &&
+      item.id !== task.id,
+  ).length;
+  return applyRootMove(staged, task.id, TaskStatus.DONE, index);
 }
 
 export function applyRootMove(

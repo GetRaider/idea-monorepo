@@ -1,3 +1,4 @@
+import type { TaskRecurrence } from "@repo/api/todex";
 import { sql } from "drizzle-orm";
 import {
   foreignKey,
@@ -125,6 +126,7 @@ export const tasks = pgTable(
       .$type<TaskAcceptanceCriterion[]>()
       .notNull()
       .default(sql`'[]'::jsonb`),
+    recurrence: jsonb("recurrence").$type<TaskRecurrence | null>(),
     parentTaskId: text("parent_task_id"),
     position: integer("position").notNull().default(0),
     createdAt: timestamp("created_at")

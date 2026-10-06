@@ -12,6 +12,7 @@ import {
   isInboxTask,
   isOverdueTask,
   normalizeDescriptionHtml,
+  projectCompletedTask,
   isUnscheduledTask,
   isoToDateInput,
   localDayScheduleQuery,
@@ -280,6 +281,55 @@ describe("normalizeDescriptionHtml", () => {
   });
 });
 
+describe("projectCompletedTask", () => {
+  const weekly = {
+    frequency: "weekly" as const,
+    interval: 1,
+    weekdays: ["MO" as const],
+    timeZone: "UTC",
+    end: { type: "never" as const },
+  };
+
+  it("keeps the completed task done and adds the next occurrence", () => {
+    const [done, next] = projectCompletedTask(
+      [
+        task({
+          id: "repeat",
+          status: TaskStatus.TODO,
+          scheduleDate: "2026-10-05T00:00:00.000Z",
+          recurrence: weekly,
+          acceptanceCriteria: [{ id: "a", text: "Reviewed", done: true }],
+        }),
+      ],
+      "repeat",
+    );
+    expect(done?.id).toBe("repeat");
+    expect(done?.status).toBe(TaskStatus.DONE);
+    expect(done?.recurrence).toBeNull();
+    expect(done?.scheduleDate).toBe("2026-10-05T00:00:00.000Z");
+    expect(next?.status).toBe(TaskStatus.TODO);
+    expect(next?.scheduleDate).toBe("2026-10-12T00:00:00.000Z");
+    expect(next?.acceptanceCriteria[0]?.done).toBe(false);
+    expect(next?.recurrence).toEqual(weekly);
+  });
+
+  it("finishes the series on the last occurrence", () => {
+    const [next] = projectCompletedTask(
+      [
+        task({
+          id: "last",
+          status: TaskStatus.IN_PROGRESS,
+          scheduleDate: "2026-10-05T00:00:00.000Z",
+          recurrence: { ...weekly, end: { type: "count", count: 1 } },
+        }),
+      ],
+      "last",
+    );
+    expect(next?.status).toBe(TaskStatus.DONE);
+    expect(next?.recurrence).toBeNull();
+  });
+});
+
 function task(overrides: Partial<NestedTask>): NestedTask {
   return {
     id: "id",
@@ -293,6 +343,7 @@ function task(overrides: Partial<NestedTask>): NestedTask {
     priority: TaskPriority.MEDIUM,
     dueDate: null,
     scheduleDate: null,
+    recurrence: null,
     estimation: null,
     parentTaskId: null,
     position: 0,

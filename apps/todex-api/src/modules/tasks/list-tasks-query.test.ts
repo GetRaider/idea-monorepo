@@ -81,6 +81,36 @@ describe("task date bodies", () => {
     ]);
   });
 
+  it("accepts a weekly recurrence and clearing it", () => {
+    const recurrence = {
+      frequency: "weekly" as const,
+      interval: 2,
+      weekdays: ["MO", "WE"] as const,
+      timeZone: "UTC",
+      end: { type: "count" as const, count: 4 },
+    };
+    expect(UpdateTaskBodySchema.parse({ recurrence }).recurrence).toEqual(
+      recurrence,
+    );
+    expect(UpdateTaskBodySchema.parse({ recurrence: null }).recurrence).toBe(
+      null,
+    );
+  });
+
+  it("rejects weekdays on a daily recurrence", () => {
+    expect(
+      UpdateTaskBodySchema.safeParse({
+        recurrence: {
+          frequency: "daily",
+          interval: 1,
+          weekdays: ["MO"],
+          timeZone: "UTC",
+          end: { type: "never" },
+        },
+      }).success,
+    ).toBe(false);
+  });
+
   it("rejects a blank acceptance criterion", () => {
     expect(
       UpdateTaskBodySchema.safeParse({

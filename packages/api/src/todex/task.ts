@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { TaskPriority, TaskStatus } from "./enums.ts";
 import { IsoDateTimeSchema } from "./iso.ts";
+import { TaskRecurrenceSchema } from "./recurrence.ts";
 
 export const AcceptanceCriterionSchema = z.object({
   id: z.string().trim().min(1).max(64),
@@ -44,6 +45,7 @@ export const TaskSchema = z.object({
   scheduleDate: IsoDateTimeSchema.nullable(),
   estimation: z.number().int().nonnegative().nullable(),
   acceptanceCriteria: AcceptanceCriteriaSchema.default([]),
+  recurrence: TaskRecurrenceSchema.nullable(),
   parentTaskId: z.string().nullable(),
   position: z.number().int().nonnegative(),
   createdAt: IsoDateTimeSchema,
@@ -112,6 +114,7 @@ export const CreateTaskBodySchema = z.object({
   scheduleDate: IsoDateTimeSchema.nullable().optional(),
   estimation: z.number().int().nonnegative().nullable().optional(),
   acceptanceCriteria: AcceptanceCriteriaSchema.optional(),
+  recurrence: TaskRecurrenceSchema.nullable().optional(),
   parentTaskId: z.string().nullable().optional(),
 });
 
@@ -134,6 +137,7 @@ export const UpdateTaskBodySchema = z.object({
   scheduleDate: IsoDateTimeSchema.nullable().optional(),
   estimation: z.number().int().nonnegative().nullable().optional(),
   acceptanceCriteria: AcceptanceCriteriaSchema.optional(),
+  recurrence: TaskRecurrenceSchema.nullable().optional(),
   parentTaskId: z.string().nullable().optional(),
 });
 

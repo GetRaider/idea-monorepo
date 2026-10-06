@@ -74,6 +74,23 @@ export function SettingsIcon(props: IconProps) {
   );
 }
 
+export function RepeatIcon(props: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      {...iconSvgProps(props)}
+    >
+      <path d="M17 2v4h-4" />
+      <path d="M7 22v-4h4" />
+      <path d="M17.5 6.5A7.5 7.5 0 0 0 6.2 8" />
+      <path d="M6.5 17.5A7.5 7.5 0 0 0 17.8 16" />
+    </svg>
+  );
+}
+
 export function ClockIcon(props: IconProps) {
   return (
     <svg

@@ -1,9 +1,10 @@
-import type {
-  Folder,
-  Task,
-  TaskBoard,
-  Workspace,
-  WorkspaceMember,
+import {
+  readTaskRecurrence,
+  type Folder,
+  type Task,
+  type TaskBoard,
+  type Workspace,
+  type WorkspaceMember,
 } from "@repo/api/todex";
 
 import type {
@@ -83,6 +84,7 @@ export function mapTask(row: TaskRow): Task {
     scheduleDate: toIso(row.scheduleDate),
     estimation: row.estimation ?? null,
     acceptanceCriteria: row.acceptanceCriteria ?? [],
+    recurrence: readTaskRecurrence(row.recurrence),
     parentTaskId: row.parentTaskId,
     position: row.position,
     createdAt: row.createdAt.toISOString(),

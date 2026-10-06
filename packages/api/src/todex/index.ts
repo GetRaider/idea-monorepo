@@ -30,6 +30,16 @@ export type {
 } from "./board.ts";
 export { formatEstimation, parseEstimation } from "./estimation.ts";
 export {
+  completeRecurringTask,
+  defaultTaskRecurrence,
+  formatTaskRecurrence,
+  readTaskRecurrence,
+  TASK_WEEKDAYS,
+  TaskRecurrenceSchema,
+  TaskWeekdaySchema,
+} from "./recurrence.ts";
+export type { TaskRecurrence, TaskWeekday } from "./recurrence.ts";
+export {
   AcceptanceCriteriaSchema,
   AcceptanceCriterionSchema,
   CreateTaskBodySchema,

@@ -27,7 +27,7 @@ import {
 const NAV = [
   { href: "/overview", label: "Overview", enabled: true, icon: OverviewIcon },
   { href: "/tasks", label: "Tasks", enabled: true, icon: TasksIcon },
-  { href: "/calendar", label: "Calendar", enabled: false, icon: CalendarIcon },
+  { href: "/calendar", label: "Calendar", enabled: true, icon: CalendarIcon },
   { href: "/docs", label: "Docs", enabled: true, icon: DocsIcon },
 ] as const;
 
@@ -122,6 +122,9 @@ function AccountAvatar() {
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" side="right">
+        <DropdownMenuItem asChild>
+          <Link href="/settings">Settings</Link>
+        </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => signOut()}>Sign out</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

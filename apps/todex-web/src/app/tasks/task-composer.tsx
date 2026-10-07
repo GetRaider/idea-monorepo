@@ -18,6 +18,7 @@ import { PriorityGlyph, StatusGlyph } from "./task-board.ui";
 import { DatePicker, EstimatePicker } from "./task-pickers";
 import {
   dateInputToLocalDayStartIso,
+  dateInputToScheduleIso,
   STATUS_LABEL,
   STATUS_ORDER,
 } from "./task-helpers";
@@ -84,7 +85,7 @@ export function TaskComposer({
       priority,
       estimation: estimationText.trim() ? parsedEstimation : null,
       taskBoardId: taskBoardId || null,
-      scheduleDate: dateInputToLocalDayStartIso(scheduleDate),
+      scheduleDate: dateInputToScheduleIso(scheduleDate),
       dueDate: dateInputToLocalDayStartIso(dueDate),
     });
     reset();

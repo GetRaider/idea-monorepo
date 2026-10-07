@@ -39,10 +39,18 @@ export const auth = betterAuth({
     },
   },
   emailAndPassword: { enabled: false },
+  account: {
+    accountLinking: {
+      trustedProviders: ["google"],
+    },
+  },
   socialProviders: {
     google: {
       clientId: env.google.clientId,
       clientSecret: env.google.clientSecret,
+      accessType: "offline",
+      prompt: "select_account consent",
+      scope: ["https://www.googleapis.com/auth/calendar.events"],
       ...(isDevelopment ? {} : { disableSignUp: true }),
     },
   },

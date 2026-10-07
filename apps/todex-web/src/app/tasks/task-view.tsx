@@ -81,8 +81,11 @@ import {
 } from "./task-board.ui";
 import {
   acceptanceCriteriaAreMet,
+  combineLocalDateAndTime,
   dateInputToLocalDayStartIso,
+  dateInputToScheduleIso,
   isoToDateInput,
+  isoToLocalTimeInput,
   startOfLocalDay,
   isClosedStatus,
   statusAfterDoneToggle,
@@ -581,16 +584,39 @@ function TaskViewBody({
               </div>
             </DetailRow>
             <DetailRow icon={<CalendarIcon size={16} />} label="Schedule">
-              <DatePicker
-                appearance="plain"
-                emptyLabel="None"
-                value={isoToDateInput(task.scheduleDate)}
-                onChange={(next) =>
-                  queueUpdate({
-                    scheduleDate: dateInputToLocalDayStartIso(next),
-                  })
-                }
-              />
+              <div className="flex items-center gap-2">
+                <DatePicker
+                  appearance="plain"
+                  emptyLabel="None"
+                  value={isoToDateInput(task.scheduleDate)}
+                  onChange={(next) => {
+                    if (!next) {
+                      queueUpdate({ scheduleDate: null });
+                      return;
+                    }
+                    const time =
+                      isoToLocalTimeInput(task.scheduleDate) || "09:00";
+                    queueUpdate({
+                      scheduleDate: dateInputToScheduleIso(next, time),
+                    });
+                  }}
+                />
+                <input
+                  type="time"
+                  aria-label="Schedule time"
+                  value={isoToLocalTimeInput(task.scheduleDate)}
+                  disabled={!task.scheduleDate}
+                  className="bg-transparent text-sm text-foreground disabled:opacity-40"
+                  onChange={(event) => {
+                    const date = isoToDateInput(task.scheduleDate);
+                    queueUpdate({
+                      scheduleDate: event.target.value
+                        ? combineLocalDateAndTime(date, event.target.value)
+                        : dateInputToLocalDayStartIso(date),
+                    });
+                  }}
+                />
+              </div>
             </DetailRow>
             <DetailRow icon={<CalendarIcon size={16} />} label="Due">
               <DatePicker

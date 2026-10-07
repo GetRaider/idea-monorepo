@@ -28,10 +28,11 @@ export function TaskRecurrencePicker({
   scheduleDate,
   dueDate,
   onChange,
+  detail = "Completing the task keeps it done and creates the next one. The count includes this occurrence.",
 }: TaskRecurrencePickerProps) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<TaskRecurrence | null>(recurrence);
-  const label = recurrence ? formatTaskRecurrence(recurrence) : "None";
+  const label = recurrence ? formatTaskRecurrence(recurrence) : "Doesn't repeat";
 
   function openPicker(nextOpen: boolean) {
     if (nextOpen) {
@@ -68,6 +69,7 @@ export function TaskRecurrencePicker({
             scheduleDate={scheduleDate}
             dueDate={dueDate}
             canRemove={recurrence != null}
+            detail={detail}
             onDraft={setDraft}
             onApply={() => {
               onChange(recurrenceForSave(draft));
@@ -89,6 +91,7 @@ function RecurrenceDraft({
   scheduleDate,
   dueDate,
   canRemove,
+  detail,
   onDraft,
   onApply,
   onRemove,
@@ -97,6 +100,7 @@ function RecurrenceDraft({
   scheduleDate: string | null;
   dueDate: string | null;
   canRemove: boolean;
+  detail: string;
   onDraft: (draft: TaskRecurrence) => void;
   onApply: () => void;
   onRemove: () => void;
@@ -135,11 +139,17 @@ function RecurrenceDraft({
             }
           >
             <SelectTrigger className="h-8 w-28">
-              <SelectValue />
+              <SelectValue>
+                {frequencyLabel(draft.frequency, draft.interval)}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {FREQUENCY_OPTIONS.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
+                <SelectItem
+                  key={option.value}
+                  value={option.value}
+                  textValue={option.singular}
+                >
                   {draft.interval === 1 ? option.singular : option.plural}
                 </SelectItem>
               ))}
@@ -191,7 +201,7 @@ function RecurrenceDraft({
           }
         >
           <SelectTrigger className="h-8 w-[9.5rem]">
-            <SelectValue />
+            <SelectValue>{END_LABEL[draft.end.type]}</SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="never">Never</SelectItem>
@@ -239,10 +249,7 @@ function RecurrenceDraft({
           />
         </div>
       ) : null}
-      <p className="text-xs text-muted-foreground">
-        Completing the task keeps it done and creates the next one. The count
-        includes this occurrence.
-      </p>
+      {detail ? <p className="text-xs text-muted-foreground">{detail}</p> : null}
       <div className="flex items-center justify-end gap-2">
         {canRemove ? (
           <Button type="button" variant="ghost" size="sm" onClick={onRemove}>
@@ -378,6 +385,21 @@ const FREQUENCY_OPTIONS: Array<{
   { value: "yearly", singular: "year", plural: "years" },
 ];
 
+const END_LABEL: Record<TaskRecurrence["end"]["type"], string> = {
+  never: "Never",
+  count: "After count",
+  until: "On date",
+};
+
+function frequencyLabel(
+  frequency: TaskRecurrence["frequency"],
+  interval: number,
+): string {
+  const option = FREQUENCY_OPTIONS.find((item) => item.value === frequency);
+  if (!option) return "week";
+  return interval === 1 ? option.singular : option.plural;
+}
+
 const WEEKDAY_LETTER: Record<TaskWeekday, string> = {
   SU: "S",
   MO: "M",
@@ -403,4 +425,5 @@ interface TaskRecurrencePickerProps {
   scheduleDate: string | null;
   dueDate: string | null;
   onChange: (recurrence: TaskRecurrence | null) => void;
+  detail?: string;
 }

@@ -289,6 +289,46 @@ export function localDayScheduleQuery(offsetDays = 0): {
   };
 }
 
+export const DEFAULT_SCHEDULE_TIME = "09:00";
+
+export function dateInputToScheduleIso(
+  yearMonthDay: string,
+  time = DEFAULT_SCHEDULE_TIME,
+): string | null {
+  return combineLocalDateAndTime(yearMonthDay, time);
+}
+
+export function combineLocalDateAndTime(
+  yearMonthDay: string,
+  time: string,
+): string | null {
+  if (!yearMonthDay) return null;
+  const [yearText, monthText, dayText] = yearMonthDay.split("-");
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+  if (!year || !month || !day) return null;
+  const match = /^(\d{2}):(\d{2})$/.exec(time);
+  const hour = match ? Number(match[1]) : 0;
+  const minute = match ? Number(match[2]) : 0;
+  if (hour > 23 || minute > 59) return null;
+  return new Date(year, month - 1, day, hour, minute, 0, 0).toISOString();
+}
+
+export function isoToLocalTimeInput(iso: string | null): string {
+  if (!iso) return "";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  if (date.getHours() === 0 && date.getMinutes() === 0 && date.getSeconds() === 0) {
+    return "";
+  }
+  return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+}
+
+export function isMidnightSchedule(iso: string | null): boolean {
+  return iso != null && isoToLocalTimeInput(iso) === "";
+}
+
 export function dateInputToLocalDayStartIso(
   yearMonthDay: string,
 ): string | null {

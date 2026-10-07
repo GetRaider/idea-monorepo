@@ -3,6 +3,8 @@ import {
   readGoalDocBody,
   readTaskRecurrence,
   type BoardArea,
+  type CalendarEvent,
+  type CalendarEventTemplate,
   type BoardProgressStage,
   type CommonDocBody,
   type Doc,
@@ -17,6 +19,8 @@ import {
 import type {
   BoardAreaRow,
   BoardProgressStageRow,
+  CalendarEventRow,
+  CalendarEventTemplateRow,
   DocRow,
   FolderRow,
   TaskBoardRow,
@@ -148,6 +152,7 @@ export function mapTask(row: TaskRow, goalId: string | null = null): Task {
     dueDate: toIso(row.dueDate),
     scheduleDate: toIso(row.scheduleDate),
     estimation: row.estimation ?? null,
+    color: row.color,
     acceptanceCriteria: row.acceptanceCriteria ?? [],
     recurrence: readTaskRecurrence(row.recurrence),
     areaId: row.areaId,
@@ -155,6 +160,49 @@ export function mapTask(row: TaskRow, goalId: string | null = null): Task {
     parentTaskId: row.parentTaskId,
     goalId,
     position: row.position,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
+export function mapCalendarEvent(row: CalendarEventRow): CalendarEvent {
+  return {
+    id: row.id,
+    workspaceId: row.workspaceId,
+    seriesEventId: row.seriesEventId,
+    title: row.title,
+    start: row.start.toISOString(),
+    end: row.end.toISOString(),
+    allDay: row.allDay,
+    color: row.color,
+    timeZone: row.timeZone,
+    recurrence: readTaskRecurrence(row.recurrence),
+    rawRrule: row.rawRrule,
+    description: row.description,
+    taskScope: row.taskScope ?? [],
+    participants: row.participants ?? [],
+    rsvpStatus: row.rsvpStatus,
+    googleEventId: row.googleEventId,
+    googleEtag: row.googleEtag,
+    organizerSelf: row.organizerSelf,
+    originalStart: toIso(row.originalStart),
+    cancelled: row.cancelled,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
+export function mapCalendarEventTemplate(
+  row: CalendarEventTemplateRow,
+): CalendarEventTemplate {
+  return {
+    id: row.id,
+    workspaceId: row.workspaceId,
+    title: row.title,
+    durationMinutes: row.durationMinutes,
+    color: row.color,
+    description: row.description,
+    taskScope: row.taskScope ?? [],
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };

@@ -51,6 +51,7 @@ export const TaskSchema = z.object({
   dueDate: IsoDateTimeSchema.nullable(),
   scheduleDate: IsoDateTimeSchema.nullable(),
   estimation: z.number().int().nonnegative().nullable(),
+  color: z.string().nullable(),
   acceptanceCriteria: AcceptanceCriteriaSchema.default([]),
   recurrence: TaskRecurrenceSchema.nullable(),
   areaId: z.string(),
@@ -132,6 +133,11 @@ export const UpdateTaskBodySchema = z.object({
   taskBoardId: z.string().min(1).optional(),
   summary: z.string().min(1).optional(),
   description: z.string().optional(),
+  color: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/)
+    .nullable()
+    .optional(),
   status: taskStatusSchema.optional(),
   priority: z
     .enum([

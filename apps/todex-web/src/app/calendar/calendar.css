@@ -1,0 +1,214 @@
+.todex-calendar .fc {
+  height: 100%;
+  --fc-border-color: color-mix(in srgb, var(--foreground) 8%, transparent);
+  --fc-page-bg-color: transparent;
+  --fc-neutral-bg-color: color-mix(in srgb, var(--foreground) 2%, transparent);
+  --fc-today-bg-color: color-mix(in srgb, var(--foreground) 6%, transparent);
+  --fc-highlight-color: color-mix(in srgb, var(--foreground) 12%, transparent);
+  --fc-now-indicator-color: var(--destructive);
+  --fc-event-text-color: var(--foreground);
+  --todex-time-col-pad-left: 0.3rem;
+  --todex-time-col-pad-right: 0.75rem;
+  color: var(--foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.todex-calendar[data-draft-kind="event"] .fc {
+  --fc-highlight-color: color-mix(in srgb, var(--foreground) 18%, transparent);
+}
+
+.todex-calendar[data-draft-kind="task"] .fc {
+  --fc-highlight-color: color-mix(in srgb, #3f3f46 45%, transparent);
+}
+
+.todex-calendar .fc-event.todex-cal-light {
+  color: #18181b;
+}
+
+.todex-calendar .fc-theme-standard td,
+.todex-calendar .fc-theme-standard th,
+.todex-calendar .fc-scrollgrid {
+  border-color: var(--border);
+}
+
+.todex-calendar .fc-scrollgrid {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.todex-calendar .fc-col-header .fc-timegrid-axis {
+  color: var(--muted-foreground);
+  font-size: 11px;
+  font-weight: 500;
+  text-align: right;
+  padding-right: 8px;
+  vertical-align: middle;
+}
+.todex-calendar .fc-col-header-cell {
+  background: color-mix(in srgb, var(--foreground) 2%, transparent);
+  vertical-align: middle;
+}
+
+.todex-calendar .fc-col-header-cell-cushion {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 7px;
+  border-radius: 999px;
+  color: var(--muted-foreground);
+  font-size: 0.68rem;
+  font-weight: 600;
+}
+
+.todex-calendar .fc-day-today .fc-col-header-cell-cushion {
+  background: color-mix(in srgb, var(--foreground) 8%, transparent);
+  color: var(--foreground);
+}
+
+.todex-calendar .fc-timegrid-slot {
+  border-color: transparent;
+}
+
+.todex-calendar .fc-timegrid-slot-lane.fc-timegrid-slot-minor,
+.todex-calendar .fc-timegrid-slot-label.fc-timegrid-slot-minor {
+  border-top-color: transparent;
+}
+
+.todex-calendar .fc-timegrid-slot-lane:not(.fc-timegrid-slot-minor) {
+  border-top: 1px solid color-mix(in srgb, var(--foreground) 7%, transparent);
+}
+
+.todex-calendar .fc-timegrid-slot-label {
+  vertical-align: top;
+}
+
+.todex-calendar .fc-direction-ltr .fc-timegrid-slot-label-cushion {
+  transform: translateY(-50%);
+}
+
+.todex-calendar .fc-timegrid-col.fc-day-today {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--foreground) 5%, transparent),
+    color-mix(in srgb, var(--foreground) 2%, transparent)
+  );
+}
+
+.todex-calendar .fc-direction-ltr .fc-timegrid-col-events {
+  margin-left: var(--todex-time-col-pad-left);
+  margin-right: var(--todex-time-col-pad-right);
+}
+
+.todex-calendar .fc-highlight {
+  background: var(--fc-highlight-color);
+  pointer-events: none;
+}
+
+.todex-calendar .fc-event-main > .fc-event-main-frame.todex-cal-event-inner {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  column-gap: 4px;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  padding: 1px 4px;
+}
+
+.todex-calendar .fc-timegrid-slot-label-cushion,
+.todex-calendar .fc-timegrid-axis-cushion {
+  color: var(--muted-foreground);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.todex-calendar .fc-timegrid-slot-label-cushion {
+  padding-right: 8px;
+}
+
+.todex-calendar .fc-timegrid-now-indicator-container {
+  overflow: visible;
+  pointer-events: none;
+}
+
+.todex-calendar .fc-timegrid-now-indicator-line {
+  border-color: var(--destructive);
+  border-width: 1px 0 0;
+  width: calc(100% * var(--todex-day-count, 7));
+}
+
+.todex-calendar .fc-timegrid-now-indicator-arrow {
+  border: none;
+  margin-top: 0;
+  transform: translateY(-50%);
+}
+
+.todex-calendar .todex-now-pill {
+  display: inline-flex;
+  margin-right: 6px;
+  border-radius: 4px;
+  background: var(--destructive);
+  padding: 1px 4px;
+  color: var(--destructive-foreground);
+  font-size: 9px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.todex-calendar .fc-timegrid-event,
+.todex-calendar .fc-daygrid-event {
+  border: none;
+  border-radius: 10px;
+  overflow: hidden !important;
+  box-shadow: inset 0 1px 0 color-mix(in srgb, white 16%, transparent);
+}
+
+.todex-calendar .fc-timegrid-event .fc-event-main,
+.todex-calendar .fc-daygrid-event .fc-event-main {
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  padding: 0;
+}
+
+.todex-calendar .todex-cal-title {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.todex-calendar .todex-cal-secondary {
+  flex: 0 100 auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.todex-calendar .fc-timegrid-col-events .fc-timegrid-event-harness {
+  left: 0 !important;
+  right: 0 !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
+.todex-calendar
+  .fc-timegrid-col-events
+  .fc-timegrid-event-harness.todex-overlap-same-start-column {
+  left: 50% !important;
+  right: 0 !important;
+  z-index: 5 !important;
+}
+
+.todex-calendar .todex-cal-rsvp-no {
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+
+.todex-calendar .todex-cal-rsvp-maybe {
+  opacity: 0.72;
+}

@@ -64,6 +64,27 @@
       "when": 1791318331749,
       "tag": "0008_cancelled_status",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1791322677436,
+      "tag": "0009_calendar_events",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1791376088843,
+      "tag": "0010_calendar_template_color",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1791379097021,
+      "tag": "0011_task_color",
+      "breakpoints": true
     }
   ]
 }

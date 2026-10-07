@@ -1,5 +1,12 @@
+"use client";
+
+import dynamic from "next/dynamic";
+
+const CalendarGrid = dynamic(
+  () => import("./calendar-grid").then((module) => module.CalendarGrid),
+  { ssr: false },
+);
+
 export default function CalendarPage() {
-  return (
-    <main className="px-6 py-6 text-muted-foreground">Calendar is coming later.</main>
-  );
+  return <CalendarGrid />;
 }

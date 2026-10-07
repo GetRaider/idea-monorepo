@@ -98,6 +98,7 @@ export type { DocMentionRef, ProseDoc, ProseNode } from "./prose.ts";
 export {
   completeRecurringTask,
   defaultTaskRecurrence,
+  expandRecurrenceStarts,
   formatTaskRecurrence,
   readTaskRecurrence,
   TASK_WEEKDAYS,
@@ -105,6 +106,44 @@ export {
   TaskWeekdaySchema,
 } from "./recurrence.ts";
 export type { TaskRecurrence, TaskWeekday } from "./recurrence.ts";
+export {
+  formatGoogleEventDescription,
+  parseGoogleEventDescription,
+} from "./calendar-description.ts";
+export { recurrenceToRrule, rruleToRecurrence } from "./calendar-rrule.ts";
+export {
+  addDaysToDate,
+  formatWallDate,
+  formatWallDateTime,
+  formatWallParts,
+  wallTimeToUtc,
+} from "./calendar-time.ts";
+export {
+  CalendarEventSchema,
+  CalendarEventScopeSchema,
+  CalendarEventTemplateSchema,
+  CalendarRsvpStatusSchema,
+  CreateCalendarEventBodySchema,
+  CreateCalendarEventTemplateBodySchema,
+  DeleteCalendarEventQuerySchema,
+  GoogleCalendarIntegrationSchema,
+  ListCalendarEventsQuerySchema,
+  UpdateCalendarEventBodySchema,
+  UpdateCalendarEventTemplateBodySchema,
+} from "./calendar.ts";
+export type {
+  CalendarEvent,
+  CalendarEventScope,
+  CalendarEventTemplate,
+  CalendarRsvpStatus,
+  CreateCalendarEventBody,
+  CreateCalendarEventTemplateBody,
+  DeleteCalendarEventQuery,
+  GoogleCalendarIntegration,
+  ListCalendarEventsQuery,
+  UpdateCalendarEventBody,
+  UpdateCalendarEventTemplateBody,
+} from "./calendar.ts";
 export {
   AcceptanceCriteriaSchema,
   AcceptanceCriterionSchema,

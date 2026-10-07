@@ -130,6 +130,44 @@ export function completeRecurringTask<T extends RecurrenceCriterion>(
   };
 }
 
+/** Occurrence starts inside `[rangeStart, rangeEnd)`, counting from the series start. */
+export function expandRecurrenceStarts(input: {
+  start: Date;
+  rule: TaskRecurrence;
+  rangeStart: Date;
+  rangeEnd: Date;
+  limit?: number;
+}): Date[] {
+  const limit = input.limit ?? 500;
+  const countLimit =
+    input.rule.end.type === "count"
+      ? input.rule.end.count
+      : Number.POSITIVE_INFINITY;
+  const starts: Date[] = [];
+  let cursor: Date | null = input.start;
+  let emitted = 0;
+  let guard = 0;
+  while (cursor && emitted < countLimit && guard < 8000) {
+    guard += 1;
+    if (
+      input.rule.end.type === "until" &&
+      dateKey(cursor, input.rule.timeZone) > input.rule.end.until
+    ) {
+      break;
+    }
+    if (cursor.getTime() >= input.rangeEnd.getTime()) break;
+    if (cursor.getTime() >= input.rangeStart.getTime()) {
+      starts.push(cursor);
+      if (starts.length >= limit) break;
+    }
+    emitted += 1;
+    const next = nextOccurrence(cursor, input.rule);
+    if (!next || next.getTime() <= cursor.getTime()) break;
+    cursor = next;
+  }
+  return starts;
+}
+
 function nextOccurrence(anchor: Date, rule: TaskRecurrence): Date | null {
   if (rule.frequency === "daily") {
     return addCalendarDays(anchor, rule.interval, rule.timeZone);

@@ -1,6 +1,7 @@
 import {
   DocMentionTarget,
   DocType,
+  type CalendarRsvpStatus,
   type DocBody,
   type DocPlainText,
   type TaskRecurrence,
@@ -201,6 +202,7 @@ export const tasks = pgTable(
     dueDate: timestamp("due_date"),
     scheduleDate: timestamp("schedule_date"),
     estimation: integer("estimation"),
+    color: text("color"),
     acceptanceCriteria: jsonb("acceptance_criteria")
       .$type<TaskAcceptanceCriterion[]>()
       .notNull()
@@ -308,7 +310,115 @@ export type TaskBoardRow = typeof taskBoards.$inferSelect;
 export type BoardAreaRow = typeof boardAreas.$inferSelect;
 export type BoardProgressStageRow = typeof boardProgressStages.$inferSelect;
 export type TaskRow = typeof tasks.$inferSelect;
+export const calendarRsvpStatusEnum = pgEnum("calendar_rsvp_status", [
+  "yes",
+  "no",
+  "maybe",
+]);
+
+export const calendarEvents = pgTable(
+  "calendar_events",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    seriesEventId: text("series_event_id"),
+    title: text("title").notNull(),
+    start: timestamp("start").notNull(),
+    end: timestamp("end").notNull(),
+    allDay: boolean("all_day").notNull().default(false),
+    color: text("color"),
+    timeZone: text("time_zone").notNull(),
+    recurrence: jsonb("recurrence").$type<TaskRecurrence | null>(),
+    rawRrule: text("raw_rrule"),
+    description: text("description").notNull().default(""),
+    taskScope: jsonb("task_scope")
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    participants: jsonb("participants")
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    rsvpStatus: calendarRsvpStatusEnum("rsvp_status"),
+    googleEventId: text("google_event_id"),
+    googleEtag: text("google_etag"),
+    googleUpdatedAt: timestamp("google_updated_at"),
+    organizerSelf: boolean("organizer_self").notNull().default(true),
+    originalStart: timestamp("original_start"),
+    cancelled: boolean("cancelled").notNull().default(false),
+    createdAt: timestamp("created_at")
+      .$defaultFn(() => new Date())
+      .notNull(),
+    updatedAt: timestamp("updated_at")
+      .$defaultFn(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("calendar_events_workspace_start_idx").on(
+      table.workspaceId,
+      table.start,
+    ),
+    index("calendar_events_series_event_id_idx").on(table.seriesEventId),
+    uniqueIndex("calendar_events_workspace_google_event_unique")
+      .on(table.workspaceId, table.googleEventId)
+      .where(sql`${table.googleEventId} is not null`),
+    foreignKey({
+      columns: [table.seriesEventId],
+      foreignColumns: [table.id],
+    }).onDelete("cascade"),
+  ],
+);
+
+export const calendarEventTemplates = pgTable("calendar_event_templates", {
+  id: text("id").primaryKey(),
+  workspaceId: text("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  durationMinutes: integer("duration_minutes").notNull(),
+  color: text("color"),
+  description: text("description").notNull().default(""),
+  taskScope: jsonb("task_scope")
+    .$type<string[]>()
+    .notNull()
+    .default(sql`'[]'::jsonb`),
+  createdAt: timestamp("created_at")
+    .$defaultFn(() => new Date())
+    .notNull(),
+  updatedAt: timestamp("updated_at")
+    .$defaultFn(() => new Date())
+    .notNull(),
+});
+
+export const googleCalendarIntegrations = pgTable(
+  "google_calendar_integrations",
+  {
+    userId: text("user_id")
+      .primaryKey()
+      .references(() => users.id, { onDelete: "cascade" }),
+    enabled: boolean("enabled").notNull().default(false),
+    calendarId: text("calendar_id").notNull().default("primary"),
+    syncToken: text("sync_token"),
+    lastSyncAt: timestamp("last_sync_at"),
+    lastError: text("last_error"),
+    createdAt: timestamp("created_at")
+      .$defaultFn(() => new Date())
+      .notNull(),
+    updatedAt: timestamp("updated_at")
+      .$defaultFn(() => new Date())
+      .notNull(),
+  },
+);
+
 export type DocRow = typeof docs.$inferSelect;
+export type CalendarEventRow = typeof calendarEvents.$inferSelect;
+export type CalendarEventTemplateRow = typeof calendarEventTemplates.$inferSelect;
+export type GoogleCalendarIntegrationRow =
+  typeof googleCalendarIntegrations.$inferSelect;
+
+export type StoredCalendarRsvp = CalendarRsvpStatus;
 
 interface TaskAcceptanceCriterion {
   id: string;

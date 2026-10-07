@@ -168,6 +168,7 @@ export class TasksService {
           ...(body.estimation !== undefined
             ? { estimation: body.estimation }
             : {}),
+          ...(body.color !== undefined ? { color: body.color } : {}),
           ...(completion.acceptanceCriteria !== undefined
             ? { acceptanceCriteria: completion.acceptanceCriteria }
             : {}),

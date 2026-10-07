@@ -422,6 +422,7 @@ function task(overrides: Partial<NestedTask>): NestedTask {
     areaId: "area",
     progressStageId: null,
     estimation: null,
+    color: null,
     parentTaskId: null,
     goalId: null,
     position: 0,

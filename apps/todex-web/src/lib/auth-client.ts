@@ -14,3 +14,4 @@ export const authClient: AuthClient = createAuthClient({
 export const useSession: AuthClient["useSession"] = authClient.useSession;
 export const signIn: AuthClient["signIn"] = authClient.signIn;
 export const signOut: AuthClient["signOut"] = authClient.signOut;
+export const linkSocial: AuthClient["linkSocial"] = authClient.linkSocial;

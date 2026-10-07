@@ -20,20 +20,23 @@ export function DatePicker({
   value,
   onChange,
   appearance = "chip",
+  disabled,
 }: DatePickerProps) {
   const [open, setOpen] = useState(false);
   const selected = dateInputToDate(value);
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={(next) => setOpen(disabled ? false : next)}>
       <PopoverTrigger asChild>
         <button
           type="button"
+          disabled={disabled}
           className={cn(
             appearance === "chip"
               ? "inline-flex items-center gap-1.5 rounded-full border border-border bg-transparent px-2.5 py-1 text-xs hover:text-foreground"
               : "inline-flex h-8 items-center gap-2 bg-transparent text-sm hover:text-foreground",
             value ? "text-foreground" : "text-muted-foreground",
+            disabled && "opacity-40",
           )}
         >
           {appearance === "chip" ? <CalendarIcon size={12} /> : null}
@@ -171,6 +174,7 @@ interface DatePickerProps {
   value: string;
   onChange: (value: string) => void;
   appearance?: "chip" | "plain";
+  disabled?: boolean;
 }
 
 interface EstimatePickerProps {

@@ -29,6 +29,7 @@
     "docker:take-and-do:down": "pnpm --filter take-and-do docker:down",
     "docker:todex": "pnpm --filter todex-api docker:up",
     "docker:todex:down": "pnpm --filter todex-api docker:down",
+    "docker:todex:clean": "pnpm --filter todex-api docker:clean",
     "docker:devinity": "pnpm --filter devinity-api docker:up",
     "docker:devinity:down": "pnpm --filter devinity-api docker:down",
     "prod:take-and-do": "turbo run prod --filter=take-and-do --filter=@repo/ui --filter=@repo/api --filter=@repo/shared",

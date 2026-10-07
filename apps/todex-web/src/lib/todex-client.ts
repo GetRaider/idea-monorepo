@@ -3,7 +3,11 @@ import {
   ApplyProgressStageTemplateBodySchema,
   BoardAreaSchema,
   BoardProgressStageSchema,
+  CalendarEventSchema,
+  CalendarEventTemplateSchema,
   CreateBoardAreaBodySchema,
+  CreateCalendarEventBodySchema,
+  CreateCalendarEventTemplateBodySchema,
   CreateDocBodySchema,
   CreateFolderBodySchema,
   CreateTaskBoardBodySchema,
@@ -11,6 +15,7 @@ import {
   DocSchema,
   DocSummarySchema,
   FolderKind,
+  GoogleCalendarIntegrationSchema,
   FolderSchema,
   MoveTaskBodySchema,
   ReplaceBoardProgressStagesBodySchema,
@@ -20,6 +25,8 @@ import {
   UpdateBoardAreaBodySchema,
   UpdateFolderBodySchema,
   UpdateTaskBoardBodySchema,
+  UpdateCalendarEventBodySchema,
+  UpdateCalendarEventTemplateBodySchema,
   UpdateDocBodySchema,
   UpdateTaskBodySchema,
   WorkspaceSchema,
@@ -46,9 +53,20 @@ async function call<T>(
     headers: { "Content-Type": "application/json", Accept: "application/json" },
   });
   if (response.status >= 400) {
-    throw new Error(`Request failed (${response.status})`);
+    throw new Error(readError(response.data) ?? `Request failed (${response.status})`);
   }
   return schema.parse(response.data);
+}
+
+function readError(data: unknown): string | null {
+  if (!data || typeof data !== "object" || !("message" in data)) return null;
+  const message = data.message;
+  if (typeof message === "string" && message.trim()) return message;
+  if (Array.isArray(message)) {
+    const text = message.filter((item) => typeof item === "string").join(", ");
+    return text || null;
+  }
+  return null;
 }
 
 export const todexClient = {
@@ -186,5 +204,81 @@ export const todexClient = {
       ),
     remove: (docId: string) =>
       call("delete", `/v1/docs/${docId}`, z.object({ ok: z.boolean() })),
+  },
+  calendar: {
+    events: {
+      list: (query: { from: string; to: string }) =>
+        call(
+          "get",
+          `/v1/calendar/events?from=${encodeURIComponent(query.from)}&to=${encodeURIComponent(query.to)}`,
+          z.array(CalendarEventSchema),
+        ),
+      get: (eventId: string) =>
+        call("get", `/v1/calendar/events/${eventId}`, CalendarEventSchema),
+      create: (body: unknown) =>
+        call(
+          "post",
+          "/v1/calendar/events",
+          CalendarEventSchema,
+          CreateCalendarEventBodySchema.parse(body),
+        ),
+      update: (eventId: string, body: unknown) =>
+        call(
+          "patch",
+          `/v1/calendar/events/${eventId}`,
+          CalendarEventSchema,
+          UpdateCalendarEventBodySchema.parse(body),
+        ),
+      remove: (
+        eventId: string,
+        query?: { scope?: "instance" | "series"; originalStart?: string },
+      ) => {
+        const search = new URLSearchParams();
+        if (query?.scope) search.set("scope", query.scope);
+        if (query?.originalStart) search.set("originalStart", query.originalStart);
+        const suffix = search.size > 0 ? `?${search}` : "";
+        return call(
+          "delete",
+          `/v1/calendar/events/${eventId}${suffix}`,
+          z.object({ ok: z.boolean() }),
+        );
+      },
+    },
+    templates: {
+      list: () =>
+        call(
+          "get",
+          "/v1/calendar/templates",
+          z.array(CalendarEventTemplateSchema),
+        ),
+      create: (body: unknown) =>
+        call(
+          "post",
+          "/v1/calendar/templates",
+          CalendarEventTemplateSchema,
+          CreateCalendarEventTemplateBodySchema.parse(body),
+        ),
+      update: (templateId: string, body: unknown) =>
+        call(
+          "patch",
+          `/v1/calendar/templates/${templateId}`,
+          CalendarEventTemplateSchema,
+          UpdateCalendarEventTemplateBodySchema.parse(body),
+        ),
+      remove: (templateId: string) =>
+        call(
+          "delete",
+          `/v1/calendar/templates/${templateId}`,
+          z.object({ ok: z.boolean() }),
+        ),
+    },
+    google: {
+      status: () =>
+        call("get", "/v1/calendar/google", GoogleCalendarIntegrationSchema),
+      sync: () =>
+        call("post", "/v1/calendar/google/sync", GoogleCalendarIntegrationSchema),
+      disconnect: () =>
+        call("delete", "/v1/calendar/google", GoogleCalendarIntegrationSchema),
+    },
   },
 };

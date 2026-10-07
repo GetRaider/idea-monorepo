@@ -50,6 +50,7 @@ import {
 import { TaskRecurrenceEditor } from "./task-recurrence-picker";
 import {
   dateInputToLocalDayStartIso,
+  dateInputToScheduleIso,
   isoToDateInput,
   startOfLocalDay,
   STATUS_LABEL,
@@ -299,6 +300,7 @@ function TaskContextMenuItems({
           icon={<CalendarIcon size={16} />}
           label="Schedule"
           value={sharedValue(targets, (task) => task.scheduleDate)}
+          toIso={dateInputToScheduleIso}
           onChange={(scheduleDate) => patch({ scheduleDate })}
         />
       ),
@@ -514,10 +516,12 @@ function DateSubmenu({
   label,
   value,
   onChange,
+  toIso = dateInputToLocalDayStartIso,
 }: {
   icon: ReactNode;
   label: string;
   value: string | null;
+  toIso?: (yearMonthDay: string) => string | null;
   onChange: (value: string | null) => void;
 }) {
   const selected = dateFromInput(isoToDateInput(value));
@@ -533,7 +537,7 @@ function DateSubmenu({
           selected={selected}
           onSelect={(date) =>
             onChange(
-              date ? dateInputToLocalDayStartIso(dateToInput(date)) : null,
+              date ? toIso(dateToInput(date)) : null,
             )
           }
         />

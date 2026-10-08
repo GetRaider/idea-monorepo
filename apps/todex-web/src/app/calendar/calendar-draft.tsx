@@ -61,9 +61,14 @@ export function CalendarDraft({
                 kind: "task",
                 taskId,
                 scheduleDate: start,
-                estimation: allDay
-                  ? null
-                  : Math.max(15, Math.round((Date.parse(end) - Date.parse(start)) / 60_000)),
+                ...(allDay
+                  ? {}
+                  : {
+                      estimation: Math.max(
+                        15,
+                        Math.round((Date.parse(end) - Date.parse(start)) / 60_000),
+                      ),
+                    }),
               })
             : onCreate({
                 kind: "event",
@@ -207,5 +212,5 @@ export type DraftCreate =
       kind: "task";
       taskId: string;
       scheduleDate: string;
-      estimation: number | null;
+      estimation?: number;
     };

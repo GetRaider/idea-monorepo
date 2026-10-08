@@ -4,11 +4,13 @@ import {
   type CalendarRsvpStatus,
   type DocBody,
   type DocPlainText,
+  type ExecutionInterval,
   type TaskRecurrence,
 } from "@repo/api/todex";
 import { sql } from "drizzle-orm";
 import {
   boolean,
+  check,
   foreignKey,
   index,
   integer,
@@ -201,7 +203,7 @@ export const tasks = pgTable(
     priority: taskPriorityEnum("priority").notNull().default("medium"),
     dueDate: timestamp("due_date"),
     scheduleDate: timestamp("schedule_date"),
-    estimation: integer("estimation"),
+    estimation: integer("estimation").notNull(),
     color: text("color"),
     acceptanceCriteria: jsonb("acceptance_criteria")
       .$type<TaskAcceptanceCriterion[]>()
@@ -235,6 +237,7 @@ export const tasks = pgTable(
       columns: [table.parentTaskId],
       foreignColumns: [table.id],
     }).onDelete("cascade"),
+    check("tasks_estimation_positive", sql`${table.estimation} > 0`),
   ],
 );
 
@@ -412,11 +415,114 @@ export const googleCalendarIntegrations = pgTable(
   },
 );
 
+export const executionExecutorTypeEnum = pgEnum("execution_executor_type", [
+  "human",
+  "ai",
+]);
+
+export const executionSessions = pgTable(
+  "execution_sessions",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    startedAt: timestamp("started_at").notNull(),
+    endedAt: timestamp("ended_at"),
+    duration: integer("duration"),
+    executorType: executionExecutorTypeEnum("executor_type")
+      .notNull()
+      .default("human"),
+    createdAt: timestamp("created_at")
+      .$defaultFn(() => new Date())
+      .notNull(),
+    updatedAt: timestamp("updated_at")
+      .$defaultFn(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("execution_sessions_open_workspace_unique")
+      .on(table.workspaceId)
+      .where(sql`${table.endedAt} is null`),
+    index("execution_sessions_workspace_started_idx").on(
+      table.workspaceId,
+      table.startedAt,
+    ),
+  ],
+);
+
+export const executionSessionTasks = pgTable(
+  "execution_session_tasks",
+  {
+    id: text("id").primaryKey(),
+    sessionId: text("session_id")
+      .notNull()
+      .references(() => executionSessions.id, { onDelete: "cascade" }),
+    taskId: text("task_id")
+      .notNull()
+      .references(() => tasks.id, { onDelete: "cascade" }),
+    position: integer("position").notNull().default(0),
+    active: boolean("active").notNull().default(true),
+    intervals: jsonb("intervals")
+      .$type<ExecutionInterval[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+  },
+  (table) => [
+    uniqueIndex("execution_session_tasks_session_task_unique").on(
+      table.sessionId,
+      table.taskId,
+    ),
+    index("execution_session_tasks_task_id_idx").on(table.taskId),
+  ],
+);
+
+export const executionCurrent = pgTable("execution_current", {
+  workspaceId: text("workspace_id")
+    .primaryKey()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  taskId: text("task_id").references(() => tasks.id, { onDelete: "set null" }),
+  updatedAt: timestamp("updated_at")
+    .$defaultFn(() => new Date())
+    .notNull(),
+});
+
+export const executionQueue = pgTable(
+  "execution_queue",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    taskId: text("task_id")
+      .notNull()
+      .references(() => tasks.id, { onDelete: "cascade" }),
+    position: integer("position").notNull().default(0),
+    createdAt: timestamp("created_at")
+      .$defaultFn(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("execution_queue_workspace_task_unique").on(
+      table.workspaceId,
+      table.taskId,
+    ),
+    index("execution_queue_workspace_position_idx").on(
+      table.workspaceId,
+      table.position,
+    ),
+  ],
+);
+
 export type DocRow = typeof docs.$inferSelect;
 export type CalendarEventRow = typeof calendarEvents.$inferSelect;
 export type CalendarEventTemplateRow = typeof calendarEventTemplates.$inferSelect;
 export type GoogleCalendarIntegrationRow =
   typeof googleCalendarIntegrations.$inferSelect;
+export type ExecutionSessionRow = typeof executionSessions.$inferSelect;
+export type ExecutionSessionTaskRow = typeof executionSessionTasks.$inferSelect;
+export type ExecutionQueueRow = typeof executionQueue.$inferSelect;
+export type ExecutionCurrentRow = typeof executionCurrent.$inferSelect;
 
 export type StoredCalendarRsvp = CalendarRsvpStatus;
 

@@ -58,6 +58,7 @@ describe("task date bodies", () => {
     const body = CreateTaskBodySchema.parse({
       taskBoardId: "board-1",
       summary: "Plan it",
+      estimation: 60,
       scheduleDate: "2026-09-10T00:00:00.000Z",
       dueDate: "2026-09-17T00:00:00.000Z",
     });
@@ -109,6 +110,26 @@ describe("task date bodies", () => {
         },
       }).success,
     ).toBe(false);
+  });
+
+  it("requires a positive estimation on create and rejects clearing it", () => {
+    expect(
+      CreateTaskBodySchema.safeParse({
+        taskBoardId: "board-1",
+        summary: "Plan it",
+      }).success,
+    ).toBe(false);
+    expect(
+      CreateTaskBodySchema.safeParse({
+        taskBoardId: "board-1",
+        summary: "Plan it",
+        estimation: 0,
+      }).success,
+    ).toBe(false);
+    expect(UpdateTaskBodySchema.safeParse({ estimation: null }).success).toBe(
+      false,
+    );
+    expect(UpdateTaskBodySchema.parse({ estimation: 30 }).estimation).toBe(30);
   });
 
   it("rejects a blank acceptance criterion", () => {

@@ -1,0 +1,1 @@
+ALTER TABLE "execution_session_tasks" ADD COLUMN "active" boolean DEFAULT true NOT NULL;

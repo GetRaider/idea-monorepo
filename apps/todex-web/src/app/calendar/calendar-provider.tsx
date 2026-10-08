@@ -109,7 +109,7 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
     mutationFn: (input: {
       taskId: string;
       scheduleDate?: string | null;
-      estimation?: number | null;
+      estimation?: number;
       color?: string | null;
     }) =>
       todexClient.tasks.update(input.taskId, {
@@ -268,7 +268,7 @@ interface CalendarContextValue {
       taskId: string,
       patch: {
         scheduleDate?: string | null;
-        estimation?: number | null;
+        estimation?: number;
         color?: string | null;
       },
     ) => Promise<Task>;

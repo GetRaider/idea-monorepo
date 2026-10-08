@@ -10,6 +10,7 @@ import { DatabaseModule } from "../db/database.module";
 import { BoardsModule } from "./boards/boards.module";
 import { CalendarModule } from "./calendar/calendar.module";
 import { DocsModule } from "./docs/docs.module";
+import { ExecutionModule } from "./execution/execution.module";
 import { FoldersModule } from "./folders/folders.module";
 import { HealthController } from "./health/health.controller";
 import { TasksModule } from "./tasks/tasks.module";
@@ -26,6 +27,7 @@ import { WorkspaceModule } from "./workspace/workspace.module";
     WorkspaceModule,
     FoldersModule,
     DocsModule,
+    ExecutionModule,
     CalendarModule,
     BoardsModule,
     TasksModule,

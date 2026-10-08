@@ -528,7 +528,7 @@ export const INBOX_BOARD_NAME = "Inbox";
 export interface TaskCreateDraft {
   status?: Task["status"];
   priority?: Task["priority"];
-  estimation?: number | null;
+  estimation: number;
   taskBoardId?: string;
   areaId?: string;
   progressStageId?: string | null;

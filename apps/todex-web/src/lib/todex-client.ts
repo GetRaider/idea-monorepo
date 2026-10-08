@@ -14,6 +14,16 @@ import {
   CreateTaskBodySchema,
   DocSchema,
   DocSummarySchema,
+  EnqueueExecutionBodySchema,
+  ExecuteTaskBodySchema,
+  ExecutionActivitySchema,
+  ExecutionCurrentSchema,
+  ExecutionSessionSchema,
+  ExecutionStateSchema,
+  ExecutionSuggestionSchema,
+  FocusExecutionTaskBodySchema,
+  ReorderExecutionQueueBodySchema,
+  UpdateExecutionSessionBodySchema,
   FolderKind,
   GoogleCalendarIntegrationSchema,
   FolderSchema,
@@ -183,6 +193,88 @@ export const todexClient = {
       ),
     remove: (taskId: string) =>
       call("delete", `/v1/tasks/${taskId}`, z.object({ ok: z.boolean() })),
+  },
+  execution: {
+    state: () => call("get", "/v1/execution", ExecutionStateSchema),
+    sessions: () =>
+      call("get", "/v1/execution/sessions", z.array(ExecutionSessionSchema)),
+    activity: (query: {
+      from: string;
+      to: string;
+      timeZone: string;
+      boardId?: string;
+    }) => {
+      const params = new URLSearchParams({
+        from: query.from,
+        to: query.to,
+        timeZone: query.timeZone,
+      });
+      if (query.boardId) params.set("boardId", query.boardId);
+      return call(
+        "get",
+        `/v1/execution/activity?${params}`,
+        ExecutionActivitySchema,
+      );
+    },
+    updateSession: (sessionId: string, body: unknown) =>
+      call(
+        "patch",
+        `/v1/execution/sessions/${sessionId}`,
+        z.array(ExecutionSessionSchema),
+        UpdateExecutionSessionBodySchema.parse(body),
+      ),
+    deleteSession: (sessionId: string) =>
+      call("delete", `/v1/execution/sessions/${sessionId}`, z.object({ ok: z.literal(true) })),
+    suggestions: () =>
+      call(
+        "get",
+        "/v1/execution/suggestions",
+        z.array(ExecutionSuggestionSchema),
+      ),
+    preview: (body: unknown) =>
+      call(
+        "post",
+        "/v1/execution/preview",
+        z.array(ExecutionCurrentSchema),
+        ExecuteTaskBodySchema.parse(body),
+      ),
+    execute: (body: unknown) =>
+      call(
+        "post",
+        "/v1/execution/execute",
+        ExecutionStateSchema,
+        ExecuteTaskBodySchema.parse(body),
+      ),
+    enqueue: (body: unknown) =>
+      call(
+        "post",
+        "/v1/execution/queue",
+        ExecutionStateSchema,
+        EnqueueExecutionBodySchema.parse(body),
+      ),
+    removeQueued: (taskId: string) =>
+      call(
+        "delete",
+        `/v1/execution/queue/${taskId}`,
+        ExecutionStateSchema,
+      ),
+    reorder: (body: unknown) =>
+      call(
+        "post",
+        "/v1/execution/queue/reorder",
+        ExecutionStateSchema,
+        ReorderExecutionQueueBodySchema.parse(body),
+      ),
+    focus: (body: unknown) =>
+      call(
+        "post",
+        "/v1/execution/focus",
+        ExecutionStateSchema,
+        FocusExecutionTaskBodySchema.parse(body),
+      ),
+    pause: () => call("post", "/v1/execution/pause", ExecutionStateSchema),
+    resume: () => call("post", "/v1/execution/resume", ExecutionStateSchema),
+    complete: () => call("post", "/v1/execution/complete", ExecutionStateSchema),
   },
   docs: {
     list: (query?: { type?: "common" | "goal"; folderId?: string }) => {

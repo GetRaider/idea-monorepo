@@ -9,6 +9,7 @@ import {
 } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
+  Button,
   Checkbox,
   ConfirmDialog,
   DropdownMenu,
@@ -37,6 +38,8 @@ import type {
 } from "@repo/api/todex";
 
 import { ResizeHandle } from "@components/resize-handle";
+import { useExecutionCommands } from "../execution/execution-commands";
+import { formatDuration } from "../execution/execution-time";
 import {
   CalendarIcon,
   ChevronIcon,
@@ -110,6 +113,7 @@ export function TaskView() {
       removeTask,
     },
   } = useTasks();
+  const { execute, enqueue } = useExecutionCommands();
   const isLargeScreen = useMinWidthLg();
   const [mode, setMode] = useState<TaskViewMode>("docked");
   const [panelWidth, setPanelWidth] = useState(TASK_PANEL_DEFAULT_WIDTH);
@@ -179,7 +183,10 @@ export function TaskView() {
             trailing={<BoardGlyph />}
           />
         )}
-        <div className="flex shrink-0 items-center gap-0.5">
+        <div className="flex shrink-0 items-center gap-1">
+          <Button size="sm" onClick={() => execute(selectedTask.id)}>
+            Execute
+          </Button>
           {taskIndex >= 0 ? (
             <>
               <PagerButton
@@ -207,6 +214,7 @@ export function TaskView() {
           ) : null}
           <TaskViewMenu
             summary={selectedTask.summary}
+            onEnqueue={() => enqueue(selectedTask.id)}
             onDelete={() => removeTask(selectedTask.id)}
           />
           {isLargeScreen ? (
@@ -244,6 +252,7 @@ export function TaskView() {
         onOpenTask={setSelectedTaskId}
         onCreateSubtask={(summary) =>
           createTask(summary, selectedTask.id, {
+            estimation: selectedTask.estimation,
             areaId: selectedTask.areaId,
             progressStageId: selectedTask.progressStageId,
           })
@@ -329,7 +338,9 @@ function TaskViewBody({
   const criteriaMet = acceptanceCriteriaAreMet(task.acceptanceCriteria);
   const parsedEstimation = parseEstimation(estimationText);
   const estimationInvalid =
-    estimationText.trim() !== "" && parsedEstimation === null;
+    estimationText.trim() === "" ||
+    parsedEstimation == null ||
+    parsedEstimation <= 0;
   const board = boards.find((item) => item.id === task.taskBoardId);
   const boardName = board?.name ?? "Board";
 
@@ -561,6 +572,9 @@ function TaskViewBody({
                 <span className="text-sm text-muted-foreground">General</span>
               )}
             </DetailRow>
+            <DetailRow icon={<ClockIcon size={16} />} label="Executed">
+              <span className="text-sm">{formatDuration(task.actualTime)}</span>
+            </DetailRow>
             <DetailRow icon={<ClockIcon size={16} />} label="Estimate">
               <div className="min-w-0 flex-1">
                 <EstimatePicker
@@ -569,17 +583,22 @@ function TaskViewBody({
                   onChange={setEstimationText}
                   onCommit={(next) => {
                     const parsed = parseEstimation(next);
-                    const invalid = next.trim() !== "" && parsed === null;
-                    if (invalid) return;
-                    const nextEstimation = next.trim() ? parsed : null;
-                    if (nextEstimation !== task.estimation) {
-                      queueUpdate({ estimation: nextEstimation });
+                    if (parsed == null || parsed <= 0) {
+                      setEstimationText(formatEstimation(task.estimation));
+                      return;
+                    }
+                    if (parsed !== task.estimation) {
+                      queueUpdate({ estimation: parsed });
                     }
                     flushPendingUpdate();
                   }}
                 />
                 {estimationInvalid ? (
-                  <p className="text-xs text-destructive">Use 1h, 30m, or 2d</p>
+                  <p className="text-xs text-destructive">
+                    {estimationText.trim() && parsedEstimation === null
+                      ? "Use 1h, 30m, or 2d"
+                      : "Estimate is required"}
+                  </p>
                 ) : null}
               </div>
             </DetailRow>
@@ -962,9 +981,11 @@ function SubtaskComposer({
 
 function TaskViewMenu({
   summary,
+  onEnqueue,
   onDelete,
 }: {
   summary: string;
+  onEnqueue: () => void;
   onDelete: () => void;
 }) {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
@@ -982,6 +1003,9 @@ function TaskViewMenu({
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
+          <DropdownMenuItem onSelect={onEnqueue}>
+            Add to Execution Queue
+          </DropdownMenuItem>
           <DropdownMenuItem onSelect={() => setIsDeleteOpen(true)}>
             Delete
           </DropdownMenuItem>

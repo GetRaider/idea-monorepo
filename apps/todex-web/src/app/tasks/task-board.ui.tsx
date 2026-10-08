@@ -12,6 +12,7 @@ import {
 } from "@repo/api/todex";
 import type { Task } from "@repo/api/todex";
 
+import { formatDuration } from "../execution/execution-time";
 import {
   CalendarIcon,
   ChevronIcon,
@@ -318,18 +319,26 @@ export function TaskFacts({
 }: {
   task: Pick<
     Task,
-    "scheduleDate" | "dueDate" | "estimation" | "recurrence" | "progressStageId"
+    | "scheduleDate"
+    | "dueDate"
+    | "estimation"
+    | "actualTime"
+    | "recurrence"
+    | "progressStageId"
   >;
   className?: string;
 }) {
   const schedule = formatTaskDay(task.scheduleDate);
   const due = formatTaskDay(task.dueDate);
   const estimate = formatEstimation(task.estimation);
+  const executed = task.actualTime > 0 ? formatDuration(task.actualTime) : null;
   const recurrence = task.recurrence
     ? formatTaskRecurrence(task.recurrence)
     : null;
   const stageName = useStageName(task.progressStageId);
-  if (!schedule && !due && !estimate && !recurrence && !stageName) return null;
+  if (!schedule && !due && !estimate && !executed && !recurrence && !stageName) {
+    return null;
+  }
   return (
     <span
       className={cn(
@@ -353,7 +362,13 @@ export function TaskFacts({
       {estimate ? (
         <span className="inline-flex items-center gap-1">
           <ClockIcon size={12} />
-          {estimate}
+          Estimate {estimate}
+        </span>
+      ) : null}
+      {executed ? (
+        <span className="inline-flex items-center gap-1">
+          <ClockIcon size={12} />
+          Executed {executed}
         </span>
       ) : null}
       {recurrence ? (

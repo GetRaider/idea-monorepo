@@ -38,6 +38,7 @@ import {
   StatusDoneIcon,
 } from "@components/icons";
 
+import { useExecutionCommands } from "../execution/execution-commands";
 import { useBoardAxes } from "./board-axes";
 import {
   AreaMark,
@@ -123,6 +124,7 @@ function TaskContextMenuItems({
     state: { tasks, boards },
     actions: { updateTask, updateTaskStatus, createTask },
   } = useTasks();
+  const { execute, enqueue } = useExecutionCommands();
   const single = targets.length === 1 ? (targets[0] ?? null) : null;
   const sharedBoardId = sharedValue(targets, (task) => task.taskBoardId);
   const boardAxes = useBoardAxes(sharedBoardId);
@@ -446,6 +448,7 @@ function TaskContextMenuItems({
               <SubtaskMenu
                 onCreate={(summary) =>
                   createTask(summary, single.id, {
+                    estimation: single.estimation,
                     areaId: single.areaId,
                     progressStageId: single.progressStageId,
                   })
@@ -466,6 +469,17 @@ function TaskContextMenuItems({
         {single ? single.taskKey : `${targets.length} tasks`}
       </ContextMenuLabel>
       <ContextMenuSeparator />
+      {single ? (
+        <>
+          <ContextMenuItem onSelect={() => execute(single.id)}>
+            Execute
+          </ContextMenuItem>
+          <ContextMenuItem onSelect={() => enqueue(single.id)}>
+            Add to Execution Queue
+          </ContextMenuItem>
+          <ContextMenuSeparator />
+        </>
+      ) : null}
       {enabledEntries.map((entry) => (
         <Fragment key={entry.key}>{entry.node}</Fragment>
       ))}
@@ -556,16 +570,16 @@ function EstimateMenu({
   onCommit,
 }: {
   value: string;
-  onCommit: (estimation: number | null) => void;
+  onCommit: (estimation: number) => void;
 }) {
   const [draft, setDraft] = useState(value);
   const parsed = parseEstimation(draft);
-  const invalid = draft.trim() !== "" && parsed === null;
+  const invalid = draft.trim() !== "" && (parsed == null || parsed <= 0);
 
   function commit(next: string) {
     const estimation = parseEstimation(next);
-    if (next.trim() !== "" && estimation === null) return;
-    onCommit(next.trim() ? estimation : null);
+    if (estimation == null || estimation <= 0) return;
+    onCommit(estimation);
   }
 
   return (
@@ -594,7 +608,6 @@ function EstimateMenu({
       {invalid ? (
         <p className="px-2 pb-1 text-xs text-destructive">Use 1h, 30m, or 2d</p>
       ) : null}
-      <ContextMenuItem onSelect={() => onCommit(null)}>Clear</ContextMenuItem>
     </div>
   );
 }

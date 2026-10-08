@@ -11,6 +11,7 @@ import {
   completeRecurringTask,
   DocType,
   readTaskRecurrence,
+  sumIntervalSeconds,
   TaskPriority,
   TaskStatus,
 } from "@repo/api/todex";
@@ -23,7 +24,14 @@ import type {
 } from "@repo/api/todex";
 
 import { DRIZZLE_DB } from "../../db/tokens";
-import { docs, docTasks, tasks, workspaces, type TaskRow } from "../../db/schema";
+import {
+  docs,
+  docTasks,
+  executionSessionTasks,
+  tasks,
+  workspaces,
+  type TaskRow,
+} from "../../db/schema";
 import { mapTask, parseIsoDate, toIso } from "../../db/mappers";
 import {
   formatTaskKey,
@@ -100,7 +108,7 @@ export class TasksService {
           priority: body.priority ?? TaskPriority.MEDIUM,
           dueDate: parseIsoDate(body.dueDate),
           scheduleDate: parseIsoDate(body.scheduleDate),
-          estimation: body.estimation ?? null,
+          estimation: body.estimation,
           acceptanceCriteria: body.acceptanceCriteria ?? [],
           recurrence: body.recurrence ?? null,
           areaId: placement.areaId,
@@ -330,7 +338,33 @@ export class TasksService {
         goalIdByTaskId.set(link.taskId, link.docId);
       }
     }
-    return rows.map((row) => mapTask(row, goalIdByTaskId.get(row.id) ?? null));
+    const actualTime = await this.actualTimeByTask(
+      rows.map((row) => row.id),
+    );
+    return rows.map((row) =>
+      mapTask(row, goalIdByTaskId.get(row.id) ?? null, actualTime.get(row.id) ?? 0),
+    );
+  }
+
+  private async actualTimeByTask(taskIds: string[]) {
+    const totals = new Map<string, number>();
+    if (taskIds.length === 0) return totals;
+    const rows = await this.db
+      .select({
+        taskId: executionSessionTasks.taskId,
+        intervals: executionSessionTasks.intervals,
+      })
+      .from(executionSessionTasks)
+      .where(inArray(executionSessionTasks.taskId, taskIds));
+    const now = new Date();
+    for (const row of rows) {
+      totals.set(
+        row.taskId,
+        (totals.get(row.taskId) ?? 0) +
+          sumIntervalSeconds(row.intervals ?? [], now),
+      );
+    }
+    return totals;
   }
 
   private async writeTaskGoal(

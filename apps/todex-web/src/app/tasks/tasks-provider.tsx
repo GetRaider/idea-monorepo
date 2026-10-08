@@ -362,9 +362,7 @@ export function TasksProvider({ children }: { children: ReactNode }) {
         ...(input.progressStageId !== undefined
           ? { progressStageId: input.progressStageId }
           : {}),
-        ...(input.estimation !== undefined
-          ? { estimation: input.estimation }
-          : {}),
+        estimation: input.estimation,
         ...(input.dueDate !== undefined ? { dueDate: input.dueDate } : {}),
         ...(input.scheduleDate !== undefined
           ? { scheduleDate: input.scheduleDate }
@@ -737,8 +735,8 @@ interface TasksContextValue {
     removeBoard: (boardId: string) => Promise<void>;
     createTask: (
       summary: string,
-      parentTaskId?: string | null,
-      draft?: TaskCreateDraft,
+      parentTaskId: string | null,
+      draft: TaskCreateDraft,
     ) => void;
     updateTask: (
       taskId: string,

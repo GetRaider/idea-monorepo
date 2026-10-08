@@ -16,10 +16,14 @@ import {
 
 import { signOut, useSession } from "@lib/auth-client";
 
+import { useExecution } from "../app/execution/execution-provider";
+import { formatClock } from "../app/execution/execution-time";
+
 import {
   BellIcon,
   CalendarIcon,
   DocsIcon,
+  ExecutionIcon,
   OverviewIcon,
   TasksIcon,
 } from "./icons";
@@ -27,15 +31,25 @@ import {
 const NAV = [
   { href: "/overview", label: "Overview", enabled: true, icon: OverviewIcon },
   { href: "/tasks", label: "Tasks", enabled: true, icon: TasksIcon },
+  { href: "/execution", label: "Execution", enabled: true, icon: ExecutionIcon },
   { href: "/calendar", label: "Calendar", enabled: true, icon: CalendarIcon },
   { href: "/docs", label: "Docs", enabled: true, icon: DocsIcon },
 ] as const;
 
 export function AppNavRail() {
   const pathname = usePathname();
+  const {
+    state: { session, focused },
+    meta: { shownSeconds },
+  } = useExecution();
 
   return (
-    <aside className="flex h-full w-12 shrink-0 flex-col items-center py-3 pl-2 pr-2">
+    <aside
+      className={cn(
+        "flex h-full shrink-0 flex-col items-center py-3 pl-2 pr-2",
+        session ? "w-16" : "w-12",
+      )}
+    >
       {/* eslint-disable-next-line @next/next/no-img-element -- static logo; next/image flashes on navigation */}
       <img
         src="/logo.svg"
@@ -78,6 +92,23 @@ export function AppNavRail() {
             </RailTooltip>
           );
         })}
+        {session ? (
+          <RailTooltip
+            label={
+              focused
+                ? `${focused.summary} · ${shownSeconds == null ? "No estimate" : formatClock(shownSeconds)}`
+                : "Active execution"
+            }
+          >
+            <Link
+              href="/execution/current"
+              aria-label="Active timer"
+              className="flex h-10 w-14 items-center justify-center rounded-lg text-[11px] font-medium tabular-nums leading-none text-foreground hover:bg-white/10"
+            >
+              {shownSeconds == null ? "—" : formatClock(shownSeconds)}
+            </Link>
+          </RailTooltip>
+        ) : null}
       </nav>
       <div className="mt-auto flex flex-col items-center gap-2">
         <NotificationsButton />

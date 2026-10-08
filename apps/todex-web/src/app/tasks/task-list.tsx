@@ -285,9 +285,11 @@ export function TaskList() {
 
   function createSubtask(parentTaskId: string) {
     const parent = tasks.find((item) => item.id === parentTaskId);
+    if (!parent) return;
     createTask("New subtask", parentTaskId, {
-      areaId: parent?.areaId,
-      progressStageId: parent?.progressStageId,
+      estimation: parent.estimation,
+      areaId: parent.areaId,
+      progressStageId: parent.progressStageId,
     });
   }
 

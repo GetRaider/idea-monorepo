@@ -161,5 +161,48 @@ export type {
   Task,
   UpdateTaskBody,
 } from "./task.ts";
+export {
+  CompleteExecutionBodySchema,
+  EnqueueExecutionBodySchema,
+  ExecuteTaskBodySchema,
+  ExecutionActivityQuerySchema,
+  ExecutionActivitySchema,
+  ExecutionCurrentSchema,
+  ExecutionExecutorTypeSchema,
+  ExecutionIntervalSchema,
+  ExecutionQueueItemSchema,
+  ExecutionSessionSchema,
+  ExecutionSuggestionSchema,
+  ExecutionStateSchema,
+  ExecutionTaskRefSchema,
+  FocusExecutionTaskBodySchema,
+  ReorderExecutionQueueBodySchema,
+  UpdateExecutionSessionBodySchema,
+} from "./execution.ts";
+export type {
+  CompleteExecutionBody,
+  EnqueueExecutionBody,
+  ExecuteTaskBody,
+  ExecutionActivity,
+  ExecutionActivityQuery,
+  ExecutionCurrent,
+  ExecutionExecutorType,
+  ExecutionInterval,
+  ExecutionQueueItem,
+  ExecutionQueueTask,
+  ExecutionSession,
+  ExecutionSuggestion,
+  ExecutionState,
+  ExecutionSubtask,
+  ExecutionTaskRef,
+  FocusExecutionTaskBody,
+  ReorderExecutionQueueBody,
+  UpdateExecutionSessionBody,
+} from "./execution.ts";
+export {
+  closeOpenIntervals,
+  hasOpenInterval,
+  sumIntervalSeconds,
+} from "./intervals.ts";
 export { WorkspaceMemberSchema, WorkspaceSchema } from "./workspace.ts";
 export type { Workspace, WorkspaceMember } from "./workspace.ts";

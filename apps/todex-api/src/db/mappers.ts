@@ -9,6 +9,9 @@ import {
   type CommonDocBody,
   type Doc,
   type DocSummary,
+  type ExecutionQueueItem,
+  type ExecutionQueueTask,
+  type ExecutionSession,
   type Folder,
   type Task,
   type TaskBoard,
@@ -22,6 +25,8 @@ import type {
   CalendarEventRow,
   CalendarEventTemplateRow,
   DocRow,
+  ExecutionQueueRow,
+  ExecutionSessionRow,
   FolderRow,
   TaskBoardRow,
   TaskRow,
@@ -139,7 +144,11 @@ export function mapDoc(row: DocRow, linkedTaskIds: string[]): Doc {
   };
 }
 
-export function mapTask(row: TaskRow, goalId: string | null = null): Task {
+export function mapTask(
+  row: TaskRow,
+  goalId: string | null = null,
+  actualTime = 0,
+): Task {
   return {
     id: row.id,
     workspaceId: row.workspaceId,
@@ -151,7 +160,8 @@ export function mapTask(row: TaskRow, goalId: string | null = null): Task {
     priority: row.priority,
     dueDate: toIso(row.dueDate),
     scheduleDate: toIso(row.scheduleDate),
-    estimation: row.estimation ?? null,
+    estimation: row.estimation,
+    actualTime,
     color: row.color,
     acceptanceCriteria: row.acceptanceCriteria ?? [],
     recurrence: readTaskRecurrence(row.recurrence),
@@ -189,6 +199,35 @@ export function mapCalendarEvent(row: CalendarEventRow): CalendarEvent {
     cancelled: row.cancelled,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
+export function mapExecutionSession(
+  row: ExecutionSessionRow,
+  sessionTasks: ExecutionSession["tasks"],
+): ExecutionSession {
+  return {
+    id: row.id,
+    workspaceId: row.workspaceId,
+    tasks: sessionTasks,
+    startedAt: row.startedAt.toISOString(),
+    endedAt: toIso(row.endedAt),
+    duration: row.duration,
+    executorType: row.executorType,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
+export function mapExecutionQueueItem(
+  row: ExecutionQueueRow,
+  task: ExecutionQueueTask,
+): ExecutionQueueItem {
+  return {
+    id: row.id,
+    taskId: row.taskId,
+    position: row.position,
+    task,
   };
 }
 

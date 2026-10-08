@@ -49,7 +49,7 @@ export function TaskComposer({
   const [taskBoardId, setTaskBoardId] = useState(
     defaultBoardId ?? boards?.[0]?.id ?? "",
   );
-  const [estimationInvalid, setEstimationInvalid] = useState(false);
+  const [estimationError, setEstimationError] = useState<string | null>(null);
   const showBoardSelect = (boards?.length ?? 0) > 1;
 
   useEffect(() => {
@@ -67,7 +67,7 @@ export function TaskComposer({
     setStatus(TaskStatus.TODO);
     setScheduleDate(defaultScheduleDate);
     setDueDate("");
-    setEstimationInvalid(false);
+    setEstimationError(null);
     onOpenChange?.(false);
   }
 
@@ -75,15 +75,22 @@ export function TaskComposer({
     event.preventDefault();
     const nextSummary = summary.trim();
     const parsedEstimation = parseEstimation(estimationText);
-    const invalid = estimationText.trim() !== "" && parsedEstimation === null;
-    setEstimationInvalid(invalid);
-    if (!nextSummary || invalid) return;
+    if (estimationText.trim() && parsedEstimation === null) {
+      setEstimationError("Use 1h, 30m, or 2d");
+      return;
+    }
+    if (parsedEstimation == null || parsedEstimation <= 0) {
+      setEstimationError("Estimate is required");
+      return;
+    }
+    setEstimationError(null);
+    if (!nextSummary) return;
     if (showBoardSelect && !taskBoardId) return;
     onCreate({
       summary: nextSummary,
       status,
       priority,
-      estimation: estimationText.trim() ? parsedEstimation : null,
+      estimation: parsedEstimation,
       taskBoardId: taskBoardId || null,
       scheduleDate: dateInputToScheduleIso(scheduleDate),
       dueDate: dateInputToLocalDayStartIso(dueDate),
@@ -160,7 +167,7 @@ export function TaskComposer({
           value={estimationText}
           onChange={(next) => {
             setEstimationText(next);
-            setEstimationInvalid(false);
+            setEstimationError(null);
           }}
         />
         {showBoardSelect ? (
@@ -190,14 +197,14 @@ export function TaskComposer({
             type="submit"
             size="sm"
             className="h-7 px-3 text-xs"
-            disabled={!summary.trim()}
+            disabled={!summary.trim() || !parseEstimation(estimationText)}
           >
             Create
           </Button>
         </div>
       </div>
-      {estimationInvalid ? (
-        <p className="text-xs text-destructive">Use 1h, 30m, or 2d</p>
+      {estimationError ? (
+        <p className="text-xs text-destructive">{estimationError}</p>
       ) : null}
     </form>
   );
@@ -261,7 +268,7 @@ export interface TaskComposerValues {
   summary: string;
   status: Task["status"];
   priority: Task["priority"];
-  estimation: number | null;
+  estimation: number;
   taskBoardId: string | null;
   scheduleDate: string | null;
   dueDate: string | null;

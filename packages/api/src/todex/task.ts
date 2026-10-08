@@ -34,6 +34,8 @@ const taskStatusSchema = z.enum([
   TaskStatus.CANCELLED,
 ]);
 
+const estimationSchema = z.number().int().positive();
+
 export const TaskSchema = z.object({
   id: z.string(),
   workspaceId: z.string(),
@@ -50,7 +52,8 @@ export const TaskSchema = z.object({
   ]),
   dueDate: IsoDateTimeSchema.nullable(),
   scheduleDate: IsoDateTimeSchema.nullable(),
-  estimation: z.number().int().nonnegative().nullable(),
+  estimation: estimationSchema,
+  actualTime: z.number().int().nonnegative(),
   color: z.string().nullable(),
   acceptanceCriteria: AcceptanceCriteriaSchema.default([]),
   recurrence: TaskRecurrenceSchema.nullable(),
@@ -121,7 +124,7 @@ export const CreateTaskBodySchema = z.object({
     .optional(),
   dueDate: IsoDateTimeSchema.nullable().optional(),
   scheduleDate: IsoDateTimeSchema.nullable().optional(),
-  estimation: z.number().int().nonnegative().nullable().optional(),
+  estimation: estimationSchema,
   acceptanceCriteria: AcceptanceCriteriaSchema.optional(),
   recurrence: TaskRecurrenceSchema.nullable().optional(),
   areaId: z.string().min(1).optional(),
@@ -149,7 +152,7 @@ export const UpdateTaskBodySchema = z.object({
     .optional(),
   dueDate: IsoDateTimeSchema.nullable().optional(),
   scheduleDate: IsoDateTimeSchema.nullable().optional(),
-  estimation: z.number().int().nonnegative().nullable().optional(),
+  estimation: estimationSchema.optional(),
   acceptanceCriteria: AcceptanceCriteriaSchema.optional(),
   recurrence: TaskRecurrenceSchema.nullable().optional(),
   areaId: z.string().min(1).optional(),

@@ -44,6 +44,21 @@ export function CalendarIcon(props: IconProps) {
   );
 }
 
+export function ExecutionIcon(props: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      {...iconSvgProps(props)}
+    >
+      <circle cx="12" cy="12" r="8" />
+      <path d="M10.5 9v6l5-3-5-3z" />
+    </svg>
+  );
+}
+
 export function DocsIcon(props: IconProps) {
   return (
     <svg

@@ -356,7 +356,9 @@ export function CalendarGrid() {
             if (body.kind === "task") {
               await updateTask(body.taskId, {
                 scheduleDate: body.scheduleDate,
-                estimation: body.estimation,
+                ...(body.estimation != null
+                  ? { estimation: body.estimation }
+                  : {}),
               });
             } else {
               await createEvent({

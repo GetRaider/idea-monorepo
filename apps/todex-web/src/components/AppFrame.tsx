@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 
 import { TooltipProvider } from "@repo/ui";
 
+import { ExecutionProvider } from "../app/execution/execution-provider";
 import { AppNavRail } from "./AppNavRail";
 import { AuthGuard } from "./AuthGuard";
 
@@ -17,10 +18,12 @@ export function AppFrame({ children }: { children: ReactNode }) {
   return (
     <TooltipProvider>
       <AuthGuard>
-        <div className="flex h-screen overflow-hidden bg-background">
-          <AppNavRail />
-          <div className="flex min-h-0 min-w-0 flex-1">{children}</div>
-        </div>
+        <ExecutionProvider>
+          <div className="flex h-screen overflow-hidden bg-background">
+            <AppNavRail />
+            <div className="flex min-h-0 min-w-0 flex-1">{children}</div>
+          </div>
+        </ExecutionProvider>
       </AuthGuard>
     </TooltipProvider>
   );

@@ -1,10 +1,18 @@
 "use client";
 
+import { OVERVIEW_CANVAS_ID } from "./overview-chapters";
+import { OverviewSections } from "./overview-sections";
+
 export default function OverviewPage() {
   return (
-    <main className="px-6 pb-6 pt-3">
+    <main
+      id={OVERVIEW_CANVAS_ID}
+      className="min-h-0 min-w-0 flex-1 overflow-auto px-6 pb-6 pt-3"
+    >
       <h1 className="text-2xl font-semibold tracking-tight">Overview</h1>
-      <p className="mt-4 text-muted-foreground">Nothing here yet.</p>
+      <div className="mt-6 flex w-full min-w-0 flex-col gap-8">
+        <OverviewSections />
+      </div>
     </main>
   );
 }

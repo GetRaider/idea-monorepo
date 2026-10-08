@@ -66,6 +66,7 @@ function moduleForPath(pathname: string): ModuleKey | null {
   if (pathname.startsWith("/docs")) return "docs";
   if (pathname.startsWith("/calendar")) return "calendar";
   if (pathname.startsWith("/execution")) return "execution";
+  if (pathname.startsWith("/overview")) return "overview";
   return null;
 }
 
@@ -90,6 +91,7 @@ const OPEN_KEYS = {
   docs: "todex:docs-sidebar-open",
   calendar: "todex:calendar-sidebar-open",
   execution: "todex:execution-sidebar-open",
+  overview: "todex:overview-sidebar-open",
 } as const;
 
 const ModuleSidebarContext = createContext<ModuleSidebarContextValue | null>(null);

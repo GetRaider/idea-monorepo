@@ -163,6 +163,8 @@ export function ExecutionProvider({ children }: { children: ReactNode }) {
       sessions: sessionsQuery.data ?? [],
       isLoading:
         stateQuery.isLoading || (onExecution && sessionsQuery.isLoading),
+      isPending:
+        stateQuery.isPending || (onExecution && sessionsQuery.isPending),
       isError: stateQuery.isError || (onExecution && sessionsQuery.isError),
     },
     actions: {
@@ -215,6 +217,7 @@ interface ExecutionContextValue {
     queue: ExecutionQueueItem[];
     sessions: ExecutionSession[];
     isLoading: boolean;
+    isPending: boolean;
     isError: boolean;
   };
   actions: {

@@ -6,26 +6,7 @@ import {
   TASKS_SIDEBAR_MIN_WIDTH,
 } from "./panel-layout";
 
-const OPEN_STORAGE_KEY = "todex:tasks-sidebar-open";
 const WIDTH_STORAGE_KEY = "todex:tasks-sidebar-width";
-
-export function readTasksSidebarOpen(): boolean {
-  try {
-    const value = localStorage.getItem(OPEN_STORAGE_KEY);
-    if (value === null) return true;
-    return value !== "false";
-  } catch {
-    return true;
-  }
-}
-
-export function writeTasksSidebarOpen(shouldOpen: boolean): void {
-  try {
-    localStorage.setItem(OPEN_STORAGE_KEY, shouldOpen ? "true" : "false");
-  } catch {
-    /* private mode / quota */
-  }
-}
 
 export function readTasksSidebarWidth(): number {
   try {

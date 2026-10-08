@@ -251,6 +251,40 @@ export function FolderIcon(props: IconProps) {
   );
 }
 
+export function SidebarToggleIcon({
+  open,
+  size = 22,
+  ...props
+}: IconProps & { open: boolean }) {
+  return (
+    <svg
+      viewBox="0 0 22 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      {...iconSvgProps({ size, ...props })}
+      width={size}
+      height={Math.round((size * 16) / 22)}
+    >
+      <rect x="0.75" y="0.75" width="20.5" height="14.5" rx="3.25" />
+      {open ? (
+        <rect
+          x="2.85"
+          y="3.15"
+          width="3.5"
+          height="9.7"
+          rx="1.2"
+          fill="currentColor"
+          stroke="none"
+        />
+      ) : (
+        <path d="M6.35 2.05v11.9" />
+      )}
+    </svg>
+  );
+}
+
 export function EllipsisIcon(props: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="currentColor" {...iconSvgProps(props)}>

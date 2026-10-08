@@ -51,12 +51,12 @@ import {
   TASKS_SIDEBAR_MIN_WIDTH,
 } from "@/helpers/panel-layout";
 import {
-  readTasksSidebarOpen,
   readTasksSidebarWidth,
-  writeTasksSidebarOpen,
   writeTasksSidebarWidth,
 } from "@/helpers/tasks-sidebar-open";
 import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
+
+import { useModuleSidebar } from "@components/module-sidebar";
 
 import { INBOX_BOARD_NAME } from "./task-helpers";
 import { useTasks } from "./tasks-provider";
@@ -67,14 +67,13 @@ export function TasksModuleSidebar() {
     state: { folders, boards, view },
     actions: { openCreateDialog, updateBoard },
   } = useTasks();
-  const [isOpen, setIsOpen] = useState(true);
+  const { open: isOpen } = useModuleSidebar();
   const [width, setWidth] = useState(TASKS_SIDEBAR_DEFAULT_WIDTH);
   const sensors = useSensors(
     useSensor(SpacePointerSensor, { activationConstraint: { distance: 8 } }),
   );
 
   useEffect(() => {
-    setIsOpen(readTasksSidebarOpen());
     setWidth(readTasksSidebarWidth());
   }, []);
 
@@ -93,42 +92,31 @@ export function TasksModuleSidebar() {
     (board) => !board.folderId && board.id !== inboxBoard?.id,
   );
 
+  if (!isOpen) return null;
+
   return (
     <aside
-      className={cn(
-        "relative flex h-full shrink-0 flex-col",
-        isOpen ? null : "w-12",
-      )}
-      style={isOpen ? { width } : undefined}
+      className="relative flex h-full shrink-0 flex-col"
+      style={{ width }}
     >
-      {isOpen ? (
-        <ResizeHandle
-          label="Resize sidebar"
-          edge="trailing"
-          width={width}
-          min={TASKS_SIDEBAR_MIN_WIDTH}
-          max={TASKS_SIDEBAR_MAX_WIDTH}
-          onWidth={setWidth}
-          onCommit={writeTasksSidebarWidth}
-        />
-      ) : null}
-      <div
-        className={cn(
-          "flex min-h-0 flex-1 flex-col pb-3 pt-3",
-          isOpen ? "px-3" : "px-1.5",
-        )}
-      >
+      <ResizeHandle
+        label="Resize sidebar"
+        edge="trailing"
+        width={width}
+        min={TASKS_SIDEBAR_MIN_WIDTH}
+        max={TASKS_SIDEBAR_MAX_WIDTH}
+        onWidth={setWidth}
+        onCommit={writeTasksSidebarWidth}
+      />
+      <div className="flex min-h-0 flex-1 flex-col px-3 pb-3 pt-3">
         <section className="mb-4 w-full">
-          {isOpen ? (
-            <h2 className="mb-2 px-2 text-sm text-muted-foreground">Views</h2>
-          ) : null}
+          <h2 className="mb-2 px-2 text-sm text-muted-foreground">Views</h2>
           {inboxBoard ? (
             <NavRow
               href={tasksUrlHelper.routing.buildBoardUrl(inboxBoard.name)}
               active={activeBoardId === inboxBoard.id}
               icon={<BoardIcon size={16} />}
               label="Inbox"
-              collapsed={!isOpen}
             />
           ) : null}
           <NavRow
@@ -136,26 +124,17 @@ export function TasksModuleSidebar() {
             active={view.kind === "schedule" && view.schedule === "today"}
             icon={<ClockIcon size={16} />}
             label="Today"
-            collapsed={!isOpen}
           />
           <NavRow
             href={tasksUrlHelper.routing.buildScheduleUrl("tomorrow")}
             active={view.kind === "schedule" && view.schedule === "tomorrow"}
             icon={<CalendarIcon size={16} />}
             label="Tomorrow"
-            collapsed={!isOpen}
           />
         </section>
         <section className="flex min-h-0 w-full flex-1 flex-col overflow-auto">
-          <div
-            className={cn(
-              "mb-2 flex items-center",
-              isOpen ? "justify-between px-2" : "justify-center",
-            )}
-          >
-            {isOpen ? (
-              <h2 className="text-sm text-muted-foreground">Spaces</h2>
-            ) : null}
+          <div className="mb-2 flex items-center justify-between px-2">
+            <h2 className="text-sm text-muted-foreground">Spaces</h2>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -174,8 +153,7 @@ export function TasksModuleSidebar() {
               </TooltipContent>
             </Tooltip>
           </div>
-          {isOpen ? (
-            <DndContext
+          <DndContext
               sensors={sensors}
               collisionDetection={spaceCollisionDetection}
               onDragEnd={handleSpaceDragEnd}
@@ -207,45 +185,7 @@ export function TasksModuleSidebar() {
               </RootSpaceList>
               <SpaceDragOverlay />
             </DndContext>
-          ) : (
-            boards.map((board) => (
-              <NavRow
-                key={board.id}
-                href={tasksUrlHelper.routing.buildBoardUrl(board.name)}
-                active={activeBoardId === board.id}
-                icon={<BoardIcon size={16} />}
-                label={board.name}
-                collapsed
-              />
-            ))
-          )}
         </section>
-      </div>
-      <div className={cn("shrink-0 p-2", !isOpen && "px-1.5")}>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              className="h-7 w-7 text-muted-foreground"
-              aria-label={isOpen ? "Collapse sidebar" : "Expand sidebar"}
-              onClick={() => {
-                const next = !isOpen;
-                setIsOpen(next);
-                writeTasksSidebarOpen(next);
-              }}
-            >
-              <ChevronIcon
-                size={14}
-                className={isOpen ? "rotate-180" : undefined}
-              />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="right">
-            {isOpen ? "Collapse sidebar" : "Expand sidebar"}
-          </TooltipContent>
-        </Tooltip>
       </div>
     </aside>
   );
@@ -386,7 +326,6 @@ function NavRow({
   active,
   icon,
   label,
-  collapsed = false,
   nested = false,
   menu,
   drag,
@@ -396,10 +335,9 @@ function NavRow({
       href={href}
       aria-label={label}
       className={cn(
-        "flex min-w-0 items-center gap-3 rounded-lg py-1.5 text-sm",
-        collapsed ? "justify-center px-0" : "flex-1 px-3 text-left",
-        nested && !collapsed && "pl-8",
-        menu && !collapsed && "pr-8",
+        "flex min-w-0 flex-1 items-center gap-3 rounded-lg px-3 py-1.5 text-left text-sm",
+        nested && "pl-8",
+        menu && "pr-8",
         drag && "cursor-grab active:cursor-grabbing",
       )}
       draggable={drag ? false : undefined}
@@ -407,18 +345,9 @@ function NavRow({
       {...drag?.attributes}
     >
       {icon}
-      {collapsed ? null : <span className="min-w-0 truncate">{label}</span>}
+      <span className="min-w-0 truncate">{label}</span>
     </Link>
   );
-
-  if (collapsed) {
-    return (
-      <Tooltip>
-        <TooltipTrigger asChild>{row}</TooltipTrigger>
-        <TooltipContent side="right">{label}</TooltipContent>
-      </Tooltip>
-    );
-  }
 
   return (
     <div
@@ -556,7 +485,6 @@ interface NavRowProps {
   active: boolean;
   icon: ReactNode;
   label: string;
-  collapsed?: boolean;
   nested?: boolean;
   menu?: ReactNode;
   drag?: {

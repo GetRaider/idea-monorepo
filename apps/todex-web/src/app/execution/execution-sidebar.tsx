@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@repo/ui";
 
 import { ClockIcon, RowsIcon, StatusDoneIcon } from "@components/icons";
+import { useModuleSidebar } from "@components/module-sidebar";
 
 const LINKS = [
   { href: "/execution/current", label: "Current", icon: ClockIcon },
@@ -15,33 +16,57 @@ const LINKS = [
 
 export function ExecutionSidebar() {
   const pathname = usePathname() ?? "";
+  const { open } = useModuleSidebar();
+
+  if (!open) return null;
 
   return (
     <aside className="flex w-52 shrink-0 flex-col px-3 py-3">
       <h2 className="mb-2 px-3 text-sm text-muted-foreground">Execution</h2>
       <nav>
-        {LINKS.map((link) => {
-          const active =
-            pathname === link.href || pathname.startsWith(`${link.href}/`);
-          return (
-            <Link
-              key={link.href}
-              href={link.href}
-              className={cn(
-                "my-1 flex items-center gap-3 rounded-lg px-3 py-1.5 text-sm",
-                active
-                  ? "bg-surface text-foreground"
-                  : "text-muted-foreground hover:bg-surface hover:text-foreground",
-              )}
-            >
-              <link.icon size={16} />
-              {link.label}
-            </Link>
-          );
-        })}
+        {LINKS.map((link) => (
+          <SidebarLink
+            key={link.href}
+            href={link.href}
+            label={link.label}
+            active={isActive(pathname, link.href)}
+            icon={<link.icon size={16} />}
+          />
+        ))}
       </nav>
     </aside>
   );
+}
+
+function SidebarLink({
+  href,
+  label,
+  active,
+  icon,
+}: {
+  href: string;
+  label: string;
+  active: boolean;
+  icon: ReactNode;
+}) {
+  return (
+    <Link
+      href={href}
+      className={cn(
+        "my-1 flex items-center gap-3 rounded-lg px-3 py-1.5 text-sm",
+        active
+          ? "bg-surface text-foreground"
+          : "text-muted-foreground hover:bg-surface hover:text-foreground",
+      )}
+    >
+      {icon}
+      {label}
+    </Link>
+  );
+}
+
+function isActive(pathname: string, href: string) {
+  return pathname === href || pathname.startsWith(`${href}/`);
 }
 
 export function ExecutionCanvas({

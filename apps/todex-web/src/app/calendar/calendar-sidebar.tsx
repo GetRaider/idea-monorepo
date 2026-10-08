@@ -8,14 +8,12 @@ import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
   cn,
 } from "@repo/ui";
-
-import { CalendarIcon, ChevronIcon, DocsIcon, PlusIcon, TasksIcon } from "@components/icons";
 import type { CalendarEventTemplate } from "@repo/api/todex";
+
+import { ChevronIcon, PlusIcon } from "@components/icons";
+import { useModuleSidebar } from "@components/module-sidebar";
 import { ResizeHandle } from "@components/resize-handle";
 import {
   TASKS_SIDEBAR_DEFAULT_WIDTH,
@@ -48,7 +46,7 @@ export function CalendarSidebar() {
   const [taskQuery, setTaskQuery] = useState("");
   const [pickerMonth, setPickerMonth] = useState(() => monthStart(new Date()));
   const [selectedDay, setSelectedDay] = useState(() => startOfDay(new Date()));
-  const [isOpen, setIsOpen] = useState(true);
+  const { open: isOpen } = useModuleSidebar();
   const [width, setWidth] = useState(TASKS_SIDEBAR_DEFAULT_WIDTH);
   const rows = useMemo(() => monthGrid(pickerMonth), [pickerMonth]);
   const taskNeedle = taskQuery.trim().toLowerCase();
@@ -65,7 +63,6 @@ export function CalendarSidebar() {
     : [];
 
   useEffect(() => {
-    setIsOpen(readOpen());
     setWidth(readWidth());
   }, []);
 
@@ -109,24 +106,7 @@ export function CalendarSidebar() {
     };
   }, [templates, taskQuery, tasks, isOpen]);
 
-  function changeOpen(next: boolean) {
-    setIsOpen(next);
-    writeOpen(next);
-  }
-
-  if (!isOpen) {
-    return (
-      <aside className="relative flex h-full w-12 shrink-0 flex-col">
-        <div className="flex min-h-0 flex-1 flex-col items-center gap-1 px-1.5 pt-3">
-          <RailButton label="Month" icon={<CalendarIcon size={16} />} onOpen={() => changeOpen(true)} />
-          <RailButton label="Event Types" icon={<DocsIcon size={16} />} onOpen={() => changeOpen(true)} />
-          <RailButton label="Events Backlog" icon={<PlusIcon size={16} />} onOpen={() => changeOpen(true)} />
-          <RailButton label="Tasks" icon={<TasksIcon size={16} />} onOpen={() => changeOpen(true)} />
-        </div>
-        <CollapseButton isOpen={false} onToggle={() => changeOpen(true)} />
-      </aside>
-    );
-  }
+  if (!isOpen) return null;
 
   return (
     <aside
@@ -348,7 +328,6 @@ export function CalendarSidebar() {
         </div>
       </SidebarSection>
       </div>
-      <CollapseButton isOpen onToggle={() => changeOpen(false)} />
     </aside>
   );
 }
@@ -543,82 +522,7 @@ function monthGrid(visibleMonth: Date) {
   return rows;
 }
 
-function RailButton({
-  label,
-  icon,
-  onOpen,
-}: {
-  label: string;
-  icon: ReactNode;
-  onOpen: () => void;
-}) {
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Button
-          type="button"
-          size="icon"
-          variant="ghost"
-          className="h-8 w-8 text-muted-foreground"
-          aria-label={label}
-          onClick={onOpen}
-        >
-          {icon}
-        </Button>
-      </TooltipTrigger>
-      <TooltipContent side="right">{label}</TooltipContent>
-    </Tooltip>
-  );
-}
-
-function CollapseButton({
-  isOpen,
-  onToggle,
-}: {
-  isOpen: boolean;
-  onToggle: () => void;
-}) {
-  return (
-    <div className={cn("shrink-0 p-2", !isOpen && "px-1.5")}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            type="button"
-            size="icon"
-            variant="ghost"
-            className="h-7 w-7 text-muted-foreground"
-            aria-label={isOpen ? "Collapse sidebar" : "Expand sidebar"}
-            onClick={onToggle}
-          >
-            <ChevronIcon size={14} className={isOpen ? "rotate-180" : undefined} />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent side="right">
-          {isOpen ? "Collapse sidebar" : "Expand sidebar"}
-        </TooltipContent>
-      </Tooltip>
-    </div>
-  );
-}
-
-const OPEN_STORAGE_KEY = "todex:calendar-sidebar-open";
 const WIDTH_STORAGE_KEY = "todex:calendar-sidebar-width";
-
-function readOpen() {
-  try {
-    return localStorage.getItem(OPEN_STORAGE_KEY) !== "false";
-  } catch {
-    return true;
-  }
-}
-
-function writeOpen(shouldOpen: boolean) {
-  try {
-    localStorage.setItem(OPEN_STORAGE_KEY, shouldOpen ? "true" : "false");
-  } catch {
-    /* private mode */
-  }
-}
 
 function readWidth() {
   try {

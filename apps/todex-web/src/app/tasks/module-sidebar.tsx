@@ -56,7 +56,7 @@ import {
 } from "@/helpers/tasks-sidebar-open";
 import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
 
-import { useModuleSidebar } from "@components/module-sidebar";
+import { ModuleSidebarFrame, useModuleSidebar } from "@components/module-sidebar";
 
 import { INBOX_BOARD_NAME } from "./task-helpers";
 import { useTasks } from "./tasks-provider";
@@ -92,13 +92,8 @@ export function TasksModuleSidebar() {
     (board) => !board.folderId && board.id !== inboxBoard?.id,
   );
 
-  if (!isOpen) return null;
-
   return (
-    <aside
-      className="relative flex h-full shrink-0 flex-col"
-      style={{ width }}
-    >
+    <ModuleSidebarFrame open={isOpen} width={width}>
       <ResizeHandle
         label="Resize sidebar"
         edge="trailing"
@@ -187,7 +182,7 @@ export function TasksModuleSidebar() {
             </DndContext>
         </section>
       </div>
-    </aside>
+    </ModuleSidebarFrame>
   );
 }
 

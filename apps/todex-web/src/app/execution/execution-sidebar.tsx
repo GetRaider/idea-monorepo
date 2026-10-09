@@ -6,7 +6,9 @@ import { usePathname } from "next/navigation";
 import { cn } from "@repo/ui";
 
 import { ClockIcon, RowsIcon, StatusDoneIcon } from "@components/icons";
-import { useModuleSidebar } from "@components/module-sidebar";
+import { ModuleSidebarFrame, useModuleSidebar } from "@components/module-sidebar";
+
+const EXECUTION_SIDEBAR_WIDTH = 208;
 
 const LINKS = [
   { href: "/execution/current", label: "Current", icon: ClockIcon },
@@ -18,23 +20,23 @@ export function ExecutionSidebar() {
   const pathname = usePathname() ?? "";
   const { open } = useModuleSidebar();
 
-  if (!open) return null;
-
   return (
-    <aside className="flex w-52 shrink-0 flex-col px-3 py-3">
-      <h2 className="mb-2 px-3 text-sm text-muted-foreground">Execution</h2>
-      <nav>
-        {LINKS.map((link) => (
-          <SidebarLink
-            key={link.href}
-            href={link.href}
-            label={link.label}
-            active={isActive(pathname, link.href)}
-            icon={<link.icon size={16} />}
-          />
-        ))}
-      </nav>
-    </aside>
+    <ModuleSidebarFrame open={open} width={EXECUTION_SIDEBAR_WIDTH}>
+      <div className="flex h-full flex-col px-3 py-3">
+        <h2 className="mb-2 px-3 text-sm text-muted-foreground">Execution</h2>
+        <nav>
+          {LINKS.map((link) => (
+            <SidebarLink
+              key={link.href}
+              href={link.href}
+              label={link.label}
+              active={isActive(pathname, link.href)}
+              icon={<link.icon size={16} />}
+            />
+          ))}
+        </nav>
+      </div>
+    </ModuleSidebarFrame>
   );
 }
 

@@ -1,8 +1,12 @@
 "use client";
 
-import type { PointerEvent as ReactPointerEvent } from "react";
+import { createContext, use, type PointerEvent as ReactPointerEvent } from "react";
 
 import { clampPanelWidth } from "@/helpers/panel-layout";
+
+export const ResizeGestureContext = createContext<
+  ((resizing: boolean) => void) | null
+>(null);
 
 export function ResizeHandle({
   label,
@@ -13,6 +17,8 @@ export function ResizeHandle({
   onWidth,
   onCommit,
 }: ResizeHandleProps) {
+  const notifyResize = use(ResizeGestureContext);
+
   function handlePointerDown(event: ReactPointerEvent<HTMLDivElement>) {
     if (event.button !== 0) return;
     event.preventDefault();
@@ -23,6 +29,7 @@ export function ResizeHandle({
     const previousUserSelect = document.body.style.userSelect;
     document.body.style.cursor = "col-resize";
     document.body.style.userSelect = "none";
+    notifyResize?.(true);
 
     function onMove(move: PointerEvent) {
       const delta = move.clientX - startX;
@@ -39,6 +46,7 @@ export function ResizeHandle({
       window.removeEventListener("pointerup", onUp);
       document.body.style.cursor = previousCursor;
       document.body.style.userSelect = previousUserSelect;
+      notifyResize?.(false);
       onCommit(latest);
     }
 
@@ -76,7 +84,7 @@ export function ResizeHandle({
       className={
         edge === "leading"
           ? "absolute -left-1 top-0 z-30 h-full w-2 cursor-col-resize touch-none hover:bg-foreground/15"
-          : "absolute -right-1 top-0 z-30 h-full w-2 cursor-col-resize touch-none hover:bg-foreground/15"
+          : "absolute right-0 top-0 z-30 h-full w-2 cursor-col-resize touch-none hover:bg-foreground/15"
       }
     />
   );

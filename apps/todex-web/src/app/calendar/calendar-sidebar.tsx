@@ -13,7 +13,7 @@ import {
 import type { CalendarEventTemplate } from "@repo/api/todex";
 
 import { ChevronIcon, PlusIcon } from "@components/icons";
-import { useModuleSidebar } from "@components/module-sidebar";
+import { ModuleSidebarFrame, useModuleSidebar } from "@components/module-sidebar";
 import { ResizeHandle } from "@components/resize-handle";
 import {
   TASKS_SIDEBAR_DEFAULT_WIDTH,
@@ -106,13 +106,8 @@ export function CalendarSidebar() {
     };
   }, [templates, taskQuery, tasks, isOpen]);
 
-  if (!isOpen) return null;
-
   return (
-    <aside
-      className="relative flex h-full shrink-0 flex-col"
-      style={{ width }}
-    >
+    <ModuleSidebarFrame open={isOpen} width={width}>
       <ResizeHandle
         label="Resize sidebar"
         edge="trailing"
@@ -328,7 +323,7 @@ export function CalendarSidebar() {
         </div>
       </SidebarSection>
       </div>
-    </aside>
+    </ModuleSidebarFrame>
   );
 }
 

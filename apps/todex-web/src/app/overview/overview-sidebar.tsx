@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-import { useModuleSidebar } from "@components/module-sidebar";
+import { ModuleSidebarFrame, useModuleSidebar } from "@components/module-sidebar";
 import { ResizeHandle } from "@components/resize-handle";
 import {
   clampPanelWidth,
@@ -22,10 +22,8 @@ export function OverviewSidebar() {
     setWidth(readWidth());
   }, []);
 
-  if (!open) return null;
-
   return (
-    <aside className="relative flex h-full shrink-0 flex-col" style={{ width }}>
+    <ModuleSidebarFrame open={open} width={width}>
       <ResizeHandle
         label="Resize sidebar"
         edge="trailing"
@@ -38,7 +36,7 @@ export function OverviewSidebar() {
       <span className="relative flex h-full shrink-0 flex-col text-center items-center justify-center">
         To be defined
       </span>
-    </aside>
+    </ModuleSidebarFrame>
   );
 }
 

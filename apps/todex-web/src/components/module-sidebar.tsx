@@ -3,9 +3,10 @@
 import { createContext, use, useEffect, useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 
-import { Tooltip, TooltipContent, TooltipTrigger } from "@repo/ui";
+import { cn, Tooltip, TooltipContent, TooltipTrigger } from "@repo/ui";
 
 import { SidebarToggleIcon } from "./icons";
+import { ResizeGestureContext } from "./resize-handle";
 
 export function ModuleSidebarProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname() ?? "";
@@ -26,6 +27,30 @@ export function ModuleSidebarProvider({ children }: { children: ReactNode }) {
     <ModuleSidebarContext value={{ moduleKey, open, setOpen }}>
       {children}
     </ModuleSidebarContext>
+  );
+}
+
+export function ModuleSidebarFrame({ open, width, children }: ModuleSidebarFrameProps) {
+  const [resizing, setResizing] = useState(false);
+
+  return (
+    <ResizeGestureContext value={setResizing}>
+      <aside
+        aria-hidden={open ? undefined : true}
+        inert={open ? undefined : true}
+        className={cn(
+          "h-full shrink-0 overflow-hidden",
+          resizing
+            ? "transition-none"
+            : "transition-[width] duration-200 ease-[cubic-bezier(0.32,_0.72,_0,_1)] motion-reduce:transition-none",
+        )}
+        style={{ width: open ? width : 0 }}
+      >
+        <div className="relative flex h-full min-h-0 flex-col" style={{ width }}>
+          {children}
+        </div>
+      </aside>
+    </ResizeGestureContext>
   );
 }
 
@@ -95,6 +120,12 @@ const OPEN_KEYS = {
 } as const;
 
 const ModuleSidebarContext = createContext<ModuleSidebarContextValue | null>(null);
+
+interface ModuleSidebarFrameProps {
+  open: boolean;
+  width: number;
+  children: ReactNode;
+}
 
 interface ModuleSidebarContextValue {
   moduleKey: ModuleKey | null;

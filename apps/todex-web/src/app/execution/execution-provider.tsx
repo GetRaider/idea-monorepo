@@ -140,14 +140,8 @@ export function ExecutionProvider({ children }: { children: ReactNode }) {
     : 0;
   const estimateMinutes = focused?.estimation ?? null;
   const shownSeconds =
-    mode === "timer"
-      ? estimateMinutes == null
-        ? null
-        : focusSeconds({
-            mode,
-            elapsedSeconds,
-            goalMinutes: estimateMinutes,
-          })
+    mode === "timer" && goalMinutes == null && estimateMinutes == null
+      ? null
       : focusSeconds({
           mode,
           elapsedSeconds,

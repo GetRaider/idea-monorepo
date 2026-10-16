@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { focusSeconds, formatClock, formatDuration } from "./execution-time";
+import {
+  extendGoalMinutes,
+  focusSeconds,
+  formatClock,
+  formatDuration,
+} from "./execution-time";
 
 describe("execution time", () => {
   it("formats clocks and durations", () => {
@@ -22,5 +27,36 @@ describe("execution time", () => {
     expect(
       focusSeconds({ mode: "timer", elapsedSeconds: 2000, goalMinutes: 25 }),
     ).toBe(0);
+  });
+
+  it("adds minutes on top of the remaining goal, or past elapsed time", () => {
+    expect(
+      extendGoalMinutes({
+        goalMinutes: 25,
+        elapsedSeconds: 10 * 60,
+        addMinutes: 15,
+      }),
+    ).toBe(40);
+    expect(
+      extendGoalMinutes({
+        goalMinutes: 25,
+        elapsedSeconds: 30 * 60,
+        addMinutes: 15,
+      }),
+    ).toBe(45);
+    expect(
+      extendGoalMinutes({
+        goalMinutes: 25,
+        elapsedSeconds: 25 * 60 + 1,
+        addMinutes: 5,
+      }),
+    ).toBe(31);
+    expect(
+      extendGoalMinutes({
+        goalMinutes: 24 * 60,
+        elapsedSeconds: 0,
+        addMinutes: 30,
+      }),
+    ).toBe(24 * 60);
   });
 });

@@ -13,7 +13,11 @@ import { ExecutionQueueList } from "../execution-queue-list";
 import { ExecutionCanvas } from "../execution-sidebar";
 import { ExecutionSuggestionsPanel } from "../execution-suggestions-panel";
 import { ExecutionTaskDetail } from "../execution-task-detail";
-import { formatClock, formatDuration } from "../execution-time";
+import {
+  extendGoalMinutes,
+  formatClock,
+  formatDuration,
+} from "../execution-time";
 import { STATUS_LABEL } from "../../tasks/task-helpers";
 
 export default function CurrentExecutionPage() {
@@ -308,6 +312,9 @@ function FocusPanel({
           </h3>
           <p className="mt-1 text-sm text-muted-foreground">
             Estimate {formatEstimation(task.estimation)}
+            {goalMinutes != null && goalMinutes > task.estimation
+              ? ` · Goal ${formatEstimation(goalMinutes)}`
+              : ""}
             {" · "}
             Executed {formatDuration(elapsedSeconds)}
           </p>
@@ -325,6 +332,19 @@ function FocusPanel({
           selected={mode === "stopwatch"}
           onClick={() => setMode("stopwatch")}
         />
+        {task && mode === "timer" ? (
+          <AddTimeControls
+            onAdd={(minutes) =>
+              setGoalMinutes(
+                extendGoalMinutes({
+                  goalMinutes: goalMinutes ?? task.estimation,
+                  elapsedSeconds,
+                  addMinutes: minutes,
+                }),
+              )
+            }
+          />
+        ) : null}
         {task && mode === "stopwatch" ? (
           <label className="ml-2 flex items-center gap-2 text-sm text-muted-foreground">
             Goal
@@ -386,6 +406,47 @@ function FocusPanel({
           Start AI Agent
         </Button>
       </div>
+    </div>
+  );
+}
+
+const ADD_TIME_PRESETS = [5, 15, 30] as const;
+
+function AddTimeControls({ onAdd }: { onAdd: (minutes: number) => void }) {
+  const [minutes, setMinutes] = useState("15");
+  const parsed = Number(minutes);
+  const canAdd = Number.isInteger(parsed) && parsed >= 1 && parsed <= 240;
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="text-sm text-muted-foreground">Add time</span>
+      {ADD_TIME_PRESETS.map((preset) => (
+        <button
+          key={preset}
+          type="button"
+          className="h-8 rounded-md px-3 text-sm text-muted-foreground hover:bg-surface hover:text-foreground"
+          onClick={() => onAdd(preset)}
+        >
+          +{preset}m
+        </button>
+      ))}
+      <input
+        aria-label="Minutes to add"
+        type="number"
+        min={1}
+        max={240}
+        value={minutes}
+        className="h-8 w-16 rounded-md border border-border bg-transparent px-2 text-sm text-foreground outline-none"
+        onChange={(event) => setMinutes(event.target.value)}
+      />
+      <Button
+        size="sm"
+        variant="outline"
+        disabled={!canAdd}
+        onClick={() => onAdd(parsed)}
+      >
+        Add
+      </Button>
     </div>
   );
 }

@@ -29,4 +29,20 @@ export function focusSeconds(input: {
   return Math.max(0, input.goalMinutes * 60 - input.elapsedSeconds);
 }
 
+const MAX_GOAL_MINUTES = 24 * 60;
+
+export function extendGoalMinutes(input: {
+  goalMinutes: number;
+  elapsedSeconds: number;
+  addMinutes: number;
+}) {
+  if (!Number.isFinite(input.addMinutes) || input.addMinutes <= 0) {
+    return input.goalMinutes;
+  }
+  const elapsedMinutes = Math.ceil(Math.max(0, input.elapsedSeconds) / 60);
+  const base = Math.max(Math.ceil(input.goalMinutes), elapsedMinutes);
+  if (base >= MAX_GOAL_MINUTES) return base;
+  return Math.min(MAX_GOAL_MINUTES, base + Math.floor(input.addMinutes));
+}
+
 export type FocusMode = "timer" | "stopwatch";

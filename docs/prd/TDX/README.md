@@ -18,3 +18,4 @@ Unified AI context for Tasks, Calendar, and Docs. Successor to Take & Do. **v0:*
 | [impl-plan-v0.md](./impl-plan-v0.md) | Phased implementation plan + acceptance checklist                            |
 | [data-model.md](./data-model.md)     | v0 entities vs later                                                         |
 | [flows.md](./flows.md)               | Auth + Tasks CRUD now; rest later                                            |
+| [ai-agent.md](./ai-agent.md)         | AI agent: conversations, jobs, runs, tool handlers. Task pack first. Draft. |

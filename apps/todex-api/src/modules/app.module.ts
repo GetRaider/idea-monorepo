@@ -7,6 +7,8 @@ import { HttpExceptionFilter } from "@repo/api/helpers/httpExceptionFilter.helpe
 
 import { auth } from "../auth";
 import { DatabaseModule } from "../db/database.module";
+import { RedisModule } from "../db/redis.module";
+import { AgentModule } from "./agent/agent.module";
 import { BoardsModule } from "./boards/boards.module";
 import { CalendarModule } from "./calendar/calendar.module";
 import { DocsModule } from "./docs/docs.module";
@@ -20,6 +22,7 @@ import { WorkspaceModule } from "./workspace/workspace.module";
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     DatabaseModule,
+    RedisModule,
     AuthModule.forRoot({
       auth,
       disableTrustedOriginsCors: true,
@@ -31,6 +34,7 @@ import { WorkspaceModule } from "./workspace/workspace.module";
     CalendarModule,
     BoardsModule,
     TasksModule,
+    AgentModule,
   ],
   controllers: [HealthController],
   providers: [

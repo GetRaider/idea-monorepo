@@ -45,6 +45,60 @@ import { z } from "zod";
 
 import { env } from "./env";
 
+const AgentConversationSummarySchema = z.object({
+  id: z.string(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  preview: z.string().nullable(),
+});
+
+const AgentConversationCreatedSchema = z.object({
+  id: z.string(),
+});
+
+const AgentMessageSchema = z.object({
+  id: z.string(),
+  role: z.string(),
+  content: z.string(),
+  toolCalls: z.unknown().nullable(),
+  toolCallId: z.string().nullable(),
+  position: z.number(),
+  jobId: z.string().nullable(),
+  agentRunId: z.string().nullable(),
+});
+
+const AgentConversationSchema = z.object({
+  id: z.string(),
+  messages: z.array(AgentMessageSchema),
+});
+
+const AgentJobAcceptedSchema = z.object({
+  jobId: z.string(),
+  conversationId: z.string(),
+  status: z.string(),
+});
+
+const AgentJobSchema = z.object({
+  id: z.string(),
+  conversationId: z.string(),
+  status: z.enum(["pending", "running", "completed", "failed"]),
+  errorCode: z.string().nullable(),
+  errorMessage: z.string().nullable(),
+  run: z
+    .object({
+      id: z.string(),
+      attempt: z.number(),
+      status: z.string(),
+      outcomeText: z.string().nullable(),
+      promptTokens: z.number(),
+      completionTokens: z.number(),
+      iterationCount: z.number(),
+      errorCode: z.string().nullable(),
+      errorMessage: z.string().nullable(),
+    })
+    .nullable(),
+});
+
 const WorkspaceListSchema = z.object({
   workspace: WorkspaceSchema,
   members: z.array(z.unknown()),
@@ -296,6 +350,23 @@ export const todexClient = {
       ),
     remove: (docId: string) =>
       call("delete", `/v1/docs/${docId}`, z.object({ ok: z.boolean() })),
+  },
+  agent: {
+    conversations: {
+      list: () => call("get", "/v1/agent/conversations", z.array(AgentConversationSummarySchema)),
+      create: () => call("post", "/v1/agent/conversations", AgentConversationCreatedSchema),
+      get: (conversationId: string) =>
+        call("get", `/v1/agent/conversations/${conversationId}`, AgentConversationSchema),
+      remove: (conversationId: string) =>
+        call("delete", `/v1/agent/conversations/${conversationId}`, z.object({ ok: z.boolean() })),
+      postMessage: (conversationId: string, message: string) =>
+        call("post", `/v1/agent/conversations/${conversationId}/messages`, AgentJobAcceptedSchema, {
+          message,
+        }),
+    },
+    jobs: {
+      get: (jobId: string) => call("get", `/v1/agent/jobs/${jobId}`, AgentJobSchema),
+    },
   },
   calendar: {
     events: {

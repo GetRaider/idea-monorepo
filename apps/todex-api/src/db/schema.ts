@@ -514,6 +514,160 @@ export const executionQueue = pgTable(
   ],
 );
 
+export const agentJobStatusEnum = pgEnum("agent_job_status", [
+  "pending",
+  "running",
+  "completed",
+  "failed",
+]);
+
+export const agentRunStatusEnum = pgEnum("agent_run_status", [
+  "running",
+  "completed",
+  "failed",
+]);
+
+export const conversations = pgTable("conversations", {
+  id: text("id").primaryKey(),
+  workspaceId: text("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id),
+  createdAt: timestamp("created_at")
+    .$defaultFn(() => new Date())
+    .notNull(),
+  updatedAt: timestamp("updated_at")
+    .$defaultFn(() => new Date())
+    .notNull(),
+});
+
+export const jobs = pgTable(
+  "jobs",
+  {
+    id: text("id").primaryKey(),
+    conversationId: text("conversation_id")
+      .notNull()
+      .references(() => conversations.id, { onDelete: "cascade" }),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id),
+    userMessageId: text("user_message_id").notNull(),
+    status: agentJobStatusEnum("status").notNull(),
+    idempotencyKey: text("idempotency_key").notNull(),
+    errorCode: text("error_code"),
+    errorMessage: text("error_message"),
+    startedAt: timestamp("started_at"),
+    finishedAt: timestamp("finished_at"),
+    createdAt: timestamp("created_at")
+      .$defaultFn(() => new Date())
+      .notNull(),
+    updatedAt: timestamp("updated_at")
+      .$defaultFn(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("jobs_conversation_idempotency_unique").on(
+      table.conversationId,
+      table.idempotencyKey,
+    ),
+  ],
+);
+
+export const agentRuns = pgTable(
+  "agent_runs",
+  {
+    id: text("id").primaryKey(),
+    jobId: text("job_id")
+      .notNull()
+      .references(() => jobs.id, { onDelete: "cascade" }),
+    attempt: integer("attempt").notNull(),
+    status: agentRunStatusEnum("status").notNull(),
+    model: text("model").notNull(),
+    outcomeText: text("outcome_text"),
+    promptTokens: integer("prompt_tokens").notNull().default(0),
+    completionTokens: integer("completion_tokens").notNull().default(0),
+    iterationCount: integer("iteration_count").notNull().default(0),
+    maxIterations: integer("max_iterations").notNull(),
+    maxDurationMs: integer("max_duration_ms").notNull(),
+    maxTokens: integer("max_tokens").notNull(),
+    errorCode: text("error_code"),
+    errorMessage: text("error_message"),
+    startedAt: timestamp("started_at")
+      .$defaultFn(() => new Date())
+      .notNull(),
+    finishedAt: timestamp("finished_at"),
+  },
+  (table) => [
+    uniqueIndex("agent_runs_job_attempt_unique").on(table.jobId, table.attempt),
+  ],
+);
+
+export const conversationMessages = pgTable(
+  "conversation_messages",
+  {
+    id: text("id").primaryKey(),
+    conversationId: text("conversation_id")
+      .notNull()
+      .references(() => conversations.id, { onDelete: "cascade" }),
+    jobId: text("job_id").references(() => jobs.id, { onDelete: "set null" }),
+    agentRunId: text("agent_run_id").references(() => agentRuns.id, {
+      onDelete: "set null",
+    }),
+    position: integer("position").notNull(),
+    role: text("role").notNull(),
+    content: text("content").notNull().default(""),
+    toolCalls: jsonb("tool_calls"),
+    toolCallId: text("tool_call_id"),
+    createdAt: timestamp("created_at")
+      .$defaultFn(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("conversation_messages_position_unique").on(
+      table.conversationId,
+      table.position,
+    ),
+  ],
+);
+
+export const agentToolExecutions = pgTable(
+  "agent_tool_executions",
+  {
+    id: text("id").primaryKey(),
+    jobId: text("job_id")
+      .notNull()
+      .references(() => jobs.id, { onDelete: "cascade" }),
+    agentRunId: text("agent_run_id")
+      .notNull()
+      .references(() => agentRuns.id, { onDelete: "cascade" }),
+    toolCallId: text("tool_call_id").notNull(),
+    toolName: text("tool_name").notNull(),
+    arguments: jsonb("arguments").notNull(),
+    status: text("status").notNull(),
+    result: jsonb("result").notNull(),
+    createdAt: timestamp("created_at")
+      .$defaultFn(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("agent_tool_executions_job_tool_call_unique").on(
+      table.jobId,
+      table.toolCallId,
+    ),
+  ],
+);
+
+export type ConversationRow = typeof conversations.$inferSelect;
+export type ConversationMessageRow = typeof conversationMessages.$inferSelect;
+export type JobRow = typeof jobs.$inferSelect;
+export type AgentRunRow = typeof agentRuns.$inferSelect;
+export type AgentToolExecutionRow = typeof agentToolExecutions.$inferSelect;
+
 export type DocRow = typeof docs.$inferSelect;
 export type CalendarEventRow = typeof calendarEvents.$inferSelect;
 export type CalendarEventTemplateRow = typeof calendarEventTemplates.$inferSelect;

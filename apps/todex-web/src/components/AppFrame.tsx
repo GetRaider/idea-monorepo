@@ -19,6 +19,7 @@ import {
 
 import { ExecutionProvider, useExecution } from "../app/execution/execution-provider";
 import { formatClock } from "../app/execution/execution-time";
+import { AgentWidget } from "./agent-widget";
 import { AppNavRail } from "./AppNavRail";
 import { AuthGuard } from "./AuthGuard";
 import { CreateMenu } from "./create-menu";
@@ -61,6 +62,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
               <div className="flex min-h-0 min-w-0 flex-1">{children}</div>
             </div>
           </div>
+          <AgentWidget />
           </ModuleSidebarProvider>
         </ExecutionProvider>
       </AuthGuard>

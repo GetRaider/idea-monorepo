@@ -277,6 +277,13 @@ export class TasksService {
     return task;
   }
 
+  async get(workspaceId: string, taskId: string) {
+    const existing = await this.requireTaskInWorkspace(workspaceId, taskId);
+    const [task] = await this.withGoalIds([existing]);
+    if (!task) throw new ForbiddenException();
+    return task;
+  }
+
   async remove(workspaceId: string, taskId: string) {
     const existing = await this.requireTaskInWorkspace(workspaceId, taskId);
     await this.db.delete(tasks).where(eq(tasks.id, existing.id));

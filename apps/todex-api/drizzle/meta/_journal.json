@@ -120,6 +120,13 @@
       "when": 1791404323955,
       "tag": "0016_execution_session_task_active",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1792160256047,
+      "tag": "0017_agent_conversations_jobs_runs",
+      "breakpoints": true
     }
   ]
 }

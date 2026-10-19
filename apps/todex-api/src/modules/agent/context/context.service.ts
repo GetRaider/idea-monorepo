@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 
 import type { ConversationMessageRow } from "../../../db/schema";
+import { ConversationsRepository } from "../conversations/conversations.repository";
 import type { LlmMessage, LlmToolCall } from "../llm/llm-client";
 
 const SYSTEM_PROMPT = [
@@ -11,19 +12,26 @@ const SYSTEM_PROMPT = [
 
 @Injectable()
 export class ContextService {
-  assemble(
-    history: ConversationMessageRow[],
-    maxTokens: number,
-  ): ContextAssembly {
-    const system: LlmMessage = { role: "system", content: SYSTEM_PROMPT };
-    const transcript = history.flatMap(toLlmMessage);
-    while (estimate([system, ...transcript]) > maxTokens) {
-      const toolIndex = transcript.findIndex((message) => message.role === "tool");
-      if (toolIndex === -1) return { ok: false };
-      transcript.splice(toolIndex, 1);
-    }
-    return { ok: true, messages: [system, ...transcript] };
+  constructor(private readonly conversations: ConversationsRepository) {}
+
+  async assemble(conversationId: string, maxTokens: number): Promise<ContextAssembly> {
+    const history = await this.conversations.listMessages(conversationId);
+    return filterTranscript(history, maxTokens);
   }
+}
+
+function filterTranscript(
+  history: ConversationMessageRow[],
+  maxTokens: number,
+): ContextAssembly {
+  const system: LlmMessage = { role: "system", content: SYSTEM_PROMPT };
+  const transcript = history.flatMap(toLlmMessage);
+  while (estimate([system, ...transcript]) > maxTokens) {
+    const toolIndex = transcript.findIndex((message) => message.role === "tool");
+    if (toolIndex === -1) return { ok: false };
+    transcript.splice(toolIndex, 1);
+  }
+  return { ok: true, messages: [system, ...transcript] };
 }
 
 function toLlmMessage(row: ConversationMessageRow): LlmMessage[] {

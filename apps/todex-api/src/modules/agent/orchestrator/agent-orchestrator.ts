@@ -39,8 +39,7 @@ export class AgentOrchestrator {
         );
       }
 
-      const history = await this.conversations.listMessages(job.conversationId);
-      const assembled = this.context.assemble(history, run.maxTokens);
+      const assembled = await this.context.assemble(job.conversationId, run.maxTokens);
       if (!assembled.ok) {
         return this.stopForLimit(
           job,

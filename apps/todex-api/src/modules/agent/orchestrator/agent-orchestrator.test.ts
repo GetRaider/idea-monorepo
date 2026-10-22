@@ -119,7 +119,7 @@ function createHarness(handle: (input: unknown) => Promise<unknown>) {
     conversations as never,
     jobs as never,
     runs as never,
-    new ContextService(conversations as never),
+    new ContextService(conversations as never, { listByWorkspace: async () => [] } as never),
     new ToolExecutionLayer(registry, runs as never),
     registry,
     llm as LlmClient,

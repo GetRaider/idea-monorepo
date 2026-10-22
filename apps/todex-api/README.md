@@ -77,8 +77,14 @@ curl -s -b /tmp/todex.cookies \
   'http://localhost:8091/v1/tasks?boardId=<boardId>'
 ```
 
+The same conversation can create a doc. `create_doc` takes `type` `common` or `goal`, plain-text `content`, and `folderName` for a docs folder. Confirm with `GET /v1/docs/:id`.
+
+`create_calendar_event` takes `title`, ISO `start` and `end`, and an IANA `timeZone`. Confirm with `GET /v1/calendar/events?from=...&to=...`.
+
 `completed` with a new task means the model emitted `create_task`. `completed` with only assistant text and no new task means `llama3.1:8b` answered in prose. Check Ollama is up (`curl -s http://localhost:11434/api/tags`) and retry once. If it still never calls the tool, set `AI_MODEL=qwen2.5:7b` after `ollama pull qwen2.5:7b`.
 
 `GET /health` must report Postgres and Redis up. Unit tests do not need either service or Ollama: `pnpm --filter todex-api test`.
 
 Same `idempotencyKey` on a second message POST in that conversation returns the original job. Omit the key to start a new turn. A worker retry of the same job must not insert a second task for the same tool call.
+
+A completed run enqueues a separate memory job. That job may store short workspace facts from the transcript. The next turn includes those memories after the system prompt and before the transcript. Apply the migration with `pnpm --filter todex-api db:migrate` before relying on them.

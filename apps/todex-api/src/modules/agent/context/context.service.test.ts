@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { ConversationMessageRow } from "../../../db/schema";
+import type { AgentMemoryRow, ConversationMessageRow } from "../../../db/schema";
 import type { ConversationsRepository } from "../conversations/conversations.repository";
+import type { MemoriesRepository } from "../memories/memories.repository";
 import { ContextService } from "./context.service";
 
 describe("ContextService", () => {
@@ -11,7 +12,7 @@ describe("ContextService", () => {
       message("m2", "job-1", "tool", "x".repeat(400), 1),
       message("m3", "job-2", "user", "Second turn", 2),
     ]);
-    const assembled = await context.assemble("conversation-1", 80);
+    const assembled = await context.assemble("conversation-1", "workspace-1", 80);
 
     expect(listMessages).toHaveBeenCalledWith("conversation-1");
 
@@ -28,17 +29,55 @@ describe("ContextService", () => {
 
   it("reports a token limit when the latest user message cannot fit", async () => {
     const { context } = service([message("m1", "job-1", "user", "y".repeat(5000), 0)]);
-    const assembled = await context.assemble("conversation-1", 10);
+    const assembled = await context.assemble("conversation-1", "workspace-1", 10);
     expect(assembled.ok).toBe(false);
+  });
+
+  it("places a workspace memory between the system prompt and the transcript", async () => {
+    const { context } = service(
+      [message("m1", "job-1", "user", "Hi", 0)],
+      [memory("User prefers Europe/Warsaw")],
+    );
+
+    const assembled = await context.assemble("conversation-1", "workspace-1", 8000);
+
+    expect(assembled.ok).toBe(true);
+    if (!assembled.ok) return;
+    expect(assembled.messages.map((entry) => entry.role)).toEqual([
+      "system",
+      "system",
+      "user",
+    ]);
+    expect(assembled.messages[1]?.content).toContain("User prefers Europe/Warsaw");
+  });
+
+  it("drops a memory that does not fit and keeps the user message", async () => {
+    const remembered = memory("m".repeat(400));
+    const { context, listByWorkspace } = service(
+      [message("m1", "job-1", "user", "Hi", 0)],
+      [remembered],
+    );
+
+    const assembled = await context.assemble("conversation-1", "workspace-1", 80);
+
+    expect(listByWorkspace).toHaveBeenCalledWith("workspace-1");
+    expect(assembled.ok).toBe(true);
+    if (!assembled.ok) return;
+    expect(assembled.messages.map((entry) => entry.content)).toEqual([
+      expect.stringContaining("Todex workspace agent"),
+      "Hi",
+    ]);
   });
 });
 
-function service(history: ConversationMessageRow[]) {
+function service(history: ConversationMessageRow[], memories: AgentMemoryRow[] = []) {
   const listMessages = vi.fn(async () => history);
-  const context = new ContextService({
-    listMessages,
-  } as unknown as ConversationsRepository);
-  return { context, listMessages };
+  const listByWorkspace = vi.fn(async () => memories);
+  const context = new ContextService(
+    { listMessages } as unknown as ConversationsRepository,
+    { listByWorkspace } as unknown as MemoriesRepository,
+  );
+  return { context, listMessages, listByWorkspace };
 }
 
 function message(
@@ -58,6 +97,17 @@ function message(
     content,
     toolCalls: null,
     toolCallId: null,
+    createdAt: new Date(),
+  };
+}
+
+function memory(content: string): AgentMemoryRow {
+  return {
+    id: "memory-1",
+    workspaceId: "workspace-1",
+    userId: "user-1",
+    conversationId: "conversation-1",
+    content,
     createdAt: new Date(),
   };
 }

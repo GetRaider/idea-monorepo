@@ -662,11 +662,42 @@ export const agentToolExecutions = pgTable(
   ],
 );
 
+export const agentMemories = pgTable(
+  "agent_memories",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id),
+    conversationId: text("conversation_id").references(() => conversations.id, {
+      onDelete: "set null",
+    }),
+    content: text("content").notNull(),
+    createdAt: timestamp("created_at")
+      .$defaultFn(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("agent_memories_workspace_content_unique").on(
+      table.workspaceId,
+      table.content,
+    ),
+    index("agent_memories_workspace_created_idx").on(
+      table.workspaceId,
+      table.createdAt,
+    ),
+  ],
+);
+
 export type ConversationRow = typeof conversations.$inferSelect;
 export type ConversationMessageRow = typeof conversationMessages.$inferSelect;
 export type JobRow = typeof jobs.$inferSelect;
 export type AgentRunRow = typeof agentRuns.$inferSelect;
 export type AgentToolExecutionRow = typeof agentToolExecutions.$inferSelect;
+export type AgentMemoryRow = typeof agentMemories.$inferSelect;
 
 export type DocRow = typeof docs.$inferSelect;
 export type CalendarEventRow = typeof calendarEvents.$inferSelect;

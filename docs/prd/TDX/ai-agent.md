@@ -32,6 +32,7 @@ This iteration ships the runtime inside the existing Nest modular monolith: a co
 - todex-web UI or streaming tokens to the client.
 - MCP clients, external HTTP tools, multi-provider routing, or per-token dollar cost.
 - Human confirmation before sensitive tools (`awaiting_confirmation`).
+- Execute and Ask modes. Every message in this iteration runs with the full tool set. The follow-up is item 7 under **Next**.
 - Run checkpoints that resume mid-loop, and automatic memory extraction. A retry starts a new `agent_run` on the same job.
 - Prompt-injection classifiers beyond the system prompt and argument checks in this PRD.
 - Running Ollama in Docker.
@@ -395,6 +396,7 @@ Not part of this iteration's checklist. Each item is a later PRD on top of these
 4. **Retrieval.** `ContextService` embeds the latest user message, ranks chunks by cosine distance for the job's workspace, and inserts the top chunks under the token budget after memories and before old tool results. Drop lowest-ranked chunks first when over budget.
 5. **MCP and external tools.** A `ToolHandler` whose `handle` calls an MCP client or `httpClient`. Same execution layer: validation, workspace injection, timeout, replay, normalized result.
 6. **Sensitive-action confirmation.** New job status `awaiting_confirmation` for handlers marked sensitive (delete is the first). The run stops without calling `handle` until a follow-up message confirms. Do not add the status in this iteration's enum.
+7. **Execute and Ask.** The mode is chosen per message, not per conversation, and stored on the job. `POST /v1/agent/conversations/:id/messages` accepts `mode: "execute" | "ask"`. Omit it and the job runs as `execute`, which is today's behavior: every registered tool is sent to `LlmClient`. `ask` keeps read tools (`list_*`, `get_*`) and drops write tools (`create_*`, `update_*`, `delete_*`) before `complete`. Each `ToolHandler` declares `read` or `write`. `ToolRegistry` filters definitions. The orchestrator only forwards the job mode. The Ask system prompt states that this run cannot change workspace data. The composer in `apps/todex-web` gets a toggle beside the send button. Do not add the column or the toggle in this iteration.
 
 ## Open questions
 

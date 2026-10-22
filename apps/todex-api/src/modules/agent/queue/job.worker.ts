@@ -3,6 +3,7 @@ import { UnrecoverableError, Worker } from "bullmq";
 
 import { env } from "../../../env/env";
 import { JobsRepository } from "../jobs/jobs.repository";
+import { MemoryQueue } from "../memories/memory-queue";
 import { AgentOrchestrator } from "../orchestrator/agent-orchestrator";
 import { AgentRunsRepository } from "../runs/agent-runs.repository";
 import { QUEUE_NAME } from "./agent-queue";
@@ -16,6 +17,7 @@ export class JobWorker implements OnModuleInit, OnModuleDestroy {
     private readonly jobs: JobsRepository,
     private readonly runs: AgentRunsRepository,
     private readonly orchestrator: AgentOrchestrator,
+    private readonly memories: MemoryQueue,
   ) {}
 
   onModuleInit(): void {
@@ -42,7 +44,16 @@ export class JobWorker implements OnModuleInit, OnModuleDestroy {
 
   private async process(jobId: string): Promise<void> {
     const job = await this.jobs.findById(jobId);
-    if (!job || job.status === "completed" || job.status === "failed") return;
+    if (!job || job.status === "failed") return;
+    if (job.status === "completed") {
+      await this.memories.enqueue({
+        jobId: job.id,
+        conversationId: job.conversationId,
+        workspaceId: job.workspaceId,
+        userId: job.userId,
+      });
+      return;
+    }
 
     const running =
       job.status === "running" ? job : await this.jobs.markRunning(job.id);
@@ -67,6 +78,13 @@ export class JobWorker implements OnModuleInit, OnModuleDestroy {
       await this.runs.fail(run.id, "worker_failed", message);
       throw error;
     }
+
+    await this.memories.enqueue({
+      jobId: running.id,
+      conversationId: running.conversationId,
+      workspaceId: running.workspaceId,
+      userId: running.userId,
+    });
   }
 }
 

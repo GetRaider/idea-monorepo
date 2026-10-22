@@ -1,4 +1,9 @@
-import { BadRequestException, ForbiddenException, Injectable } from "@nestjs/common";
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
 
 import { rejectWorkspaceArgument } from "../guardrails/reject-workspace-argument";
 import {
@@ -53,7 +58,8 @@ export class ToolExecutionLayer {
       }
       if (
         error instanceof BadRequestException ||
-        error instanceof ForbiddenException
+        error instanceof ForbiddenException ||
+        error instanceof NotFoundException
       ) {
         return this.finish(input, "failed", { ok: false, error: error.message });
       }

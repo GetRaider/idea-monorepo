@@ -3,6 +3,7 @@ import {
   ForbiddenException,
   Inject,
   Injectable,
+  Optional,
 } from "@nestjs/common";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { randomUUID } from "crypto";
@@ -37,6 +38,7 @@ import { DRIZZLE_DB } from "../../db/tokens";
 import { docMentions, docs, docTasks, folders, tasks, workspaces } from "../../db/schema";
 import type { DocRow } from "../../db/schema";
 import { mapDoc, mapDocSummary } from "../../db/mappers";
+import { ContentIndexQueue } from "../content-index/content-index.queue";
 import { WorkspaceService } from "../workspace/workspace.service";
 
 @Injectable()
@@ -44,6 +46,7 @@ export class DocsService {
   constructor(
     @Inject(DRIZZLE_DB) private readonly db: NodePgDatabase,
     private readonly workspaceService: WorkspaceService,
+    @Optional() private readonly contentIndex?: ContentIndexQueue,
   ) {}
 
   async list(workspaceId: string, query: ListDocsQuery) {
@@ -123,6 +126,7 @@ export class DocsService {
     });
 
     await this.workspaceService.bumpUpdatedAt(workspaceId);
+    await this.scheduleIndex(workspaceId, docId);
     return this.get(workspaceId, docId);
   }
 
@@ -159,6 +163,7 @@ export class DocsService {
     });
 
     await this.workspaceService.bumpUpdatedAt(workspaceId);
+    await this.scheduleIndex(workspaceId, docId);
     return this.get(workspaceId, docId);
   }
 
@@ -166,6 +171,42 @@ export class DocsService {
     const existing = await this.requireInWorkspace(workspaceId, docId);
     await this.db.delete(docs).where(eq(docs.id, existing.id));
     await this.workspaceService.bumpUpdatedAt(workspaceId);
+    await this.scheduleIndex(workspaceId, docId, true);
+  }
+
+  async readIndexText(
+    workspaceId: string,
+    docId: string,
+  ): Promise<{ title: string; text: string } | null> {
+    const [row] = await this.db
+      .select()
+      .from(docs)
+      .where(and(eq(docs.id, docId), eq(docs.workspaceId, workspaceId)))
+      .limit(1);
+    if (!row) return null;
+    const parts = [row.plainText.content, row.plainText.why].filter(
+      (part): part is string => Boolean(part),
+    );
+    if (row.type === DocType.GOAL) {
+      const body = readGoalDocBody(row.body);
+      for (const criterion of [...body.successCriteria, ...body.preconditions]) {
+        parts.push(criterion.text);
+      }
+    }
+    return { title: row.title, text: parts.join("\n\n") };
+  }
+
+  private async scheduleIndex(
+    workspaceId: string,
+    docId: string,
+    removed = false,
+  ): Promise<void> {
+    await this.contentIndex?.enqueue({
+      workspaceId,
+      sourceType: "doc",
+      sourceId: docId,
+      removed,
+    });
   }
 
   private mergeBody(existing: DocRow, patch: unknown): DocBody | null {

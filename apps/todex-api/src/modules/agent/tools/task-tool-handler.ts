@@ -29,6 +29,7 @@ export class TaskToolHandler {
     return [
       {
         name: "list_tasks",
+        access: "read",
         description: "List tasks on a board in the current workspace.",
         parameters: z.object({ boardId: z.string().min(1) }).strict(),
         handle: async ({ workspaceId, args }) => {
@@ -38,6 +39,7 @@ export class TaskToolHandler {
       },
       {
         name: "get_task",
+        access: "read",
         description: "Get one task in the current workspace by id.",
         parameters: z.object({ taskId: z.string().min(1) }).strict(),
         handle: async ({ workspaceId, args }) => {
@@ -47,6 +49,7 @@ export class TaskToolHandler {
       },
       {
         name: "create_task",
+        access: "write",
         description: "Create a task on a board in the current workspace.",
         parameters: z
           .object({
@@ -77,6 +80,7 @@ export class TaskToolHandler {
       },
       {
         name: "update_task",
+        access: "write",
         description: "Update a task in the current workspace.",
         parameters: z
           .object({
@@ -105,6 +109,7 @@ export class TaskToolHandler {
       },
       {
         name: "delete_task",
+        access: "write",
         description: "Delete a task in the current workspace.",
         parameters: z.object({ taskId: z.string().min(1) }).strict(),
         handle: async ({ workspaceId, args }) => {

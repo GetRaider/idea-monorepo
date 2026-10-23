@@ -19,12 +19,14 @@ export class ToolRegistry {
     return this.handlers.get(name);
   }
 
-  definitions(): LlmToolDefinition[] {
-    return [...this.handlers.values()].map((handler) => ({
-      name: handler.name,
-      description: handler.description,
-      parameters: parametersJsonSchema(handler.parameters),
-    }));
+  definitions(mode: "execute" | "ask" = "execute"): LlmToolDefinition[] {
+    return [...this.handlers.values()]
+      .filter((handler) => mode === "execute" || handler.access === "read")
+      .map((handler) => ({
+        name: handler.name,
+        description: handler.description,
+        parameters: handler.parametersJson ?? parametersJsonSchema(handler.parameters),
+      }));
   }
 }
 

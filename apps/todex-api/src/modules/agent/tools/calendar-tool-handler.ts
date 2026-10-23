@@ -21,6 +21,7 @@ export class CalendarToolHandler {
     return [
       {
         name: "list_calendar_events",
+        access: "read",
         description: "List calendar events in the current workspace that overlap an ISO interval.",
         parameters: z
           .object({
@@ -38,6 +39,7 @@ export class CalendarToolHandler {
       },
       {
         name: "get_calendar_event",
+        access: "read",
         description: "Get one calendar event in the current workspace by id.",
         parameters: z.object({ eventId: z.string().min(1) }).strict(),
         handle: async ({ workspaceId, args }) => {
@@ -47,6 +49,7 @@ export class CalendarToolHandler {
       },
       {
         name: "create_calendar_event",
+        access: "write",
         description:
           "Create a calendar event in the current workspace. start and end are ISO datetimes. timeZone is an IANA name.",
         parameters: z
@@ -78,6 +81,7 @@ export class CalendarToolHandler {
       },
       {
         name: "update_calendar_event",
+        access: "write",
         description: "Update a calendar event in the current workspace.",
         parameters: z
           .object({
@@ -124,6 +128,7 @@ export class CalendarToolHandler {
       },
       {
         name: "delete_calendar_event",
+        access: "write",
         description: "Delete a calendar event in the current workspace.",
         parameters: z.object({ eventId: z.string().min(1) }).strict(),
         handle: async ({ workspaceId, userId, args }) => {

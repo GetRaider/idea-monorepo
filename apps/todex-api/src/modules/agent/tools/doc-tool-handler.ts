@@ -38,6 +38,7 @@ export class DocToolHandler {
     return [
       {
         name: "list_docs",
+        access: "read",
         description: "List docs in the current workspace. Goals are docs with type goal.",
         parameters: z
           .object({
@@ -52,6 +53,7 @@ export class DocToolHandler {
       },
       {
         name: "get_doc",
+        access: "read",
         description: "Get one doc in the current workspace by id.",
         parameters: z.object({ docId: z.string().min(1) }).strict(),
         handle: async ({ workspaceId, args }) => {
@@ -61,6 +63,7 @@ export class DocToolHandler {
       },
       {
         name: "create_doc",
+        access: "write",
         description:
           "Create a common doc or a goal in the current workspace. content is plain text. To file it, pass folderName of a docs folder or folderId from list_folders. Do not put the folder name in the title.",
         parameters: z
@@ -120,6 +123,7 @@ export class DocToolHandler {
       },
       {
         name: "update_doc",
+        access: "write",
         description:
           "Update a doc in the current workspace. content replaces the common doc text or a goal's why. Move it with folderName or a docs folderId from list_folders. folderId null removes it from its folder.",
         parameters: z
@@ -171,6 +175,7 @@ export class DocToolHandler {
       },
       {
         name: "delete_doc",
+        access: "write",
         description: "Delete a doc in the current workspace.",
         parameters: z.object({ docId: z.string().min(1) }).strict(),
         handle: async ({ workspaceId, args }) => {

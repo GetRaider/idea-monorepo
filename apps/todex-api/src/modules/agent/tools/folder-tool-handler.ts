@@ -15,6 +15,7 @@ export class FolderToolHandler {
     return [
       {
         name: "list_folders",
+        access: "read",
         description:
           "List folders in the current workspace. Pass kind docs before filing a doc, or kind tasks before filing a task. Use the returned id as folderId.",
         parameters: z

@@ -47,6 +47,7 @@ import { env } from "./env";
 
 const AgentConversationSummarySchema = z.object({
   id: z.string(),
+  title: z.string().nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
   preview: z.string().nullable(),
@@ -69,6 +70,7 @@ const AgentMessageSchema = z.object({
 
 const AgentConversationSchema = z.object({
   id: z.string(),
+  title: z.string().nullable(),
   messages: z.array(AgentMessageSchema),
 });
 
@@ -81,7 +83,10 @@ const AgentJobAcceptedSchema = z.object({
 const AgentJobSchema = z.object({
   id: z.string(),
   conversationId: z.string(),
-  status: z.enum(["pending", "running", "completed", "failed"]),
+  status: z.enum(["pending", "running", "awaiting_confirmation", "completed", "failed"]),
+  pendingToolCalls: z
+    .array(z.object({ id: z.string(), name: z.string(), arguments: z.unknown() }))
+    .default([]),
   errorCode: z.string().nullable(),
   errorMessage: z.string().nullable(),
   run: z
@@ -359,13 +364,16 @@ export const todexClient = {
         call("get", `/v1/agent/conversations/${conversationId}`, AgentConversationSchema),
       remove: (conversationId: string) =>
         call("delete", `/v1/agent/conversations/${conversationId}`, z.object({ ok: z.boolean() })),
-      postMessage: (conversationId: string, message: string) =>
+      postMessage: (conversationId: string, message: string, mode: "execute" | "ask" = "execute") =>
         call("post", `/v1/agent/conversations/${conversationId}/messages`, AgentJobAcceptedSchema, {
           message,
+          mode,
         }),
     },
     jobs: {
       get: (jobId: string) => call("get", `/v1/agent/jobs/${jobId}`, AgentJobSchema),
+      confirm: (jobId: string, decision: "approve" | "reject" | "allow") =>
+        call("post", `/v1/agent/jobs/${jobId}/confirmation`, z.unknown(), { decision }),
     },
   },
   calendar: {

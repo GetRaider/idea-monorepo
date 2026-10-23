@@ -3,6 +3,7 @@ import {
   ForbiddenException,
   Inject,
   Injectable,
+  Optional,
 } from "@nestjs/common";
 import { and, asc, eq, gte, inArray, isNull, lt, sql } from "drizzle-orm";
 import { randomUUID } from "crypto";
@@ -39,6 +40,7 @@ import {
 } from "../../helpers/parent-cycle.helper";
 import { sanitizeTaskHtml } from "../../helpers/sanitize-task-html.helper";
 import { BoardsService } from "../boards/boards.service";
+import { ContentIndexQueue } from "../content-index/content-index.queue";
 import { WorkspaceService } from "../workspace/workspace.service";
 import { resolveTaskPlacement, TaskPlacementError } from "./task-placement";
 
@@ -48,6 +50,7 @@ export class TasksService {
     @Inject(DRIZZLE_DB) private readonly db: NodePgDatabase,
     private readonly boardsService: BoardsService,
     private readonly workspaceService: WorkspaceService,
+    @Optional() private readonly contentIndex?: ContentIndexQueue,
   ) {}
 
   async list(workspaceId: string, query: ListTasksQuery) {
@@ -123,6 +126,7 @@ export class TasksService {
     });
 
     if (!created) throw new ForbiddenException();
+    await this.scheduleIndex(workspaceId, created.id);
     return mapTask(created);
   }
 
@@ -204,6 +208,7 @@ export class TasksService {
     await this.workspaceService.bumpUpdatedAt(workspaceId);
     const [task] = await this.withGoalIds([updated]);
     if (!task) throw new ForbiddenException();
+    await this.scheduleIndex(workspaceId, task.id);
     return task;
   }
 
@@ -294,6 +299,39 @@ export class TasksService {
       await this.writePositions(this.db, ids, {});
     }
     await this.workspaceService.bumpUpdatedAt(workspaceId);
+    await this.scheduleIndex(workspaceId, existing.id, true);
+  }
+
+  async readIndexText(
+    workspaceId: string,
+    taskId: string,
+  ): Promise<{ title: string; text: string } | null> {
+    const [row] = await this.db
+      .select()
+      .from(tasks)
+      .where(and(eq(tasks.id, taskId), eq(tasks.workspaceId, workspaceId)))
+      .limit(1);
+    if (!row) return null;
+    const criteria = (row.acceptanceCriteria ?? []).map((criterion) => criterion.text);
+    return {
+      title: row.summary,
+      text: [row.summary, textFromHtml(row.description), ...criteria]
+        .filter((part) => part.length > 0)
+        .join("\n\n"),
+    };
+  }
+
+  private async scheduleIndex(
+    workspaceId: string,
+    taskId: string,
+    removed = false,
+  ): Promise<void> {
+    await this.contentIndex?.enqueue({
+      workspaceId,
+      sourceType: "task",
+      sourceId: taskId,
+      removed,
+    });
   }
 
   private async listByBoard(workspaceId: string, boardId: string) {
@@ -697,6 +735,13 @@ function recurrenceSnapshot(row: TaskRow) {
     recurrence: readTaskRecurrence(row.recurrence),
     acceptanceCriteria: row.acceptanceCriteria ?? [],
   };
+}
+
+function textFromHtml(value: string): string {
+  return value
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function clampIndex(index: number, length: number) {

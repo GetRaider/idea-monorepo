@@ -13,14 +13,14 @@ export class AgentQueue implements OnModuleDestroy {
       ? null
       : new Queue(QUEUE_NAME, { connection: { url: env.redis.url } });
 
-  async enqueue(jobId: string): Promise<void> {
+  async enqueue(jobId: string, bullJobId = jobId): Promise<void> {
     if (!this.queue) return;
     try {
       await this.queue.add(
         "run",
         { jobId },
         {
-          jobId,
+          jobId: bullJobId,
           attempts: 3,
           backoff: { type: "exponential", delay: 1000 },
         },

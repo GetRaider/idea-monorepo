@@ -20,7 +20,7 @@ describe("AgentOrchestrator", () => {
     harness.complete
       .mockResolvedValueOnce({
         content: "",
-        toolCalls: [{ id: "call-1", name: "create_task", arguments: { summary: "A" } }],
+        toolCalls: [{ id: "call-1", name: "list_tasks", arguments: {} }],
         promptTokens: 3,
         completionTokens: 2,
       })
@@ -42,7 +42,7 @@ describe("AgentOrchestrator", () => {
 
     harness.complete.mockResolvedValueOnce({
       content: "",
-      toolCalls: [{ id: "call-1", name: "create_task", arguments: { summary: "A" } }],
+      toolCalls: [{ id: "call-1", name: "list_tasks", arguments: {} }],
       promptTokens: 1,
       completionTokens: 1,
     });
@@ -63,7 +63,7 @@ describe("AgentOrchestrator", () => {
     const harness = createHarness(handle);
     harness.complete.mockResolvedValue({
       content: "",
-      toolCalls: [{ id: "call-9", name: "create_task", arguments: { summary: "A" } }],
+      toolCalls: [{ id: "call-9", name: "list_tasks", arguments: {} }],
       promptTokens: 1,
       completionTokens: 1,
     });
@@ -85,15 +85,115 @@ describe("AgentOrchestrator", () => {
     );
     expect(harness.runs.complete).not.toHaveBeenCalled();
   });
+
+  it("waits for approval before a write and runs it after approve", async () => {
+    const handle = vi.fn(async () => ({ id: "doc-1" }));
+    const harness = createHarness(handle);
+    harness.complete.mockResolvedValueOnce({
+      content: "I can create that",
+      toolCalls: [{ id: "call-2", name: "create_doc", arguments: { title: "Notes" } }],
+      promptTokens: 1,
+      completionTokens: 1,
+    });
+
+    await harness.orchestrator.execute(job(), run());
+
+    expect(handle).not.toHaveBeenCalled();
+    expect(harness.jobs.markAwaitingConfirmation).toHaveBeenCalledWith("job-1", [
+      { id: "call-2", name: "create_doc", arguments: { title: "Notes" } },
+    ]);
+    expect(harness.jobs.markCompleted).not.toHaveBeenCalled();
+
+    harness.complete.mockResolvedValueOnce({
+      content: "Created it",
+      toolCalls: [],
+      promptTokens: 1,
+      completionTokens: 1,
+    });
+    await harness.orchestrator.execute(
+      job({
+        pendingToolCalls: [{ id: "call-2", name: "create_doc", arguments: { title: "Notes" } }],
+        confirmationDecision: "approved",
+      }),
+      run(),
+    );
+
+    expect(handle).toHaveBeenCalledTimes(1);
+    expect(harness.jobs.clearPending).toHaveBeenCalledWith("job-1");
+    expect(harness.jobs.markCompleted).toHaveBeenCalledWith("job-1");
+  });
+
+  it("runs an allowed write without waiting", async () => {
+    const handle = vi.fn(async () => ({ id: "doc-1" }));
+    const harness = createHarness(
+      handle,
+      new Set(['create_doc\0{"title":"Notes"}']),
+    );
+    harness.complete
+      .mockResolvedValueOnce({
+        content: "",
+        toolCalls: [{ id: "call-3", name: "create_doc", arguments: { title: "Notes" } }],
+        promptTokens: 1,
+        completionTokens: 1,
+      })
+      .mockResolvedValueOnce({
+        content: "Created it",
+        toolCalls: [],
+        promptTokens: 1,
+        completionTokens: 1,
+      });
+
+    await harness.orchestrator.execute(job(), run());
+
+    expect(handle).toHaveBeenCalledTimes(1);
+    expect(harness.jobs.markAwaitingConfirmation).not.toHaveBeenCalled();
+    expect(harness.jobs.markCompleted).toHaveBeenCalledWith("job-1");
+  });
+
+  it("does not offer or run write tools in ask mode", async () => {
+    const handle = vi.fn(async () => ({ id: "doc-1" }));
+    const harness = createHarness(handle);
+    harness.complete.mockResolvedValueOnce({
+      content: "I cannot change that",
+      toolCalls: [{ id: "call-4", name: "create_doc", arguments: { title: "Notes" } }],
+      promptTokens: 1,
+      completionTokens: 1,
+    });
+    harness.complete.mockResolvedValueOnce({
+      content: "Read only",
+      toolCalls: [],
+      promptTokens: 1,
+      completionTokens: 1,
+    });
+
+    await harness.orchestrator.execute(job({ mode: "ask" }), run());
+
+    const offered = harness.complete.mock.calls[0]?.[0] as { tools: { name: string }[] };
+    expect(offered.tools.map((tool) => tool.name)).toEqual(["list_tasks"]);
+    expect(handle).not.toHaveBeenCalled();
+    expect(harness.jobs.markAwaitingConfirmation).not.toHaveBeenCalled();
+    expect(harness.jobs.markCompleted).toHaveBeenCalledWith("job-1");
+  });
 });
 
-function createHarness(handle: (input: unknown) => Promise<unknown>) {
+function createHarness(
+  handle: (input: unknown) => Promise<unknown>,
+  allowed: Set<string> = new Set(),
+) {
   const registry = new ToolRegistry();
   registry.register([
     {
-      name: "create_task",
-      description: "Create a task",
-      parameters: z.object({ summary: z.string() }).strict(),
+      name: "list_tasks",
+      access: "read",
+      description: "List tasks",
+      parameters: z.object({}).strict(),
+      handle,
+    },
+    {
+      name: "create_doc",
+      access: "write",
+      description: "Create a doc",
+      parameters: z.object({ title: z.string() }).strict(),
       handle,
     },
   ]);
@@ -112,22 +212,33 @@ function createHarness(handle: (input: unknown) => Promise<unknown>) {
     listMessages: vi.fn(async () => [message("user", "Create a task")]),
     appendMessage: vi.fn(),
   };
-  const jobs = { markCompleted: vi.fn(), markFailed: vi.fn() };
+  const jobs = {
+    markCompleted: vi.fn(),
+    markFailed: vi.fn(),
+    markAwaitingConfirmation: vi.fn(),
+    clearPending: vi.fn(),
+  };
   const complete = vi.fn();
   const llm = { complete };
   const orchestrator = new AgentOrchestrator(
     conversations as never,
     jobs as never,
     runs as never,
-    new ContextService(conversations as never, { listByWorkspace: async () => [] } as never),
+    new ContextService(
+      conversations as never,
+      { listByWorkspace: async () => [] } as never,
+      { search: async () => [] } as never,
+      { embed: async () => [[0.1]] },
+    ),
     new ToolExecutionLayer(registry, runs as never),
     registry,
+    { allowedKeys: async () => allowed } as never,
     llm as LlmClient,
   );
   return { orchestrator, runs, jobs, complete };
 }
 
-function job(): JobRow {
+function job(overrides?: Partial<JobRow>): JobRow {
   return {
     id: "job-1",
     conversationId: "conversation-1",
@@ -135,13 +246,17 @@ function job(): JobRow {
     userId: "user-1",
     userMessageId: "message-1",
     status: "running",
+    mode: "execute",
     idempotencyKey: "key-1",
+    pendingToolCalls: null,
+    confirmationDecision: null,
     errorCode: null,
     errorMessage: null,
     startedAt: new Date(),
     finishedAt: null,
     createdAt: new Date(),
     updatedAt: new Date(),
+    ...overrides,
   };
 }
 

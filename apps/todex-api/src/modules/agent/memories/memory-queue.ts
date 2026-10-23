@@ -17,7 +17,7 @@ export class MemoryQueue implements OnModuleDestroy {
     if (!this.queue) return;
     try {
       await this.queue.add("propose", input, {
-        jobId: `memory:${input.jobId}`,
+        jobId: `memory-${input.jobId}`,
         attempts: 3,
         backoff: { type: "exponential", delay: 1000 },
       });

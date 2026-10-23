@@ -5,8 +5,10 @@
   "globalEnv": [
     "AI_API_KEY",
     "AI_BASE_URL",
+    "AI_EMBEDDING_MODEL",
     "AI_MODEL",
     "AI_PROVIDER",
+    "MCP_SERVER_URL",
     "API_BASE_URL",
     "BETTER_AUTH_SECRET",
     "BETTER_AUTH_URL",

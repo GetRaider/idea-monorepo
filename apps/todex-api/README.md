@@ -21,6 +21,7 @@ Spec: `docs/prd/TDX/ai-agent.md`. A conversation holds the transcript. Each mess
 # host
 ollama serve
 ollama pull llama3.1:8b   # skip if you already have it
+ollama pull nomic-embed-text
 
 # apps/todex-api
 docker compose up -d      # Postgres :5434, Redis :6379
@@ -34,6 +35,7 @@ pnpm dev
 REDIS_URL=redis://localhost:6379
 AI_PROVIDER=local
 AI_MODEL=llama3.1:8b
+AI_EMBEDDING_MODEL=nomic-embed-text
 AI_BASE_URL=http://localhost:11434/v1
 AI_API_KEY=ollama
 ```
@@ -87,4 +89,10 @@ The same conversation can create a doc. `create_doc` takes `type` `common` or `g
 
 Same `idempotencyKey` on a second message POST in that conversation returns the original job. Omit the key to start a new turn. A worker retry of the same job must not insert a second task for the same tool call.
 
-A completed run enqueues a separate memory job. That job may store short workspace facts from the transcript. The next turn includes those memories after the system prompt and before the transcript. Apply the migration with `pnpm --filter todex-api db:migrate` before relying on them.
+A completed run enqueues a separate memory job. That job may store short workspace facts from the transcript. The next turn includes those memories after the system prompt and before the transcript.
+
+Saving or deleting a doc or task enqueues a chunk job. That job reads the text through the doc or task service, embeds each chunk with `AI_EMBEDDING_MODEL` (768 dimensions, `nomic-embed-text` on Ollama), and replaces `agent_documents` / `agent_chunks` for that source. A chat turn embeds the latest user message with the same model and inserts the closest workspace chunks after memories and before the transcript. The model still does not query Postgres.
+
+`POST /v1/agent/conversations/:id/messages` takes optional `mode`: `execute` (default) or `ask`. Ask sends only read tools and cannot change workspace data. A `create_`, `update_`, or `delete_` tool call in execute mode pauses the job at `awaiting_confirmation`. Approve, reject, or allow it with `POST /v1/agent/jobs/:id/confirmation` and `{ "decision": "approve" | "reject" | "allow" }`. Allow remembers that tool and those arguments for this user in this workspace. Read tools still run immediately. Set `MCP_SERVER_URL` to register that server's tools on startup.
+
+Postgres comes from `pgvector/pgvector:pg15`. Recreate the db container after pulling that image (`docker compose up -d` in `apps/todex-api`). The existing `pgdata` volume stays. Apply the migration with `pnpm --filter todex-api db:migrate` before relying on memories or chunks.

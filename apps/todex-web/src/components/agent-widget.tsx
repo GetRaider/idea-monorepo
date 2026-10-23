@@ -111,7 +111,7 @@ function AgentConversationList({
                   className="min-w-0 flex-1 px-2 py-2 text-left"
                 >
                   <span className="block truncate text-sm">
-                    {conversationTitle(conversation.preview)}
+                    {conversationTitle(conversation.title ?? conversation.preview)}
                   </span>
                   <span className="block text-xs text-muted-foreground">
                     {formatWhen(conversation.updatedAt)}
@@ -163,6 +163,7 @@ function AgentThread({
 }) {
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState("");
+  const [mode, setMode] = useState<"execute" | "ask">("execute");
   const [jobId, setJobId] = useState<string | null>(null);
   const scrollerRef = useRef<HTMLDivElement>(null);
   const conversation = useQuery({
@@ -183,9 +184,20 @@ function AgentThread({
   const jobStatus = job.data?.status;
   const activeJobId = job.data?.id;
   const working = jobStatus === "pending" || jobStatus === "running";
+  const awaiting = jobStatus === "awaiting_confirmation";
+  const confirm = useMutation({
+    mutationFn: (decision: "approve" | "reject" | "allow") => {
+      if (!jobId) throw new Error("Missing job");
+      return todexClient.agent.jobs.confirm(jobId, decision);
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["agent", "job", jobId] });
+    },
+    onError: (error) => toast.error(readError(error)),
+  });
   const postMessage = useMutation({
-    mutationFn: (message: string) =>
-      todexClient.agent.conversations.postMessage(conversationId, message),
+    mutationFn: (input: { message: string; mode: "execute" | "ask" }) =>
+      todexClient.agent.conversations.postMessage(conversationId, input.message, input.mode),
     onSuccess: async (accepted) => {
       setDraft("");
       setJobId(accepted.jobId);
@@ -197,13 +209,18 @@ function AgentThread({
   });
 
   useEffect(() => {
-    if (!activeJobId || (jobStatus !== "completed" && jobStatus !== "failed")) return;
+    if (!activeJobId) return;
+    if (jobStatus !== "completed" && jobStatus !== "failed" && jobStatus !== "awaiting_confirmation") {
+      return;
+    }
     void queryClient.invalidateQueries({
       queryKey: ["agent", "conversation", conversationId],
     });
     void queryClient.invalidateQueries({ queryKey: ["agent", "conversations"] });
+    if (jobStatus === "awaiting_confirmation") return;
     if (jobStatus === "completed") {
       void queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      void queryClient.invalidateQueries({ queryKey: ["docs"] });
     }
   }, [activeJobId, conversationId, jobStatus, queryClient]);
 
@@ -216,12 +233,13 @@ function AgentThread({
   function onSubmit(event: FormEvent) {
     event.preventDefault();
     const message = draft.trim();
-    if (!message || postMessage.isPending || working) return;
-    postMessage.mutate(message);
+    if (!message || postMessage.isPending || working || awaiting) return;
+    postMessage.mutate({ message, mode });
   }
 
   const title = conversationTitle(
-    conversation.data?.messages.find((message) => message.role === "user")?.content,
+    conversation.data?.title ??
+      conversation.data?.messages.find((message) => message.role === "user")?.content,
   );
 
   return (
@@ -255,6 +273,46 @@ function AgentThread({
         {working ? (
           <p className="text-sm text-muted-foreground">Working…</p>
         ) : null}
+        {awaiting ? (
+          <div className="rounded-xl border border-border bg-surface px-3 py-2 text-sm">
+            <p>Approve this step before anything is changed.</p>
+            <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
+              {(job.data?.pendingToolCalls ?? []).map((toolCall) => (
+                <li key={toolCall.id}>
+                  {toolCall.name} {JSON.stringify(toolCall.arguments)}
+                </li>
+              ))}
+            </ul>
+            <div className="mt-2 flex justify-end gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                disabled={confirm.isPending}
+                onClick={() => confirm.mutate("reject")}
+              >
+                Reject
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                disabled={confirm.isPending}
+                onClick={() => confirm.mutate("allow")}
+              >
+                Allow
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                disabled={confirm.isPending}
+                onClick={() => confirm.mutate("approve")}
+              >
+                Approve
+              </Button>
+            </div>
+          </div>
+        ) : null}
         {job.data?.status === "failed" ? (
           <p className="text-sm text-destructive">
             {job.data.errorMessage ?? job.data.run?.errorMessage ?? "The run failed."}
@@ -272,11 +330,28 @@ function AgentThread({
           }}
           rows={2}
           placeholder="Message"
-          disabled={postMessage.isPending || working}
+          disabled={postMessage.isPending || working || awaiting}
           className="w-full resize-none rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50"
         />
-        <div className="mt-2 flex justify-end">
-          <Button type="submit" size="sm" disabled={postMessage.isPending || working || !draft.trim()}>
+        <div className="mt-2 flex items-center justify-between gap-2">
+          <div className="flex rounded-md border border-border p-0.5 text-xs">
+            {(["execute", "ask"] as const).map((option) => (
+              <button
+                key={option}
+                type="button"
+                aria-pressed={mode === option}
+                disabled={postMessage.isPending || working || awaiting}
+                onClick={() => setMode(option)}
+                className={cn(
+                  "rounded px-2 py-1 disabled:opacity-50",
+                  mode === option ? "bg-white text-neutral-950" : "text-muted-foreground",
+                )}
+              >
+                {option === "execute" ? "Execute" : "Ask"}
+              </button>
+            ))}
+          </div>
+          <Button type="submit" size="sm" disabled={postMessage.isPending || working || awaiting || !draft.trim()}>
             Send
           </Button>
         </div>

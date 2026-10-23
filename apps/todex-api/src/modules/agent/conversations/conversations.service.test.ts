@@ -10,6 +10,7 @@ describe("ConversationsService idempotency", () => {
       status: "completed" as const,
     };
     const jobs = {
+      findAwaitingConfirmation: vi.fn(async () => null),
       findByIdempotency: vi.fn(async (conversationId: string) => {
         if (conversationId === "conversation-1") return existing;
         return null;
@@ -36,6 +37,7 @@ describe("ConversationsService idempotency", () => {
       jobs as never,
       {} as never,
       { enqueue: vi.fn() } as never,
+      { grant: vi.fn() } as never,
     );
 
     const first = await service.postMessage(
@@ -52,9 +54,12 @@ describe("ConversationsService idempotency", () => {
       "workspace-1",
       "user-1",
       "conversation-2",
-      { message: "Create a task", idempotencyKey: "same-key" },
+      { message: "Create a task", idempotencyKey: "same-key", mode: "ask" },
     );
     expect(second.created).toBe(true);
-    expect(jobs.insert).toHaveBeenCalledOnce();
+    expect(jobs.insert).toHaveBeenCalledWith(
+      expect.objectContaining({ mode: "ask" }),
+      expect.anything(),
+    );
   });
 });

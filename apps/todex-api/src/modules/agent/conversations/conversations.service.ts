@@ -1,4 +1,5 @@
 import {
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -6,6 +7,7 @@ import {
 import { randomUUID } from "crypto";
 
 import type { ConversationMessageRow, JobRow } from "../../../db/schema";
+import { ToolAllowsRepository } from "../allows/tool-allows.repository";
 import { AgentQueue } from "../queue/agent-queue";
 import { AgentRunsRepository } from "../runs/agent-runs.repository";
 import { JobsRepository } from "../jobs/jobs.repository";
@@ -19,6 +21,7 @@ export class ConversationsService {
     private readonly jobs: JobsRepository,
     private readonly runs: AgentRunsRepository,
     private readonly queue: AgentQueue,
+    private readonly allows: ToolAllowsRepository,
   ) {}
 
   async create(workspaceId: string, userId: string) {
@@ -33,6 +36,7 @@ export class ConversationsService {
     const rows = await this.conversations.listForUser(workspaceId, userId);
     return rows.map((row) => ({
       id: row.id,
+      title: row.title,
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
       preview: row.preview,
@@ -50,6 +54,7 @@ export class ConversationsService {
     const messages = await this.conversations.listMessages(conversation.id);
     return {
       id: conversation.id,
+      title: conversation.title,
       messages: messages.map(toMessageResponse),
     };
   }
@@ -61,6 +66,10 @@ export class ConversationsService {
     body: PostConversationMessageBody,
   ): Promise<{ created: boolean; job: JobRow }> {
     const conversation = await this.requireConversation(workspaceId, conversationId);
+    const waiting = await this.jobs.findAwaitingConfirmation(conversation.id);
+    if (waiting) {
+      throw new ConflictException("Confirm or reject the pending step first");
+    }
     const idempotencyKey = body.idempotencyKey ?? randomUUID();
     const existing = await this.jobs.findByIdempotency(
       conversation.id,
@@ -89,6 +98,7 @@ export class ConversationsService {
             userId,
             userMessageId: message.id,
             idempotencyKey,
+            mode: body.mode ?? "execute",
           },
           tx,
         );
@@ -112,6 +122,7 @@ export class ConversationsService {
       status: job.status,
       errorCode: job.errorCode,
       errorMessage: job.errorMessage,
+      pendingToolCalls: job.pendingToolCalls ?? [],
       run: run
         ? {
             id: run.id,
@@ -126,6 +137,26 @@ export class ConversationsService {
           }
         : null,
     };
+  }
+
+  async confirm(
+    workspaceId: string,
+    jobId: string,
+    decision: "approved" | "rejected" | "allowed",
+  ): Promise<JobRow> {
+    const job = await this.jobs.findById(jobId);
+    if (!job) throw new NotFoundException();
+    if (job.workspaceId !== workspaceId) throw new ForbiddenException();
+    if (decision === "allowed") {
+      await this.allows.grant(job.workspaceId, job.userId, job.pendingToolCalls ?? []);
+    }
+    const resumed = await this.jobs.resume(
+      job.id,
+      decision === "rejected" ? "rejected" : "approved",
+    );
+    if (!resumed) throw new ConflictException("This step is no longer waiting");
+    await this.queue.enqueue(resumed.id, `${resumed.id}-resume-${randomUUID()}`);
+    return resumed;
   }
 
   private async requireConversation(workspaceId: string, conversationId: string) {

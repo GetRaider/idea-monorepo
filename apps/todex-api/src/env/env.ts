@@ -15,8 +15,10 @@ const envSchema = z.object({
   REDIS_URL: z.string().min(1).optional().default("redis://localhost:6379"),
   AI_PROVIDER: z.enum(["local", "external"]).optional().default("local"),
   AI_MODEL: z.string().min(1).optional().default("llama3.1:8b"),
+  AI_EMBEDDING_MODEL: z.string().min(1).optional().default("nomic-embed-text"),
   AI_BASE_URL: z.string().url().optional(),
   AI_API_KEY: z.string().optional(),
+  MCP_SERVER_URL: z.string().url().optional(),
   AGENT_MAX_ITERATIONS: z.coerce.number().int().positive().optional().default(8),
   AGENT_MAX_DURATION_MS: z.coerce
     .number()
@@ -62,8 +64,10 @@ export const env = {
   ai: {
     provider: parsedEnv.AI_PROVIDER,
     model: parsedEnv.AI_MODEL,
+    embeddingModel: parsedEnv.AI_EMBEDDING_MODEL,
     baseUrl: resolveAiBaseUrl(parsedEnv),
     apiKey: parsedEnv.AI_API_KEY,
+    mcpServerUrl: parsedEnv.MCP_SERVER_URL,
   },
   agent: {
     maxIterations: parsedEnv.AGENT_MAX_ITERATIONS,

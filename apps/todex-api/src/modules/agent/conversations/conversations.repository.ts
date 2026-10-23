@@ -1,6 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { randomUUID } from "crypto";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 
 import { DRIZZLE_DB } from "../../../db/tokens";
@@ -43,6 +43,7 @@ export class ConversationsRepository {
     return this.db
       .select({
         id: conversations.id,
+        title: conversations.title,
         createdAt: conversations.createdAt,
         updatedAt: conversations.updatedAt,
         preview: sql<string | null>`(
@@ -77,6 +78,13 @@ export class ConversationsRepository {
       .update(conversations)
       .set({ updatedAt: new Date() })
       .where(eq(conversations.id, id));
+  }
+
+  async setTitleIfEmpty(id: string, title: string): Promise<void> {
+    await this.db
+      .update(conversations)
+      .set({ title })
+      .where(and(eq(conversations.id, id), isNull(conversations.title)));
   }
 
   async findConversation(id: string): Promise<ConversationRow | null> {
@@ -162,6 +170,7 @@ export class ConversationsRepository {
 
 export interface ConversationSummary {
   id: string;
+  title: string | null;
   createdAt: Date;
   updatedAt: Date;
   preview: string | null;

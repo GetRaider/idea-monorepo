@@ -2,6 +2,7 @@ import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from "@nestjs/commo
 import { UnrecoverableError, Worker } from "bullmq";
 
 import { env } from "../../../env/env";
+import { ConversationNamer } from "../conversations/conversation-namer";
 import { JobsRepository } from "../jobs/jobs.repository";
 import { MemoryQueue } from "../memories/memory-queue";
 import { AgentOrchestrator } from "../orchestrator/agent-orchestrator";
@@ -18,6 +19,7 @@ export class JobWorker implements OnModuleInit, OnModuleDestroy {
     private readonly runs: AgentRunsRepository,
     private readonly orchestrator: AgentOrchestrator,
     private readonly memories: MemoryQueue,
+    private readonly namer: ConversationNamer,
   ) {}
 
   onModuleInit(): void {
@@ -44,8 +46,9 @@ export class JobWorker implements OnModuleInit, OnModuleDestroy {
 
   private async process(jobId: string): Promise<void> {
     const job = await this.jobs.findById(jobId);
-    if (!job || job.status === "failed") return;
+    if (!job || job.status === "failed" || job.status === "awaiting_confirmation") return;
     if (job.status === "completed") {
+      await this.name(job.conversationId);
       await this.memories.enqueue({
         jobId: job.id,
         conversationId: job.conversationId,
@@ -54,6 +57,8 @@ export class JobWorker implements OnModuleInit, OnModuleDestroy {
       });
       return;
     }
+
+    await this.name(job.conversationId);
 
     const running =
       job.status === "running" ? job : await this.jobs.markRunning(job.id);
@@ -77,14 +82,27 @@ export class JobWorker implements OnModuleInit, OnModuleDestroy {
       const message = error instanceof Error ? error.message : "worker_failed";
       await this.runs.fail(run.id, "worker_failed", message);
       throw error;
+    } finally {
+      await this.name(running.conversationId);
     }
 
+    const finished = await this.jobs.findById(running.id);
+    if (finished?.status !== "completed") return;
     await this.memories.enqueue({
       jobId: running.id,
       conversationId: running.conversationId,
       workspaceId: running.workspaceId,
       userId: running.userId,
     });
+  }
+
+  private async name(conversationId: string): Promise<void> {
+    try {
+      await this.namer.nameIfMissing(conversationId);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "title_failed";
+      this.logger.warn(`Conversation ${conversationId} title failed: ${message}`);
+    }
   }
 }
 

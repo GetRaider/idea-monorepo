@@ -21,6 +21,7 @@ import {
   text,
   timestamp,
   uniqueIndex,
+  vector,
 } from "drizzle-orm/pg-core";
 
 import { users } from "./auth-schema";
@@ -514,9 +515,12 @@ export const executionQueue = pgTable(
   ],
 );
 
+export const agentSourceTypeEnum = pgEnum("agent_source_type", ["doc", "task"]);
+
 export const agentJobStatusEnum = pgEnum("agent_job_status", [
   "pending",
   "running",
+  "awaiting_confirmation",
   "completed",
   "failed",
 ]);
@@ -535,6 +539,7 @@ export const conversations = pgTable("conversations", {
   userId: text("user_id")
     .notNull()
     .references(() => users.id),
+  title: text("title"),
   createdAt: timestamp("created_at")
     .$defaultFn(() => new Date())
     .notNull(),
@@ -558,7 +563,10 @@ export const jobs = pgTable(
       .references(() => users.id),
     userMessageId: text("user_message_id").notNull(),
     status: agentJobStatusEnum("status").notNull(),
+    mode: text("mode").$type<AgentMode>().notNull().default("execute"),
     idempotencyKey: text("idempotency_key").notNull(),
+    pendingToolCalls: jsonb("pending_tool_calls").$type<PendingToolCall[] | null>(),
+    confirmationDecision: text("confirmation_decision").$type<ConfirmationDecision | null>(),
     errorCode: text("error_code"),
     errorMessage: text("error_message"),
     startedAt: timestamp("started_at"),
@@ -662,6 +670,75 @@ export const agentToolExecutions = pgTable(
   ],
 );
 
+export const agentDocuments = pgTable(
+  "agent_documents",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    sourceType: agentSourceTypeEnum("source_type").notNull(),
+    sourceId: text("source_id").notNull(),
+    title: text("title").notNull(),
+  },
+  (table) => [
+    uniqueIndex("agent_documents_source_unique").on(
+      table.workspaceId,
+      table.sourceType,
+      table.sourceId,
+    ),
+  ],
+);
+
+export const AGENT_CHUNK_EMBEDDING_DIMENSIONS = 768;
+
+export const agentChunks = pgTable(
+  "agent_chunks",
+  {
+    id: text("id").primaryKey(),
+    documentId: text("document_id")
+      .notNull()
+      .references(() => agentDocuments.id, { onDelete: "cascade" }),
+    position: integer("position").notNull(),
+    content: text("content").notNull(),
+    embedding: vector("embedding", {
+      dimensions: AGENT_CHUNK_EMBEDDING_DIMENSIONS,
+    }).notNull(),
+  },
+  (table) => [
+    uniqueIndex("agent_chunks_document_position_unique").on(
+      table.documentId,
+      table.position,
+    ),
+  ],
+);
+
+export const agentToolAllows = pgTable(
+  "agent_tool_allows",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id),
+    toolName: text("tool_name").notNull(),
+    argumentsJson: text("arguments_json").notNull(),
+    createdAt: timestamp("created_at")
+      .$defaultFn(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("agent_tool_allows_request_unique").on(
+      table.workspaceId,
+      table.userId,
+      table.toolName,
+      table.argumentsJson,
+    ),
+  ],
+);
+
 export const agentMemories = pgTable(
   "agent_memories",
   {
@@ -695,9 +772,20 @@ export const agentMemories = pgTable(
 export type ConversationRow = typeof conversations.$inferSelect;
 export type ConversationMessageRow = typeof conversationMessages.$inferSelect;
 export type JobRow = typeof jobs.$inferSelect;
+export type ConfirmationDecision = "approved" | "rejected";
+export type AgentMode = "execute" | "ask";
+
+export interface PendingToolCall {
+  id: string;
+  name: string;
+  arguments: unknown;
+}
 export type AgentRunRow = typeof agentRuns.$inferSelect;
 export type AgentToolExecutionRow = typeof agentToolExecutions.$inferSelect;
 export type AgentMemoryRow = typeof agentMemories.$inferSelect;
+export type AgentToolAllowRow = typeof agentToolAllows.$inferSelect;
+export type AgentDocumentRow = typeof agentDocuments.$inferSelect;
+export type AgentChunkRow = typeof agentChunks.$inferSelect;
 
 export type DocRow = typeof docs.$inferSelect;
 export type CalendarEventRow = typeof calendarEvents.$inferSelect;

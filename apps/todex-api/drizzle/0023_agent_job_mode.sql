@@ -1,0 +1,1 @@
+ALTER TABLE "jobs" ADD COLUMN "mode" text DEFAULT 'execute' NOT NULL;

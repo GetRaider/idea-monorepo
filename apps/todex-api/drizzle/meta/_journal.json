@@ -120,6 +120,62 @@
       "when": 1791404323955,
       "tag": "0016_execution_session_task_active",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1792160256047,
+      "tag": "0017_agent_conversations_jobs_runs",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1792704707810,
+      "tag": "0018_agent_memories",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1792706587362,
+      "tag": "0019_agent_chunks",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1792706839082,
+      "tag": "0020_agent_chunk_embeddings",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1792746045356,
+      "tag": "0021_agent_confirmation",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1792748601120,
+      "tag": "0022_agent_tool_allows",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1792753536517,
+      "tag": "0023_agent_job_mode",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1792756246256,
+      "tag": "0024_conversation_title",
+      "breakpoints": true
     }
   ]
 }

@@ -21,6 +21,7 @@ import {
   text,
   timestamp,
   uniqueIndex,
+  vector,
 } from "drizzle-orm/pg-core";
 
 import { users } from "./auth-schema";
@@ -513,6 +514,278 @@ export const executionQueue = pgTable(
     ),
   ],
 );
+
+export const agentSourceTypeEnum = pgEnum("agent_source_type", ["doc", "task"]);
+
+export const agentJobStatusEnum = pgEnum("agent_job_status", [
+  "pending",
+  "running",
+  "awaiting_confirmation",
+  "completed",
+  "failed",
+]);
+
+export const agentRunStatusEnum = pgEnum("agent_run_status", [
+  "running",
+  "completed",
+  "failed",
+]);
+
+export const conversations = pgTable("conversations", {
+  id: text("id").primaryKey(),
+  workspaceId: text("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id),
+  title: text("title"),
+  createdAt: timestamp("created_at")
+    .$defaultFn(() => new Date())
+    .notNull(),
+  updatedAt: timestamp("updated_at")
+    .$defaultFn(() => new Date())
+    .notNull(),
+});
+
+export const jobs = pgTable(
+  "jobs",
+  {
+    id: text("id").primaryKey(),
+    conversationId: text("conversation_id")
+      .notNull()
+      .references(() => conversations.id, { onDelete: "cascade" }),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id),
+    userMessageId: text("user_message_id").notNull(),
+    status: agentJobStatusEnum("status").notNull(),
+    mode: text("mode").$type<AgentMode>().notNull().default("execute"),
+    idempotencyKey: text("idempotency_key").notNull(),
+    pendingToolCalls: jsonb("pending_tool_calls").$type<PendingToolCall[] | null>(),
+    confirmationDecision: text("confirmation_decision").$type<ConfirmationDecision | null>(),
+    errorCode: text("error_code"),
+    errorMessage: text("error_message"),
+    startedAt: timestamp("started_at"),
+    finishedAt: timestamp("finished_at"),
+    createdAt: timestamp("created_at")
+      .$defaultFn(() => new Date())
+      .notNull(),
+    updatedAt: timestamp("updated_at")
+      .$defaultFn(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("jobs_conversation_idempotency_unique").on(
+      table.conversationId,
+      table.idempotencyKey,
+    ),
+  ],
+);
+
+export const agentRuns = pgTable(
+  "agent_runs",
+  {
+    id: text("id").primaryKey(),
+    jobId: text("job_id")
+      .notNull()
+      .references(() => jobs.id, { onDelete: "cascade" }),
+    attempt: integer("attempt").notNull(),
+    status: agentRunStatusEnum("status").notNull(),
+    model: text("model").notNull(),
+    outcomeText: text("outcome_text"),
+    promptTokens: integer("prompt_tokens").notNull().default(0),
+    completionTokens: integer("completion_tokens").notNull().default(0),
+    iterationCount: integer("iteration_count").notNull().default(0),
+    maxIterations: integer("max_iterations").notNull(),
+    maxDurationMs: integer("max_duration_ms").notNull(),
+    maxTokens: integer("max_tokens").notNull(),
+    errorCode: text("error_code"),
+    errorMessage: text("error_message"),
+    startedAt: timestamp("started_at")
+      .$defaultFn(() => new Date())
+      .notNull(),
+    finishedAt: timestamp("finished_at"),
+  },
+  (table) => [
+    uniqueIndex("agent_runs_job_attempt_unique").on(table.jobId, table.attempt),
+  ],
+);
+
+export const conversationMessages = pgTable(
+  "conversation_messages",
+  {
+    id: text("id").primaryKey(),
+    conversationId: text("conversation_id")
+      .notNull()
+      .references(() => conversations.id, { onDelete: "cascade" }),
+    jobId: text("job_id").references(() => jobs.id, { onDelete: "set null" }),
+    agentRunId: text("agent_run_id").references(() => agentRuns.id, {
+      onDelete: "set null",
+    }),
+    position: integer("position").notNull(),
+    role: text("role").notNull(),
+    content: text("content").notNull().default(""),
+    toolCalls: jsonb("tool_calls"),
+    toolCallId: text("tool_call_id"),
+    createdAt: timestamp("created_at")
+      .$defaultFn(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("conversation_messages_position_unique").on(
+      table.conversationId,
+      table.position,
+    ),
+  ],
+);
+
+export const agentToolExecutions = pgTable(
+  "agent_tool_executions",
+  {
+    id: text("id").primaryKey(),
+    jobId: text("job_id")
+      .notNull()
+      .references(() => jobs.id, { onDelete: "cascade" }),
+    agentRunId: text("agent_run_id")
+      .notNull()
+      .references(() => agentRuns.id, { onDelete: "cascade" }),
+    toolCallId: text("tool_call_id").notNull(),
+    toolName: text("tool_name").notNull(),
+    arguments: jsonb("arguments").notNull(),
+    status: text("status").notNull(),
+    result: jsonb("result").notNull(),
+    createdAt: timestamp("created_at")
+      .$defaultFn(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("agent_tool_executions_job_tool_call_unique").on(
+      table.jobId,
+      table.toolCallId,
+    ),
+  ],
+);
+
+export const agentDocuments = pgTable(
+  "agent_documents",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    sourceType: agentSourceTypeEnum("source_type").notNull(),
+    sourceId: text("source_id").notNull(),
+    title: text("title").notNull(),
+  },
+  (table) => [
+    uniqueIndex("agent_documents_source_unique").on(
+      table.workspaceId,
+      table.sourceType,
+      table.sourceId,
+    ),
+  ],
+);
+
+export const AGENT_CHUNK_EMBEDDING_DIMENSIONS = 768;
+
+export const agentChunks = pgTable(
+  "agent_chunks",
+  {
+    id: text("id").primaryKey(),
+    documentId: text("document_id")
+      .notNull()
+      .references(() => agentDocuments.id, { onDelete: "cascade" }),
+    position: integer("position").notNull(),
+    content: text("content").notNull(),
+    embedding: vector("embedding", {
+      dimensions: AGENT_CHUNK_EMBEDDING_DIMENSIONS,
+    }).notNull(),
+  },
+  (table) => [
+    uniqueIndex("agent_chunks_document_position_unique").on(
+      table.documentId,
+      table.position,
+    ),
+  ],
+);
+
+export const agentToolAllows = pgTable(
+  "agent_tool_allows",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id),
+    toolName: text("tool_name").notNull(),
+    argumentsJson: text("arguments_json").notNull(),
+    createdAt: timestamp("created_at")
+      .$defaultFn(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("agent_tool_allows_request_unique").on(
+      table.workspaceId,
+      table.userId,
+      table.toolName,
+      table.argumentsJson,
+    ),
+  ],
+);
+
+export const agentMemories = pgTable(
+  "agent_memories",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id),
+    conversationId: text("conversation_id").references(() => conversations.id, {
+      onDelete: "set null",
+    }),
+    content: text("content").notNull(),
+    createdAt: timestamp("created_at")
+      .$defaultFn(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("agent_memories_workspace_content_unique").on(
+      table.workspaceId,
+      table.content,
+    ),
+    index("agent_memories_workspace_created_idx").on(
+      table.workspaceId,
+      table.createdAt,
+    ),
+  ],
+);
+
+export type ConversationRow = typeof conversations.$inferSelect;
+export type ConversationMessageRow = typeof conversationMessages.$inferSelect;
+export type JobRow = typeof jobs.$inferSelect;
+export type ConfirmationDecision = "approved" | "rejected";
+export type AgentMode = "execute" | "ask";
+
+export interface PendingToolCall {
+  id: string;
+  name: string;
+  arguments: unknown;
+}
+export type AgentRunRow = typeof agentRuns.$inferSelect;
+export type AgentToolExecutionRow = typeof agentToolExecutions.$inferSelect;
+export type AgentMemoryRow = typeof agentMemories.$inferSelect;
+export type AgentToolAllowRow = typeof agentToolAllows.$inferSelect;
+export type AgentDocumentRow = typeof agentDocuments.$inferSelect;
+export type AgentChunkRow = typeof agentChunks.$inferSelect;
 
 export type DocRow = typeof docs.$inferSelect;
 export type CalendarEventRow = typeof calendarEvents.$inferSelect;

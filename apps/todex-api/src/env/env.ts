@@ -12,6 +12,21 @@ const envSchema = z.object({
   GOOGLE_CLIENT_SECRET: z.string().min(1),
   BETTER_AUTH_SECRET: z.string().min(1),
   DATABASE_URL: z.string().url(),
+  REDIS_URL: z.string().min(1).optional().default("redis://localhost:6379"),
+  AI_PROVIDER: z.enum(["local", "external"]).optional().default("local"),
+  AI_MODEL: z.string().min(1).optional().default("llama3.1:8b"),
+  AI_EMBEDDING_MODEL: z.string().min(1).optional().default("nomic-embed-text"),
+  AI_BASE_URL: z.string().url().optional(),
+  AI_API_KEY: z.string().optional(),
+  MCP_SERVER_URL: z.string().url().optional(),
+  AGENT_MAX_ITERATIONS: z.coerce.number().int().positive().optional().default(8),
+  AGENT_MAX_DURATION_MS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .optional()
+    .default(120_000),
+  AGENT_MAX_TOKENS: z.coerce.number().int().positive().optional().default(8000),
   NODE_ENV: z
     .enum(["development", "production", "test"])
     .optional()
@@ -19,6 +34,10 @@ const envSchema = z.object({
 });
 
 const parsedEnv = envSchema.parse(process.env);
+
+if (parsedEnv.AI_PROVIDER === "external" && !parsedEnv.AI_API_KEY) {
+  throw new Error("AI_API_KEY is required when AI_PROVIDER is external");
+}
 
 export const env = {
   nodeEnv: parsedEnv.NODE_ENV,
@@ -39,7 +58,29 @@ export const env = {
   db: {
     connectionString: parsedEnv.DATABASE_URL,
   },
+  redis: {
+    url: parsedEnv.REDIS_URL,
+  },
+  ai: {
+    provider: parsedEnv.AI_PROVIDER,
+    model: parsedEnv.AI_MODEL,
+    embeddingModel: parsedEnv.AI_EMBEDDING_MODEL,
+    baseUrl: resolveAiBaseUrl(parsedEnv),
+    apiKey: parsedEnv.AI_API_KEY,
+    mcpServerUrl: parsedEnv.MCP_SERVER_URL,
+  },
+  agent: {
+    maxIterations: parsedEnv.AGENT_MAX_ITERATIONS,
+    maxDurationMs: parsedEnv.AGENT_MAX_DURATION_MS,
+    maxTokens: parsedEnv.AGENT_MAX_TOKENS,
+  },
 };
+
+function resolveAiBaseUrl(parsed: z.infer<typeof envSchema>): string | undefined {
+  if (parsed.AI_BASE_URL) return parsed.AI_BASE_URL;
+  if (parsed.AI_PROVIDER === "local") return "http://localhost:11434/v1";
+  return undefined;
+}
 
 function loadEnvFile(): void {
   const nodeEnv = process.env.NODE_ENV || "development";

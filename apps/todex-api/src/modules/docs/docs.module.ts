@@ -8,5 +8,6 @@ import { DocsService } from "./docs.service";
   imports: [WorkspaceModule],
   controllers: [DocsController],
   providers: [DocsService],
+  exports: [DocsService],
 })
 export class DocsModule {}

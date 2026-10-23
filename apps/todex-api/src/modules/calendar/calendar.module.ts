@@ -22,5 +22,6 @@ import { GoogleCalendarService } from "./google-calendar.service";
     CalendarTemplatesService,
     GoogleCalendarService,
   ],
+  exports: [CalendarEventsService],
 })
 export class CalendarModule {}

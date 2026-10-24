@@ -39,17 +39,19 @@ export function AppFrame({ children }: { children: ReactNode }) {
           <ModuleSidebarProvider>
           <div className="flex h-screen flex-col overflow-hidden bg-background">
             <header className="flex h-12 shrink-0 items-center pr-2">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden">
-                {/* eslint-disable-next-line @next/next/no-img-element -- static logo; next/image flashes on navigation */}
-                <img
-                  src="/todex-logo.png"
-                  alt="Todex"
-                  width={48}
-                  height={48}
-                  decoding="sync"
-                  fetchPriority="high"
-                  className="h-12 w-12 origin-center scale-[1.2] object-cover"
-                />
+              <div className="flex w-12 shrink-0 items-center justify-center">
+                <div className="h-10 w-10 overflow-hidden">
+                  {/* eslint-disable-next-line @next/next/no-img-element -- static logo; next/image flashes on navigation */}
+                  <img
+                    src="/todex-uniform-logo.svg"
+                    alt="Todex"
+                    width={40}
+                    height={40}
+                    decoding="sync"
+                    fetchPriority="high"
+                    className="h-10 w-10 origin-center scale-[1.2] object-cover"
+                  />
+                </div>
               </div>
               <SidebarToggle />
               <div className="ml-auto flex min-w-0 items-center gap-2">

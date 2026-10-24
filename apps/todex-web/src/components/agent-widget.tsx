@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -53,10 +59,18 @@ export function AgentWidget() {
         aria-label={open ? "Close agent" : "Open agent"}
         aria-expanded={open}
         onClick={() => setOpen((current) => !current)}
-        className="pointer-events-auto flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl shadow-lg transition-transform hover:scale-105"
+        className="pointer-events-auto flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl bg-black shadow-lg transition-transform hover:scale-105"
       >
-        {/* eslint-disable-next-line @next/next/no-img-element -- same static mark as the header */}
-        <img src="/todex-logo.png" alt="" width={60} height={60} className="h-14 w-14 object-cover" />
+        <span className="block h-11 w-11 overflow-hidden">
+          {/* eslint-disable-next-line @next/next/no-img-element -- static agent mark */}
+          <img
+            src="/todex-ai-agent.svg"
+            alt=""
+            width={44}
+            height={44}
+            className="h-11 w-11 origin-center scale-[2.02] object-cover"
+          />
+        </span>
       </button>
     </div>
   );
@@ -78,10 +92,13 @@ function AgentConversationList({
     queryFn: () => todexClient.agent.conversations.list(),
   });
   const remove = useMutation({
-    mutationFn: (conversationId: string) => todexClient.agent.conversations.remove(conversationId),
+    mutationFn: (conversationId: string) =>
+      todexClient.agent.conversations.remove(conversationId),
     onSuccess: async () => {
       setConfirmId(null);
-      await queryClient.invalidateQueries({ queryKey: ["agent", "conversations"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["agent", "conversations"],
+      });
     },
     onError: (error) => toast.error(readError(error)),
   });
@@ -91,10 +108,14 @@ function AgentConversationList({
       <WidgetHeader title="Chats" />
       <div className="min-h-0 flex-1 overflow-y-auto p-2">
         {conversations.isLoading ? (
-          <p className="px-2 py-6 text-center text-sm text-muted-foreground">Loading chats…</p>
+          <p className="px-2 py-6 text-center text-sm text-muted-foreground">
+            Loading chats…
+          </p>
         ) : null}
         {conversations.isError ? (
-          <p className="px-2 py-6 text-center text-sm text-destructive">{readError(conversations.error)}</p>
+          <p className="px-2 py-6 text-center text-sm text-destructive">
+            {readError(conversations.error)}
+          </p>
         ) : null}
         {conversations.data?.length === 0 ? (
           <p className="px-2 py-6 text-center text-sm text-muted-foreground">
@@ -111,7 +132,9 @@ function AgentConversationList({
                   className="min-w-0 flex-1 px-2 py-2 text-left"
                 >
                   <span className="block truncate text-sm">
-                    {conversationTitle(conversation.title ?? conversation.preview)}
+                    {conversationTitle(
+                      conversation.title ?? conversation.preview,
+                    )}
                   </span>
                   <span className="block text-xs text-muted-foreground">
                     {formatWhen(conversation.updatedAt)}
@@ -191,13 +214,19 @@ function AgentThread({
       return todexClient.agent.jobs.confirm(jobId, decision);
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["agent", "job", jobId] });
+      await queryClient.invalidateQueries({
+        queryKey: ["agent", "job", jobId],
+      });
     },
     onError: (error) => toast.error(readError(error)),
   });
   const postMessage = useMutation({
     mutationFn: (input: { message: string; mode: "execute" | "ask" }) =>
-      todexClient.agent.conversations.postMessage(conversationId, input.message, input.mode),
+      todexClient.agent.conversations.postMessage(
+        conversationId,
+        input.message,
+        input.mode,
+      ),
     onSuccess: async (accepted) => {
       setDraft("");
       setJobId(accepted.jobId);
@@ -210,13 +239,19 @@ function AgentThread({
 
   useEffect(() => {
     if (!activeJobId) return;
-    if (jobStatus !== "completed" && jobStatus !== "failed" && jobStatus !== "awaiting_confirmation") {
+    if (
+      jobStatus !== "completed" &&
+      jobStatus !== "failed" &&
+      jobStatus !== "awaiting_confirmation"
+    ) {
       return;
     }
     void queryClient.invalidateQueries({
       queryKey: ["agent", "conversation", conversationId],
     });
-    void queryClient.invalidateQueries({ queryKey: ["agent", "conversations"] });
+    void queryClient.invalidateQueries({
+      queryKey: ["agent", "conversations"],
+    });
     if (jobStatus === "awaiting_confirmation") return;
     if (jobStatus === "completed") {
       void queryClient.invalidateQueries({ queryKey: ["tasks"] });
@@ -239,7 +274,8 @@ function AgentThread({
 
   const title = conversationTitle(
     conversation.data?.title ??
-      conversation.data?.messages.find((message) => message.role === "user")?.content,
+      conversation.data?.messages.find((message) => message.role === "user")
+        ?.content,
   );
 
   return (
@@ -258,9 +294,14 @@ function AgentThread({
           </button>
         }
       />
-      <div ref={scrollerRef} className="min-h-0 flex-1 space-y-3 overflow-y-auto px-3 py-3">
+      <div
+        ref={scrollerRef}
+        className="min-h-0 flex-1 space-y-3 overflow-y-auto px-3 py-3"
+      >
         {conversation.isLoading ? (
-          <p className="py-6 text-center text-sm text-muted-foreground">Loading…</p>
+          <p className="py-6 text-center text-sm text-muted-foreground">
+            Loading…
+          </p>
         ) : null}
         {conversation.data?.messages.length === 0 ? (
           <p className="py-6 text-center text-sm text-muted-foreground">
@@ -315,7 +356,9 @@ function AgentThread({
         ) : null}
         {job.data?.status === "failed" ? (
           <p className="text-sm text-destructive">
-            {job.data.errorMessage ?? job.data.run?.errorMessage ?? "The run failed."}
+            {job.data.errorMessage ??
+              job.data.run?.errorMessage ??
+              "The run failed."}
           </p>
         ) : null}
       </div>
@@ -344,14 +387,22 @@ function AgentThread({
                 onClick={() => setMode(option)}
                 className={cn(
                   "rounded px-2 py-1 disabled:opacity-50",
-                  mode === option ? "bg-white text-neutral-950" : "text-muted-foreground",
+                  mode === option
+                    ? "bg-white text-neutral-950"
+                    : "text-muted-foreground",
                 )}
               >
                 {option === "execute" ? "Execute" : "Ask"}
               </button>
             ))}
           </div>
-          <Button type="submit" size="sm" disabled={postMessage.isPending || working || awaiting || !draft.trim()}>
+          <Button
+            type="submit"
+            size="sm"
+            disabled={
+              postMessage.isPending || working || awaiting || !draft.trim()
+            }
+          >
             Send
           </Button>
         </div>
@@ -392,21 +443,34 @@ function WidgetHeader({
 function AgentMessage({ message }: { message: AgentMessageView }) {
   if (message.role === "tool") return null;
   const names = toolNames(message.toolCalls);
-  if (message.role !== "user" && !message.content.trim() && names.length === 0) return null;
+  if (message.role !== "user" && !message.content.trim() && names.length === 0)
+    return null;
 
   return (
-    <div className={cn("flex", message.role === "user" ? "justify-end" : "justify-start")}>
+    <div
+      className={cn(
+        "flex",
+        message.role === "user" ? "justify-end" : "justify-start",
+      )}
+    >
       <div
         className={cn(
           "max-w-[85%] rounded-2xl px-3 py-2 text-sm",
-          message.role === "user" ? "bg-white text-neutral-950" : "bg-surface text-foreground",
+          message.role === "user"
+            ? "bg-white text-neutral-950"
+            : "bg-surface text-foreground",
         )}
       >
         {message.content.trim() ? (
           <p className="whitespace-pre-wrap break-words">{message.content}</p>
         ) : null}
         {names.length > 0 ? (
-          <p className={cn("text-xs text-muted-foreground", message.content.trim() && "mt-1")}>
+          <p
+            className={cn(
+              "text-xs text-muted-foreground",
+              message.content.trim() && "mt-1",
+            )}
+          >
             {names.join(", ")}
           </p>
         ) : null}
@@ -420,7 +484,9 @@ function useCreateConversation(onCreated: (conversationId: string) => void) {
   return useMutation({
     mutationFn: () => todexClient.agent.conversations.create(),
     onSuccess: async (created) => {
-      await queryClient.invalidateQueries({ queryKey: ["agent", "conversations"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["agent", "conversations"],
+      });
       onCreated(created.id);
     },
     onError: (error) => toast.error(readError(error)),
@@ -458,7 +524,13 @@ function readError(error: unknown) {
 
 function BackIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.75">
+    <svg
+      viewBox="0 0 24 24"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+    >
       <path d="M15 6 9 12l6 6" />
     </svg>
   );
@@ -466,7 +538,13 @@ function BackIcon() {
 
 function TrashIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.75">
+    <svg
+      viewBox="0 0 24 24"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+    >
       <path d="M5 7h14M9 7V5h6v2M8 7l1 12h6l1-12" />
     </svg>
   );

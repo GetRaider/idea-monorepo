@@ -53,10 +53,10 @@ export function AgentWidget() {
         aria-label={open ? "Close agent" : "Open agent"}
         aria-expanded={open}
         onClick={() => setOpen((current) => !current)}
-        className="pointer-events-auto flex h-14 w-14 items-center justify-center rounded-full bg-white shadow-lg ring-1 ring-black/10 transition-transform hover:scale-105"
+        className="pointer-events-auto flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl shadow-lg transition-transform hover:scale-105"
       >
         {/* eslint-disable-next-line @next/next/no-img-element -- same static mark as the header */}
-        <img src="/logo.svg" alt="" width={40} height={40} className="h-10 w-10" />
+        <img src="/todex-logo.png" alt="" width={60} height={60} className="h-14 w-14 object-cover" />
       </button>
     </div>
   );

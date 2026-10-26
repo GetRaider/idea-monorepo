@@ -14,6 +14,22 @@ export function OverviewIcon(props: IconProps) {
   );
 }
 
+export function PlanningIcon(props: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      {...iconSvgProps(props)}
+    >
+      <rect x="4" y="4" width="6" height="6" rx="1.5" />
+      <rect x="4" y="14" width="6" height="6" rx="1.5" />
+      <path d="M13 6h7M13 9h7M13 15h7M13 18h7" />
+    </svg>
+  );
+}
+
 export function TasksIcon(props: IconProps) {
   return (
     <svg
@@ -55,6 +71,37 @@ export function ExecutionIcon(props: IconProps) {
     >
       <circle cx="12" cy="12" r="8" />
       <path d="M10.5 9v6l5-3-5-3z" />
+    </svg>
+  );
+}
+
+export function KnowledgeIcon(props: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      {...iconSvgProps(props)}
+    >
+      <path d="M12 7v14" />
+      <path d="M4 18.5A1.5 1.5 0 0 1 2.5 17V5A1.5 1.5 0 0 1 4 3.5h5A3.5 3.5 0 0 1 12.5 7 3.5 3.5 0 0 1 16 3.5h4A1.5 1.5 0 0 1 21.5 5v12a1.5 1.5 0 0 1-1.5 1.5h-5A2.5 2.5 0 0 0 12 21a2.5 2.5 0 0 0-3-2.5H4z" />
+    </svg>
+  );
+}
+
+export function GoalIcon(props: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      {...iconSvgProps(props)}
+    >
+      <circle cx="12" cy="12" r="8" />
+      <circle cx="12" cy="12" r="4.5" />
+      <circle cx="12" cy="12" r="1.25" fill="currentColor" stroke="none" />
     </svg>
   );
 }

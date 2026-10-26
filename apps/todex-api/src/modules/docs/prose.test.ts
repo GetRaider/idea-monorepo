@@ -5,8 +5,10 @@ import {
   DocMentionTarget,
   DocType,
   GoalDocBodySchema,
+  GoalStatus,
   collectMentions,
   projectProse,
+  readGoalDocBody,
 } from "@repo/api/todex";
 import type { DocMentionRef, ProseDoc } from "@repo/api/todex";
 
@@ -60,9 +62,41 @@ describe("doc bodies", () => {
         why: emptyDoc(),
         successCriteria: [],
         preconditions: [],
+        status: GoalStatus.ACTIVE,
+        deadline: null,
         notes: "nope",
       }).success,
     ).toBe(false);
+  });
+
+  it("reads legacy goals and drops invalid status or deadline", () => {
+    expect(
+      readGoalDocBody({
+        why: emptyDoc(),
+        successCriteria: [],
+        preconditions: [],
+      }),
+    ).toMatchObject({ status: GoalStatus.ACTIVE, deadline: null });
+
+    expect(
+      readGoalDocBody({
+        why: emptyDoc(),
+        successCriteria: [],
+        preconditions: [],
+        status: "later",
+        deadline: "next week",
+      }),
+    ).toMatchObject({ status: GoalStatus.ACTIVE, deadline: null });
+
+    expect(
+      readGoalDocBody({
+        why: emptyDoc(),
+        successCriteria: [],
+        preconditions: [],
+        status: GoalStatus.PAUSED,
+        deadline: "2026-12-01",
+      }),
+    ).toMatchObject({ status: GoalStatus.PAUSED, deadline: "2026-12-01" });
   });
 });
 

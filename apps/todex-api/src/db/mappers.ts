@@ -114,8 +114,11 @@ export function mapSpaceProgressStage(
   };
 }
 
-export function mapDocSummary(row: DocSummaryRow): DocSummary {
-  return {
+export function mapDocSummary(
+  row: DocSummaryRow,
+  progressPercent: number | null = null,
+): DocSummary {
+  const summary = {
     id: row.id,
     workspaceId: row.workspaceId,
     folderId: row.folderId,
@@ -124,6 +127,21 @@ export function mapDocSummary(row: DocSummaryRow): DocSummary {
     title: row.title,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
+  };
+  if (row.type !== DocType.GOAL) {
+    return {
+      ...summary,
+      goalStatus: null,
+      goalDeadline: null,
+      progressPercent: null,
+    };
+  }
+  const body = readGoalDocBody(row.body);
+  return {
+    ...summary,
+    goalStatus: body.status,
+    goalDeadline: body.deadline,
+    progressPercent: progressPercent ?? 0,
   };
 }
 
@@ -255,6 +273,7 @@ interface DocSummaryRow {
   type: DocRow["type"];
   docKey: string;
   title: string;
+  body: unknown;
   createdAt: Date;
   updatedAt: Date;
 }

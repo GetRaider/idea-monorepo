@@ -5,7 +5,7 @@ import {
   type Task,
 } from "@repo/api/todex";
 
-import { isMidnightSchedule } from "../tasks/task-helpers";
+import { isMidnightSchedule } from "../planning/task-helpers";
 
 const DEFAULT_TASK_MINUTES = 30;
 

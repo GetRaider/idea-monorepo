@@ -13,13 +13,16 @@ export default function DocsPage() {
     state: { docs, search, isLoading },
   } = useDocs();
   const [access, setAccess] = useState<QuickAccess | null>(null);
-  const visibleDocs = filterDocs(docs, search);
+  const visibleDocs = filterDocs(
+    docs.filter((doc) => doc.type === DocType.COMMON),
+    search,
+  );
   const activeAccess = QUICK_ACCESS.find((item) => item.id === access) ?? null;
   const recentDocs = visibleDocs.slice(0, RECENT_LIMIT);
 
   return (
     <section className={docsSectionClassName()}>
-      <DocsCanvasHeader crumbs={[{ label: "Docs" }]} />
+      <DocsCanvasHeader crumbs={[{ label: "Knowledge" }]} />
       {isLoading ? (
         <Spinner className="flex-1" />
       ) : (
@@ -30,7 +33,9 @@ export default function DocsPage() {
             </h2>
             <div className="grid grid-cols-[repeat(auto-fit,minmax(9.5rem,1fr))] gap-2">
               {QUICK_ACCESS.map((item) => {
-                const count = visibleDocs.filter((doc) => item.match(doc)).length;
+                const count = visibleDocs.filter((doc) =>
+                  item.match(doc),
+                ).length;
                 const selected = access === item.id;
                 return (
                   <button
@@ -42,7 +47,9 @@ export default function DocsPage() {
                       selected && "bg-surface",
                     )}
                     onClick={() =>
-                      setAccess((current) => (current === item.id ? null : item.id))
+                      setAccess((current) =>
+                        current === item.id ? null : item.id,
+                      )
                     }
                   >
                     <span className="w-full truncate text-sm font-medium">
@@ -92,12 +99,6 @@ const RECENT_LIMIT = 8;
 
 const QUICK_ACCESS: QuickAccessItem[] = [
   {
-    id: "goals",
-    label: "Goals",
-    emptyLabel: "No goals yet.",
-    match: (doc) => doc.type === DocType.GOAL,
-  },
-  {
     id: "general",
     label: "General",
     emptyLabel: "No docs yet.",
@@ -105,7 +106,7 @@ const QUICK_ACCESS: QuickAccessItem[] = [
   },
 ];
 
-type QuickAccess = "goals" | "general";
+type QuickAccess = "general";
 
 interface QuickAccessItem {
   id: QuickAccess;

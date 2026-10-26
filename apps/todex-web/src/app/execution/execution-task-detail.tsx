@@ -7,7 +7,7 @@ import type { ExecutionCurrent } from "@repo/api/todex";
 
 import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
 import { formatDuration } from "./execution-time";
-import { STATUS_LABEL } from "../tasks/task-helpers";
+import { STATUS_LABEL } from "../planning/task-helpers";
 
 export function ExecutionTaskDetail({ task }: { task: ExecutionCurrent }) {
   const taskHref = tasksUrlHelper.routing.buildBoardUrl(
@@ -26,7 +26,7 @@ export function ExecutionTaskDetail({ task }: { task: ExecutionCurrent }) {
           label="Goal"
           value={
             task.goal ? (
-              <Link href={`/docs/${task.goal.id}`} className="hover:underline">
+              <Link href={`/planning/goals/${task.goal.id}`} className="hover:underline">
                 {task.goal.title}
               </Link>
             ) : (

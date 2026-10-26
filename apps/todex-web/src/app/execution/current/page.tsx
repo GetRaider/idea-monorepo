@@ -7,7 +7,7 @@ import type { ExecutionCurrent } from "@repo/api/todex";
 import { Button, Spinner, cn } from "@repo/ui";
 
 import { todexClient } from "@lib/todex-client";
-import { applyTaskSelection, isToggleClick } from "../../tasks/task-selection";
+import { applyTaskSelection, isToggleClick } from "../../planning/task-selection";
 import { useExecution } from "../execution-provider";
 import { ExecutionQueueList } from "../execution-queue-list";
 import { ExecutionCanvas } from "../execution-sidebar";
@@ -18,7 +18,7 @@ import {
   formatClock,
   formatDuration,
 } from "../execution-time";
-import { STATUS_LABEL } from "../../tasks/task-helpers";
+import { STATUS_LABEL } from "../../planning/task-helpers";
 
 export default function CurrentExecutionPage() {
   const {

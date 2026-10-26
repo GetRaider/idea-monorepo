@@ -5,7 +5,7 @@ export const OVERVIEW_CHAPTERS = [
   { id: "continue-work", label: "Continue Work" },
   { id: "upcoming", label: "Upcoming" },
   { id: "needs-organizing", label: "Needs Organizing" },
-  { id: "recent-docs", label: "Recent Docs" },
+  { id: "recent-docs", label: "Knowledge" },
 ] as const;
 
 export type OverviewChapterId = (typeof OVERVIEW_CHAPTERS)[number]["id"];

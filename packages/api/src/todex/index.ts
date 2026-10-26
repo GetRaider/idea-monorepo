@@ -3,6 +3,7 @@ export {
   DocMentionTarget,
   DocType,
   FolderKind,
+  GoalStatus,
   PROGRESS_STAGE_TEMPLATES,
   ProgressStageTemplate,
   TaskPriority,

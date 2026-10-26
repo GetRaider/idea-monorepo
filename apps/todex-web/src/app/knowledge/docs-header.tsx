@@ -2,13 +2,7 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
-import {
-  Button,
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@repo/ui";
+import { Button, cn } from "@repo/ui";
 import { DocType } from "@repo/api/todex";
 
 import { PlusIcon } from "@components/icons";
@@ -34,9 +28,9 @@ export function DocsCanvasHeader({
   } = useDocs();
 
   return (
-    <div className="mb-6 flex items-start justify-between gap-4">
-      <DocsBreadcrumb crumbs={crumbs} />
-      <div className="flex min-w-0 items-center gap-2">
+    <div className="mb-6 flex flex-col gap-4">
+      <DocsBreadcrumb className="w-full flex-none" crumbs={crumbs} />
+      <div className="flex items-center justify-end gap-2">
         {showSearch ? (
           <input
             value={search}
@@ -47,26 +41,13 @@ export function DocsCanvasHeader({
           />
         ) : null}
         {showNew ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button size="sm">
-                <PlusIcon size={16} />
-                New
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                onSelect={() => void createDoc(DocType.COMMON, folderId)}
-              >
-                New doc
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onSelect={() => void createDoc(DocType.GOAL, folderId)}
-              >
-                New goal
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <Button
+            size="sm"
+            onClick={() => void createDoc(DocType.COMMON, folderId)}
+          >
+            <PlusIcon size={16} />
+            New
+          </Button>
         ) : null}
         {trailing}
       </div>
@@ -74,13 +55,24 @@ export function DocsCanvasHeader({
   );
 }
 
-export function DocsBreadcrumb({ crumbs }: { crumbs: DocsCrumb[] }) {
+export function DocsBreadcrumb({
+  crumbs,
+  className,
+}: {
+  crumbs: DocsCrumb[];
+  className?: string;
+}) {
   return (
-    <div className="flex min-w-0 flex-1 items-center gap-3 text-2xl font-semibold tracking-tight">
+    <div
+      className={cn(
+        "flex min-w-0 items-center gap-3 text-2xl font-semibold tracking-tight",
+        className,
+      )}
+    >
       {crumbs.map((crumb, index) => (
         <span
           key={`${crumb.label}-${index}`}
-          className="flex min-w-0 items-center gap-3"
+          className="flex shrink-0 items-center gap-3"
         >
           {index > 0 ? (
             <span className="shrink-0 text-muted-foreground">›</span>

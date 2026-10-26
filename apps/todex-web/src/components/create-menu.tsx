@@ -38,14 +38,14 @@ import {
   fromInputValue,
   toInputValue,
 } from "../app/calendar/calendar-datetime";
-import { PriorityGlyph, StatusGlyph } from "../app/tasks/task-board.ui";
-import { DatePicker, EstimatePicker } from "../app/tasks/task-pickers";
+import { PriorityGlyph, StatusGlyph } from "../app/planning/task-board.ui";
+import { DatePicker, EstimatePicker } from "../app/planning/task-pickers";
 import {
   INBOX_BOARD_NAME,
   STATUS_LABEL,
   STATUS_ORDER,
   dateInputToScheduleIso,
-} from "../app/tasks/task-helpers";
+} from "../app/planning/task-helpers";
 
 import { ChevronIcon, PlusIcon } from "./icons";
 
@@ -165,11 +165,24 @@ function CreatePalette({ onClose }: { onClose: () => void }) {
       router.push(
         board
           ? tasksUrlHelper.routing.buildBoardUrl(board.name, task.taskKey)
-          : "/tasks",
+          : "/planning",
       );
       onClose();
     },
     onError: () => toast.error("Could not create the task"),
+  });
+  const createGoal = useMutation({
+    mutationFn: () =>
+      todexClient.docs.create({
+        type: DocType.GOAL,
+        title: name.trim(),
+      }),
+    onSuccess: async (goal) => {
+      await queryClient.invalidateQueries({ queryKey: ["docs"] });
+      router.push(`/planning/goals/${goal.id}`);
+      onClose();
+    },
+    onError: () => toast.error("Could not create the goal"),
   });
   const createDoc = useMutation({
     mutationFn: () =>
@@ -180,7 +193,7 @@ function CreatePalette({ onClose }: { onClose: () => void }) {
       }),
     onSuccess: async (doc) => {
       await queryClient.invalidateQueries({ queryKey: ["docs"] });
-      router.push(`/docs/${doc.id}`);
+      router.push(`/knowledge/${doc.id}`);
       onClose();
     },
     onError: () => toast.error("Could not create the doc"),
@@ -225,6 +238,7 @@ function CreatePalette({ onClose }: { onClose: () => void }) {
   });
   const pending =
     createTask.isPending ||
+    createGoal.isPending ||
     createDoc.isPending ||
     createEvent.isPending ||
     createEpic.isPending;
@@ -244,6 +258,11 @@ function CreatePalette({ onClose }: { onClose: () => void }) {
       setEstimationError(null);
       if (!name.trim() || !resolvedBoardId) return;
       createTask.mutate(estimation);
+      return;
+    }
+    if (kind === "goal") {
+      if (!name.trim()) return;
+      createGoal.mutate();
       return;
     }
     if (kind === "doc") {
@@ -327,7 +346,7 @@ function CreatePalette({ onClose }: { onClose: () => void }) {
             </Button>
           </div>
         </div>
-        {kind === "doc" ? null : (
+        {kind === "doc" || kind === "goal" ? null : (
           <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-border px-4 py-3">
             {kind === "task" || kind === "epic" ? (
               <PropertyMenu label={boardLabel} menuLabel="Space">
@@ -523,7 +542,7 @@ function createReady(
       input.name.trim() && input.resolvedBoardId && !input.boardsLoading,
     );
   }
-  if (kind === "doc") return Boolean(input.name.trim());
+  if (kind === "doc" || kind === "goal") return Boolean(input.name.trim());
   return Boolean(input.name.trim()) && !input.eventRangeInvalid;
 }
 
@@ -547,6 +566,7 @@ function nextHalfHour(now: Date) {
 
 const KINDS = [
   { id: "task", label: "Task" },
+  { id: "goal", label: "Goal" },
   { id: "doc", label: "Doc" },
   { id: "event", label: "Event" },
   { id: "epic", label: "Epic" },
@@ -554,6 +574,7 @@ const KINDS = [
 
 const PLACEHOLDERS: Record<CreateKind, string> = {
   task: "Task name",
+  goal: "Goal title",
   doc: "Doc title",
   event: "Event name",
   epic: "Epic name",

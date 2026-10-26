@@ -1,5 +1,10 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
-import { DocType, FolderKind, type ProseDoc } from "@repo/api/todex";
+import {
+  DocType,
+  FolderKind,
+  emptyGoalDocBody,
+  type ProseDoc,
+} from "@repo/api/todex";
 import { z } from "zod";
 
 import { DocsService } from "../../docs/docs.service";
@@ -39,7 +44,8 @@ export class DocToolHandler {
       {
         name: "list_docs",
         access: "read",
-        description: "List docs in the current workspace. Goals are docs with type goal.",
+        description:
+          "List docs in the current workspace. Goals are Planning goals stored with type goal, not Knowledge docs.",
         parameters: z
           .object({
             type: docTypeSchema.optional(),
@@ -65,7 +71,7 @@ export class DocToolHandler {
         name: "create_doc",
         access: "write",
         description:
-          "Create a common doc or a goal in the current workspace. content is plain text. To file it, pass folderName of a docs folder or folderId from list_folders. Do not put the folder name in the title.",
+          "Create a Knowledge doc (type common) or a Planning goal (type goal) in the current workspace. content is plain text. To file a doc, pass folderName of a docs folder or folderId from list_folders. Do not put the folder name in the title.",
         parameters: z
           .object({
             type: docTypeSchema,
@@ -112,9 +118,8 @@ export class DocToolHandler {
             ...(body.content !== undefined
               ? {
                   body: {
+                    ...emptyGoalDocBody(),
                     why: proseFromText(body.content),
-                    successCriteria: [],
-                    preconditions: [],
                   },
                 }
               : {}),
@@ -125,7 +130,7 @@ export class DocToolHandler {
         name: "update_doc",
         access: "write",
         description:
-          "Update a doc in the current workspace. content replaces the common doc text or a goal's why. Move it with folderName or a docs folderId from list_folders. folderId null removes it from its folder.",
+          "Update a Knowledge doc or Planning goal in the current workspace. content replaces the doc text or a goal's description. Move a doc with folderName or a docs folderId from list_folders. folderId null removes it from its folder.",
         parameters: z
           .object({
             docId: z.string().min(1),
@@ -202,7 +207,9 @@ export class DocToolHandler {
     const byId = docsFolders.find((folder) => folder.id === requested);
     if (byId) return byId.id;
 
-    const matches = docsFolders.filter((folder) => sameFolderName(folder.name, requested));
+    const matches = docsFolders.filter((folder) =>
+      sameFolderName(folder.name, requested),
+    );
     if (matches.length === 1) return matches[0].id;
     if (matches.length > 1) {
       throw new BadRequestException(
@@ -210,7 +217,8 @@ export class DocToolHandler {
       );
     }
 
-    const names = docsFolders.map((folder) => folder.name).join(", ") || "(none)";
+    const names =
+      docsFolders.map((folder) => folder.name).join(", ") || "(none)";
     throw new BadRequestException(
       `No docs folder named "${requested}". Docs folders: ${names}`,
     );
@@ -226,7 +234,9 @@ function proseFromText(text: string): ProseDoc {
   if (!trimmed) return { type: "doc", content: [] };
   return {
     type: "doc",
-    content: [{ type: "paragraph", content: [{ type: "text", text: trimmed }] }],
+    content: [
+      { type: "paragraph", content: [{ type: "text", text: trimmed }] },
+    ],
   };
 }
 

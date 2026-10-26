@@ -4,7 +4,7 @@ import { formatEstimation } from "@repo/api/todex";
 import type { ExecutionQueueItem } from "@repo/api/todex";
 import { cn } from "@repo/ui";
 
-import { STATUS_LABEL } from "../tasks/task-helpers";
+import { STATUS_LABEL } from "../planning/task-helpers";
 
 const PRIORITY_MARK = {
   low: "🔵",

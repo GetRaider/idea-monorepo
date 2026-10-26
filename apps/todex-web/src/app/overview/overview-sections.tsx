@@ -3,7 +3,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { TaskStatus, type Task } from "@repo/api/todex";
+import { DocType, TaskStatus, type Task } from "@repo/api/todex";
 import { Checkbox, Spinner, buttonVariants, cn } from "@repo/ui";
 import { toast } from "sonner";
 
@@ -13,12 +13,12 @@ import { todexClient } from "@lib/todex-client";
 import { eventBlocks, type CalendarBlock } from "../calendar/calendar-blocks";
 import { useExecution } from "../execution/execution-provider";
 import { formatClock, formatDuration } from "../execution/execution-time";
-import { docTypeLabel } from "../docs/doc-collection";
+import { docTypeLabel } from "../knowledge/doc-collection";
 import {
   isoToLocalTimeInput,
   localDayScheduleQuery,
   statusAfterDoneToggle,
-} from "../tasks/task-helpers";
+} from "../planning/task-helpers";
 import { OVERVIEW_CHAPTERS } from "./overview-chapters";
 import {
   ORGANIZING_PREVIEW_LIMIT,
@@ -306,14 +306,16 @@ function RecentDocsSection() {
     queryKey: ["docs"],
     queryFn: () => todexClient.docs.list(),
   });
-  const docs = (docsQuery.data ?? []).slice(0, RECENT_DOCS_LIMIT);
+  const docs = (docsQuery.data ?? [])
+    .filter((doc) => doc.type === DocType.COMMON)
+    .slice(0, RECENT_DOCS_LIMIT);
 
   return (
-    <Section id={OVERVIEW_CHAPTERS[4].id} title="Recent Docs">
+    <Section id={OVERVIEW_CHAPTERS[4].id} title="Knowledge">
       <div className="px-4 py-3">
         <div className="mb-2 flex items-center justify-end">
           <Link
-            href="/docs"
+            href="/knowledge"
             className="text-xs text-muted-foreground hover:text-foreground"
           >
             Open
@@ -329,7 +331,7 @@ function RecentDocsSection() {
             {docs.map((doc) => (
               <li key={doc.id}>
                 <Link
-                  href={`/docs/${doc.id}`}
+                  href={`/knowledge/${doc.id}`}
                   className="flex items-center gap-3 py-1.5 text-sm hover:text-foreground"
                 >
                   <span className="font-mono text-xs text-muted-foreground">

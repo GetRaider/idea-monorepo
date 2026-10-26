@@ -84,7 +84,7 @@ export function applyMentionEntry(
 
 export function mentionHref(input: MentionHrefInput): string | null {
   if (input.targetType === DocMentionTarget.DOC) {
-    return `/docs/${input.targetId}`;
+    return `/knowledge/${input.targetId}`;
   }
   if (input.targetType === DocMentionTarget.EVENT) {
     return `/calendar/events/${input.targetId}`;
@@ -135,7 +135,7 @@ function targetEntry(candidate: MentionCandidate): MentionMenuEntry {
 
 const MENTION_SCOPES = [
   { token: "tasks", targetType: DocMentionTarget.TASK, label: "Tasks" },
-  { token: "docs", targetType: DocMentionTarget.DOC, label: "Docs" },
+  { token: "docs", targetType: DocMentionTarget.DOC, label: "Knowledge" },
   { token: "events", targetType: DocMentionTarget.EVENT, label: "Events" },
 ] as const;
 

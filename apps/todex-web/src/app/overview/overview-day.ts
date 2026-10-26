@@ -5,7 +5,7 @@ import {
   INBOX_BOARD_NAME,
   isClosedStatus,
   isUnscheduledTask,
-} from "../tasks/task-helpers";
+} from "../planning/task-helpers";
 
 export function upcomingBounds(today: Date): DayRange {
   const start = startOfLocalDay(today);

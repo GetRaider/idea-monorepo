@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   DndContext,
   DragOverlay,
@@ -42,6 +43,7 @@ import {
   ClockIcon,
   EllipsisIcon,
   FolderIcon,
+  GoalIcon,
   PlusIcon,
 } from "@components/icons";
 import { ResizeHandle } from "@components/resize-handle";
@@ -71,6 +73,7 @@ export function TasksModuleSidebar() {
     actions: { openCreateDialog, updateBoard },
   } = useTasks();
   const { open: isOpen } = useModuleSidebar();
+  const pathname = usePathname() ?? "";
   const [width, setWidth] = useState(TASKS_SIDEBAR_DEFAULT_WIDTH);
   const sensors = useSensors(
     useSensor(SpacePointerSensor, { activationConstraint: { distance: 8 } }),
@@ -108,7 +111,7 @@ export function TasksModuleSidebar() {
       />
       <div className="flex min-h-0 flex-1 flex-col px-3 pb-3 pt-3">
         <section className="mb-4 w-full">
-          <h2 className="mb-2 px-2 text-sm text-muted-foreground">Views</h2>
+          <h2 className="mb-2 px-2 text-sm text-muted-foreground">Lists</h2>
           {inboxBoard ? (
             <NavRow
               href={tasksUrlHelper.routing.buildBoardUrl(inboxBoard.name)}
@@ -128,6 +131,15 @@ export function TasksModuleSidebar() {
             active={view.kind === "schedule" && view.schedule === "tomorrow"}
             icon={<CalendarIcon size={16} />}
             label="Tomorrow"
+          />
+          <NavRow
+            href="/planning/goals"
+            active={
+              pathname === "/planning/goals" ||
+              pathname.startsWith("/planning/goals/")
+            }
+            icon={<GoalIcon size={16} />}
+            label="Goals"
           />
         </section>
         <section className="flex min-h-0 w-full flex-1 flex-col overflow-auto">

@@ -15,14 +15,14 @@ const candidates: MentionCandidate[] = [
     id: "task-1",
     label: "Ship the editor",
     hint: "TDX-4",
-    href: "/tasks/space/Inbox/TDX-4",
+    href: "/planning/space/Inbox/TDX-4",
   },
   {
     targetType: DocMentionTarget.DOC,
     id: "doc-1",
     label: "Launch goal",
     hint: "Goal",
-    href: "/docs/doc-1",
+    href: "/knowledge/doc-1",
   },
 ];
 
@@ -53,7 +53,7 @@ describe("mentionMenuItems", () => {
       mentionMenuItems(candidates, "do").map((item) =>
         item.kind === "scope" ? item.label : item.id,
       ),
-    ).toEqual(["Docs"]);
+    ).toEqual(["Knowledge"]);
   });
 
   it("lists tasks after @tasks", () => {
@@ -65,7 +65,7 @@ describe("mentionMenuItems", () => {
         id: "task-1",
         label: "Ship the editor",
         hint: "TDX-4",
-        href: "/tasks/space/Inbox/TDX-4",
+        href: "/planning/space/Inbox/TDX-4",
       },
     ]);
   });
@@ -90,7 +90,7 @@ describe("mentionHref", () => {
   it("builds doc, task, and event paths", () => {
     expect(
       mentionHref({ targetType: DocMentionTarget.DOC, targetId: "doc-1" }),
-    ).toBe("/docs/doc-1");
+    ).toBe("/knowledge/doc-1");
     expect(
       mentionHref({
         targetType: DocMentionTarget.TASK,
@@ -98,7 +98,7 @@ describe("mentionHref", () => {
         taskKey: "TDX-4",
         spaceName: "Inbox",
       }),
-    ).toBe("/tasks/space/Inbox/TDX-4");
+    ).toBe("/planning/space/Inbox/TDX-4");
     expect(
       mentionHref({ targetType: DocMentionTarget.EVENT, targetId: "event-1" }),
     ).toBe("/calendar/events/event-1");

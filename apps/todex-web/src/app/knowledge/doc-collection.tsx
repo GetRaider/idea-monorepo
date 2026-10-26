@@ -32,7 +32,7 @@ export function DocRows({
         return (
           <li key={doc.id}>
             <Link
-              href={`/docs/${doc.id}`}
+              href={`/knowledge/${doc.id}`}
               className="flex items-center gap-3 rounded-md px-2 py-2 text-sm hover:bg-surface"
             >
               <span className="font-mono text-xs text-muted-foreground">

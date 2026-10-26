@@ -3,8 +3,8 @@
 import { createContext, use, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { FolderKind } from "@repo/api/todex";
-import type { DocSummary, DocType, Folder } from "@repo/api/todex";
+import { DocType, FolderKind } from "@repo/api/todex";
+import type { DocSummary, Folder } from "@repo/api/todex";
 import { toast } from "sonner";
 
 import { todexClient } from "@lib/todex-client";
@@ -33,7 +33,9 @@ export function DocsProvider({ children }: { children: ReactNode }) {
       }),
     onSuccess: async (doc) => {
       await queryClient.invalidateQueries({ queryKey: ["docs"] });
-      router.push(`/docs/${doc.id}`);
+      router.push(
+        doc.type === DocType.GOAL ? `/planning/goals/${doc.id}` : `/knowledge/${doc.id}`,
+      );
     },
     onError: () => toast.error("Could not create the doc"),
   });

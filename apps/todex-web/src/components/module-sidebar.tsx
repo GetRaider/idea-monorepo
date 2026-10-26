@@ -87,8 +87,8 @@ export function SidebarToggle() {
 }
 
 function moduleForPath(pathname: string): ModuleKey | null {
-  if (pathname.startsWith("/tasks")) return "tasks";
-  if (pathname.startsWith("/docs")) return "docs";
+  if (pathname.startsWith("/planning")) return "tasks";
+  if (pathname.startsWith("/knowledge")) return "docs";
   if (pathname.startsWith("/calendar")) return "calendar";
   if (pathname.startsWith("/execution")) return "execution";
   if (pathname.startsWith("/overview")) return "overview";

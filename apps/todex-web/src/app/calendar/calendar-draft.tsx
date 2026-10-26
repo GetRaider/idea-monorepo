@@ -4,7 +4,7 @@ import { useState, type ReactNode } from "react";
 import { Button, Checkbox, Input, Label, cn } from "@repo/ui";
 import type { Task, Space, TaskRecurrence } from "@repo/api/todex";
 
-import { TaskRecurrencePicker } from "../tasks/task-recurrence-picker";
+import { TaskRecurrencePicker } from "../planning/task-recurrence-picker";
 import { CalendarColorPicker } from "./calendar-color-picker";
 import { DEFAULT_EVENT_COLOR } from "./calendar-colors";
 import { TaskScopePicker } from "./calendar-task-scope";

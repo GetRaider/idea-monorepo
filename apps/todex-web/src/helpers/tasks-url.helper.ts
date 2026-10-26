@@ -1,4 +1,4 @@
-const TASKS_ROOT_PATH = "/tasks";
+const TASKS_ROOT_PATH = "/planning";
 
 const VALID_SCHEDULE_DATES = ["today", "tomorrow"] as const;
 
@@ -49,18 +49,18 @@ export const tasksUrlHelper = {
     },
 
     getBoardNameFromPathname(pathname: string): string | null {
-      const match = pathname.match(/^\/tasks\/space\/([^/]+)/);
+      const match = pathname.match(/^\/planning\/space\/([^/]+)/);
       if (!match?.[1]) return null;
       return decodePathSegment(match[1]);
     },
 
     getTaskKeyFromPathname(pathname: string): string | undefined {
-      const boardMatch = pathname.match(/^\/tasks\/space\/[^/]+\/([^/]+)/);
+      const boardMatch = pathname.match(/^\/planning\/space\/[^/]+\/([^/]+)/);
       if (boardMatch?.[1] && boardMatch[1] !== "epics") {
         return decodePathSegment(boardMatch[1]);
       }
       const scheduleMatch = pathname.match(
-        /^\/tasks\/schedule\/(?:today|tomorrow)\/([^/]+)/,
+        /^\/planning\/schedule\/(?:today|tomorrow)\/([^/]+)/,
       );
       if (scheduleMatch?.[1]) return decodePathSegment(scheduleMatch[1]);
       return undefined;
@@ -75,8 +75,8 @@ export const tasksUrlHelper = {
       if (tasksUrlHelper.routing.isRootPathname(pathname)) {
         return TASKS_ROOT_VIEW_ID;
       }
-      if (/^\/tasks\/schedule\/today(?:\/|$)/.test(pathname)) return "today";
-      if (/^\/tasks\/schedule\/tomorrow(?:\/|$)/.test(pathname)) {
+      if (/^\/planning\/schedule\/today(?:\/|$)/.test(pathname)) return "today";
+      if (/^\/planning\/schedule\/tomorrow(?:\/|$)/.test(pathname)) {
         return "tomorrow";
       }
       return tasksUrlHelper.routing.getBoardNameFromPathname(pathname) ?? "";

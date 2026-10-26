@@ -8,10 +8,13 @@ import { Button, Tooltip, TooltipContent, TooltipTrigger, cn } from "@repo/ui";
 import {
   DocsIcon,
   FolderIcon,
+  KnowledgeIcon,
   PlusIcon,
-  StatusDoneIcon,
 } from "@components/icons";
-import { ModuleSidebarFrame, useModuleSidebar } from "@components/module-sidebar";
+import {
+  ModuleSidebarFrame,
+  useModuleSidebar,
+} from "@components/module-sidebar";
 import { ResizeHandle } from "@components/resize-handle";
 import {
   clampPanelWidth,
@@ -54,21 +57,21 @@ export function DocsModuleSidebar() {
         <section className="mb-4 w-full">
           <h2 className="mb-2 px-2 text-sm text-muted-foreground">Views</h2>
           <SidebarLink
-            href="/docs"
+            href="/knowledge"
             label="All"
-            active={pathname === "/docs"}
-            icon={<DocsIcon size={16} />}
+            active={pathname === "/knowledge"}
+            icon={<KnowledgeIcon size={16} />}
           />
           <SidebarLink
-            href="/docs/goals"
-            label="Goals"
-            active={pathname === "/docs/goals"}
-            icon={<StatusDoneIcon size={16} />}
-          />
-          <SidebarLink
-            href="/docs/general"
+            href="/knowledge/general"
             label="General"
-            active={pathname === "/docs/general"}
+            active={pathname === "/knowledge/general"}
+            icon={<KnowledgeIcon size={16} />}
+          />
+          <SidebarLink
+            href="/knowledge/templates"
+            label="Templates"
+            active={pathname === "/knowledge/templates"}
             icon={<DocsIcon size={16} />}
           />
         </section>
@@ -118,9 +121,9 @@ export function DocsModuleSidebar() {
           {folders.map((folder) => (
             <SidebarLink
               key={folder.id}
-              href={`/docs/folder/${folder.id}`}
+              href={`/knowledge/folder/${folder.id}`}
               label={folder.name}
-              active={pathname === `/docs/folder/${folder.id}`}
+              active={pathname === `/knowledge/folder/${folder.id}`}
               icon={<FolderIcon size={16} />}
             />
           ))}
@@ -176,7 +179,11 @@ function writeWidth(width: number) {
     localStorage.setItem(
       WIDTH_STORAGE_KEY,
       String(
-        clampPanelWidth(width, TASKS_SIDEBAR_MIN_WIDTH, TASKS_SIDEBAR_MAX_WIDTH),
+        clampPanelWidth(
+          width,
+          TASKS_SIDEBAR_MIN_WIDTH,
+          TASKS_SIDEBAR_MAX_WIDTH,
+        ),
       ),
     );
   } catch {

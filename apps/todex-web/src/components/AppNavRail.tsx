@@ -19,16 +19,16 @@ import { signOut, useSession } from "@lib/auth-client";
 import {
   BellIcon,
   CalendarIcon,
-  DocsIcon,
+  KnowledgeIcon,
   OverviewIcon,
-  TasksIcon,
+  PlanningIcon,
 } from "./icons";
 
 const NAV = [
   { href: "/overview", label: "Overview", enabled: true, icon: OverviewIcon },
-  { href: "/tasks", label: "Tasks", enabled: true, icon: TasksIcon },
+  { href: "/planning", label: "Planning", enabled: true, icon: PlanningIcon },
   { href: "/calendar", label: "Calendar", enabled: true, icon: CalendarIcon },
-  { href: "/docs", label: "Docs", enabled: true, icon: DocsIcon },
+  { href: "/knowledge", label: "Knowledge", enabled: true, icon: KnowledgeIcon },
 ] as const;
 
 export function AppNavRail() {

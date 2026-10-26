@@ -608,7 +608,7 @@ export function TasksBreadcrumb({
         href={tasksUrlHelper.routing.buildRootUrl()}
         className="shrink-0 text-muted-foreground hover:text-foreground"
       >
-        Tasks
+        Planning
       </Link>
       {spaceName ? (
         <>

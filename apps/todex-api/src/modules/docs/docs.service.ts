@@ -35,9 +35,17 @@ import type {
 } from "@repo/api/todex";
 
 import { DRIZZLE_DB } from "../../db/tokens";
-import { docMentions, docs, docTasks, folders, tasks, workspaces } from "../../db/schema";
+import {
+  docMentions,
+  docs,
+  docTasks,
+  folders,
+  tasks,
+  workspaces,
+} from "../../db/schema";
 import type { DocRow } from "../../db/schema";
 import { mapDoc, mapDocSummary } from "../../db/mappers";
+import { planningProgress } from "../epics/progress";
 import { ContentIndexQueue } from "../content-index/content-index.queue";
 import { WorkspaceService } from "../workspace/workspace.service";
 
@@ -62,13 +70,20 @@ export class DocsService {
         type: docs.type,
         docKey: docs.docKey,
         title: docs.title,
+        body: docs.body,
         createdAt: docs.createdAt,
         updatedAt: docs.updatedAt,
       })
       .from(docs)
       .where(and(...filters))
       .orderBy(desc(docs.updatedAt));
-    return rows.map(mapDocSummary);
+    const goalIds = rows.flatMap((row) =>
+      row.type === DocType.GOAL ? [row.id] : [],
+    );
+    const progressByGoalId = await this.progressByGoal(goalIds);
+    return rows.map((row) =>
+      mapDocSummary(row, progressByGoalId.get(row.id) ?? null),
+    );
   }
 
   async get(workspaceId: string, docId: string) {
@@ -189,11 +204,37 @@ export class DocsService {
     );
     if (row.type === DocType.GOAL) {
       const body = readGoalDocBody(row.body);
-      for (const criterion of [...body.successCriteria, ...body.preconditions]) {
+      for (const criterion of [
+        ...body.successCriteria,
+        ...body.preconditions,
+      ]) {
         parts.push(criterion.text);
       }
     }
     return { title: row.title, text: parts.join("\n\n") };
+  }
+
+  private async progressByGoal(goalIds: string[]) {
+    const progress = new Map<string, number>();
+    if (goalIds.length === 0) return progress;
+    const links = await this.db
+      .select({ docId: docTasks.docId, status: tasks.status })
+      .from(docTasks)
+      .innerJoin(tasks, eq(tasks.id, docTasks.taskId))
+      .where(inArray(docTasks.docId, goalIds));
+    const statusesByGoal = new Map<string, string[]>();
+    for (const link of links) {
+      const statuses = statusesByGoal.get(link.docId) ?? [];
+      statuses.push(link.status);
+      statusesByGoal.set(link.docId, statuses);
+    }
+    for (const goalId of goalIds) {
+      progress.set(
+        goalId,
+        planningProgress(statusesByGoal.get(goalId) ?? []).progressPercent,
+      );
+    }
+    return progress;
   }
 
   private async scheduleIndex(
@@ -379,6 +420,8 @@ function applyProjectedFields(
     why: fieldDoc(fields, "why", body.why),
     successCriteria: body.successCriteria,
     preconditions: body.preconditions,
+    status: body.status,
+    deadline: body.deadline,
   };
 }
 
@@ -420,6 +463,8 @@ function mergeGoalBody(
     why: patch.why ?? existing.why,
     successCriteria: patch.successCriteria ?? existing.successCriteria,
     preconditions: patch.preconditions ?? existing.preconditions,
+    status: patch.status ?? existing.status,
+    deadline: patch.deadline === undefined ? existing.deadline : patch.deadline,
   };
 }
 

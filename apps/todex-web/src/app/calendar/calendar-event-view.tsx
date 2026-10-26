@@ -9,7 +9,7 @@ import {
   type TaskRecurrence,
 } from "@repo/api/todex";
 
-import { TaskRecurrencePicker } from "../tasks/task-recurrence-picker";
+import { TaskRecurrencePicker } from "../planning/task-recurrence-picker";
 import { CalendarColorPicker } from "./calendar-color-picker";
 import { DEFAULT_EVENT_COLOR } from "./calendar-colors";
 import { deviceTimeZone, withAllDay } from "./calendar-datetime";

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -1187,29 +1188,39 @@ function TaskViewBody({
               />
             </DetailRow>
             <DetailRow icon={<StatusDoneIcon size={16} />} label="Goal">
-              <Select
-                value={task.goalId ?? "none"}
-                onValueChange={(value) => {
-                  queueUpdate({ goalId: value === "none" ? null : value });
-                  flushPendingUpdate();
-                }}
-              >
-                <SelectTrigger className="h-8 w-full border-0 bg-transparent px-0 text-sm shadow-none">
-                  <SelectValue placeholder="None" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">None</SelectItem>
-                  {task.goalId &&
-                  !goals.some((goal) => goal.id === task.goalId) ? (
-                    <SelectItem value={task.goalId}>Goal</SelectItem>
-                  ) : null}
-                  {goals.map((goal) => (
-                    <SelectItem key={goal.id} value={goal.id}>
-                      {goal.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex min-w-0 items-center gap-2">
+                <Select
+                  value={task.goalId ?? "none"}
+                  onValueChange={(value) => {
+                    queueUpdate({ goalId: value === "none" ? null : value });
+                    flushPendingUpdate();
+                  }}
+                >
+                  <SelectTrigger className="h-8 w-full border-0 bg-transparent px-0 text-sm shadow-none">
+                    <SelectValue placeholder="None" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {task.goalId &&
+                    !goals.some((goal) => goal.id === task.goalId) ? (
+                      <SelectItem value={task.goalId}>Goal</SelectItem>
+                    ) : null}
+                    {goals.map((goal) => (
+                      <SelectItem key={goal.id} value={goal.id}>
+                        {goal.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {task.goalId ? (
+                  <Link
+                    href={`/planning/goals/${task.goalId}`}
+                    className="shrink-0 text-xs text-muted-foreground hover:underline"
+                  >
+                    Open
+                  </Link>
+                ) : null}
+              </div>
             </DetailRow>
             <DetailRow icon={<ParentMark />} label="Parent">
               <Select
@@ -1488,7 +1499,7 @@ function StatusDoneIconMark() {
 }
 
 function openedEpicFromPathname(pathname: string) {
-  const match = pathname.match(/^\/tasks\/space\/(.+)$/);
+  const match = pathname.match(/^\/planning\/space\/(.+)$/);
   if (!match?.[1]) return null;
   const parsed = tasksUrlHelper.routing.parseSpacePath(
     match[1].split("/").filter(Boolean),

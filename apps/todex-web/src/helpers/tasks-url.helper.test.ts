@@ -3,49 +3,49 @@ import { describe, expect, it } from "vitest";
 import { TASKS_ROOT_VIEW_ID, tasksUrlHelper } from "./tasks-url.helper";
 
 describe("tasksUrlHelper.routing.isRootPathname", () => {
-  it("treats /tasks and trailing-slash variants as root", () => {
-    expect(tasksUrlHelper.routing.isRootPathname("/tasks")).toBe(true);
-    expect(tasksUrlHelper.routing.isRootPathname("/tasks/")).toBe(true);
+  it("treats /planning and trailing-slash variants as root", () => {
+    expect(tasksUrlHelper.routing.isRootPathname("/planning")).toBe(true);
+    expect(tasksUrlHelper.routing.isRootPathname("/planning/")).toBe(true);
   });
 
   it("does not treat board or schedule pages as root", () => {
-    expect(tasksUrlHelper.routing.isRootPathname("/tasks/space/Inbox")).toBe(
+    expect(tasksUrlHelper.routing.isRootPathname("/planning/space/Inbox")).toBe(
       false,
     );
     expect(
-      tasksUrlHelper.routing.isRootPathname("/tasks/space/Inbox/T-1"),
+      tasksUrlHelper.routing.isRootPathname("/planning/space/Inbox/T-1"),
     ).toBe(false);
-    expect(tasksUrlHelper.routing.isRootPathname("/tasks/schedule/today")).toBe(
+    expect(tasksUrlHelper.routing.isRootPathname("/planning/schedule/today")).toBe(
       false,
     );
     expect(
-      tasksUrlHelper.routing.isRootPathname("/tasks/schedule/tomorrow"),
+      tasksUrlHelper.routing.isRootPathname("/planning/schedule/tomorrow"),
     ).toBe(false);
   });
 });
 
 describe("tasksUrlHelper.routing.getActiveViewFromPathname", () => {
-  it("returns the root view id only for /tasks", () => {
-    expect(tasksUrlHelper.routing.getActiveViewFromPathname("/tasks")).toBe(
+  it("returns the root view id only for /planning", () => {
+    expect(tasksUrlHelper.routing.getActiveViewFromPathname("/planning")).toBe(
       TASKS_ROOT_VIEW_ID,
     );
     expect(
-      tasksUrlHelper.routing.getActiveViewFromPathname("/tasks/space/Inbox"),
+      tasksUrlHelper.routing.getActiveViewFromPathname("/planning/space/Inbox"),
     ).not.toBe(TASKS_ROOT_VIEW_ID);
   });
 
   it("returns today and tomorrow for schedule routes", () => {
     expect(
-      tasksUrlHelper.routing.getActiveViewFromPathname("/tasks/schedule/today"),
+      tasksUrlHelper.routing.getActiveViewFromPathname("/planning/schedule/today"),
     ).toBe("today");
     expect(
       tasksUrlHelper.routing.getActiveViewFromPathname(
-        "/tasks/schedule/tomorrow",
+        "/planning/schedule/tomorrow",
       ),
     ).toBe("tomorrow");
     expect(
       tasksUrlHelper.routing.getActiveViewFromPathname(
-        "/tasks/schedule/today/T-1",
+        "/planning/schedule/today/T-1",
       ),
     ).toBe("today");
   });
@@ -54,7 +54,7 @@ describe("tasksUrlHelper.routing.getActiveViewFromPathname", () => {
 describe("tasksUrlHelper.routing board urls", () => {
   it("encodes board names and parses them back", () => {
     const href = tasksUrlHelper.routing.buildBoardUrl("My Board");
-    expect(href).toBe("/tasks/space/My%20Board");
+    expect(href).toBe("/planning/space/My%20Board");
     expect(tasksUrlHelper.routing.getBoardNameFromPathname(href)).toBe(
       "My Board",
     );
@@ -67,35 +67,35 @@ describe("tasksUrlHelper.routing board urls", () => {
 
   it("treats an epics segment as an epic page", () => {
     expect(tasksUrlHelper.routing.buildEpicUrl("Todex", "epic-1")).toBe(
-      "/tasks/space/Todex/epics/epic-1",
+      "/planning/space/Todex/epics/epic-1",
     );
     expect(
       tasksUrlHelper.routing.parseSpacePath(["Todex", "epics", "epic-1"]),
     ).toEqual({ kind: "epic", spaceName: "Todex", epicId: "epic-1" });
     expect(
       tasksUrlHelper.routing.getTaskKeyFromPathname(
-        "/tasks/space/Todex/epics/epic-1",
+        "/planning/space/Todex/epics/epic-1",
       ),
     ).toBeUndefined();
   });
 
   it("builds and reads taskKey segments", () => {
     expect(tasksUrlHelper.routing.buildBoardUrl("Inbox", "T-1")).toBe(
-      "/tasks/space/Inbox/T-1",
+      "/planning/space/Inbox/T-1",
     );
     expect(tasksUrlHelper.routing.buildScheduleUrl("today", "T-12")).toBe(
-      "/tasks/schedule/today/T-12",
+      "/planning/schedule/today/T-12",
     );
     expect(
-      tasksUrlHelper.routing.getTaskKeyFromPathname("/tasks/space/Inbox/T-1"),
+      tasksUrlHelper.routing.getTaskKeyFromPathname("/planning/space/Inbox/T-1"),
     ).toBe("T-1");
     expect(
       tasksUrlHelper.routing.getTaskKeyFromPathname(
-        "/tasks/schedule/tomorrow/T-9",
+        "/planning/schedule/tomorrow/T-9",
       ),
     ).toBe("T-9");
     expect(
-      tasksUrlHelper.routing.getTaskKeyFromPathname("/tasks/space/Inbox"),
+      tasksUrlHelper.routing.getTaskKeyFromPathname("/planning/space/Inbox"),
     ).toBeUndefined();
   });
 });

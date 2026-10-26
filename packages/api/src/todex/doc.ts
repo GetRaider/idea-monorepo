@@ -1,11 +1,19 @@
 import { z } from "zod";
 
 import { AcceptanceCriteriaSchema } from "./task.ts";
-import { DocType } from "./enums.ts";
+import { DocType, GoalStatus } from "./enums.ts";
 import { EMPTY_PROSE_DOC, ProseDocSchema } from "./prose.ts";
 import { IsoDateTimeSchema } from "./iso.ts";
 
 const TitleSchema = z.string().trim().min(1).max(200);
+
+const GoalStatusSchema = z.enum([
+  GoalStatus.ACTIVE,
+  GoalStatus.PAUSED,
+  GoalStatus.DONE,
+]);
+
+const GoalDeadlineSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
 const LinkedTaskIdsSchema = z
   .array(z.string().trim().min(1).max(128))
@@ -35,6 +43,8 @@ export const GoalDocBodySchema = z
     why: ProseDocSchema,
     successCriteria: AcceptanceCriteriaSchema,
     preconditions: AcceptanceCriteriaSchema,
+    status: GoalStatusSchema,
+    deadline: GoalDeadlineSchema.nullable(),
   })
   .strict();
 
@@ -49,6 +59,8 @@ export const UpdateGoalDocBodySchema = z
     why: ProseDocSchema.optional(),
     successCriteria: AcceptanceCriteriaSchema.optional(),
     preconditions: AcceptanceCriteriaSchema.optional(),
+    status: GoalStatusSchema.optional(),
+    deadline: GoalDeadlineSchema.nullable().optional(),
   })
   .strict();
 
@@ -65,6 +77,9 @@ const DocSummaryFields = {
 export const DocSummarySchema = z.object({
   ...DocSummaryFields,
   type: z.enum([DocType.COMMON, DocType.GOAL]),
+  goalStatus: GoalStatusSchema.nullable(),
+  goalDeadline: GoalDeadlineSchema.nullable(),
+  progressPercent: z.number().int().min(0).max(100).nullable(),
 });
 
 export const CommonDocSchema = z.object({
@@ -131,6 +146,8 @@ export function emptyGoalDocBody(): GoalDocBody {
     why: EMPTY_PROSE_DOC,
     successCriteria: [],
     preconditions: [],
+    status: GoalStatus.ACTIVE,
+    deadline: null,
   };
 }
 
@@ -139,10 +156,14 @@ export function readGoalDocBody(value: unknown): GoalDocBody {
     value && typeof value === "object"
       ? (value as Record<string, unknown>)
       : {};
+  const status = GoalStatusSchema.safeParse(record.status);
+  const deadline = GoalDeadlineSchema.safeParse(record.deadline);
   const parsed = GoalDocBodySchema.safeParse({
     why: record.why ?? EMPTY_PROSE_DOC,
     successCriteria: record.successCriteria ?? [],
     preconditions: record.preconditions ?? [],
+    status: status.success ? status.data : GoalStatus.ACTIVE,
+    deadline: deadline.success ? deadline.data : null,
   });
   return parsed.success ? parsed.data : emptyGoalDocBody();
 }

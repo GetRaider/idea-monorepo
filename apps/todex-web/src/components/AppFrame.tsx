@@ -22,9 +22,10 @@ import { formatClock } from "../app/execution/execution-time";
 import { AgentWidget } from "./agent-widget";
 import { AppNavRail } from "./AppNavRail";
 import { AuthGuard } from "./AuthGuard";
-import { CreateMenu } from "./create-menu";
+import { CreateMenu, CreateMenuProvider } from "./create-menu";
 import { ExecutionIcon } from "./icons";
 import { ModuleSidebarProvider, SidebarToggle } from "./module-sidebar";
+import { PlatformSearchProvider, SearchButton } from "./platform-search";
 
 export function AppFrame({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -36,6 +37,8 @@ export function AppFrame({ children }: { children: ReactNode }) {
     <TooltipProvider>
       <AuthGuard>
         <ExecutionProvider>
+          <PlatformSearchProvider>
+          <CreateMenuProvider>
           <ModuleSidebarProvider>
           <div className="flex h-screen flex-col overflow-hidden bg-background">
             <header className="flex h-12 shrink-0 items-center pr-2">
@@ -56,6 +59,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
               <SidebarToggle />
               <div className="ml-auto flex min-w-0 items-center gap-2">
                 <ExecutionStatusBar />
+                <SearchButton />
                 <CreateMenu />
               </div>
             </header>
@@ -66,6 +70,8 @@ export function AppFrame({ children }: { children: ReactNode }) {
           </div>
           <AgentWidget />
           </ModuleSidebarProvider>
+          </CreateMenuProvider>
+          </PlatformSearchProvider>
         </ExecutionProvider>
       </AuthGuard>
     </TooltipProvider>

@@ -15,6 +15,7 @@ import timeGridPlugin from "@fullcalendar/timegrid";
 import { cn } from "@repo/ui";
 
 import { CalendarIcon, ChevronIcon, TasksIcon } from "@components/icons";
+import { NewButton } from "@components/new-button";
 
 import { blocksForRange, visibleBlocks, type CalendarBlock } from "./calendar-blocks";
 import { blockColor, fillIsLight } from "./calendar-colors";
@@ -33,12 +34,34 @@ export function CalendarGrid() {
   const calendarRef = useRef<FullCalendar>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
+  const draftFormRef = useRef<HTMLFormElement>(null);
+  const draftOriginRef = useRef<SelectionOrigin | null>(null);
   const clickTimer = useRef<number | null>(null);
   const [viewId, setViewId] = useState("timeGridRollingWeek");
   const [menuOpen, setMenuOpen] = useState(false);
   const [slotMinutes, setSlotMinutes] = useState<15 | 30>(30);
   const [hour12, setHour12] = useState(false);
   const [draft, setDraft] = useState<DraftSelection | null>(null);
+  useLayoutEffect(() => {
+    const form = draftFormRef.current;
+    const frame = gridRef.current;
+    const origin = draftOriginRef.current;
+    if (!draft || !form || !frame || !origin) return;
+    const anchor = menuAnchor(
+      frame,
+      origin,
+      DRAFT_MENU_WIDTH,
+      form.scrollHeight + form.offsetHeight - form.clientHeight,
+    );
+    if (
+      Math.abs(anchor.left - draft.left) < 1 &&
+      Math.abs(anchor.top - draft.top) < 1 &&
+      Math.abs(anchor.maxHeight - draft.maxHeight) < 1
+    ) {
+      return;
+    }
+    setDraft((current) => (current ? { ...current, ...anchor } : current));
+  }, [draft]);
   const [quickMenu, setQuickMenu] = useState<QuickMenuState | null>(null);
   const {
     state: { events, tasks, boards, range, visibility, focusRequest },
@@ -72,6 +95,18 @@ export function CalendarGrid() {
   }, [blocks]);
 
   const dayCount = DAY_COUNT[viewId] ?? 7;
+
+  function selectQuarterHourFromNow() {
+    const api = calendarRef.current?.getApi();
+    if (!api) return;
+    const { start, end } = quarterHourSlot(new Date());
+    api.gotoDate(start);
+    const hour = Math.max(0, start.getHours() - 1);
+    api.scrollToTime(
+      `${String(hour).padStart(2, "0")}:${String(start.getMinutes()).padStart(2, "0")}:00`,
+    );
+    api.select(start, end);
+  }
 
   return (
     <div
@@ -197,6 +232,7 @@ export function CalendarGrid() {
               24h
             </button>
           </div>
+          <NewButton onClick={selectQuarterHourFromNow} />
         </div>
       </div>
       <div ref={gridRef} className="relative min-h-0 flex-1 px-2 pb-2">
@@ -258,20 +294,26 @@ export function CalendarGrid() {
             if (axis) axis.textContent = shortZoneName();
           }}
           select={(selection) => {
-            const point = selection.jsEvent;
             const frame = gridRef.current;
-            if (!point || !frame) return;
-            const anchor = menuAnchor(frame, point.clientX, point.clientY, 320, 240);
+            if (!frame) return;
             setQuickMenu(null);
-            setDraft({
-              start: selection.start,
-              end: selection.end,
-              allDay: selection.allDay,
-              kind: "event",
-              left: anchor.left,
-              top: anchor.top,
-              maxHeight: anchor.maxHeight,
-            });
+            const point = selection.jsEvent;
+            const openDraft = () => {
+              const origin = selectionOrigin(frame, point);
+              draftOriginRef.current = origin;
+              const anchor = menuAnchor(frame, origin, DRAFT_MENU_WIDTH, DRAFT_MENU_HEIGHT);
+              setDraft({
+                start: selection.start,
+                end: selection.end,
+                allDay: selection.allDay,
+                kind: "event",
+                left: anchor.left,
+                top: anchor.top,
+                maxHeight: anchor.maxHeight,
+              });
+            };
+            if (point) openDraft();
+            else requestAnimationFrame(openDraft);
           }}
           unselect={() => setDraft(null)}
           eventClick={(arg) => {
@@ -344,6 +386,7 @@ export function CalendarGrid() {
         />
         {draft ? (
         <CalendarDraft
+          ref={draftFormRef}
           key={`${draft.start.toISOString()}-${draft.end.toISOString()}-${draft.allDay}`}
           draft={draft}
           tasks={tasks}
@@ -629,18 +672,49 @@ function shortZoneName() {
 
 function menuAnchor(
   frame: HTMLElement,
-  clientX: number,
-  clientY: number,
+  origin: SelectionOrigin,
   menuWidth: number,
   menuHeight: number,
 ) {
   const rect = frame.getBoundingClientRect();
-  const left = clamp(clientX - rect.left, 8, Math.max(8, rect.width - menuWidth - 8));
-  const top = clamp(clientY - rect.top + 8, 8, Math.max(8, rect.height - 48));
+  const left = clamp(
+    origin.x - rect.left,
+    MENU_GAP,
+    Math.max(MENU_GAP, rect.width - menuWidth - MENU_GAP),
+  );
+  const aboveEdge = clamp(origin.top - rect.top, 0, rect.height);
+  const belowEdge = clamp(origin.bottom - rect.top, 0, rect.height);
+  const spaceAbove = aboveEdge - MENU_GAP;
+  const spaceBelow = rect.height - belowEdge - MENU_GAP;
+  const placeBelow = spaceBelow >= menuHeight || spaceBelow >= spaceAbove;
+  const maxHeight = Math.max(
+    0,
+    Math.min(menuHeight, placeBelow ? spaceBelow : spaceAbove),
+  );
+  const top = clamp(
+    placeBelow ? belowEdge + MENU_GAP : aboveEdge - MENU_GAP - maxHeight,
+    0,
+    Math.max(0, rect.height - maxHeight),
+  );
+  return { left, top, maxHeight };
+}
+
+function selectionOrigin(
+  frame: HTMLElement,
+  point: { clientX: number; clientY: number } | null,
+): SelectionOrigin {
+  const highlight = frame.querySelector(".fc-highlight")?.getBoundingClientRect();
+  if (highlight && highlight.width > 0 && highlight.height > 0) {
+    return { x: highlight.right, top: highlight.top, bottom: highlight.bottom };
+  }
+  if (point) {
+    return { x: point.clientX, top: point.clientY, bottom: point.clientY };
+  }
+  const rect = frame.getBoundingClientRect();
   return {
-    left,
-    top,
-    maxHeight: Math.max(menuHeight, rect.height - top - 8),
+    x: rect.left + 96,
+    top: rect.top + 96,
+    bottom: rect.top + 96,
   };
 }
 
@@ -651,7 +725,12 @@ function openQuickMenu(
   setQuickMenu: (menu: QuickMenuState | null) => void,
 ) {
   if (!frame) return;
-  const anchor = menuAnchor(frame, mouseEvent.clientX, mouseEvent.clientY, 160, 148);
+  const anchor = menuAnchor(
+    frame,
+    { x: mouseEvent.clientX, top: mouseEvent.clientY, bottom: mouseEvent.clientY },
+    160,
+    148,
+  );
   setQuickMenu({ block, left: anchor.left, top: anchor.top });
 }
 
@@ -668,6 +747,13 @@ function chipClassNames(block: CalendarBlock) {
     block.rsvpStatus === "no" ? "todex-cal-rsvp-no" : "",
     block.rsvpStatus === "maybe" ? "todex-cal-rsvp-maybe" : "",
   ].filter(Boolean);
+}
+
+function quarterHourSlot(now: Date) {
+  const start = new Date(now);
+  start.setSeconds(0, 0);
+  start.setMinutes(start.getMinutes() - (start.getMinutes() % 15));
+  return { start, end: new Date(start.getTime() + 15 * 60 * 1000) };
 }
 
 function scrollTime(): string {
@@ -709,3 +795,13 @@ const CALENDAR_VIEWS = {
     dateAlignment: "day",
   },
 } as const;
+
+const MENU_GAP = 8;
+const DRAFT_MENU_WIDTH = 320;
+const DRAFT_MENU_HEIGHT = 440;
+
+interface SelectionOrigin {
+  x: number;
+  top: number;
+  bottom: number;
+}

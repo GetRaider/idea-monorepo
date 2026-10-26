@@ -9,7 +9,6 @@ export default function TemplatesPage() {
       <DocsCanvasHeader
         crumbs={[{ label: "Knowledge", href: "/knowledge" }, { label: "Templates" }]}
         showNew={false}
-        showSearch={false}
       />
       <p className="text-sm text-muted-foreground">
         Document templates are not available yet.

@@ -1,6 +1,8 @@
 "use client";
 
 import {
+  createContext,
+  use,
   useEffect,
   useRef,
   useState,
@@ -49,7 +51,7 @@ import {
 
 import { ChevronIcon, PlusIcon } from "./icons";
 
-export function CreateMenu() {
+export function CreateMenuProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -64,27 +66,43 @@ export function CreateMenu() {
   }, []);
 
   return (
-    <>
-      <Tooltip open={open ? false : undefined}>
-        <TooltipTrigger asChild>
-          <button
-            type="button"
-            aria-label="Create"
-            onClick={() => setOpen(true)}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-neutral-100 text-neutral-900 transition-colors hover:bg-white"
-          >
-            <PlusIcon size={16} />
-          </button>
-        </TooltipTrigger>
-        <TooltipContent side="bottom" className="flex items-center gap-1.5">
-          Create
-          <kbd className="rounded border border-white/20 px-1 font-sans text-[10px] leading-none">
-            ⌘K
-          </kbd>
-        </TooltipContent>
-      </Tooltip>
+    <CreateMenuContext value={() => setOpen(true)}>
+      {children}
       {open ? <CreatePalette onClose={() => setOpen(false)} /> : null}
-    </>
+    </CreateMenuContext>
+  );
+}
+
+export function useOpenCreateMenu() {
+  const openMenu = use(CreateMenuContext);
+  if (!openMenu) {
+    throw new Error("useOpenCreateMenu must be used within CreateMenuProvider");
+  }
+  return openMenu;
+}
+
+export function CreateMenu() {
+  const openMenu = useOpenCreateMenu();
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          aria-label="Create"
+          onClick={openMenu}
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-neutral-100 text-neutral-900 transition-colors hover:bg-white"
+        >
+          <PlusIcon size={20} />
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="bottom" className="flex items-center gap-1.5">
+        Create
+        <kbd className="rounded border border-white/20 px-1 font-sans text-[10px] leading-none">
+          ⌘K
+        </kbd>
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -593,5 +611,7 @@ const PRIORITY_LABEL: Record<Task["priority"], string> = {
   [TaskPriority.HIGH]: "High",
   [TaskPriority.CRITICAL]: "Critical",
 };
+
+const CreateMenuContext = createContext<(() => void) | null>(null);
 
 type CreateKind = (typeof KINDS)[number]["id"];

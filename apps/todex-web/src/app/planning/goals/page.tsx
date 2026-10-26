@@ -1,15 +1,14 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { DocType, GoalStatus } from "@repo/api/todex";
 import type { DocSummary } from "@repo/api/todex";
-import { Button, Spinner } from "@repo/ui";
+import { Spinner } from "@repo/ui";
 import { toast } from "sonner";
 
-import { PlusIcon } from "@components/icons";
+import { NewButton } from "@components/new-button";
 import { todexClient } from "@lib/todex-client";
 import { docsSectionClassName } from "../../knowledge/doc-collection";
 import { DocsBreadcrumb } from "../../knowledge/docs-header";
@@ -17,7 +16,6 @@ import { DocsBreadcrumb } from "../../knowledge/docs-header";
 export default function GoalsPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [search, setSearch] = useState("");
   const goalsQuery = useQuery({
     queryKey: ["docs", { type: DocType.GOAL }],
     queryFn: () => todexClient.docs.list({ type: DocType.GOAL }),
@@ -31,32 +29,19 @@ export default function GoalsPage() {
     },
     onError: () => toast.error("Could not create the doc"),
   });
-  const goals = filterGoals(goalsQuery.data ?? [], search);
+  const goals = filterGoals(goalsQuery.data ?? []);
 
   return (
     <section className={docsSectionClassName()}>
-      <div className="mb-6 flex flex-col gap-4">
+      <div className="mb-6 flex items-center justify-between gap-4">
         <DocsBreadcrumb
-          className="w-full flex-none"
+          className="min-w-0"
           crumbs={[{ label: "Planning", href: "/planning" }, { label: "Goals" }]}
         />
-        <div className="flex items-center justify-end gap-2">
-          <input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search"
-            aria-label="Search"
-            className="h-9 w-40 min-w-0 rounded-md border border-border bg-transparent px-3 text-sm outline-none placeholder:text-muted-foreground"
-          />
-          <Button
-            size="sm"
-            onClick={() => createGoal.mutate()}
-            disabled={createGoal.isPending}
-          >
-            <PlusIcon size={16} />
-            New
-          </Button>
-        </div>
+        <NewButton
+          onClick={() => createGoal.mutate()}
+          disabled={createGoal.isPending}
+        />
       </div>
       {goalsQuery.isPending ? (
         <Spinner className="flex-1" />
@@ -65,9 +50,7 @@ export default function GoalsPage() {
       ) : (
         <GoalRows
           goals={goals}
-          emptyLabel={
-            search.trim() ? "Nothing matches this search." : "No goals yet."
-          }
+          emptyLabel="No goals yet."
         />
       )}
     </section>
@@ -112,16 +95,8 @@ function GoalRows({
   );
 }
 
-function filterGoals(goals: DocSummary[], search: string) {
-  const query = search.trim().toLowerCase();
-  const matched = query
-    ? goals.filter(
-        (goal) =>
-          goal.title.toLowerCase().includes(query) ||
-          goal.docKey.toLowerCase().includes(query),
-      )
-    : goals;
-  return [...matched].sort((left, right) =>
+function filterGoals(goals: DocSummary[]) {
+  return [...goals].sort((left, right) =>
     right.updatedAt.localeCompare(left.updatedAt),
   );
 }

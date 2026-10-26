@@ -2,55 +2,39 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { Button, cn } from "@repo/ui";
+import { cn } from "@repo/ui";
 import { DocType } from "@repo/api/todex";
 
-import { PlusIcon } from "@components/icons";
+import { NewButton } from "@components/new-button";
 
 import { useDocs } from "./docs-provider";
 
 export function DocsCanvasHeader({
   crumbs,
   folderId = null,
-  showSearch = true,
   showNew = true,
   trailing,
 }: {
   crumbs: DocsCrumb[];
   folderId?: string | null;
-  showSearch?: boolean;
   showNew?: boolean;
   trailing?: ReactNode;
 }) {
   const {
-    state: { search },
-    actions: { setSearch, createDoc },
+    actions: { createDoc },
   } = useDocs();
 
   return (
-    <div className="mb-6 flex flex-col gap-4">
-      <DocsBreadcrumb className="w-full flex-none" crumbs={crumbs} />
-      <div className="flex items-center justify-end gap-2">
-        {showSearch ? (
-          <input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search"
-            aria-label="Search"
-            className="h-9 w-40 min-w-0 rounded-md border border-border bg-transparent px-3 text-sm outline-none placeholder:text-muted-foreground"
-          />
-        ) : null}
-        {showNew ? (
-          <Button
-            size="sm"
-            onClick={() => void createDoc(DocType.COMMON, folderId)}
-          >
-            <PlusIcon size={16} />
-            New
-          </Button>
-        ) : null}
-        {trailing}
-      </div>
+    <div className="mb-6 flex items-center justify-between gap-4">
+      <DocsBreadcrumb className="min-w-0" crumbs={crumbs} />
+      {showNew || trailing ? (
+        <div className="flex shrink-0 items-center gap-2">
+          {trailing}
+          {showNew ? (
+            <NewButton onClick={() => void createDoc(DocType.COMMON, folderId)} />
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }

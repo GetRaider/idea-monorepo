@@ -115,9 +115,9 @@ export function GoalEditor({ goalId }: { goalId: string }) {
 
   return (
     <section className={docsSectionClassName()}>
-      <div className="mb-6 flex items-center justify-between gap-4">
+      <div className="mb-6 flex shrink-0 items-center justify-between gap-4">
         <DocsBreadcrumb
-          className="flex-none"
+          className="min-w-0"
           crumbs={[
             { label: "Planning", href: "/planning" },
             { label: "Goals", href: "/planning/goals" },
@@ -127,17 +127,16 @@ export function GoalEditor({ goalId }: { goalId: string }) {
         <Button
           size="sm"
           variant="ghost"
-          className="shrink-0"
+          className="shrink-0 text-muted-foreground hover:text-foreground"
           onClick={() => setConfirmDelete(true)}
         >
           Delete
         </Button>
       </div>
-      <textarea
+      <input
         aria-label="Title"
         value={draft.title}
-        rows={2}
-        className="w-full resize-none bg-transparent text-2xl font-semibold leading-tight text-foreground outline-none"
+        className="w-full shrink-0 bg-transparent text-2xl font-semibold leading-tight text-foreground outline-none"
         onChange={(event) =>
           setDraft((current) =>
             current ? { ...current, title: event.target.value } : current,
@@ -399,6 +398,7 @@ function ProseSection({
         key={editorKey}
         appearance="plain"
         content=""
+        contentClassName="min-h-16"
         excludeDocId={excludeDocId}
         document={withParagraph(document)}
         onDocumentChange={onChange}

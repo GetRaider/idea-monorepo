@@ -2,12 +2,21 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { DocType, GoalStatus } from "@repo/api/todex";
 import type { DocSummary, Task } from "@repo/api/todex";
-import { Button, Spinner, cn } from "@repo/ui";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  Spinner,
+  cn,
+} from "@repo/ui";
+import { toast } from "sonner";
 
-import { PlusIcon } from "@components/icons";
+import { NewButton } from "@components/new-button";
 import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
 import { todexClient } from "@lib/todex-client";
 
@@ -24,6 +33,8 @@ import {
 import { useTasks } from "./tasks-provider";
 
 export default function TasksRootPage() {
+  const router = useRouter();
+  const queryClient = useQueryClient();
   const {
     state: { boards, tasks, search },
     actions: { createTask, openCreateDialog },
@@ -42,9 +53,6 @@ export default function TasksRootPage() {
   const accessTasks = activeAccess
     ? visibleTasks.filter((task) => activeAccess.match(task))
     : [];
-  const inboxBoardId =
-    boards.find((board) => board.name === INBOX_BOARD_NAME)?.id ??
-    boards[0]?.id;
   const recentTasks = tasksByCreatedAtDescending(visibleTasks, RECENT_LIMIT);
   const completedTasks = tasksByCompletedDescending(visibleTasks, RECENT_LIMIT);
   const goalsQuery = useQuery({
@@ -52,6 +60,19 @@ export default function TasksRootPage() {
     queryFn: () => todexClient.docs.list({ type: DocType.GOAL }),
   });
   const goals = recentGoals(goalsQuery.data ?? [], query);
+  const inboxBoardId =
+    boards.find((board) => board.name === INBOX_BOARD_NAME)?.id ??
+    boards[0]?.id;
+
+  const createGoal = useMutation({
+    mutationFn: () =>
+      todexClient.docs.create({ type: DocType.GOAL, title: "Untitled" }),
+    onSuccess: async (goal) => {
+      await queryClient.invalidateQueries({ queryKey: ["docs"] });
+      router.push(`/planning/goals/${goal.id}`);
+    },
+    onError: () => toast.error("Could not create the goal"),
+  });
 
   function openComposer() {
     if (boards.length === 0) {
@@ -65,20 +86,28 @@ export default function TasksRootPage() {
     <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-auto px-6 pb-6 pt-3">
       <div className="mb-6 flex items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold tracking-tight">Planning</h1>
-        <div className="flex items-center gap-2">
-          <Button size="sm" onClick={openComposer}>
-            <PlusIcon size={16} />
-            New Task
-          </Button>
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <NewButton disabled={createGoal.isPending} />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onSelect={openComposer}>Task</DropdownMenuItem>
+            <DropdownMenuItem
+              disabled={createGoal.isPending}
+              onSelect={() => createGoal.mutate()}
+            >
+              Goal
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
-      {boards.length > 0 ? (
+      {isComposerOpen && boards.length > 0 ? (
         <div className="mb-6">
           <TaskComposer
             titleRef={createInputRef}
             boards={boards}
             defaultBoardId={inboxBoardId}
-            open={isComposerOpen}
+            open
             onOpenChange={setIsComposerOpen}
             onCreate={(values) => {
               createTask(values.summary, null, {

@@ -211,6 +211,21 @@ export function BoardIcon(props: IconProps) {
   );
 }
 
+export function SearchIcon(props: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      {...iconSvgProps(props)}
+    >
+      <circle cx="11" cy="11" r="6" />
+      <path d="m16 16 4 4" />
+    </svg>
+  );
+}
+
 export function PlusIcon(props: IconProps) {
   return (
     <svg

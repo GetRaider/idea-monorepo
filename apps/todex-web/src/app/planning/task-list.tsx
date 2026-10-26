@@ -38,11 +38,11 @@ import type { Task } from "@repo/api/todex";
 
 import {
   ChevronIcon,
-  PlusIcon,
   RowsIcon,
   SettingsIcon,
   SortIcon,
 } from "@components/icons";
+import { NewButton } from "@components/new-button";
 
 import { todexClient } from "@/lib/todex-client";
 
@@ -507,8 +507,7 @@ export function TaskList() {
               onShowEpicsChange={setShowEpics}
               onShowTasksChange={setShowTasks}
             />
-            <Button
-              size="sm"
+            <NewButton
               onClick={() => {
                 if (view.kind === "schedule") {
                   const spaceId = scheduleSections[0]?.board.id;
@@ -522,10 +521,7 @@ export function TaskList() {
                 openComposer();
               }}
               disabled={!createBoardId}
-            >
-              <PlusIcon size={16} />
-              New Task
-            </Button>
+            />
           </div>
         </div>
         {view.kind === "schedule" && boards.length === 0 ? (

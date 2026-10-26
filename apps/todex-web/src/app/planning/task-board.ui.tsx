@@ -528,62 +528,6 @@ export function TaskFacts({
   );
 }
 
-export function TaskSearchPalette() {
-  const [open, setOpen] = useState(false);
-  const {
-    state: { search },
-    actions: { setSearch },
-  } = useTasks();
-
-  function close() {
-    setSearch("");
-    setOpen(false);
-  }
-
-  useEffect(() => {
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key.toLowerCase() !== "f" || !event.metaKey) return;
-      if (event.shiftKey || event.altKey || event.repeat) return;
-      event.preventDefault();
-      setOpen((current) => {
-        if (current) setSearch("");
-        return !current;
-      });
-    }
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [setSearch]);
-
-  if (!open) return null;
-
-  return (
-    <div
-      className="fixed inset-0 z-[4000] flex items-start justify-center bg-black/50 p-4 pt-[18vh]"
-      onMouseDown={close}
-    >
-      <form
-        role="dialog"
-        aria-label="Search"
-        className="w-full max-w-xl rounded-xl border border-border bg-popover text-popover-foreground shadow-2xl"
-        onMouseDown={(event) => event.stopPropagation()}
-        onSubmit={(event) => event.preventDefault()}
-        onKeyDown={(event) => {
-          if (event.key === "Escape") close();
-        }}
-      >
-        <input
-          autoFocus
-          value={search}
-          placeholder="Search"
-          aria-label="Search"
-          className="w-full bg-transparent px-4 py-4 text-lg text-foreground outline-none placeholder:text-muted-foreground"
-          onChange={(event) => setSearch(event.target.value)}
-        />
-      </form>
-    </div>
-  );
-}
-
 export function TasksBreadcrumb({
   spaceName,
   boardHref,

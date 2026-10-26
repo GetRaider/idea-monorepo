@@ -5,8 +5,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@repo/ui";
 
+import { useOpenCreateMenu } from "@components/create-menu";
 import { ClockIcon, RowsIcon, StatusDoneIcon } from "@components/icons";
 import { ModuleSidebarFrame, useModuleSidebar } from "@components/module-sidebar";
+import { NewButton } from "@components/new-button";
 
 const EXECUTION_SIDEBAR_WIDTH = 208;
 
@@ -78,9 +80,14 @@ export function ExecutionCanvas({
   title: string;
   children: ReactNode;
 }) {
+  const openCreateMenu = useOpenCreateMenu();
+
   return (
     <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-auto px-6 pb-6 pt-3">
-      <h1 className="mb-6 text-2xl font-semibold tracking-tight">{title}</h1>
+      <div className="mb-6 flex items-center justify-between gap-4">
+        <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+        <NewButton onClick={openCreateMenu} />
+      </div>
       {children}
     </section>
   );

@@ -105,7 +105,6 @@ export function DocEditor({ docId }: { docId: string }) {
     <section className={docsSectionClassName()}>
       <DocsCanvasHeader
         crumbs={crumbsForDoc(doc, folders)}
-        showSearch={false}
         showNew={false}
         trailing={
           <Button

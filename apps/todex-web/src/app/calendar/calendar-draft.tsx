@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useState, type ReactNode, type Ref } from "react";
 import { Button, Checkbox, Input, Label, cn } from "@repo/ui";
 import type { Task, Space, TaskRecurrence } from "@repo/api/todex";
 
@@ -12,6 +12,7 @@ import { withAllDay } from "./calendar-datetime";
 import { CalendarWhenFields } from "./calendar-when";
 
 export function CalendarDraft({
+  ref,
   draft,
   tasks,
   boards,
@@ -19,6 +20,7 @@ export function CalendarDraft({
   onCancel,
   onCreate,
 }: {
+  ref?: Ref<HTMLFormElement>;
   draft: DraftSelection;
   tasks: Task[];
   boards: Space[];
@@ -49,6 +51,7 @@ export function CalendarDraft({
 
   return (
     <form
+      ref={ref}
       className="calendar-draft absolute z-30 flex w-80 max-w-[calc(100%-1rem)] flex-col gap-3 overflow-y-auto rounded-xl border border-border bg-popover p-3 shadow-lg"
       style={{ left: draft.left, top: draft.top, maxHeight: draft.maxHeight }}
       onSubmit={(event) => {

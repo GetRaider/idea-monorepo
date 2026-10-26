@@ -96,6 +96,7 @@ export function TaskDescriptionEditor({
   onDocumentChange,
   excludeDocId,
   appearance = "field",
+  contentClassName,
 }: TaskDescriptionEditorProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const onChangeRef = useRef(onChange);
@@ -142,6 +143,7 @@ export function TaskDescriptionEditor({
         class: cn(
           "outline-none",
           appearance === "plain" ? "min-h-40" : "min-h-20",
+          contentClassName,
         ),
       },
       handleKeyDown: (_view, event) =>
@@ -618,6 +620,7 @@ interface TaskDescriptionEditorProps {
   onDocumentChange?: (document: ProseDoc) => void;
   excludeDocId?: string;
   appearance?: "field" | "plain";
+  contentClassName?: string;
 }
 
 interface MentionMenuState {

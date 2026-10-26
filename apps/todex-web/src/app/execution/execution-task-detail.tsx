@@ -11,7 +11,7 @@ import { STATUS_LABEL } from "../tasks/task-helpers";
 
 export function ExecutionTaskDetail({ task }: { task: ExecutionCurrent }) {
   const taskHref = tasksUrlHelper.routing.buildBoardUrl(
-    task.boardName,
+    task.spaceName,
     task.taskKey,
   );
   const description = hasText(task.description) ? task.description : null;
@@ -19,7 +19,7 @@ export function ExecutionTaskDetail({ task }: { task: ExecutionCurrent }) {
   return (
     <div className="flex flex-col gap-5 border-t border-border pt-5">
       <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-        <Detail label="Board" value={task.boardName} />
+        <Detail label="Space" value={task.spaceName} />
         <Detail label="Estimate" value={formatEstimation(task.estimation)} />
         <Detail label="Executed" value={formatDuration(task.actualTime)} />
         <Detail
@@ -49,7 +49,13 @@ export function ExecutionTaskDetail({ task }: { task: ExecutionCurrent }) {
                 <span className="mr-2 text-muted-foreground">
                   {criterion.done ? "✓" : "○"}
                 </span>
-                <span className={criterion.done ? "text-muted-foreground line-through" : undefined}>
+                <span
+                  className={
+                    criterion.done
+                      ? "text-muted-foreground line-through"
+                      : undefined
+                  }
+                >
                   {criterion.text}
                 </span>
               </li>
@@ -99,13 +105,7 @@ export function ExecutionTaskDetail({ task }: { task: ExecutionCurrent }) {
   );
 }
 
-function Detail({
-  label,
-  value,
-}: {
-  label: string;
-  value: ReactNode;
-}) {
+function Detail({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div>
       <dt className="text-xs text-muted-foreground">{label}</dt>

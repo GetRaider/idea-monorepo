@@ -1,19 +1,22 @@
 import { httpClient } from "@repo/api/helpers";
 import {
   ApplyProgressStageTemplateBodySchema,
-  BoardAreaSchema,
-  BoardProgressStageSchema,
+  SpaceSectionSchema,
+  SpaceProgressStageSchema,
   CalendarEventSchema,
   CalendarEventTemplateSchema,
-  CreateBoardAreaBodySchema,
+  CreateSpaceSectionBodySchema,
   CreateCalendarEventBodySchema,
   CreateCalendarEventTemplateBodySchema,
   CreateDocBodySchema,
   CreateFolderBodySchema,
-  CreateTaskBoardBodySchema,
+  CreateEpicBodySchema,
+  CreateSpaceBodySchema,
   CreateTaskBodySchema,
   DocSchema,
   DocSummarySchema,
+  EpicDetailSchema,
+  EpicSchema,
   EnqueueExecutionBodySchema,
   ExecuteTaskBodySchema,
   ExecutionActivitySchema,
@@ -28,17 +31,19 @@ import {
   GoogleCalendarIntegrationSchema,
   FolderSchema,
   MoveTaskBodySchema,
-  ReplaceBoardProgressStagesBodySchema,
-  TaskBoardDetailSchema,
-  TaskBoardSchema,
+  ReplaceSpaceProgressStagesBodySchema,
+  SpaceDetailSchema,
+  SpaceSchema,
   TaskSchema,
-  UpdateBoardAreaBodySchema,
+  UpdateSpaceSectionBodySchema,
   UpdateFolderBodySchema,
-  UpdateTaskBoardBodySchema,
+  UpdateSpaceBodySchema,
   UpdateCalendarEventBodySchema,
   UpdateCalendarEventTemplateBodySchema,
   UpdateDocBodySchema,
+  UpdateEpicBodySchema,
   UpdateTaskBodySchema,
+  WorkspaceMemberProfileSchema,
   WorkspaceSchema,
 } from "@repo/api/todex";
 import { z } from "zod";
@@ -83,9 +88,17 @@ const AgentJobAcceptedSchema = z.object({
 const AgentJobSchema = z.object({
   id: z.string(),
   conversationId: z.string(),
-  status: z.enum(["pending", "running", "awaiting_confirmation", "completed", "failed"]),
+  status: z.enum([
+    "pending",
+    "running",
+    "awaiting_confirmation",
+    "completed",
+    "failed",
+  ]),
   pendingToolCalls: z
-    .array(z.object({ id: z.string(), name: z.string(), arguments: z.unknown() }))
+    .array(
+      z.object({ id: z.string(), name: z.string(), arguments: z.unknown() }),
+    )
     .default([]),
   errorCode: z.string().nullable(),
   errorMessage: z.string().nullable(),
@@ -122,7 +135,9 @@ async function call<T>(
     headers: { "Content-Type": "application/json", Accept: "application/json" },
   });
   if (response.status >= 400) {
-    throw new Error(readError(response.data) ?? `Request failed (${response.status})`);
+    throw new Error(
+      readError(response.data) ?? `Request failed (${response.status})`,
+    );
   }
   return schema.parse(response.data);
 }
@@ -141,6 +156,12 @@ function readError(data: unknown): string | null {
 export const todexClient = {
   workspaces: {
     list: () => call("get", "/v1/workspaces", WorkspaceListSchema),
+    members: () =>
+      call(
+        "get",
+        "/v1/workspaces/members",
+        z.array(WorkspaceMemberProfileSchema),
+      ),
   },
   folders: {
     list: (kind: "tasks" | "docs" = FolderKind.TASKS) =>
@@ -162,68 +183,90 @@ export const todexClient = {
     remove: (folderId: string) =>
       call("delete", `/v1/folders/${folderId}`, z.object({ ok: z.boolean() })),
   },
-  boards: {
-    list: () => call("get", "/v1/boards", z.array(TaskBoardSchema)),
+  spaces: {
+    list: () => call("get", "/v1/spaces", z.array(SpaceSchema)),
     create: (body: unknown) =>
       call(
         "post",
-        "/v1/boards",
-        TaskBoardSchema,
-        CreateTaskBoardBodySchema.parse(body),
+        "/v1/spaces",
+        SpaceSchema,
+        CreateSpaceBodySchema.parse(body),
       ),
-    update: (boardId: string, body: unknown) =>
+    update: (spaceId: string, body: unknown) =>
       call(
         "patch",
-        `/v1/boards/${boardId}`,
-        TaskBoardSchema,
-        UpdateTaskBoardBodySchema.parse(body),
+        `/v1/spaces/${spaceId}`,
+        SpaceSchema,
+        UpdateSpaceBodySchema.parse(body),
       ),
-    remove: (boardId: string) =>
-      call("delete", `/v1/boards/${boardId}`, z.object({ ok: z.boolean() })),
-    get: (boardId: string) =>
-      call("get", `/v1/boards/${boardId}`, TaskBoardDetailSchema),
-    createArea: (boardId: string, body: unknown) =>
+    remove: (spaceId: string) =>
+      call("delete", `/v1/spaces/${spaceId}`, z.object({ ok: z.boolean() })),
+    get: (spaceId: string) =>
+      call("get", `/v1/spaces/${spaceId}`, SpaceDetailSchema),
+    createSection: (spaceId: string, body: unknown) =>
       call(
         "post",
-        `/v1/boards/${boardId}/areas`,
-        BoardAreaSchema,
-        CreateBoardAreaBodySchema.parse(body),
+        `/v1/spaces/${spaceId}/sections`,
+        SpaceSectionSchema,
+        CreateSpaceSectionBodySchema.parse(body),
       ),
-    updateArea: (boardId: string, areaId: string, body: unknown) =>
+    updateSection: (spaceId: string, sectionId: string, body: unknown) =>
       call(
         "patch",
-        `/v1/boards/${boardId}/areas/${areaId}`,
-        BoardAreaSchema,
-        UpdateBoardAreaBodySchema.parse(body),
+        `/v1/spaces/${spaceId}/sections/${sectionId}`,
+        SpaceSectionSchema,
+        UpdateSpaceSectionBodySchema.parse(body),
       ),
-    removeArea: (boardId: string, areaId: string) =>
+    removeSection: (spaceId: string, sectionId: string) =>
       call(
         "delete",
-        `/v1/boards/${boardId}/areas/${areaId}`,
+        `/v1/spaces/${spaceId}/sections/${sectionId}`,
         z.object({ ok: z.boolean() }),
       ),
-    replaceProgressStages: (boardId: string, body: unknown) =>
+    replaceProgressStages: (spaceId: string, body: unknown) =>
       call(
         "put",
-        `/v1/boards/${boardId}/progress-stages`,
-        z.array(BoardProgressStageSchema),
-        ReplaceBoardProgressStagesBodySchema.parse(body),
+        `/v1/spaces/${spaceId}/progress-stages`,
+        z.array(SpaceProgressStageSchema),
+        ReplaceSpaceProgressStagesBodySchema.parse(body),
       ),
-    applyProgressStageTemplate: (boardId: string, body: unknown) =>
+    applyProgressStageTemplate: (spaceId: string, body: unknown) =>
       call(
         "post",
-        `/v1/boards/${boardId}/progress-stages/apply`,
-        z.array(BoardProgressStageSchema),
+        `/v1/spaces/${spaceId}/progress-stages/apply`,
+        z.array(SpaceProgressStageSchema),
         ApplyProgressStageTemplateBodySchema.parse(body),
       ),
   },
+  epics: {
+    list: (spaceId: string) =>
+      call("get", `/v1/spaces/${spaceId}/epics`, z.array(EpicSchema)),
+    create: (spaceId: string, body: unknown) =>
+      call(
+        "post",
+        `/v1/spaces/${spaceId}/epics`,
+        EpicSchema,
+        CreateEpicBodySchema.parse(body),
+      ),
+    get: (epicId: string) =>
+      call("get", `/v1/epics/${epicId}`, EpicDetailSchema),
+    update: (epicId: string, body: unknown) =>
+      call(
+        "patch",
+        `/v1/epics/${epicId}`,
+        EpicSchema,
+        UpdateEpicBodySchema.parse(body),
+      ),
+    remove: (epicId: string) =>
+      call("delete", `/v1/epics/${epicId}`, z.object({ ok: z.boolean() })),
+  },
   tasks: {
     list: (
-      query: { boardId: string } | { scheduleFrom: string; scheduleTo: string },
+      query: { spaceId: string } | { scheduleFrom: string; scheduleTo: string },
     ) => {
       const searchParams =
-        "boardId" in query
-          ? new URLSearchParams({ boardId: query.boardId })
+        "spaceId" in query
+          ? new URLSearchParams({ spaceId: query.spaceId })
           : new URLSearchParams({
               scheduleFrom: query.scheduleFrom,
               scheduleTo: query.scheduleTo,
@@ -261,14 +304,14 @@ export const todexClient = {
       from: string;
       to: string;
       timeZone: string;
-      boardId?: string;
+      spaceId?: string;
     }) => {
       const params = new URLSearchParams({
         from: query.from,
         to: query.to,
         timeZone: query.timeZone,
       });
-      if (query.boardId) params.set("boardId", query.boardId);
+      if (query.spaceId) params.set("spaceId", query.spaceId);
       return call(
         "get",
         `/v1/execution/activity?${params}`,
@@ -283,7 +326,11 @@ export const todexClient = {
         UpdateExecutionSessionBodySchema.parse(body),
       ),
     deleteSession: (sessionId: string) =>
-      call("delete", `/v1/execution/sessions/${sessionId}`, z.object({ ok: z.literal(true) })),
+      call(
+        "delete",
+        `/v1/execution/sessions/${sessionId}`,
+        z.object({ ok: z.literal(true) }),
+      ),
     suggestions: () =>
       call(
         "get",
@@ -312,11 +359,7 @@ export const todexClient = {
         EnqueueExecutionBodySchema.parse(body),
       ),
     removeQueued: (taskId: string) =>
-      call(
-        "delete",
-        `/v1/execution/queue/${taskId}`,
-        ExecutionStateSchema,
-      ),
+      call("delete", `/v1/execution/queue/${taskId}`, ExecutionStateSchema),
     reorder: (body: unknown) =>
       call(
         "post",
@@ -333,7 +376,8 @@ export const todexClient = {
       ),
     pause: () => call("post", "/v1/execution/pause", ExecutionStateSchema),
     resume: () => call("post", "/v1/execution/resume", ExecutionStateSchema),
-    complete: () => call("post", "/v1/execution/complete", ExecutionStateSchema),
+    complete: () =>
+      call("post", "/v1/execution/complete", ExecutionStateSchema),
   },
   docs: {
     list: (query?: { type?: "common" | "goal"; folderId?: string }) => {
@@ -358,22 +402,48 @@ export const todexClient = {
   },
   agent: {
     conversations: {
-      list: () => call("get", "/v1/agent/conversations", z.array(AgentConversationSummarySchema)),
-      create: () => call("post", "/v1/agent/conversations", AgentConversationCreatedSchema),
+      list: () =>
+        call(
+          "get",
+          "/v1/agent/conversations",
+          z.array(AgentConversationSummarySchema),
+        ),
+      create: () =>
+        call("post", "/v1/agent/conversations", AgentConversationCreatedSchema),
       get: (conversationId: string) =>
-        call("get", `/v1/agent/conversations/${conversationId}`, AgentConversationSchema),
+        call(
+          "get",
+          `/v1/agent/conversations/${conversationId}`,
+          AgentConversationSchema,
+        ),
       remove: (conversationId: string) =>
-        call("delete", `/v1/agent/conversations/${conversationId}`, z.object({ ok: z.boolean() })),
-      postMessage: (conversationId: string, message: string, mode: "execute" | "ask" = "execute") =>
-        call("post", `/v1/agent/conversations/${conversationId}/messages`, AgentJobAcceptedSchema, {
-          message,
-          mode,
-        }),
+        call(
+          "delete",
+          `/v1/agent/conversations/${conversationId}`,
+          z.object({ ok: z.boolean() }),
+        ),
+      postMessage: (
+        conversationId: string,
+        message: string,
+        mode: "execute" | "ask" = "execute",
+      ) =>
+        call(
+          "post",
+          `/v1/agent/conversations/${conversationId}/messages`,
+          AgentJobAcceptedSchema,
+          {
+            message,
+            mode,
+          },
+        ),
     },
     jobs: {
-      get: (jobId: string) => call("get", `/v1/agent/jobs/${jobId}`, AgentJobSchema),
+      get: (jobId: string) =>
+        call("get", `/v1/agent/jobs/${jobId}`, AgentJobSchema),
       confirm: (jobId: string, decision: "approve" | "reject" | "allow") =>
-        call("post", `/v1/agent/jobs/${jobId}/confirmation`, z.unknown(), { decision }),
+        call("post", `/v1/agent/jobs/${jobId}/confirmation`, z.unknown(), {
+          decision,
+        }),
     },
   },
   calendar: {
@@ -406,7 +476,8 @@ export const todexClient = {
       ) => {
         const search = new URLSearchParams();
         if (query?.scope) search.set("scope", query.scope);
-        if (query?.originalStart) search.set("originalStart", query.originalStart);
+        if (query?.originalStart)
+          search.set("originalStart", query.originalStart);
         const suffix = search.size > 0 ? `?${search}` : "";
         return call(
           "delete",
@@ -447,7 +518,11 @@ export const todexClient = {
       status: () =>
         call("get", "/v1/calendar/google", GoogleCalendarIntegrationSchema),
       sync: () =>
-        call("post", "/v1/calendar/google/sync", GoogleCalendarIntegrationSchema),
+        call(
+          "post",
+          "/v1/calendar/google/sync",
+          GoogleCalendarIntegrationSchema,
+        ),
       disconnect: () =>
         call("delete", "/v1/calendar/google", GoogleCalendarIntegrationSchema),
     },

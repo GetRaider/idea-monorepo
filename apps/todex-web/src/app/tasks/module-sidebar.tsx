@@ -33,7 +33,7 @@ import {
   TooltipTrigger,
   cn,
 } from "@repo/ui";
-import type { Folder, TaskBoard } from "@repo/api/todex";
+import type { Folder, Space } from "@repo/api/todex";
 
 import {
   BoardIcon,
@@ -56,7 +56,10 @@ import {
 } from "@/helpers/tasks-sidebar-open";
 import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
 
-import { ModuleSidebarFrame, useModuleSidebar } from "@components/module-sidebar";
+import {
+  ModuleSidebarFrame,
+  useModuleSidebar,
+} from "@components/module-sidebar";
 
 import { INBOX_BOARD_NAME } from "./task-helpers";
 import { useTasks } from "./tasks-provider";
@@ -83,10 +86,10 @@ export function TasksModuleSidebar() {
     if (!isSpaceDrag(drag) || !isSpaceDrop(drop)) return;
     const folderId = drop.kind === "folder" ? drop.folderId : null;
     if (drag.folderId === folderId) return;
-    void updateBoard(drag.boardId, { folderId });
+    void updateBoard(drag.spaceId, { folderId });
   }
 
-  const activeBoardId = view.kind === "board" ? view.boardId : null;
+  const activeBoardId = view.kind === "board" ? view.spaceId : null;
   const inboxBoard = boards.find((board) => board.name === INBOX_BOARD_NAME);
   const rootBoards = boards.filter(
     (board) => !board.folderId && board.id !== inboxBoard?.id,
@@ -138,48 +141,48 @@ export function TasksModuleSidebar() {
                   variant="ghost"
                   className="h-7 w-7 text-muted-foreground"
                   onClick={openCreateDialog}
-                  aria-label="Create board or folder"
+                  aria-label="Create space or folder"
                 >
                   <PlusIcon size={14} />
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="right">
-                Create board or folder
+                Create space or folder
               </TooltipContent>
             </Tooltip>
           </div>
           <DndContext
-              sensors={sensors}
-              collisionDetection={spaceCollisionDetection}
-              onDragEnd={handleSpaceDragEnd}
+            sensors={sensors}
+            collisionDetection={spaceCollisionDetection}
+            onDragEnd={handleSpaceDragEnd}
+          >
+            <RootSpaceList
+              boards={rootBoards.map((board) => (
+                <SpaceBoardRow
+                  key={board.id}
+                  spaceId={board.id}
+                  folderId={board.folderId}
+                  href={tasksUrlHelper.routing.buildBoardUrl(board.name)}
+                  active={activeBoardId === board.id}
+                  icon={<BoardIcon size={16} />}
+                  label={board.name}
+                  menu={<BoardMenu board={board} />}
+                />
+              ))}
             >
-              <RootSpaceList
-                boards={rootBoards.map((board) => (
-                  <SpaceBoardRow
-                    key={board.id}
-                    boardId={board.id}
-                    folderId={board.folderId}
-                    href={tasksUrlHelper.routing.buildBoardUrl(board.name)}
-                    active={activeBoardId === board.id}
-                    icon={<BoardIcon size={16} />}
-                    label={board.name}
-                    menu={<BoardMenu board={board} />}
-                  />
-                ))}
-              >
-                {folders.map((folder) => (
-                  <FolderGroup
-                    key={folder.id}
-                    folder={folder}
-                    boards={boards.filter(
-                      (board) => board.folderId === folder.id,
-                    )}
-                    activeBoardId={activeBoardId}
-                  />
-                ))}
-              </RootSpaceList>
-              <SpaceDragOverlay />
-            </DndContext>
+              {folders.map((folder) => (
+                <FolderGroup
+                  key={folder.id}
+                  folder={folder}
+                  boards={boards.filter(
+                    (board) => board.folderId === folder.id,
+                  )}
+                  activeBoardId={activeBoardId}
+                />
+              ))}
+            </RootSpaceList>
+            <SpaceDragOverlay />
+          </DndContext>
         </section>
       </div>
     </ModuleSidebarFrame>
@@ -194,8 +197,7 @@ function FolderGroup({ folder, boards, activeBoardId }: FolderGroupProps) {
   });
   const { active } = useDndContext();
   const drag = active?.data.current;
-  const showDrop =
-    isOver && isSpaceDrag(drag) && drag.folderId !== folder.id;
+  const showDrop = isOver && isSpaceDrag(drag) && drag.folderId !== folder.id;
 
   return (
     <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
@@ -226,7 +228,7 @@ function FolderGroup({ folder, boards, activeBoardId }: FolderGroupProps) {
           {boards.map((board) => (
             <SpaceBoardRow
               key={board.id}
-              boardId={board.id}
+              spaceId={board.id}
               folderId={board.folderId}
               href={tasksUrlHelper.routing.buildBoardUrl(board.name)}
               active={activeBoardId === board.id}
@@ -295,15 +297,15 @@ function SpaceDragOverlay() {
 }
 
 function SpaceBoardRow({
-  boardId,
+  spaceId,
   folderId,
   ...row
-}: NavRowProps & { boardId: string; folderId: string | null }) {
+}: NavRowProps & { spaceId: string; folderId: string | null }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-    id: `space-board:${boardId}`,
+    id: `space-board:${spaceId}`,
     data: {
       kind: "board",
-      boardId,
+      spaceId,
       folderId,
       label: row.label,
     } satisfies SpaceDragData,
@@ -355,13 +357,15 @@ function NavRow({
     >
       {row}
       {menu ? (
-        <div className="absolute right-0.5 top-1/2 -translate-y-1/2">{menu}</div>
+        <div className="absolute right-0.5 top-1/2 -translate-y-1/2">
+          {menu}
+        </div>
       ) : null}
     </div>
   );
 }
 
-function BoardMenu({ board }: { board: TaskBoard }) {
+function BoardMenu({ board }: { board: Space }) {
   const actions = useSpaceDialogs();
   return (
     <RowMenu>
@@ -422,7 +426,7 @@ function RowMenu({ children }: { children: ReactNode }) {
 function isSpaceDrag(value: unknown): value is SpaceDragData {
   if (typeof value !== "object" || value === null) return false;
   if (!("kind" in value) || value.kind !== "board") return false;
-  if (!("boardId" in value) || typeof value.boardId !== "string") return false;
+  if (!("spaceId" in value) || typeof value.spaceId !== "string") return false;
   if (!("folderId" in value)) return false;
   if (!("label" in value) || typeof value.label !== "string") return false;
   return value.folderId === null || typeof value.folderId === "string";
@@ -471,7 +475,7 @@ class SpacePointerSensor extends PointerSensor {
 
 interface FolderGroupProps {
   folder: Folder;
-  boards: TaskBoard[];
+  boards: Space[];
   activeBoardId: string | null;
 }
 
@@ -490,11 +494,9 @@ interface NavRowProps {
 
 interface SpaceDragData {
   kind: "board";
-  boardId: string;
+  spaceId: string;
   folderId: string | null;
   label: string;
 }
 
-type SpaceDropData =
-  | { kind: "folder"; folderId: string }
-  | { kind: "root" };
+type SpaceDropData = { kind: "folder"; folderId: string } | { kind: "root" };

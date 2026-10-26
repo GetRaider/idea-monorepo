@@ -18,4 +18,9 @@ export class WorkspaceController {
       request.workspaceId,
     );
   }
+
+  @Get("members")
+  async members(@Req() request: WorkspaceRequest) {
+    return this.workspaceService.listMemberProfiles(request.workspaceId);
+  }
 }

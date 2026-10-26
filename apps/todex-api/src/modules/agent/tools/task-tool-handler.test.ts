@@ -28,10 +28,13 @@ describe("TaskToolHandler", () => {
       agentRunId: "run-1",
       toolCallId: "call-reject",
       name: "create_task",
-      args: { workspaceId: "other", taskBoardId: "board-1", summary: "Nope" },
+      args: { workspaceId: "other", spaceId: "board-1", summary: "Nope" },
     });
 
-    expect(rejected).toEqual({ ok: false, error: "workspaceId is not allowed" });
+    expect(rejected).toEqual({
+      ok: false,
+      error: "workspaceId is not allowed",
+    });
     expect(tasks.create).not.toHaveBeenCalled();
 
     const created = await layer.execute({
@@ -41,12 +44,12 @@ describe("TaskToolHandler", () => {
       agentRunId: "run-1",
       toolCallId: "call-create",
       name: "create_task",
-      args: { taskBoardId: "board-1", summary: "Agent smoke test" },
+      args: { spaceId: "board-1", summary: "Agent smoke test" },
     });
 
     expect(created.ok).toBe(true);
     expect(tasks.create).toHaveBeenCalledWith("workspace-1", {
-      taskBoardId: "board-1",
+      spaceId: "board-1",
       summary: "Agent smoke test",
       description: "",
       status: undefined,

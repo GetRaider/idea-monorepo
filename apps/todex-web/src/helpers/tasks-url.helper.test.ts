@@ -9,11 +9,11 @@ describe("tasksUrlHelper.routing.isRootPathname", () => {
   });
 
   it("does not treat board or schedule pages as root", () => {
-    expect(tasksUrlHelper.routing.isRootPathname("/tasks/board/Inbox")).toBe(
+    expect(tasksUrlHelper.routing.isRootPathname("/tasks/space/Inbox")).toBe(
       false,
     );
     expect(
-      tasksUrlHelper.routing.isRootPathname("/tasks/board/Inbox/T-1"),
+      tasksUrlHelper.routing.isRootPathname("/tasks/space/Inbox/T-1"),
     ).toBe(false);
     expect(tasksUrlHelper.routing.isRootPathname("/tasks/schedule/today")).toBe(
       false,
@@ -30,7 +30,7 @@ describe("tasksUrlHelper.routing.getActiveViewFromPathname", () => {
       TASKS_ROOT_VIEW_ID,
     );
     expect(
-      tasksUrlHelper.routing.getActiveViewFromPathname("/tasks/board/Inbox"),
+      tasksUrlHelper.routing.getActiveViewFromPathname("/tasks/space/Inbox"),
     ).not.toBe(TASKS_ROOT_VIEW_ID);
   });
 
@@ -54,7 +54,7 @@ describe("tasksUrlHelper.routing.getActiveViewFromPathname", () => {
 describe("tasksUrlHelper.routing board urls", () => {
   it("encodes board names and parses them back", () => {
     const href = tasksUrlHelper.routing.buildBoardUrl("My Board");
-    expect(href).toBe("/tasks/board/My%20Board");
+    expect(href).toBe("/tasks/space/My%20Board");
     expect(tasksUrlHelper.routing.getBoardNameFromPathname(href)).toBe(
       "My Board",
     );
@@ -62,18 +62,32 @@ describe("tasksUrlHelper.routing board urls", () => {
 
   it("parses optional taskKey without using it in P0", () => {
     const parsed = tasksUrlHelper.routing.parseBoardPath(["Inbox", "T-1"]);
-    expect(parsed).toEqual({ boardName: "Inbox", taskKey: "T-1" });
+    expect(parsed).toEqual({ spaceName: "Inbox", taskKey: "T-1" });
+  });
+
+  it("treats an epics segment as an epic page", () => {
+    expect(tasksUrlHelper.routing.buildEpicUrl("Todex", "epic-1")).toBe(
+      "/tasks/space/Todex/epics/epic-1",
+    );
+    expect(
+      tasksUrlHelper.routing.parseSpacePath(["Todex", "epics", "epic-1"]),
+    ).toEqual({ kind: "epic", spaceName: "Todex", epicId: "epic-1" });
+    expect(
+      tasksUrlHelper.routing.getTaskKeyFromPathname(
+        "/tasks/space/Todex/epics/epic-1",
+      ),
+    ).toBeUndefined();
   });
 
   it("builds and reads taskKey segments", () => {
     expect(tasksUrlHelper.routing.buildBoardUrl("Inbox", "T-1")).toBe(
-      "/tasks/board/Inbox/T-1",
+      "/tasks/space/Inbox/T-1",
+    );
+    expect(tasksUrlHelper.routing.buildScheduleUrl("today", "T-12")).toBe(
+      "/tasks/schedule/today/T-12",
     );
     expect(
-      tasksUrlHelper.routing.buildScheduleUrl("today", "T-12"),
-    ).toBe("/tasks/schedule/today/T-12");
-    expect(
-      tasksUrlHelper.routing.getTaskKeyFromPathname("/tasks/board/Inbox/T-1"),
+      tasksUrlHelper.routing.getTaskKeyFromPathname("/tasks/space/Inbox/T-1"),
     ).toBe("T-1");
     expect(
       tasksUrlHelper.routing.getTaskKeyFromPathname(
@@ -81,7 +95,7 @@ describe("tasksUrlHelper.routing board urls", () => {
       ),
     ).toBe("T-9");
     expect(
-      tasksUrlHelper.routing.getTaskKeyFromPathname("/tasks/board/Inbox"),
+      tasksUrlHelper.routing.getTaskKeyFromPathname("/tasks/space/Inbox"),
     ).toBeUndefined();
   });
 });

@@ -10,14 +10,14 @@ describe("boardDropId", () => {
       kind: "gap",
       status: TaskStatus.TODO,
       index: 0,
-      boardId: "work",
+      spaceId: "work",
     });
     const inbox = boardDropId({
       type: "reorder",
       kind: "gap",
       status: TaskStatus.TODO,
       index: 0,
-      boardId: "inbox",
+      spaceId: "inbox",
     });
     expect(work).not.toBe(inbox);
   });

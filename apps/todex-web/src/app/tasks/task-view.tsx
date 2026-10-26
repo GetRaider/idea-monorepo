@@ -1,13 +1,8 @@
 "use client";
 
-import {
-  useEffect,
-  useRef,
-  useState,
-  type FormEvent,
-  type ReactNode,
-} from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { usePathname } from "next/navigation";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Button,
   Checkbox,
@@ -32,8 +27,10 @@ import {
 } from "@repo/api/todex";
 import type {
   AcceptanceCriterion,
+  Epic,
   Task,
-  TaskBoard,
+  Space,
+  UpdateEpicBody,
   UpdateTaskBody,
 } from "@repo/api/todex";
 
@@ -75,6 +72,7 @@ import {
   AreaMark,
   BoardGlyph,
   BoardMark,
+  InlineTitle,
   ParentMark,
   PriorityGlyph,
   StageMark,
@@ -82,6 +80,8 @@ import {
   TaskProgressBar,
   TasksBreadcrumb,
 } from "./task-board.ui";
+import { EpicTaskCard } from "./epic-row";
+import { TaskComposer, type TaskComposerValues } from "./task-composer";
 import {
   acceptanceCriteriaAreMet,
   combineLocalDateAndTime,
@@ -103,6 +103,8 @@ const SAVE_DEBOUNCE_MS = 600;
 const LG_QUERY = "(min-width: 1024px)";
 
 export function TaskView() {
+  const pathname = usePathname();
+  const openedEpic = openedEpicFromPathname(pathname);
   const {
     state: { selectedTask, tasks, boards },
     actions: {
@@ -123,6 +125,20 @@ export function TaskView() {
     setPanelWidth(readTaskPanelWidth());
   }, []);
 
+  if (openedEpic) {
+    return (
+      <OpenedEpicView
+        spaceName={openedEpic.spaceName}
+        epicId={openedEpic.epicId}
+        isLargeScreen={isLargeScreen}
+        mode={mode}
+        panelWidth={panelWidth}
+        onMode={setMode}
+        onWidth={setPanelWidth}
+      />
+    );
+  }
+
   if (!selectedTask) return null;
 
   const isDocked = isLargeScreen && mode === "docked";
@@ -137,8 +153,8 @@ export function TaskView() {
       ? orderedTasks[taskIndex + 1]
       : null;
 
-  const board = boards.find((item) => item.id === selectedTask.taskBoardId);
-  const boardName = board?.name ?? "Board";
+  const board = boards.find((item) => item.id === selectedTask.spaceId);
+  const spaceName = board?.name ?? "Space";
 
   return (
     <div
@@ -173,7 +189,7 @@ export function TaskView() {
         ) : (
           <TasksBreadcrumb
             className="min-w-0 flex-1 text-2xl font-semibold tracking-tight"
-            boardName={boardName}
+            spaceName={spaceName}
             boardHref={
               board
                 ? tasksUrlHelper.routing.buildBoardUrl(board.name)
@@ -250,15 +266,445 @@ export function TaskView() {
         onUpdate={(body) => updateTask(selectedTask.id, body, { quiet: true })}
         onUpdateStatus={(taskId, status) => updateTaskStatus(taskId, status)}
         onOpenTask={setSelectedTaskId}
-        onCreateSubtask={(summary) =>
-          createTask(summary, selectedTask.id, {
-            estimation: selectedTask.estimation,
-            areaId: selectedTask.areaId,
+        onCreateSubtask={(values) =>
+          createTask(values.summary, selectedTask.id, {
+            estimation: values.estimation,
+            status: values.status,
+            priority: values.priority,
+            spaceId: selectedTask.spaceId,
+            sectionId: selectedTask.sectionId,
+            epicId: selectedTask.epicId,
+            scheduleDate: values.scheduleDate,
+            dueDate: values.dueDate,
             progressStageId: selectedTask.progressStageId,
           })
         }
       />
     </div>
+  );
+}
+
+function OpenedEpicView({
+  spaceName,
+  epicId,
+  isLargeScreen,
+  mode,
+  panelWidth,
+  onMode,
+  onWidth,
+}: {
+  spaceName: string;
+  epicId: string;
+  isLargeScreen: boolean;
+  mode: TaskViewMode;
+  panelWidth: number;
+  onMode: (mode: TaskViewMode) => void;
+  onWidth: (width: number) => void;
+}) {
+  const {
+    actions: { setSelectedTaskId },
+  } = useTasks();
+  const isDocked = isLargeScreen && mode === "docked";
+  const epicQuery = useQuery({
+    queryKey: ["epic", epicId],
+    queryFn: () => todexClient.epics.get(epicId),
+  });
+  const spaceHref = tasksUrlHelper.routing.buildBoardUrl(spaceName);
+
+  function close() {
+    setSelectedTaskId(null);
+  }
+
+  return (
+    <div
+      className={
+        isDocked
+          ? "relative flex min-h-0 shrink-0 flex-col border-l border-border bg-canvas text-foreground"
+          : "absolute inset-0 z-20 flex min-h-0 flex-col bg-canvas text-foreground"
+      }
+      style={isDocked ? { width: panelWidth } : undefined}
+    >
+      {isDocked ? (
+        <ResizeHandle
+          label="Resize task panel"
+          edge="leading"
+          width={panelWidth}
+          min={TASK_PANEL_MIN_WIDTH}
+          max={TASK_PANEL_MAX_WIDTH}
+          onWidth={onWidth}
+          onCommit={writeTaskPanelWidth}
+        />
+      ) : null}
+      <header
+        className={cn(
+          "flex items-center gap-3 border-b border-border",
+          isDocked ? "px-3 py-1.5" : "px-6 py-3",
+        )}
+      >
+        {isDocked ? (
+          <span className="min-w-0 flex-1 truncate text-sm font-medium text-muted-foreground">
+            {epicQuery.data?.epic.name ?? "Epic"}
+          </span>
+        ) : (
+          <TasksBreadcrumb
+            className="min-w-0 flex-1 text-2xl font-semibold tracking-tight"
+            spaceName={spaceName}
+            boardHref={spaceHref}
+            epicName={epicQuery.data?.epic.name ?? "Epic"}
+            trailing={<BoardGlyph />}
+          />
+        )}
+        <div className="flex shrink-0 items-center gap-1">
+          {epicQuery.data ? (
+            <EpicViewMenu
+              name={epicQuery.data.epic.name}
+              onDelete={async () => {
+                await todexClient.epics.remove(epicId);
+                close();
+              }}
+            />
+          ) : null}
+          {isLargeScreen ? (
+            <PagerButton
+              label={isDocked ? "Expand epic" : "Dock epic to the side"}
+              onClick={() => {
+                const nextMode = isDocked ? "fullscreen" : "docked";
+                onMode(nextMode);
+                writeTaskViewMode(nextMode);
+              }}
+            >
+              {isDocked ? (
+                <ExpandIcon size={14} />
+              ) : (
+                <DockRightIcon size={14} />
+              )}
+            </PagerButton>
+          ) : null}
+          <PagerButton label="Close epic" onClick={close}>
+            <CloseIcon size={14} />
+          </PagerButton>
+        </div>
+      </header>
+      {epicQuery.isLoading ? null : epicQuery.isError || !epicQuery.data ? (
+        <p className="px-6 py-10 text-sm text-destructive">
+          Could not load epic.
+        </p>
+      ) : (
+        <OpenedEpicBody
+          key={epicQuery.data.epic.id}
+          epic={epicQuery.data.epic}
+          spaceName={spaceName}
+          stacked={isDocked}
+        />
+      )}
+    </div>
+  );
+}
+
+function OpenedEpicBody({
+  epic,
+  spaceName,
+  stacked,
+}: {
+  epic: Epic;
+  spaceName: string;
+  stacked: boolean;
+}) {
+  const queryClient = useQueryClient();
+  const {
+    state: { tasks },
+    actions: { createTask },
+  } = useTasks();
+  const [name, setName] = useState(epic.name);
+  const [addingTask, setAddingTask] = useState(false);
+  const sections = useBoardAxes(epic.spaceId).data?.sections ?? [];
+  const pendingUpdateRef = useRef<UpdateEpicBody>({});
+  const saveTimerRef = useRef<number | null>(null);
+  const epicTasks = tasks
+    .filter((task) => task.epicId === epic.id && task.parentTaskId == null)
+    .sort(compareTasksForNavigation);
+  const assigned = tasks.filter((task) => task.epicId === epic.id);
+  const completed = assigned.filter(
+    (task) => task.status === TaskStatus.DONE,
+  ).length;
+  const listedDone = epicTasks.filter(
+    (task) => task.status === TaskStatus.DONE,
+  ).length;
+  const updateEpic = useMutation({
+    mutationFn: (body: UpdateEpicBody) =>
+      todexClient.epics.update(epic.id, body),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["epic", epic.id] });
+      await queryClient.invalidateQueries({
+        queryKey: ["epics", epic.spaceId],
+      });
+    },
+  });
+
+  function flushPendingUpdate() {
+    if (saveTimerRef.current != null) {
+      window.clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
+    const body = pendingUpdateRef.current;
+    if (Object.keys(body).length === 0) return;
+    pendingUpdateRef.current = {};
+    updateEpic.mutate(body);
+  }
+
+  function queueUpdate(body: UpdateEpicBody) {
+    pendingUpdateRef.current = { ...pendingUpdateRef.current, ...body };
+    if (saveTimerRef.current != null) window.clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = window.setTimeout(() => {
+      saveTimerRef.current = null;
+      flushPendingUpdate();
+    }, SAVE_DEBOUNCE_MS);
+  }
+
+  useEffect(() => {
+    return () => {
+      flushPendingUpdate();
+    };
+  }, []);
+
+  return (
+    <div
+      className={cn(
+        "flex min-h-0 flex-1 flex-col overflow-y-auto",
+        stacked ? null : "lg:flex-row lg:overflow-hidden",
+      )}
+    >
+      <div
+        className={cn(
+          "min-w-0 flex-1 py-6",
+          stacked ? "px-4" : "px-6 sm:px-10 lg:overflow-y-auto",
+        )}
+      >
+        <textarea
+          aria-label="Name"
+          value={name}
+          rows={2}
+          className="w-full resize-none bg-transparent text-2xl font-semibold leading-tight text-foreground outline-none placeholder:text-muted-foreground"
+          onChange={(event) => {
+            const nextName = event.target.value;
+            setName(nextName);
+            const trimmed = nextName.trim();
+            if (trimmed && trimmed !== epic.name)
+              queueUpdate({ name: trimmed });
+          }}
+          onBlur={() => {
+            const nextName = name.trim();
+            if (!nextName) {
+              setName(epic.name);
+              return;
+            }
+            if (nextName !== epic.name) queueUpdate({ name: nextName });
+            flushPendingUpdate();
+          }}
+        />
+        <div className="mt-1">
+          <p className="mb-3 text-lg font-medium text-muted-foreground">
+            Description
+          </p>
+          <TaskDescriptionEditor
+            appearance="plain"
+            content={epic.description}
+            onChange={(html) => {
+              if (html === epic.description) return;
+              queueUpdate({ description: html });
+            }}
+          />
+        </div>
+        <section className="mt-8">
+          <div className="mb-3 flex items-center">
+            <h2 className="text-lg font-medium text-muted-foreground">Tasks</h2>
+            <span className="ml-auto text-sm font-medium tabular-nums text-muted-foreground">
+              {listedDone}/{epicTasks.length}
+            </span>
+          </div>
+          {epicTasks.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No tasks yet.</p>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {epicTasks.map((task) => (
+                <EpicTaskCard key={task.id} task={task} draggable={false} />
+              ))}
+            </div>
+          )}
+          <div className="mt-2">
+            <TaskComposer
+              open={addingTask}
+              defaultBoardId={epic.spaceId}
+              onOpenChange={setAddingTask}
+              onCreate={(values) =>
+                createTask(values.summary, null, {
+                  estimation: values.estimation,
+                  status: values.status,
+                  priority: values.priority,
+                  spaceId: epic.spaceId,
+                  sectionId: epic.sectionId,
+                  epicId: epic.id,
+                  scheduleDate: values.scheduleDate,
+                  dueDate: values.dueDate,
+                })
+              }
+            />
+          </div>
+        </section>
+      </div>
+      <aside
+        className={cn(
+          "flex w-full shrink-0 flex-col gap-3 border-t border-border bg-background p-4",
+          stacked
+            ? null
+            : "lg:w-[22rem] lg:overflow-y-auto lg:border-l lg:border-t-0",
+        )}
+      >
+        <section className="rounded-xl border border-border bg-background p-4">
+          <h2 className="text-sm font-medium text-foreground">Details</h2>
+          <div className="mt-4 flex flex-col gap-3">
+            <DetailRow icon={<StatusDoneIconMark />} label="Progress">
+              <TaskProgressBar
+                done={completed}
+                total={assigned.length}
+                className="text-sm"
+              />
+            </DetailRow>
+            <DetailRow
+              icon={<StatusGlyph status={epic.status} />}
+              label="Status"
+            >
+              <Select
+                value={epic.status}
+                onValueChange={(value) =>
+                  updateEpic.mutate({ status: value as Task["status"] })
+                }
+              >
+                <SelectTrigger
+                  className={cn(
+                    "h-7 w-fit gap-1.5 rounded-full px-2.5 text-xs font-medium shadow-none",
+                    STATUS_PILL[epic.status],
+                  )}
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {STATUS_ORDER.map((status) => (
+                    <SelectItem key={status} value={status}>
+                      <span className="flex items-center gap-2">
+                        <StatusGlyph status={status} />
+                        {STATUS_LABEL[status]}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </DetailRow>
+            <DetailRow
+              icon={<PriorityGlyph priority={epic.priority} />}
+              label="Priority"
+            >
+              <Select
+                value={epic.priority}
+                onValueChange={(value) =>
+                  updateEpic.mutate({ priority: value as Task["priority"] })
+                }
+              >
+                <SelectTrigger
+                  className={cn(
+                    "h-7 w-fit gap-1.5 rounded-full px-2.5 text-xs font-medium shadow-none",
+                    PRIORITY_PILL[epic.priority],
+                  )}
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PRIORITY_OPTIONS.map((priority) => (
+                    <SelectItem key={priority} value={priority}>
+                      <span className="flex items-center gap-2">
+                        <PriorityGlyph priority={priority} />
+                        {PRIORITY_LABEL[priority]}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </DetailRow>
+            <DetailRow icon={<BoardMark />} label="Space">
+              <span className="text-sm">{spaceName}</span>
+            </DetailRow>
+            <DetailRow icon={<AreaMark />} label="Section">
+              {sections.some((section) => section.id === epic.sectionId) ? (
+                <Select
+                  value={epic.sectionId}
+                  onValueChange={(sectionId) =>
+                    updateEpic.mutate({ sectionId })
+                  }
+                >
+                  <SelectTrigger className="h-8 w-full border-0 bg-transparent px-0 text-sm shadow-none">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sections.map((section) => (
+                      <SelectItem key={section.id} value={section.id}>
+                        {section.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <span className="text-sm text-muted-foreground">General</span>
+              )}
+            </DetailRow>
+          </div>
+        </section>
+      </aside>
+    </div>
+  );
+}
+
+function EpicViewMenu({
+  name,
+  onDelete,
+}: {
+  name: string;
+  onDelete: () => void | Promise<void>;
+}) {
+  const queryClient = useQueryClient();
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+
+  return (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            aria-label="Epic actions"
+            className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-surface hover:text-foreground"
+          >
+            <EllipsisIcon size={14} />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onSelect={() => setIsDeleteOpen(true)}>
+            Delete
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      {isDeleteOpen ? (
+        <ConfirmDialog
+          title="Delete epic"
+          description={`Delete "${name}"? Its tasks stay in the space.`}
+          confirmLabel="Delete"
+          onClose={() => setIsDeleteOpen(false)}
+          onConfirm={async () => {
+            await onDelete();
+            await queryClient.invalidateQueries({ queryKey: ["epics"] });
+            await queryClient.invalidateQueries({ queryKey: ["tasks"] });
+          }}
+        />
+      ) : null}
+    </>
   );
 }
 
@@ -274,13 +720,14 @@ function TaskViewBody({
 }: {
   task: Task;
   tasks: Task[];
-  boards: TaskBoard[];
+  boards: Space[];
   stacked: boolean;
   onUpdate: (body: UpdateTaskBody) => void;
   onUpdateStatus: (taskId: string, status: Task["status"]) => void;
   onOpenTask: (taskId: string) => void;
-  onCreateSubtask: (summary: string) => void;
+  onCreateSubtask: (values: TaskComposerValues) => void;
 }) {
+  const [addingTask, setAddingTask] = useState(false);
   const [summary, setSummary] = useState(task.summary);
   const [estimationText, setEstimationText] = useState(
     formatEstimation(task.estimation),
@@ -289,12 +736,17 @@ function TaskViewBody({
   const saveTimerRef = useRef<number | null>(null);
   const onUpdateRef = useRef(onUpdate);
   onUpdateRef.current = onUpdate;
-  const boardAxes = useBoardAxes(task.taskBoardId);
+  const boardAxes = useBoardAxes(task.spaceId);
   const goalsQuery = useQuery({
     queryKey: ["docs", "goal"],
     queryFn: () => todexClient.docs.list({ type: DocType.GOAL }),
   });
-  const areas = boardAxes.data?.areas ?? [];
+  const areas = boardAxes.data?.sections ?? [];
+  const epicsQuery = useQuery({
+    queryKey: ["epics", task.spaceId],
+    queryFn: () => todexClient.epics.list(task.spaceId),
+  });
+  const epics = epicsQuery.data ?? [];
   const stages = boardAxes.data?.progressStages ?? [];
   const goals = [...(goalsQuery.data ?? [])].sort((left, right) =>
     left.title.localeCompare(right.title),
@@ -341,8 +793,8 @@ function TaskViewBody({
     estimationText.trim() === "" ||
     parsedEstimation == null ||
     parsedEstimation <= 0;
-  const board = boards.find((item) => item.id === task.taskBoardId);
-  const boardName = board?.name ?? "Board";
+  const board = boards.find((item) => item.id === task.spaceId);
+  const spaceName = board?.name ?? "Space";
 
   useEffect(() => {
     return () => {
@@ -408,6 +860,42 @@ function TaskViewBody({
             }}
           />
         </div>
+        <section className="mt-8">
+          <div className="mb-3 flex items-center">
+            <h2 className="text-lg font-medium text-muted-foreground">
+              Subtasks
+            </h2>
+            <span className="ml-auto text-sm font-medium tabular-nums text-muted-foreground">
+              {doneCount}/{children.length}
+            </span>
+          </div>
+          {children.length === 0 ? (
+            <p className="mb-2 text-sm text-muted-foreground">No tasks yet.</p>
+          ) : (
+            <div className="mb-2 flex flex-col gap-2">
+              {children.map((child) => (
+                <EpicTaskCard
+                  key={child.id}
+                  task={child}
+                  draggable={false}
+                  onOpen={() => onOpenTask(child.id)}
+                  onToggleDone={() =>
+                    onUpdateStatus(
+                      child.id,
+                      statusAfterDoneToggle(child.status),
+                    )
+                  }
+                />
+              ))}
+            </div>
+          )}
+          <TaskComposer
+            open={addingTask}
+            defaultBoardId={task.spaceId}
+            onOpenChange={setAddingTask}
+            onCreate={onCreateSubtask}
+          />
+        </section>
       </div>
       <aside
         className={cn(
@@ -418,7 +906,7 @@ function TaskViewBody({
         )}
       >
         <section className="rounded-xl border border-border bg-background p-4">
-          <h2 className="text-sm font-medium text-foreground">Task Details</h2>
+          <h2 className="text-sm font-medium text-foreground">Details</h2>
           <div className="mt-4 flex flex-col gap-3">
             {progress.total > 0 ? (
               <DetailRow icon={<StatusDoneIconMark />} label="Progress">
@@ -530,11 +1018,17 @@ function TaskViewBody({
                 </SelectContent>
               </Select>
             </DetailRow>
-            <DetailRow icon={<BoardMark />} label="Board">
+            <DetailRow icon={<BoardMark />} label="Space">
               {boards.length > 1 ? (
                 <Select
-                  value={task.taskBoardId}
-                  onValueChange={(value) => queueUpdate({ taskBoardId: value })}
+                  value={task.spaceId}
+                  onValueChange={(value) => {
+                    queueUpdate({
+                      spaceId: value,
+                      epicId: null,
+                    });
+                    flushPendingUpdate();
+                  }}
                 >
                   <SelectTrigger className="h-8 w-full border-0 bg-transparent px-0 text-sm shadow-none">
                     <SelectValue />
@@ -548,14 +1042,14 @@ function TaskViewBody({
                   </SelectContent>
                 </Select>
               ) : (
-                <span className="text-sm">{boardName}</span>
+                <span className="text-sm">{spaceName}</span>
               )}
             </DetailRow>
-            <DetailRow icon={<AreaMark />} label="Area">
-              {areas.some((area) => area.id === task.areaId) ? (
+            <DetailRow icon={<AreaMark />} label="Section">
+              {areas.some((area) => area.id === task.sectionId) ? (
                 <Select
-                  value={task.areaId}
-                  onValueChange={(value) => onUpdate({ areaId: value })}
+                  value={task.sectionId}
+                  onValueChange={(value) => onUpdate({ sectionId: value })}
                 >
                   <SelectTrigger className="h-8 w-full border-0 bg-transparent px-0 text-sm shadow-none">
                     <SelectValue />
@@ -571,6 +1065,27 @@ function TaskViewBody({
               ) : (
                 <span className="text-sm text-muted-foreground">General</span>
               )}
+            </DetailRow>
+            <DetailRow icon={<AreaMark />} label="Epic">
+              <Select
+                value={task.epicId ?? "none"}
+                onValueChange={(value) => {
+                  queueUpdate({ epicId: value === "none" ? null : value });
+                  flushPendingUpdate();
+                }}
+              >
+                <SelectTrigger className="h-8 w-full border-0 bg-transparent px-0 text-sm shadow-none">
+                  <SelectValue placeholder="None" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  {epics.map((epic) => (
+                    <SelectItem key={epic.id} value={epic.id}>
+                      {epic.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </DetailRow>
             <DetailRow icon={<ClockIcon size={16} />} label="Executed">
               <span className="text-sm">{formatDuration(task.actualTime)}</span>
@@ -722,13 +1237,6 @@ function TaskViewBody({
           criteria={task.acceptanceCriteria}
           onChange={(acceptanceCriteria) => onUpdate({ acceptanceCriteria })}
         />
-        <SubtasksSection
-          tasks={children}
-          doneCount={doneCount}
-          onOpenTask={onOpenTask}
-          onUpdateStatus={onUpdateStatus}
-          onCreateSubtask={onCreateSubtask}
-        />
       </aside>
     </div>
   );
@@ -870,115 +1378,6 @@ function AcceptanceCriterionRow({
   );
 }
 
-function SubtasksSection({
-  tasks,
-  doneCount,
-  onOpenTask,
-  onUpdateStatus,
-  onCreateSubtask,
-}: {
-  tasks: Task[];
-  doneCount: number;
-  onOpenTask: (taskId: string) => void;
-  onUpdateStatus: (taskId: string, status: Task["status"]) => void;
-  onCreateSubtask: (summary: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-
-  return (
-    <section className="rounded-xl border border-border bg-background p-4">
-      <button
-        type="button"
-        className="flex w-full items-center gap-2 text-left"
-        aria-expanded={open}
-        onClick={() => setOpen((current) => !current)}
-      >
-        <ChevronIcon
-          size={14}
-          className={cn(
-            "text-muted-foreground transition-transform",
-            open && "rotate-90",
-          )}
-        />
-        <h2 className="text-sm font-medium text-foreground">Subtasks</h2>
-        <span className="ml-auto text-xs tabular-nums text-muted-foreground">
-          {doneCount}/{tasks.length}
-        </span>
-      </button>
-      {open ? (
-        tasks.length === 0 ? (
-          <p className="mt-3 text-sm text-muted-foreground">No subtasks</p>
-        ) : (
-          <ul className="mt-3 flex flex-col gap-2">
-            {tasks.map((child) => (
-              <li key={child.id} className="flex items-start gap-2">
-                <Checkbox
-                  checked={child.status === TaskStatus.DONE}
-                  aria-label={`Mark ${child.summary} done`}
-                  className="mt-0.5"
-                  onCheckedChange={() =>
-                    onUpdateStatus(
-                      child.id,
-                      statusAfterDoneToggle(child.status),
-                    )
-                  }
-                />
-                <button
-                  type="button"
-                  className={cn(
-                    "min-w-0 flex-1 text-left text-sm hover:text-foreground",
-                    isClosedStatus(child.status)
-                      ? "text-muted-foreground line-through"
-                      : "text-foreground",
-                  )}
-                  onClick={() => onOpenTask(child.id)}
-                >
-                  {child.summary}
-                </button>
-              </li>
-            ))}
-          </ul>
-        )
-      ) : null}
-      <SubtaskComposer
-        onCreate={(summary) => {
-          onCreateSubtask(summary);
-          setOpen(true);
-        }}
-      />
-    </section>
-  );
-}
-
-function SubtaskComposer({
-  onCreate,
-}: {
-  onCreate: (summary: string) => void;
-}) {
-  const [summary, setSummary] = useState("");
-
-  function handleSubmit(event: FormEvent) {
-    event.preventDefault();
-    const nextSummary = summary.trim();
-    if (!nextSummary) return;
-    onCreate(nextSummary);
-    setSummary("");
-  }
-
-  return (
-    <form className="mt-3 flex items-center gap-2" onSubmit={handleSubmit}>
-      <PlusIcon size={14} className="shrink-0 text-muted-foreground" />
-      <input
-        aria-label="Add subtask"
-        value={summary}
-        placeholder="Add subtask"
-        className="min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
-        onChange={(event) => setSummary(event.target.value)}
-      />
-    </form>
-  );
-}
-
 function TaskViewMenu({
   summary,
   onEnqueue,
@@ -1086,6 +1485,19 @@ function StatusDoneIconMark() {
   return (
     <span className="h-3.5 w-3.5 rounded-full border-2 border-emerald-400" />
   );
+}
+
+function openedEpicFromPathname(pathname: string) {
+  const match = pathname.match(/^\/tasks\/space\/(.+)$/);
+  if (!match?.[1]) return null;
+  const parsed = tasksUrlHelper.routing.parseSpacePath(
+    match[1].split("/").filter(Boolean),
+  );
+  if (!parsed || parsed.kind !== "epic") return null;
+  return {
+    spaceName: parsed.spaceName,
+    epicId: decodeURIComponent(parsed.epicId),
+  };
 }
 
 function compareTasksForNavigation(left: Task, right: Task): number {

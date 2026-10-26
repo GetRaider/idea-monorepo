@@ -11,11 +11,12 @@ Unified AI context for Tasks, Calendar, and Docs. Successor to Take & Do. **v0:*
 
 **Diagram:** [todex-architecture-v1.excalidraw](./todex-architecture-v1.excalidraw)
 
-| Doc                                  | Contents                                                                     |
-| ------------------------------------ | ---------------------------------------------------------------------------- |
-| [prd.md](./prd.md)                   | v0 slice, goals, build order                                                 |
-| [architecture.md](./architecture.md) | Split, Zod `@repo/api/todex`, Docker Postgres, deferred Redis/guests/GCal/AI |
-| [impl-plan-v0.md](./impl-plan-v0.md) | Phased implementation plan + acceptance checklist                            |
-| [data-model.md](./data-model.md)     | v0 entities vs later                                                         |
-| [flows.md](./flows.md)               | Auth + Tasks CRUD now; rest later                                            |
-| [ai-agent.md](./ai-agent.md)         | AI agent: conversations, jobs, runs, tool handlers. Task pack first. Draft. |
+| Doc                                                  | Contents                                                                     |
+| ---------------------------------------------------- | ---------------------------------------------------------------------------- |
+| [prd.md](./prd.md)                                   | v0 slice, goals, build order                                                 |
+| [architecture.md](./architecture.md)                 | Split, Zod `@repo/api/todex`, Docker Postgres, deferred Redis/guests/GCal/AI |
+| [impl-plan-v0.md](./impl-plan-v0.md)                 | Phased implementation plan + acceptance checklist                            |
+| [data-model.md](./data-model.md)                     | v0 entities vs later                                                         |
+| [flows.md](./flows.md)                               | Auth + Tasks CRUD now; rest later                                            |
+| [ai-agent.md](./ai-agent.md)                         | AI agent: conversations, jobs, runs, tool handlers. Task pack first. Draft.  |
+| [space-projects-epics.md](./space-projects-epics.md) | Rename Board→Space and Area→Section; add Projects and Epics. Draft.          |

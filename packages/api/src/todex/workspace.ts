@@ -11,6 +11,12 @@ export const WorkspaceSchema = z.object({
   updatedAt: IsoDateTimeSchema,
 });
 
+export const WorkspaceMemberProfileSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  image: z.string().nullable(),
+});
+
 export const WorkspaceMemberSchema = z.object({
   id: z.string(),
   workspaceId: z.string(),
@@ -21,3 +27,6 @@ export const WorkspaceMemberSchema = z.object({
 
 export type Workspace = z.infer<typeof WorkspaceSchema>;
 export type WorkspaceMember = z.infer<typeof WorkspaceMemberSchema>;
+export type WorkspaceMemberProfile = z.infer<
+  typeof WorkspaceMemberProfileSchema
+>;

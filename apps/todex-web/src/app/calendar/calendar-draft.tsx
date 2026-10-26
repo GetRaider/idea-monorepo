@@ -2,7 +2,7 @@
 
 import { useState, type ReactNode } from "react";
 import { Button, Checkbox, Input, Label, cn } from "@repo/ui";
-import type { Task, TaskBoard, TaskRecurrence } from "@repo/api/todex";
+import type { Task, Space, TaskRecurrence } from "@repo/api/todex";
 
 import { TaskRecurrencePicker } from "../tasks/task-recurrence-picker";
 import { CalendarColorPicker } from "./calendar-color-picker";
@@ -21,7 +21,7 @@ export function CalendarDraft({
 }: {
   draft: DraftSelection;
   tasks: Task[];
-  boards: TaskBoard[];
+  boards: Space[];
   onKind: (kind: DraftKind) => void;
   onCancel: () => void;
   onCreate: (body: DraftCreate) => Promise<void>;
@@ -66,7 +66,9 @@ export function CalendarDraft({
                   : {
                       estimation: Math.max(
                         15,
-                        Math.round((Date.parse(end) - Date.parse(start)) / 60_000),
+                        Math.round(
+                          (Date.parse(end) - Date.parse(start)) / 60_000,
+                        ),
                       ),
                     }),
               })
@@ -88,7 +90,9 @@ export function CalendarDraft({
           type="button"
           className={cn(
             "flex-1 rounded-md py-1 text-xs font-medium",
-            draft.kind === "event" ? "bg-accent text-foreground" : "text-muted-foreground",
+            draft.kind === "event"
+              ? "bg-accent text-foreground"
+              : "text-muted-foreground",
           )}
           onClick={() => onKind("event")}
         >
@@ -98,7 +102,9 @@ export function CalendarDraft({
           type="button"
           className={cn(
             "flex-1 rounded-md py-1 text-xs font-medium",
-            draft.kind === "task" ? "bg-accent text-foreground" : "text-muted-foreground",
+            draft.kind === "task"
+              ? "bg-accent text-foreground"
+              : "text-muted-foreground",
           )}
           onClick={() => onKind("task")}
         >
@@ -139,7 +145,13 @@ export function CalendarDraft({
         />
         All day
       </label>
-      <CalendarWhenFields allDay={allDay} start={start} end={end} onStart={setStart} onEnd={setEnd} />
+      <CalendarWhenFields
+        allDay={allDay}
+        start={start}
+        end={end}
+        onStart={setStart}
+        onEnd={setEnd}
+      />
 
       {draft.kind === "event" ? (
         <>
@@ -168,7 +180,12 @@ export function CalendarDraft({
         <Button type="button" size="sm" variant="ghost" onClick={onCancel}>
           Cancel
         </Button>
-        <Button type="submit" size="sm" variant="solid" disabled={!canCreate || pending}>
+        <Button
+          type="submit"
+          size="sm"
+          variant="solid"
+          disabled={!canCreate || pending}
+        >
           {draft.kind === "task" ? "Schedule" : "Create"}
         </Button>
       </div>

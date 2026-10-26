@@ -10,9 +10,9 @@ import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
 import { TaskList } from "../../task-list";
 import { useTasks } from "../../tasks-provider";
 
-export default function TasksBoardPage({ params }: TasksBoardPageProps) {
-  const { boardPath } = use(params);
-  const parsed = tasksUrlHelper.routing.parseBoardPath(boardPath);
+export default function TasksSpacePage({ params }: TasksSpacePageProps) {
+  const { spacePath } = use(params);
+  const parsed = tasksUrlHelper.routing.parseSpacePath(spacePath);
   const {
     state: { selectedBoard, view },
     meta: { isLoading },
@@ -27,7 +27,7 @@ export default function TasksBoardPage({ params }: TasksBoardPageProps) {
   if (!selectedBoard || view.kind !== "board") {
     return (
       <p className="px-6 py-10 text-sm text-muted-foreground">
-        Board &quot;{parsed.boardName}&quot; not found.
+        Space &quot;{parsed.spaceName}&quot; not found.
       </p>
     );
   }
@@ -35,6 +35,6 @@ export default function TasksBoardPage({ params }: TasksBoardPageProps) {
   return <TaskList />;
 }
 
-interface TasksBoardPageProps {
-  params: Promise<{ boardPath: string[] }>;
+interface TasksSpacePageProps {
+  params: Promise<{ spacePath: string[] }>;
 }

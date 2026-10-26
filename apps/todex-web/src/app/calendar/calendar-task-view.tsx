@@ -16,7 +16,7 @@ export function CalendarTaskView() {
   } = useCalendar();
   const router = useRouter();
   if (selectedEvent || !selectedTaskId) return null;
-  const board = boards.find((item) => item.id === selectedTask?.taskBoardId);
+  const board = boards.find((item) => item.id === selectedTask?.spaceId);
   const href =
     selectedTask && board
       ? tasksUrlHelper.routing.buildBoardUrl(board.name, selectedTask.taskKey)
@@ -69,7 +69,9 @@ export function CalendarTaskView() {
           ) : null}
         </div>
       ) : (
-        <p className="p-3 text-sm text-muted-foreground">Task is not on a board.</p>
+        <p className="p-3 text-sm text-muted-foreground">
+          Task is not on a board.
+        </p>
       )}
     </aside>
   );

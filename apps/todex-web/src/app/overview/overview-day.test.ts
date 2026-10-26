@@ -46,18 +46,18 @@ describe("organizingTasks", () => {
   it("puts Inbox-board tasks in Inbox and other unscheduled tasks with their board", () => {
     const organized = organizingTasks(
       [
-        task({ id: "inbox", taskBoardId: "inbox-board" }),
+        task({ id: "inbox", spaceId: "inbox-board" }),
         task({
           id: "growth",
-          taskBoardId: "growth",
+          spaceId: "growth",
           dueDate: "2026-10-20T00:00:00.000Z",
         }),
         task({
           id: "scheduled",
-          taskBoardId: "growth",
+          spaceId: "growth",
           scheduleDate: "2026-10-08T09:00:00.000Z",
         }),
-        task({ id: "done", taskBoardId: "inbox-board", status: TaskStatus.DONE }),
+        task({ id: "done", spaceId: "inbox-board", status: TaskStatus.DONE }),
       ],
       boards,
     );
@@ -85,7 +85,7 @@ function task(overrides: Partial<Task>): Task {
   return {
     id: "id",
     workspaceId: "ws",
-    taskBoardId: "board",
+    spaceId: "board",
     taskKey: "T-1",
     summary: "Task",
     description: "",
@@ -95,12 +95,13 @@ function task(overrides: Partial<Task>): Task {
     dueDate: null,
     scheduleDate: null,
     recurrence: null,
-    areaId: "area",
+    sectionId: "area",
     progressStageId: null,
     estimation: 30,
     actualTime: 0,
     color: null,
     parentTaskId: null,
+    epicId: null,
     goalId: null,
     position: 0,
     createdAt: "2026-10-08T00:00:00.000Z",

@@ -16,7 +16,7 @@ export function ScheduleBoards<TBoard extends { id: string; name: string }>({
 }: {
   sections: ScheduleBoardSection<TBoard>[];
   collapsedBoardIds: Set<string>;
-  onToggleBoard: (boardId: string) => void;
+  onToggleBoard: (spaceId: string) => void;
   renderBoard: (section: ScheduleBoardSection<TBoard>) => ReactNode;
 }) {
   return (

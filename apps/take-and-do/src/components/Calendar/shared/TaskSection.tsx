@@ -111,7 +111,7 @@ export function CalendarEventTaskSection({
             <DialogFormLabel>Or quick-create a task</DialogFormLabel>
             <QuickCreateTaskRow
               taskBoardId={taskBoardId}
-              triggerLabel="Create a new task"
+              triggerLabel="Add task"
               defaultStatus={TaskStatus.TODO}
               defaultPriority={TaskPriority.MEDIUM}
               onCreate={async (input) => {

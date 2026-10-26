@@ -7,6 +7,7 @@ import {
   type ComponentProps,
   type ReactNode,
 } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   DndContext,
   DragOverlay,
@@ -43,13 +44,14 @@ import {
   SortIcon,
 } from "@components/icons";
 
+import { todexClient } from "@/lib/todex-client";
+
 import { boardCollisionDetection, type BoardDropData } from "./task-board-dnd";
 import {
   BoardDropZone,
   BoardGlyph,
   StatusGlyph,
   TaskRow,
-  TaskSearchField,
   TasksBreadcrumb,
 } from "./task-board.ui";
 import { useBoardPreferences } from "./board-preferences-provider";
@@ -66,11 +68,13 @@ import {
   useBoardAxes,
 } from "./board-axes";
 import { TaskComposer, type TaskComposerValues } from "./task-composer";
+import { EpicRows } from "./epic-row";
 import { TaskKanban } from "./task-kanban";
 import {
   STATUS_LABEL,
   STATUS_ORDER,
   statusAfterDoneToggle,
+  columnsWithEpics,
   filterStatusGroups,
   isoToDateInput,
   localDayScheduleQuery,
@@ -79,6 +83,7 @@ import {
   scheduleBoards,
   sortGroupsByListSort,
   sortNestedTasks,
+  type EpicColumn,
   type ListSortField,
   type NestedTask,
 } from "./task-helpers";
@@ -104,6 +109,8 @@ export function TaskList() {
     },
     meta: { createInputRef },
   } = useTasks();
+  const [showEpics, setShowEpics] = useState(true);
+  const [showTasks, setShowTasks] = useState(true);
   const [isComposerOpen, setIsComposerOpen] = useState(false);
   const [composerBoardId, setComposerBoardId] = useState<string | null>(null);
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
@@ -111,10 +118,10 @@ export function TaskList() {
   const boardDetail = useBoardAxes(
     view.kind === "board" ? (selectedBoard?.id ?? null) : null,
   );
-  const boardAreas = boardDetail.data?.areas ?? [];
+  const spaceSections = boardDetail.data?.sections ?? [];
   const selectedAreaId =
-    boardAreas.find((area) => area.id === areaFilter)?.id ??
-    boardAreas.find((area) => area.isDefault)?.id ??
+    spaceSections.find((area) => area.id === areaFilter)?.id ??
+    spaceSections.find((area) => area.isDefault)?.id ??
     null;
   const {
     viewMode,
@@ -127,7 +134,7 @@ export function TaskList() {
   const sensors = useSensors(
     useSensor(BoardPointerSensor, { activationConstraint: { distance: 8 } }),
   );
-  const boardNameById = new Map(boards.map((board) => [board.id, board.name]));
+  const spaceNameById = new Map(boards.map((board) => [board.id, board.name]));
   const scheduleContextKey =
     view.kind === "schedule" ? `schedule:${view.schedule}` : null;
   const { collapsedBoardIds, toggleBoardCollapsed } =
@@ -148,6 +155,28 @@ export function TaskList() {
     () => sortGroupsByListSort(visibleGroups, listSort),
     [listSort, visibleGroups],
   );
+  const queryClient = useQueryClient();
+  const spaceId = view.kind === "board" ? selectedBoard?.id : undefined;
+  const epicsQuery = useQuery({
+    queryKey: ["epics", spaceId],
+    queryFn: () => todexClient.epics.list(spaceId ?? ""),
+    enabled: Boolean(spaceId),
+  });
+  const epicColumns = useMemo(() => {
+    if (!spaceId) return null;
+    const roots = STATUS_ORDER.flatMap((status) => sortedGroups[status] ?? []);
+    const sectionEpics = (epicsQuery.data ?? []).filter(
+      (epic) => epic.sectionId === selectedAreaId,
+    );
+    return columnsWithEpics(roots, sectionEpics, showEpics, showTasks);
+  }, [
+    epicsQuery.data,
+    selectedAreaId,
+    showEpics,
+    showTasks,
+    sortedGroups,
+    spaceId,
+  ]);
   const scheduleSections = useMemo(() => {
     if (view.kind !== "schedule") return [];
     const roots = STATUS_ORDER.flatMap((status) => groups[status] ?? []);
@@ -164,7 +193,7 @@ export function TaskList() {
       ? view.schedule === "today"
         ? "Today"
         : "Tomorrow"
-      : (selectedBoard?.name ?? "Select a board");
+      : (selectedBoard?.name ?? "Select a space");
   const scheduleDayInput =
     view.kind === "schedule"
       ? isoToDateInput(
@@ -177,6 +206,11 @@ export function TaskList() {
     !search.trim() &&
     (viewMode === "kanban" || !listSort.enabled);
   const activeTask = tasks.find((task) => task.id === activeTaskId) ?? null;
+  const draggingEpicId = activeTaskId?.startsWith("epic:")
+    ? activeTaskId.slice("epic:".length)
+    : null;
+  const draggingEpic =
+    epicsQuery.data?.find((epic) => epic.id === draggingEpicId) ?? null;
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveTaskId(String(event.active.id));
@@ -186,20 +220,44 @@ export function TaskList() {
     setActiveTaskId(null);
     const drop = event.over?.data.current as BoardDropData | undefined;
     if (!drop || drop.type !== "reorder") return;
-    const task = tasks.find((item) => item.id === String(event.active.id));
+    const activeId = String(event.active.id);
+    if (activeId.startsWith("epic:")) {
+      const epicId = activeId.slice("epic:".length);
+      const epic = epicsQuery.data?.find((item) => item.id === epicId);
+      if (!epic || epic.status === drop.status) return;
+      void todexClient.epics
+        .update(epicId, { status: drop.status })
+        .then(() => {
+          void queryClient.invalidateQueries({
+            queryKey: ["epics", epic.spaceId],
+          });
+          void queryClient.invalidateQueries({ queryKey: ["epic", epicId] });
+        });
+      return;
+    }
+    const task = tasks.find((item) => item.id === activeId);
+    if (drop.kind === "epic" && drop.epicId) {
+      if (!task || task.parentTaskId) return;
+      if (drop.spaceId && drop.spaceId !== task.spaceId) return;
+      if (task.epicId === drop.epicId) return;
+      updateTask(task.id, { epicId: drop.epicId }, { quiet: true });
+      return;
+    }
     if (!task || task.parentTaskId) return;
-    if (drop.boardId && drop.boardId !== task.taskBoardId) {
+    if (drop.spaceId && drop.spaceId !== task.spaceId) {
       updateTask(
         task.id,
-        { taskBoardId: drop.boardId, status: drop.status },
+        { spaceId: drop.spaceId, status: drop.status },
         { quiet: true },
       );
       return;
     }
     const columnNodes = (status: Task["status"]) => {
-      const nodes = visibleGroups[status] ?? [];
-      if (!drop.boardId) return nodes;
-      return nodes.filter((node) => node.taskBoardId === drop.boardId);
+      const nodes = epicColumns
+        ? epicColumns[status].tasks
+        : (visibleGroups[status] ?? []);
+      if (!drop.spaceId) return nodes;
+      return nodes.filter((node) => node.spaceId === drop.spaceId);
     };
     if (!reorderEnabled || drop.index == null) {
       if (task.status === drop.status) return;
@@ -211,7 +269,7 @@ export function TaskList() {
           columnNodes(TaskStatus.TODO),
           columnNodes(TaskStatus.IN_PROGRESS),
           task.id,
-          task.taskBoardId,
+          task.spaceId,
           drop.index,
         )
       : {
@@ -219,12 +277,16 @@ export function TaskList() {
           index: sameBoardDropIndex(
             columnNodes(drop.status),
             task.id,
-            task.taskBoardId,
+            task.spaceId,
             drop.index,
           ),
         };
-    const currentIndex = (visibleGroups[task.status] ?? [])
-      .filter((node) => node.taskBoardId === task.taskBoardId)
+    const currentIndex = (
+      epicColumns
+        ? epicColumns[task.status].tasks
+        : (visibleGroups[task.status] ?? [])
+    )
+      .filter((node) => node.spaceId === task.spaceId)
       .findIndex((node) => node.id === task.id);
     if (resolved.status === task.status && resolved.index === currentIndex) {
       return;
@@ -235,9 +297,13 @@ export function TaskList() {
   const showEmptySchedule =
     view.kind === "schedule" && scheduleSections.length === 0 && !search.trim();
   const isBoard = view.kind === "board";
-  const hasVisibleTasks = STATUS_ORDER.some(
-    (status) => (sortedGroups[status] ?? []).length > 0,
-  );
+  const hasVisibleTasks = epicColumns
+    ? STATUS_ORDER.some(
+        (status) =>
+          epicColumns[status].epics.length > 0 ||
+          epicColumns[status].tasks.length > 0,
+      )
+    : STATUS_ORDER.some((status) => (sortedGroups[status] ?? []).length > 0);
 
   useEffect(() => {
     setAreaFilter(null);
@@ -257,29 +323,29 @@ export function TaskList() {
     setComposerBoardId(null);
   }
 
-  function submitComposer(values: TaskComposerValues, boardId?: string) {
+  function submitComposer(values: TaskComposerValues, spaceId?: string) {
     createTask(values.summary, null, {
       status: values.status,
       priority: values.priority,
       estimation: values.estimation,
-      taskBoardId: boardId ?? values.taskBoardId ?? undefined,
-      areaId: selectedAreaId ?? undefined,
+      spaceId: spaceId ?? values.spaceId ?? undefined,
+      sectionId: selectedAreaId ?? undefined,
       scheduleDate: values.scheduleDate,
       dueDate: values.dueDate,
     });
     closeComposer();
   }
 
-  function fastCreateFor(boardId: string) {
+  function fastCreateFor(spaceId: string) {
     return {
-      isOpen: composerBoardId === boardId,
-      titleRef: composerBoardId === boardId ? createInputRef : undefined,
-      defaultBoardId: boardId,
+      isOpen: composerBoardId === spaceId,
+      titleRef: composerBoardId === spaceId ? createInputRef : undefined,
+      defaultBoardId: spaceId,
       defaultScheduleDate: scheduleDayInput,
-      onOpen: () => setComposerBoardId(boardId),
+      onOpen: () => setComposerBoardId(spaceId),
       onClose: () =>
-        setComposerBoardId((current) => (current === boardId ? null : current)),
-      onCreate: (values: TaskComposerValues) => submitComposer(values, boardId),
+        setComposerBoardId((current) => (current === spaceId ? null : current)),
+      onCreate: (values: TaskComposerValues) => submitComposer(values, spaceId),
     };
   }
 
@@ -288,7 +354,7 @@ export function TaskList() {
     if (!parent) return;
     createTask("New subtask", parentTaskId, {
       estimation: parent.estimation,
-      areaId: parent.areaId,
+      sectionId: parent.sectionId,
       progressStageId: parent.progressStageId,
     });
   }
@@ -308,10 +374,10 @@ export function TaskList() {
             viewMode === "kanban" ? (
               <TaskKanban
                 groups={section.groups}
-                boardNameById={boardNameById}
+                spaceNameById={spaceNameById}
                 showBoardName={false}
                 reorderEnabled={reorderEnabled}
-                boardId={section.board.id}
+                spaceId={section.board.id}
                 layout="stack"
                 fastCreate={fastCreateFor(section.board.id)}
               />
@@ -321,9 +387,9 @@ export function TaskList() {
                   submode={listSubmode}
                   groups={section.groups}
                   listSort={listSort}
-                  boardNameById={boardNameById}
+                  spaceNameById={spaceNameById}
                   showBoardName={false}
-                  boardId={section.board.id}
+                  spaceId={section.board.id}
                   fastCreate={fastCreateFor(section.board.id)}
                   onToggleDone={toggleDone}
                   onCreateSubtask={createSubtask}
@@ -338,8 +404,23 @@ export function TaskList() {
     if (viewMode === "kanban") {
       return (
         <TaskKanban
-          groups={visibleGroups}
-          boardNameById={boardNameById}
+          groups={
+            epicColumns
+              ? {
+                  [TaskStatus.TODO]: epicColumns[TaskStatus.TODO].tasks,
+                  [TaskStatus.IN_PROGRESS]:
+                    epicColumns[TaskStatus.IN_PROGRESS].tasks,
+                  [TaskStatus.DONE]: epicColumns[TaskStatus.DONE].tasks,
+                  [TaskStatus.CANCELLED]:
+                    epicColumns[TaskStatus.CANCELLED].tasks,
+                }
+              : visibleGroups
+          }
+          epicColumns={epicColumns}
+          spaceName={selectedBoard?.name}
+          spaceId={selectedBoard?.id}
+          allowEpicTasks={showTasks}
+          spaceNameById={spaceNameById}
           showBoardName={false}
           reorderEnabled={reorderEnabled}
           fastCreate={
@@ -361,9 +442,13 @@ export function TaskList() {
         <ListSections
           submode={listSubmode}
           groups={sortedGroups}
+          epicColumns={epicColumns}
+          spaceName={selectedBoard?.name}
+          allowEpicTasks={showTasks}
           listSort={listSort}
-          boardNameById={boardNameById}
+          spaceNameById={spaceNameById}
           showBoardName={false}
+          spaceId={selectedBoard?.id}
           fastCreate={
             isBoard
               ? {
@@ -384,24 +469,24 @@ export function TaskList() {
   }
 
   const stageBoardIds = useMemo(
-    () => [...new Set(tasks.map((task) => task.taskBoardId))],
+    () => [...new Set(tasks.map((task) => task.spaceId))],
     [tasks],
   );
 
   return (
-    <StageNameProvider boardIds={stageBoardIds}>
+    <StageNameProvider spaceIds={stageBoardIds}>
       <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-auto px-6 pb-6 pt-3">
         <div className="mb-6 flex items-start justify-between gap-4">
           <div className="flex min-w-0 flex-col gap-3">
             <TasksBreadcrumb
               className="text-2xl font-semibold tracking-tight"
-              boardName={title}
+              spaceName={title}
               trailing={view.kind === "board" ? <BoardGlyph /> : null}
             />
             {isBoard && selectedBoard ? (
               <BoardAxes
-                boardId={selectedBoard.id}
-                areaId={selectedAreaId}
+                spaceId={selectedBoard.id}
+                sectionId={selectedAreaId}
                 onAreaId={setAreaFilter}
               />
             ) : null}
@@ -411,24 +496,27 @@ export function TaskList() {
               viewMode={viewMode}
               onViewModeChange={setViewMode}
             />
-            <TaskSearchField />
             <ViewSettingsMenu
-              boardId={isBoard ? selectedBoard?.id : null}
+              spaceId={isBoard ? selectedBoard?.id : null}
               listSubmode={listSubmode}
               listSort={listSort}
               onListSubmodeChange={setListSubmode}
               onListSortChange={setListSort}
+              showEpics={spaceId ? showEpics : undefined}
+              showTasks={spaceId ? showTasks : undefined}
+              onShowEpicsChange={setShowEpics}
+              onShowTasksChange={setShowTasks}
             />
             <Button
               size="sm"
               onClick={() => {
                 if (view.kind === "schedule") {
-                  const boardId = scheduleSections[0]?.board.id;
-                  if (!boardId) return;
-                  if (collapsedBoardIds.has(boardId)) {
-                    toggleBoardCollapsed(boardId);
+                  const spaceId = scheduleSections[0]?.board.id;
+                  if (!spaceId) return;
+                  if (collapsedBoardIds.has(spaceId)) {
+                    toggleBoardCollapsed(spaceId);
                   }
-                  setComposerBoardId(boardId);
+                  setComposerBoardId(spaceId);
                   return;
                 }
                 openComposer();
@@ -442,9 +530,9 @@ export function TaskList() {
         </div>
         {view.kind === "schedule" && boards.length === 0 ? (
           <div className="mb-3 flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2 text-sm text-muted-foreground">
-            <span>Create a board to schedule tasks.</span>
+            <span>Create a space to schedule tasks.</span>
             <Button size="sm" onClick={openCreateDialog}>
-              Create board
+              Create space
             </Button>
           </div>
         ) : null}
@@ -476,6 +564,10 @@ export function TaskList() {
                   </span>
                   {activeTask.summary}
                 </div>
+              ) : draggingEpic ? (
+                <div className="cursor-grabbing rounded-md border border-border bg-panel px-3 py-2 text-sm shadow-lg">
+                  {draggingEpic.name}
+                </div>
               ) : null}
             </DragOverlay>
           </DndContext>
@@ -488,10 +580,13 @@ export function TaskList() {
 function ListSections({
   submode,
   groups,
+  epicColumns,
+  spaceName,
+  allowEpicTasks = true,
   listSort,
-  boardNameById,
+  spaceNameById,
   showBoardName,
-  boardId,
+  spaceId,
   fastCreate,
   onToggleDone,
   onCreateSubtask,
@@ -499,19 +594,35 @@ function ListSections({
 }: {
   submode: BoardListSubmode;
   groups: Record<Task["status"], NestedTask[]>;
+  epicColumns?: Record<
+    Task["status"],
+    { epics: EpicColumn[]; tasks: NestedTask[] }
+  > | null;
+  spaceName?: string;
+  allowEpicTasks?: boolean;
   listSort: {
     enabled: boolean;
     field: ListSortField;
     direction: "asc" | "desc";
   };
-  boardNameById: Map<string, string>;
+  spaceNameById: Map<string, string>;
   showBoardName: boolean;
-  boardId?: string;
+  spaceId?: string;
   fastCreate?: ListFastCreate;
   onToggleDone: (task: NestedTask) => void;
   onCreateSubtask: (parentTaskId: string) => void;
   reorderEnabled: boolean;
 }) {
+  function tasksFor(statuses: Task["status"][]) {
+    return statuses.flatMap((status) =>
+      epicColumns ? epicColumns[status].tasks : (groups[status] ?? []),
+    );
+  }
+  function epicsFor(statuses: Task["status"][]) {
+    return statuses.flatMap((status) =>
+      epicColumns ? epicColumns[status].epics : [],
+    );
+  }
   const sections =
     submode === "single"
       ? [
@@ -520,31 +631,32 @@ function ListSections({
             label: "Tasks",
             status: TaskStatus.TODO,
             nodes: sortNestedTasks(
-              [
-                ...(groups[TaskStatus.TODO] ?? []),
-                ...(groups[TaskStatus.IN_PROGRESS] ?? []),
-              ],
+              tasksFor([TaskStatus.TODO, TaskStatus.IN_PROGRESS]),
               listSort,
             ),
+            epics: epicsFor([TaskStatus.TODO, TaskStatus.IN_PROGRESS]),
           },
           {
             key: "done",
             label: "Done",
             status: TaskStatus.DONE,
-            nodes: groups[TaskStatus.DONE] ?? [],
+            nodes: tasksFor([TaskStatus.DONE]),
+            epics: epicsFor([TaskStatus.DONE]),
           },
           {
             key: "cancelled",
             label: "Cancelled",
             status: TaskStatus.CANCELLED,
-            nodes: groups[TaskStatus.CANCELLED] ?? [],
+            nodes: tasksFor([TaskStatus.CANCELLED]),
+            epics: epicsFor([TaskStatus.CANCELLED]),
           },
         ]
       : STATUS_ORDER.map((status) => ({
           key: status,
           label: STATUS_LABEL[status],
           status,
-          nodes: groups[status] ?? [],
+          nodes: tasksFor([status]),
+          epics: epicsFor([status]),
         }));
 
   const {
@@ -573,13 +685,16 @@ function ListSections({
           label={section.label}
           status={section.status}
           nodes={section.nodes}
+          epics={section.epics}
+          spaceName={spaceName}
+          allowEpicTasks={allowEpicTasks}
           defaultOpen={
             section.status !== TaskStatus.DONE &&
             section.status !== TaskStatus.CANCELLED
           }
-          boardNameById={boardNameById}
+          spaceNameById={spaceNameById}
           showBoardName={showBoardName}
-          boardId={boardId}
+          spaceId={spaceId}
           fastCreate={
             section.status === TaskStatus.TODO ? fastCreate : undefined
           }
@@ -599,10 +714,13 @@ function ListSection({
   label,
   status,
   nodes,
+  epics = [],
+  spaceName,
+  allowEpicTasks = true,
   defaultOpen,
-  boardNameById,
+  spaceNameById,
   showBoardName,
-  boardId,
+  spaceId,
   fastCreate,
   onToggleDone,
   onCreateSubtask,
@@ -612,10 +730,13 @@ function ListSection({
   label: string;
   status: Task["status"];
   nodes: NestedTask[];
+  epics?: EpicColumn[];
+  spaceName?: string;
+  allowEpicTasks?: boolean;
   defaultOpen: boolean;
-  boardNameById: Map<string, string>;
+  spaceNameById: Map<string, string>;
   showBoardName: boolean;
-  boardId?: string;
+  spaceId?: string;
   fastCreate?: ListFastCreate;
   onToggleDone: (task: NestedTask) => void;
   onCreateSubtask: (parentTaskId: string) => void;
@@ -634,7 +755,9 @@ function ListSection({
       />
       <StatusGlyph status={status} />
       <span>{label}</span>
-      <span className="text-muted-foreground">{nodes.length}</span>
+      <span className="text-muted-foreground">
+        {nodes.length + epics.length}
+      </span>
     </>
   );
   const trigger = (
@@ -652,7 +775,7 @@ function ListSection({
             kind="column"
             status={status}
             index={reorderEnabled ? nodes.length : null}
-            boardId={boardId}
+            spaceId={spaceId}
             combinedOpen={combinedOpen}
           >
             {trigger}
@@ -673,13 +796,21 @@ function ListSection({
           </div>
         ) : null}
         <CollapsibleContent>
+          {spaceId && spaceName && epics.length > 0 ? (
+            <EpicRows
+              rows={epics}
+              spaceName={spaceName}
+              spaceId={spaceId}
+              allowTasks={allowEpicTasks}
+            />
+          ) : null}
           {reorderEnabled ? (
-            nodes.length === 0 ? (
+            nodes.length === 0 && epics.length === 0 ? (
               <BoardDropZone
                 kind="empty"
                 status={status}
                 index={0}
-                boardId={boardId}
+                spaceId={spaceId}
                 combinedOpen={combinedOpen}
                 compact
               >
@@ -695,7 +826,7 @@ function ListSection({
                       kind="gap"
                       status={status}
                       index={index}
-                      boardId={boardId}
+                      spaceId={spaceId}
                       combinedOpen={combinedOpen}
                       compact
                     />
@@ -703,14 +834,14 @@ function ListSection({
                       kind="card"
                       status={status}
                       index={index}
-                      boardId={boardId}
+                      spaceId={spaceId}
                       combinedOpen={combinedOpen}
                     >
                       <TaskTree
                         nodes={[node]}
-                        boardNameById={boardNameById}
+                        spaceNameById={spaceNameById}
                         showBoardName={showBoardName}
-                        boardId={boardId}
+                        spaceId={spaceId}
                         onToggleDone={onToggleDone}
                         onCreateSubtask={onCreateSubtask}
                       />
@@ -721,18 +852,18 @@ function ListSection({
                   kind="fill"
                   status={status}
                   index={nodes.length}
-                  boardId={boardId}
+                  spaceId={spaceId}
                   combinedOpen={combinedOpen}
                   compact
                 />
               </div>
             )
-          ) : nodes.length === 0 ? (
+          ) : nodes.length === 0 && epics.length === 0 ? (
             <BoardDropZone
               kind="empty"
               status={status}
               index={null}
-              boardId={boardId}
+              spaceId={spaceId}
               combinedOpen={combinedOpen}
               compact
             >
@@ -743,9 +874,9 @@ function ListSection({
           ) : (
             <TaskTree
               nodes={nodes}
-              boardNameById={boardNameById}
+              spaceNameById={spaceNameById}
               showBoardName={showBoardName}
-              boardId={boardId}
+              spaceId={spaceId}
               statusDrop
               onToggleDone={onToggleDone}
               onCreateSubtask={onCreateSubtask}
@@ -759,18 +890,18 @@ function ListSection({
 
 function TaskTree({
   nodes,
-  boardNameById,
+  spaceNameById,
   showBoardName,
-  boardId,
+  spaceId,
   onToggleDone,
   onCreateSubtask,
   statusDrop = false,
   depth = 0,
 }: {
   nodes: NestedTask[];
-  boardNameById: Map<string, string>;
+  spaceNameById: Map<string, string>;
   showBoardName: boolean;
-  boardId?: string;
+  spaceId?: string;
   onToggleDone: (task: NestedTask) => void;
   onCreateSubtask: (parentTaskId: string) => void;
   statusDrop?: boolean;
@@ -795,9 +926,9 @@ function TaskTree({
         <li key={node.id}>
           <TaskRow
             node={node}
-            boardNameById={boardNameById}
+            spaceNameById={spaceNameById}
             showBoardName={showBoardName}
-            boardId={boardId}
+            spaceId={spaceId}
             depth={depth}
             expanded={expandedIds.has(node.id)}
             onToggleExpanded={() => toggleExpanded(node.id)}
@@ -808,9 +939,9 @@ function TaskTree({
           {node.children.length > 0 && expandedIds.has(node.id) ? (
             <TaskTree
               nodes={node.children}
-              boardNameById={boardNameById}
+              spaceNameById={spaceNameById}
               showBoardName={showBoardName}
-              boardId={boardId}
+              spaceId={spaceId}
               onToggleDone={onToggleDone}
               onCreateSubtask={onCreateSubtask}
               depth={depth + 1}
@@ -834,11 +965,15 @@ const SORT_DIRECTION_OPTIONS = [
 ] as const satisfies ReadonlyArray<SettingsOption<"asc" | "desc">>;
 
 function ViewSettingsMenu({
-  boardId,
+  spaceId,
   listSubmode,
   listSort,
+  showEpics,
+  showTasks,
   onListSubmodeChange,
   onListSortChange,
+  onShowEpicsChange,
+  onShowTasksChange,
 }: ViewSettingsMenuProps) {
   return (
     <Popover>
@@ -848,7 +983,7 @@ function ViewSettingsMenu({
           size="icon"
           variant="ghost"
           className="h-8 w-8 text-muted-foreground"
-          aria-label="Board view settings"
+          aria-label="Space view settings"
         >
           <SettingsIcon size={16} />
         </Button>
@@ -923,10 +1058,37 @@ function ViewSettingsMenu({
             />
           }
         />
-        {boardId ? (
+        {showEpics !== undefined && showTasks !== undefined ? (
           <>
             <div className="mx-2 my-1 h-px bg-border" />
-            <ProgressStageSettings boardId={boardId} />
+            <SettingsRow
+              icon={<RowsIcon size={16} />}
+              label="Show epics"
+              control={
+                <SettingsChoice
+                  label={showEpics ? "On" : "Off"}
+                  pressed={showEpics}
+                  onClick={() => onShowEpicsChange?.(!showEpics)}
+                />
+              }
+            />
+            <SettingsRow
+              icon={<RowsIcon size={16} />}
+              label="Show tasks"
+              control={
+                <SettingsChoice
+                  label={showTasks ? "On" : "Off"}
+                  pressed={showTasks}
+                  onClick={() => onShowTasksChange?.(!showTasks)}
+                />
+              }
+            />
+          </>
+        ) : null}
+        {spaceId ? (
+          <>
+            <div className="mx-2 my-1 h-px bg-border" />
+            <ProgressStageSettings spaceId={spaceId} />
           </>
         ) : null}
       </PopoverContent>
@@ -1049,19 +1211,23 @@ class BoardPointerSensor extends PointerSensor {
 }
 
 interface ViewSettingsMenuProps {
-  boardId?: string | null;
+  spaceId?: string | null;
   listSubmode: BoardListSubmode;
   listSort: {
     enabled: boolean;
     field: ListSortField;
     direction: "asc" | "desc";
   };
+  showEpics?: boolean;
+  showTasks?: boolean;
   onListSubmodeChange: (next: BoardListSubmode) => void;
   onListSortChange: (next: {
     enabled: boolean;
     field: ListSortField;
     direction: "asc" | "desc";
   }) => void;
+  onShowEpicsChange?: (next: boolean) => void;
+  onShowTasksChange?: (next: boolean) => void;
 }
 
 interface SettingsRowProps {

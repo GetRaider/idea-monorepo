@@ -4,12 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { DocType } from "@repo/api/todex";
-import type {
-  AcceptanceCriterion,
-  Doc,
-  ProseDoc,
-  Task,
-} from "@repo/api/todex";
+import type { AcceptanceCriterion, Doc, ProseDoc, Task } from "@repo/api/todex";
 import {
   Button,
   Checkbox,
@@ -91,7 +86,9 @@ export function DocEditor({ docId }: { docId: string }) {
   if (docQuery.isError) {
     return (
       <section className={docsSectionClassName()}>
-        <p className="text-sm text-muted-foreground">This doc is unavailable.</p>
+        <p className="text-sm text-muted-foreground">
+          This doc is unavailable.
+        </p>
       </section>
     );
   }
@@ -146,11 +143,7 @@ export function DocEditor({ docId }: { docId: string }) {
           }
         />
       ) : (
-        <GoalSections
-          docId={doc.id}
-          draft={draft}
-          onChange={setDraft}
-        />
+        <GoalSections docId={doc.id} draft={draft} onChange={setDraft} />
       )}
       {confirmDelete ? (
         <ConfirmDialog
@@ -185,7 +178,9 @@ function GoalSections({
     const task = tasks.find((item) => item.id === taskId);
     return task ? [task] : [];
   });
-  const available = tasks.filter((task) => !draft.linkedTaskIds.includes(task.id));
+  const available = tasks.filter(
+    (task) => !draft.linkedTaskIds.includes(task.id),
+  );
 
   return (
     <>
@@ -196,7 +191,9 @@ function GoalSections({
         document={draft.why}
         onChange={(why) =>
           onChange((current) =>
-            current && current.type === DocType.GOAL ? { ...current, why } : current,
+            current && current.type === DocType.GOAL
+              ? { ...current, why }
+              : current,
           )
         }
       />
@@ -329,9 +326,7 @@ function CriteriaSection({
 
   return (
     <section className="mt-6">
-      <p className="mb-3 text-lg font-medium text-muted-foreground">
-        {label}
-      </p>
+      <p className="mb-3 text-lg font-medium text-muted-foreground">{label}</p>
       {criteria.length > 0 ? (
         <ul className="mb-3 flex flex-col gap-2">
           {criteria.map((criterion) => (
@@ -418,9 +413,9 @@ function TaskLinkSelect({
 }
 
 async function listWorkspaceTasks() {
-  const boards = await todexClient.boards.list();
+  const boards = await todexClient.spaces.list();
   const groups = await Promise.all(
-    boards.map((board) => todexClient.tasks.list({ boardId: board.id })),
+    boards.map((board) => todexClient.tasks.list({ spaceId: board.id })),
   );
   return groups.flat();
 }

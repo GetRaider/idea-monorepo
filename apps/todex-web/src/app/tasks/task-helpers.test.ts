@@ -183,10 +183,10 @@ describe("list sort", () => {
 
 describe("scheduleBoards", () => {
   it("groups roots by board in board-list order and drops empty boards", () => {
-    const inbox = task({ id: "inbox-task", taskBoardId: "inbox", position: 1 });
+    const inbox = task({ id: "inbox-task", spaceId: "inbox", position: 1 });
     const work = task({
       id: "work-task",
-      taskBoardId: "work",
+      spaceId: "work",
       status: TaskStatus.IN_PROGRESS,
       position: 0,
     });
@@ -214,9 +214,9 @@ describe("scheduleBoards", () => {
 describe("board drop indexes", () => {
   const board = "board";
   const nodes = [
-    { id: "a1", taskBoardId: board },
-    { id: "b1", taskBoardId: "other" },
-    { id: "a2", taskBoardId: board },
+    { id: "a1", spaceId: board },
+    { id: "b1", spaceId: "other" },
+    { id: "a2", spaceId: board },
   ];
 
   it("counts same-board roots before the gap, skipping the dragged task", () => {
@@ -227,8 +227,8 @@ describe("board drop indexes", () => {
   });
 
   it("sends the boundary gap to the start of in progress", () => {
-    const todo = [{ id: "t1", taskBoardId: board }];
-    const inProgress = [{ id: "p1", taskBoardId: board }];
+    const todo = [{ id: "t1", spaceId: board }];
+    const inProgress = [{ id: "p1", spaceId: board }];
     expect(resolveCombinedOpenDrop(todo, inProgress, "t1", board, 1)).toEqual({
       status: TaskStatus.IN_PROGRESS,
       index: 0,
@@ -383,8 +383,8 @@ describe("projectCompletedTask", () => {
 describe("filterStatusGroups", () => {
   it("keeps every task when no area is selected", () => {
     const groups = {
-      [TaskStatus.TODO]: [task({ id: "a", areaId: "general" })],
-      [TaskStatus.IN_PROGRESS]: [task({ id: "b", areaId: "launch" })],
+      [TaskStatus.TODO]: [task({ id: "a", sectionId: "general" })],
+      [TaskStatus.IN_PROGRESS]: [task({ id: "b", sectionId: "launch" })],
       [TaskStatus.DONE]: [],
       [TaskStatus.CANCELLED]: [],
     };
@@ -392,9 +392,12 @@ describe("filterStatusGroups", () => {
   });
 
   it("keeps tasks in the selected area", () => {
-    const launch = task({ id: "launch", areaId: "launch" });
+    const launch = task({ id: "launch", sectionId: "launch" });
     const groups = {
-      [TaskStatus.TODO]: [task({ id: "general", areaId: "general" }), launch],
+      [TaskStatus.TODO]: [
+        task({ id: "general", sectionId: "general" }),
+        launch,
+      ],
       [TaskStatus.IN_PROGRESS]: [],
       [TaskStatus.DONE]: [],
       [TaskStatus.CANCELLED]: [],
@@ -409,7 +412,7 @@ function task(overrides: Partial<NestedTask>): NestedTask {
   return {
     id: "id",
     workspaceId: "ws",
-    taskBoardId: "board",
+    spaceId: "board",
     taskKey: "T-1",
     summary: "Task",
     description: "",
@@ -419,12 +422,13 @@ function task(overrides: Partial<NestedTask>): NestedTask {
     dueDate: null,
     scheduleDate: null,
     recurrence: null,
-    areaId: "area",
+    sectionId: "area",
     progressStageId: null,
     estimation: 30,
     actualTime: 0,
     color: null,
     parentTaskId: null,
+    epicId: null,
     goalId: null,
     position: 0,
     createdAt: "2026-09-10T00:00:00.000Z",

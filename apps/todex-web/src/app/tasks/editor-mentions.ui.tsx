@@ -6,7 +6,11 @@ import { cn } from "@repo/ui";
 
 import { todexClient } from "@lib/todex-client";
 
-import { mentionHref, type MentionCandidate, type MentionMenuEntry } from "./editor-mentions";
+import {
+  mentionHref,
+  type MentionCandidate,
+  type MentionMenuEntry,
+} from "./editor-mentions";
 
 export function MentionMenu({
   activeIndex,
@@ -23,7 +27,9 @@ export function MentionMenu({
       onMouseDown={(event) => event.preventDefault()}
     >
       {items.length === 0 ? (
-        <p className="px-2.5 py-2 text-sm text-muted-foreground">{emptyLabel}</p>
+        <p className="px-2.5 py-2 text-sm text-muted-foreground">
+          {emptyLabel}
+        </p>
       ) : (
         items.map((item, itemIndex) => (
           <button
@@ -46,7 +52,9 @@ export function MentionMenu({
   );
 }
 
-export function useMentionCandidates(excludeDocId?: string): MentionCandidate[] {
+export function useMentionCandidates(
+  excludeDocId?: string,
+): MentionCandidate[] {
   const tasksQuery = useQuery({
     queryKey: ["tasks", "workspace"],
     queryFn: listWorkspaceTasks,
@@ -57,11 +65,11 @@ export function useMentionCandidates(excludeDocId?: string): MentionCandidate[] 
   });
   const boardsQuery = useQuery({
     queryKey: ["boards"],
-    queryFn: () => todexClient.boards.list(),
+    queryFn: () => todexClient.spaces.list(),
   });
   const tasks = (tasksQuery.data ?? []).map((task) => {
-    const boardName = boardsQuery.data?.find(
-      (board) => board.id === task.taskBoardId,
+    const spaceName = boardsQuery.data?.find(
+      (board) => board.id === task.spaceId,
     )?.name;
     return {
       targetType: DocMentionTarget.TASK,
@@ -72,7 +80,7 @@ export function useMentionCandidates(excludeDocId?: string): MentionCandidate[] 
         targetType: DocMentionTarget.TASK,
         targetId: task.id,
         taskKey: task.taskKey,
-        boardName,
+        spaceName,
       }),
     };
   });
@@ -96,9 +104,9 @@ export function useMentionCandidates(excludeDocId?: string): MentionCandidate[] 
 }
 
 export async function listWorkspaceTasks() {
-  const boards = await todexClient.boards.list();
+  const boards = await todexClient.spaces.list();
   const groups = await Promise.all(
-    boards.map((board) => todexClient.tasks.list({ boardId: board.id })),
+    boards.map((board) => todexClient.tasks.list({ spaceId: board.id })),
   );
   return groups.flat();
 }

@@ -1,20 +1,20 @@
 export function resolveTaskPlacement(input: TaskPlacementInput): TaskPlacement {
-  if (input.requestedAreaId !== undefined && !input.areaOnDestination) {
-    throw new TaskPlacementError("Area does not belong to this board");
+  if (input.requestedSectionId !== undefined && !input.sectionOnDestination) {
+    throw new TaskPlacementError("Section does not belong to this space");
   }
   if (input.requestedProgressStageId != null && !input.stageOnDestination) {
     throw new TaskPlacementError(
-      "Progress stage does not belong to this board",
+      "Progress stage does not belong to this space",
     );
   }
-  if (input.boardChanged) {
+  if (input.spaceChanged) {
     return {
-      areaId: input.requestedAreaId ?? input.defaultAreaId,
+      sectionId: input.requestedSectionId ?? input.defaultSectionId,
       progressStageId: input.requestedProgressStageId ?? null,
     };
   }
   return {
-    areaId: input.requestedAreaId ?? input.currentAreaId,
+    sectionId: input.requestedSectionId ?? input.currentSectionId,
     progressStageId:
       input.requestedProgressStageId === undefined
         ? input.currentProgressStageId
@@ -30,17 +30,17 @@ export class TaskPlacementError extends Error {
 }
 
 interface TaskPlacementInput {
-  boardChanged: boolean;
-  currentAreaId: string;
+  spaceChanged: boolean;
+  currentSectionId: string;
   currentProgressStageId: string | null;
-  requestedAreaId: string | undefined;
+  requestedSectionId: string | undefined;
   requestedProgressStageId: string | null | undefined;
-  defaultAreaId: string;
-  areaOnDestination: boolean;
+  defaultSectionId: string;
+  sectionOnDestination: boolean;
   stageOnDestination: boolean;
 }
 
 interface TaskPlacement {
-  areaId: string;
+  sectionId: string;
   progressStageId: string | null;
 }

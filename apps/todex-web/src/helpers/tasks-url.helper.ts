@@ -19,29 +19,46 @@ export const tasksUrlHelper = {
       return taskKey ? `${base}/${encodeURIComponent(taskKey)}` : base;
     },
 
-    buildBoardUrl(boardName: string, taskKey?: string): string {
-      const base = `${TASKS_ROOT_PATH}/board/${encodeURIComponent(boardName)}`;
+    buildBoardUrl(spaceName: string, taskKey?: string): string {
+      const base = `${TASKS_ROOT_PATH}/space/${encodeURIComponent(spaceName)}`;
       return taskKey ? `${base}/${encodeURIComponent(taskKey)}` : base;
     },
 
-    parseBoardPath(boardPath: string[]): BoardPath | null {
-      const boardNameSegment = boardPath[0];
-      if (!boardNameSegment) return null;
+    buildEpicUrl(spaceName: string, epicId: string): string {
+      return `${TASKS_ROOT_PATH}/space/${encodeURIComponent(spaceName)}/epics/${epicId}`;
+    },
+
+    parseSpacePath(spacePath: string[]): SpacePath | null {
+      const spaceNameSegment = spacePath[0];
+      if (!spaceNameSegment) return null;
+      const spaceName = decodePathSegment(spaceNameSegment);
+      if (spacePath[1] === "epics" && spacePath[2]) {
+        return { kind: "epic", spaceName, epicId: spacePath[2] };
+      }
       return {
-        boardName: decodePathSegment(boardNameSegment),
-        taskKey: boardPath[1] ? decodePathSegment(boardPath[1]) : undefined,
+        kind: "space",
+        spaceName,
+        taskKey: spacePath[1] ? decodePathSegment(spacePath[1]) : undefined,
       };
     },
 
+    parseBoardPath(boardPath: string[]): BoardPath | null {
+      const parsed = tasksUrlHelper.routing.parseSpacePath(boardPath);
+      if (!parsed || parsed.kind !== "space") return null;
+      return { spaceName: parsed.spaceName, taskKey: parsed.taskKey };
+    },
+
     getBoardNameFromPathname(pathname: string): string | null {
-      const match = pathname.match(/^\/tasks\/board\/([^/]+)/);
+      const match = pathname.match(/^\/tasks\/space\/([^/]+)/);
       if (!match?.[1]) return null;
       return decodePathSegment(match[1]);
     },
 
     getTaskKeyFromPathname(pathname: string): string | undefined {
-      const boardMatch = pathname.match(/^\/tasks\/board\/[^/]+\/([^/]+)/);
-      if (boardMatch?.[1]) return decodePathSegment(boardMatch[1]);
+      const boardMatch = pathname.match(/^\/tasks\/space\/[^/]+\/([^/]+)/);
+      if (boardMatch?.[1] && boardMatch[1] !== "epics") {
+        return decodePathSegment(boardMatch[1]);
+      }
       const scheduleMatch = pathname.match(
         /^\/tasks\/schedule\/(?:today|tomorrow)\/([^/]+)/,
       );
@@ -78,6 +95,10 @@ function decodePathSegment(value: string): string {
 export type ScheduleDate = (typeof VALID_SCHEDULE_DATES)[number];
 
 export interface BoardPath {
-  boardName: string;
+  spaceName: string;
   taskKey?: string;
 }
+
+export type SpacePath =
+  | { kind: "space"; spaceName: string; taskKey?: string }
+  | { kind: "epic"; spaceName: string; epicId: string };

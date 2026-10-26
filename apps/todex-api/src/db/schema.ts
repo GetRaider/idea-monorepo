@@ -109,7 +109,7 @@ export const folders = pgTable("folders", {
     .notNull(),
 });
 
-export const taskBoards = pgTable("task_boards", {
+export const spaces = pgTable("spaces", {
   id: text("id").primaryKey(),
   workspaceId: text("workspace_id")
     .notNull()
@@ -127,13 +127,13 @@ export const taskBoards = pgTable("task_boards", {
     .notNull(),
 });
 
-export const boardAreas = pgTable(
-  "board_areas",
+export const spaceSections = pgTable(
+  "space_sections",
   {
     id: text("id").primaryKey(),
-    boardId: text("board_id")
+    spaceId: text("space_id")
       .notNull()
-      .references(() => taskBoards.id, { onDelete: "cascade" }),
+      .references(() => spaces.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     position: integer("position").notNull().default(0),
     isDefault: boolean("is_default").notNull().default(false),
@@ -145,27 +145,27 @@ export const boardAreas = pgTable(
       .notNull(),
   },
   (table) => [
-    uniqueIndex("board_areas_board_position_unique").on(
-      table.boardId,
+    uniqueIndex("space_sections_space_position_unique").on(
+      table.spaceId,
       table.position,
     ),
-    uniqueIndex("board_areas_board_name_unique").on(
-      table.boardId,
+    uniqueIndex("space_sections_space_name_unique").on(
+      table.spaceId,
       sql`lower(${table.name})`,
     ),
-    uniqueIndex("board_areas_default_unique")
-      .on(table.boardId)
+    uniqueIndex("space_sections_default_unique")
+      .on(table.spaceId)
       .where(sql`${table.isDefault} = true`),
   ],
 );
 
-export const boardProgressStages = pgTable(
-  "board_progress_stages",
+export const spaceProgressStages = pgTable(
+  "space_progress_stages",
   {
     id: text("id").primaryKey(),
-    boardId: text("board_id")
+    spaceId: text("space_id")
       .notNull()
-      .references(() => taskBoards.id, { onDelete: "cascade" }),
+      .references(() => spaces.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     position: integer("position").notNull().default(0),
     createdAt: timestamp("created_at")
@@ -176,14 +176,45 @@ export const boardProgressStages = pgTable(
       .notNull(),
   },
   (table) => [
-    uniqueIndex("board_progress_stages_board_position_unique").on(
-      table.boardId,
+    uniqueIndex("space_progress_stages_space_position_unique").on(
+      table.spaceId,
       table.position,
     ),
-    uniqueIndex("board_progress_stages_board_name_unique").on(
-      table.boardId,
+    uniqueIndex("space_progress_stages_space_name_unique").on(
+      table.spaceId,
       sql`lower(${table.name})`,
     ),
+  ],
+);
+
+export const epics = pgTable(
+  "epics",
+  {
+    id: text("id").primaryKey(),
+    spaceId: text("space_id")
+      .notNull()
+      .references(() => spaces.id, { onDelete: "cascade" }),
+    sectionId: text("section_id")
+      .notNull()
+      .references(() => spaceSections.id, { onDelete: "restrict" }),
+    name: text("name").notNull(),
+    description: text("description").notNull().default(""),
+    status: taskStatusEnum("status").notNull().default("todo"),
+    priority: taskPriorityEnum("priority").notNull().default("medium"),
+    createdAt: timestamp("created_at")
+      .$defaultFn(() => new Date())
+      .notNull(),
+    updatedAt: timestamp("updated_at")
+      .$defaultFn(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("epics_space_name_unique").on(
+      table.spaceId,
+      sql`lower(${table.name})`,
+    ),
+    index("epics_space_id_idx").on(table.spaceId),
+    index("epics_section_id_idx").on(table.sectionId),
   ],
 );
 
@@ -194,9 +225,9 @@ export const tasks = pgTable(
     workspaceId: text("workspace_id")
       .notNull()
       .references(() => workspaces.id, { onDelete: "cascade" }),
-    taskBoardId: text("task_board_id")
+    spaceId: text("space_id")
       .notNull()
-      .references(() => taskBoards.id, { onDelete: "cascade" }),
+      .references(() => spaces.id, { onDelete: "cascade" }),
     taskKey: text("task_key").notNull(),
     summary: text("summary").notNull(),
     description: text("description").notNull().default(""),
@@ -211,13 +242,16 @@ export const tasks = pgTable(
       .notNull()
       .default(sql`'[]'::jsonb`),
     recurrence: jsonb("recurrence").$type<TaskRecurrence | null>(),
-    areaId: text("area_id")
+    sectionId: text("section_id")
       .notNull()
-      .references(() => boardAreas.id, { onDelete: "restrict" }),
+      .references(() => spaceSections.id, { onDelete: "restrict" }),
     progressStageId: text("progress_stage_id").references(
-      () => boardProgressStages.id,
+      () => spaceProgressStages.id,
       { onDelete: "set null" },
     ),
+    epicId: text("epic_id").references(() => epics.id, {
+      onDelete: "set null",
+    }),
     parentTaskId: text("parent_task_id"),
     position: integer("position").notNull().default(0),
     createdAt: timestamp("created_at")
@@ -232,7 +266,8 @@ export const tasks = pgTable(
       table.workspaceId,
       table.taskKey,
     ),
-    index("tasks_area_id_idx").on(table.areaId),
+    index("tasks_section_id_idx").on(table.sectionId),
+    index("tasks_epic_id_idx").on(table.epicId),
     index("tasks_progress_stage_id_idx").on(table.progressStageId),
     foreignKey({
       columns: [table.parentTaskId],
@@ -310,9 +345,10 @@ export const docMentions = pgTable(
 export type WorkspaceRow = typeof workspaces.$inferSelect;
 export type WorkspaceMemberRow = typeof workspaceMembers.$inferSelect;
 export type FolderRow = typeof folders.$inferSelect;
-export type TaskBoardRow = typeof taskBoards.$inferSelect;
-export type BoardAreaRow = typeof boardAreas.$inferSelect;
-export type BoardProgressStageRow = typeof boardProgressStages.$inferSelect;
+export type SpaceRow = typeof spaces.$inferSelect;
+export type SpaceSectionRow = typeof spaceSections.$inferSelect;
+export type SpaceProgressStageRow = typeof spaceProgressStages.$inferSelect;
+export type EpicRow = typeof epics.$inferSelect;
 export type TaskRow = typeof tasks.$inferSelect;
 export const calendarRsvpStatusEnum = pgEnum("calendar_rsvp_status", [
   "yes",
@@ -565,8 +601,12 @@ export const jobs = pgTable(
     status: agentJobStatusEnum("status").notNull(),
     mode: text("mode").$type<AgentMode>().notNull().default("execute"),
     idempotencyKey: text("idempotency_key").notNull(),
-    pendingToolCalls: jsonb("pending_tool_calls").$type<PendingToolCall[] | null>(),
-    confirmationDecision: text("confirmation_decision").$type<ConfirmationDecision | null>(),
+    pendingToolCalls: jsonb("pending_tool_calls").$type<
+      PendingToolCall[] | null
+    >(),
+    confirmationDecision: text(
+      "confirmation_decision",
+    ).$type<ConfirmationDecision | null>(),
     errorCode: text("error_code"),
     errorMessage: text("error_message"),
     startedAt: timestamp("started_at"),
@@ -789,7 +829,8 @@ export type AgentChunkRow = typeof agentChunks.$inferSelect;
 
 export type DocRow = typeof docs.$inferSelect;
 export type CalendarEventRow = typeof calendarEvents.$inferSelect;
-export type CalendarEventTemplateRow = typeof calendarEventTemplates.$inferSelect;
+export type CalendarEventTemplateRow =
+  typeof calendarEventTemplates.$inferSelect;
 export type GoogleCalendarIntegrationRow =
   typeof googleCalendarIntegrations.$inferSelect;
 export type ExecutionSessionRow = typeof executionSessions.$inferSelect;

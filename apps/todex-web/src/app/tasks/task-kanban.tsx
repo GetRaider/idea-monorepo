@@ -5,6 +5,7 @@ import { TaskStatus } from "@repo/api/todex";
 import type { Task } from "@repo/api/todex";
 import { Checkbox, cn } from "@repo/ui";
 
+import { EpicRows } from "./epic-row";
 import { TaskComposer, type TaskComposerValues } from "./task-composer";
 import { TaskContextMenu } from "./task-context-menu";
 import { isToggleClick, orderedTaskIds } from "./task-selection";
@@ -12,7 +13,8 @@ import { useTasks } from "./tasks-provider";
 import {
   BoardDropZone,
   DraggableTask,
-  PriorityGlyph,
+  InlineTitle,
+  PriorityMenu,
   StatusGlyph,
   TaskFacts,
   TaskProgressBar,
@@ -22,24 +24,34 @@ import {
   STATUS_ORDER,
   statusAfterDoneToggle,
   taskChecklistProgress,
+  type EpicColumn,
   type NestedTask,
 } from "./task-helpers";
 
 export function TaskKanban({
   groups,
-  boardNameById,
+  epicColumns,
+  spaceName,
+  allowEpicTasks = true,
+  spaceNameById,
   showBoardName,
   fastCreate,
   reorderEnabled,
-  boardId,
+  spaceId,
   layout = "fill",
 }: {
   groups: Record<Task["status"], NestedTask[]>;
-  boardNameById: Map<string, string>;
+  epicColumns?: Record<
+    Task["status"],
+    { epics: EpicColumn[]; tasks: NestedTask[] }
+  > | null;
+  spaceName?: string;
+  allowEpicTasks?: boolean;
+  spaceNameById: Map<string, string>;
   showBoardName: boolean;
   fastCreate?: FastCreate;
   reorderEnabled: boolean;
-  boardId?: string;
+  spaceId?: string;
   layout?: "fill" | "stack";
 }) {
   const {
@@ -79,7 +91,9 @@ export function TaskKanban({
             <div className="mb-2 flex items-center gap-2 px-1 py-1 text-sm font-semibold">
               <StatusGlyph status={status} />
               <span>{STATUS_LABEL[status]}</span>
-              <span className="text-muted-foreground">{nodes.length}</span>
+              <span className="text-muted-foreground">
+                {nodes.length + (epicColumns?.[status].epics.length ?? 0)}
+              </span>
             </div>
             {status === TaskStatus.TODO && fastCreate ? (
               <div className="mb-2">
@@ -101,13 +115,21 @@ export function TaskKanban({
                 layout === "fill" && "min-h-0 flex-1 overflow-auto",
               )}
             >
+              {spaceId && spaceName && epicColumns ? (
+                <EpicRows
+                  rows={epicColumns[status].epics}
+                  spaceName={spaceName}
+                  spaceId={spaceId}
+                  allowTasks={allowEpicTasks}
+                />
+              ) : null}
               {reorderEnabled ? (
                 nodes.length === 0 ? (
                   <BoardDropZone
                     kind="empty"
                     status={status}
                     index={0}
-                    boardId={boardId}
+                    spaceId={spaceId}
                   />
                 ) : (
                   <>
@@ -117,18 +139,18 @@ export function TaskKanban({
                           kind="gap"
                           status={status}
                           index={index}
-                          boardId={boardId}
+                          spaceId={spaceId}
                         />
                         <BoardDropZone
                           kind="card"
                           status={status}
                           index={index}
-                          boardId={boardId}
+                          spaceId={spaceId}
                         >
                           <KanbanCard
                             node={node}
                             selected={selectedTaskIds.has(node.id)}
-                            boardNameById={boardNameById}
+                            spaceNameById={spaceNameById}
                             showBoardName={showBoardName}
                             onToggleDone={() =>
                               updateTaskStatus(
@@ -144,7 +166,7 @@ export function TaskKanban({
                       kind="fill"
                       status={status}
                       index={nodes.length}
-                      boardId={boardId}
+                      spaceId={spaceId}
                     />
                   </>
                 )
@@ -153,7 +175,7 @@ export function TaskKanban({
                   kind="column"
                   status={status}
                   index={null}
-                  boardId={boardId}
+                  spaceId={spaceId}
                   className="flex min-h-24 flex-1 flex-col gap-1"
                 >
                   {nodes.map((node) => (
@@ -161,7 +183,7 @@ export function TaskKanban({
                       key={node.id}
                       node={node}
                       selected={selectedTaskIds.has(node.id)}
-                      boardNameById={boardNameById}
+                      spaceNameById={spaceNameById}
                       showBoardName={showBoardName}
                       onToggleDone={() =>
                         updateTaskStatus(
@@ -181,16 +203,16 @@ export function TaskKanban({
   );
 }
 
-function KanbanCard({
+export function KanbanCard({
   node,
   selected,
-  boardNameById,
+  spaceNameById,
   showBoardName,
   onToggleDone,
 }: {
   node: NestedTask;
   selected: boolean;
-  boardNameById: Map<string, string>;
+  spaceNameById: Map<string, string>;
   showBoardName: boolean;
   onToggleDone: () => void;
 }) {
@@ -200,7 +222,7 @@ function KanbanCard({
   });
 
   const {
-    actions: { selectTask },
+    actions: { selectTask, updateTask },
   } = useTasks();
 
   function selectFromPointer(event: MouseEvent<HTMLElement>) {
@@ -217,11 +239,10 @@ function KanbanCard({
   return (
     <DraggableTask taskId={node.id}>
       <TaskContextMenu taskId={node.id}>
-        <button
-          type="button"
+        <div
           data-task-id={node.id}
           className={cn(
-            "flex w-full items-start gap-2 rounded-md border border-border px-2.5 py-2 text-left hover:bg-surface",
+            "flex w-full items-start gap-2 rounded-md border border-border px-2.5 py-2 text-left transition-colors duration-150 hover:bg-surface",
             node.status === TaskStatus.DONE &&
               "bg-black/30 text-muted-foreground",
             node.status === TaskStatus.CANCELLED &&
@@ -242,12 +263,19 @@ function KanbanCard({
           />
           <span className="flex min-w-0 flex-1 flex-col gap-1">
             <span className="flex items-center gap-2">
-              <PriorityGlyph priority={node.priority} />
+              <PriorityMenu
+                priority={node.priority}
+                onSelect={(priority) => updateTask(node.id, { priority })}
+              />
               <span className="font-mono text-xs text-muted-foreground">
                 {node.taskKey}
               </span>
             </span>
-            <span className="text-sm">{node.summary}</span>
+            <InlineTitle
+              value={node.summary}
+              className="w-full"
+              onSave={(summary) => updateTask(node.id, { summary })}
+            />
             <TaskProgressBar
               done={progress.done}
               total={progress.total}
@@ -256,11 +284,11 @@ function KanbanCard({
             <TaskFacts task={node} />
             {showBoardName ? (
               <span className="text-xs text-muted-foreground">
-                {boardNameById.get(node.taskBoardId)}
+                {spaceNameById.get(node.spaceId)}
               </span>
             ) : null}
           </span>
-        </button>
+        </div>
       </TaskContextMenu>
     </DraggableTask>
   );

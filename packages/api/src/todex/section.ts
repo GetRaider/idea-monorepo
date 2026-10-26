@@ -2,9 +2,9 @@ import { z } from "zod";
 
 import { IsoDateTimeSchema } from "./iso.ts";
 
-export const BoardAreaSchema = z.object({
+export const SpaceSectionSchema = z.object({
   id: z.string(),
-  boardId: z.string(),
+  spaceId: z.string(),
   name: z.string(),
   position: z.number().int().nonnegative(),
   isDefault: z.boolean(),
@@ -12,11 +12,11 @@ export const BoardAreaSchema = z.object({
   updatedAt: IsoDateTimeSchema,
 });
 
-export const CreateBoardAreaBodySchema = z.object({
+export const CreateSpaceSectionBodySchema = z.object({
   name: z.string().trim().min(1).max(80),
 });
 
-export const UpdateBoardAreaBodySchema = z
+export const UpdateSpaceSectionBodySchema = z
   .object({
     name: z.string().trim().min(1).max(80).optional(),
     position: z.number().int().nonnegative().optional(),
@@ -25,6 +25,10 @@ export const UpdateBoardAreaBodySchema = z
     message: "Provide a name or a position",
   });
 
-export type BoardArea = z.infer<typeof BoardAreaSchema>;
-export type CreateBoardAreaBody = z.infer<typeof CreateBoardAreaBodySchema>;
-export type UpdateBoardAreaBody = z.infer<typeof UpdateBoardAreaBodySchema>;
+export type SpaceSection = z.infer<typeof SpaceSectionSchema>;
+export type CreateSpaceSectionBody = z.infer<
+  typeof CreateSpaceSectionBodySchema
+>;
+export type UpdateSpaceSectionBody = z.infer<
+  typeof UpdateSpaceSectionBodySchema
+>;

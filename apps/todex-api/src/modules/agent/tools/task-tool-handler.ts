@@ -30,11 +30,11 @@ export class TaskToolHandler {
       {
         name: "list_tasks",
         access: "read",
-        description: "List tasks on a board in the current workspace.",
-        parameters: z.object({ boardId: z.string().min(1) }).strict(),
+        description: "List tasks in a space in the current workspace.",
+        parameters: z.object({ spaceId: z.string().min(1) }).strict(),
         handle: async ({ workspaceId, args }) => {
-          const { boardId } = args as { boardId: string };
-          return this.tasks.list(workspaceId, { boardId });
+          const { spaceId } = args as { spaceId: string };
+          return this.tasks.list(workspaceId, { spaceId });
         },
       },
       {
@@ -50,10 +50,10 @@ export class TaskToolHandler {
       {
         name: "create_task",
         access: "write",
-        description: "Create a task on a board in the current workspace.",
+        description: "Create a task in a space in the current workspace.",
         parameters: z
           .object({
-            taskBoardId: z.string().min(1),
+            spaceId: z.string().min(1),
             summary: z.string().min(1),
             description: z.string().optional(),
             status: taskStatusSchema.optional(),
@@ -62,14 +62,14 @@ export class TaskToolHandler {
           .strict(),
         handle: async ({ workspaceId, args }) => {
           const body = args as {
-            taskBoardId: string;
+            spaceId: string;
             summary: string;
             description?: string;
             status?: (typeof TaskStatus)[keyof typeof TaskStatus];
             priority?: (typeof TaskPriority)[keyof typeof TaskPriority];
           };
           return this.tasks.create(workspaceId, {
-            taskBoardId: body.taskBoardId,
+            spaceId: body.spaceId,
             summary: body.summary,
             description: body.description ?? "",
             status: body.status,

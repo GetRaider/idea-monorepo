@@ -40,7 +40,7 @@ describe("TasksController (e2e smoke)", () => {
 
   it("rejects unauthenticated list", async () => {
     const response = await request(app.getHttpServer() as Server).get(
-      "/tasks?boardId=board-1",
+      "/tasks?spaceId=board-1",
     );
     expect(response.status).toBeGreaterThanOrEqual(403);
   });
@@ -78,14 +78,14 @@ describe("TasksController list query (e2e)", () => {
     await app.close();
   });
 
-  it("returns 400 when neither boardId nor schedule range is provided", async () => {
+  it("returns 400 when neither spaceId nor schedule range is provided", async () => {
     const response = await request(app.getHttpServer() as Server).get("/tasks");
     expect(response.status).toBe(400);
   });
 
-  it("returns 400 when boardId and schedule range are both provided", async () => {
+  it("returns 400 when spaceId and schedule range are both provided", async () => {
     const response = await request(app.getHttpServer() as Server).get(
-      `/tasks?boardId=board-1&scheduleFrom=${encodeURIComponent(scheduleFrom)}&scheduleTo=${encodeURIComponent(scheduleTo)}`,
+      `/tasks?spaceId=board-1&scheduleFrom=${encodeURIComponent(scheduleFrom)}&scheduleTo=${encodeURIComponent(scheduleTo)}`,
     );
     expect(response.status).toBe(400);
   });

@@ -78,16 +78,16 @@ export function readCollapsedBoardIds(contextKey: string): string[] {
   ];
   if (!Array.isArray(stored)) return [];
   return stored.filter(
-    (boardId): boardId is string => typeof boardId === "string",
+    (spaceId): spaceId is string => typeof spaceId === "string",
   );
 }
 
 export function writeCollapsedBoardIds(
   contextKey: string,
-  boardIds: Iterable<string>,
+  spaceIds: Iterable<string>,
 ): void {
   const map = readJsonObject(SCHEDULE_COLLAPSED_BOARDS_STORAGE_KEY);
-  map[contextKey] = [...boardIds];
+  map[contextKey] = [...spaceIds];
   writeJsonObject(SCHEDULE_COLLAPSED_BOARDS_STORAGE_KEY, map);
 }
 
@@ -102,11 +102,11 @@ export function useCollapsedScheduleBoards(contextKey: string | null) {
   }, [contextKey]);
 
   const toggleBoardCollapsed = useCallback(
-    (boardId: string) => {
+    (spaceId: string) => {
       setCollapsedBoardIds((current) => {
         const next = new Set(current);
-        if (next.has(boardId)) next.delete(boardId);
-        else next.add(boardId);
+        if (next.has(spaceId)) next.delete(spaceId);
+        else next.add(spaceId);
         if (contextKey) writeCollapsedBoardIds(contextKey, next);
         return next;
       });
@@ -122,7 +122,7 @@ export function readBoardListSort(contextKey: string): ListSortState {
   return isListSortState(stored) ? stored : DEFAULT_LIST_SORT;
 }
 
-export function useTaskBoardPreferences(contextKey: string | null) {
+export function useSpacePreferences(contextKey: string | null) {
   const [viewMode, setViewModeState] = useState<BoardViewMode>(
     DEFAULT_BOARD_VIEW_MODE,
   );

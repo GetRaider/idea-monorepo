@@ -11,16 +11,16 @@ describe("execution activity", () => {
       from: "2026-10-07",
       to: "2026-10-08",
       timeZone: "UTC",
-      boardId: null,
+      spaceId: null,
       now: new Date("2026-10-08T12:00:00.000Z"),
       slices: [
         {
           sessionId: "session-1",
-          boardId: "board-1",
-          boardName: "Software Growth",
-          areaId: "area-default",
-          areaName: "General",
-          isDefaultArea: true,
+          spaceId: "board-1",
+          spaceName: "Software Growth",
+          sectionId: "area-default",
+          sectionName: "General",
+          isDefaultSection: true,
           intervals: [
             {
               startedAt: "2026-10-07T23:30:00.000Z",
@@ -30,11 +30,11 @@ describe("execution activity", () => {
         },
         {
           sessionId: "session-1",
-          boardId: "board-1",
-          boardName: "Software Growth",
-          areaId: "area-design",
-          areaName: "Design",
-          isDefaultArea: false,
+          spaceId: "board-1",
+          spaceName: "Software Growth",
+          sectionId: "area-design",
+          sectionName: "Design",
+          isDefaultSection: false,
           intervals: [
             {
               startedAt: "2026-10-08T02:00:00.000Z",
@@ -64,7 +64,7 @@ describe("execution activity", () => {
       from: "2026-10-07",
       to: "2026-10-07",
       timeZone: "UTC",
-      boardId: "board-2",
+      spaceId: "board-2",
       now: new Date("2026-10-07T18:00:00.000Z"),
       slices: [
         slice("session-1", "board-1", "Growth", 60 * 60),
@@ -72,7 +72,7 @@ describe("execution activity", () => {
       ],
     });
 
-    expect(report.boards.map((board) => board.name)).toEqual([
+    expect(report.spaces.map((space) => space.name)).toEqual([
       "Growth",
       "Search",
     ]);
@@ -91,21 +91,23 @@ describe("execution activity", () => {
 
 function slice(
   sessionId: string,
-  boardId: string,
-  boardName: string,
+  spaceId: string,
+  spaceName: string,
   seconds: number,
 ) {
   return {
     sessionId,
-    boardId,
-    boardName,
-    areaId: `${boardId}-area`,
-    areaName: "General",
-    isDefaultArea: true,
+    spaceId,
+    spaceName,
+    sectionId: `${spaceId}-area`,
+    sectionName: "General",
+    isDefaultSection: true,
     intervals: [
       {
         startedAt: "2026-10-07T09:00:00.000Z",
-        endedAt: new Date(Date.parse("2026-10-07T09:00:00.000Z") + seconds * 1000).toISOString(),
+        endedAt: new Date(
+          Date.parse("2026-10-07T09:00:00.000Z") + seconds * 1000,
+        ).toISOString(),
       },
     ],
   };

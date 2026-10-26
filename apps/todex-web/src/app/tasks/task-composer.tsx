@@ -1,6 +1,12 @@
 "use client";
 
-import { useState, useEffect, type ComponentProps, type FormEvent, type ReactNode } from "react";
+import {
+  useState,
+  useEffect,
+  type ComponentProps,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 import {
   Button,
   DropdownMenu,
@@ -42,18 +48,20 @@ export function TaskComposer({
 }) {
   const [summary, setSummary] = useState("");
   const [estimationText, setEstimationText] = useState("");
-  const [priority, setPriority] = useState<Task["priority"]>(TaskPriority.MEDIUM);
+  const [priority, setPriority] = useState<Task["priority"]>(
+    TaskPriority.MEDIUM,
+  );
   const [status, setStatus] = useState<Task["status"]>(TaskStatus.TODO);
   const [scheduleDate, setScheduleDate] = useState(defaultScheduleDate);
   const [dueDate, setDueDate] = useState("");
-  const [taskBoardId, setTaskBoardId] = useState(
+  const [spaceId, setSpaceId] = useState(
     defaultBoardId ?? boards?.[0]?.id ?? "",
   );
   const [estimationError, setEstimationError] = useState<string | null>(null);
   const showBoardSelect = (boards?.length ?? 0) > 1;
 
   useEffect(() => {
-    if (defaultBoardId) setTaskBoardId(defaultBoardId);
+    if (defaultBoardId) setSpaceId(defaultBoardId);
   }, [defaultBoardId]);
 
   useEffect(() => {
@@ -85,13 +93,13 @@ export function TaskComposer({
     }
     setEstimationError(null);
     if (!nextSummary) return;
-    if (showBoardSelect && !taskBoardId) return;
+    if (showBoardSelect && !spaceId) return;
     onCreate({
       summary: nextSummary,
       status,
       priority,
       estimation: parsedEstimation,
-      taskBoardId: taskBoardId || null,
+      spaceId: spaceId || null,
       scheduleDate: dateInputToScheduleIso(scheduleDate),
       dueDate: dateInputToLocalDayStartIso(dueDate),
     });
@@ -102,11 +110,11 @@ export function TaskComposer({
     return (
       <button
         type="button"
-        className="flex w-full items-center gap-2 rounded-lg border border-dashed border-border bg-transparent px-4 py-3 text-left text-sm text-muted-foreground hover:bg-surface hover:text-foreground"
+        className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-border bg-transparent px-4 py-3 text-sm text-muted-foreground hover:bg-surface hover:text-foreground"
         onClick={() => onOpenChange?.(true)}
       >
         <PlusIcon size={16} />
-        Create a new task
+        Add task
       </button>
     );
   }
@@ -172,13 +180,15 @@ export function TaskComposer({
         />
         {showBoardSelect ? (
           <ChoiceChip
-            label={boards?.find((board) => board.id === taskBoardId)?.name ?? "Board"}
-            menuLabel="Board"
+            label={
+              boards?.find((board) => board.id === spaceId)?.name ?? "Space"
+            }
+            menuLabel="Space"
           >
             {boards?.map((board) => (
               <DropdownMenuItem
                 key={board.id}
-                onSelect={() => setTaskBoardId(board.id)}
+                onSelect={() => setSpaceId(board.id)}
               >
                 {board.name}
               </DropdownMenuItem>
@@ -229,10 +239,7 @@ function ChoiceChip({
   );
 }
 
-function ChipButton({
-  className,
-  ...props
-}: ComponentProps<"button">) {
+function ChipButton({ className, ...props }: ComponentProps<"button">) {
   return (
     <button
       type="button"
@@ -269,7 +276,7 @@ export interface TaskComposerValues {
   status: Task["status"];
   priority: Task["priority"];
   estimation: number;
-  taskBoardId: string | null;
+  spaceId: string | null;
   scheduleDate: string | null;
   dueDate: string | null;
 }

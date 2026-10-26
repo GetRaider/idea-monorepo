@@ -3,9 +3,9 @@ import { describe, expect, it } from "vitest";
 import { resolveTaskPlacement, TaskPlacementError } from "./task-placement";
 
 const current = {
-  currentAreaId: "general",
+  currentSectionId: "general",
   currentProgressStageId: "design",
-  defaultAreaId: "dest-general",
+  defaultSectionId: "dest-general",
 };
 
 describe("resolveTaskPlacement", () => {
@@ -13,23 +13,23 @@ describe("resolveTaskPlacement", () => {
     expect(
       resolveTaskPlacement({
         ...current,
-        boardChanged: false,
-        requestedAreaId: undefined,
+        spaceChanged: false,
+        requestedSectionId: undefined,
         requestedProgressStageId: undefined,
-        areaOnDestination: false,
+        sectionOnDestination: false,
         stageOnDestination: false,
       }),
-    ).toEqual({ areaId: "general", progressStageId: "design" });
+    ).toEqual({ sectionId: "general", progressStageId: "design" });
   });
 
   it("clears the stage when it is set to null", () => {
     expect(
       resolveTaskPlacement({
         ...current,
-        boardChanged: false,
-        requestedAreaId: undefined,
+        spaceChanged: false,
+        requestedSectionId: undefined,
         requestedProgressStageId: null,
-        areaOnDestination: false,
+        sectionOnDestination: false,
         stageOnDestination: false,
       }).progressStageId,
     ).toBeNull();
@@ -39,36 +39,36 @@ describe("resolveTaskPlacement", () => {
     expect(
       resolveTaskPlacement({
         ...current,
-        boardChanged: true,
-        requestedAreaId: undefined,
+        spaceChanged: true,
+        requestedSectionId: undefined,
         requestedProgressStageId: undefined,
-        areaOnDestination: false,
+        sectionOnDestination: false,
         stageOnDestination: false,
       }),
-    ).toEqual({ areaId: "dest-general", progressStageId: null });
+    ).toEqual({ sectionId: "dest-general", progressStageId: null });
   });
 
   it("accepts an area and stage that belong to the destination board", () => {
     expect(
       resolveTaskPlacement({
         ...current,
-        boardChanged: true,
-        requestedAreaId: "launch",
+        spaceChanged: true,
+        requestedSectionId: "launch",
         requestedProgressStageId: "build",
-        areaOnDestination: true,
+        sectionOnDestination: true,
         stageOnDestination: true,
       }),
-    ).toEqual({ areaId: "launch", progressStageId: "build" });
+    ).toEqual({ sectionId: "launch", progressStageId: "build" });
   });
 
   it("rejects an area from another board", () => {
     expect(() =>
       resolveTaskPlacement({
         ...current,
-        boardChanged: true,
-        requestedAreaId: "other",
+        spaceChanged: true,
+        requestedSectionId: "other",
         requestedProgressStageId: undefined,
-        areaOnDestination: false,
+        sectionOnDestination: false,
         stageOnDestination: false,
       }),
     ).toThrow(TaskPlacementError);

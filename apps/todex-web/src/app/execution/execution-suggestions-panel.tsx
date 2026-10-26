@@ -34,15 +34,21 @@ export function ExecutionSuggestionsPanel() {
     mutationFn: (taskId: string) => todexClient.execution.enqueue({ taskId }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["execution"] }),
     onError: (error) =>
-      toast.error(error instanceof Error && error.message ? error.message : "Could not add the task to the queue"),
+      toast.error(
+        error instanceof Error && error.message
+          ? error.message
+          : "Could not add the task to the queue",
+      ),
   });
-  const [filters, setFilters] = useState<SuggestionFilters>(EMPTY_SUGGESTION_FILTERS);
+  const [filters, setFilters] = useState<SuggestionFilters>(
+    EMPTY_SUGGESTION_FILTERS,
+  );
   const tasks = suggestions.data ?? [];
   const boards = suggestionBoards(tasks);
-  const areas = suggestionAreas(tasks, filters.boardId);
+  const areas = suggestionAreas(tasks, filters.spaceId);
   const stages = suggestionStages(tasks);
-  if (filters.areaName !== "all" && !areas.includes(filters.areaName)) {
-    setFilters((current) => ({ ...current, areaName: "all" }));
+  if (filters.sectionName !== "all" && !areas.includes(filters.sectionName)) {
+    setFilters((current) => ({ ...current, sectionName: "all" }));
   }
   const visible = applySuggestionFilters(tasks, filters, new Date());
 
@@ -59,10 +65,12 @@ export function ExecutionSuggestionsPanel() {
         <FilterSelect
           label="Sort"
           value={filters.sort}
-          onChange={(sort) => update({ sort: sort as SuggestionFilters["sort"] })}
+          onChange={(sort) =>
+            update({ sort: sort as SuggestionFilters["sort"] })
+          }
         >
           <option value="priority">Priority</option>
-          <option value="board">Board</option>
+          <option value="board">Space</option>
           <option value="estimation">Estimation</option>
           <option value="schedule">Schedule</option>
           <option value="due">Due</option>
@@ -82,9 +90,9 @@ export function ExecutionSuggestionsPanel() {
           <option value="low">Low</option>
         </FilterSelect>
         <FilterSelect
-          label="Board"
-          value={filters.boardId}
-          onChange={(boardId) => update({ boardId })}
+          label="Space"
+          value={filters.spaceId}
+          onChange={(spaceId) => update({ spaceId })}
         >
           <option value="all">Any</option>
           {boards.map((board) => (
@@ -95,9 +103,9 @@ export function ExecutionSuggestionsPanel() {
         </FilterSelect>
         {areas.length > 0 ? (
           <FilterSelect
-            label="Area"
-            value={filters.areaName}
-            onChange={(areaName) => update({ areaName })}
+            label="Section"
+            value={filters.sectionName}
+            onChange={(sectionName) => update({ sectionName })}
           >
             <option value="all">Any</option>
             {areas.map((area) => (
@@ -111,7 +119,9 @@ export function ExecutionSuggestionsPanel() {
           label="Estimation"
           value={filters.estimation}
           onChange={(estimation) =>
-            update({ estimation: estimation as SuggestionFilters["estimation"] })
+            update({
+              estimation: estimation as SuggestionFilters["estimation"],
+            })
           }
         >
           <option value="all">Any</option>
@@ -187,8 +197,8 @@ export function ExecutionSuggestionsPanel() {
                   </span>
                 </p>
                 <p className="mt-1 truncate text-xs text-muted-foreground">
-                  {task.boardName}
-                  {task.isDefaultArea ? "" : ` (${task.areaName})`}
+                  {task.spaceName}
+                  {task.isDefaultSection ? "" : ` (${task.sectionName})`}
                   {task.stageName ? ` · ${task.stageName}` : ""}
                 </p>
               </div>

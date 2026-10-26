@@ -1,9 +1,22 @@
 "use client";
 
-import type { CSSProperties, MouseEvent, ReactNode } from "react";
+import {
+  useEffect,
+  useState,
+  type CSSProperties,
+  type MouseEvent,
+  type ReactNode,
+} from "react";
 import Link from "next/link";
 import { useDndContext, useDraggable, useDroppable } from "@dnd-kit/core";
-import { Checkbox, cn } from "@repo/ui";
+import {
+  Checkbox,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  cn,
+} from "@repo/ui";
 import {
   formatEstimation,
   formatTaskRecurrence,
@@ -27,13 +40,18 @@ import { isToggleClick, orderedTaskIds } from "./task-selection";
 import { useTasks } from "./tasks-provider";
 import { useStageName } from "./board-axes";
 
-import { formatTaskDay, type NestedTask } from "./task-helpers";
+import {
+  formatTaskDay,
+  STATUS_LABEL,
+  STATUS_ORDER,
+  type NestedTask,
+} from "./task-helpers";
 
 export function BoardDropZone({
   status,
   index,
   kind,
-  boardId,
+  spaceId,
   combinedOpen,
   taskId,
   compact,
@@ -43,7 +61,7 @@ export function BoardDropZone({
   status: Task["status"];
   index: number | null;
   kind: BoardDropData["kind"];
-  boardId?: string;
+  spaceId?: string;
   combinedOpen?: boolean;
   taskId?: string;
   compact?: boolean;
@@ -55,7 +73,7 @@ export function BoardDropZone({
     status,
     index,
     kind,
-    boardId,
+    spaceId,
     combinedOpen,
   };
   const { setNodeRef, isOver } = useDroppable({
@@ -68,7 +86,7 @@ export function BoardDropZone({
     overData?.type === "reorder" &&
     overData.status === status &&
     overData.index === index &&
-    overData.boardId === boardId &&
+    overData.spaceId === spaceId &&
     Boolean(overData.combinedOpen) === Boolean(combinedOpen);
   const showIndicator =
     Boolean(active) &&
@@ -151,7 +169,7 @@ export function DraggableTask({
 
 export function TaskRow({
   node,
-  boardNameById,
+  spaceNameById,
   showBoardName,
   depth = 0,
   expanded = false,
@@ -159,10 +177,10 @@ export function TaskRow({
   onToggleDone,
   onCreateSubtask,
   statusDrop,
-  boardId,
+  spaceId,
 }: {
   node: NestedTask;
-  boardNameById: Map<string, string>;
+  spaceNameById: Map<string, string>;
   showBoardName: boolean;
   depth?: number;
   expanded?: boolean;
@@ -170,11 +188,11 @@ export function TaskRow({
   onToggleDone: (task: NestedTask) => void;
   onCreateSubtask: (parentTaskId: string) => void;
   statusDrop?: boolean;
-  boardId?: string;
+  spaceId?: string;
 }) {
   const {
     state: { selectedTaskIds },
-    actions: { selectTask },
+    actions: { selectTask, updateTask },
   } = useTasks();
   const hasChildren = node.children.length > 0;
   const selected = selectedTaskIds.has(node.id);
@@ -237,25 +255,23 @@ export function TaskRow({
           onClick={(event) => event.stopPropagation()}
           onCheckedChange={() => onToggleDone(node)}
         />
-        <PriorityGlyph priority={node.priority} />
-        <button
-          type="button"
-          className="min-w-0 flex-1 text-left text-sm"
-          onClick={(event) => {
-            event.stopPropagation();
-            selectFromPointer(event);
-          }}
-        >
-          <span className="mr-2 font-mono text-xs text-muted-foreground">
-            {node.taskKey}
+        <PriorityMenu
+          priority={node.priority}
+          onSelect={(priority) => updateTask(node.id, { priority })}
+        />
+        <span className="shrink-0 font-mono text-xs text-muted-foreground">
+          {node.taskKey}
+        </span>
+        <InlineTitle
+          value={node.summary}
+          className="flex-1"
+          onSave={(summary) => updateTask(node.id, { summary })}
+        />
+        {showBoardName ? (
+          <span className="shrink-0 text-xs text-muted-foreground">
+            {spaceNameById.get(node.spaceId)}
           </span>
-          {node.summary}
-          {showBoardName ? (
-            <span className="ml-2 text-xs text-muted-foreground">
-              {boardNameById.get(node.taskBoardId)}
-            </span>
-          ) : null}
-        </button>
+        ) : null}
         <TaskFacts task={node} />
         <button
           type="button"
@@ -281,10 +297,134 @@ export function TaskRow({
       status={node.status}
       index={null}
       taskId={node.id}
-      boardId={boardId}
+      spaceId={spaceId}
     >
       {draggable}
     </BoardDropZone>
+  );
+}
+
+export function TextMenu({
+  label,
+  trigger,
+  ariaLabel,
+  options,
+  onSelect,
+  className,
+}: {
+  label?: string;
+  trigger?: ReactNode;
+  ariaLabel: string;
+  options: ReadonlyArray<{ value: string; label: string }>;
+  onSelect: (value: string) => void;
+  className?: string;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          aria-label={ariaLabel}
+          className={cn(
+            "shrink-0 rounded-md px-1.5 py-0.5 text-xs text-muted-foreground transition-colors duration-150 hover:bg-background hover:text-foreground",
+            className,
+          )}
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={(event) => event.stopPropagation()}
+        >
+          {trigger ?? label}
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="start"
+        onClick={(event) => event.stopPropagation()}
+      >
+        {options.map((option) => (
+          <DropdownMenuItem
+            key={option.value}
+            onSelect={() => onSelect(option.value)}
+          >
+            {option.label}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+export function InlineTitle({
+  value,
+  onSave,
+  className,
+}: {
+  value: string;
+  onSave: (next: string) => void;
+  className?: string;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value);
+
+  useEffect(() => {
+    if (!editing) setDraft(value);
+  }, [editing, value]);
+
+  function save() {
+    const next = draft.trim();
+    setEditing(false);
+    if (!next || next === value) {
+      setDraft(value);
+      return;
+    }
+    onSave(next);
+  }
+
+  if (editing) {
+    return (
+      <input
+        autoFocus
+        aria-label="Title"
+        value={draft}
+        className={cn(
+          "min-w-0 bg-transparent text-left text-sm text-foreground outline-none",
+          className,
+        )}
+        onClick={(event) => event.stopPropagation()}
+        onPointerDown={(event) => event.stopPropagation()}
+        onKeyDown={(event) => {
+          event.stopPropagation();
+          if (event.key === "Enter") {
+            event.preventDefault();
+            save();
+          }
+          if (event.key === "Escape") {
+            event.preventDefault();
+            setDraft(value);
+            setEditing(false);
+          }
+        }}
+        onBlur={save}
+        onChange={(event) => setDraft(event.target.value)}
+      />
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      data-no-dnd=""
+      className={cn(
+        "min-w-0 truncate text-left text-sm transition-colors duration-150 hover:text-foreground",
+        className,
+      )}
+      onPointerDown={(event) => event.stopPropagation()}
+      onClick={(event) => {
+        event.stopPropagation();
+        setDraft(value);
+        setEditing(true);
+      }}
+    >
+      {value}
+    </button>
   );
 }
 
@@ -336,7 +476,14 @@ export function TaskFacts({
     ? formatTaskRecurrence(task.recurrence)
     : null;
   const stageName = useStageName(task.progressStageId);
-  if (!schedule && !due && !estimate && !executed && !recurrence && !stageName) {
+  if (
+    !schedule &&
+    !due &&
+    !estimate &&
+    !executed &&
+    !recurrence &&
+    !stageName
+  ) {
     return null;
   }
   return (
@@ -381,32 +528,74 @@ export function TaskFacts({
   );
 }
 
-export function TaskSearchField() {
+export function TaskSearchPalette() {
+  const [open, setOpen] = useState(false);
   const {
     state: { search },
     actions: { setSearch },
   } = useTasks();
+
+  function close() {
+    setSearch("");
+    setOpen(false);
+  }
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key.toLowerCase() !== "f" || !event.metaKey) return;
+      if (event.shiftKey || event.altKey || event.repeat) return;
+      event.preventDefault();
+      setOpen((current) => {
+        if (current) setSearch("");
+        return !current;
+      });
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [setSearch]);
+
+  if (!open) return null;
+
   return (
-    <input
-      value={search}
-      onChange={(event) => setSearch(event.target.value)}
-      placeholder="Search"
-      aria-label="Search"
-      className="h-9 w-40 rounded-md border border-border bg-transparent px-3 text-sm outline-none placeholder:text-muted-foreground"
-    />
+    <div
+      className="fixed inset-0 z-[4000] flex items-start justify-center bg-black/50 p-4 pt-[18vh]"
+      onMouseDown={close}
+    >
+      <form
+        role="dialog"
+        aria-label="Search"
+        className="w-full max-w-xl rounded-xl border border-border bg-popover text-popover-foreground shadow-2xl"
+        onMouseDown={(event) => event.stopPropagation()}
+        onSubmit={(event) => event.preventDefault()}
+        onKeyDown={(event) => {
+          if (event.key === "Escape") close();
+        }}
+      >
+        <input
+          autoFocus
+          value={search}
+          placeholder="Search"
+          aria-label="Search"
+          className="w-full bg-transparent px-4 py-4 text-lg text-foreground outline-none placeholder:text-muted-foreground"
+          onChange={(event) => setSearch(event.target.value)}
+        />
+      </form>
+    </div>
   );
 }
 
 export function TasksBreadcrumb({
-  boardName,
+  spaceName,
   boardHref,
   taskKey,
+  epicName,
   trailing,
   className,
 }: {
-  boardName?: string;
+  spaceName?: string;
   boardHref?: string;
   taskKey?: string;
+  epicName?: string;
   trailing?: ReactNode;
   className?: string;
 }) {
@@ -421,7 +610,7 @@ export function TasksBreadcrumb({
       >
         Tasks
       </Link>
-      {boardName ? (
+      {spaceName ? (
         <>
           <span className="shrink-0 text-muted-foreground">›</span>
           <span className="flex min-w-0 items-center gap-2 truncate">
@@ -435,12 +624,18 @@ export function TasksBreadcrumb({
                   setSelectedTaskId(null);
                 }}
               >
-                {boardName}
+                {spaceName}
               </Link>
             ) : (
-              <span className="truncate">{boardName}</span>
+              <span className="truncate">{spaceName}</span>
             )}
           </span>
+        </>
+      ) : null}
+      {epicName ? (
+        <>
+          <span className="shrink-0 text-muted-foreground">›</span>
+          <span className="truncate">{epicName}</span>
         </>
       ) : null}
       {taskKey ? (
@@ -473,6 +668,42 @@ export function PriorityGlyph({ priority }: { priority: Task["priority"] }) {
     <span aria-hidden className="inline-flex text-xs leading-none">
       {PRIORITY_ICON[priority]}
     </span>
+  );
+}
+
+export function PriorityMenu({
+  priority,
+  onSelect,
+}: {
+  priority: Task["priority"];
+  onSelect: (priority: Task["priority"]) => void;
+}) {
+  return (
+    <TextMenu
+      ariaLabel="Priority"
+      className="px-0.5"
+      trigger={<PriorityGlyph priority={priority} />}
+      options={PRIORITY_MENU_OPTIONS}
+      onSelect={(value) => onSelect(value as Task["priority"])}
+    />
+  );
+}
+
+export function StatusMenu({
+  status,
+  onSelect,
+}: {
+  status: Task["status"];
+  onSelect: (status: Task["status"]) => void;
+}) {
+  return (
+    <TextMenu
+      ariaLabel="Status"
+      className="px-0.5"
+      trigger={<StatusGlyph status={status} />}
+      options={STATUS_MENU_OPTIONS}
+      onSelect={(value) => onSelect(value as Task["status"])}
+    />
   );
 }
 
@@ -551,3 +782,22 @@ export const PRIORITY_ICON: Record<Task["priority"], string> = {
   [TaskPriority.HIGH]: "🔴",
   [TaskPriority.CRITICAL]: "🟣",
 };
+
+const PRIORITY_MENU_LABEL: Record<Task["priority"], string> = {
+  [TaskPriority.LOW]: "Low",
+  [TaskPriority.MEDIUM]: "Medium",
+  [TaskPriority.HIGH]: "High",
+  [TaskPriority.CRITICAL]: "Critical",
+};
+
+const PRIORITY_MENU_OPTIONS = (
+  Object.keys(PRIORITY_MENU_LABEL) as Task["priority"][]
+).map((priority) => ({
+  value: priority,
+  label: PRIORITY_MENU_LABEL[priority],
+}));
+
+const STATUS_MENU_OPTIONS = STATUS_ORDER.map((status) => ({
+  value: status,
+  label: STATUS_LABEL[status],
+}));

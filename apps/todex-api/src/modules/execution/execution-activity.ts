@@ -32,15 +32,15 @@ export function buildExecutionActivity(
       tracked += seconds;
     }
     if (tracked === 0) continue;
-    boards.set(slice.boardId, slice.boardName);
-    if (input.boardId && slice.boardId !== input.boardId) continue;
+    boards.set(slice.spaceId, slice.spaceName);
+    if (input.spaceId && slice.spaceId !== input.spaceId) continue;
     sessionSeconds.set(
       slice.sessionId,
       (sessionSeconds.get(slice.sessionId) ?? 0) + tracked,
     );
-    const section = slice.isDefaultArea ? null : slice.areaName;
-    const id = section ? `${slice.boardId}:${slice.areaId}` : slice.boardId;
-    const label = section ? `${slice.boardName} · ${section}` : slice.boardName;
+    const section = slice.isDefaultSection ? null : slice.sectionName;
+    const id = section ? `${slice.spaceId}:${slice.sectionId}` : slice.spaceId;
+    const label = section ? `${slice.spaceName} · ${section}` : slice.spaceName;
     const current = activitySeconds.get(id);
     activitySeconds.set(id, {
       label,
@@ -48,7 +48,7 @@ export function buildExecutionActivity(
     });
   }
 
-  const filteredDaySeconds = input.boardId
+  const filteredDaySeconds = input.spaceId
     ? daySecondsFromSlices(input, rangeStart, rangeEnd, days)
     : daySeconds;
   const executionSeconds = [...filteredDaySeconds.values()].reduce(
@@ -78,7 +78,7 @@ export function buildExecutionActivity(
       date,
       seconds: filteredDaySeconds.get(date) ?? 0,
     })),
-    boards: [...boards.entries()]
+    spaces: [...boards.entries()]
       .map(([id, name]) => ({ id, name }))
       .sort((left, right) => left.name.localeCompare(right.name)),
     activities: [...activitySeconds.entries()]
@@ -90,8 +90,11 @@ export function buildExecutionActivity(
 export function allocateSessionSpans(weights: number[], duration: number) {
   if (weights.length === 0 || duration <= 0) return weights.map(() => 0);
   const total = weights.reduce((sum, weight) => sum + weight, 0);
-  if (total <= 0) return weights.map((_, index) => (index === 0 ? duration : 0));
-  const spans = weights.map((weight) => Math.floor((duration * weight) / total));
+  if (total <= 0)
+    return weights.map((_, index) => (index === 0 ? duration : 0));
+  const spans = weights.map((weight) =>
+    Math.floor((duration * weight) / total),
+  );
   let remainder = duration - spans.reduce((sum, span) => sum + span, 0);
   for (let index = spans.length - 1; index >= 0 && remainder > 0; index -= 1) {
     if (weights[index] > 0) {
@@ -110,7 +113,7 @@ function daySecondsFromSlices(
 ) {
   const daySeconds = new Map(days.map((day) => [day, 0]));
   for (const slice of input.slices) {
-    if (slice.boardId !== input.boardId) continue;
+    if (slice.spaceId !== input.spaceId) continue;
     for (const interval of slice.intervals) {
       const started = Date.parse(interval.startedAt);
       const ended = Date.parse(interval.endedAt ?? input.now.toISOString());
@@ -218,11 +221,11 @@ function timeZoneOffset(instant: Date, timeZone: string) {
 
 interface ActivitySlice {
   sessionId: string;
-  boardId: string;
-  boardName: string;
-  areaId: string;
-  areaName: string;
-  isDefaultArea: boolean;
+  spaceId: string;
+  spaceName: string;
+  sectionId: string;
+  sectionName: string;
+  isDefaultSection: boolean;
   intervals: ExecutionInterval[];
 }
 
@@ -231,6 +234,6 @@ interface BuildActivityInput {
   from: string;
   to: string;
   timeZone: string;
-  boardId: string | null;
+  spaceId: string | null;
   now: Date;
 }

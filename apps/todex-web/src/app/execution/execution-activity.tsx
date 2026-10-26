@@ -25,19 +25,23 @@ export function ExecutionActivity() {
   const [preset, setPreset] = useState<RangePreset>("today");
   const [from, setFrom] = useState(today);
   const [to, setTo] = useState(today);
-  const [boardId, setBoardId] = useState<string | null>(null);
+  const [spaceId, setBoardId] = useState<string | null>(null);
   const query = useQuery({
-    queryKey: ["execution", "activity", from, to, timeZone, boardId],
+    queryKey: ["execution", "activity", from, to, timeZone, spaceId],
     queryFn: () =>
       todexClient.execution.activity({
         from,
         to,
         timeZone,
-        boardId: boardId ?? undefined,
+        spaceId: spaceId ?? undefined,
       }),
   });
   const report = query.data;
-  if (report && boardId && !report.boards.some((board) => board.id === boardId)) {
+  if (
+    report &&
+    spaceId &&
+    !report.spaces.some((space) => space.id === spaceId)
+  ) {
     setBoardId(null);
   }
   const peak = report?.days.reduce(
@@ -73,15 +77,15 @@ export function ExecutionActivity() {
           ))}
         </div>
         <select
-          aria-label="Board"
+          aria-label="Space"
           className="h-8 rounded-md border border-border bg-transparent px-2 text-sm text-foreground outline-none"
-          value={boardId ?? ""}
+          value={spaceId ?? ""}
           onChange={(event) => setBoardId(event.target.value || null)}
         >
-          <option value="">All boards</option>
-          {report?.boards.map((board) => (
-            <option key={board.id} value={board.id}>
-              {board.name}
+          <option value="">All spaces</option>
+          {report?.spaces.map((space) => (
+            <option key={space.id} value={space.id}>
+              {space.name}
             </option>
           ))}
         </select>
@@ -109,7 +113,9 @@ export function ExecutionActivity() {
       {query.isLoading ? (
         <Spinner className="py-10" />
       ) : query.isError || !report ? (
-        <p className="text-sm text-muted-foreground">Could not load activity.</p>
+        <p className="text-sm text-muted-foreground">
+          Could not load activity.
+        </p>
       ) : (
         <>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -165,7 +171,7 @@ export function ExecutionActivity() {
           </section>
           <section>
             <h2 className="mb-3 text-xs tracking-wide text-muted-foreground">
-              Activity by board
+              Activity by space
             </h2>
             {report.activities.length === 0 ? (
               <p className="text-sm text-muted-foreground">
@@ -181,7 +187,10 @@ export function ExecutionActivity() {
                           (activity.seconds / report.executionSeconds) * 100,
                         );
                   return (
-                    <div key={activity.id} className="grid grid-cols-[8rem_1fr_auto] items-center gap-3 text-sm">
+                    <div
+                      key={activity.id}
+                      className="grid grid-cols-[8rem_1fr_auto] items-center gap-3 text-sm"
+                    >
                       <span className="truncate">{activity.label}</span>
                       <div className="h-2 overflow-hidden rounded-full bg-surface">
                         <div
@@ -249,7 +258,9 @@ function presetRange(preset: RangePreset, today: string) {
   }
   if (preset === "month") {
     const [year, month] = today.split("-");
-    const last = new Date(Date.UTC(Number(year), Number(month), 0)).getUTCDate();
+    const last = new Date(
+      Date.UTC(Number(year), Number(month), 0),
+    ).getUTCDate();
     return {
       from: `${year}-${month}-01`,
       to: `${year}-${month}-${String(last).padStart(2, "0")}`,
@@ -269,10 +280,13 @@ function dayKey(date: Date, timeZone: string) {
 
 function formatDay(day: string) {
   const [year, month, date] = day.split("-").map(Number);
-  return new Date(Date.UTC(year ?? 0, (month ?? 1) - 1, date ?? 1)).toLocaleDateString(
-    undefined,
-    { month: "numeric", day: "numeric", timeZone: "UTC" },
-  );
+  return new Date(
+    Date.UTC(year ?? 0, (month ?? 1) - 1, date ?? 1),
+  ).toLocaleDateString(undefined, {
+    month: "numeric",
+    day: "numeric",
+    timeZone: "UTC",
+  });
 }
 
 function shiftDay(day: string, delta: number) {

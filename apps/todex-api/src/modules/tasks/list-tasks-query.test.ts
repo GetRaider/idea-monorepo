@@ -7,9 +7,9 @@ import {
 } from "@repo/api/todex";
 
 describe("ListTasksQuerySchema", () => {
-  it("accepts boardId alone", () => {
-    expect(ListTasksQuerySchema.parse({ boardId: "board-1" })).toEqual({
-      boardId: "board-1",
+  it("accepts spaceId alone", () => {
+    expect(ListTasksQuerySchema.parse({ spaceId: "board-1" })).toEqual({
+      spaceId: "board-1",
     });
   });
 
@@ -21,14 +21,14 @@ describe("ListTasksQuerySchema", () => {
     expect(ListTasksQuerySchema.parse(query)).toEqual(query);
   });
 
-  it("rejects neither boardId nor schedule range", () => {
+  it("rejects neither spaceId nor schedule range", () => {
     expect(ListTasksQuerySchema.safeParse({}).success).toBe(false);
   });
 
-  it("rejects boardId and schedule range together", () => {
+  it("rejects spaceId and schedule range together", () => {
     expect(
       ListTasksQuerySchema.safeParse({
-        boardId: "board-1",
+        spaceId: "board-1",
         scheduleFrom: "2026-09-10T00:00:00.000Z",
         scheduleTo: "2026-09-11T00:00:00.000Z",
       }).success,
@@ -56,7 +56,7 @@ describe("ListTasksQuerySchema", () => {
 describe("task date bodies", () => {
   it("allows scheduleDate and dueDate independently on create", () => {
     const body = CreateTaskBodySchema.parse({
-      taskBoardId: "board-1",
+      spaceId: "board-1",
       summary: "Plan it",
       estimation: 60,
       scheduleDate: "2026-09-10T00:00:00.000Z",
@@ -115,13 +115,13 @@ describe("task date bodies", () => {
   it("requires a positive estimation on create and rejects clearing it", () => {
     expect(
       CreateTaskBodySchema.safeParse({
-        taskBoardId: "board-1",
+        spaceId: "board-1",
         summary: "Plan it",
       }).success,
     ).toBe(false);
     expect(
       CreateTaskBodySchema.safeParse({
-        taskBoardId: "board-1",
+        spaceId: "board-1",
         summary: "Plan it",
         estimation: 0,
       }).success,

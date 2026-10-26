@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@repo/ui";
-import type { Folder, TaskBoard } from "@repo/api/todex";
+import type { Folder, Space } from "@repo/api/todex";
 
 import { useTasks } from "./tasks-provider";
 
@@ -76,7 +76,7 @@ function SpaceDialogsHost({ dialog, onClose }: SpaceDialogsHostProps) {
   if (dialog?.kind === "renameBoard") {
     return (
       <NameDialog
-        title="Rename board"
+        title="Rename space"
         initialName={dialog.board.name}
         onClose={onClose}
         onSubmit={(name) => updateBoard(dialog.board.id, { name })}
@@ -98,8 +98,8 @@ function SpaceDialogsHost({ dialog, onClose }: SpaceDialogsHostProps) {
   if (dialog?.kind === "deleteBoard") {
     return (
       <ConfirmDialog
-        title="Delete board"
-        description={`Delete board "${dialog.board.name}" and all its tasks?`}
+        title="Delete space"
+        description={`Delete space "${dialog.board.name}" and all its tasks?`}
         confirmLabel="Delete"
         onClose={onClose}
         onConfirm={() => removeBoard(dialog.board.id)}
@@ -122,7 +122,7 @@ function SpaceDialogsHost({ dialog, onClose }: SpaceDialogsHostProps) {
     return (
       <ConfirmDialog
         title="Delete folder"
-        description={`Delete folder "${dialog.folder.name}"? Boards inside it stay and move to the root.`}
+        description={`Delete folder "${dialog.folder.name}"? Spaces inside it stay and move to the root.`}
         confirmLabel="Delete"
         onClose={onClose}
         onConfirm={() => removeFolder(dialog.folder.id)}
@@ -165,7 +165,7 @@ function CreateSpaceDialog({
   };
 
   return (
-    <Dialog title="Create board or folder" onClose={onClose}>
+    <Dialog title="Create space or folder" onClose={onClose}>
       <form className="space-y-4" onSubmit={submit}>
         <Field label="Type">
           <div className="flex gap-2">
@@ -181,7 +181,7 @@ function CreateSpaceDialog({
                 }`}
                 onClick={() => setKind(option)}
               >
-                {option === "board" ? "Board" : "Folder"}
+                {option === "board" ? "Space" : "Folder"}
               </button>
             ))}
           </div>
@@ -283,7 +283,7 @@ function MoveBoardDialog({
   onClose,
   onSubmit,
 }: {
-  board: TaskBoard;
+  board: Space;
   folders: Folder[];
   onClose: () => void;
   onSubmit: (folderId: string | null) => Promise<unknown>;
@@ -348,17 +348,17 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
 }
 
 type SpaceDialog =
-  | { kind: "renameBoard"; board: TaskBoard }
-  | { kind: "moveBoard"; board: TaskBoard }
-  | { kind: "deleteBoard"; board: TaskBoard }
+  | { kind: "renameBoard"; board: Space }
+  | { kind: "moveBoard"; board: Space }
+  | { kind: "deleteBoard"; board: Space }
   | { kind: "renameFolder"; folder: Folder }
   | { kind: "deleteFolder"; folder: Folder }
   | null;
 
 interface SpaceDialogsContextValue {
-  openRenameBoard: (board: TaskBoard) => void;
-  openMoveBoard: (board: TaskBoard) => void;
-  openDeleteBoard: (board: TaskBoard) => void;
+  openRenameBoard: (board: Space) => void;
+  openMoveBoard: (board: Space) => void;
+  openDeleteBoard: (board: Space) => void;
   openRenameFolder: (folder: Folder) => void;
   openDeleteFolder: (folder: Folder) => void;
 }

@@ -8,27 +8,28 @@ import { and, asc, eq } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import {
-  DEFAULT_AREA_NAME,
+  DEFAULT_SECTION_NAME,
   PROGRESS_STAGE_TEMPLATES,
   type ApplyProgressStageTemplateBody,
-  type CreateBoardAreaBody,
-  type CreateTaskBoardBody,
-  type ReplaceBoardProgressStagesBody,
-  type UpdateBoardAreaBody,
-  type UpdateTaskBoardBody,
+  type CreateSpaceSectionBody,
+  type CreateSpaceBody,
+  type ReplaceSpaceProgressStagesBody,
+  type UpdateSpaceSectionBody,
+  type UpdateSpaceBody,
 } from "@repo/api/todex";
 
 import {
-  mapBoardArea,
-  mapBoardProgressStage,
-  mapTaskBoard,
+  mapSpaceSection,
+  mapSpaceProgressStage,
+  mapSpace,
 } from "../../db/mappers";
 import {
-  boardAreas,
-  boardProgressStages,
-  taskBoards,
+  epics,
+  spaceSections,
+  spaceProgressStages,
+  spaces,
   tasks,
-  type BoardAreaRow,
+  type SpaceSectionRow,
 } from "../../db/schema";
 import { DRIZZLE_DB } from "../../db/tokens";
 import { WorkspaceService } from "../workspace/workspace.service";
@@ -38,7 +39,7 @@ import {
 } from "./progress-stage-plan";
 
 @Injectable()
-export class BoardsService {
+export class SpacesService {
   constructor(
     @Inject(DRIZZLE_DB) private readonly db: NodePgDatabase,
     private readonly workspaceService: WorkspaceService,
@@ -47,32 +48,32 @@ export class BoardsService {
   async list(workspaceId: string, folderId?: string) {
     const rows = await this.db
       .select()
-      .from(taskBoards)
+      .from(spaces)
       .where(
         folderId
           ? and(
-              eq(taskBoards.workspaceId, workspaceId),
-              eq(taskBoards.folderId, folderId),
+              eq(spaces.workspaceId, workspaceId),
+              eq(spaces.folderId, folderId),
             )
-          : eq(taskBoards.workspaceId, workspaceId),
+          : eq(spaces.workspaceId, workspaceId),
       );
-    return rows.map(mapTaskBoard);
+    return rows.map(mapSpace);
   }
 
-  async get(workspaceId: string, boardId: string) {
-    const board = await this.requireInWorkspace(workspaceId, boardId);
+  async get(workspaceId: string, spaceId: string) {
+    const board = await this.requireInWorkspace(workspaceId, spaceId);
     const [areas, progressStages] = await Promise.all([
-      this.listAreas(board.id),
+      this.listSections(board.id),
       this.listProgressStages(board.id),
     ]);
-    return { ...mapTaskBoard(board), areas, progressStages };
+    return { ...mapSpace(board), sections: areas, progressStages };
   }
 
-  async create(workspaceId: string, body: CreateTaskBoardBody) {
+  async create(workspaceId: string, body: CreateSpaceBody) {
     const now = new Date();
     const created = await this.db.transaction(async (tx) => {
       const [board] = await tx
-        .insert(taskBoards)
+        .insert(spaces)
         .values({
           id: randomUUID(),
           workspaceId,
@@ -84,10 +85,10 @@ export class BoardsService {
         })
         .returning();
       if (!board) throw new ForbiddenException();
-      await tx.insert(boardAreas).values({
+      await tx.insert(spaceSections).values({
         id: randomUUID(),
-        boardId: board.id,
-        name: DEFAULT_AREA_NAME,
+        spaceId: board.id,
+        name: DEFAULT_SECTION_NAME,
         position: 0,
         isDefault: true,
         createdAt: now,
@@ -96,53 +97,49 @@ export class BoardsService {
       return board;
     });
     await this.workspaceService.bumpUpdatedAt(workspaceId);
-    return mapTaskBoard(created);
+    return mapSpace(created);
   }
 
-  async update(
-    workspaceId: string,
-    boardId: string,
-    body: UpdateTaskBoardBody,
-  ) {
-    const existing = await this.requireInWorkspace(workspaceId, boardId);
+  async update(workspaceId: string, spaceId: string, body: UpdateSpaceBody) {
+    const existing = await this.requireInWorkspace(workspaceId, spaceId);
     const [updated] = await this.db
-      .update(taskBoards)
+      .update(spaces)
       .set({
         ...(body.name !== undefined ? { name: body.name } : {}),
         ...(body.folderId !== undefined ? { folderId: body.folderId } : {}),
         ...(body.emoji !== undefined ? { emoji: body.emoji } : {}),
         updatedAt: new Date(),
       })
-      .where(eq(taskBoards.id, existing.id))
+      .where(eq(spaces.id, existing.id))
       .returning();
     if (!updated) throw new ForbiddenException();
     await this.workspaceService.bumpUpdatedAt(workspaceId);
-    return mapTaskBoard(updated);
+    return mapSpace(updated);
   }
 
-  async remove(workspaceId: string, boardId: string) {
-    const existing = await this.requireInWorkspace(workspaceId, boardId);
+  async remove(workspaceId: string, spaceId: string) {
+    const existing = await this.requireInWorkspace(workspaceId, spaceId);
     await this.db.transaction(async (tx) => {
-      await tx.delete(tasks).where(eq(tasks.taskBoardId, existing.id));
-      await tx.delete(taskBoards).where(eq(taskBoards.id, existing.id));
+      await tx.delete(tasks).where(eq(tasks.spaceId, existing.id));
+      await tx.delete(spaces).where(eq(spaces.id, existing.id));
     });
     await this.workspaceService.bumpUpdatedAt(workspaceId);
   }
 
-  async createArea(
+  async createSection(
     workspaceId: string,
-    boardId: string,
-    body: CreateBoardAreaBody,
+    spaceId: string,
+    body: CreateSpaceSectionBody,
   ) {
-    await this.requireInWorkspace(workspaceId, boardId);
-    const areas = await this.areaRows(boardId);
-    this.assertUniqueAreaName(areas, body.name);
+    await this.requireInWorkspace(workspaceId, spaceId);
+    const areas = await this.sectionRows(spaceId);
+    this.assertUniqueSectionName(areas, body.name);
     const now = new Date();
     const [created] = await this.db
-      .insert(boardAreas)
+      .insert(spaceSections)
       .values({
         id: randomUUID(),
-        boardId,
+        spaceId,
         name: body.name,
         position: areas.length,
         isDefault: false,
@@ -152,44 +149,44 @@ export class BoardsService {
       .returning();
     if (!created) throw new ForbiddenException();
     await this.workspaceService.bumpUpdatedAt(workspaceId);
-    return mapBoardArea(created);
+    return mapSpaceSection(created);
   }
 
-  async updateArea(
+  async updateSection(
     workspaceId: string,
-    boardId: string,
-    areaId: string,
-    body: UpdateBoardAreaBody,
+    spaceId: string,
+    sectionId: string,
+    body: UpdateSpaceSectionBody,
   ) {
-    await this.requireInWorkspace(workspaceId, boardId);
-    const areas = await this.areaRows(boardId);
-    const area = areas.find((item) => item.id === areaId);
+    await this.requireInWorkspace(workspaceId, spaceId);
+    const areas = await this.sectionRows(spaceId);
+    const area = areas.find((item) => item.id === sectionId);
     if (!area) throw new ForbiddenException();
     if (body.name !== undefined) {
-      this.assertUniqueAreaName(areas, body.name, area.id);
+      this.assertUniqueSectionName(areas, body.name, area.id);
     }
 
     if (body.name !== undefined && body.position === undefined) {
       const now = new Date();
       const [updated] = await this.db
-        .update(boardAreas)
+        .update(spaceSections)
         .set({ name: body.name, updatedAt: now })
-        .where(eq(boardAreas.id, area.id))
+        .where(eq(spaceSections.id, area.id))
         .returning();
       if (!updated) throw new ForbiddenException();
       await this.workspaceService.bumpUpdatedAt(workspaceId);
-      return mapBoardArea(updated);
+      return mapSpaceSection(updated);
     }
 
     const ordered = moveRow(areas, area.id, body.position ?? area.position);
     const now = new Date();
     await this.db.transaction(async (tx) => {
-      await this.parkAreaSlots(tx, ordered);
+      await this.parkSectionSlots(tx, ordered);
       for (let position = 0; position < ordered.length; position += 1) {
         const row = ordered[position];
         if (!row) continue;
         await tx
-          .update(boardAreas)
+          .update(spaceSections)
           .set({
             position,
             ...(row.id === area.id && body.name !== undefined
@@ -197,24 +194,24 @@ export class BoardsService {
               : {}),
             updatedAt: now,
           })
-          .where(eq(boardAreas.id, row.id));
+          .where(eq(spaceSections.id, row.id));
       }
     });
     await this.workspaceService.bumpUpdatedAt(workspaceId);
-    const updated = (await this.areaRows(boardId)).find(
+    const updated = (await this.sectionRows(spaceId)).find(
       (item) => item.id === area.id,
     );
     if (!updated) throw new ForbiddenException();
-    return mapBoardArea(updated);
+    return mapSpaceSection(updated);
   }
 
-  async removeArea(workspaceId: string, boardId: string, areaId: string) {
-    await this.requireInWorkspace(workspaceId, boardId);
-    const areas = await this.areaRows(boardId);
-    const area = areas.find((item) => item.id === areaId);
+  async removeSection(workspaceId: string, spaceId: string, sectionId: string) {
+    await this.requireInWorkspace(workspaceId, spaceId);
+    const areas = await this.sectionRows(spaceId);
+    const area = areas.find((item) => item.id === sectionId);
     if (!area) throw new ForbiddenException();
     if (area.isDefault) {
-      throw new BadRequestException("The default area cannot be deleted");
+      throw new BadRequestException("The default section cannot be deleted");
     }
     const fallback = areas.find((item) => item.isDefault);
     if (!fallback) throw new ForbiddenException();
@@ -223,17 +220,21 @@ export class BoardsService {
     await this.db.transaction(async (tx) => {
       await tx
         .update(tasks)
-        .set({ areaId: fallback.id, updatedAt: now })
-        .where(eq(tasks.areaId, area.id));
-      await tx.delete(boardAreas).where(eq(boardAreas.id, area.id));
-      await this.parkAreaSlots(tx, remaining);
+        .set({ sectionId: fallback.id, updatedAt: now })
+        .where(eq(tasks.sectionId, area.id));
+      await tx
+        .update(epics)
+        .set({ sectionId: fallback.id, updatedAt: now })
+        .where(eq(epics.sectionId, area.id));
+      await tx.delete(spaceSections).where(eq(spaceSections.id, area.id));
+      await this.parkSectionSlots(tx, remaining);
       for (let position = 0; position < remaining.length; position += 1) {
         const row = remaining[position];
         if (!row) continue;
         await tx
-          .update(boardAreas)
+          .update(spaceSections)
           .set({ position, updatedAt: now })
-          .where(eq(boardAreas.id, row.id));
+          .where(eq(spaceSections.id, row.id));
       }
     });
     await this.workspaceService.bumpUpdatedAt(workspaceId);
@@ -241,11 +242,11 @@ export class BoardsService {
 
   async replaceProgressStages(
     workspaceId: string,
-    boardId: string,
-    body: ReplaceBoardProgressStagesBody,
+    spaceId: string,
+    body: ReplaceSpaceProgressStagesBody,
   ) {
-    await this.requireInWorkspace(workspaceId, boardId);
-    const existing = await this.stageRows(boardId);
+    await this.requireInWorkspace(workspaceId, spaceId);
+    const existing = await this.stageRows(spaceId);
     let plan: ReturnType<typeof planProgressStageReplace>;
     try {
       plan = planProgressStageReplace(
@@ -265,22 +266,22 @@ export class BoardsService {
       if (plan.removeIds.length > 0) {
         for (const id of plan.removeIds) {
           await tx
-            .delete(boardProgressStages)
-            .where(eq(boardProgressStages.id, id));
+            .delete(spaceProgressStages)
+            .where(eq(spaceProgressStages.id, id));
         }
       }
       for (const stage of plan.updates) {
         if (!stage.id) continue;
         await tx
-          .update(boardProgressStages)
+          .update(spaceProgressStages)
           .set({ name: stage.name, position: stage.position, updatedAt: now })
-          .where(eq(boardProgressStages.id, stage.id));
+          .where(eq(spaceProgressStages.id, stage.id));
       }
       if (plan.inserts.length > 0) {
-        await tx.insert(boardProgressStages).values(
+        await tx.insert(spaceProgressStages).values(
           plan.inserts.map((stage) => ({
             id: randomUUID(),
-            boardId,
+            spaceId,
             name: stage.name,
             position: stage.position,
             createdAt: now,
@@ -290,25 +291,25 @@ export class BoardsService {
       }
     });
     await this.workspaceService.bumpUpdatedAt(workspaceId);
-    return this.listProgressStages(boardId);
+    return this.listProgressStages(spaceId);
   }
 
   async applyProgressStageTemplate(
     workspaceId: string,
-    boardId: string,
+    spaceId: string,
     body: ApplyProgressStageTemplateBody,
   ) {
     const names = PROGRESS_STAGE_TEMPLATES[body.template];
-    return this.replaceProgressStages(workspaceId, boardId, {
+    return this.replaceProgressStages(workspaceId, spaceId, {
       stages: names.map((name) => ({ name })),
     });
   }
 
-  async requireInWorkspace(workspaceId: string, boardId: string) {
+  async requireInWorkspace(workspaceId: string, spaceId: string) {
     const [row] = await this.db
       .select()
-      .from(taskBoards)
-      .where(eq(taskBoards.id, boardId))
+      .from(spaces)
+      .where(eq(spaces.id, spaceId))
       .limit(1);
     if (!row || row.workspaceId !== workspaceId) {
       throw new ForbiddenException();
@@ -316,67 +317,75 @@ export class BoardsService {
     return row;
   }
 
-  async defaultAreaId(boardId: string) {
+  async defaultSectionId(spaceId: string) {
     const [row] = await this.db
-      .select({ id: boardAreas.id })
-      .from(boardAreas)
+      .select({ id: spaceSections.id })
+      .from(spaceSections)
       .where(
-        and(eq(boardAreas.boardId, boardId), eq(boardAreas.isDefault, true)),
+        and(
+          eq(spaceSections.spaceId, spaceId),
+          eq(spaceSections.isDefault, true),
+        ),
       )
       .limit(1);
     if (!row) throw new ForbiddenException();
     return row.id;
   }
 
-  async areaBelongsToBoard(boardId: string, areaId: string) {
+  async sectionBelongsToSpace(spaceId: string, sectionId: string) {
     const [row] = await this.db
-      .select({ id: boardAreas.id })
-      .from(boardAreas)
-      .where(and(eq(boardAreas.id, areaId), eq(boardAreas.boardId, boardId)))
-      .limit(1);
-    return row != null;
-  }
-
-  async stageBelongsToBoard(boardId: string, stageId: string) {
-    const [row] = await this.db
-      .select({ id: boardProgressStages.id })
-      .from(boardProgressStages)
+      .select({ id: spaceSections.id })
+      .from(spaceSections)
       .where(
         and(
-          eq(boardProgressStages.id, stageId),
-          eq(boardProgressStages.boardId, boardId),
+          eq(spaceSections.id, sectionId),
+          eq(spaceSections.spaceId, spaceId),
         ),
       )
       .limit(1);
     return row != null;
   }
 
-  private async listAreas(boardId: string) {
-    return (await this.areaRows(boardId)).map(mapBoardArea);
+  async stageBelongsToSpace(spaceId: string, stageId: string) {
+    const [row] = await this.db
+      .select({ id: spaceProgressStages.id })
+      .from(spaceProgressStages)
+      .where(
+        and(
+          eq(spaceProgressStages.id, stageId),
+          eq(spaceProgressStages.spaceId, spaceId),
+        ),
+      )
+      .limit(1);
+    return row != null;
   }
 
-  private async listProgressStages(boardId: string) {
-    return (await this.stageRows(boardId)).map(mapBoardProgressStage);
+  private async listSections(spaceId: string) {
+    return (await this.sectionRows(spaceId)).map(mapSpaceSection);
   }
 
-  private async areaRows(boardId: string) {
+  private async listProgressStages(spaceId: string) {
+    return (await this.stageRows(spaceId)).map(mapSpaceProgressStage);
+  }
+
+  private async sectionRows(spaceId: string) {
     return this.db
       .select()
-      .from(boardAreas)
-      .where(eq(boardAreas.boardId, boardId))
-      .orderBy(asc(boardAreas.position), asc(boardAreas.id));
+      .from(spaceSections)
+      .where(eq(spaceSections.spaceId, spaceId))
+      .orderBy(asc(spaceSections.position), asc(spaceSections.id));
   }
 
-  private async stageRows(boardId: string) {
+  private async stageRows(spaceId: string) {
     return this.db
       .select()
-      .from(boardProgressStages)
-      .where(eq(boardProgressStages.boardId, boardId))
-      .orderBy(asc(boardProgressStages.position), asc(boardProgressStages.id));
+      .from(spaceProgressStages)
+      .where(eq(spaceProgressStages.spaceId, spaceId))
+      .orderBy(asc(spaceProgressStages.position), asc(spaceProgressStages.id));
   }
 
-  private assertUniqueAreaName(
-    areas: BoardAreaRow[],
+  private assertUniqueSectionName(
+    areas: SpaceSectionRow[],
     name: string,
     ignoreId?: string,
   ) {
@@ -385,18 +394,18 @@ export class BoardsService {
       (area) => area.id !== ignoreId && area.name.toLowerCase() === key,
     );
     if (taken) {
-      throw new BadRequestException("An area with this name already exists");
+      throw new BadRequestException("A section with this name already exists");
     }
   }
 
-  private async parkAreaSlots(tx: NodePgDatabase, rows: BoardAreaRow[]) {
+  private async parkSectionSlots(tx: NodePgDatabase, rows: SpaceSectionRow[]) {
     for (let index = 0; index < rows.length; index += 1) {
       const row = rows[index];
       if (!row) continue;
       await tx
-        .update(boardAreas)
+        .update(spaceSections)
         .set({ position: -(index + 1) })
-        .where(eq(boardAreas.id, row.id));
+        .where(eq(spaceSections.id, row.id));
     }
   }
 
@@ -405,14 +414,14 @@ export class BoardsService {
       const row = rows[index];
       if (!row) continue;
       await tx
-        .update(boardProgressStages)
+        .update(spaceProgressStages)
         .set({ position: -(index + 1), name: `~${row.id}` })
-        .where(eq(boardProgressStages.id, row.id));
+        .where(eq(spaceProgressStages.id, row.id));
     }
   }
 }
 
-function moveRow(rows: BoardAreaRow[], id: string, index: number) {
+function moveRow(rows: SpaceSectionRow[], id: string, index: number) {
   const currentIndex = rows.findIndex((row) => row.id === id);
   if (currentIndex < 0) return rows;
   const next = rows.slice();

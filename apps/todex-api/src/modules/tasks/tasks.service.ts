@@ -39,7 +39,9 @@ import {
   hasParentCycle,
 } from "../../helpers/parent-cycle.helper";
 import { sanitizeTaskHtml } from "../../helpers/sanitize-task-html.helper";
-import { BoardsService } from "../boards/boards.service";
+import { EpicsService } from "../epics/epics.service";
+import { resolveTaskEpicLink } from "../epics/task-epic-link";
+import { SpacesService } from "../spaces/spaces.service";
 import { ContentIndexQueue } from "../content-index/content-index.queue";
 import { WorkspaceService } from "../workspace/workspace.service";
 import { resolveTaskPlacement, TaskPlacementError } from "./task-placement";
@@ -48,33 +50,40 @@ import { resolveTaskPlacement, TaskPlacementError } from "./task-placement";
 export class TasksService {
   constructor(
     @Inject(DRIZZLE_DB) private readonly db: NodePgDatabase,
-    private readonly boardsService: BoardsService,
+    private readonly spacesService: SpacesService,
+    private readonly epicsService: EpicsService,
     private readonly workspaceService: WorkspaceService,
     @Optional() private readonly contentIndex?: ContentIndexQueue,
   ) {}
 
   async list(workspaceId: string, query: ListTasksQuery) {
-    if (query.boardId) {
-      return this.listByBoard(workspaceId, query.boardId);
-    }
-    if (!query.scheduleFrom || !query.scheduleTo) {
-      throw new BadRequestException(
-        "Provide boardId or both scheduleFrom and scheduleTo",
+    if (query.scheduleFrom && query.scheduleTo) {
+      return this.listByScheduleRange(
+        workspaceId,
+        new Date(query.scheduleFrom),
+        new Date(query.scheduleTo),
       );
     }
-    return this.listByScheduleRange(
-      workspaceId,
-      new Date(query.scheduleFrom),
-      new Date(query.scheduleTo),
-    );
+    if (query.scheduleFrom || query.scheduleTo) {
+      throw new BadRequestException(
+        "scheduleFrom and scheduleTo are both required",
+      );
+    }
+    return this.listFiltered(workspaceId, query);
   }
 
   async create(workspaceId: string, body: CreateTaskBody) {
-    await this.boardsService.requireInWorkspace(workspaceId, body.taskBoardId);
+    await this.spacesService.requireInWorkspace(workspaceId, body.spaceId);
     if (body.parentTaskId) {
       await this.requireTaskInWorkspace(workspaceId, body.parentTaskId);
     }
-    const placement = await this.placementFor(null, body.taskBoardId, body);
+    const placement = await this.placementFor(null, body.spaceId, body);
+    const epicId = await this.epicLinkFor(
+      workspaceId,
+      null,
+      body.spaceId,
+      body,
+    );
 
     const created = await this.db.transaction(async (tx) => {
       const [workspace] = await tx
@@ -92,18 +101,13 @@ export class TasksService {
       const parentTaskId = body.parentTaskId ?? null;
       const position = parentTaskId
         ? 0
-        : await this.nextRootPosition(
-            tx,
-            workspaceId,
-            body.taskBoardId,
-            status,
-          );
+        : await this.nextRootPosition(tx, workspaceId, body.spaceId, status);
       const [row] = await tx
         .insert(tasks)
         .values({
           id: randomUUID(),
           workspaceId,
-          taskBoardId: body.taskBoardId,
+          spaceId: body.spaceId,
           taskKey: formatTaskKey(workspace.taskSeq),
           summary: body.summary,
           description: sanitizeTaskHtml(body.description ?? ""),
@@ -114,8 +118,9 @@ export class TasksService {
           estimation: body.estimation,
           acceptanceCriteria: body.acceptanceCriteria ?? [],
           recurrence: body.recurrence ?? null,
-          areaId: placement.areaId,
+          sectionId: placement.sectionId,
           progressStageId: placement.progressStageId,
+          epicId,
           parentTaskId,
           position,
           createdAt: now,
@@ -133,16 +138,19 @@ export class TasksService {
   async update(workspaceId: string, taskId: string, body: UpdateTaskBody) {
     const existing = await this.requireTaskInWorkspace(workspaceId, taskId);
 
-    if (body.taskBoardId) {
-      await this.boardsService.requireInWorkspace(
-        workspaceId,
-        body.taskBoardId,
-      );
+    if (body.spaceId) {
+      await this.spacesService.requireInWorkspace(workspaceId, body.spaceId);
     }
-    const destinationBoardId = body.taskBoardId ?? existing.taskBoardId;
+    const destinationSpaceId = body.spaceId ?? existing.spaceId;
     const placement = await this.placementFor(
       existing,
-      destinationBoardId,
+      destinationSpaceId,
+      body,
+    );
+    const epicId = await this.epicLinkFor(
+      workspaceId,
+      existing,
+      destinationSpaceId,
       body,
     );
 
@@ -158,11 +166,10 @@ export class TasksService {
       const [row] = await tx
         .update(tasks)
         .set({
-          ...(body.taskBoardId !== undefined
-            ? { taskBoardId: body.taskBoardId }
-            : {}),
-          areaId: placement.areaId,
+          ...(body.spaceId !== undefined ? { spaceId: body.spaceId } : {}),
+          sectionId: placement.sectionId,
           progressStageId: placement.progressStageId,
+          epicId,
           ...(body.summary !== undefined ? { summary: body.summary } : {}),
           ...(body.description !== undefined
             ? { description: sanitizeTaskHtml(body.description) }
@@ -223,7 +230,7 @@ export class TasksService {
         ? completeRecurringTask(recurrenceSnapshot(existing))
         : null;
     const destinationIds = (
-      await this.rootIds(workspaceId, existing.taskBoardId, body.status)
+      await this.rootIds(workspaceId, existing.spaceId, body.status)
     ).filter((id) => id !== existing.id);
     const index =
       body.index == null
@@ -235,11 +242,7 @@ export class TasksService {
       existing.status === body.status
         ? null
         : (
-            await this.rootIds(
-              workspaceId,
-              existing.taskBoardId,
-              existing.status,
-            )
+            await this.rootIds(workspaceId, existing.spaceId, existing.status)
           ).filter((id) => id !== existing.id);
 
     await this.db.transaction(async (tx) => {
@@ -294,7 +297,7 @@ export class TasksService {
     await this.db.delete(tasks).where(eq(tasks.id, existing.id));
     if (!existing.parentTaskId) {
       const ids = (
-        await this.rootIds(workspaceId, existing.taskBoardId, existing.status)
+        await this.rootIds(workspaceId, existing.spaceId, existing.status)
       ).filter((id) => id !== existing.id);
       await this.writePositions(this.db, ids, {});
     }
@@ -312,7 +315,9 @@ export class TasksService {
       .where(and(eq(tasks.id, taskId), eq(tasks.workspaceId, workspaceId)))
       .limit(1);
     if (!row) return null;
-    const criteria = (row.acceptanceCriteria ?? []).map((criterion) => criterion.text);
+    const criteria = (row.acceptanceCriteria ?? []).map(
+      (criterion) => criterion.text,
+    );
     return {
       title: row.summary,
       text: [row.summary, textFromHtml(row.description), ...criteria]
@@ -334,13 +339,28 @@ export class TasksService {
     });
   }
 
-  private async listByBoard(workspaceId: string, boardId: string) {
-    await this.boardsService.requireInWorkspace(workspaceId, boardId);
+  private async listFiltered(workspaceId: string, query: ListTasksQuery) {
+    if (query.epicId) {
+      const epic = await this.epicsService.requireEpic(
+        workspaceId,
+        query.epicId,
+      );
+      if (query.spaceId && epic.spaceId !== query.spaceId) {
+        throw new BadRequestException("Epic does not belong to this space");
+      }
+    }
+    if (query.spaceId) {
+      await this.spacesService.requireInWorkspace(workspaceId, query.spaceId);
+    }
     const rows = await this.db
       .select()
       .from(tasks)
       .where(
-        and(eq(tasks.workspaceId, workspaceId), eq(tasks.taskBoardId, boardId)),
+        and(
+          eq(tasks.workspaceId, workspaceId),
+          ...(query.spaceId ? [eq(tasks.spaceId, query.spaceId)] : []),
+          ...(query.epicId ? [eq(tasks.epicId, query.epicId)] : []),
+        ),
       )
       .orderBy(asc(tasks.position), asc(tasks.createdAt), asc(tasks.id));
     return this.withGoalIds(rows);
@@ -383,11 +403,13 @@ export class TasksService {
         goalIdByTaskId.set(link.taskId, link.docId);
       }
     }
-    const actualTime = await this.actualTimeByTask(
-      rows.map((row) => row.id),
-    );
+    const actualTime = await this.actualTimeByTask(rows.map((row) => row.id));
     return rows.map((row) =>
-      mapTask(row, goalIdByTaskId.get(row.id) ?? null, actualTime.get(row.id) ?? 0),
+      mapTask(
+        row,
+        goalIdByTaskId.get(row.id) ?? null,
+        actualTime.get(row.id) ?? 0,
+      ),
     );
   }
 
@@ -467,32 +489,59 @@ export class TasksService {
     }
   }
 
+  private async epicLinkFor(
+    workspaceId: string,
+    existing: TaskRow | null,
+    destinationSpaceId: string,
+    body: { epicId?: string | null },
+  ) {
+    const spaceChanged =
+      existing != null && existing.spaceId !== destinationSpaceId;
+    if (body.epicId) {
+      const epic = await this.epicsService.requireEpic(
+        workspaceId,
+        body.epicId,
+      );
+      if (epic.spaceId !== destinationSpaceId) {
+        throw new BadRequestException("Epic does not belong to this space");
+      }
+    }
+    return resolveTaskEpicLink({
+      spaceChanged,
+      currentEpicId: existing?.epicId ?? null,
+      requestedEpicId: body.epicId,
+    });
+  }
+
   private async placementFor(
     existing: TaskRow | null,
-    boardId: string,
-    body: { areaId?: string; progressStageId?: string | null },
+    spaceId: string,
+    body: { sectionId?: string; progressStageId?: string | null },
   ) {
-    const defaultAreaId = await this.boardsService.defaultAreaId(boardId);
-    const areaOnDestination =
-      body.areaId === undefined
+    const defaultSectionId = await this.spacesService.defaultSectionId(spaceId);
+    const sectionOnDestination =
+      body.sectionId === undefined
         ? true
-        : await this.boardsService.areaBelongsToBoard(boardId, body.areaId);
+        : await this.spacesService.sectionBelongsToSpace(
+            spaceId,
+            body.sectionId,
+          );
     const stageOnDestination =
       body.progressStageId == null
         ? true
-        : await this.boardsService.stageBelongsToBoard(
-            boardId,
+        : await this.spacesService.stageBelongsToSpace(
+            spaceId,
             body.progressStageId,
           );
     try {
       return resolveTaskPlacement({
-        boardChanged: existing == null || existing.taskBoardId !== boardId,
-        currentAreaId: existing?.areaId ?? defaultAreaId,
+        spaceChanged: existing == null || existing.spaceId !== spaceId,
+        currentSectionId: existing?.sectionId ?? defaultSectionId,
         currentProgressStageId: existing?.progressStageId ?? null,
-        requestedAreaId: body.areaId,
+        requestedSectionId: body.sectionId,
         requestedProgressStageId: body.progressStageId,
-        defaultAreaId,
-        areaOnDestination,
+        defaultSectionId,
+        sectionOnDestination,
         stageOnDestination,
       });
     } catch (error) {
@@ -509,28 +558,24 @@ export class TasksService {
     const leftColumn =
       wasRoot &&
       (!isRoot ||
-        before.taskBoardId !== after.taskBoardId ||
+        before.spaceId !== after.spaceId ||
         before.status !== after.status);
     const enteredColumn =
       isRoot &&
       (!wasRoot ||
-        before.taskBoardId !== after.taskBoardId ||
+        before.spaceId !== after.spaceId ||
         before.status !== after.status);
     if (!leftColumn && !enteredColumn) return;
 
     if (leftColumn) {
       const ids = (
-        await this.rootIds(
-          before.workspaceId,
-          before.taskBoardId,
-          before.status,
-        )
+        await this.rootIds(before.workspaceId, before.spaceId, before.status)
       ).filter((id) => id !== after.id);
       await this.writePositions(this.db, ids, {});
     }
     if (enteredColumn) {
       const ids = (
-        await this.rootIds(after.workspaceId, after.taskBoardId, after.status)
+        await this.rootIds(after.workspaceId, after.spaceId, after.status)
       ).filter((id) => id !== after.id);
       ids.push(after.id);
       await this.writePositions(this.db, ids, {});
@@ -558,13 +603,13 @@ export class TasksService {
       : await this.nextRootPosition(
           tx,
           completed.workspaceId,
-          completed.taskBoardId,
+          completed.spaceId,
           TaskStatus.TODO,
         );
     await tx.insert(tasks).values({
       id: randomUUID(),
       workspaceId: completed.workspaceId,
-      taskBoardId: completed.taskBoardId,
+      spaceId: completed.spaceId,
       taskKey: formatTaskKey(workspace.taskSeq),
       summary: completed.summary,
       description: completed.description,
@@ -575,8 +620,9 @@ export class TasksService {
       estimation: completed.estimation,
       acceptanceCriteria: next.acceptanceCriteria ?? [],
       recurrence: next.recurrence,
-      areaId: completed.areaId,
+      sectionId: completed.sectionId,
       progressStageId: completed.progressStageId,
+      epicId: completed.epicId,
       parentTaskId: completed.parentTaskId,
       position,
       createdAt: now,
@@ -587,7 +633,7 @@ export class TasksService {
   private async nextRootPosition(
     tx: NodePgDatabase,
     workspaceId: string,
-    taskBoardId: string,
+    spaceId: string,
     status: TaskRow["status"],
   ) {
     const [row] = await tx
@@ -596,7 +642,7 @@ export class TasksService {
       .where(
         and(
           eq(tasks.workspaceId, workspaceId),
-          eq(tasks.taskBoardId, taskBoardId),
+          eq(tasks.spaceId, spaceId),
           eq(tasks.status, status),
           isNull(tasks.parentTaskId),
         ),
@@ -606,7 +652,7 @@ export class TasksService {
 
   private async rootIds(
     workspaceId: string,
-    taskBoardId: string,
+    spaceId: string,
     status: TaskRow["status"],
   ) {
     const rows = await this.db
@@ -615,7 +661,7 @@ export class TasksService {
       .where(
         and(
           eq(tasks.workspaceId, workspaceId),
-          eq(tasks.taskBoardId, taskBoardId),
+          eq(tasks.spaceId, spaceId),
           eq(tasks.status, status),
           isNull(tasks.parentTaskId),
         ),

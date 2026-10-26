@@ -176,6 +176,34 @@
       "when": 1792756246256,
       "tag": "0024_conversation_title",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1792842519369,
+      "tag": "0025_spaces_sections_projects_epics",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1792877120080,
+      "tag": "0026_epics_on_spaces",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1792880000000,
+      "tag": "0027_epic_priority",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1792890000000,
+      "tag": "0028_epic_section",
+      "breakpoints": true
     }
   ]
 }

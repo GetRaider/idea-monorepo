@@ -10,12 +10,13 @@ import { DatabaseModule } from "../db/database.module";
 import { RedisModule } from "../db/redis.module";
 import { AgentModule } from "./agent/agent.module";
 import { ContentIndexModule } from "./content-index/content-index.module";
-import { BoardsModule } from "./boards/boards.module";
+import { SpacesModule } from "./spaces/spaces.module";
 import { CalendarModule } from "./calendar/calendar.module";
 import { DocsModule } from "./docs/docs.module";
 import { ExecutionModule } from "./execution/execution.module";
 import { FoldersModule } from "./folders/folders.module";
 import { HealthController } from "./health/health.controller";
+import { EpicsModule } from "./epics/epics.module";
 import { TasksModule } from "./tasks/tasks.module";
 import { WorkspaceModule } from "./workspace/workspace.module";
 
@@ -34,7 +35,8 @@ import { WorkspaceModule } from "./workspace/workspace.module";
     DocsModule,
     ExecutionModule,
     CalendarModule,
-    BoardsModule,
+    SpacesModule,
+    EpicsModule,
     TasksModule,
     AgentModule,
   ],

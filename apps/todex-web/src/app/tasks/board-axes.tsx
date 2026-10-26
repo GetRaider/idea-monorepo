@@ -1,7 +1,18 @@
 "use client";
 
-import { createContext, use, useState, type FormEvent, type ReactNode } from "react";
-import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  createContext,
+  use,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from "react";
+import {
+  useMutation,
+  useQueries,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   Popover,
@@ -14,8 +25,11 @@ import {
   SelectValue,
   cn,
 } from "@repo/ui";
-import { PROGRESS_STAGE_TEMPLATES, ProgressStageTemplate } from "@repo/api/todex";
-import type { BoardArea, BoardProgressStage } from "@repo/api/todex";
+import {
+  PROGRESS_STAGE_TEMPLATES,
+  ProgressStageTemplate,
+} from "@repo/api/todex";
+import type { SpaceSection, SpaceProgressStage } from "@repo/api/todex";
 
 import { PlusIcon } from "@components/icons";
 import { todexClient } from "@lib/todex-client";
@@ -24,53 +38,55 @@ const EMPTY_STAGE_NAMES = new Map<string, string>();
 const StageNameContext = createContext(EMPTY_STAGE_NAMES);
 
 export function BoardAxes({
-  boardId,
-  areaId,
+  spaceId,
+  sectionId,
   onAreaId,
 }: {
-  boardId: string;
-  areaId: string | null;
-  onAreaId: (areaId: string | null) => void;
+  spaceId: string;
+  sectionId: string | null;
+  onAreaId: (sectionId: string | null) => void;
 }) {
   const queryClient = useQueryClient();
   const boardQuery = useQuery({
-    queryKey: ["board", boardId],
-    queryFn: () => todexClient.boards.get(boardId),
+    queryKey: ["board", spaceId],
+    queryFn: () => todexClient.spaces.get(spaceId),
   });
-  const areas = boardQuery.data?.areas ?? [];
-  const defaultAreaId = areas.find((area) => area.isDefault)?.id ?? null;
+  const areas = boardQuery.data?.sections ?? [];
+  const defaultSectionId = areas.find((area) => area.isDefault)?.id ?? null;
   const [renamingAreaId, setRenamingAreaId] = useState<string | null>(null);
   const invalidate = () => {
-    void queryClient.invalidateQueries({ queryKey: ["board", boardId] });
+    void queryClient.invalidateQueries({ queryKey: ["board", spaceId] });
   };
 
-  const createArea = useMutation({
+  const createSection = useMutation({
     mutationFn: (name: string) =>
-      todexClient.boards.createArea(boardId, { name }),
+      todexClient.spaces.createSection(spaceId, { name }),
     onSuccess: (area) => {
       invalidate();
       onAreaId(area.id);
     },
-    onError: () => toast.error("Could not add area"),
+    onError: () => toast.error("Could not add section"),
   });
   const renameArea = useMutation({
-    mutationFn: (input: { areaId: string; name: string }) =>
-      todexClient.boards.updateArea(boardId, input.areaId, { name: input.name }),
+    mutationFn: (input: { sectionId: string; name: string }) =>
+      todexClient.spaces.updateSection(spaceId, input.sectionId, {
+        name: input.name,
+      }),
     onSuccess: () => {
       invalidate();
       setRenamingAreaId(null);
     },
-    onError: () => toast.error("Could not rename area"),
+    onError: () => toast.error("Could not rename section"),
   });
-  const removeArea = useMutation({
+  const removeSection = useMutation({
     mutationFn: (nextAreaId: string) =>
-      todexClient.boards.removeArea(boardId, nextAreaId),
+      todexClient.spaces.removeSection(spaceId, nextAreaId),
     onSuccess: (_result, nextAreaId) => {
       invalidate();
       void queryClient.invalidateQueries({ queryKey: ["tasks"] });
-      if (areaId === nextAreaId) onAreaId(defaultAreaId);
+      if (sectionId === nextAreaId) onAreaId(defaultSectionId);
     },
-    onError: () => toast.error("Could not delete area"),
+    onError: () => toast.error("Could not delete section"),
   });
 
   return (
@@ -80,11 +96,11 @@ export function BoardAxes({
           <NameForm
             key={area.id}
             label={`Rename ${area.name}`}
-            placeholder="Area name"
+            placeholder="Section name"
             initialValue={area.name}
             pending={renameArea.isPending}
             startOpen
-            onSubmit={(name) => renameArea.mutate({ areaId: area.id, name })}
+            onSubmit={(name) => renameArea.mutate({ sectionId: area.id, name })}
             onClose={() => setRenamingAreaId(null)}
           />
         ) : (
@@ -92,13 +108,13 @@ export function BoardAxes({
             key={area.id}
             className={cn(
               "group inline-flex items-center rounded-md",
-              areaId === area.id
+              sectionId === area.id
                 ? "bg-surface text-foreground"
                 : "text-muted-foreground hover:bg-surface hover:text-foreground",
             )}
           >
             <AxisChip
-              active={areaId === area.id}
+              active={sectionId === area.id}
               onClick={() => onAreaId(area.id)}
             >
               {area.name}
@@ -107,37 +123,37 @@ export function BoardAxes({
               <AreaMenu
                 area={area}
                 onRename={() => setRenamingAreaId(area.id)}
-                onDelete={() => removeArea.mutate(area.id)}
+                onDelete={() => removeSection.mutate(area.id)}
               />
             )}
           </span>
         ),
       )}
       <NameForm
-        label="Add area"
-        placeholder="Area name"
-        pending={createArea.isPending}
-        onSubmit={(name) => createArea.mutate(name)}
+        label="Add section"
+        placeholder="Section name"
+        pending={createSection.isPending}
+        onSubmit={(name) => createSection.mutate(name)}
       />
     </div>
   );
 }
 
-export function ProgressStageSettings({ boardId }: { boardId: string }) {
+export function ProgressStageSettings({ spaceId }: { spaceId: string }) {
   const queryClient = useQueryClient();
   const boardQuery = useQuery({
-    queryKey: ["board", boardId],
-    queryFn: () => todexClient.boards.get(boardId),
+    queryKey: ["board", spaceId],
+    queryFn: () => todexClient.spaces.get(spaceId),
   });
   const stages = boardQuery.data?.progressStages ?? [];
   const [creating, setCreating] = useState(false);
   const invalidate = () => {
-    void queryClient.invalidateQueries({ queryKey: ["board", boardId] });
+    void queryClient.invalidateQueries({ queryKey: ["board", spaceId] });
     void queryClient.invalidateQueries({ queryKey: ["tasks"] });
   };
   const replaceStages = useMutation({
     mutationFn: (next: Array<{ id?: string; name: string }>) =>
-      todexClient.boards.replaceProgressStages(boardId, { stages: next }),
+      todexClient.spaces.replaceProgressStages(spaceId, { stages: next }),
     onSuccess: () => {
       invalidate();
       setCreating(false);
@@ -146,7 +162,7 @@ export function ProgressStageSettings({ boardId }: { boardId: string }) {
   });
   const applyFounder = useMutation({
     mutationFn: () =>
-      todexClient.boards.applyProgressStageTemplate(boardId, {
+      todexClient.spaces.applyProgressStageTemplate(spaceId, {
         template: ProgressStageTemplate.FOUNDER,
       }),
     onSuccess: () => {
@@ -226,7 +242,10 @@ export function ProgressStageSettings({ boardId }: { boardId: string }) {
               startOpen={creating && stages.length === 0}
               onSubmit={(name) =>
                 replaceStages.mutate([
-                  ...stages.map((stage) => ({ id: stage.id, name: stage.name })),
+                  ...stages.map((stage) => ({
+                    id: stage.id,
+                    name: stage.name,
+                  })),
                   { name },
                 ])
               }
@@ -240,13 +259,13 @@ export function ProgressStageSettings({ boardId }: { boardId: string }) {
 }
 
 export function StageNameProvider({
-  boardIds,
+  spaceIds,
   children,
 }: {
-  boardIds: string[];
+  spaceIds: string[];
   children: ReactNode;
 }) {
-  const names = useStageNames(boardIds);
+  const names = useStageNames(spaceIds);
   return <StageNameContext value={names}>{children}</StageNameContext>;
 }
 
@@ -256,20 +275,20 @@ export function useStageName(progressStageId: string | null): string | null {
   return names.get(progressStageId) ?? null;
 }
 
-export function useBoardAxes(boardId: string | null) {
+export function useBoardAxes(spaceId: string | null) {
   return useQuery({
-    queryKey: ["board", boardId],
-    queryFn: () => todexClient.boards.get(boardId!),
-    enabled: !!boardId,
+    queryKey: ["board", spaceId],
+    queryFn: () => todexClient.spaces.get(spaceId!),
+    enabled: !!spaceId,
   });
 }
 
-function useStageNames(boardIds: string[]) {
-  const uniqueBoardIds = [...new Set(boardIds)].sort();
+function useStageNames(spaceIds: string[]) {
+  const uniqueBoardIds = [...new Set(spaceIds)].sort();
   const boards = useQueries({
-    queries: uniqueBoardIds.map((boardId) => ({
-      queryKey: ["board", boardId],
-      queryFn: () => todexClient.boards.get(boardId),
+    queries: uniqueBoardIds.map((spaceId) => ({
+      queryKey: ["board", spaceId],
+      queryFn: () => todexClient.spaces.get(spaceId),
     })),
   });
   const names = new Map<string, string>();
@@ -286,7 +305,7 @@ function AreaMenu({
   onRename,
   onDelete,
 }: {
-  area: BoardArea;
+  area: SpaceSection;
   onRename: () => void;
   onDelete: () => void;
 }) {
@@ -330,7 +349,7 @@ function StageRow({
   onRename,
   onDelete,
 }: {
-  stage: BoardProgressStage;
+  stage: SpaceProgressStage;
   onRename: (name: string) => void;
   onDelete: () => void;
 }) {
@@ -450,14 +469,14 @@ function NameForm({
   );
 }
 
-function stageMode(stages: BoardProgressStage[], creating: boolean): StageMode {
+function stageMode(stages: SpaceProgressStage[], creating: boolean): StageMode {
   if (stages.length === 0) return creating ? "custom" : "none";
   if (creating) return "custom";
   if (isFounderTemplate(stages)) return "founder";
   return "custom";
 }
 
-function isFounderTemplate(stages: BoardProgressStage[]) {
+function isFounderTemplate(stages: SpaceProgressStage[]) {
   const template = PROGRESS_STAGE_TEMPLATES.founder;
   return (
     stages.length === template.length &&

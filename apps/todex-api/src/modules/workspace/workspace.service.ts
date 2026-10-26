@@ -1,7 +1,13 @@
-import { Inject, Injectable, NotFoundException } from "@nestjs/common";
-import { eq } from "drizzle-orm";
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
+import { and, eq } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 
+import { users } from "../../db/auth-schema";
 import { DRIZZLE_DB } from "../../db/tokens";
 import { workspaces, workspaceMembers } from "../../db/schema";
 import { mapWorkspace, mapWorkspaceMember } from "../../db/mappers";
@@ -30,6 +36,34 @@ export class WorkspaceService {
       workspace: mapWorkspace(workspace),
       members: members.map(mapWorkspaceMember),
     };
+  }
+
+  async listMemberProfiles(workspaceId: string) {
+    return this.db
+      .select({
+        id: users.id,
+        name: users.name,
+        image: users.image,
+      })
+      .from(workspaceMembers)
+      .innerJoin(users, eq(users.id, workspaceMembers.userId))
+      .where(eq(workspaceMembers.workspaceId, workspaceId));
+  }
+
+  async assertMember(workspaceId: string, userId: string) {
+    const [row] = await this.db
+      .select({ id: workspaceMembers.id })
+      .from(workspaceMembers)
+      .where(
+        and(
+          eq(workspaceMembers.workspaceId, workspaceId),
+          eq(workspaceMembers.userId, userId),
+        ),
+      )
+      .limit(1);
+    if (!row) {
+      throw new BadRequestException("Owner is not a member of this workspace");
+    }
   }
 
   async bumpUpdatedAt(workspaceId: string) {

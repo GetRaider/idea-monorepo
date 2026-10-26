@@ -39,7 +39,7 @@ const estimationSchema = z.number().int().positive();
 export const TaskSchema = z.object({
   id: z.string(),
   workspaceId: z.string(),
-  taskBoardId: z.string(),
+  spaceId: z.string(),
   taskKey: z.string(),
   summary: z.string(),
   description: z.string(),
@@ -57,9 +57,10 @@ export const TaskSchema = z.object({
   color: z.string().nullable(),
   acceptanceCriteria: AcceptanceCriteriaSchema.default([]),
   recurrence: TaskRecurrenceSchema.nullable(),
-  areaId: z.string(),
+  sectionId: z.string(),
   progressStageId: z.string().nullable(),
   parentTaskId: z.string().nullable(),
+  epicId: z.string().nullable(),
   goalId: z.string().nullable(),
   position: z.number().int().nonnegative(),
   createdAt: IsoDateTimeSchema,
@@ -68,25 +69,27 @@ export const TaskSchema = z.object({
 
 export const ListTasksQuerySchema = z
   .object({
-    boardId: z.string().min(1).optional(),
+    spaceId: z.string().min(1).optional(),
+    epicId: z.string().min(1).optional(),
     scheduleFrom: IsoDateTimeSchema.optional(),
     scheduleTo: IsoDateTimeSchema.optional(),
   })
   .superRefine((value, context) => {
-    const hasBoard = value.boardId != null;
+    const hasBoard = value.spaceId != null || value.epicId != null;
     const hasFrom = value.scheduleFrom != null;
     const hasTo = value.scheduleTo != null;
-    if (hasBoard && (hasFrom || hasTo)) {
+    if ((value.spaceId != null || value.epicId != null) && (hasFrom || hasTo)) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Provide either boardId or a schedule range, not both",
+        message:
+          "Provide either a space or epic, or a schedule range, not both",
       });
       return;
     }
     if (!hasBoard && !hasFrom && !hasTo) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Provide boardId or both scheduleFrom and scheduleTo",
+        message: "Provide spaceId, epicId, or both scheduleFrom and scheduleTo",
       });
       return;
     }
@@ -110,7 +113,7 @@ export const ListTasksQuerySchema = z
   });
 
 export const CreateTaskBodySchema = z.object({
-  taskBoardId: z.string().min(1),
+  spaceId: z.string().min(1),
   summary: z.string().min(1),
   description: z.string().optional().default(""),
   status: taskStatusSchema.optional(),
@@ -127,13 +130,14 @@ export const CreateTaskBodySchema = z.object({
   estimation: estimationSchema,
   acceptanceCriteria: AcceptanceCriteriaSchema.optional(),
   recurrence: TaskRecurrenceSchema.nullable().optional(),
-  areaId: z.string().min(1).optional(),
+  sectionId: z.string().min(1).optional(),
   progressStageId: z.string().min(1).nullable().optional(),
   parentTaskId: z.string().nullable().optional(),
+  epicId: z.string().nullable().optional(),
 });
 
 export const UpdateTaskBodySchema = z.object({
-  taskBoardId: z.string().min(1).optional(),
+  spaceId: z.string().min(1).optional(),
   summary: z.string().min(1).optional(),
   description: z.string().optional(),
   color: z
@@ -155,9 +159,10 @@ export const UpdateTaskBodySchema = z.object({
   estimation: estimationSchema.optional(),
   acceptanceCriteria: AcceptanceCriteriaSchema.optional(),
   recurrence: TaskRecurrenceSchema.nullable().optional(),
-  areaId: z.string().min(1).optional(),
+  sectionId: z.string().min(1).optional(),
   progressStageId: z.string().min(1).nullable().optional(),
   parentTaskId: z.string().nullable().optional(),
+  epicId: z.string().nullable().optional(),
   goalId: z.string().nullable().optional(),
 });
 

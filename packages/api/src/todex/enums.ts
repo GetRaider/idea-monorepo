@@ -37,7 +37,7 @@ export const ProgressStageTemplate = {
   FOUNDER: "founder",
 } as const;
 
-export const DEFAULT_AREA_NAME = "General";
+export const DEFAULT_SECTION_NAME = "General";
 
 export const PROGRESS_STAGE_TEMPLATES = {
   founder: ["Discovery", "Product", "Design", "Development", "Validation"],

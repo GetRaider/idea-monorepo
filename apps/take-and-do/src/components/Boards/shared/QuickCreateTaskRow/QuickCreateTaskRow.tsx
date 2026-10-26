@@ -26,7 +26,7 @@ export function QuickCreateTaskRow({
   taskBoardId,
   boardOptions,
   defaultBoardId,
-  triggerLabel = "Create a new task",
+  triggerLabel = "Add task",
   className,
 }: QuickCreateTaskRowProps) {
   const row = useQuickCreateTaskRow({

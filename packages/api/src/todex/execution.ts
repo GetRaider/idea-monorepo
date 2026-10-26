@@ -37,10 +37,10 @@ export const ExecutionQueueTaskSchema = ExecutionTaskRefSchema.extend({
   estimation: z.number().int().positive(),
   actualTime: z.number().int().nonnegative(),
   scheduleDate: IsoDateTimeSchema.nullable(),
-  boardId: z.string(),
-  boardName: z.string(),
-  areaName: z.string(),
-  isDefaultArea: z.boolean(),
+  spaceId: z.string(),
+  spaceName: z.string(),
+  sectionName: z.string(),
+  isDefaultSection: z.boolean(),
   dueDate: IsoDateTimeSchema.nullable(),
   stageName: z.string().nullable(),
 });
@@ -53,10 +53,10 @@ export const ExecutionSuggestionSchema = z.object({
   estimation: z.number().int().positive(),
   scheduleDate: IsoDateTimeSchema.nullable(),
   dueDate: IsoDateTimeSchema.nullable(),
-  boardId: z.string(),
-  boardName: z.string(),
-  areaName: z.string(),
-  isDefaultArea: z.boolean(),
+  spaceId: z.string(),
+  spaceName: z.string(),
+  sectionName: z.string(),
+  isDefaultSection: z.boolean(),
   stageName: z.string().nullable(),
 });
 
@@ -139,7 +139,7 @@ export const ExecutionActivityQuerySchema = z
     from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     timeZone: z.string().trim().min(1).max(100),
-    boardId: z.string().trim().min(1).optional(),
+    spaceId: z.string().trim().min(1).optional(),
   })
   .refine((query) => query.from <= query.to, { message: "Invalid range" });
 
@@ -157,7 +157,7 @@ export const ExecutionActivitySchema = z.object({
       seconds: z.number().int().nonnegative(),
     }),
   ),
-  boards: z.array(
+  spaces: z.array(
     z.object({
       id: z.string(),
       name: z.string(),
@@ -182,7 +182,9 @@ export type ExecutionCurrent = z.infer<typeof ExecutionCurrentSchema>;
 export type ExecutionSession = z.infer<typeof ExecutionSessionSchema>;
 export type ExecutionQueueItem = z.infer<typeof ExecutionQueueItemSchema>;
 export type ExecutionState = z.infer<typeof ExecutionStateSchema>;
-export type FocusExecutionTaskBody = z.infer<typeof FocusExecutionTaskBodySchema>;
+export type FocusExecutionTaskBody = z.infer<
+  typeof FocusExecutionTaskBodySchema
+>;
 export type ExecuteTaskBody = z.infer<typeof ExecuteTaskBodySchema>;
 export type EnqueueExecutionBody = z.infer<typeof EnqueueExecutionBodySchema>;
 export type ReorderExecutionQueueBody = z.infer<
@@ -192,5 +194,7 @@ export type CompleteExecutionBody = z.infer<typeof CompleteExecutionBodySchema>;
 export type UpdateExecutionSessionBody = z.infer<
   typeof UpdateExecutionSessionBodySchema
 >;
-export type ExecutionActivityQuery = z.infer<typeof ExecutionActivityQuerySchema>;
+export type ExecutionActivityQuery = z.infer<
+  typeof ExecutionActivityQuerySchema
+>;
 export type ExecutionActivity = z.infer<typeof ExecutionActivitySchema>;

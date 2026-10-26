@@ -4,7 +4,18 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-import { and, asc, desc, eq, gt, inArray, isNull, lt, max, or } from "drizzle-orm";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  gt,
+  inArray,
+  isNull,
+  lt,
+  max,
+  or,
+} from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { randomUUID } from "crypto";
 import { DocType } from "@repo/api/todex";
@@ -27,14 +38,14 @@ import {
   toIso,
 } from "../../db/mappers";
 import {
-  boardAreas,
-  boardProgressStages,
+  spaceSections,
+  spaceProgressStages,
   docTasks,
   docs,
   executionQueue,
   executionSessions,
   executionSessionTasks,
-  taskBoards,
+  spaces,
   tasks,
 } from "../../db/schema";
 import type {
@@ -167,7 +178,6 @@ export class ExecutionService {
     });
     return this.state(workspaceId);
   }
-
 
   async focus(workspaceId: string, taskId: string) {
     const now = new Date();
@@ -327,11 +337,11 @@ export class ExecutionService {
       .select({
         sessionId: executionSessions.id,
         intervals: executionSessionTasks.intervals,
-        boardId: tasks.taskBoardId,
-        boardName: taskBoards.name,
-        areaId: tasks.areaId,
-        areaName: boardAreas.name,
-        isDefaultArea: boardAreas.isDefault,
+        spaceId: tasks.spaceId,
+        spaceName: spaces.name,
+        sectionId: tasks.sectionId,
+        sectionName: spaceSections.name,
+        isDefaultSection: spaceSections.isDefault,
       })
       .from(executionSessions)
       .innerJoin(
@@ -339,8 +349,8 @@ export class ExecutionService {
         eq(executionSessionTasks.sessionId, executionSessions.id),
       )
       .innerJoin(tasks, eq(tasks.id, executionSessionTasks.taskId))
-      .innerJoin(taskBoards, eq(taskBoards.id, tasks.taskBoardId))
-      .innerJoin(boardAreas, eq(boardAreas.id, tasks.areaId))
+      .innerJoin(spaces, eq(spaces.id, tasks.spaceId))
+      .innerJoin(spaceSections, eq(spaceSections.id, tasks.sectionId))
       .where(
         and(
           eq(executionSessions.workspaceId, workspaceId),
@@ -357,7 +367,7 @@ export class ExecutionService {
         from: query.from,
         to: query.to,
         timeZone: query.timeZone,
-        boardId: query.boardId ?? null,
+        spaceId: query.spaceId ?? null,
         now: new Date(),
       });
     } catch {
@@ -434,11 +444,13 @@ export class ExecutionService {
     taskIds: string[],
   ) {
     const selected = await tx
-      .select({ id: tasks.id, taskBoardId: tasks.taskBoardId })
+      .select({ id: tasks.id, spaceId: tasks.spaceId })
       .from(tasks)
-      .where(and(eq(tasks.workspaceId, workspaceId), inArray(tasks.id, taskIds)));
+      .where(
+        and(eq(tasks.workspaceId, workspaceId), inArray(tasks.id, taskIds)),
+      );
     if (selected.length !== taskIds.length) throw new NotFoundException("Task");
-    const boards = new Set(selected.map((task) => task.taskBoardId));
+    const boards = new Set(selected.map((task) => task.spaceId));
     if (boards.size > 1) {
       throw new BadRequestException("Tasks must belong to the same board");
     }
@@ -482,7 +494,9 @@ export class ExecutionService {
     const live = await tx
       .select({ id: tasks.id })
       .from(tasks)
-      .where(and(eq(tasks.workspaceId, workspaceId), inArray(tasks.id, taskIds)));
+      .where(
+        and(eq(tasks.workspaceId, workspaceId), inArray(tasks.id, taskIds)),
+      );
     const liveIds = new Set(live.map((task) => task.id));
     const [highest] = await tx
       .select({ value: max(executionQueue.position) })
@@ -576,19 +590,19 @@ export class ExecutionService {
       .select({
         item: executionQueue,
         task: tasks,
-        boardId: taskBoards.id,
-        boardName: taskBoards.name,
-        areaName: boardAreas.name,
-        isDefaultArea: boardAreas.isDefault,
-        stageName: boardProgressStages.name,
+        spaceId: spaces.id,
+        spaceName: spaces.name,
+        sectionName: spaceSections.name,
+        isDefaultSection: spaceSections.isDefault,
+        stageName: spaceProgressStages.name,
       })
       .from(executionQueue)
       .innerJoin(tasks, eq(executionQueue.taskId, tasks.id))
-      .innerJoin(taskBoards, eq(tasks.taskBoardId, taskBoards.id))
-      .innerJoin(boardAreas, eq(tasks.areaId, boardAreas.id))
+      .innerJoin(spaces, eq(tasks.spaceId, spaces.id))
+      .innerJoin(spaceSections, eq(tasks.sectionId, spaceSections.id))
       .leftJoin(
-        boardProgressStages,
-        eq(tasks.progressStageId, boardProgressStages.id),
+        spaceProgressStages,
+        eq(tasks.progressStageId, spaceProgressStages.id),
       )
       .where(eq(executionQueue.workspaceId, workspaceId))
       .orderBy(asc(executionQueue.position));
@@ -601,10 +615,10 @@ export class ExecutionService {
         row.item,
         queueTask(
           row.task,
-          row.boardId,
-          row.boardName,
-          row.areaName,
-          row.isDefaultArea,
+          row.spaceId,
+          row.spaceName,
+          row.sectionName,
+          row.isDefaultSection,
           row.stageName,
           actualTime.get(row.task.id) ?? 0,
         ),
@@ -666,18 +680,18 @@ export class ExecutionService {
         estimation: tasks.estimation,
         scheduleDate: tasks.scheduleDate,
         dueDate: tasks.dueDate,
-        boardId: taskBoards.id,
-        boardName: taskBoards.name,
-        areaName: boardAreas.name,
-        isDefaultArea: boardAreas.isDefault,
-        stageName: boardProgressStages.name,
+        spaceId: spaces.id,
+        spaceName: spaces.name,
+        sectionName: spaceSections.name,
+        isDefaultSection: spaceSections.isDefault,
+        stageName: spaceProgressStages.name,
       })
       .from(tasks)
-      .innerJoin(taskBoards, eq(tasks.taskBoardId, taskBoards.id))
-      .innerJoin(boardAreas, eq(tasks.areaId, boardAreas.id))
+      .innerJoin(spaces, eq(tasks.spaceId, spaces.id))
+      .innerJoin(spaceSections, eq(tasks.sectionId, spaceSections.id))
       .leftJoin(
-        boardProgressStages,
-        eq(tasks.progressStageId, boardProgressStages.id),
+        spaceProgressStages,
+        eq(tasks.progressStageId, spaceProgressStages.id),
       )
       .where(
         and(
@@ -699,10 +713,10 @@ export class ExecutionService {
           estimation: row.estimation,
           scheduleDate: toIso(row.scheduleDate),
           dueDate: toIso(row.dueDate),
-          boardId: row.boardId,
-          boardName: row.boardName,
-          areaName: row.areaName,
-          isDefaultArea: row.isDefaultArea,
+          spaceId: row.spaceId,
+          spaceName: row.spaceName,
+          sectionName: row.sectionName,
+          isDefaultSection: row.isDefaultSection,
           stageName: row.stageName,
         },
       ];
@@ -718,22 +732,20 @@ export class ExecutionService {
     const [row] = await db
       .select({
         task: tasks,
-        boardId: taskBoards.id,
-        boardName: taskBoards.name,
-        areaName: boardAreas.name,
-        isDefaultArea: boardAreas.isDefault,
-        stageName: boardProgressStages.name,
+        spaceId: spaces.id,
+        spaceName: spaces.name,
+        sectionName: spaceSections.name,
+        isDefaultSection: spaceSections.isDefault,
+        stageName: spaceProgressStages.name,
       })
       .from(tasks)
-      .innerJoin(taskBoards, eq(tasks.taskBoardId, taskBoards.id))
-      .innerJoin(boardAreas, eq(tasks.areaId, boardAreas.id))
+      .innerJoin(spaces, eq(tasks.spaceId, spaces.id))
+      .innerJoin(spaceSections, eq(tasks.sectionId, spaceSections.id))
       .leftJoin(
-        boardProgressStages,
-        eq(tasks.progressStageId, boardProgressStages.id),
+        spaceProgressStages,
+        eq(tasks.progressStageId, spaceProgressStages.id),
       )
-      .where(
-        and(eq(tasks.id, taskId), eq(tasks.workspaceId, workspaceId)),
-      );
+      .where(and(eq(tasks.id, taskId), eq(tasks.workspaceId, workspaceId)));
     if (!row) return null;
     const [subtasks, goal, actualTime] = await Promise.all([
       db
@@ -762,10 +774,10 @@ export class ExecutionService {
     return {
       ...queueTask(
         row.task,
-        row.boardId,
-        row.boardName,
-        row.areaName,
-        row.isDefaultArea,
+        row.spaceId,
+        row.spaceName,
+        row.sectionName,
+        row.isDefaultSection,
         row.stageName,
         actualTime.get(taskId) ?? 0,
       ),
@@ -801,10 +813,10 @@ export class ExecutionService {
 
 function queueTask(
   task: TaskRow,
-  boardId: string,
-  boardName: string,
-  areaName: string,
-  isDefaultArea: boolean,
+  spaceId: string,
+  spaceName: string,
+  sectionName: string,
+  isDefaultSection: boolean,
   stageName: string | null,
   actualTime: number,
 ): ExecutionQueueTask {
@@ -818,10 +830,10 @@ function queueTask(
     actualTime,
     scheduleDate: toIso(task.scheduleDate),
     dueDate: toIso(task.dueDate),
-    boardId,
-    boardName,
-    areaName,
-    isDefaultArea,
+    spaceId,
+    spaceName,
+    sectionName,
+    isDefaultSection,
     stageName,
   };
 }
@@ -857,4 +869,7 @@ function sameTaskIds(queuedIds: string[], taskIds: string[]) {
   return taskIds.every((taskId) => queued.has(taskId));
 }
 
-type ExecutionDb = Pick<NodePgDatabase, "select" | "insert" | "update" | "delete">;
+type ExecutionDb = Pick<
+  NodePgDatabase,
+  "select" | "insert" | "update" | "delete"
+>;

@@ -1,9 +1,20 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { DocType, TaskPriority, TaskStatus, parseEstimation } from "@repo/api/todex";
+import {
+  DocType,
+  TaskPriority,
+  TaskStatus,
+  parseEstimation,
+} from "@repo/api/todex";
 import type { Task } from "@repo/api/todex";
 import {
   Button,
@@ -86,30 +97,40 @@ function CreatePalette({ onClose }: { onClose: () => void }) {
   const [estimationText, setEstimationText] = useState("");
   const [estimationError, setEstimationError] = useState<string | null>(null);
   const [status, setStatus] = useState<Task["status"]>(TaskStatus.TODO);
-  const [priority, setPriority] = useState<Task["priority"]>(TaskPriority.MEDIUM);
+  const [priority, setPriority] = useState<Task["priority"]>(
+    TaskPriority.MEDIUM,
+  );
   const [scheduleDate, setScheduleDate] = useState("");
-  const [boardId, setBoardId] = useState("");
-  const [areaId, setAreaId] = useState("");
+  const [spaceId, setBoardId] = useState("");
+  const [sectionId, setAreaId] = useState("");
+  const [epicId, setEpicId] = useState("");
   const [eventStart, setEventStart] = useState(defaultEventRange().start);
   const [eventEnd, setEventEnd] = useState(defaultEventRange().end);
   const boardsQuery = useQuery({
     queryKey: ["boards"],
-    queryFn: () => todexClient.boards.list(),
-    enabled: kind === "task",
+    queryFn: () => todexClient.spaces.list(),
+    enabled: kind === "task" || kind === "epic",
   });
   const boards = boardsQuery.data ?? [];
   const inboxBoard = boards.find((board) => board.name === INBOX_BOARD_NAME);
-  const resolvedBoardId = boardId || inboxBoard?.id || "";
+  const resolvedBoardId = spaceId || inboxBoard?.id || "";
   const boardQuery = useQuery({
     queryKey: ["board", resolvedBoardId],
-    queryFn: () => todexClient.boards.get(resolvedBoardId),
+    queryFn: () => todexClient.spaces.get(resolvedBoardId),
+    enabled: (kind === "task" || kind === "epic") && Boolean(resolvedBoardId),
+  });
+  const areas = boardQuery.data?.sections ?? [];
+  const epicsQuery = useQuery({
+    queryKey: ["epics", resolvedBoardId],
+    queryFn: () => todexClient.epics.list(resolvedBoardId),
     enabled: kind === "task" && Boolean(resolvedBoardId),
   });
-  const areas = boardQuery.data?.areas ?? [];
-  const selectedArea = areas.find((area) => area.id === areaId) ?? null;
+  const epics = epicsQuery.data ?? [];
+  const selectedArea = areas.find((area) => area.id === sectionId) ?? null;
   const kindLabel = KINDS.find((option) => option.id === kind)?.label ?? "Task";
   const boardLabel =
-    boards.find((board) => board.id === resolvedBoardId)?.name ?? INBOX_BOARD_NAME;
+    boards.find((board) => board.id === resolvedBoardId)?.name ??
+    INBOX_BOARD_NAME;
 
   useEffect(() => {
     nameRef.current?.focus();
@@ -117,18 +138,26 @@ function CreatePalette({ onClose }: { onClose: () => void }) {
 
   useEffect(() => {
     setAreaId("");
+    setEpicId("");
   }, [resolvedBoardId]);
+
+  useEffect(() => {
+    if (kind !== "epic" || sectionId || areas.length === 0) return;
+    const fallback = areas.find((area) => area.isDefault) ?? areas[0];
+    if (fallback) setAreaId(fallback.id);
+  }, [areas, kind, sectionId]);
 
   const createTask = useMutation({
     mutationFn: (estimation: number) =>
       todexClient.tasks.create({
-        taskBoardId: resolvedBoardId,
+        spaceId: resolvedBoardId,
         summary: name.trim(),
         estimation,
         status,
         priority,
         scheduleDate: dateInputToScheduleIso(scheduleDate),
-        ...(selectedArea ? { areaId: selectedArea.id } : {}),
+        ...(selectedArea ? { sectionId: selectedArea.id } : {}),
+        ...(epicId ? { epicId } : {}),
       }),
     onSuccess: async (task) => {
       await queryClient.invalidateQueries({ queryKey: ["tasks"] });
@@ -176,7 +205,29 @@ function CreatePalette({ onClose }: { onClose: () => void }) {
     },
     onError: () => toast.error("Could not create the event"),
   });
-  const pending = createTask.isPending || createDoc.isPending || createEvent.isPending;
+  const createEpic = useMutation({
+    mutationFn: () =>
+      todexClient.epics.create(resolvedBoardId, {
+        name: name.trim(),
+        ...(selectedArea ? { sectionId: selectedArea.id } : {}),
+      }),
+    onSuccess: async (epic) => {
+      await queryClient.invalidateQueries({
+        queryKey: ["epics", resolvedBoardId],
+      });
+      const space = boards.find((item) => item.id === resolvedBoardId);
+      if (space) {
+        router.push(tasksUrlHelper.routing.buildEpicUrl(space.name, epic.id));
+      }
+      onClose();
+    },
+    onError: () => toast.error("Could not create the epic"),
+  });
+  const pending =
+    createTask.isPending ||
+    createDoc.isPending ||
+    createEvent.isPending ||
+    createEpic.isPending;
 
   function submit(event: FormEvent) {
     event.preventDefault();
@@ -200,9 +251,15 @@ function CreatePalette({ onClose }: { onClose: () => void }) {
       createDoc.mutate();
       return;
     }
+    if (kind === "epic") {
+      if (!name.trim() || !resolvedBoardId) return;
+      createEpic.mutate();
+      return;
+    }
     const start = fromInputValue(eventStart, false);
     const end = fromInputValue(eventEnd, false);
-    if (!name.trim() || !start || !end || Date.parse(start) >= Date.parse(end)) return;
+    if (!name.trim() || !start || !end || Date.parse(start) >= Date.parse(end))
+      return;
     createEvent.mutate();
   }
 
@@ -242,7 +299,10 @@ function CreatePalette({ onClose }: { onClose: () => void }) {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="z-[6000]">
               {KINDS.map((option) => (
-                <DropdownMenuItem key={option.id} onSelect={() => setKind(option.id)}>
+                <DropdownMenuItem
+                  key={option.id}
+                  onSelect={() => setKind(option.id)}
+                >
                   {option.label}
                 </DropdownMenuItem>
               ))}
@@ -268,92 +328,152 @@ function CreatePalette({ onClose }: { onClose: () => void }) {
           </div>
         </div>
         {kind === "doc" ? null : (
-        <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-border px-4 py-3">
-          {kind === "task" ? (
-            <>
-              <PropertyMenu label={STATUS_LABEL[status]} menuLabel="Status">
-                {STATUS_ORDER.map((option) => (
-                  <DropdownMenuItem key={option} onSelect={() => setStatus(option)}>
-                    <StatusGlyph status={option} />
-                    {STATUS_LABEL[option]}
-                  </DropdownMenuItem>
-                ))}
-              </PropertyMenu>
-              <PropertyMenu
-                menuLabel="Priority"
-                label={
-                  <span className="inline-flex items-center gap-1">
-                    <PriorityGlyph priority={priority} />
-                    {PRIORITY_LABEL[priority]}
-                  </span>
-                }
-              >
-                {PRIORITY_OPTIONS.map((option) => (
-                  <DropdownMenuItem key={option} onSelect={() => setPriority(option)}>
-                    <PriorityGlyph priority={option} />
-                    {PRIORITY_LABEL[option]}
-                  </DropdownMenuItem>
-                ))}
-              </PropertyMenu>
-              <EstimatePicker
-                value={estimationText}
-                onChange={(next) => {
-                  setEstimationText(next);
-                  setEstimationError(null);
-                }}
-              />
-              <DatePicker
-                emptyLabel="Schedule"
-                value={scheduleDate}
-                onChange={setScheduleDate}
-              />
-              <PropertyMenu label={boardLabel} menuLabel="Board">
+          <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-border px-4 py-3">
+            {kind === "task" || kind === "epic" ? (
+              <PropertyMenu label={boardLabel} menuLabel="Space">
                 {boards.map((board) => (
-                  <DropdownMenuItem key={board.id} onSelect={() => setBoardId(board.id)}>
+                  <DropdownMenuItem
+                    key={board.id}
+                    onSelect={() => setBoardId(board.id)}
+                  >
                     {board.name}
                   </DropdownMenuItem>
                 ))}
               </PropertyMenu>
-              {areas.length > 0 ? (
-                <PropertyMenu label={selectedArea?.name ?? "Area"} menuLabel="Area">
-                  <DropdownMenuItem onSelect={() => setAreaId("")}>None</DropdownMenuItem>
-                  {areas.map((area) => (
-                    <DropdownMenuItem key={area.id} onSelect={() => setAreaId(area.id)}>
-                      {area.name}
+            ) : null}
+            {kind === "epic" && areas.length > 0 ? (
+              <PropertyMenu
+                label={selectedArea?.name ?? "Section"}
+                menuLabel="Section"
+              >
+                {areas.map((area) => (
+                  <DropdownMenuItem
+                    key={area.id}
+                    onSelect={() => setAreaId(area.id)}
+                  >
+                    {area.name}
+                  </DropdownMenuItem>
+                ))}
+              </PropertyMenu>
+            ) : null}
+            {kind === "task" ? (
+              <>
+                <PropertyMenu label={STATUS_LABEL[status]} menuLabel="Status">
+                  {STATUS_ORDER.map((option) => (
+                    <DropdownMenuItem
+                      key={option}
+                      onSelect={() => setStatus(option)}
+                    >
+                      <StatusGlyph status={option} />
+                      {STATUS_LABEL[option]}
                     </DropdownMenuItem>
                   ))}
                 </PropertyMenu>
-              ) : null}
-            </>
-          ) : null}
-          {kind === "event" ? (
-            <>
-              <Input
-                type="datetime-local"
-                aria-label="Starts"
-                value={eventStart}
-                className="h-7 w-auto rounded-full px-2.5 text-xs"
-                onChange={(event) => setEventStart(event.target.value)}
-              />
-              <Input
-                type="datetime-local"
-                aria-label="Ends"
-                value={eventEnd}
-                className="h-7 w-auto rounded-full px-2.5 text-xs"
-                onChange={(event) => setEventEnd(event.target.value)}
-              />
-            </>
-          ) : null}
-        </div>
+                <PropertyMenu
+                  menuLabel="Priority"
+                  label={
+                    <span className="inline-flex items-center gap-1">
+                      <PriorityGlyph priority={priority} />
+                      {PRIORITY_LABEL[priority]}
+                    </span>
+                  }
+                >
+                  {PRIORITY_OPTIONS.map((option) => (
+                    <DropdownMenuItem
+                      key={option}
+                      onSelect={() => setPriority(option)}
+                    >
+                      <PriorityGlyph priority={option} />
+                      {PRIORITY_LABEL[option]}
+                    </DropdownMenuItem>
+                  ))}
+                </PropertyMenu>
+                <EstimatePicker
+                  value={estimationText}
+                  onChange={(next) => {
+                    setEstimationText(next);
+                    setEstimationError(null);
+                  }}
+                />
+                <DatePicker
+                  emptyLabel="Schedule"
+                  value={scheduleDate}
+                  onChange={setScheduleDate}
+                />
+                {areas.length > 0 ? (
+                  <PropertyMenu
+                    label={selectedArea?.name ?? "Section"}
+                    menuLabel="Section"
+                  >
+                    <DropdownMenuItem onSelect={() => setAreaId("")}>
+                      None
+                    </DropdownMenuItem>
+                    {areas.map((area) => (
+                      <DropdownMenuItem
+                        key={area.id}
+                        onSelect={() => setAreaId(area.id)}
+                      >
+                        {area.name}
+                      </DropdownMenuItem>
+                    ))}
+                  </PropertyMenu>
+                ) : null}
+                <PropertyMenu
+                  label={
+                    epics.find((epic) => epic.id === epicId)?.name ?? "Epic"
+                  }
+                  menuLabel="Epic"
+                >
+                  <DropdownMenuItem onSelect={() => setEpicId("")}>
+                    None
+                  </DropdownMenuItem>
+                  {epics.map((epic) => (
+                    <DropdownMenuItem
+                      key={epic.id}
+                      onSelect={() => setEpicId(epic.id)}
+                    >
+                      {epic.name}
+                    </DropdownMenuItem>
+                  ))}
+                </PropertyMenu>
+              </>
+            ) : null}
+            {kind === "event" ? (
+              <>
+                <Input
+                  type="datetime-local"
+                  aria-label="Starts"
+                  value={eventStart}
+                  className="h-7 w-auto rounded-full px-2.5 text-xs"
+                  onChange={(event) => setEventStart(event.target.value)}
+                />
+                <Input
+                  type="datetime-local"
+                  aria-label="Ends"
+                  value={eventEnd}
+                  className="h-7 w-auto rounded-full px-2.5 text-xs"
+                  onChange={(event) => setEventEnd(event.target.value)}
+                />
+              </>
+            ) : null}
+          </div>
         )}
         {estimationError ? (
-          <p className="px-4 pb-3 text-xs text-destructive">{estimationError}</p>
+          <p className="px-4 pb-3 text-xs text-destructive">
+            {estimationError}
+          </p>
         ) : null}
-        {kind === "task" && boardsQuery.isError && boards.length === 0 ? (
-          <p className="px-4 pb-3 text-xs text-destructive">Could not load boards.</p>
+        {(kind === "task" || kind === "epic") &&
+        boardsQuery.isError &&
+        boards.length === 0 ? (
+          <p className="px-4 pb-3 text-xs text-destructive">
+            Could not load spaces.
+          </p>
         ) : null}
         {kind === "event" && eventRangeInvalid ? (
-          <p className="px-4 pb-3 text-xs text-destructive">End must be after start.</p>
+          <p className="px-4 pb-3 text-xs text-destructive">
+            End must be after start.
+          </p>
         ) : null}
       </form>
     </div>
@@ -398,8 +518,10 @@ function createReady(
     eventRangeInvalid: boolean;
   },
 ) {
-  if (kind === "task") {
-    return Boolean(input.name.trim() && input.resolvedBoardId && !input.boardsLoading);
+  if (kind === "task" || kind === "epic") {
+    return Boolean(
+      input.name.trim() && input.resolvedBoardId && !input.boardsLoading,
+    );
   }
   if (kind === "doc") return Boolean(input.name.trim());
   return Boolean(input.name.trim()) && !input.eventRangeInvalid;
@@ -427,12 +549,14 @@ const KINDS = [
   { id: "task", label: "Task" },
   { id: "doc", label: "Doc" },
   { id: "event", label: "Event" },
+  { id: "epic", label: "Epic" },
 ] as const;
 
 const PLACEHOLDERS: Record<CreateKind, string> = {
   task: "Task name",
   doc: "Doc title",
   event: "Event name",
+  epic: "Epic name",
 };
 
 const PRIORITY_OPTIONS = [

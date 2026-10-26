@@ -40,12 +40,12 @@ export function overviewTasks(tasks: Task[]): Task[] {
 
 export function organizingTasks(
   tasks: Task[],
-  boardNameById: Map<string, string>,
+  spaceNameById: Map<string, string>,
 ): OrganizingTasks {
   const inbox = tasks
     .filter(
       (task) =>
-        boardNameById.get(task.taskBoardId) === INBOX_BOARD_NAME &&
+        spaceNameById.get(task.spaceId) === INBOX_BOARD_NAME &&
         !isClosedStatus(task.status),
     )
     .sort((left, right) => createdTime(right) - createdTime(left));
@@ -53,7 +53,7 @@ export function organizingTasks(
     .filter(
       (task) =>
         isUnscheduledTask(task) &&
-        boardNameById.get(task.taskBoardId) !== INBOX_BOARD_NAME,
+        spaceNameById.get(task.spaceId) !== INBOX_BOARD_NAME,
     )
     .sort((left, right) => createdTime(right) - createdTime(left));
   return { inbox, unscheduled };

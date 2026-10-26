@@ -15,7 +15,7 @@ const candidates: MentionCandidate[] = [
     id: "task-1",
     label: "Ship the editor",
     hint: "TDX-4",
-    href: "/tasks/board/Inbox/TDX-4",
+    href: "/tasks/space/Inbox/TDX-4",
   },
   {
     targetType: DocMentionTarget.DOC,
@@ -41,17 +41,19 @@ describe("readMentionTrigger", () => {
 
 describe("mentionMenuItems", () => {
   it("offers tasks, docs, and events from a bare @", () => {
-    expect(mentionMenuItems(candidates, "").map((item) => item.kind === "scope" ? item.token : item.id)).toEqual([
-      "tasks",
-      "docs",
-      "events",
-    ]);
+    expect(
+      mentionMenuItems(candidates, "").map((item) =>
+        item.kind === "scope" ? item.token : item.id,
+      ),
+    ).toEqual(["tasks", "docs", "events"]);
   });
 
   it("narrows scopes while the query is still a prefix", () => {
-    expect(mentionMenuItems(candidates, "do").map((item) => item.kind === "scope" ? item.label : item.id)).toEqual([
-      "Docs",
-    ]);
+    expect(
+      mentionMenuItems(candidates, "do").map((item) =>
+        item.kind === "scope" ? item.label : item.id,
+      ),
+    ).toEqual(["Docs"]);
   });
 
   it("lists tasks after @tasks", () => {
@@ -63,22 +65,24 @@ describe("mentionMenuItems", () => {
         id: "task-1",
         label: "Ship the editor",
         hint: "TDX-4",
-        href: "/tasks/board/Inbox/TDX-4",
+        href: "/tasks/space/Inbox/TDX-4",
       },
     ]);
   });
 
   it("filters docs when the name is typed onto @docs", () => {
     const items = mentionMenuItems(candidates, "docsLaunch");
-    expect(items.map((item) => (item.kind === "target" ? item.id : item.token))).toEqual([
-      "doc-1",
-    ]);
+    expect(
+      items.map((item) => (item.kind === "target" ? item.id : item.token)),
+    ).toEqual(["doc-1"]);
   });
 
   it("searches every kind when the query is not a scope", () => {
-    expect(mentionMenuItems(candidates, "launch").map((item) => item.kind === "target" ? item.id : item.token)).toEqual([
-      "doc-1",
-    ]);
+    expect(
+      mentionMenuItems(candidates, "launch").map((item) =>
+        item.kind === "target" ? item.id : item.token,
+      ),
+    ).toEqual(["doc-1"]);
   });
 });
 
@@ -92,9 +96,9 @@ describe("mentionHref", () => {
         targetType: DocMentionTarget.TASK,
         targetId: "task-1",
         taskKey: "TDX-4",
-        boardName: "Inbox",
+        spaceName: "Inbox",
       }),
-    ).toBe("/tasks/board/Inbox/TDX-4");
+    ).toBe("/tasks/space/Inbox/TDX-4");
     expect(
       mentionHref({ targetType: DocMentionTarget.EVENT, targetId: "event-1" }),
     ).toBe("/calendar/events/event-1");

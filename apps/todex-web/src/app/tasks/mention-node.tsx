@@ -106,22 +106,25 @@ function useMentionHref(targetType: string, targetId: string) {
   });
   const boardsQuery = useQuery({
     queryKey: ["boards"],
-    queryFn: () => todexClient.boards.list(),
+    queryFn: () => todexClient.spaces.list(),
   });
-  if (targetType === DocMentionTarget.DOC || targetType === DocMentionTarget.EVENT) {
+  if (
+    targetType === DocMentionTarget.DOC ||
+    targetType === DocMentionTarget.EVENT
+  ) {
     return mentionHref({
       targetType,
       targetId,
     });
   }
   const task = tasksQuery.data?.find((item) => item.id === targetId);
-  const boardName = boardsQuery.data?.find(
-    (board) => board.id === task?.taskBoardId,
+  const spaceName = boardsQuery.data?.find(
+    (board) => board.id === task?.spaceId,
   )?.name;
   return mentionHref({
     targetType: DocMentionTarget.TASK,
     targetId,
     taskKey: task?.taskKey,
-    boardName,
+    spaceName,
   });
 }

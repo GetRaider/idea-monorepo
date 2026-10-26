@@ -3,7 +3,7 @@ import {
   TaskPriority,
   TaskStatus,
 } from "@repo/api/todex";
-import type { Task } from "@repo/api/todex";
+import type { Epic, Task } from "@repo/api/todex";
 
 export const STATUS_ORDER = [
   TaskStatus.TODO,
@@ -73,9 +73,9 @@ export function scheduleBoards<TBoard extends { id: string }>(
 ): ScheduleBoardSection<TBoard>[] {
   const rootsByBoardId = new Map<string, NestedTask[]>();
   for (const root of roots) {
-    const boardRoots = rootsByBoardId.get(root.taskBoardId) ?? [];
+    const boardRoots = rootsByBoardId.get(root.spaceId) ?? [];
     boardRoots.push(root);
-    rootsByBoardId.set(root.taskBoardId, boardRoots);
+    rootsByBoardId.set(root.spaceId, boardRoots);
   }
   return boards.flatMap((board) => {
     const boardRoots = rootsByBoardId.get(board.id);
@@ -86,13 +86,13 @@ export function scheduleBoards<TBoard extends { id: string }>(
 
 export function filterStatusGroups(
   groups: Record<Task["status"], NestedTask[]>,
-  areaId: string | null,
+  sectionId: string | null,
 ): Record<Task["status"], NestedTask[]> {
-  if (!areaId) return groups;
+  if (!sectionId) return groups;
   const filtered = {} as Record<Task["status"], NestedTask[]>;
   for (const status of STATUS_ORDER) {
     filtered[status] = (groups[status] ?? []).filter(
-      (task) => task.areaId === areaId,
+      (task) => task.sectionId === sectionId,
     );
   }
   return filtered;
@@ -116,6 +116,47 @@ export function groupRootsByStatus(
   return groups;
 }
 
+export function columnsWithEpics(
+  roots: NestedTask[],
+  epics: Epic[],
+  showEpics: boolean,
+  showTasks: boolean,
+): Record<Task["status"], StatusColumn> {
+  const columns = emptyStatusColumns();
+  if (!showEpics && !showTasks) return columns;
+  const epicIds = new Set(epics.map((epic) => epic.id));
+  if (showEpics) {
+    for (const epic of epics) {
+      columns[epic.status].epics.push({
+        epic,
+        tasks: showTasks
+          ? roots
+              .filter((task) => task.epicId === epic.id)
+              .slice()
+              .sort(compareTaskOrder)
+          : [],
+      });
+    }
+  }
+  if (showTasks) {
+    for (const root of roots) {
+      const nestedUnderEpic =
+        showEpics && root.epicId != null && epicIds.has(root.epicId);
+      if (!nestedUnderEpic) columns[root.status].tasks.push(root);
+    }
+  }
+  return columns;
+}
+
+function emptyStatusColumns(): Record<Task["status"], StatusColumn> {
+  return {
+    [TaskStatus.TODO]: { epics: [], tasks: [] },
+    [TaskStatus.IN_PROGRESS]: { epics: [], tasks: [] },
+    [TaskStatus.DONE]: { epics: [], tasks: [] },
+    [TaskStatus.CANCELLED]: { epics: [], tasks: [] },
+  };
+}
+
 export function compareTaskOrder(left: Task, right: Task): number {
   const positionDelta = left.position - right.position;
   if (positionDelta !== 0) return positionDelta;
@@ -127,7 +168,7 @@ export function compareTaskOrder(left: Task, right: Task): number {
 export function sameBoardDropIndex(
   nodes: BoardDropNode[],
   taskId: string,
-  taskBoardId: string,
+  spaceId: string,
   dropIndex: number,
 ): number {
   let index = 0;
@@ -135,7 +176,7 @@ export function sameBoardDropIndex(
   for (let cursor = 0; cursor < limit; cursor += 1) {
     const node = nodes[cursor];
     if (!node || node.id === taskId) continue;
-    if (node.taskBoardId === taskBoardId) index += 1;
+    if (node.spaceId === spaceId) index += 1;
   }
   return index;
 }
@@ -144,20 +185,20 @@ export function resolveCombinedOpenDrop(
   todoNodes: BoardDropNode[],
   inProgressNodes: BoardDropNode[],
   taskId: string,
-  taskBoardId: string,
+  spaceId: string,
   dropIndex: number,
 ): { status: Task["status"]; index: number } {
   const todoCount = todoNodes.length;
   if (inProgressNodes.length > 0 && dropIndex === todoCount) {
     return {
       status: TaskStatus.IN_PROGRESS,
-      index: sameBoardDropIndex(inProgressNodes, taskId, taskBoardId, 0),
+      index: sameBoardDropIndex(inProgressNodes, taskId, spaceId, 0),
     };
   }
   if (dropIndex <= todoCount) {
     return {
       status: TaskStatus.TODO,
-      index: sameBoardDropIndex(todoNodes, taskId, taskBoardId, dropIndex),
+      index: sameBoardDropIndex(todoNodes, taskId, spaceId, dropIndex),
     };
   }
   return {
@@ -165,7 +206,7 @@ export function resolveCombinedOpenDrop(
     index: sameBoardDropIndex(
       inProgressNodes,
       taskId,
-      taskBoardId,
+      spaceId,
       dropIndex - todoCount,
     ),
   };
@@ -187,7 +228,7 @@ export function projectCompletedTask(tasks: Task[], taskId: string): Task[] {
     : doneTasks.filter(
         (item) =>
           item.parentTaskId == null &&
-          item.taskBoardId === task.taskBoardId &&
+          item.spaceId === task.spaceId &&
           item.status === TaskStatus.TODO,
       ).length;
   const now = new Date().toISOString();
@@ -223,7 +264,7 @@ function placeCompletedTask(
   const index = staged.filter(
     (item) =>
       item.parentTaskId == null &&
-      item.taskBoardId === task.taskBoardId &&
+      item.spaceId === task.spaceId &&
       item.status === TaskStatus.DONE &&
       item.id !== task.id,
   ).length;
@@ -244,7 +285,7 @@ export function applyRootMove(
       .filter(
         (item) =>
           item.parentTaskId == null &&
-          item.taskBoardId === task.taskBoardId &&
+          item.spaceId === task.spaceId &&
           item.status === columnStatus,
       )
       .sort(compareTaskOrder)
@@ -319,7 +360,11 @@ export function isoToLocalTimeInput(iso: string | null): string {
   if (!iso) return "";
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return "";
-  if (date.getHours() === 0 && date.getMinutes() === 0 && date.getSeconds() === 0) {
+  if (
+    date.getHours() === 0 &&
+    date.getMinutes() === 0 &&
+    date.getSeconds() === 0
+  ) {
     return "";
   }
   return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
@@ -503,11 +548,21 @@ const PRIORITY_RANK: Record<Task["priority"], number> = {
 
 export interface BoardDropNode {
   id: string;
-  taskBoardId: string;
+  spaceId: string;
 }
 
 export interface NestedTask extends Task {
   children: NestedTask[];
+}
+
+export interface EpicColumn {
+  epic: Epic;
+  tasks: NestedTask[];
+}
+
+export interface StatusColumn {
+  epics: EpicColumn[];
+  tasks: NestedTask[];
 }
 
 export interface ScheduleBoardSection<TBoard extends { id: string }> {
@@ -529,9 +584,10 @@ export interface TaskCreateDraft {
   status?: Task["status"];
   priority?: Task["priority"];
   estimation: number;
-  taskBoardId?: string;
-  areaId?: string;
+  spaceId?: string;
+  sectionId?: string;
   progressStageId?: string | null;
   scheduleDate?: string | null;
   dueDate?: string | null;
+  epicId?: string | null;
 }

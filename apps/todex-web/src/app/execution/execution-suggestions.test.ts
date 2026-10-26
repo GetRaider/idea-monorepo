@@ -13,7 +13,11 @@ describe("suggestion filters", () => {
   it("keeps today's scheduled tasks and sorts critical first", () => {
     const tasks = applySuggestionFilters(
       [
-        suggestion({ id: "low", priority: "low", scheduleDate: localIso(2026, 9, 8) }),
+        suggestion({
+          id: "low",
+          priority: "low",
+          scheduleDate: localIso(2026, 9, 8),
+        }),
         suggestion({
           id: "critical",
           priority: "critical",
@@ -34,16 +38,35 @@ describe("suggestion filters", () => {
 
   it("filters a board area and an estimation bucket", () => {
     const tasks = [
-      suggestion({ id: "short", estimation: 20, areaName: "Job Search", isDefaultArea: false }),
-      suggestion({ id: "long", estimation: 180, areaName: "Job Search", isDefaultArea: false }),
-      suggestion({ id: "other", estimation: 20, areaName: "General", isDefaultArea: true }),
+      suggestion({
+        id: "short",
+        estimation: 20,
+        sectionName: "Job Search",
+        isDefaultSection: false,
+      }),
+      suggestion({
+        id: "long",
+        estimation: 180,
+        sectionName: "Job Search",
+        isDefaultSection: false,
+      }),
+      suggestion({
+        id: "other",
+        estimation: 20,
+        sectionName: "General",
+        isDefaultSection: true,
+      }),
     ];
 
     expect(suggestionAreas(tasks, "all")).toEqual(["Job Search"]);
     expect(
       applySuggestionFilters(
         tasks,
-        { ...EMPTY_SUGGESTION_FILTERS, areaName: "Job Search", estimation: "short" },
+        {
+          ...EMPTY_SUGGESTION_FILTERS,
+          sectionName: "Job Search",
+          estimation: "short",
+        },
         now,
       ).map((task) => task.id),
     ).toEqual(["short"]);
@@ -52,11 +75,24 @@ describe("suggestion filters", () => {
   it("filters overdue due dates and tasks with no stage", () => {
     const tasks = applySuggestionFilters(
       [
-        suggestion({ id: "overdue", dueDate: localIso(2026, 9, 1), stageName: "Build" }),
-        suggestion({ id: "future", dueDate: localIso(2026, 9, 20), stageName: null }),
+        suggestion({
+          id: "overdue",
+          dueDate: localIso(2026, 9, 1),
+          stageName: "Build",
+        }),
+        suggestion({
+          id: "future",
+          dueDate: localIso(2026, 9, 20),
+          stageName: null,
+        }),
         suggestion({ id: "open", dueDate: null, stageName: null }),
       ],
-      { ...EMPTY_SUGGESTION_FILTERS, due: "overdue", stage: "none", sort: "due" },
+      {
+        ...EMPTY_SUGGESTION_FILTERS,
+        due: "overdue",
+        stage: "none",
+        sort: "due",
+      },
       now,
     );
 
@@ -64,8 +100,16 @@ describe("suggestion filters", () => {
     expect(
       applySuggestionFilters(
         [
-          suggestion({ id: "overdue", dueDate: localIso(2026, 9, 1), stageName: null }),
-          suggestion({ id: "future", dueDate: localIso(2026, 9, 20), stageName: null }),
+          suggestion({
+            id: "overdue",
+            dueDate: localIso(2026, 9, 1),
+            stageName: null,
+          }),
+          suggestion({
+            id: "future",
+            dueDate: localIso(2026, 9, 20),
+            stageName: null,
+          }),
         ],
         { ...EMPTY_SUGGESTION_FILTERS, due: "overdue" },
         now,
@@ -74,7 +118,9 @@ describe("suggestion filters", () => {
   });
 });
 
-function suggestion(overrides: Partial<ExecutionSuggestion>): ExecutionSuggestion {
+function suggestion(
+  overrides: Partial<ExecutionSuggestion>,
+): ExecutionSuggestion {
   return {
     id: "task",
     taskKey: "T-1",
@@ -83,10 +129,10 @@ function suggestion(overrides: Partial<ExecutionSuggestion>): ExecutionSuggestio
     estimation: 60,
     scheduleDate: null,
     dueDate: null,
-    boardId: "board",
-    boardName: "Software Growth",
-    areaName: "General",
-    isDefaultArea: true,
+    spaceId: "board",
+    spaceName: "Software Growth",
+    sectionName: "General",
+    isDefaultSection: true,
     stageName: null,
     ...overrides,
   };

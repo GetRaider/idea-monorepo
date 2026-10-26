@@ -37,7 +37,7 @@ export default function CurrentExecutionPage() {
   const selectedBoards = new Set(
     queue
       .filter((item) => visibleSelected.includes(item.taskId))
-      .map((item) => item.task.boardId),
+      .map((item) => item.task.spaceId),
   );
   const sameBoard = selectedBoards.size <= 1;
   const running = session != null;
@@ -63,7 +63,7 @@ export default function CurrentExecutionPage() {
       toggle: isToggleClick(event, navigator.platform),
     });
     const selected = queue.filter((item) => next.selectedIds.has(item.taskId));
-    const boards = new Set(selected.map((item) => item.task.boardId));
+    const boards = new Set(selected.map((item) => item.task.spaceId));
     if (boards.size > 1) {
       setMixedBoard(true);
       return;
@@ -78,7 +78,9 @@ export default function CurrentExecutionPage() {
       {isLoading ? (
         <Spinner className="flex-1" />
       ) : isError ? (
-        <p className="text-sm text-muted-foreground">Could not load execution.</p>
+        <p className="text-sm text-muted-foreground">
+          Could not load execution.
+        </p>
       ) : (
         <div className="flex min-h-0 flex-1 gap-4">
           <ExecutionSuggestionsPanel />
@@ -91,7 +93,7 @@ export default function CurrentExecutionPage() {
             </header>
             {mixedBoard ? (
               <p className="border-b border-border px-4 py-2 text-xs text-destructive">
-                Selected tasks must belong to the same board.
+                Selected tasks must belong to the same space.
               </p>
             ) : null}
             {queue.length === 0 ? (
@@ -227,7 +229,11 @@ function SelectionSummary({ tasks }: { tasks: ExecutionCurrent[] }) {
   }
   const minutes = tasks.reduce((total, item) => total + item.estimation, 0);
   const areas = [
-    ...new Set(tasks.flatMap((item) => (item.isDefaultArea ? [] : [item.areaName]))),
+    ...new Set(
+      tasks.flatMap((item) =>
+        item.isDefaultSection ? [] : [item.sectionName],
+      ),
+    ),
   ];
   return (
     <div className="rounded-xl border border-border px-4 py-3">
@@ -235,7 +241,7 @@ function SelectionSummary({ tasks }: { tasks: ExecutionCurrent[] }) {
       <p className="mt-1 text-sm text-muted-foreground">
         Estimate {formatEstimation(minutes)}
         {" · "}
-        {task.boardName}
+        {task.spaceName}
         {areas.length > 0 ? ` (${areas.join(", ")})` : ""}
       </p>
     </div>
@@ -245,7 +251,9 @@ function SelectionSummary({ tasks }: { tasks: ExecutionCurrent[] }) {
 function summaryParts(task: ExecutionCurrent) {
   return [
     `Estimate ${formatEstimation(task.estimation)}`,
-    task.isDefaultArea ? task.boardName : `${task.boardName} (${task.areaName})`,
+    task.isDefaultSection
+      ? task.spaceName
+      : `${task.spaceName} (${task.sectionName})`,
     STATUS_LABEL[task.status],
     task.stageName,
     task.scheduleDate ? `Scheduled ${formatDay(task.scheduleDate)}` : null,
@@ -301,25 +309,27 @@ function FocusPanel({
           ))}
         </div>
       ) : (
-        <p className="text-sm text-muted-foreground">No tasks in this session.</p>
+        <p className="text-sm text-muted-foreground">
+          No tasks in this session.
+        </p>
       )}
       {task ? (
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-xs text-muted-foreground">{task.taskKey}</p>
-          <h3 className="mt-1 text-xl font-semibold tracking-tight">
-            {task.summary}
-          </h3>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Estimate {formatEstimation(task.estimation)}
-            {goalMinutes != null && goalMinutes > task.estimation
-              ? ` · Goal ${formatEstimation(goalMinutes)}`
-              : ""}
-            {" · "}
-            Executed {formatDuration(elapsedSeconds)}
-          </p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs text-muted-foreground">{task.taskKey}</p>
+            <h3 className="mt-1 text-xl font-semibold tracking-tight">
+              {task.summary}
+            </h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Estimate {formatEstimation(task.estimation)}
+              {goalMinutes != null && goalMinutes > task.estimation
+                ? ` · Goal ${formatEstimation(goalMinutes)}`
+                : ""}
+              {" · "}
+              Executed {formatDuration(elapsedSeconds)}
+            </p>
+          </div>
         </div>
-      </div>
       ) : null}
       <div className="flex flex-wrap items-center gap-2">
         <ModeButton

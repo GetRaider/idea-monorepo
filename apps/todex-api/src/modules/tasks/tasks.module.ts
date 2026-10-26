@@ -1,12 +1,13 @@
 import { Module } from "@nestjs/common";
 
-import { BoardsModule } from "../boards/boards.module";
+import { EpicsModule } from "../epics/epics.module";
+import { SpacesModule } from "../spaces/spaces.module";
 import { WorkspaceModule } from "../workspace/workspace.module";
 import { TasksController } from "./tasks.controller";
 import { TasksService } from "./tasks.service";
 
 @Module({
-  imports: [WorkspaceModule, BoardsModule],
+  imports: [WorkspaceModule, SpacesModule, EpicsModule],
   controllers: [TasksController],
   providers: [TasksService],
   exports: [TasksService],

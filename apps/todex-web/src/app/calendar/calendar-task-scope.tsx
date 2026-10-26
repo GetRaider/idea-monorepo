@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@repo/ui";
-import { TaskStatus, type Task, type TaskBoard } from "@repo/api/todex";
+import { TaskStatus, type Task, type Space } from "@repo/api/todex";
 
 export function TaskScopePicker({
   boards,
@@ -21,27 +21,31 @@ export function TaskScopePicker({
   disabled,
   onChange,
 }: {
-  boards: TaskBoard[];
+  boards: Space[];
   tasks: Task[];
   value: string[];
   selection: "single" | "multiple";
   disabled?: boolean;
   onChange: (taskIds: string[]) => void;
 }) {
-  const [boardId, setBoardId] = useState(
-    () => boards.find((board) => board.name === "Inbox")?.id ?? boards[0]?.id ?? "",
+  const [spaceId, setBoardId] = useState(
+    () =>
+      boards.find((board) => board.name === "Inbox")?.id ?? boards[0]?.id ?? "",
   );
   const [query, setQuery] = useState("");
-  const activeBoardId = boardId || boards[0]?.id || "";
-  const boardName = useMemo(() => {
+  const activeBoardId = spaceId || boards[0]?.id || "";
+  const spaceName = useMemo(() => {
     const names = new Map(boards.map((board) => [board.id, board.name]));
-    return (taskBoardId: string) => names.get(taskBoardId) ?? "Board";
+    return (spaceId: string) => names.get(spaceId) ?? "Space";
   }, [boards]);
   const selected = tasks.filter((task) => value.includes(task.id));
   const needle = query.trim().toLowerCase();
   const boardTasks = tasks.filter((task) => {
-    if (task.taskBoardId !== activeBoardId) return false;
-    if (task.status === TaskStatus.DONE || task.status === TaskStatus.CANCELLED) {
+    if (task.spaceId !== activeBoardId) return false;
+    if (
+      task.status === TaskStatus.DONE ||
+      task.status === TaskStatus.CANCELLED
+    ) {
       return value.includes(task.id);
     }
     if (!needle) return true;
@@ -54,7 +58,9 @@ export function TaskScopePicker({
       return;
     }
     onChange(
-      checked ? [...value, taskId] : value.filter((current) => current !== taskId),
+      checked
+        ? [...value, taskId]
+        : value.filter((current) => current !== taskId),
     );
   }
 
@@ -68,10 +74,11 @@ export function TaskScopePicker({
               className="flex items-center gap-2 rounded-md border border-border px-2 py-1 text-sm"
             >
               <span className="min-w-0 flex-1 truncate">
-                <span className="text-muted-foreground">{task.taskKey}</span> {task.summary}
+                <span className="text-muted-foreground">{task.taskKey}</span>{" "}
+                {task.summary}
               </span>
               <span className="shrink-0 text-xs text-muted-foreground">
-                {boardName(task.taskBoardId)}
+                {spaceName(task.spaceId)}
               </span>
               <button
                 type="button"
@@ -94,8 +101,8 @@ export function TaskScopePicker({
           setQuery("");
         }}
       >
-        <SelectTrigger aria-label="Board">
-          <SelectValue placeholder="Board" />
+        <SelectTrigger aria-label="Space">
+          <SelectValue placeholder="Space" />
         </SelectTrigger>
         <SelectContent>
           {boards.map((board) => (
@@ -115,7 +122,9 @@ export function TaskScopePicker({
       />
       <div className="flex max-h-40 flex-col gap-0.5 overflow-y-auto">
         {boardTasks.length === 0 ? (
-          <p className="px-1 py-2 text-xs text-muted-foreground">No tasks on this board</p>
+          <p className="px-1 py-2 text-xs text-muted-foreground">
+            No tasks in this space
+          </p>
         ) : (
           boardTasks.map((task) => {
             const checked = value.includes(task.id);
@@ -141,7 +150,8 @@ export function TaskScopePicker({
                   />
                 )}
                 <span className="min-w-0 truncate">
-                  <span className="text-muted-foreground">{task.taskKey}</span> {task.summary}
+                  <span className="text-muted-foreground">{task.taskKey}</span>{" "}
+                  {task.summary}
                 </span>
               </label>
             );

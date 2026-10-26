@@ -32,7 +32,7 @@ export interface QuickCreateTaskRowProps {
   boardOptions?: QuickCreateTaskRowBoardOption[];
   /** Default selected board for multi-board mode. */
   defaultBoardId?: string;
-  /** Label for the collapsed row. Defaults to "Create a new task". */
+  /** Label for the collapsed row. Defaults to "Add task". */
   triggerLabel?: string;
   className?: string;
 }

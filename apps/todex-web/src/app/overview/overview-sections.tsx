@@ -107,7 +107,8 @@ function ContinueWorkSection() {
     enabled: !isPending && !isError && session == null,
   });
   const recent = session == null ? (sessionsQuery.data?.[0] ?? null) : null;
-  const waiting = isPending || (session == null && !isError && sessionsQuery.isPending);
+  const waiting =
+    isPending || (session == null && !isError && sessionsQuery.isPending);
   const failed = isError || (session == null && sessionsQuery.isError);
   const hasWork = session != null || recent != null;
 
@@ -179,14 +180,14 @@ function UpcomingSection() {
   });
   const boardsQuery = useQuery({
     queryKey: ["boards"],
-    queryFn: () => todexClient.boards.list(),
+    queryFn: () => todexClient.spaces.list(),
   });
   const toggleDone = useToggleTaskDone();
   const tasks = overviewTasks(tasksQuery.data ?? []);
   const events = sortEvents(
     eventBlocks(eventsQuery.data ?? [], bounds.from, bounds.to),
   );
-  const boardNameById = new Map(
+  const spaceNameById = new Map(
     (boardsQuery.data ?? []).map((board) => [board.id, board.name]),
   );
   const taskDays = dayGroups(bounds.from, bounds.to, tasks, []);
@@ -194,7 +195,10 @@ function UpcomingSection() {
 
   return (
     <Section id={OVERVIEW_CHAPTERS[2].id} title="Upcoming">
-      <Panel title="Tasks" href={tasksUrlHelper.routing.buildScheduleUrl("tomorrow")}>
+      <Panel
+        title="Tasks"
+        href={tasksUrlHelper.routing.buildScheduleUrl("tomorrow")}
+      >
         <QueryState
           isLoading={tasksQuery.isPending}
           isError={tasksQuery.isError}
@@ -204,7 +208,7 @@ function UpcomingSection() {
           <DayList
             days={taskDays}
             tomorrow={bounds.from}
-            boardNameById={boardNameById}
+            spaceNameById={spaceNameById}
             onToggleDone={(task) => toggleDone.mutate(task)}
           />
         </QueryState>
@@ -219,7 +223,7 @@ function UpcomingSection() {
           <DayList
             days={eventDays}
             tomorrow={bounds.from}
-            boardNameById={boardNameById}
+            spaceNameById={spaceNameById}
             onToggleDone={(task) => toggleDone.mutate(task)}
           />
         </QueryState>
@@ -231,7 +235,7 @@ function UpcomingSection() {
 function NeedsOrganizingSection() {
   const boardsQuery = useQuery({
     queryKey: ["boards"],
-    queryFn: () => todexClient.boards.list(),
+    queryFn: () => todexClient.spaces.list(),
   });
   const boards = boardsQuery.data ?? [];
   const boardKey = boards.map((board) => board.id).join("\n");
@@ -239,14 +243,15 @@ function NeedsOrganizingSection() {
     queryKey: ["tasks", "root", boardKey],
     queryFn: () =>
       Promise.all(
-        boards.map((board) => todexClient.tasks.list({ boardId: board.id })),
+        boards.map((board) => todexClient.tasks.list({ spaceId: board.id })),
       ).then((lists) => lists.flat()),
     enabled: boardsQuery.isSuccess,
   });
   const toggleDone = useToggleTaskDone();
-  const boardNameById = new Map(boards.map((board) => [board.id, board.name]));
-  const organized = organizingTasks(tasksQuery.data ?? [], boardNameById);
-  const waiting = boardsQuery.isPending || (boardsQuery.isSuccess && tasksQuery.isPending);
+  const spaceNameById = new Map(boards.map((board) => [board.id, board.name]));
+  const organized = organizingTasks(tasksQuery.data ?? [], spaceNameById);
+  const waiting =
+    boardsQuery.isPending || (boardsQuery.isSuccess && tasksQuery.isPending);
   const failed = boardsQuery.isError || tasksQuery.isError;
 
   return (
@@ -260,11 +265,14 @@ function NeedsOrganizingSection() {
         >
           <TaskRows
             tasks={organized.inbox.slice(0, ORGANIZING_PREVIEW_LIMIT)}
-            hrefFor={(task) => taskHref(task, "later", boardNameById)}
+            hrefFor={(task) => taskHref(task, "later", spaceNameById)}
             onToggleDone={(task) => toggleDone.mutate(task)}
           />
           <HiddenCount
-            count={Math.max(0, organized.inbox.length - ORGANIZING_PREVIEW_LIMIT)}
+            count={Math.max(
+              0,
+              organized.inbox.length - ORGANIZING_PREVIEW_LIMIT,
+            )}
           />
         </QueryState>
       </Panel>
@@ -277,8 +285,8 @@ function NeedsOrganizingSection() {
         >
           <TaskRows
             tasks={organized.unscheduled.slice(0, ORGANIZING_PREVIEW_LIMIT)}
-            hrefFor={(task) => taskHref(task, "later", boardNameById)}
-            boardNameById={boardNameById}
+            hrefFor={(task) => taskHref(task, "later", spaceNameById)}
+            spaceNameById={spaceNameById}
             onToggleDone={(task) => toggleDone.mutate(task)}
           />
           <HiddenCount
@@ -434,12 +442,12 @@ function TaskRows({
   tasks,
   hrefFor,
   onToggleDone,
-  boardNameById,
+  spaceNameById,
 }: {
   tasks: Task[];
   hrefFor: (task: Task) => string;
   onToggleDone: (task: Task) => void;
-  boardNameById?: Map<string, string>;
+  spaceNameById?: Map<string, string>;
 }) {
   if (tasks.length === 0) return null;
   return (
@@ -447,7 +455,7 @@ function TaskRows({
       {tasks.map((task) => {
         const time = isoToLocalTimeInput(task.scheduleDate);
         const done = task.status === TaskStatus.DONE;
-        const boardName = boardNameById?.get(task.taskBoardId);
+        const spaceName = spaceNameById?.get(task.spaceId);
         return (
           <li key={task.id} className="flex items-center gap-2 py-1.5">
             <Checkbox
@@ -469,9 +477,9 @@ function TaskRows({
               </span>
               {task.summary}
             </Link>
-            {boardName ? (
+            {spaceName ? (
               <span className="shrink-0 text-xs text-muted-foreground">
-                {boardName}
+                {spaceName}
               </span>
             ) : null}
             {time ? (
@@ -515,12 +523,12 @@ function HiddenCount({ count }: { count: number }) {
 function DayList({
   days,
   tomorrow,
-  boardNameById,
+  spaceNameById,
   onToggleDone,
 }: {
   days: DayGroup[];
   tomorrow: Date;
-  boardNameById: Map<string, string>;
+  spaceNameById: Map<string, string>;
   onToggleDone: (task: Task) => void;
 }) {
   return (
@@ -538,7 +546,7 @@ function DayList({
                 localDayKey(group.day) === localDayKey(tomorrow)
                   ? "tomorrow"
                   : "later",
-                boardNameById,
+                spaceNameById,
               )
             }
             onToggleDone={onToggleDone}
@@ -575,7 +583,7 @@ function dayGroups(
 function taskHref(
   task: Task,
   when: "today" | "tomorrow" | "later",
-  boardNameById: Map<string, string>,
+  spaceNameById: Map<string, string>,
 ): string {
   if (when === "today") {
     return tasksUrlHelper.routing.buildScheduleUrl("today", task.taskKey);
@@ -583,9 +591,9 @@ function taskHref(
   if (when === "tomorrow") {
     return tasksUrlHelper.routing.buildScheduleUrl("tomorrow", task.taskKey);
   }
-  const boardName = boardNameById.get(task.taskBoardId);
-  if (!boardName) return tasksUrlHelper.routing.buildRootUrl();
-  return tasksUrlHelper.routing.buildBoardUrl(boardName, task.taskKey);
+  const spaceName = spaceNameById.get(task.spaceId);
+  if (!spaceName) return tasksUrlHelper.routing.buildRootUrl();
+  return tasksUrlHelper.routing.buildBoardUrl(spaceName, task.taskKey);
 }
 
 function sortEvents(events: CalendarBlock[]): CalendarBlock[] {
@@ -599,9 +607,7 @@ function tasksOnDay(tasks: Task[], day: Date): Task[] {
   return tasks.filter((task) => {
     if (!task.scheduleDate) return false;
     const scheduled = new Date(task.scheduleDate);
-    return (
-      !Number.isNaN(scheduled.getTime()) && localDayKey(scheduled) === key
-    );
+    return !Number.isNaN(scheduled.getTime()) && localDayKey(scheduled) === key;
   });
 }
 

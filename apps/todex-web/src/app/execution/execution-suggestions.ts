@@ -11,23 +11,27 @@ export function applySuggestionFilters(
   const weekEnd = shiftDay(today, 6 - weekdayIndex(today));
   return tasks
     .filter((task) => matches(task, filters, today, weekEnd))
-    .sort((left, right) => compareSuggestions(left, right, filters.sort) || left.summary.localeCompare(right.summary));
+    .sort(
+      (left, right) =>
+        compareSuggestions(left, right, filters.sort) ||
+        left.summary.localeCompare(right.summary),
+    );
 }
 
 export function suggestionBoards(tasks: ExecutionSuggestion[]) {
   const boards = new Map<string, string>();
-  for (const task of tasks) boards.set(task.boardId, task.boardName);
+  for (const task of tasks) boards.set(task.spaceId, task.spaceName);
   return [...boards.entries()]
     .map(([id, name]) => ({ id, name }))
     .sort((left, right) => left.name.localeCompare(right.name));
 }
 
-export function suggestionAreas(tasks: ExecutionSuggestion[], boardId: string) {
+export function suggestionAreas(tasks: ExecutionSuggestion[], spaceId: string) {
   const areas = new Set<string>();
   for (const task of tasks) {
-    if (task.isDefaultArea) continue;
-    if (boardId !== "all" && task.boardId !== boardId) continue;
-    areas.add(task.areaName);
+    if (task.isDefaultSection) continue;
+    if (spaceId !== "all" && task.spaceId !== spaceId) continue;
+    areas.add(task.sectionName);
   }
   return [...areas].sort((left, right) => left.localeCompare(right));
 }
@@ -46,28 +50,45 @@ function matches(
   today: string,
   weekEnd: string,
 ) {
-  if (filters.priority !== "all" && task.priority !== filters.priority) return false;
-  if (filters.boardId !== "all" && task.boardId !== filters.boardId) return false;
-  if (filters.areaName !== "all" && task.areaName !== filters.areaName) return false;
+  if (filters.priority !== "all" && task.priority !== filters.priority)
+    return false;
+  if (filters.spaceId !== "all" && task.spaceId !== filters.spaceId)
+    return false;
+  if (filters.sectionName !== "all" && task.sectionName !== filters.sectionName)
+    return false;
   if (filters.estimation === "short" && task.estimation > 30) return false;
-  if (filters.estimation === "medium" && (task.estimation <= 30 || task.estimation > 120)) {
+  if (
+    filters.estimation === "medium" &&
+    (task.estimation <= 30 || task.estimation > 120)
+  ) {
     return false;
   }
   if (filters.estimation === "long" && task.estimation <= 120) return false;
-  const scheduleDay = task.scheduleDate ? dayKey(new Date(task.scheduleDate)) : null;
+  const scheduleDay = task.scheduleDate
+    ? dayKey(new Date(task.scheduleDate))
+    : null;
   if (filters.schedule === "unscheduled" && scheduleDay) return false;
   if (filters.schedule === "today" && scheduleDay !== today) return false;
-  if (filters.schedule === "week" && (!scheduleDay || scheduleDay < today || scheduleDay > weekEnd)) {
+  if (
+    filters.schedule === "week" &&
+    (!scheduleDay || scheduleDay < today || scheduleDay > weekEnd)
+  ) {
     return false;
   }
-  if (filters.schedule === "later" && (!scheduleDay || scheduleDay <= weekEnd)) return false;
+  if (filters.schedule === "later" && (!scheduleDay || scheduleDay <= weekEnd))
+    return false;
   const dueDay = task.dueDate ? dayKey(new Date(task.dueDate)) : null;
   if (filters.due === "none" && dueDay) return false;
   if (filters.due === "overdue" && (!dueDay || dueDay >= today)) return false;
   if (filters.due === "today" && dueDay !== today) return false;
-  if (filters.due === "week" && (!dueDay || dueDay < today || dueDay > weekEnd)) return false;
+  if (filters.due === "week" && (!dueDay || dueDay < today || dueDay > weekEnd))
+    return false;
   if (filters.stage === "none" && task.stageName) return false;
-  if (filters.stage !== "all" && filters.stage !== "none" && task.stageName !== filters.stage) {
+  if (
+    filters.stage !== "all" &&
+    filters.stage !== "none" &&
+    task.stageName !== filters.stage
+  ) {
     return false;
   }
   return true;
@@ -78,14 +99,21 @@ function compareSuggestions(
   right: ExecutionSuggestion,
   sort: SuggestionSort,
 ) {
-  if (sort === "priority") return PRIORITY_RANK[left.priority] - PRIORITY_RANK[right.priority];
+  if (sort === "priority")
+    return PRIORITY_RANK[left.priority] - PRIORITY_RANK[right.priority];
   if (sort === "board") {
-    return left.boardName.localeCompare(right.boardName) || left.areaName.localeCompare(right.areaName);
+    return (
+      left.spaceName.localeCompare(right.spaceName) ||
+      left.sectionName.localeCompare(right.sectionName)
+    );
   }
   if (sort === "estimation") return left.estimation - right.estimation;
-  if (sort === "schedule") return compareTime(left.scheduleDate, right.scheduleDate);
+  if (sort === "schedule")
+    return compareTime(left.scheduleDate, right.scheduleDate);
   if (sort === "due") return compareTime(left.dueDate, right.dueDate);
-  return (left.stageName ?? "\uffff").localeCompare(right.stageName ?? "\uffff");
+  return (left.stageName ?? "\uffff").localeCompare(
+    right.stageName ?? "\uffff",
+  );
 }
 
 function compareTime(left: string | null, right: string | null) {
@@ -116,8 +144,8 @@ function weekdayIndex(day: string) {
 
 export const EMPTY_SUGGESTION_FILTERS: SuggestionFilters = {
   priority: "all",
-  boardId: "all",
-  areaName: "all",
+  spaceId: "all",
+  sectionName: "all",
   estimation: "all",
   schedule: "all",
   due: "all",
@@ -127,8 +155,8 @@ export const EMPTY_SUGGESTION_FILTERS: SuggestionFilters = {
 
 export interface SuggestionFilters {
   priority: "all" | ExecutionSuggestion["priority"];
-  boardId: string;
-  areaName: string;
+  spaceId: string;
+  sectionName: string;
   estimation: "all" | "short" | "medium" | "long";
   schedule: "all" | "today" | "week" | "later" | "unscheduled";
   due: "all" | "overdue" | "today" | "week" | "none";
@@ -136,4 +164,10 @@ export interface SuggestionFilters {
   sort: SuggestionSort;
 }
 
-type SuggestionSort = "priority" | "board" | "estimation" | "schedule" | "due" | "stage";
+type SuggestionSort =
+  | "priority"
+  | "board"
+  | "estimation"
+  | "schedule"
+  | "due"
+  | "stage";

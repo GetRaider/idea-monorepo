@@ -57,7 +57,12 @@ export function applyMentionEntry(
   entry: MentionMenuEntry,
 ) {
   if (entry.kind === "scope") {
-    editor.chain().focus().deleteRange(range).insertContent(`@${entry.token}`).run();
+    editor
+      .chain()
+      .focus()
+      .deleteRange(range)
+      .insertContent(`@${entry.token}`)
+      .run();
     return;
   }
   const label = entry.hint ? `${entry.hint} ${entry.label}` : entry.label;
@@ -84,13 +89,15 @@ export function mentionHref(input: MentionHrefInput): string | null {
   if (input.targetType === DocMentionTarget.EVENT) {
     return `/calendar/events/${input.targetId}`;
   }
-  if (!input.taskKey || !input.boardName) return null;
-  return tasksUrlHelper.routing.buildBoardUrl(input.boardName, input.taskKey);
+  if (!input.taskKey || !input.spaceName) return null;
+  return tasksUrlHelper.routing.buildBoardUrl(input.spaceName, input.taskKey);
 }
 
 function parseMentionQuery(query: string): ParsedMentionQuery {
   const normalized = query.toLowerCase();
-  const scope = MENTION_SCOPES.find((item) => normalized.startsWith(item.token));
+  const scope = MENTION_SCOPES.find((item) =>
+    normalized.startsWith(item.token),
+  );
   if (scope) {
     return {
       scope: scope.targetType,
@@ -101,7 +108,9 @@ function parseMentionQuery(query: string): ParsedMentionQuery {
   return {
     scope: null,
     search: query,
-    showScopes: MENTION_SCOPES.some((item) => item.token.startsWith(normalized)),
+    showScopes: MENTION_SCOPES.some((item) =>
+      item.token.startsWith(normalized),
+    ),
   };
 }
 
@@ -158,7 +167,7 @@ interface MentionHrefInput {
   targetType: MentionCandidate["targetType"];
   targetId: string;
   taskKey?: string;
-  boardName?: string;
+  spaceName?: string;
 }
 
 interface ParsedMentionQuery {

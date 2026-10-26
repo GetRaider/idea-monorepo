@@ -90,8 +90,8 @@ function QueueRow({
           </span>
         </span>
         <span className="mt-1 block truncate text-xs text-muted-foreground">
-          {task.boardName}
-          {task.isDefaultArea ? "" : ` (${task.areaName})`} -{" "}
+          {task.spaceName}
+          {task.isDefaultSection ? "" : ` (${task.sectionName})`} -{" "}
           {STATUS_LABEL[task.status]}
         </span>
       </button>

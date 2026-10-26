@@ -7,7 +7,7 @@ import {
 import type { Task } from "@repo/api/todex";
 
 export function boardDropId(drop: BoardDropData & { taskId?: string }): string {
-  const board = drop.boardId ? `${drop.boardId}:` : "";
+  const board = drop.spaceId ? `${drop.spaceId}:` : "";
   if (drop.kind === "row" && drop.taskId)
     return `drop-row:${board}${drop.taskId}`;
   const index = drop.index == null ? "end" : String(drop.index);
@@ -18,6 +18,8 @@ export function boardDropId(drop: BoardDropData & { taskId?: string }): string {
 export const boardCollisionDetection: CollisionDetection = (args) => {
   const pointerHits = pointerWithin(args);
   const hits = pointerHits.length > 0 ? pointerHits : rectIntersection(args);
+  const epicHits = hits.filter((hit) => dropKind(args, hit.id) === "epic");
+  if (epicHits.length > 0) return [closestToPointer(args, epicHits)];
   if (hits.length <= 1) return hits;
   const gaps = hits.filter((hit) => dropKind(args, hit.id) === "gap");
   const pool = gaps.length > 0 ? gaps : hits;
@@ -58,7 +60,8 @@ export interface BoardDropData {
   type: "reorder";
   status: Task["status"];
   index: number | null;
-  boardId?: string;
+  spaceId?: string;
   combinedOpen?: boolean;
-  kind: "gap" | "fill" | "empty" | "column" | "row" | "card";
+  epicId?: string;
+  kind: "gap" | "fill" | "empty" | "column" | "row" | "card" | "epic";
 }

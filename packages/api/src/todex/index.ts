@@ -1,5 +1,5 @@
 export {
-  DEFAULT_AREA_NAME,
+  DEFAULT_SECTION_NAME,
   DocMentionTarget,
   DocType,
   FolderKind,
@@ -10,15 +10,15 @@ export {
   WorkspaceMemberRole,
 } from "./enums.ts";
 export {
-  BoardAreaSchema,
-  CreateBoardAreaBodySchema,
-  UpdateBoardAreaBodySchema,
-} from "./area.ts";
+  SpaceSectionSchema,
+  CreateSpaceSectionBodySchema,
+  UpdateSpaceSectionBodySchema,
+} from "./section.ts";
 export type {
-  BoardArea,
-  CreateBoardAreaBody,
-  UpdateBoardAreaBody,
-} from "./area.ts";
+  SpaceSection,
+  CreateSpaceSectionBody,
+  UpdateSpaceSectionBody,
+} from "./section.ts";
 export {
   CommonDocBodySchema,
   CommonDocSchema,
@@ -63,29 +63,43 @@ export type {
   UpdateFolderBody,
 } from "./folder.ts";
 export {
-  CreateTaskBoardBodySchema,
-  ListTaskBoardsQuerySchema,
-  TaskBoardDetailSchema,
-  TaskBoardSchema,
-  UpdateTaskBoardBodySchema,
-} from "./board.ts";
+  CreateSpaceBodySchema,
+  ListSpacesQuerySchema,
+  SpaceDetailSchema,
+  SpaceSchema,
+  UpdateSpaceBodySchema,
+} from "./space.ts";
 export type {
-  CreateTaskBoardBody,
-  ListTaskBoardsQuery,
-  TaskBoard,
-  TaskBoardDetail,
-  UpdateTaskBoardBody,
-} from "./board.ts";
+  CreateSpaceBody,
+  ListSpacesQuery,
+  Space,
+  SpaceDetail,
+  UpdateSpaceBody,
+} from "./space.ts";
+export {
+  CreateEpicBodySchema,
+  EpicDetailSchema,
+  EpicSchema,
+  PlanningProgressSchema,
+  UpdateEpicBodySchema,
+} from "./epic.ts";
+export type {
+  CreateEpicBody,
+  Epic,
+  EpicDetail,
+  PlanningProgress,
+  UpdateEpicBody,
+} from "./epic.ts";
 export {
   ApplyProgressStageTemplateBodySchema,
-  BoardProgressStageSchema,
-  ReplaceBoardProgressStagesBodySchema,
+  SpaceProgressStageSchema,
+  ReplaceSpaceProgressStagesBodySchema,
 } from "./progress-stage.ts";
 export type {
   ApplyProgressStageTemplateBody,
-  BoardProgressStage,
+  SpaceProgressStage,
   ProgressStageInput,
-  ReplaceBoardProgressStagesBody,
+  ReplaceSpaceProgressStagesBody,
 } from "./progress-stage.ts";
 export { formatEstimation, parseEstimation } from "./estimation.ts";
 export {
@@ -204,5 +218,13 @@ export {
   hasOpenInterval,
   sumIntervalSeconds,
 } from "./intervals.ts";
-export { WorkspaceMemberSchema, WorkspaceSchema } from "./workspace.ts";
-export type { Workspace, WorkspaceMember } from "./workspace.ts";
+export {
+  WorkspaceMemberProfileSchema,
+  WorkspaceMemberSchema,
+  WorkspaceSchema,
+} from "./workspace.ts";
+export type {
+  Workspace,
+  WorkspaceMember,
+  WorkspaceMemberProfile,
+} from "./workspace.ts";

@@ -9,7 +9,6 @@ import { PlusIcon } from "@components/icons";
 import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
 
 import { TaskComposer } from "./task-composer";
-import { TaskSearchField } from "./task-board.ui";
 import {
   INBOX_BOARD_NAME,
   isClosedStatus,
@@ -35,7 +34,7 @@ export default function TasksRootPage() {
       ? `${task.summary} ${task.taskKey}`.toLowerCase().includes(query)
       : true,
   );
-  const boardNameById = new Map(boards.map((board) => [board.id, board.name]));
+  const spaceNameById = new Map(boards.map((board) => [board.id, board.name]));
   const activeAccess = QUICK_ACCESS.find((item) => item.id === access) ?? null;
   const accessTasks = activeAccess
     ? visibleTasks.filter((task) => activeAccess.match(task))
@@ -59,7 +58,6 @@ export default function TasksRootPage() {
       <div className="mb-6 flex items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold tracking-tight">Tasks</h1>
         <div className="flex items-center gap-2">
-          <TaskSearchField />
           <Button size="sm" onClick={openComposer}>
             <PlusIcon size={16} />
             New Task
@@ -79,7 +77,7 @@ export default function TasksRootPage() {
                 status: values.status,
                 priority: values.priority,
                 estimation: values.estimation,
-                taskBoardId: values.taskBoardId ?? undefined,
+                spaceId: values.spaceId ?? undefined,
                 scheduleDate: values.scheduleDate,
                 dueDate: values.dueDate,
               });
@@ -97,7 +95,9 @@ export default function TasksRootPage() {
             </h2>
             <div className="grid grid-cols-[repeat(auto-fit,minmax(9.5rem,1fr))] gap-2">
               {QUICK_ACCESS.map((item) => {
-                const count = visibleTasks.filter((task) => item.match(task)).length;
+                const count = visibleTasks.filter((task) =>
+                  item.match(task),
+                ).length;
                 const selected = access === item.id;
                 return (
                   <button
@@ -130,18 +130,16 @@ export default function TasksRootPage() {
               title={activeAccess.label}
               tasks={accessTasks.slice(0, SLICE_LIMIT)}
               hiddenCount={Math.max(0, accessTasks.length - SLICE_LIMIT)}
-              boardNameById={boardNameById}
+              spaceNameById={spaceNameById}
               emptyLabel={
-                query
-                  ? "Nothing matches this search."
-                  : activeAccess.emptyLabel
+                query ? "Nothing matches this search." : activeAccess.emptyLabel
               }
             />
           ) : null}
           <HubTaskSection
             title="Recently Created"
             tasks={recentTasks}
-            boardNameById={boardNameById}
+            spaceNameById={spaceNameById}
             emptyLabel={
               query ? "Nothing matches this search." : "No tasks yet."
             }
@@ -149,11 +147,9 @@ export default function TasksRootPage() {
           <HubTaskSection
             title="Recently Completed"
             tasks={completedTasks}
-            boardNameById={boardNameById}
+            spaceNameById={spaceNameById}
             emptyLabel={
-              query
-                ? "Nothing matches this search."
-                : "No completed tasks."
+              query ? "Nothing matches this search." : "No completed tasks."
             }
           />
         </div>
@@ -165,30 +161,32 @@ export default function TasksRootPage() {
 function HubTaskSection({
   title,
   tasks,
-  boardNameById,
+  spaceNameById,
   emptyLabel,
   hiddenCount = 0,
 }: {
   title: string;
   tasks: Task[];
-  boardNameById: Map<string, string>;
+  spaceNameById: Map<string, string>;
   emptyLabel: string;
   hiddenCount?: number;
 }) {
   return (
     <section>
-      <h2 className="mb-2 text-sm font-medium text-muted-foreground">{title}</h2>
+      <h2 className="mb-2 text-sm font-medium text-muted-foreground">
+        {title}
+      </h2>
       {tasks.length === 0 ? (
         <p className="px-2 py-2 text-sm text-muted-foreground">{emptyLabel}</p>
       ) : (
         <ul className="flex flex-col">
           {tasks.map((task) => {
-            const boardName = boardNameById.get(task.taskBoardId) ?? "Board";
+            const spaceName = spaceNameById.get(task.spaceId) ?? "Space";
             return (
               <li key={task.id}>
                 <Link
                   href={tasksUrlHelper.routing.buildBoardUrl(
-                    boardName,
+                    spaceName,
                     task.taskKey,
                   )}
                   className="flex items-center gap-3 rounded-md px-2 py-2 text-sm hover:bg-surface"
@@ -206,7 +204,7 @@ function HubTaskSection({
                     {task.summary}
                   </span>
                   <span className="max-w-40 truncate text-xs text-muted-foreground">
-                    {boardName}
+                    {spaceName}
                   </span>
                 </Link>
               </li>

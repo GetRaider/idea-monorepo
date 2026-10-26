@@ -4,7 +4,7 @@ import { createContext, use, type ReactNode } from "react";
 
 import { useTasks } from "./tasks-provider";
 import {
-  useTaskBoardPreferences,
+  useSpacePreferences,
   type BoardListSubmode,
   type BoardViewMode,
 } from "./task-board-preferences";
@@ -22,11 +22,11 @@ export function BoardPreferencesProvider({
   } = useTasks();
   const contextKey =
     view.kind === "board"
-      ? view.boardId
+      ? view.spaceId
       : view.kind === "schedule"
         ? `schedule:${view.schedule}`
         : null;
-  const preferences = useTaskBoardPreferences(contextKey);
+  const preferences = useSpacePreferences(contextKey);
 
   return (
     <BoardPreferencesContext value={preferences}>

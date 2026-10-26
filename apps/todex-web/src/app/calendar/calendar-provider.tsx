@@ -7,7 +7,7 @@ import type {
   CalendarEvent,
   CalendarEventTemplate,
   Task,
-  TaskBoard,
+  Space,
 } from "@repo/api/todex";
 
 import type { CalendarVisibility } from "./calendar-blocks";
@@ -23,7 +23,8 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const [range, setRange] = useState(initialRange);
-  const [visibility, setVisibility] = useState<CalendarVisibility>(DEFAULT_VISIBILITY);
+  const [visibility, setVisibility] =
+    useState<CalendarVisibility>(DEFAULT_VISIBILITY);
   const [focusRequest, setFocusRequest] = useState<CalendarFocusRequest | null>(
     null,
   );
@@ -41,15 +42,18 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
   });
   const boardsQuery = useQuery({
     queryKey: ["boards"],
-    queryFn: () => todexClient.boards.list(),
+    queryFn: () => todexClient.spaces.list(),
   });
   const tasksQuery = useQuery({
-    queryKey: ["calendar-tasks", boardsQuery.data?.map((board) => board.id).join(",")],
+    queryKey: [
+      "calendar-tasks",
+      boardsQuery.data?.map((board) => board.id).join(","),
+    ],
     enabled: Boolean(boardsQuery.data),
     queryFn: async () => {
       const boards = boardsQuery.data ?? [];
       const groups = await Promise.all(
-        boards.map((board) => todexClient.tasks.list({ boardId: board.id })),
+        boards.map((board) => todexClient.tasks.list({ spaceId: board.id })),
       );
       return groups.flat();
     },
@@ -145,7 +149,9 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
       actions: {
         setRange: (next) => {
           setRange((current) =>
-            current.from === next.from && current.to === next.to ? current : next,
+            current.from === next.from && current.to === next.to
+              ? current
+              : next,
           );
         },
         setVisibility: (patch) => {
@@ -161,7 +167,8 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
           router.push(`/calendar/events/${eventId}${search}`);
         },
         closeEvent: () => router.push("/calendar"),
-        openTask: (taskId) => router.push(`/calendar?task=${encodeURIComponent(taskId)}`),
+        openTask: (taskId) =>
+          router.push(`/calendar?task=${encodeURIComponent(taskId)}`),
         closeTask: () => router.push("/calendar"),
         createEvent: (body) => createEvent.mutateAsync(body),
         updateEvent: (eventId, body) =>
@@ -172,7 +179,8 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
         updateTemplate: (templateId, body) =>
           updateTemplate.mutateAsync({ templateId, body }),
         removeTemplate: (templateId) => removeTemplate.mutateAsync(templateId),
-        updateTask: (taskId, patch) => updateTask.mutateAsync({ taskId, ...patch }),
+        updateTask: (taskId, patch) =>
+          updateTask.mutateAsync({ taskId, ...patch }),
       },
     }),
     [
@@ -200,13 +208,16 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
   );
 
   return (
-    <CalendarContext.Provider value={value}>{children}</CalendarContext.Provider>
+    <CalendarContext.Provider value={value}>
+      {children}
+    </CalendarContext.Provider>
   );
 }
 
 export function useCalendar() {
   const value = use(CalendarContext);
-  if (!value) throw new Error("useCalendar must be used within CalendarProvider");
+  if (!value)
+    throw new Error("useCalendar must be used within CalendarProvider");
   return value;
 }
 
@@ -234,7 +245,7 @@ interface CalendarContextValue {
     events: CalendarEvent[];
     templates: CalendarEventTemplate[];
     tasks: Task[];
-    boards: TaskBoard[];
+    boards: Space[];
     visibility: CalendarVisibility;
     focusRequest: CalendarFocusRequest | null;
     selectedEvent: CalendarEvent | null;

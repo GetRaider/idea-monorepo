@@ -3,9 +3,9 @@ import { z } from "zod";
 import { ProgressStageTemplate } from "./enums.ts";
 import { IsoDateTimeSchema } from "./iso.ts";
 
-export const BoardProgressStageSchema = z.object({
+export const SpaceProgressStageSchema = z.object({
   id: z.string(),
-  boardId: z.string(),
+  spaceId: z.string(),
   name: z.string(),
   position: z.number().int().nonnegative(),
   createdAt: IsoDateTimeSchema,
@@ -17,7 +17,7 @@ export const ProgressStageInputSchema = z.object({
   name: z.string().trim().min(1).max(80),
 });
 
-export const ReplaceBoardProgressStagesBodySchema = z.object({
+export const ReplaceSpaceProgressStagesBodySchema = z.object({
   stages: z.array(ProgressStageInputSchema).max(30),
 });
 
@@ -25,10 +25,10 @@ export const ApplyProgressStageTemplateBodySchema = z.object({
   template: z.enum([ProgressStageTemplate.FOUNDER]),
 });
 
-export type BoardProgressStage = z.infer<typeof BoardProgressStageSchema>;
+export type SpaceProgressStage = z.infer<typeof SpaceProgressStageSchema>;
 export type ProgressStageInput = z.infer<typeof ProgressStageInputSchema>;
-export type ReplaceBoardProgressStagesBody = z.infer<
-  typeof ReplaceBoardProgressStagesBodySchema
+export type ReplaceSpaceProgressStagesBody = z.infer<
+  typeof ReplaceSpaceProgressStagesBodySchema
 >;
 export type ApplyProgressStageTemplateBody = z.infer<
   typeof ApplyProgressStageTemplateBodySchema

@@ -126,13 +126,13 @@ function TaskContextMenuItems({
   } = useTasks();
   const { execute, enqueue } = useExecutionCommands();
   const single = targets.length === 1 ? (targets[0] ?? null) : null;
-  const sharedBoardId = sharedValue(targets, (task) => task.taskBoardId);
+  const sharedBoardId = sharedValue(targets, (task) => task.spaceId);
   const boardAxes = useBoardAxes(sharedBoardId);
-  const areas = boardAxes.data?.areas ?? [];
+  const areas = boardAxes.data?.sections ?? [];
   const stages = boardAxes.data?.progressStages ?? [];
   const status = sharedValue(targets, (task) => task.status);
   const priority = sharedValue(targets, (task) => task.priority);
-  const areaId = sharedValue(targets, (task) => task.areaId);
+  const sectionId = sharedValue(targets, (task) => task.sectionId);
   const stageId = sharedValue(targets, (task) => task.progressStageId);
   const parentOptions = single
     ? tasks.filter(
@@ -234,15 +234,15 @@ function TaskContextMenuItems({
       node: (
         <RadioSubmenu
           icon={<BoardMark />}
-          label="Board"
-          value={sharedValue(targets, (task) => task.taskBoardId)}
+          label="Space"
+          value={sharedValue(targets, (task) => task.spaceId)}
           disabled={boardDisabled}
         >
           {boards.map((board) => (
             <ContextMenuRadioItem
               key={board.id}
               value={board.id}
-              onSelect={() => patch({ taskBoardId: board.id })}
+              onSelect={() => patch({ spaceId: board.id })}
             >
               {board.name}
             </ContextMenuRadioItem>
@@ -256,15 +256,17 @@ function TaskContextMenuItems({
       node: (
         <RadioSubmenu
           icon={<AreaMark />}
-          label="Area"
-          value={areas.some((area) => area.id === areaId) ? areaId : undefined}
+          label="Section"
+          value={
+            areas.some((area) => area.id === sectionId) ? sectionId : undefined
+          }
           disabled={areaDisabled}
         >
           {areas.map((area) => (
             <ContextMenuRadioItem
               key={area.id}
               value={area.id}
-              onSelect={() => patch({ areaId: area.id })}
+              onSelect={() => patch({ sectionId: area.id })}
             >
               {area.name}
             </ContextMenuRadioItem>
@@ -419,11 +421,7 @@ function TaskContextMenuItems({
               <CriteriaMenu
                 criteria={single.acceptanceCriteria}
                 onChange={(acceptanceCriteria) =>
-                  updateTask(
-                    single.id,
-                    { acceptanceCriteria },
-                    { quiet: true },
-                  )
+                  updateTask(single.id, { acceptanceCriteria }, { quiet: true })
                 }
               />
             ) : null}
@@ -449,7 +447,7 @@ function TaskContextMenuItems({
                 onCreate={(summary) =>
                   createTask(summary, single.id, {
                     estimation: single.estimation,
-                    areaId: single.areaId,
+                    sectionId: single.sectionId,
                     progressStageId: single.progressStageId,
                   })
                 }
@@ -549,11 +547,7 @@ function DateSubmenu({
         <Calendar
           mode="single"
           selected={selected}
-          onSelect={(date) =>
-            onChange(
-              date ? toIso(dateToInput(date)) : null,
-            )
-          }
+          onSelect={(date) => onChange(date ? toIso(dateToInput(date)) : null)}
         />
         {value ? (
           <ContextMenuItem onSelect={() => onChange(null)}>

@@ -2,10 +2,10 @@ import {
   DocType,
   readGoalDocBody,
   readTaskRecurrence,
-  type BoardArea,
+  type SpaceSection,
   type CalendarEvent,
   type CalendarEventTemplate,
-  type BoardProgressStage,
+  type SpaceProgressStage,
   type CommonDocBody,
   type Doc,
   type DocSummary,
@@ -14,21 +14,21 @@ import {
   type ExecutionSession,
   type Folder,
   type Task,
-  type TaskBoard,
+  type Space,
   type Workspace,
   type WorkspaceMember,
 } from "@repo/api/todex";
 
 import type {
-  BoardAreaRow,
-  BoardProgressStageRow,
+  SpaceSectionRow,
+  SpaceProgressStageRow,
   CalendarEventRow,
   CalendarEventTemplateRow,
   DocRow,
   ExecutionQueueRow,
   ExecutionSessionRow,
   FolderRow,
-  TaskBoardRow,
+  SpaceRow,
   TaskRow,
   WorkspaceMemberRow,
   WorkspaceRow,
@@ -77,7 +77,7 @@ export function mapFolder(row: FolderRow): Folder {
   };
 }
 
-export function mapTaskBoard(row: TaskBoardRow): TaskBoard {
+export function mapSpace(row: SpaceRow): Space {
   return {
     id: row.id,
     workspaceId: row.workspaceId,
@@ -89,10 +89,10 @@ export function mapTaskBoard(row: TaskBoardRow): TaskBoard {
   };
 }
 
-export function mapBoardArea(row: BoardAreaRow): BoardArea {
+export function mapSpaceSection(row: SpaceSectionRow): SpaceSection {
   return {
     id: row.id,
-    boardId: row.boardId,
+    spaceId: row.spaceId,
     name: row.name,
     position: row.position,
     isDefault: row.isDefault,
@@ -101,12 +101,12 @@ export function mapBoardArea(row: BoardAreaRow): BoardArea {
   };
 }
 
-export function mapBoardProgressStage(
-  row: BoardProgressStageRow,
-): BoardProgressStage {
+export function mapSpaceProgressStage(
+  row: SpaceProgressStageRow,
+): SpaceProgressStage {
   return {
     id: row.id,
-    boardId: row.boardId,
+    spaceId: row.spaceId,
     name: row.name,
     position: row.position,
     createdAt: row.createdAt.toISOString(),
@@ -152,7 +152,7 @@ export function mapTask(
   return {
     id: row.id,
     workspaceId: row.workspaceId,
-    taskBoardId: row.taskBoardId,
+    spaceId: row.spaceId,
     taskKey: row.taskKey,
     summary: row.summary,
     description: row.description,
@@ -165,9 +165,10 @@ export function mapTask(
     color: row.color,
     acceptanceCriteria: row.acceptanceCriteria ?? [],
     recurrence: readTaskRecurrence(row.recurrence),
-    areaId: row.areaId,
+    sectionId: row.sectionId,
     progressStageId: row.progressStageId,
     parentTaskId: row.parentTaskId,
+    epicId: row.epicId,
     goalId,
     position: row.position,
     createdAt: row.createdAt.toISOString(),

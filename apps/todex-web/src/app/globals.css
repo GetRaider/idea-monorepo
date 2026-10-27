@@ -40,3 +40,50 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer components {
+  .app-chrome {
+    background: linear-gradient(180deg, #171717 0%, #303030 100%);
+  }
+
+  .module-surface {
+    position: relative;
+    background-color: #131313;
+  }
+
+  .module-surface::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 3;
+    background-image: url("/noise-surface.svg?v=7");
+    background-size: 160px 160px;
+    mix-blend-mode: overlay;
+  }
+
+  .module-surface > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .primary-noise {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+  }
+
+  .primary-noise::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0.6;
+    background-image: url("/noise-button.svg");
+    background-size: 96px 96px;
+    mix-blend-mode: multiply;
+  }
+}

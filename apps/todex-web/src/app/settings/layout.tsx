@@ -3,11 +3,12 @@
 import type { ReactNode } from "react";
 
 import { CanvasColumn } from "@components/CanvasColumn";
+import { ModuleSurface } from "@components/module-surface";
 
 export default function SettingsLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="mb-2 mr-2 flex w-full min-w-0 overflow-hidden rounded-xl border border-border bg-sidebar">
+    <ModuleSurface>
       <CanvasColumn>{children}</CanvasColumn>
-    </div>
+    </ModuleSurface>
   );
 }

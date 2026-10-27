@@ -3,14 +3,15 @@
 import type { ReactNode } from "react";
 
 import { CanvasColumn } from "@components/CanvasColumn";
+import { ModuleSurface } from "@components/module-surface";
 
 import { ExecutionSidebar } from "./execution-sidebar";
 
 export default function ExecutionLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="mb-2 mr-2 flex w-full min-w-0 overflow-hidden rounded-xl border border-border bg-sidebar">
+    <ModuleSurface>
       <ExecutionSidebar />
       <CanvasColumn>{children}</CanvasColumn>
-    </div>
+    </ModuleSurface>
   );
 }

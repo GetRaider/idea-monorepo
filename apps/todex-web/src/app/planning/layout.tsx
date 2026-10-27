@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 
 import { CanvasColumn } from "@components/CanvasColumn";
+import { ModuleSurface } from "@components/module-surface";
 
 import { BoardPreferencesProvider } from "./board-preferences-provider";
 import { TaskView } from "./task-view";
@@ -15,7 +16,7 @@ export default function TasksLayout({ children }: { children: ReactNode }) {
     <TasksProvider>
       <SpaceDialogsProvider>
         <BoardPreferencesProvider>
-          <div className="mb-2 mr-2 flex w-full min-w-0 overflow-hidden rounded-xl border border-border bg-sidebar">
+          <ModuleSurface>
             <TasksModuleSidebar />
             <CanvasColumn>
               <div className="flex min-h-0 min-w-0 flex-1">
@@ -25,7 +26,7 @@ export default function TasksLayout({ children }: { children: ReactNode }) {
                 <TaskView />
               </div>
             </CanvasColumn>
-          </div>
+          </ModuleSurface>
         </BoardPreferencesProvider>
       </SpaceDialogsProvider>
     </TasksProvider>

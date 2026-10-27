@@ -3,6 +3,7 @@
 import { Suspense, type ReactNode } from "react";
 
 import { CanvasColumn } from "@components/CanvasColumn";
+import { ModuleSurface } from "@components/module-surface";
 
 import { CalendarEventView } from "./calendar-event-view";
 import { CalendarTaskView } from "./calendar-task-view";
@@ -13,7 +14,7 @@ export default function CalendarLayout({ children }: { children: ReactNode }) {
   return (
     <Suspense>
       <CalendarProvider>
-        <div className="mb-2 mr-2 flex w-full min-w-0 overflow-hidden rounded-xl border border-border bg-sidebar">
+        <ModuleSurface>
           <CalendarSidebar />
           <CanvasColumn>
             <div className="flex min-h-0 min-w-0 flex-1">
@@ -22,7 +23,7 @@ export default function CalendarLayout({ children }: { children: ReactNode }) {
               <CalendarTaskView />
             </div>
           </CanvasColumn>
-        </div>
+        </ModuleSurface>
       </CalendarProvider>
     </Suspense>
   );

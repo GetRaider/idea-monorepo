@@ -3,7 +3,7 @@
 import { useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { formatEstimation } from "@repo/api/todex";
-import { Spinner } from "@repo/ui";
+import { Spinner, cn } from "@repo/ui";
 import { toast } from "sonner";
 
 import { todexClient } from "@lib/todex-client";
@@ -16,13 +16,6 @@ import {
   suggestionStages,
   type SuggestionFilters,
 } from "./execution-suggestions";
-
-const PRIORITY_MARK = {
-  low: "🔵",
-  medium: "🟡",
-  high: "🔴",
-  critical: "🟣",
-} as const;
 
 export function ExecutionSuggestionsPanel() {
   const queryClient = useQueryClient();
@@ -57,11 +50,18 @@ export function ExecutionSuggestionsPanel() {
   }
 
   return (
-    <section className="flex w-80 shrink-0 flex-col overflow-hidden rounded-xl border border-border">
-      <header className="border-b border-border px-4 py-3">
-        <h2 className="text-sm font-medium">Suggestions to Execute</h2>
+    <section className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-hidden rounded-xl border border-white/[0.06] bg-[#121212]">
+      <header className="flex items-center justify-between px-4 pt-3">
+        <h2 className="text-sm font-semibold text-[#f2f2f0]">Suggestions</h2>
+        <button
+          type="button"
+          className="rounded-md px-2 py-1.5 text-sm text-[#a3a3a0] hover:bg-surface hover:text-[#f2f2f0]"
+          onClick={() => setFilters(EMPTY_SUGGESTION_FILTERS)}
+        >
+          Reset
+        </button>
       </header>
-      <div className="grid grid-cols-2 gap-2 border-b border-border px-3 py-3">
+      <div className="flex flex-wrap gap-2 px-4">
         <FilterSelect
           label="Sort"
           value={filters.sort}
@@ -90,7 +90,7 @@ export function ExecutionSuggestionsPanel() {
           <option value="low">Low</option>
         </FilterSelect>
         <FilterSelect
-          label="Space"
+          label="Board"
           value={filters.spaceId}
           onChange={(spaceId) => update({ spaceId })}
         >
@@ -103,7 +103,7 @@ export function ExecutionSuggestionsPanel() {
         </FilterSelect>
         {areas.length > 0 ? (
           <FilterSelect
-            label="Section"
+            label="Area"
             value={filters.sectionName}
             onChange={(sectionName) => update({ sectionName })}
           >
@@ -169,52 +169,64 @@ export function ExecutionSuggestionsPanel() {
           </FilterSelect>
         ) : null}
       </div>
+      <div className="h-px w-full bg-white/[0.06]" />
       {suggestions.isLoading ? (
         <Spinner className="flex-1" />
       ) : suggestions.isError ? (
-        <p className="px-4 py-6 text-sm text-muted-foreground">
+        <p className="px-4 py-6 text-sm text-[#8f8f8c]">
           Could not load suggestions.
         </p>
       ) : visible.length === 0 ? (
-        <p className="px-4 py-6 text-sm text-muted-foreground">
+        <p className="px-4 py-6 text-sm text-[#8f8f8c]">
           No tasks match these filters.
         </p>
       ) : (
-        <ol className="min-h-0 flex-1 overflow-auto">
+        <ol className="min-h-0 flex-1 overflow-auto px-2">
           {visible.map((task) => (
             <li
               key={task.id}
-              className="flex items-start gap-2 border-b border-border px-3 py-3 last:border-b-0"
+              className="flex items-center gap-2 rounded-md px-2 py-2 hover:bg-surface"
             >
               <div className="min-w-0 flex-1">
-                <p className="flex min-w-0 items-baseline gap-1.5 text-sm">
-                  <span aria-hidden className="shrink-0 text-xs leading-none">
-                    {PRIORITY_MARK[task.priority]}
-                  </span>
-                  <span className="truncate">{task.summary}</span>
-                  <span className="shrink-0 text-muted-foreground">
-                    ({formatEstimation(task.estimation)})
-                  </span>
+                <p className="truncate text-sm font-medium text-[#f2f2f0]">
+                  {task.summary}
                 </p>
-                <p className="mt-1 truncate text-xs text-muted-foreground">
+                <p className="mt-0.5 truncate text-xs text-[#8f8f8c]">
                   {task.spaceName}
-                  {task.isDefaultSection ? "" : ` (${task.sectionName})`}
-                  {task.stageName ? ` · ${task.stageName}` : ""}
+                  {task.isDefaultSection ? "" : ` · ${task.sectionName}`}
                 </p>
               </div>
+              <span className="shrink-0 rounded-md bg-white/[0.06] px-1.5 py-0.5 font-mono text-xs text-[#cfcfcc]">
+                {formatEstimation(task.estimation) || "—"}
+              </span>
               <button
                 type="button"
-                className="text-xs text-muted-foreground hover:text-foreground"
+                aria-label={`Add ${task.summary} to the queue`}
+                className="flex size-7 shrink-0 items-center justify-center rounded-md border border-white/10 text-[#e6e6e3] hover:bg-white/10 disabled:opacity-40"
                 disabled={enqueue.isPending}
                 onClick={() => enqueue.mutate(task.id)}
               >
-                Add
+                <PlusIcon />
               </button>
             </li>
           ))}
         </ol>
       )}
     </section>
+  );
+}
+
+function PlusIcon() {
+  return (
+    <svg viewBox="0 0 18 18" className="size-[18px]" aria-hidden>
+      <path
+        d="M9 3.5v11M3.5 9h11"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+    </svg>
   );
 }
 
@@ -229,17 +241,49 @@ function FilterSelect({
   onChange: (value: string) => void;
   children: ReactNode;
 }) {
+  const solid = label === "Sort";
+
   return (
-    <label className="flex min-w-0 flex-col gap-1 text-[11px] text-muted-foreground">
-      {label}
+    <label
+      className={cn(
+        "inline-flex h-8 items-center gap-1.5 rounded-md pl-2.5 pr-1.5 text-sm",
+        solid
+          ? "primary-noise bg-[#f2f2f0] text-[#3a3a38]"
+          : "border border-white/[0.09] bg-white/[0.04] text-[#8f8f8c]",
+      )}
+    >
+      <span>{solid ? "Sort." : label}</span>
       <select
         aria-label={label}
         value={value}
-        className="h-8 rounded-md border border-border bg-transparent px-1.5 text-xs text-foreground outline-none"
+        className={cn(
+          "max-w-28 appearance-none bg-transparent pr-4 font-medium outline-none",
+          solid ? "text-[#0b0b0b]" : "text-[#e6e6e3]",
+        )}
         onChange={(event) => onChange(event.target.value)}
       >
         {children}
       </select>
+      <ChevronIcon className={solid ? "text-[#0b0b0b]" : "text-[#e6e6e3]"} />
     </label>
+  );
+}
+
+function ChevronIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 14 14"
+      className={cn("pointer-events-none -ml-4 size-3.5", className)}
+      aria-hidden
+    >
+      <path
+        d="M3.5 5.25 7 8.75l3.5-3.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }

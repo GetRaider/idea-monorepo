@@ -1,13 +1,14 @@
 "use client";
 
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useEffect, useRef, useState } from "react";
 import { formatEstimation } from "@repo/api/todex";
 import type { ExecutionCurrent } from "@repo/api/todex";
 import { Button, Spinner, cn } from "@repo/ui";
 
-import { todexClient } from "@lib/todex-client";
-import { applyTaskSelection, isToggleClick } from "../../planning/task-selection";
+import {
+  applyTaskSelection,
+  isToggleClick,
+} from "../../planning/task-selection";
 import { useExecution } from "../execution-provider";
 import { ExecutionQueueList } from "../execution-queue-list";
 import { ExecutionCanvas } from "../execution-sidebar";
@@ -18,45 +19,63 @@ import {
   formatClock,
   formatDuration,
 } from "../execution-time";
-import { STATUS_LABEL } from "../../planning/task-helpers";
 
 export default function CurrentExecutionPage() {
   const {
     state: { session, tasks, focused, queue, isLoading, isError },
-    actions: { execute, removeQueued },
+    actions: { execute, removeQueued, setMode, setGoalMinutes },
     meta: { isExecuting },
   } = useExecution();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [anchorId, setAnchorId] = useState<string | null>(null);
-  const [previewId, setPreviewId] = useState<string | null>(null);
   const [mixedBoard, setMixedBoard] = useState(false);
+  const [preset, setPreset] = useState<DurationPreset>(null);
+  const pendingPreset = useRef<DurationPreset>(null);
   const orderedSelected = queue
     .map((item) => item.taskId)
     .filter((taskId) => selectedIds.includes(taskId));
-  const visibleSelected = orderedSelected;
-  const selectedBoards = new Set(
+  const scheduledMinutes = queue.reduce(
+    (total, item) => total + item.task.estimation,
+    0,
+  );
+  const startIds =
+    orderedSelected.length > 0
+      ? orderedSelected
+      : queue.map((item) => item.taskId);
+  const startBoards = new Set(
     queue
-      .filter((item) => visibleSelected.includes(item.taskId))
+      .filter((item) => startIds.includes(item.taskId))
       .map((item) => item.task.spaceId),
   );
-  const sameBoard = selectedBoards.size <= 1;
-  const running = session != null;
-  const shownId = orderedSelected.includes(previewId ?? "")
-    ? previewId
-    : (orderedSelected[0] ?? null);
-  const preview = useQuery({
-    queryKey: ["execution", "preview", orderedSelected],
-    queryFn: () => todexClient.execution.preview({ taskIds: orderedSelected }),
-    enabled: !running && orderedSelected.length > 0,
-  });
+  const canStart = startIds.length > 0 && startBoards.size <= 1 && !isExecuting;
+
+  useEffect(() => {
+    if (!session) return;
+    const chosen = pendingPreset.current;
+    if (chosen == null) return;
+    pendingPreset.current = null;
+    if (chosen === "none") {
+      setMode("stopwatch");
+      setGoalMinutes(null);
+      return;
+    }
+    setMode("timer");
+    setGoalMinutes(chosen);
+  }, [session, setGoalMinutes, setMode]);
+
+  function start() {
+    if (!canStart) return;
+    pendingPreset.current = preset;
+    execute(startIds);
+  }
 
   function selectQueued(
     taskId: string,
     event: { shiftKey: boolean; metaKey: boolean; ctrlKey: boolean },
   ) {
     const next = applyTaskSelection({
-      selectedIds: new Set(visibleSelected),
-      anchorId: anchorId ?? visibleSelected[0] ?? null,
+      selectedIds: new Set(orderedSelected),
+      anchorId: anchorId ?? orderedSelected[0] ?? null,
       taskId,
       orderedIds: queue.map((item) => item.taskId),
       shift: event.shiftKey,
@@ -73,68 +92,81 @@ export default function CurrentExecutionPage() {
     setSelectedIds([...next.selectedIds]);
   }
 
+  const scheduledLabel = formatEstimation(scheduledMinutes) || "0m";
+
   return (
-    <ExecutionCanvas title="Current">
+    <ExecutionCanvas
+      title="Execution"
+      actions={
+        <div className="flex gap-2">
+          <StatChip value={String(queue.length)} label="in queue" />
+          <StatChip value={scheduledLabel} label="scheduled" />
+        </div>
+      }
+    >
       {isLoading ? (
         <Spinner className="flex-1" />
       ) : isError ? (
-        <p className="text-sm text-muted-foreground">
-          Could not load execution.
-        </p>
+        <p className="text-sm text-[#8f8f8c]">Could not load execution.</p>
       ) : (
-        <div className="flex min-h-0 flex-1 gap-4">
+        <div className="flex min-h-0 flex-1 gap-3">
           <ExecutionSuggestionsPanel />
-          <section className="flex w-80 shrink-0 flex-col overflow-hidden rounded-xl border border-border">
-            <header className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
-              <h2 className="text-sm font-medium">Execution Queue</h2>
-              <span className="text-xs tabular-nums text-muted-foreground">
-                {queue.length}
+          <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-white/[0.06] bg-[#121212]">
+            <header className="flex items-center justify-between px-4 pt-3">
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm font-semibold text-[#f2f2f0]">Queue</h2>
+                <span className="flex h-5 min-w-5 items-center justify-center rounded-md bg-white/10 px-1 font-mono text-xs text-[#f2f2f0]">
+                  {queue.length}
+                </span>
+              </div>
+              <span className="font-mono text-sm text-[#a3a3a0]">
+                {scheduledLabel}
               </span>
             </header>
-            {mixedBoard ? (
-              <p className="border-b border-border px-4 py-2 text-xs text-destructive">
+            {mixedBoard || startBoards.size > 1 ? (
+              <p className="px-4 pt-3 text-xs text-destructive">
                 Selected tasks must belong to the same space.
               </p>
             ) : null}
             {queue.length === 0 ? (
-              <p className="px-4 py-6 text-sm text-muted-foreground">
+              <p className="px-4 py-6 text-sm text-[#8f8f8c]">
                 No tasks in the queue.
               </p>
             ) : (
-              <div className="min-h-0 flex-1 overflow-auto">
+              <div className="min-h-0 flex-1 overflow-auto px-2 py-2">
                 <ExecutionQueueList
                   queue={queue}
-                  selectedTaskIds={visibleSelected}
+                  selectedTaskIds={orderedSelected}
                   onSelect={selectQueued}
                   onRemove={removeQueued}
                 />
               </div>
             )}
           </section>
-          <section className="flex min-w-0 flex-1 flex-col rounded-xl border border-border">
-            <header className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
-              <h2 className="text-sm font-medium">Current Execution</h2>
+          <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-white/[0.06] bg-[#121212]">
+            <header className="flex items-center justify-between px-4 pt-3">
+              <h2 className="text-sm font-semibold text-[#f2f2f0]">
+                Execution
+              </h2>
               {session ? null : (
-                <Button
-                  size="sm"
-                  disabled={
-                    orderedSelected.length === 0 || !sameBoard || isExecuting
-                  }
-                  onClick={() => execute(orderedSelected)}
+                <button
+                  type="button"
+                  disabled={!canStart}
+                  className="primary-noise flex h-8 items-center gap-1.5 rounded-md bg-[#f2f2f0] px-3 text-sm font-medium text-[#0b0b0b] disabled:opacity-40"
+                  onClick={start}
                 >
                   Start
-                </Button>
+                  <PlayIcon />
+                </button>
               )}
             </header>
             {session ? (
               <FocusPanel key={session.id} task={focused} tasks={tasks} />
             ) : (
-              <SelectionPanel
-                tasks={orderedSelected.length > 0 ? (preview.data ?? []) : []}
-                shownId={shownId}
-                isLoading={preview.isLoading && orderedSelected.length > 0}
-                isError={preview.isError}
-                onShow={setPreviewId}
+              <ReadyPanel
+                scheduledLabel={scheduledLabel}
+                preset={preset}
+                onPreset={setPreset}
               />
             )}
           </section>
@@ -144,128 +176,52 @@ export default function CurrentExecutionPage() {
   );
 }
 
-function SelectionPanel({
-  tasks,
-  shownId,
-  isLoading,
-  isError,
-  onShow,
+function ReadyPanel({
+  scheduledLabel,
+  preset,
+  onPreset,
 }: {
-  tasks: ExecutionCurrent[];
-  shownId: string | null;
-  isLoading: boolean;
-  isError: boolean;
-  onShow: (taskId: string) => void;
+  scheduledLabel: string;
+  preset: DurationPreset;
+  onPreset: (preset: DurationPreset) => void;
 }) {
-  const task = tasks.find((item) => item.id === shownId) ?? tasks[0] ?? null;
-
-  if (isLoading) return <Spinner className="flex-1" />;
-  if (isError) {
-    return (
-      <p className="px-6 py-8 text-sm text-muted-foreground">
-        Could not load the selected tasks.
-      </p>
-    );
-  }
-  if (!task) {
-    return (
-      <p className="px-6 py-8 text-sm text-muted-foreground">
-        Select tasks from the queue.
-      </p>
-    );
-  }
+  const caption =
+    preset === "none"
+      ? "no timer"
+      : preset == null
+        ? `from ${scheduledLabel}`
+        : `from ${preset}m`;
 
   return (
-    <div className="flex flex-1 flex-col gap-6 overflow-auto px-6 py-8">
-      <SelectionSummary tasks={tasks} />
-      {tasks.length > 1 ? (
-        <div className="flex flex-wrap gap-2">
-          {tasks.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              aria-pressed={item.id === task.id}
-              className={cn(
-                "h-8 max-w-48 truncate rounded-md px-3 text-sm",
-                item.id === task.id
-                  ? "bg-surface text-foreground"
-                  : "text-muted-foreground hover:bg-surface hover:text-foreground",
-              )}
-              onClick={() => onShow(item.id)}
-            >
-              {item.summary}
-            </button>
-          ))}
-        </div>
-      ) : null}
-      {tasks.length > 1 ? (
-        <div>
-          <p className="text-xs text-muted-foreground">{task.taskKey}</p>
-          <h3 className="mt-1 text-xl font-semibold tracking-tight">
-            {task.summary}
-          </h3>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Executed {formatDuration(task.actualTime)}
-          </p>
-        </div>
-      ) : null}
-      <ExecutionTaskDetail task={task} />
-    </div>
-  );
-}
-
-function SelectionSummary({ tasks }: { tasks: ExecutionCurrent[] }) {
-  const task = tasks[0];
-  if (!task) return null;
-  if (tasks.length === 1) {
-    return (
-      <div className="rounded-xl border border-border px-4 py-3">
-        <p className="text-sm font-medium">{task.summary}</p>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {summaryParts(task).join(" · ")}
+    <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 px-4 py-4">
+      <TimerRing label="00:00" caption={caption} progress={0.08} />
+      <div className="flex max-w-[280px] flex-col items-center gap-1 text-center">
+        <p className="text-base font-semibold tracking-tight text-[#f2f2f0]">
+          Ready to start
+        </p>
+        <p className="text-sm leading-[21px] text-[#a3a3a0]">
+          Select tasks from the queue — or run the entire queue at once.
         </p>
       </div>
-    );
-  }
-  const minutes = tasks.reduce((total, item) => total + item.estimation, 0);
-  const areas = [
-    ...new Set(
-      tasks.flatMap((item) =>
-        item.isDefaultSection ? [] : [item.sectionName],
-      ),
-    ),
-  ];
-  return (
-    <div className="rounded-xl border border-border px-4 py-3">
-      <p className="text-sm font-medium">{tasks.length} tasks</p>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Estimate {formatEstimation(minutes)}
-        {" · "}
-        {task.spaceName}
-        {areas.length > 0 ? ` (${areas.join(", ")})` : ""}
-      </p>
+      <div className="flex gap-2">
+        <PresetButton
+          label="25 min"
+          selected={preset === 25}
+          onClick={() => onPreset(preset === 25 ? null : 25)}
+        />
+        <PresetButton
+          label="50 min"
+          selected={preset === 50}
+          onClick={() => onPreset(preset === 50 ? null : 50)}
+        />
+        <PresetButton
+          label="No timer"
+          selected={preset === "none"}
+          onClick={() => onPreset(preset === "none" ? null : "none")}
+        />
+      </div>
     </div>
   );
-}
-
-function summaryParts(task: ExecutionCurrent) {
-  return [
-    `Estimate ${formatEstimation(task.estimation)}`,
-    task.isDefaultSection
-      ? task.spaceName
-      : `${task.spaceName} (${task.sectionName})`,
-    STATUS_LABEL[task.status],
-    task.stageName,
-    task.scheduleDate ? `Scheduled ${formatDay(task.scheduleDate)}` : null,
-    task.dueDate ? `Due ${formatDay(task.dueDate)}` : null,
-  ].flatMap((part) => (part ? [part] : []));
-}
-
-function formatDay(iso: string) {
-  return new Date(iso).toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-  });
 }
 
 function FocusPanel({
@@ -287,8 +243,20 @@ function FocusPanel({
     },
   } = useExecution();
 
+  const goalLabel =
+    mode === "stopwatch"
+      ? "no timer"
+      : `from ${formatEstimation(goalMinutes ?? task?.estimation ?? null) || "0m"}`;
+  const progress =
+    mode === "timer" && (goalMinutes ?? task?.estimation)
+      ? Math.min(
+          1,
+          elapsedSeconds / ((goalMinutes ?? task?.estimation ?? 1) * 60),
+        )
+      : 0.08;
+
   return (
-    <div className="flex flex-1 flex-col gap-6 overflow-auto px-6 py-8">
+    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-auto px-4 py-4">
       {tasks.length > 0 ? (
         <div className="flex flex-wrap gap-2">
           {tasks.map((item) => (
@@ -297,7 +265,7 @@ function FocusPanel({
               type="button"
               aria-pressed={item.id === task?.id}
               className={cn(
-                "h-8 max-w-48 truncate rounded-md px-3 text-sm",
+                "max-w-48 truncate rounded-md px-3 py-2 text-sm",
                 item.id === task?.id
                   ? "bg-surface text-foreground"
                   : "text-muted-foreground hover:bg-surface hover:text-foreground",
@@ -317,7 +285,7 @@ function FocusPanel({
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-xs text-muted-foreground">{task.taskKey}</p>
-            <h3 className="mt-1 text-xl font-semibold tracking-tight">
+            <h3 className="mt-1 text-base font-semibold tracking-tight">
               {task.summary}
             </h3>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -384,16 +352,19 @@ function FocusPanel({
           </label>
         ) : null}
       </div>
-      <p className="font-mono text-5xl tabular-nums tracking-tight">
-        {shownSeconds == null ? "—" : formatClock(shownSeconds)}
-      </p>
-      <p className="text-sm text-muted-foreground">
-        {!task
-          ? "No task is being tracked."
-          : tracking
-            ? `Focused ${formatDuration(elapsedSeconds)}`
-            : "Paused"}
-      </p>
+      <div className="flex justify-center">
+        <TimerRing
+          label={shownSeconds == null ? "—" : formatClock(shownSeconds)}
+          caption={
+            !task
+              ? "No task is being tracked."
+              : tracking
+                ? goalLabel
+                : "Paused"
+          }
+          progress={progress}
+        />
+      </div>
       <div className="flex flex-wrap items-center gap-2">
         <Button
           size="sm"
@@ -434,7 +405,7 @@ function AddTimeControls({ onAdd }: { onAdd: (minutes: number) => void }) {
         <button
           key={preset}
           type="button"
-          className="h-8 rounded-md px-3 text-sm text-muted-foreground hover:bg-surface hover:text-foreground"
+          className="rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-surface hover:text-foreground"
           onClick={() => onAdd(preset)}
         >
           +{preset}m
@@ -475,7 +446,7 @@ function ModeButton({
       type="button"
       aria-pressed={selected}
       className={cn(
-        "h-8 rounded-md px-3 text-sm",
+        "rounded-md px-3 py-2 text-sm",
         selected
           ? "bg-surface text-foreground"
           : "text-muted-foreground hover:bg-surface hover:text-foreground",
@@ -486,3 +457,98 @@ function ModeButton({
     </button>
   );
 }
+
+function StatChip({ value, label }: { value: string; label: string }) {
+  return (
+    <span className="flex h-8 items-center gap-1.5 rounded-md bg-white/[0.06] px-2.5 text-sm text-[#cfcfcc]">
+      <span className="font-mono">{value}</span>
+      {label}
+    </span>
+  );
+}
+
+function PresetButton({
+  label,
+  selected,
+  onClick,
+}: {
+  label: string;
+  selected: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={selected}
+      className={cn(
+        "flex items-center justify-center rounded-md border px-3 py-2 text-sm",
+        selected
+          ? "primary-noise border-[#f2f2f0] bg-[#f2f2f0] text-[#0b0b0b]"
+          : "border-white/10 bg-white/[0.05] text-[#e6e6e3] hover:bg-white/10",
+      )}
+      onClick={onClick}
+    >
+      {label}
+    </button>
+  );
+}
+
+function TimerRing({
+  label,
+  caption,
+  progress,
+}: {
+  label: string;
+  caption: string;
+  progress: number;
+}) {
+  const radius = 100;
+  const circumference = 2 * Math.PI * radius;
+  const dash = Math.max(0.04, Math.min(1, progress)) * circumference;
+
+  return (
+    <div className="relative flex size-44 items-center justify-center">
+      <svg
+        viewBox="0 0 232 232"
+        className="absolute inset-0 size-full"
+        aria-hidden
+      >
+        <circle
+          cx="116"
+          cy="116"
+          r={radius}
+          fill="none"
+          stroke="rgba(255,255,255,0.08)"
+          strokeWidth="10"
+        />
+        <circle
+          cx="116"
+          cy="116"
+          r={radius}
+          fill="none"
+          stroke="#f2f2f0"
+          strokeWidth="10"
+          strokeLinecap="round"
+          strokeDasharray={`${dash} ${circumference}`}
+          transform="rotate(-90 116 116)"
+        />
+      </svg>
+      <div className="flex flex-col items-center gap-1.5 text-center">
+        <p className="font-mono text-3xl font-medium leading-none tracking-tight text-[#f2f2f0]">
+          {label}
+        </p>
+        <p className="text-sm text-[#a3a3a0]">{caption}</p>
+      </div>
+    </div>
+  );
+}
+
+function PlayIcon() {
+  return (
+    <svg viewBox="0 0 16 16" className="size-4" aria-hidden>
+      <path d="M5.5 3.5v9l7-4.5-7-4.5z" fill="currentColor" />
+    </svg>
+  );
+}
+
+type DurationPreset = 25 | 50 | "none" | null;

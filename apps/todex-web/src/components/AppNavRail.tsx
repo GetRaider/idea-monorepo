@@ -35,20 +35,20 @@ export function AppNavRail() {
   const pathname = usePathname();
 
   return (
-    <aside className="flex h-full w-12 shrink-0 flex-col items-center pt-1 pb-3 pl-2 pr-2">
-      <nav className="flex flex-col gap-2">
+    <aside className="flex h-full w-[53px] shrink-0 flex-col items-center px-[10px] py-4">
+      <nav className="flex flex-col gap-1.5">
         {NAV.map((item) => {
           const active =
             item.enabled &&
             (pathname === item.href || pathname.startsWith(`${item.href}/`));
-          const icon = <item.icon size={22} />;
+          const icon = <item.icon size={20} />;
           if (!item.enabled) {
             return (
               <RailTooltip
                 key={item.href}
                 label={`${item.label} — Coming soon`}
               >
-                <span className="flex h-10 w-10 cursor-not-allowed items-center justify-center rounded-lg text-muted-foreground opacity-30">
+                <span className="flex size-8 cursor-not-allowed items-center justify-center rounded-lg text-[#a3a3a0] opacity-30">
                   {icon}
                 </span>
               </RailTooltip>
@@ -59,8 +59,8 @@ export function AppNavRail() {
               <Link
                 href={item.href}
                 className={cn(
-                  "flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground",
-                  active && "bg-white/10 text-foreground",
+                  "flex size-8 items-center justify-center rounded-lg text-[#c8c8c4] transition-colors hover:bg-white/5 hover:text-foreground",
+                  active && "bg-[#f2f2f0] text-[#141414] hover:bg-[#f2f2f0] hover:text-[#141414]",
                 )}
               >
                 {icon}
@@ -69,7 +69,7 @@ export function AppNavRail() {
           );
         })}
       </nav>
-      <div className="mt-auto flex flex-col items-center gap-2">
+      <div className="mt-auto flex flex-col items-center gap-1.5">
         <NotificationsButton />
         <AccountAvatar />
       </div>
@@ -83,7 +83,7 @@ function NotificationsButton() {
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          className="flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
+          className="flex size-8 items-center justify-center rounded-2xl text-[#c8c8c4] transition-colors hover:bg-white/5 hover:text-foreground"
           aria-label="Notifications"
         >
           <BellIcon size={20} />
@@ -106,7 +106,7 @@ function AccountAvatar() {
         <button
           type="button"
           aria-label="Account"
-          className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-xs font-semibold text-foreground hover:bg-white/20"
+          className="flex size-8 items-center justify-center rounded-full border border-white/15 bg-[linear-gradient(140deg,#5a5a58_4%,#262625_96%)] text-sm font-semibold text-[#f2f2f0]"
         >
           {initial}
         </button>

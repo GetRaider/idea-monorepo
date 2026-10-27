@@ -80,7 +80,7 @@ export function SearchButton() {
           type="button"
           aria-label="Search"
           onClick={openSearch}
-          className="flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
+          className="flex size-8 items-center justify-center rounded-lg border border-[#1f1f1f] bg-[#121212] text-[#cfcfcc] transition-colors hover:text-foreground"
         >
           <SearchIcon size={20} />
         </button>

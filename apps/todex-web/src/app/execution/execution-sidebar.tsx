@@ -13,7 +13,7 @@ import { NewButton } from "@components/new-button";
 const EXECUTION_SIDEBAR_WIDTH = 208;
 
 const LINKS = [
-  { href: "/execution/current", label: "Current", icon: ClockIcon },
+  { href: "/execution/current", label: "Execution", icon: ClockIcon },
   { href: "/execution/activity", label: "Activity", icon: RowsIcon },
   { href: "/execution/history", label: "History", icon: StatusDoneIcon },
 ] as const;
@@ -24,9 +24,9 @@ export function ExecutionSidebar() {
 
   return (
     <ModuleSidebarFrame open={open} width={EXECUTION_SIDEBAR_WIDTH}>
-      <div className="flex h-full flex-col px-3 py-3">
-        <h2 className="mb-2 px-3 text-sm text-muted-foreground">Execution</h2>
-        <nav>
+      <div className="flex h-full flex-col px-3 pb-3 pt-3">
+        <h2 className="mb-2 px-2 text-sm text-muted-foreground">Focus</h2>
+        <nav className="flex flex-col">
           {LINKS.map((link) => (
             <SidebarLink
               key={link.href}
@@ -57,9 +57,9 @@ function SidebarLink({
     <Link
       href={href}
       className={cn(
-        "my-1 flex items-center gap-3 rounded-lg px-3 py-1.5 text-sm",
+        "my-0.5 flex items-center gap-2 rounded-md px-2 py-2 text-sm",
         active
-          ? "bg-surface text-foreground"
+          ? "bg-surface font-medium text-foreground"
           : "text-muted-foreground hover:bg-surface hover:text-foreground",
       )}
     >
@@ -75,18 +75,20 @@ function isActive(pathname: string, href: string) {
 
 export function ExecutionCanvas({
   title,
+  actions,
   children,
 }: {
   title: string;
+  actions?: ReactNode;
   children: ReactNode;
 }) {
   const openCreateMenu = useOpenCreateMenu();
 
   return (
-    <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-auto px-6 pb-6 pt-3">
+    <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden px-6 pb-6 pt-3">
       <div className="mb-6 flex items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-        <NewButton onClick={openCreateMenu} />
+        {actions ?? <NewButton onClick={openCreateMenu} />}
       </div>
       {children}
     </section>

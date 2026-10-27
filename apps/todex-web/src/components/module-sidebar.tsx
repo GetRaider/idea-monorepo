@@ -30,7 +30,11 @@ export function ModuleSidebarProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function ModuleSidebarFrame({ open, width, children }: ModuleSidebarFrameProps) {
+export function ModuleSidebarFrame({
+  open,
+  width,
+  children,
+}: ModuleSidebarFrameProps) {
   const [resizing, setResizing] = useState(false);
 
   return (
@@ -46,7 +50,10 @@ export function ModuleSidebarFrame({ open, width, children }: ModuleSidebarFrame
         )}
         style={{ width: open ? width : 0 }}
       >
-        <div className="relative flex h-full min-h-0 flex-col" style={{ width }}>
+        <div
+          className="relative flex h-full min-h-0 flex-col"
+          style={{ width }}
+        >
           {children}
         </div>
       </aside>
@@ -57,7 +64,9 @@ export function ModuleSidebarFrame({ open, width, children }: ModuleSidebarFrame
 export function useModuleSidebar() {
   const value = use(ModuleSidebarContext);
   if (!value) {
-    throw new Error("useModuleSidebar must be used within ModuleSidebarProvider");
+    throw new Error(
+      "useModuleSidebar must be used within ModuleSidebarProvider",
+    );
   }
   return value;
 }
@@ -74,7 +83,7 @@ export function SidebarToggle() {
           aria-label={open ? "Collapse sidebar" : "Expand sidebar"}
           aria-pressed={open}
           onClick={() => setOpen(!open)}
-          className="flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
+          className="flex size-11 items-center justify-center rounded-full text-[#cfcfcc] transition-colors hover:bg-white/5 hover:text-foreground"
         >
           <SidebarToggleIcon open={open} size={16} />
         </button>
@@ -119,7 +128,9 @@ const OPEN_KEYS = {
   overview: "todex:overview-sidebar-open",
 } as const;
 
-const ModuleSidebarContext = createContext<ModuleSidebarContextValue | null>(null);
+const ModuleSidebarContext = createContext<ModuleSidebarContextValue | null>(
+  null,
+);
 
 interface ModuleSidebarFrameProps {
   open: boolean;

@@ -40,30 +40,30 @@ export function AppFrame({ children }: { children: ReactNode }) {
           <PlatformSearchProvider>
           <CreateMenuProvider>
           <ModuleSidebarProvider>
-          <div className="flex h-screen flex-col overflow-hidden bg-background">
-            <header className="flex h-12 shrink-0 items-center pr-2">
-              <div className="flex w-12 shrink-0 items-center justify-center">
-                <div className="h-10 w-10 overflow-hidden">
+          <div className="app-chrome flex h-screen flex-col overflow-hidden">
+            <header className="flex h-14 shrink-0 items-center px-4">
+              <div className="flex shrink-0 items-center gap-2.5">
+                <div className="size-10 shrink-0 overflow-hidden rounded-[8px]">
                   {/* eslint-disable-next-line @next/next/no-img-element -- static logo; next/image flashes on navigation */}
                   <img
-                    src="/todex-uniform-logo.svg"
+                    src="/todex-silver-stroke-default.png"
                     alt="Todex"
                     width={40}
                     height={40}
                     decoding="sync"
                     fetchPriority="high"
-                    className="h-10 w-10 origin-center scale-[1.2] object-cover"
+                    className="size-10 origin-center scale-[1.18] object-cover"
                   />
                 </div>
+                <SidebarToggle />
               </div>
-              <SidebarToggle />
               <div className="ml-auto flex min-w-0 items-center gap-2">
                 <ExecutionStatusBar />
                 <SearchButton />
                 <CreateMenu />
               </div>
             </header>
-            <div className="flex min-h-0 min-w-0 flex-1">
+            <div className="flex min-h-0 min-w-0 flex-1 pl-1.5">
               <AppNavRail />
               <div className="flex min-h-0 min-w-0 flex-1">{children}</div>
             </div>
@@ -85,7 +85,8 @@ function ExecutionStatusBar() {
     actions: { focus, pause, resume, complete },
     meta: { shownSeconds, tracking, isCompleting },
   } = useExecution();
-  const active = pathname.startsWith("/execution");
+  const active =
+    pathname === "/execution" || pathname.startsWith("/execution/");
 
   if (!session) {
     return (
@@ -95,11 +96,12 @@ function ExecutionStatusBar() {
             href="/execution/current"
             aria-label="Execution"
             className={cn(
-              "flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground",
-              active && "bg-white/10 text-foreground",
+              "flex size-8 items-center justify-center rounded-lg text-[#c8c8c4] transition-colors hover:bg-white/5 hover:text-foreground",
+              active &&
+                "bg-[#f2f2f0] text-[#141414] hover:bg-[#f2f2f0] hover:text-[#141414]",
             )}
           >
-            <ExecutionIcon size={22} />
+            <ExecutionIcon size={20} />
           </Link>
         </TooltipTrigger>
         <TooltipContent side="bottom">Execution</TooltipContent>
@@ -113,11 +115,12 @@ function ExecutionStatusBar() {
         <button
           type="button"
           className={cn(
-            "flex h-10 min-w-0 max-w-xs items-center gap-2 rounded-lg px-2 text-foreground transition-colors hover:bg-white/5",
-            active && "bg-white/10",
+            "flex h-8 min-w-0 max-w-xs items-center gap-2 rounded-lg px-2 text-[#c8c8c4] transition-colors hover:bg-white/5 hover:text-foreground",
+            active &&
+              "bg-[#f2f2f0] text-[#141414] hover:bg-[#f2f2f0] hover:text-[#141414]",
           )}
         >
-          <ExecutionIcon size={22} />
+          <ExecutionIcon size={20} />
           <span className="text-xs font-medium tabular-nums leading-none">
             {shownSeconds == null ? "—" : formatClock(shownSeconds)}
           </span>

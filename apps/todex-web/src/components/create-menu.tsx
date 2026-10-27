@@ -91,7 +91,7 @@ export function CreateMenu() {
           type="button"
           aria-label="Create"
           onClick={openMenu}
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-neutral-100 text-neutral-900 transition-colors hover:bg-white"
+          className="primary-noise flex size-8 shrink-0 items-center justify-center rounded-lg bg-[#f2f2f0] text-[#0b0b0b] transition-colors hover:bg-white"
         >
           <PlusIcon size={20} />
         </button>

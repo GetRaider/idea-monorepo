@@ -12,8 +12,8 @@ export function CanvasColumn({ children }: { children: ReactNode }) {
   return (
     <div
       className={cn(
-        "relative flex min-h-0 min-w-0 flex-1 flex-col bg-canvas",
-        sidebarOpen && "border-l border-border",
+        "relative flex min-h-0 min-w-0 flex-1 flex-col",
+        sidebarOpen && "border-l border-[#1c1c1c]",
       )}
     >
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">{children}</div>

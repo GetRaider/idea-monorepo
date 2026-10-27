@@ -83,7 +83,7 @@ export function SidebarToggle() {
           aria-label={open ? "Collapse sidebar" : "Expand sidebar"}
           aria-pressed={open}
           onClick={() => setOpen(!open)}
-          className="flex size-11 items-center justify-center rounded-full text-[#cfcfcc] transition-colors hover:bg-white/5 hover:text-foreground"
+          className="flex size-11 items-center justify-center rounded-lg text-[#cfcfcc] transition-colors hover:bg-white/5 hover:text-foreground"
         >
           <SidebarToggleIcon open={open} size={16} />
         </button>

@@ -35,7 +35,7 @@ export function AppNavRail() {
   const pathname = usePathname();
 
   return (
-    <aside className="flex h-full w-[53px] shrink-0 flex-col items-center px-[10px] py-4">
+    <aside className="flex h-full w-[53px] shrink-0 flex-col items-center px-[10px] pb-4">
       <nav className="flex flex-col gap-1.5">
         {NAV.map((item) => {
           const active =

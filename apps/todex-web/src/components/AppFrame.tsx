@@ -43,18 +43,16 @@ export function AppFrame({ children }: { children: ReactNode }) {
           <div className="app-chrome flex h-screen flex-col overflow-hidden">
             <header className="flex h-14 shrink-0 items-center px-4">
               <div className="flex shrink-0 items-center gap-2.5">
-                <div className="size-10 shrink-0 overflow-hidden rounded-[8px]">
-                  {/* eslint-disable-next-line @next/next/no-img-element -- static logo; next/image flashes on navigation */}
-                  <img
-                    src="/todex-silver-stroke-default.png"
-                    alt="Todex"
-                    width={40}
-                    height={40}
-                    decoding="sync"
-                    fetchPriority="high"
-                    className="size-10 origin-center scale-[1.18] object-cover"
-                  />
-                </div>
+                {/* eslint-disable-next-line @next/next/no-img-element -- static logo; next/image flashes on navigation */}
+                <img
+                  src="/todex-mark.png"
+                  alt="Todex"
+                  width={40}
+                  height={40}
+                  decoding="sync"
+                  fetchPriority="high"
+                  className="size-10 shrink-0"
+                />
                 <SidebarToggle />
               </div>
               <div className="ml-auto flex min-w-0 items-center gap-2">

@@ -1,15 +1,17 @@
+import { apiKeyClient } from "better-auth/client/plugins";
 import { createAuthClient } from "better-auth/react";
 
 import { env } from "./env";
 
-type AuthClient = ReturnType<typeof createAuthClient>;
-
-export const authClient: AuthClient = createAuthClient({
+export const authClient = createAuthClient({
   baseURL: env.api.baseUrl,
+  plugins: [apiKeyClient()],
   fetchOptions: {
     credentials: "include",
   },
 });
+
+type AuthClient = typeof authClient;
 
 export const useSession: AuthClient["useSession"] = authClient.useSession;
 export const signIn: AuthClient["signIn"] = authClient.signIn;

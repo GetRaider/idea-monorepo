@@ -33,6 +33,14 @@ export function AppFrame({ children }: { children: ReactNode }) {
     return <TooltipProvider>{children}</TooltipProvider>;
   }
 
+  if (pathname === "/oauth/consent") {
+    return (
+      <TooltipProvider>
+        <AuthGuard>{children}</AuthGuard>
+      </TooltipProvider>
+    );
+  }
+
   return (
     <TooltipProvider>
       <AuthGuard>

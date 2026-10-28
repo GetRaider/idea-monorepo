@@ -457,6 +457,12 @@ export const executionExecutorTypeEnum = pgEnum("execution_executor_type", [
   "ai",
 ]);
 
+export const executionResultOutcomeEnum = pgEnum("execution_result_outcome", [
+  "implemented",
+  "blocked",
+  "partial",
+]);
+
 export const executionSessions = pgTable(
   "execution_sessions",
   {
@@ -511,6 +517,39 @@ export const executionSessionTasks = pgTable(
       table.taskId,
     ),
     index("execution_session_tasks_task_id_idx").on(table.taskId),
+  ],
+);
+
+export const taskExecutionResults = pgTable(
+  "task_execution_results",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    taskId: text("task_id")
+      .notNull()
+      .references(() => tasks.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id),
+    summary: text("summary").notNull(),
+    outcome: executionResultOutcomeEnum("outcome").notNull(),
+    artifactUrls: jsonb("artifact_urls")
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    decisions: text("decisions").notNull().default(""),
+    createdAt: timestamp("created_at")
+      .$defaultFn(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("task_execution_results_workspace_task_created_idx").on(
+      table.workspaceId,
+      table.taskId,
+      table.createdAt,
+    ),
   ],
 );
 

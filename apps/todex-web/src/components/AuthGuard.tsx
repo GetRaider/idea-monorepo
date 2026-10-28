@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { useSession } from "@lib/auth-client";
 import { env } from "@lib/env";
@@ -9,11 +9,14 @@ import { env } from "@lib/env";
 export function AuthGuard({ children }: { children: ReactNode }) {
   const { data: session, isPending } = useSession();
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     if (!env.auth.enabled || isPending || session?.user) return;
-    router.replace("/sign-in");
-  }, [isPending, router, session]);
+    const next = `${pathname}${searchParams.size ? `?${searchParams.toString()}` : ""}`;
+    router.replace(`/sign-in?next=${encodeURIComponent(next)}`);
+  }, [isPending, pathname, router, searchParams, session]);
 
   if (!env.auth.enabled) return children;
 

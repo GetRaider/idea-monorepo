@@ -21,3 +21,4 @@ Unified AI context for Tasks, Calendar, and Docs. Successor to Take & Do. **v0:*
 | [ai-agent.md](./ai-agent.md)                         | AI agent: conversations, jobs, runs, tool handlers. Task pack first. Draft.  |
 | [space-projects-epics.md](./space-projects-epics.md) | Rename Board→Space and Area→Section; add Projects and Epics. Draft.          |
 | [planning-knowledge-goals.md](./planning-knowledge-goals.md) | Planning / Knowledge labels, Goals under Planning, Knowledge templates placeholder. Draft. |
+| [mcp-server-mvp.md](./mcp-server-mvp.md)                 | Inbound MCP server: OAuth + PAT, knowledge and task tools, task context, execution results. Draft. |

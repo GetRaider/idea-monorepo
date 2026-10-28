@@ -204,6 +204,13 @@
       "when": 1792890000000,
       "tag": "0028_epic_section",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1793184629628,
+      "tag": "0029_mcp_server",
+      "breakpoints": true
     }
   ]
 }

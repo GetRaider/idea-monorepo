@@ -21,6 +21,7 @@
     "docker:clean": "docker compose down -v"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
     "@nestjs/common": "catalog:",
     "@nestjs/config": "catalog:",
     "@nestjs/core": "catalog:",

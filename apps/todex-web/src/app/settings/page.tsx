@@ -3,6 +3,7 @@
 import { Suspense } from "react";
 
 import { GoogleCalendarSettings } from "./google-calendar-settings";
+import { McpAccessSettings } from "./mcp-access";
 
 export default function SettingsPage() {
   return (
@@ -10,6 +11,7 @@ export default function SettingsPage() {
       <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
       <Suspense>
         <GoogleCalendarSettings />
+        <McpAccessSettings />
       </Suspense>
     </main>
   );

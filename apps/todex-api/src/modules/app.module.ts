@@ -9,6 +9,7 @@ import { auth } from "../auth";
 import { DatabaseModule } from "../db/database.module";
 import { RedisModule } from "../db/redis.module";
 import { AgentModule } from "./agent/agent.module";
+import { McpModule } from "./mcp/mcp.module";
 import { ContentIndexModule } from "./content-index/content-index.module";
 import { SpacesModule } from "./spaces/spaces.module";
 import { CalendarModule } from "./calendar/calendar.module";
@@ -39,6 +40,7 @@ import { WorkspaceModule } from "./workspace/workspace.module";
     EpicsModule,
     TasksModule,
     AgentModule,
+    McpModule,
   ],
   controllers: [HealthController],
   providers: [

@@ -1,10 +1,22 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import { Button } from "@repo/ui";
 
 import { signIn } from "@lib/auth-client";
 
 export default function SignInPage() {
+  return (
+    <Suspense>
+      <SignInForm />
+    </Suspense>
+  );
+}
+
+function SignInForm() {
+  const searchParams = useSearchParams();
+  const next = searchParams.get("next");
   return (
     <main className="flex min-h-screen items-center justify-center">
       <div className="w-full max-w-sm rounded-xl border border-border bg-panel p-8">
@@ -17,7 +29,9 @@ export default function SignInPage() {
           onClick={() =>
             signIn.social({
               provider: "google",
-              callbackURL: `${window.location.origin}/overview`,
+              callbackURL: next
+                ? `${window.location.origin}${next}`
+                : `${window.location.origin}/overview`,
             })
           }
         >

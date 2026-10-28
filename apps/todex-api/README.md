@@ -96,3 +96,54 @@ Saving or deleting a doc or task enqueues a chunk job. That job reads the text t
 `POST /v1/agent/conversations/:id/messages` takes optional `mode`: `execute` (default) or `ask`. Ask sends only read tools and cannot change workspace data. A `create_`, `update_`, or `delete_` tool call in execute mode pauses the job at `awaiting_confirmation`. Approve, reject, or allow it with `POST /v1/agent/jobs/:id/confirmation` and `{ "decision": "approve" | "reject" | "allow" }`. Allow remembers that tool and those arguments for this user in this workspace. Read tools still run immediately. Set `MCP_SERVER_URL` to register that server's tools on startup.
 
 Postgres comes from `pgvector/pgvector:pg15`. Recreate the db container after pulling that image (`docker compose up -d` in `apps/todex-api`). The existing `pgdata` volume stays. Apply the migration with `pnpm --filter todex-api db:migrate` before relying on memories or chunks.
+
+## Inbound MCP
+
+`POST /mcp` is Todex acting as an MCP server for Cursor, Claude, and ChatGPT. It is separate from `MCP_SERVER_URL`, which is an outbound client the in-app agent uses to call someone else's tools. Inbound calls use a Bearer token. They do not use the in-app confirmation gate. A write runs immediately as the token's user, in that user's single workspace. Do not send `workspaceId`.
+
+Cursor (`~/.cursor/mcp.json`):
+
+```json
+{
+  "mcpServers": {
+    "todex": {
+      "url": "http://localhost:8091/mcp",
+      "headers": { "Authorization": "Bearer tdx_..." }
+    }
+  }
+}
+```
+
+Create the token in Todex Settings. It is shown once, prefixed `tdx_`, and expires in 90 days. Pick read-only or read-write. Revoke it there. OAuth: the client discovers `/.well-known/oauth-protected-resource` and `/.well-known/oauth-authorization-server`, registers, and sends the user to `/api/auth/oauth2/authorize`. After Google sign-in, `/oauth/consent` asks before the code is issued. Scopes are `todex:read` and `todex:write`. Write includes read.
+
+Tools:
+
+- `search_knowledge` — semantic search over Knowledge docs.
+- `get_document` — one doc as plain text.
+- `create_document` — a common Knowledge doc from plain text.
+- `update_document` — title, plain text, or folder.
+- `list_spaces` — spaces in the caller's workspace.
+- `list_tasks` — by `spaceId`, `epicId`, or a schedule range.
+- `get_task` — one task, without `actualTime`.
+- `create_task` — `estimation` is required minutes.
+- `update_task` — the only way to change status, including `done`.
+- `get_task_context` — one task plus goal, mentioning docs, epic, parent, last five execution results, and retrieved chunks. Capped at 24,000 characters.
+- `submit_execution_result` — stores a summary. Does not mark the task done.
+
+```json
+{ "name": "get_task_context", "arguments": { "taskId": "…" } }
+```
+
+```json
+{
+  "name": "submit_execution_result",
+  "arguments": {
+    "taskId": "…",
+    "summary": "Handler is in todex-api",
+    "outcome": "implemented",
+    "artifactUrls": ["https://example.com/pr/1"]
+  }
+}
+```
+
+Completion is a separate `update_task` with `{ "taskId": "…", "status": "done" }`.

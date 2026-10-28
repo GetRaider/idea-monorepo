@@ -1,12 +1,8 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
-import {
-  DocType,
-  FolderKind,
-  emptyGoalDocBody,
-  type ProseDoc,
-} from "@repo/api/todex";
+import { DocType, FolderKind, emptyGoalDocBody } from "@repo/api/todex";
 import { z } from "zod";
 
+import { proseFromText } from "../../docs/prose-from-text";
 import { DocsService } from "../../docs/docs.service";
 import { FoldersService } from "../../folders/folders.service";
 import type { ToolHandler } from "./tool-handler";
@@ -227,17 +223,6 @@ export class DocToolHandler {
 
 function sameFolderName(left: string, right: string): boolean {
   return left.localeCompare(right, undefined, { sensitivity: "accent" }) === 0;
-}
-
-function proseFromText(text: string): ProseDoc {
-  const trimmed = text.trim();
-  if (!trimmed) return { type: "doc", content: [] };
-  return {
-    type: "doc",
-    content: [
-      { type: "paragraph", content: [{ type: "text", text: trimmed }] },
-    ],
-  };
 }
 
 interface CreateDocArgs {

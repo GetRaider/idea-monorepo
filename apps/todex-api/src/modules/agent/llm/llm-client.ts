@@ -9,6 +9,7 @@ export interface LlmMessage {
   content: string;
   toolCalls?: LlmToolCall[];
   toolCallId?: string;
+  providerItems?: unknown[];
 }
 
 export interface LlmToolDefinition {
@@ -17,18 +18,35 @@ export interface LlmToolDefinition {
   parameters: Record<string, unknown>;
 }
 
+export interface UrlCitation {
+  url: string;
+  title: string;
+  snippet?: string;
+  publishedAt?: string;
+  startIndex?: number;
+  endIndex?: number;
+}
+
 export interface LlmCompletion {
   content: string;
   toolCalls: LlmToolCall[];
-  promptTokens: number;
-  completionTokens: number;
+  promptTokens: number | null;
+  completionTokens: number | null;
+  webSearchCalls?: number | null;
+  model: string;
+  citations: UrlCitation[];
+  providerItems?: unknown[];
+}
+
+export interface LlmCompletionInput {
+  messages: LlmMessage[];
+  tools: LlmToolDefinition[];
+  webSearch?: boolean;
+  onDelta?: (text: string) => void;
 }
 
 export interface LlmClient {
-  complete(input: {
-    messages: LlmMessage[];
-    tools: LlmToolDefinition[];
-  }): Promise<LlmCompletion>;
+  complete(input: LlmCompletionInput): Promise<LlmCompletion>;
 }
 
 export const LLM_CLIENT = "LLM_CLIENT";

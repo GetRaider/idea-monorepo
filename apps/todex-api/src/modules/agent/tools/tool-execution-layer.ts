@@ -5,6 +5,8 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 
+import type { MessageCitation, WebSearchCapability } from "../../../db/schema";
+import { env } from "../../../env/env";
 import { rejectWorkspaceArgument } from "../guardrails/reject-workspace-argument";
 import {
   AgentRunsRepository,
@@ -22,6 +24,7 @@ export class ToolExecutionLayer {
   ) {}
 
   async execute(input: ToolExecutionInput): Promise<NormalizedToolResult> {
+    if (input.name === "web_search") return this.executeWebSearch(input);
     const existing = await this.runs.findToolExecution(input.jobId, input.toolCallId);
     if (existing) return existing.result as NormalizedToolResult;
 
@@ -48,6 +51,7 @@ export class ToolExecutionLayer {
           workspaceId: input.workspaceId,
           userId: input.userId,
           args: parsed.data,
+          sources: input.sources,
         }),
         TOOL_TIMEOUT_MS,
       );
@@ -62,6 +66,61 @@ export class ToolExecutionLayer {
         error instanceof NotFoundException
       ) {
         return this.finish(input, "failed", { ok: false, error: error.message });
+      }
+      throw error;
+    }
+  }
+
+  private async executeWebSearch(input: ToolExecutionInput): Promise<NormalizedToolResult> {
+    const handler = this.registry.get("web_search");
+    const gate = await this.runs.reserveWebSearch({
+      jobId: input.jobId,
+      agentRunId: input.agentRunId,
+      toolCallId: input.toolCallId,
+      args: input.args,
+      webResearch: input.webResearch === true,
+      webSearchCapability: input.webSearchCapability ?? "none",
+      handlerRegistered: Boolean(handler),
+      maxAttempts: env.ai.maxWebSearchCalls,
+    });
+    if (gate.action === "return") return gate.result;
+    if (!handler) {
+      return { ok: false, error: "web_search_unauthorized" };
+    }
+    const parsed = handler.parameters.safeParse(input.args);
+    if (!parsed.success) {
+      const result: NormalizedToolResult = { ok: false, error: "invalid_response" };
+      await this.runs.finishWebSearch(input.jobId, input.toolCallId, "failed", result);
+      return result;
+    }
+    try {
+      const data = await withTimeout(
+        handler.handle({
+          workspaceId: input.workspaceId,
+          userId: input.userId,
+          args: parsed.data,
+        }),
+        TOOL_TIMEOUT_MS,
+      );
+      const error = readToolError(data);
+      const result: NormalizedToolResult = error
+        ? { ok: false, error }
+        : { ok: true, data };
+      await this.runs.finishWebSearch(input.jobId, input.toolCallId, error ? "failed" : "completed", result);
+      return result;
+    } catch (error) {
+      const result: NormalizedToolResult = {
+        ok: false,
+        error: error instanceof ToolTimeoutError ? "timeout" : "unavailable",
+      };
+      await this.runs.finishWebSearch(input.jobId, input.toolCallId, "failed", result);
+      if (
+        error instanceof ToolTimeoutError ||
+        error instanceof BadRequestException ||
+        error instanceof ForbiddenException ||
+        error instanceof NotFoundException
+      ) {
+        return result;
       }
       throw error;
     }
@@ -105,6 +164,12 @@ async function withTimeout<T>(work: Promise<T>, timeoutMs: number): Promise<T> {
 
 class ToolTimeoutError extends Error {}
 
+function readToolError(data: unknown): string | null {
+  if (!data || typeof data !== "object" || !("error" in data)) return null;
+  const error = (data as { error?: unknown }).error;
+  return typeof error === "string" ? error : "unavailable";
+}
+
 export interface ToolExecutionInput {
   workspaceId: string;
   userId: string;
@@ -113,4 +178,7 @@ export interface ToolExecutionInput {
   toolCallId: string;
   name: string;
   args: unknown;
+  sources?: MessageCitation[];
+  webResearch?: boolean;
+  webSearchCapability?: WebSearchCapability;
 }

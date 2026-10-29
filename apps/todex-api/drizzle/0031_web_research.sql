@@ -1,0 +1,10 @@
+ALTER TABLE "jobs" ADD COLUMN "web_research" boolean DEFAULT false NOT NULL;
+ALTER TABLE "jobs" ADD COLUMN "web_search_capability" text DEFAULT 'none' NOT NULL;
+ALTER TABLE "agent_runs" ADD COLUMN "provider" text DEFAULT 'ollama' NOT NULL;
+ALTER TABLE "agent_runs" ADD COLUMN "web_search_calls" integer;
+ALTER TABLE "agent_runs" ADD COLUMN "estimated_cost_micro_usd" integer;
+ALTER TABLE "conversation_messages" ADD COLUMN "provider_items" jsonb;
+ALTER TABLE "agent_runs" ALTER COLUMN "prompt_tokens" DROP NOT NULL;
+ALTER TABLE "agent_runs" ALTER COLUMN "prompt_tokens" DROP DEFAULT;
+ALTER TABLE "agent_runs" ALTER COLUMN "completion_tokens" DROP NOT NULL;
+ALTER TABLE "agent_runs" ALTER COLUMN "completion_tokens" DROP DEFAULT;

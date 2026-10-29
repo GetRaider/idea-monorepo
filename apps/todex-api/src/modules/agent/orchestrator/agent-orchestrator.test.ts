@@ -100,7 +100,7 @@ describe("AgentOrchestrator", () => {
 
     expect(handle).not.toHaveBeenCalled();
     expect(harness.jobs.markAwaitingConfirmation).toHaveBeenCalledWith("job-1", [
-      { id: "call-2", name: "create_doc", arguments: { title: "Notes" } },
+      { id: "call-2", name: "create_doc", arguments: { title: "Notes" }, sources: [] },
     ]);
     expect(harness.jobs.markCompleted).not.toHaveBeenCalled();
 
@@ -174,6 +174,23 @@ describe("AgentOrchestrator", () => {
     expect(harness.jobs.markAwaitingConfirmation).not.toHaveBeenCalled();
     expect(harness.jobs.markCompleted).toHaveBeenCalledWith("job-1");
   });
+
+  it("fails web research before the model when the stored capability is none", async () => {
+    const handle = vi.fn(async () => ({ results: [] }));
+    const harness = createHarness(handle);
+    await expect(
+      harness.orchestrator.execute(
+        job({ webResearch: true, webSearchCapability: "none" }),
+        run(),
+      ),
+    ).rejects.toBeInstanceOf(UnrecoverableError);
+    expect(harness.complete).not.toHaveBeenCalled();
+    expect(harness.jobs.markFailed).toHaveBeenCalledWith(
+      "job-1",
+      "web_search_unavailable",
+      "This agent cannot search the web.",
+    );
+  });
 });
 
 function createHarness(
@@ -234,6 +251,7 @@ function createHarness(
     registry,
     { allowedKeys: async () => allowed } as never,
     llm as LlmClient,
+    { publish: async () => undefined } as never,
   );
   return { orchestrator, runs, jobs, complete };
 }
@@ -247,6 +265,8 @@ function job(overrides?: Partial<JobRow>): JobRow {
     userMessageId: "message-1",
     status: "running",
     mode: "execute",
+    webResearch: false,
+    webSearchCapability: "none",
     idempotencyKey: "key-1",
     pendingToolCalls: null,
     confirmationDecision: null,
@@ -267,6 +287,9 @@ function run(overrides?: Partial<AgentRunRow>): AgentRunRow {
     attempt: 1,
     status: "running",
     model: "llama3.1:8b",
+    provider: "ollama",
+    webSearchCalls: null,
+    estimatedCostMicroUsd: null,
     outcomeText: null,
     promptTokens: 0,
     completionTokens: 0,
@@ -293,6 +316,8 @@ function message(role: string, content: string): ConversationMessageRow {
     content,
     toolCalls: null,
     toolCallId: null,
+    citations: null,
+    providerItems: null,
     createdAt: new Date(),
   };
 }

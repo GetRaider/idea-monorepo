@@ -2,6 +2,8 @@ import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from "@nestjs/commo
 import { UnrecoverableError, Worker } from "bullmq";
 
 import { env } from "../../../env/env";
+import { HOSTED_TIMEOUT_MS } from "../llm/openai-responses-llm-client";
+import { JobEventBus } from "../llm/job-event-bus";
 import { ConversationNamer } from "../conversations/conversation-namer";
 import { JobsRepository } from "../jobs/jobs.repository";
 import { MemoryQueue } from "../memories/memory-queue";
@@ -20,6 +22,7 @@ export class JobWorker implements OnModuleInit, OnModuleDestroy {
     private readonly orchestrator: AgentOrchestrator,
     private readonly memories: MemoryQueue,
     private readonly namer: ConversationNamer,
+    private readonly events: JobEventBus,
   ) {}
 
   onModuleInit(): void {
@@ -70,8 +73,12 @@ export class JobWorker implements OnModuleInit, OnModuleDestroy {
       jobId: running.id,
       attempt,
       model: env.ai.model,
+      provider: env.ai.provider,
       maxIterations: env.agent.maxIterations,
-      maxDurationMs: env.agent.maxDurationMs,
+      maxDurationMs:
+        running.webResearch && running.webSearchCapability === "native"
+          ? Math.max(env.agent.maxDurationMs, HOSTED_TIMEOUT_MS)
+          : env.agent.maxDurationMs,
       maxTokens: env.agent.maxTokens,
     });
 
@@ -81,6 +88,7 @@ export class JobWorker implements OnModuleInit, OnModuleDestroy {
       if (error instanceof UnrecoverableError) throw error;
       const message = error instanceof Error ? error.message : "worker_failed";
       await this.runs.fail(run.id, "worker_failed", message);
+      await this.events.publish(run.jobId, { type: "status", status: "failed" });
       throw error;
     } finally {
       await this.name(running.conversationId);

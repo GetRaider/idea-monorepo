@@ -19,9 +19,13 @@ export class ToolRegistry {
     return this.handlers.get(name);
   }
 
-  definitions(mode: "execute" | "ask" = "execute"): LlmToolDefinition[] {
+  definitions(
+    mode: "execute" | "ask" = "execute",
+    options?: { webSearchTool?: boolean },
+  ): LlmToolDefinition[] {
     return [...this.handlers.values()]
       .filter((handler) => mode === "execute" || handler.access === "read")
+      .filter((handler) => handler.name !== "web_search" || options?.webSearchTool === true)
       .map((handler) => ({
         name: handler.name,
         description: handler.description,

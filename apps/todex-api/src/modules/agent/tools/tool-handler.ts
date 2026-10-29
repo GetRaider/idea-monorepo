@@ -1,5 +1,7 @@
 import type { ZodType } from "zod";
 
+import type { MessageCitation } from "../../../db/schema";
+
 export interface ToolHandler {
   readonly name: string;
   readonly description: string;
@@ -15,4 +17,5 @@ export interface ToolHandlerInput {
   workspaceId: string;
   userId: string;
   args: unknown;
+  sources?: MessageCitation[];
 }

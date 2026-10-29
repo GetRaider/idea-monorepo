@@ -5,11 +5,17 @@ import { AGENT_CHUNK_EMBEDDING_DIMENSIONS } from "../../../db/schema";
 import { env } from "../../../env/env";
 import type { EmbeddingClient } from "./embedding-client";
 
+export function embeddingClientConfig(baseUrl: string): {
+  apiKey: string;
+  baseURL: string;
+} {
+  return { apiKey: "ollama", baseURL: baseUrl };
+}
+
 @Injectable()
 export class OpenAiCompatibleEmbeddingClient implements EmbeddingClient {
   private readonly client = new OpenAI({
-    apiKey: env.ai.apiKey || "ollama",
-    baseURL: env.ai.provider === "local" ? env.ai.baseUrl : undefined,
+    ...embeddingClientConfig(env.ai.baseUrl),
     timeout: 60_000,
     maxRetries: 1,
   });

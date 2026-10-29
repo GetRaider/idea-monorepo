@@ -7,6 +7,8 @@ import {
 import { randomUUID } from "crypto";
 
 import type { ConversationMessageRow, JobRow } from "../../../db/schema";
+import { env } from "../../../env/env";
+import { webSearchCapability } from "../llm/web-search-capability";
 import { ToolAllowsRepository } from "../allows/tool-allows.repository";
 import { AgentQueue } from "../queue/agent-queue";
 import { AgentRunsRepository } from "../runs/agent-runs.repository";
@@ -99,6 +101,13 @@ export class ConversationsService {
             userMessageId: message.id,
             idempotencyKey,
             mode: body.mode ?? "execute",
+            webResearch: body.webResearch ?? false,
+            webSearchCapability: webSearchCapability({
+              provider: env.ai.provider,
+              webSearch: env.ai.webSearch,
+              model: env.ai.model,
+              nativeSearchModels: env.ai.nativeSearchModels,
+            }),
           },
           tx,
         );
@@ -120,6 +129,8 @@ export class ConversationsService {
       id: job.id,
       conversationId: job.conversationId,
       status: job.status,
+      webResearch: job.webResearch,
+      webSearchCapability: job.webSearchCapability,
       errorCode: job.errorCode,
       errorMessage: job.errorMessage,
       pendingToolCalls: job.pendingToolCalls ?? [],
@@ -174,6 +185,7 @@ function toMessageResponse(message: ConversationMessageRow) {
     content: message.content,
     toolCalls: message.toolCalls,
     toolCallId: message.toolCallId,
+    citations: message.citations,
     position: message.position,
     jobId: message.jobId,
     agentRunId: message.agentRunId,

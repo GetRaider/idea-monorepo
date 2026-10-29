@@ -16,6 +16,14 @@ services:
       timeout: 5s
       retries: 5
 
+  searxng:
+    image: searxng/searxng:2026.10.29-cff884f98
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - ./searxng/settings.yml:/etc/searxng/settings.yml:ro
+
   redis:
     image: redis:7-alpine
     restart: unless-stopped

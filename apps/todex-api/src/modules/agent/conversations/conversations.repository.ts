@@ -11,7 +11,7 @@ import {
   type ConversationMessageRow,
   type ConversationRow,
 } from "../../../db/schema";
-import type { LlmToolCall } from "../llm/llm-client";
+import type { LlmToolCall, UrlCitation } from "../llm/llm-client";
 
 @Injectable()
 export class ConversationsRepository {
@@ -160,6 +160,8 @@ export class ConversationsRepository {
         content: input.content,
         toolCalls: input.toolCalls ?? null,
         toolCallId: input.toolCallId ?? null,
+        citations: input.citations ?? null,
+        providerItems: input.role === "assistant" ? input.providerItems ?? null : null,
         createdAt: new Date(),
       })
       .returning();
@@ -184,4 +186,6 @@ export interface NewConversationMessage {
   content: string;
   toolCalls?: LlmToolCall[] | null;
   toolCallId?: string | null;
+  citations?: UrlCitation[] | null;
+  providerItems?: unknown[] | null;
 }

@@ -10,6 +10,7 @@ import {
   type ConfirmationDecision,
   type JobRow,
   type PendingToolCall,
+  type WebSearchCapability,
 } from "../../../db/schema";
 
 @Injectable()
@@ -29,6 +30,8 @@ export class JobsRepository {
         userMessageId: input.userMessageId,
         status: "pending",
         mode: input.mode ?? "execute",
+        webResearch: input.webResearch ?? false,
+        webSearchCapability: input.webSearchCapability ?? "none",
         idempotencyKey: input.idempotencyKey,
         createdAt: now,
         updatedAt: now,
@@ -161,4 +164,6 @@ export interface NewJob {
   userMessageId: string;
   idempotencyKey: string;
   mode?: AgentMode;
+  webResearch?: boolean;
+  webSearchCapability?: WebSearchCapability;
 }

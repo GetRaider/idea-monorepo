@@ -33,11 +33,14 @@ pnpm dev
 
 ```bash
 REDIS_URL=redis://localhost:6379
-AI_PROVIDER=local
+AI_PROVIDER=ollama
 AI_MODEL=llama3.1:8b
 AI_EMBEDDING_MODEL=nomic-embed-text
 AI_BASE_URL=http://localhost:11434/v1
-AI_API_KEY=ollama
+```
+
+`AI_PROVIDER=openai` uses `AI_OPENAI_API_KEY` and `AI_MODEL` for chat. Embeddings stay on `AI_BASE_URL`. Web research is off unless the widget sends `webResearch: true`. Ollama search needs `AI_WEB_SEARCH=tool` and SearXNG from Compose on `127.0.0.1:8080`. An unset `AI_WEB_SEARCH` is `none` for Ollama and `native` for an OpenAI model listed in `AI_NATIVE_SEARCH_MODELS`.
+
 ```
 
 Sign in through the web app (`pnpm dev:todex` from the repo root) so the browser has a Better Auth session. Then, from that browser origin (`http://localhost:3002`):

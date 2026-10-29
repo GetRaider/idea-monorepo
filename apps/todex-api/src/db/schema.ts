@@ -639,6 +639,11 @@ export const jobs = pgTable(
     userMessageId: text("user_message_id").notNull(),
     status: agentJobStatusEnum("status").notNull(),
     mode: text("mode").$type<AgentMode>().notNull().default("execute"),
+    webResearch: boolean("web_research").notNull().default(false),
+    webSearchCapability: text("web_search_capability")
+      .$type<WebSearchCapability>()
+      .notNull()
+      .default("none"),
     idempotencyKey: text("idempotency_key").notNull(),
     pendingToolCalls: jsonb("pending_tool_calls").$type<
       PendingToolCall[] | null
@@ -675,9 +680,12 @@ export const agentRuns = pgTable(
     attempt: integer("attempt").notNull(),
     status: agentRunStatusEnum("status").notNull(),
     model: text("model").notNull(),
+    provider: text("provider").$type<AiProvider>().notNull().default("ollama"),
+    webSearchCalls: integer("web_search_calls"),
+    estimatedCostMicroUsd: integer("estimated_cost_micro_usd"),
     outcomeText: text("outcome_text"),
-    promptTokens: integer("prompt_tokens").notNull().default(0),
-    completionTokens: integer("completion_tokens").notNull().default(0),
+    promptTokens: integer("prompt_tokens"),
+    completionTokens: integer("completion_tokens"),
     iterationCount: integer("iteration_count").notNull().default(0),
     maxIterations: integer("max_iterations").notNull(),
     maxDurationMs: integer("max_duration_ms").notNull(),
@@ -710,6 +718,8 @@ export const conversationMessages = pgTable(
     content: text("content").notNull().default(""),
     toolCalls: jsonb("tool_calls"),
     toolCallId: text("tool_call_id"),
+    citations: jsonb("citations").$type<MessageCitation[] | null>(),
+    providerItems: jsonb("provider_items"),
     createdAt: timestamp("created_at")
       .$defaultFn(() => new Date())
       .notNull(),
@@ -858,6 +868,19 @@ export interface PendingToolCall {
   id: string;
   name: string;
   arguments: unknown;
+  sources?: MessageCitation[];
+}
+
+export type AiProvider = "ollama" | "openai";
+export type WebSearchCapability = "native" | "tool" | "none";
+
+export interface MessageCitation {
+  url: string;
+  title: string;
+  snippet?: string;
+  publishedAt?: string;
+  startIndex?: number;
+  endIndex?: number;
 }
 export type AgentRunRow = typeof agentRuns.$inferSelect;
 export type AgentToolExecutionRow = typeof agentToolExecutions.$inferSelect;

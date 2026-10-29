@@ -68,6 +68,18 @@ const AgentMessageSchema = z.object({
   content: z.string(),
   toolCalls: z.unknown().nullable(),
   toolCallId: z.string().nullable(),
+  citations: z
+    .array(
+      z.object({
+        url: z.string(),
+        title: z.string(),
+        snippet: z.string().optional(),
+        publishedAt: z.string().optional(),
+        startIndex: z.number().optional(),
+        endIndex: z.number().optional(),
+      }),
+    )
+    .nullable(),
   position: z.number(),
   jobId: z.string().nullable(),
   agentRunId: z.string().nullable(),
@@ -97,7 +109,21 @@ const AgentJobSchema = z.object({
   ]),
   pendingToolCalls: z
     .array(
-      z.object({ id: z.string(), name: z.string(), arguments: z.unknown() }),
+      z.object({
+        id: z.string(),
+        name: z.string(),
+        arguments: z.unknown(),
+        sources: z
+          .array(
+            z.object({
+              url: z.string(),
+              title: z.string(),
+              startIndex: z.number().optional(),
+              endIndex: z.number().optional(),
+            }),
+          )
+          .optional(),
+      }),
     )
     .default([]),
   errorCode: z.string().nullable(),
@@ -108,8 +134,8 @@ const AgentJobSchema = z.object({
       attempt: z.number(),
       status: z.string(),
       outcomeText: z.string().nullable(),
-      promptTokens: z.number(),
-      completionTokens: z.number(),
+      promptTokens: z.number().nullable(),
+      completionTokens: z.number().nullable(),
       iterationCount: z.number(),
       errorCode: z.string().nullable(),
       errorMessage: z.string().nullable(),
@@ -426,6 +452,7 @@ export const todexClient = {
         conversationId: string,
         message: string,
         mode: "execute" | "ask" = "execute",
+        webResearch = false,
       ) =>
         call(
           "post",
@@ -434,6 +461,7 @@ export const todexClient = {
           {
             message,
             mode,
+            webResearch,
           },
         ),
     },

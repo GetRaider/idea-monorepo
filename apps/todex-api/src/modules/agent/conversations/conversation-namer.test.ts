@@ -10,6 +10,8 @@ describe("ConversationNamer", () => {
       toolCalls: [],
       promptTokens: 1,
       completionTokens: 1,
+      model: "llama3.1:8b",
+      citations: [],
     }));
     const namer = new ConversationNamer(conversations as never, { complete });
 
@@ -21,7 +23,10 @@ describe("ConversationNamer", () => {
       "Add customer feedback doc",
     );
 
-    conversations.findConversation.mockResolvedValueOnce({ title: "Add customer feedback doc" });
+    conversations.findConversation.mockResolvedValueOnce({
+      id: "conversation-1",
+      title: "Add customer feedback doc",
+    });
     await namer.nameIfMissing("conversation-1");
     expect(complete).toHaveBeenCalledOnce();
   });
@@ -34,6 +39,8 @@ describe("ConversationNamer", () => {
         toolCalls: [],
         promptTokens: 1,
         completionTokens: 1,
+        model: "llama3.1:8b",
+        citations: [],
       })),
     });
 

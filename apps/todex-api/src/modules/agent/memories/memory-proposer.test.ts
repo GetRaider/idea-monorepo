@@ -11,6 +11,8 @@ describe("MemoryProposer", () => {
       toolCalls: [],
       promptTokens: 1,
       completionTokens: 1,
+      model: "llama3.1:8b",
+      citations: [],
     }));
     const proposer = new MemoryProposer(
       {
@@ -53,6 +55,8 @@ describe("MemoryProposer", () => {
           toolCalls: [],
           promptTokens: 1,
           completionTokens: 1,
+          model: "llama3.1:8b",
+          citations: [],
         })),
       },
     );
@@ -78,6 +82,8 @@ function message(role: string, content: string): ConversationMessageRow {
     content,
     toolCalls: null,
     toolCallId: null,
+    citations: null,
+    providerItems: null,
     createdAt: new Date(),
   };
 }

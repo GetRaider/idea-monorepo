@@ -2,6 +2,7 @@ import { BadRequestException, Injectable } from "@nestjs/common";
 import { DocType, FolderKind, emptyGoalDocBody } from "@repo/api/todex";
 import { z } from "zod";
 
+import type { MessageCitation } from "../../../db/schema";
 import { proseFromText } from "../../docs/prose-from-text";
 import { DocsService } from "../../docs/docs.service";
 import { FoldersService } from "../../folders/folders.service";
@@ -87,8 +88,9 @@ export class DocToolHandler {
               });
             }
           }),
-        handle: async ({ workspaceId, args }) => {
+        handle: async ({ workspaceId, args, sources }) => {
           const body = args as CreateDocArgs;
+          const input = { sources };
           const folderId = await this.resolveDocsFolderId(
             workspaceId,
             body.folderId,
@@ -99,8 +101,8 @@ export class DocToolHandler {
               type: DocType.COMMON,
               title: body.title,
               ...(folderId !== undefined ? { folderId } : {}),
-              ...(body.content !== undefined
-                ? { body: { content: proseFromText(body.content) } }
+              ...(body.content !== undefined || input.sources?.length
+                ? { body: { content: proseFromText(textWithSources(body.content, input.sources)) } }
                 : {}),
             });
           }
@@ -115,7 +117,7 @@ export class DocToolHandler {
               ? {
                   body: {
                     ...emptyGoalDocBody(),
-                    why: proseFromText(body.content),
+                    why: proseFromText(textWithSources(body.content, input.sources)),
                   },
                 }
               : {}),
@@ -137,7 +139,7 @@ export class DocToolHandler {
             linkedTaskIds: linkedTaskIdsSchema.optional(),
           })
           .strict(),
-        handle: async ({ workspaceId, args }) => {
+        handle: async ({ workspaceId, args, sources }) => {
           const body = args as UpdateDocArgs;
           if (
             body.title === undefined &&
@@ -167,8 +169,8 @@ export class DocToolHandler {
               ? {
                   body:
                     existing.type === DocType.GOAL
-                      ? { why: proseFromText(body.content) }
-                      : { content: proseFromText(body.content) },
+                      ? { why: proseFromText(textWithSources(body.content, sources)) }
+                      : { content: proseFromText(textWithSources(body.content, sources)) },
                 }
               : {}),
           });
@@ -219,6 +221,14 @@ export class DocToolHandler {
       `No docs folder named "${requested}". Docs folders: ${names}`,
     );
   }
+}
+
+function textWithSources(content: string | undefined, sources: MessageCitation[] | undefined): string {
+  const base = content ?? "";
+  const fresh = (sources ?? []).filter((source) => source.url && !base.includes(source.url));
+  if (fresh.length === 0) return base;
+  const lines = fresh.map((source) => `${source.title} ${source.url}`.trim());
+  return `${base}\n\nSources\n${lines.join("\n")}`.trim();
 }
 
 function sameFolderName(left: string, right: string): boolean {

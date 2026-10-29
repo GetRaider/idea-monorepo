@@ -12,8 +12,8 @@ import type {
 @Injectable()
 export class OpenAiCompatibleLlmClient implements LlmClient {
   private readonly client = new OpenAI({
-    apiKey: env.ai.apiKey || "ollama",
-    baseURL: env.ai.provider === "local" ? env.ai.baseUrl : undefined,
+    apiKey: "ollama",
+    baseURL: env.ai.baseUrl,
     timeout: 60_000,
     maxRetries: 1,
   });
@@ -21,6 +21,7 @@ export class OpenAiCompatibleLlmClient implements LlmClient {
   async complete(input: {
     messages: LlmMessage[];
     tools: { name: string; description: string; parameters: Record<string, unknown> }[];
+    onDelta?: (text: string) => void;
   }): Promise<LlmCompletion> {
     const response = await this.client.chat.completions.create({
       model: env.ai.model,
@@ -47,11 +48,17 @@ export class OpenAiCompatibleLlmClient implements LlmClient {
       ];
     });
 
+    const content = message?.content ?? "";
+    input.onDelta?.(content);
+    const usage = response.usage;
     return {
-      content: message?.content ?? "",
+      content,
       toolCalls,
-      promptTokens: response.usage?.prompt_tokens ?? 0,
-      completionTokens: response.usage?.completion_tokens ?? 0,
+      promptTokens: usage ? usage.prompt_tokens : null,
+      completionTokens: usage ? usage.completion_tokens : null,
+      webSearchCalls: null,
+      model: env.ai.model,
+      citations: [],
     };
   }
 }

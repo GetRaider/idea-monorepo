@@ -13,7 +13,7 @@ describe("ContextService", () => {
       message("m2", "job-1", "tool", "x".repeat(400), 1),
       message("m3", "job-2", "user", "Second turn", 2),
     ]);
-    const assembled = await context.assemble("conversation-1", "workspace-1", 80);
+    const assembled = await context.assemble("conversation-1", "workspace-1", 140);
 
     expect(listMessages).toHaveBeenCalledWith("conversation-1");
 
@@ -58,6 +58,24 @@ describe("ContextService", () => {
     expect(assembled.ok).toBe(true);
     if (!assembled.ok) return;
     expect(assembled.messages[0]?.content).toContain("This run cannot change workspace data");
+    expect(assembled.messages[0]?.content).toContain("Do not search the web");
+  });
+
+  it("adds the search line for the stored capability without copying the whole prompt", async () => {
+    const { context } = service([message("m1", "job-1", "user", "Hi", 0)]);
+    const native = await context.assemble("conversation-1", "workspace-1", 8000, "execute", {
+      webResearch: true,
+      capability: "native",
+    });
+    const tool = await context.assemble("conversation-1", "workspace-1", 8000, "execute", {
+      webResearch: true,
+      capability: "tool",
+    });
+    expect(native.ok && tool.ok).toBe(true);
+    if (!native.ok || !tool.ok) return;
+    expect(native.messages[0]?.content).toContain("Write tools pause until the user confirms");
+    expect(native.messages[0]?.content).toContain("You may search the web");
+    expect(tool.messages[0]?.content).toContain("You may call web_search");
   });
 
   it("drops a memory that does not fit and keeps the user message", async () => {
@@ -138,6 +156,8 @@ function message(
     content,
     toolCalls: null,
     toolCallId: null,
+    citations: null,
+    providerItems: null,
     createdAt: new Date(),
   };
 }

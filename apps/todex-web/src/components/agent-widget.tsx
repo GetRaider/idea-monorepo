@@ -10,8 +10,9 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import { Button, cn } from "@repo/ui";
+import { Button, cn, Tooltip, TooltipContent, TooltipTrigger } from "@repo/ui";
 
+import { env } from "@lib/env";
 import { todexClient } from "@lib/todex-client";
 
 export function AgentWidget() {
@@ -187,7 +188,10 @@ function AgentThread({
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState("");
   const [mode, setMode] = useState<"execute" | "ask">("execute");
+  const [webResearch, setWebResearch] = useState(false);
   const [jobId, setJobId] = useState<string | null>(null);
+  const lastSeq = useRef(0);
+  const [liveText, setLiveText] = useState("");
   const scrollerRef = useRef<HTMLDivElement>(null);
   const conversation = useQuery({
     queryKey: ["agent", "conversation", conversationId],
@@ -221,11 +225,16 @@ function AgentThread({
     onError: (error) => toast.error(readError(error)),
   });
   const postMessage = useMutation({
-    mutationFn: (input: { message: string; mode: "execute" | "ask" }) =>
+    mutationFn: (input: {
+      message: string;
+      mode: "execute" | "ask";
+      webResearch: boolean;
+    }) =>
       todexClient.agent.conversations.postMessage(
         conversationId,
         input.message,
         input.mode,
+        input.webResearch,
       ),
     onSuccess: async (accepted) => {
       setDraft("");
@@ -260,16 +269,38 @@ function AgentThread({
   }, [activeJobId, conversationId, jobStatus, queryClient]);
 
   useEffect(() => {
+    if (!jobId || (!working && !awaiting)) return;
+    if (working) setLiveText("");
+    const controller = new AbortController();
+    void readJobEvents(jobId, lastSeq, controller.signal, {
+      onDelta: (text) => setLiveText((current) => current + text),
+      onResync: () => {
+        setLiveText("");
+        void queryClient.invalidateQueries({ queryKey: ["agent", "job", jobId] });
+        void queryClient.invalidateQueries({
+          queryKey: ["agent", "conversation", conversationId],
+        });
+      },
+    });
+    return () => controller.abort();
+  }, [awaiting, conversationId, jobId, queryClient, working]);
+
+  useEffect(() => {
+    if (working) return;
+    setLiveText("");
+  }, [working]);
+
+  useEffect(() => {
     const scroller = scrollerRef.current;
     if (!scroller) return;
     scroller.scrollTop = scroller.scrollHeight;
-  }, [conversation.data?.messages, working]);
+  }, [conversation.data?.messages, working, liveText]);
 
   function onSubmit(event: FormEvent) {
     event.preventDefault();
     const message = draft.trim();
     if (!message || postMessage.isPending || working || awaiting) return;
-    postMessage.mutate({ message, mode });
+    postMessage.mutate({ message, mode, webResearch });
   }
 
   const title = conversationTitle(
@@ -311,7 +342,12 @@ function AgentThread({
         {conversation.data?.messages.map((message) => (
           <AgentMessage key={message.id} message={message} />
         ))}
-        {working ? (
+        {working && liveText ? (
+          <AgentMessage
+            message={{ id: "live", role: "assistant", content: liveText, toolCalls: null, citations: null }}
+          />
+        ) : null}
+        {working && !liveText ? (
           <p className="text-sm text-muted-foreground">Working…</p>
         ) : null}
         {awaiting ? (
@@ -321,6 +357,22 @@ function AgentThread({
               {(job.data?.pendingToolCalls ?? []).map((toolCall) => (
                 <li key={toolCall.id}>
                   {toolCall.name} {JSON.stringify(toolCall.arguments)}
+                  {(toolCall.sources ?? []).length > 0 ? (
+                    <ul className="mt-1 space-y-1">
+                      {toolCall.sources?.map((source) => (
+                        <li key={source.url}>
+                          <a
+                            href={source.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="break-all underline"
+                          >
+                            {source.title || source.url}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
                 </li>
               ))}
             </ul>
@@ -377,6 +429,7 @@ function AgentThread({
           className="w-full resize-none rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50"
         />
         <div className="mt-2 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
           <div className="flex rounded-md border border-border p-0.5 text-xs">
             {(["execute", "ask"] as const).map((option) => (
               <button
@@ -395,6 +448,39 @@ function AgentThread({
                 {option === "execute" ? "Execute" : "Ask"}
               </button>
             ))}
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              role="switch"
+              aria-checked={webResearch}
+              onClick={() => setWebResearch((current) => !current)}
+              className={cn(
+                "rounded px-2 py-1 text-xs",
+                webResearch
+                  ? "bg-white text-neutral-950"
+                  : "text-muted-foreground",
+              )}
+            >
+              Web Research
+            </button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  aria-label="About Web Research"
+                  className="rounded px-1 text-xs text-muted-foreground"
+                >
+                  ?
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                Allows Todex AI to search the internet and use external sources
+                alongside your Todex workspace context. When disabled, AI uses
+                only Todex context.
+              </TooltipContent>
+            </Tooltip>
+          </div>
           </div>
           <Button
             type="submit"
@@ -462,7 +548,7 @@ function AgentMessage({ message }: { message: AgentMessageView }) {
         )}
       >
         {message.content.trim() ? (
-          <p className="whitespace-pre-wrap break-words">{message.content}</p>
+          <MessageBody content={message.content} citations={message.citations} />
         ) : null}
         {names.length > 0 ? (
           <p
@@ -550,9 +636,200 @@ function TrashIcon() {
   );
 }
 
+function MessageBody({
+  content,
+  citations,
+}: {
+  content: string;
+  citations: UrlCitation[] | null;
+}) {
+  const spans = citationSpans(content, citations ?? []);
+  const unspanned = (citations ?? []).filter(
+    (citation) => citation.startIndex === undefined || citation.endIndex === undefined,
+  );
+  return (
+    <div>
+      {spans.length === 0 ? (
+        <p className="whitespace-pre-wrap break-words">{content}</p>
+      ) : (
+        <p className="whitespace-pre-wrap break-words">
+          {spans.map((span, index) =>
+            span.url ? (
+              <a
+                key={index}
+                href={span.url}
+                target="_blank"
+                rel="noreferrer"
+                className="break-all underline"
+              >
+                {span.text}
+              </a>
+            ) : (
+              <span key={index}>{span.text}</span>
+            ),
+          )}
+        </p>
+      )}
+      {unspanned.length > 0 ? (
+        <ul className="mt-2 space-y-1 text-xs">
+          {unspanned.map((citation) => (
+            <li key={citation.url}>
+              <a
+                href={citation.url}
+                target="_blank"
+                rel="noreferrer"
+                className="break-all underline"
+              >
+                {citation.title || citation.url}
+              </a>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
+
+function citationSpans(content: string, citations: UrlCitation[]): TextSpan[] {
+  const valid = citations
+    .filter(
+      (citation): citation is UrlCitation & { startIndex: number; endIndex: number } =>
+        citation.url.length > 0 &&
+        citation.startIndex !== undefined &&
+        citation.endIndex !== undefined &&
+        citation.startIndex >= 0 &&
+        citation.endIndex > citation.startIndex &&
+        citation.endIndex <= content.length,
+    )
+    .sort((left, right) => left.startIndex - right.startIndex);
+  if (valid.length === 0) return [];
+  const spans: TextSpan[] = [];
+  let cursor = 0;
+  for (const citation of valid) {
+    if (citation.startIndex < cursor) continue;
+    if (citation.startIndex > cursor) {
+      spans.push({ text: content.slice(cursor, citation.startIndex) });
+    }
+    spans.push({
+      text: content.slice(citation.startIndex, citation.endIndex),
+      url: citation.url,
+    });
+    cursor = citation.endIndex;
+  }
+  if (cursor < content.length) spans.push({ text: content.slice(cursor) });
+  return spans;
+}
+
+async function readJobEvents(
+  jobId: string,
+  lastSeq: { current: number },
+  signal: AbortSignal,
+  handlers: {
+    onDelta: (text: string) => void;
+    onResync: () => void;
+  },
+): Promise<void> {
+  let failures = 0;
+  while (!signal.aborted && failures < 4) {
+    try {
+      const response = await fetch(
+        `${env.api.baseUrl}/v1/agent/jobs/${jobId}/events?after=${lastSeq.current}`,
+        {
+          credentials: "include",
+          signal,
+          headers: { Accept: "text/event-stream" },
+        },
+      );
+      if (!response.ok || !response.body) throw new Error("stream");
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let terminal = false;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const chunks = buffer.split("\n\n");
+        buffer = chunks.pop() ?? "";
+        for (const chunk of chunks) {
+          const parsed = readStreamEvent(chunk);
+          if (!parsed) continue;
+          if (parsed.event === "resync") {
+            handlers.onResync();
+            return;
+          }
+          if (parsed.seq !== undefined && parsed.seq <= lastSeq.current) continue;
+          if (parsed.seq !== undefined) lastSeq.current = parsed.seq;
+          if (parsed.event === "delta" && parsed.text) handlers.onDelta(parsed.text);
+          if (
+            parsed.event === "status" &&
+            (parsed.status === "completed" ||
+              parsed.status === "failed" ||
+              parsed.status === "awaiting_confirmation")
+          ) {
+            terminal = true;
+          }
+        }
+      }
+      if (terminal || signal.aborted) return;
+      failures += 1;
+    } catch {
+      if (signal.aborted) return;
+      failures += 1;
+    }
+    if (failures >= 4) {
+      handlers.onResync();
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  }
+}
+
+function readStreamEvent(chunk: string): {
+  event: string;
+  seq?: number;
+  text?: string;
+  status?: string;
+} | null {
+  let event = "message";
+  const data: string[] = [];
+  for (const line of chunk.split("\n")) {
+    if (line.startsWith("event:")) event = line.slice(6).trim();
+    if (line.startsWith("data:")) data.push(line.slice(5).trim());
+  }
+  try {
+    const parsed = JSON.parse(data.join("\n")) as {
+      text?: unknown;
+      status?: unknown;
+      seq?: unknown;
+    };
+    return {
+      event,
+      ...(typeof parsed.seq === "number" ? { seq: parsed.seq } : {}),
+      ...(typeof parsed.text === "string" ? { text: parsed.text } : {}),
+      ...(typeof parsed.status === "string" ? { status: parsed.status } : {}),
+    };
+  } catch {
+    return null;
+  }
+}
+
 interface AgentMessageView {
   id: string;
   role: string;
   content: string;
   toolCalls: unknown;
+  citations: UrlCitation[] | null;
+}
+
+interface UrlCitation {
+  url: string;
+  title: string;
+  startIndex?: number;
+  endIndex?: number;
+}
+
+interface TextSpan {
+  text: string;
+  url?: string;
 }

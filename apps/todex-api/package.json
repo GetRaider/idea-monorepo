@@ -34,7 +34,7 @@
     "drizzle-orm": "catalog:",
     "express": "catalog:",
     "ioredis": "catalog:",
-    "openai": "4.73.0",
+    "openai": "7.45.1",
     "pg": "catalog:",
     "reflect-metadata": "catalog:",
     "rxjs": "catalog:",

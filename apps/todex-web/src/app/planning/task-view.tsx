@@ -129,7 +129,7 @@ export function TaskView() {
   if (openedEpic) {
     return (
       <OpenedEpicView
-        spaceName={openedEpic.spaceName}
+        spaceId={openedEpic.spaceId}
         epicId={openedEpic.epicId}
         isLargeScreen={isLargeScreen}
         mode={mode}
@@ -193,7 +193,7 @@ export function TaskView() {
             spaceName={spaceName}
             boardHref={
               board
-                ? tasksUrlHelper.routing.buildBoardUrl(board.name)
+                ? tasksUrlHelper.routing.buildBoardUrl(board.id)
                 : undefined
             }
             taskKey={selectedTask.taskKey}
@@ -286,7 +286,7 @@ export function TaskView() {
 }
 
 function OpenedEpicView({
-  spaceName,
+  spaceId,
   epicId,
   isLargeScreen,
   mode,
@@ -294,7 +294,7 @@ function OpenedEpicView({
   onMode,
   onWidth,
 }: {
-  spaceName: string;
+  spaceId: string;
   epicId: string;
   isLargeScreen: boolean;
   mode: TaskViewMode;
@@ -303,6 +303,7 @@ function OpenedEpicView({
   onWidth: (width: number) => void;
 }) {
   const {
+    state: { boards },
     actions: { setSelectedTaskId },
   } = useTasks();
   const isDocked = isLargeScreen && mode === "docked";
@@ -310,7 +311,9 @@ function OpenedEpicView({
     queryKey: ["epic", epicId],
     queryFn: () => todexClient.epics.get(epicId),
   });
-  const spaceHref = tasksUrlHelper.routing.buildBoardUrl(spaceName);
+  const spaceName =
+    boards.find((board) => board.id === spaceId)?.name ?? "Space";
+  const spaceHref = tasksUrlHelper.routing.buildBoardUrl(spaceId);
 
   function close() {
     setSelectedTaskId(null);
@@ -1506,7 +1509,7 @@ function openedEpicFromPathname(pathname: string) {
   );
   if (!parsed || parsed.kind !== "epic") return null;
   return {
-    spaceName: parsed.spaceName,
+    spaceId: parsed.spaceId,
     epicId: decodeURIComponent(parsed.epicId),
   };
 }

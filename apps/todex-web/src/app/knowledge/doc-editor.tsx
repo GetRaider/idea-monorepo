@@ -211,10 +211,8 @@ function crumbsForDoc(
   if (folder) {
     crumbs.push({
       label: folder.name,
-      href: `/knowledge/folder/${folder.id}`,
+      href: `/knowledge/space/${doc.spaceId}/folder/${folder.id}`,
     });
-  } else {
-    crumbs.push({ label: "General", href: "/knowledge/general" });
   }
   crumbs.push({ label: doc.docKey });
   return crumbs;

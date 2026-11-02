@@ -13,7 +13,7 @@ import type {
 } from "@repo/api/todex";
 
 import { mapCalendarEventTemplate } from "../../db/mappers";
-import { calendarEventTemplates, tasks } from "../../db/schema";
+import { calendarEventTemplates, spaces, tasks } from "../../db/schema";
 import { DRIZZLE_DB } from "../../db/tokens";
 
 @Injectable()
@@ -31,6 +31,7 @@ export class CalendarTemplatesService {
 
   async create(workspaceId: string, body: CreateCalendarEventTemplateBody) {
     await this.requireTasks(workspaceId, body.taskScope ?? []);
+    if (body.spaceId) await this.requireSpace(workspaceId, body.spaceId);
     const now = new Date();
     const [created] = await this.db
       .insert(calendarEventTemplates)
@@ -41,6 +42,7 @@ export class CalendarTemplatesService {
         durationMinutes: body.durationMinutes,
         color: body.color ?? null,
         description: body.description ?? "",
+        spaceId: body.spaceId ?? null,
         taskScope: body.taskScope ?? [],
         createdAt: now,
         updatedAt: now,
@@ -57,6 +59,7 @@ export class CalendarTemplatesService {
   ) {
     await this.require(workspaceId, templateId);
     if (body.taskScope) await this.requireTasks(workspaceId, body.taskScope);
+    if (body.spaceId) await this.requireSpace(workspaceId, body.spaceId);
     const [updated] = await this.db
       .update(calendarEventTemplates)
       .set({
@@ -69,6 +72,7 @@ export class CalendarTemplatesService {
           ? { description: body.description }
           : {}),
         ...(body.taskScope !== undefined ? { taskScope: body.taskScope } : {}),
+        ...(body.spaceId !== undefined ? { spaceId: body.spaceId } : {}),
         updatedAt: new Date(),
       })
       .where(eq(calendarEventTemplates.id, templateId))
@@ -96,6 +100,15 @@ export class CalendarTemplatesService {
       );
     if (!row) throw new NotFoundException("Calendar template");
     return row;
+  }
+
+  private async requireSpace(workspaceId: string, spaceId: string) {
+    const [space] = await this.db
+      .select({ id: spaces.id })
+      .from(spaces)
+      .where(and(eq(spaces.id, spaceId), eq(spaces.workspaceId, workspaceId)))
+      .limit(1);
+    if (!space) throw new NotFoundException("Space");
   }
 
   private async requireTasks(workspaceId: string, taskIds: string[]) {

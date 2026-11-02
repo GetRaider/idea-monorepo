@@ -25,6 +25,8 @@ import { KnowledgeSearch } from "../src/modules/mcp/knowledge-search";
 import { McpAuthService } from "../src/modules/mcp/mcp-auth";
 import { McpHttp } from "../src/modules/mcp/mcp-http";
 import { TaskContextService } from "../src/modules/mcp/task-context.service";
+import { RelationsService } from "../src/modules/relations/relations.service";
+import { SpaceFoldersService } from "../src/modules/folders/space-folders.service";
 import { SpacesService } from "../src/modules/spaces/spaces.service";
 import { TasksService } from "../src/modules/tasks/tasks.service";
 import { WorkspaceService } from "../src/modules/workspace/workspace.service";
@@ -49,16 +51,29 @@ describe("MCP server (e2e)", () => {
 
   beforeAll(async () => {
     const workspaceService = new WorkspaceService(database);
-    const docs = new DocsService(database, workspaceService);
-    const spaces = new SpacesService(database, workspaceService);
-    const epics = new EpicsService(database, spaces);
-    const tasksService = new TasksService(database, spaces, epics, workspaceService);
+    const relations = new RelationsService(database);
+    const docs = new DocsService(database, workspaceService, relations);
+    const spaces = new SpacesService(
+      database,
+      workspaceService,
+      new SpaceFoldersService(database, workspaceService),
+      relations,
+    );
+    const epics = new EpicsService(database, spaces, relations);
+    const tasksService = new TasksService(
+      database,
+      spaces,
+      epics,
+      relations,
+      workspaceService,
+    );
     const chunks = new ChunksRepository(database);
     const embeddings = { embed: async () => [] as number[][] };
     const results = new ExecutionResultsService(database);
     const mcp = new McpHttp(
       new McpAuthService(database),
       docs,
+      relations,
       tasksService,
       spaces,
       new KnowledgeSearch(chunks, embeddings),
@@ -66,6 +81,7 @@ describe("MCP server (e2e)", () => {
         database,
         tasksService,
         docs,
+        relations,
         epics,
         results,
         chunks,
@@ -102,6 +118,7 @@ describe("MCP server (e2e)", () => {
     const goal = await docs.create(workspaceId, {
       type: DocType.GOAL,
       title: "Ship MCP",
+      spaceId,
     });
     goalId = goal.id;
     const otherSpace = await spaces.create(otherWorkspaceId, { name: "Other" });
@@ -115,6 +132,7 @@ describe("MCP server (e2e)", () => {
     const foreignDoc = await docs.create(otherWorkspaceId, {
       type: DocType.COMMON,
       title: "Foreign doc",
+      spaceId: otherSpace.id,
     });
     otherDocId = foreignDoc.id;
 

@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 
+import { RelationsModule } from "../relations/relations.module";
 import { WorkspaceModule } from "../workspace/workspace.module";
 import { CalendarEventsService } from "./calendar-events.service";
 import {
@@ -11,7 +12,7 @@ import { CalendarTemplatesService } from "./calendar-templates.service";
 import { GoogleCalendarService } from "./google-calendar.service";
 
 @Module({
-  imports: [WorkspaceModule],
+  imports: [WorkspaceModule, RelationsModule],
   controllers: [
     CalendarEventsController,
     CalendarTemplatesController,

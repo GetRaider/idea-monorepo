@@ -9,8 +9,10 @@ import { and, asc, eq, gte, inArray, isNull, lt, sql } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import {
+  collectHtmlMentions,
   completeRecurringTask,
   DocType,
+  RelationEntityType,
   readTaskRecurrence,
   sumIntervalSeconds,
   TaskPriority,
@@ -41,6 +43,7 @@ import {
 import { sanitizeTaskHtml } from "../../helpers/sanitize-task-html.helper";
 import { EpicsService } from "../epics/epics.service";
 import { resolveTaskEpicLink } from "../epics/task-epic-link";
+import { RelationsService } from "../relations/relations.service";
 import { SpacesService } from "../spaces/spaces.service";
 import { ContentIndexQueue } from "../content-index/content-index.queue";
 import { WorkspaceService } from "../workspace/workspace.service";
@@ -52,6 +55,7 @@ export class TasksService {
     @Inject(DRIZZLE_DB) private readonly db: NodePgDatabase,
     private readonly spacesService: SpacesService,
     private readonly epicsService: EpicsService,
+    private readonly relations: RelationsService,
     private readonly workspaceService: WorkspaceService,
     @Optional() private readonly contentIndex?: ContentIndexQueue,
   ) {}
@@ -131,6 +135,13 @@ export class TasksService {
     });
 
     if (!created) throw new ForbiddenException();
+    await this.relations.replaceReferences(
+      this.db,
+      workspaceId,
+      "task",
+      created.id,
+      collectHtmlMentions(created.description),
+    );
     await this.scheduleIndex(workspaceId, created.id);
     return mapTask(created);
   }
@@ -203,6 +214,15 @@ export class TasksService {
         .returning();
       if (row && completion.spawn) {
         await this.insertNextOccurrence(tx, row, completion.spawn);
+      }
+      if (row && body.description !== undefined) {
+        await this.relations.replaceReferences(
+          tx,
+          workspaceId,
+          "task",
+          row.id,
+          collectHtmlMentions(row.description),
+        );
       }
       if (row && body.goalId !== undefined) {
         await this.writeTaskGoal(tx, workspaceId, row.id, body.goalId);
@@ -294,7 +314,13 @@ export class TasksService {
 
   async remove(workspaceId: string, taskId: string) {
     const existing = await this.requireTaskInWorkspace(workspaceId, taskId);
-    await this.db.delete(tasks).where(eq(tasks.id, existing.id));
+    const familyIds = await this.descendantIds(existing.id);
+    await this.db.transaction(async (tx) => {
+      await this.relations.deleteTouching(tx, workspaceId, [
+        { type: RelationEntityType.TASK, ids: familyIds },
+      ]);
+      await tx.delete(tasks).where(eq(tasks.id, existing.id));
+    });
     if (!existing.parentTaskId) {
       const ids = (
         await this.rootIds(workspaceId, existing.spaceId, existing.status)
@@ -460,6 +486,20 @@ export class TasksService {
     await tx.delete(docTasks).where(eq(docTasks.taskId, taskId));
     if (!goalId) return;
     await tx.insert(docTasks).values({ docId: goalId, taskId });
+  }
+
+  private async descendantIds(taskId: string) {
+    const ids = [taskId];
+    let frontier = [taskId];
+    while (frontier.length > 0) {
+      const children = await this.db
+        .select({ id: tasks.id })
+        .from(tasks)
+        .where(inArray(tasks.parentTaskId, frontier));
+      frontier = children.map((child) => child.id);
+      ids.push(...frontier);
+    }
+    return ids;
   }
 
   private async requireTaskInWorkspace(workspaceId: string, taskId: string) {

@@ -8,6 +8,7 @@ export const SpaceSchema = z.object({
   id: z.string(),
   workspaceId: z.string(),
   folderId: z.string().nullable(),
+  isInbox: z.boolean(),
   name: z.string(),
   emoji: z.string().nullable(),
   createdAt: IsoDateTimeSchema,

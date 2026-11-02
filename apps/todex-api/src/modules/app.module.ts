@@ -16,6 +16,7 @@ import { CalendarModule } from "./calendar/calendar.module";
 import { DocsModule } from "./docs/docs.module";
 import { ExecutionModule } from "./execution/execution.module";
 import { FoldersModule } from "./folders/folders.module";
+import { RelationsModule } from "./relations/relations.module";
 import { HealthController } from "./health/health.controller";
 import { EpicsModule } from "./epics/epics.module";
 import { TasksModule } from "./tasks/tasks.module";
@@ -33,6 +34,7 @@ import { WorkspaceModule } from "./workspace/workspace.module";
     }),
     WorkspaceModule,
     FoldersModule,
+    RelationsModule,
     DocsModule,
     ExecutionModule,
     CalendarModule,

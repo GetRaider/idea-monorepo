@@ -89,8 +89,8 @@ export function mentionHref(input: MentionHrefInput): string | null {
   if (input.targetType === DocMentionTarget.EVENT) {
     return `/calendar/events/${input.targetId}`;
   }
-  if (!input.taskKey || !input.spaceName) return null;
-  return tasksUrlHelper.routing.buildBoardUrl(input.spaceName, input.taskKey);
+  if (!input.taskKey || !input.spaceId) return null;
+  return tasksUrlHelper.routing.buildBoardUrl(input.spaceId, input.taskKey);
 }
 
 function parseMentionQuery(query: string): ParsedMentionQuery {
@@ -167,7 +167,7 @@ interface MentionHrefInput {
   targetType: MentionCandidate["targetType"];
   targetId: string;
   taskKey?: string;
-  spaceName?: string;
+  spaceId?: string;
 }
 
 interface ParsedMentionQuery {

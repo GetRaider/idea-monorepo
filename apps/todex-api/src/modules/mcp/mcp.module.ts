@@ -4,6 +4,7 @@ import { ChunksRepository } from "../agent/chunks/chunks.repository";
 import { EMBEDDING_CLIENT } from "../agent/llm/embedding-client";
 import { OpenAiCompatibleEmbeddingClient } from "../agent/llm/openai-compatible-embedding-client";
 import { DocsModule } from "../docs/docs.module";
+import { RelationsModule } from "../relations/relations.module";
 import { EpicsModule } from "../epics/epics.module";
 import { SpacesModule } from "../spaces/spaces.module";
 import { TasksModule } from "../tasks/tasks.module";
@@ -14,7 +15,7 @@ import { McpHttp } from "./mcp-http";
 import { TaskContextService } from "./task-context.service";
 
 @Module({
-  imports: [DocsModule, TasksModule, SpacesModule, EpicsModule],
+  imports: [DocsModule, TasksModule, SpacesModule, EpicsModule, RelationsModule],
   providers: [
     ChunksRepository,
     OpenAiCompatibleEmbeddingClient,

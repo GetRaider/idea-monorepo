@@ -15,12 +15,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { TaskStatus } from "@repo/api/todex";
 import type {
-  Folder,
   MoveTaskBody,
   Task,
   Space,
-  UpdateFolderBody,
+  SpaceFolder,
   UpdateSpaceBody,
+  UpdateSpaceFolderBody,
   UpdateTaskBody,
 } from "@repo/api/todex";
 
@@ -31,7 +31,6 @@ import {
   applyRootMove,
   groupRootsByStatus,
   projectCompletedTask,
-  INBOX_BOARD_NAME,
   localDayScheduleQuery,
   nestTasks,
   type NestedTask,
@@ -66,8 +65,8 @@ export function TasksProvider({ children }: { children: ReactNode }) {
   >(null);
 
   const foldersQuery = useQuery({
-    queryKey: ["folders"],
-    queryFn: () => todexClient.folders.list(),
+    queryKey: ["space-folders"],
+    queryFn: () => todexClient.spaceFolders.list(),
   });
   const boardsQuery = useQuery({
     queryKey: ["boards"],
@@ -86,7 +85,7 @@ export function TasksProvider({ children }: { children: ReactNode }) {
       ? localDayScheduleQuery(view.schedule === "today" ? 0 : 1)
       : null;
   const inboxBoardId =
-    boards.find((board) => board.name === INBOX_BOARD_NAME)?.id ?? null;
+    boards.find((board) => board.isInbox)?.id ?? null;
   const resolvedScheduleBoardId =
     (scheduleTargetBoardId &&
     boards.some((board) => board.id === scheduleTargetBoardId)
@@ -228,15 +227,14 @@ export function TasksProvider({ children }: { children: ReactNode }) {
   };
 
   const invalidateSpaces = () => {
-    void queryClient.invalidateQueries({ queryKey: ["folders"] });
+    void queryClient.invalidateQueries({ queryKey: ["space-folders"] });
     void queryClient.invalidateQueries({ queryKey: ["boards"] });
   };
 
   const createFolder = useMutation({
-    mutationFn: (name: string) =>
-      todexClient.folders.create({ name, kind: "tasks" }),
+    mutationFn: (name: string) => todexClient.spaceFolders.create({ name }),
     onSuccess: (folder) => {
-      queryClient.setQueryData<Folder[]>(["folders"], (current) =>
+      queryClient.setQueryData<SpaceFolder[]>(["space-folders"], (current) =>
         current ? [...current, folder] : [folder],
       );
       toast.success(`Folder "${folder.name}" created`);
@@ -245,8 +243,8 @@ export function TasksProvider({ children }: { children: ReactNode }) {
   });
 
   const updateFolder = useMutation({
-    mutationFn: (input: { folderId: string; body: UpdateFolderBody }) =>
-      todexClient.folders.update(input.folderId, input.body),
+    mutationFn: (input: { folderId: string; body: UpdateSpaceFolderBody }) =>
+      todexClient.spaceFolders.update(input.folderId, input.body),
     onSuccess: (folder) => {
       invalidateSpaces();
       toast.success(`Folder "${folder.name}" saved`);
@@ -255,7 +253,7 @@ export function TasksProvider({ children }: { children: ReactNode }) {
   });
 
   const removeFolder = useMutation({
-    mutationFn: (folderId: string) => todexClient.folders.remove(folderId),
+    mutationFn: (folderId: string) => todexClient.spaceFolders.remove(folderId),
     onSuccess: () => {
       invalidateSpaces();
       toast.success("Folder deleted");
@@ -279,7 +277,7 @@ export function TasksProvider({ children }: { children: ReactNode }) {
       );
       if (input.quiet) return;
       toast.success(`Space "${board.name}" created`);
-      router.push(tasksUrlHelper.routing.buildBoardUrl(board.name));
+      router.push(tasksUrlHelper.routing.buildBoardUrl(board.id));
     },
     onError: (_error, input) => {
       if (input.quiet) didEnsureInboxRef.current = false;
@@ -290,14 +288,21 @@ export function TasksProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const currentBoards = boardsQuery.data ?? [];
     if (boardsQuery.isLoading || boardsQuery.isError) return;
-    if (currentBoards.some((board) => board.name === INBOX_BOARD_NAME)) return;
+    if (currentBoards.some((board) => board.isInbox)) return;
     if (didEnsureInboxRef.current) return;
     didEnsureInboxRef.current = true;
-    createBoard.mutate({
-      name: INBOX_BOARD_NAME,
-      folderId: null,
-      quiet: true,
-    });
+    void todexClient.spaces
+      .ensureInbox()
+      .then((board) => {
+        queryClient.setQueryData<Space[]>(["boards"], (current) => {
+          const boards = current ?? [];
+          if (boards.some((item) => item.id === board.id)) return boards;
+          return [...boards, board];
+        });
+      })
+      .catch(() => {
+        didEnsureInboxRef.current = false;
+      });
   }, [
     boardsQuery.data,
     boardsQuery.isError,
@@ -319,10 +324,7 @@ export function TasksProvider({ children }: { children: ReactNode }) {
       toast.success(`Space "${board.name}" saved`);
       if (selectedBoardId === board.id) {
         router.replace(
-          tasksUrlHelper.routing.buildBoardUrl(
-            board.name,
-            selectedTask?.taskKey,
-          ),
+          tasksUrlHelper.routing.buildBoardUrl(board.id, selectedTask?.taskKey),
         );
       }
     },
@@ -678,7 +680,7 @@ function clearRecurrenceOnCancel(
 
 function hrefForTasksView(view: TasksView, taskKey?: string): string | null {
   if (view.kind === "board") {
-    return tasksUrlHelper.routing.buildBoardUrl(view.spaceName, taskKey);
+    return tasksUrlHelper.routing.buildBoardUrl(view.spaceId, taskKey);
   }
   if (view.kind === "schedule") {
     return tasksUrlHelper.routing.buildScheduleUrl(view.schedule, taskKey);
@@ -694,18 +696,18 @@ function resolveTasksView(pathname: string, boards: Space[]): TasksView {
   if (activeView === TASKS_ROOT_VIEW_ID || activeView === "") {
     return { kind: "root" };
   }
-  const board = boards.find((item) => item.name === activeView);
-  return { kind: "board", spaceId: board?.id ?? null, spaceName: activeView };
+  const board = boards.find((item) => item.id === activeView);
+  return { kind: "board", spaceId: board?.id ?? activeView };
 }
 
 export type TasksView =
   | { kind: "root" }
-  | { kind: "board"; spaceId: string | null; spaceName: string }
+  | { kind: "board"; spaceId: string }
   | { kind: "schedule"; schedule: "today" | "tomorrow" };
 
 interface TasksContextValue {
   state: {
-    folders: Folder[];
+    folders: SpaceFolder[];
     boards: Space[];
     tasks: Task[];
     groups: Record<Task["status"], NestedTask[]>;
@@ -731,8 +733,11 @@ interface TasksContextValue {
     setScheduleTargetBoardId: (spaceId: string) => void;
     openCreateDialog: () => void;
     closeCreateDialog: () => void;
-    createFolder: (name: string) => Promise<Folder>;
-    updateFolder: (folderId: string, body: UpdateFolderBody) => Promise<Folder>;
+    createFolder: (name: string) => Promise<SpaceFolder>;
+    updateFolder: (
+      folderId: string,
+      body: UpdateSpaceFolderBody,
+    ) => Promise<SpaceFolder>;
     removeFolder: (folderId: string) => Promise<void>;
     createBoard: (name: string, folderId: string | null) => Promise<Space>;
     updateBoard: (spaceId: string, body: UpdateSpaceBody) => Promise<Space>;

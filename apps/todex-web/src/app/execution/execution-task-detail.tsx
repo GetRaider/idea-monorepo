@@ -11,7 +11,7 @@ import { STATUS_LABEL } from "../planning/task-helpers";
 
 export function ExecutionTaskDetail({ task }: { task: ExecutionCurrent }) {
   const taskHref = tasksUrlHelper.routing.buildBoardUrl(
-    task.spaceName,
+    task.spaceId,
     task.taskKey,
   );
   const description = hasText(task.description) ? task.description : null;

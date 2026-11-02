@@ -7,6 +7,7 @@ import {
   type FormEvent,
   type ReactNode,
 } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   Button,
   ConfirmDialog,
@@ -20,7 +21,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@repo/ui";
-import type { Folder, Space } from "@repo/api/todex";
+import type { Space, SpaceFolder } from "@repo/api/todex";
+
+import { todexClient } from "@lib/todex-client";
 
 import { useTasks } from "./tasks-provider";
 
@@ -37,10 +40,10 @@ export function SpaceDialogsProvider({ children }: { children: ReactNode }) {
         openRenameBoard: (board) => setDialog({ kind: "renameBoard", board }),
         openMoveBoard: (board) => setDialog({ kind: "moveBoard", board }),
         openDeleteBoard: (board) => setDialog({ kind: "deleteBoard", board }),
-        openRenameFolder: (folder) =>
-          setDialog({ kind: "renameFolder", folder }),
-        openDeleteFolder: (folder) =>
-          setDialog({ kind: "deleteFolder", folder }),
+        openRenameSpaceFolder: (folder) =>
+          setDialog({ kind: "renameSpaceFolder", folder }),
+        openDeleteSpaceFolder: (folder) =>
+          setDialog({ kind: "deleteSpaceFolder", folder }),
       }}
     >
       {children}
@@ -97,17 +100,15 @@ function SpaceDialogsHost({ dialog, onClose }: SpaceDialogsHostProps) {
 
   if (dialog?.kind === "deleteBoard") {
     return (
-      <ConfirmDialog
-        title="Delete space"
-        description={`Delete space "${dialog.board.name}" and all its tasks?`}
-        confirmLabel="Delete"
+      <DeleteSpaceDialog
+        board={dialog.board}
         onClose={onClose}
         onConfirm={() => removeBoard(dialog.board.id)}
       />
     );
   }
 
-  if (dialog?.kind === "renameFolder") {
+  if (dialog?.kind === "renameSpaceFolder") {
     return (
       <NameDialog
         title="Rename folder"
@@ -118,11 +119,11 @@ function SpaceDialogsHost({ dialog, onClose }: SpaceDialogsHostProps) {
     );
   }
 
-  if (dialog?.kind === "deleteFolder") {
+  if (dialog?.kind === "deleteSpaceFolder") {
     return (
       <ConfirmDialog
         title="Delete folder"
-        description={`Delete folder "${dialog.folder.name}"? Spaces inside it stay and move to the root.`}
+        description={`Delete folder "${dialog.folder.name}"? Spaces inside it stay and have no folder.`}
         confirmLabel="Delete"
         onClose={onClose}
         onConfirm={() => removeFolder(dialog.folder.id)}
@@ -133,19 +134,48 @@ function SpaceDialogsHost({ dialog, onClose }: SpaceDialogsHostProps) {
   return null;
 }
 
+function DeleteSpaceDialog({
+  board,
+  onClose,
+  onConfirm,
+}: {
+  board: Space;
+  onClose: () => void;
+  onConfirm: () => Promise<void>;
+}) {
+  const previewQuery = useQuery({
+    queryKey: ["space-deletion", board.id],
+    queryFn: () => todexClient.spaces.deletionPreview(board.id),
+  });
+  const preview = previewQuery.data;
+  const counts = preview
+    ? `${preview.tasks} tasks, ${preview.goals} goals, ${preview.documents} documents, ${preview.epics} epics, ${preview.docFolders} document folders`
+    : "its tasks, goals, documents, epics, and document folders";
+
+  return (
+    <ConfirmDialog
+      title="Delete space"
+      description={`Delete space "${board.name}" and ${counts}? Calendar events and templates stay and lose this space.`}
+      confirmLabel="Delete"
+      onClose={onClose}
+      onConfirm={onConfirm}
+    />
+  );
+}
+
 function CreateSpaceDialog({
   onClose,
   folders,
 }: {
   onClose: () => void;
-  folders: Folder[];
+  folders: SpaceFolder[];
 }) {
   const {
     actions: { createFolder, createBoard },
   } = useTasks();
   const [kind, setKind] = useState<"board" | "folder">("board");
   const [name, setName] = useState("");
-  const [folderId, setFolderId] = useState("");
+  const [folderId, setSpaceFolderId] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const submit = async (event: FormEvent) => {
@@ -193,19 +223,19 @@ function CreateSpaceDialog({
             onChange={(event) => setName(event.target.value)}
           />
         </Field>
-        {kind === "board" && folders.length > 0 ? (
+        {kind === "board" ? (
           <Field label="Folder">
             <Select
               value={folderId || "root"}
               onValueChange={(value) =>
-                setFolderId(value === "root" ? "" : value)
+                setSpaceFolderId(value === "root" ? "" : value)
               }
             >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="z-[5000]">
-                <SelectItem value="root">Root</SelectItem>
+                <SelectItem value="root">No Folder</SelectItem>
                 {folders.map((folder) => (
                   <SelectItem key={folder.id} value={folder.id}>
                     {folder.name}
@@ -284,11 +314,11 @@ function MoveBoardDialog({
   onSubmit,
 }: {
   board: Space;
-  folders: Folder[];
+  folders: SpaceFolder[];
   onClose: () => void;
   onSubmit: (folderId: string | null) => Promise<unknown>;
 }) {
-  const [folderId, setFolderId] = useState(board.folderId ?? "");
+  const [folderId, setSpaceFolderId] = useState(board.folderId ?? "");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const submit = async (event: FormEvent) => {
@@ -309,14 +339,14 @@ function MoveBoardDialog({
           <Select
             value={folderId || "root"}
             onValueChange={(value) =>
-              setFolderId(value === "root" ? "" : value)
+              setSpaceFolderId(value === "root" ? "" : value)
             }
           >
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="z-[5000]">
-              <SelectItem value="root">Root</SelectItem>
+              <SelectItem value="root">No Folder</SelectItem>
               {folders.map((folder) => (
                 <SelectItem key={folder.id} value={folder.id}>
                   {folder.name}
@@ -351,16 +381,16 @@ type SpaceDialog =
   | { kind: "renameBoard"; board: Space }
   | { kind: "moveBoard"; board: Space }
   | { kind: "deleteBoard"; board: Space }
-  | { kind: "renameFolder"; folder: Folder }
-  | { kind: "deleteFolder"; folder: Folder }
+  | { kind: "renameSpaceFolder"; folder: SpaceFolder }
+  | { kind: "deleteSpaceFolder"; folder: SpaceFolder }
   | null;
 
 interface SpaceDialogsContextValue {
   openRenameBoard: (board: Space) => void;
   openMoveBoard: (board: Space) => void;
   openDeleteBoard: (board: Space) => void;
-  openRenameFolder: (folder: Folder) => void;
-  openDeleteFolder: (folder: Folder) => void;
+  openRenameSpaceFolder: (folder: SpaceFolder) => void;
+  openDeleteSpaceFolder: (folder: SpaceFolder) => void;
 }
 
 interface SpaceDialogsHostProps {

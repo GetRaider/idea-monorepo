@@ -19,7 +19,7 @@ export function CalendarTaskView() {
   const board = boards.find((item) => item.id === selectedTask?.spaceId);
   const href =
     selectedTask && board
-      ? tasksUrlHelper.routing.buildBoardUrl(board.name, selectedTask.taskKey)
+      ? tasksUrlHelper.routing.buildBoardUrl(board.id, selectedTask.taskKey)
       : null;
 
   return (

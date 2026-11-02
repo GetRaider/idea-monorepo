@@ -109,7 +109,7 @@ function EpicRow({
   }
 
   function openEpic() {
-    router.push(tasksUrlHelper.routing.buildEpicUrl(spaceName, row.epic.id));
+    router.push(tasksUrlHelper.routing.buildEpicUrl(spaceId, row.epic.id));
   }
 
   return (

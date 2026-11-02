@@ -154,7 +154,7 @@ export class ExecutionService {
         createdAt: now,
         updatedAt: now,
       });
-      await this.requireSameBoard(tx, workspaceId, taskIds);
+      await this.requireTasks(tx, workspaceId, taskIds);
       await tx.insert(executionSessionTasks).values(
         taskIds.map((taskId, index) => ({
           id: randomUUID(),
@@ -438,22 +438,18 @@ export class ExecutionService {
     return { ok: true as const };
   }
 
-  private async requireSameBoard(
+  private async requireTasks(
     tx: ExecutionDb,
     workspaceId: string,
     taskIds: string[],
   ) {
     const selected = await tx
-      .select({ id: tasks.id, spaceId: tasks.spaceId })
+      .select({ id: tasks.id })
       .from(tasks)
       .where(
         and(eq(tasks.workspaceId, workspaceId), inArray(tasks.id, taskIds)),
       );
     if (selected.length !== taskIds.length) throw new NotFoundException("Task");
-    const boards = new Set(selected.map((task) => task.spaceId));
-    if (boards.size > 1) {
-      throw new BadRequestException("Tasks must belong to the same board");
-    }
   }
 
   private async sessionRow(

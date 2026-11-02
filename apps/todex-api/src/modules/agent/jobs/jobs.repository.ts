@@ -33,6 +33,8 @@ export class JobsRepository {
         webResearch: input.webResearch ?? false,
         webSearchCapability: input.webSearchCapability ?? "none",
         idempotencyKey: input.idempotencyKey,
+        focalType: input.focalType ?? null,
+        focalId: input.focalId ?? null,
         createdAt: now,
         updatedAt: now,
       })
@@ -166,4 +168,6 @@ export interface NewJob {
   mode?: AgentMode;
   webResearch?: boolean;
   webSearchCapability?: WebSearchCapability;
+  focalType?: "task" | "doc" | null;
+  focalId?: string | null;
 }

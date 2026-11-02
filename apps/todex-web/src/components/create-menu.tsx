@@ -127,10 +127,11 @@ function CreatePalette({ onClose }: { onClose: () => void }) {
   const boardsQuery = useQuery({
     queryKey: ["boards"],
     queryFn: () => todexClient.spaces.list(),
-    enabled: kind === "task" || kind === "epic",
+    enabled:
+      kind === "task" || kind === "epic" || kind === "goal" || kind === "doc",
   });
   const boards = boardsQuery.data ?? [];
-  const inboxBoard = boards.find((board) => board.name === INBOX_BOARD_NAME);
+  const inboxBoard = boards.find((board) => board.isInbox);
   const resolvedBoardId = spaceId || inboxBoard?.id || "";
   const boardQuery = useQuery({
     queryKey: ["board", resolvedBoardId],
@@ -182,7 +183,7 @@ function CreatePalette({ onClose }: { onClose: () => void }) {
       const board = boards.find((item) => item.id === resolvedBoardId);
       router.push(
         board
-          ? tasksUrlHelper.routing.buildBoardUrl(board.name, task.taskKey)
+          ? tasksUrlHelper.routing.buildBoardUrl(board.id, task.taskKey)
           : "/planning",
       );
       onClose();
@@ -190,11 +191,14 @@ function CreatePalette({ onClose }: { onClose: () => void }) {
     onError: () => toast.error("Could not create the task"),
   });
   const createGoal = useMutation({
-    mutationFn: () =>
-      todexClient.docs.create({
+    mutationFn: () => {
+      if (!inboxBoard) throw new Error("Choose a space");
+      return todexClient.docs.create({
         type: DocType.GOAL,
         title: name.trim(),
-      }),
+        spaceId: inboxBoard.id,
+      });
+    },
     onSuccess: async (goal) => {
       await queryClient.invalidateQueries({ queryKey: ["docs"] });
       router.push(`/planning/goals/${goal.id}`);
@@ -203,12 +207,16 @@ function CreatePalette({ onClose }: { onClose: () => void }) {
     onError: () => toast.error("Could not create the goal"),
   });
   const createDoc = useMutation({
-    mutationFn: () =>
-      todexClient.docs.create({
+    mutationFn: () => {
+      const space = inboxBoard ?? boards[0];
+      if (!space) throw new Error("Choose a space");
+      return todexClient.docs.create({
         type: DocType.COMMON,
         title: name.trim(),
+        spaceId: space.id,
         folderId: null,
-      }),
+      });
+    },
     onSuccess: async (doc) => {
       await queryClient.invalidateQueries({ queryKey: ["docs"] });
       router.push(`/knowledge/${doc.id}`);
@@ -248,7 +256,7 @@ function CreatePalette({ onClose }: { onClose: () => void }) {
       });
       const space = boards.find((item) => item.id === resolvedBoardId);
       if (space) {
-        router.push(tasksUrlHelper.routing.buildEpicUrl(space.name, epic.id));
+        router.push(tasksUrlHelper.routing.buildEpicUrl(space.id, epic.id));
       }
       onClose();
     },

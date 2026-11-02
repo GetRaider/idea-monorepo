@@ -96,9 +96,9 @@ describe("mentionHref", () => {
         targetType: DocMentionTarget.TASK,
         targetId: "task-1",
         taskKey: "TDX-4",
-        spaceName: "Inbox",
+        spaceId: "space-1",
       }),
-    ).toBe("/planning/space/Inbox/TDX-4");
+    ).toBe("/planning/space/space-1/TDX-4");
     expect(
       mentionHref({ targetType: DocMentionTarget.EVENT, targetId: "event-1" }),
     ).toBe("/calendar/events/event-1");

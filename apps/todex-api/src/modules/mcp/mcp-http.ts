@@ -10,6 +10,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 
 import { env } from "../../env/env";
 import { DocsService } from "../docs/docs.service";
+import { RelationsService } from "../relations/relations.service";
 import { SpacesService } from "../spaces/spaces.service";
 import { TasksService } from "../tasks/tasks.service";
 import { ExecutionResultsService } from "./execution-results.service";
@@ -62,6 +63,7 @@ export class McpHttp {
   constructor(
     private readonly authService: McpAuthService,
     private readonly docs: DocsService,
+    private readonly relations: RelationsService,
     private readonly tasks: TasksService,
     private readonly spaces: SpacesService,
     private readonly knowledge: KnowledgeSearch,
@@ -112,6 +114,7 @@ export class McpHttp {
           const result = await callMcpTool(
             {
               docs: this.docs,
+              relations: this.relations,
               tasks: this.tasks,
               spaces: this.spaces,
               knowledge: this.knowledge,

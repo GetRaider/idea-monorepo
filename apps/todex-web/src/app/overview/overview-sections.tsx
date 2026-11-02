@@ -77,7 +77,7 @@ function TodaySection() {
         >
           <TaskRows
             tasks={tasks}
-            hrefFor={(task) => taskHref(task, "today", EMPTY_BOARDS)}
+            hrefFor={(task) => taskHref(task, "today")}
             onToggleDone={(task) => toggleDone.mutate(task)}
           />
         </QueryState>
@@ -249,7 +249,8 @@ function NeedsOrganizingSection() {
   });
   const toggleDone = useToggleTaskDone();
   const spaceNameById = new Map(boards.map((board) => [board.id, board.name]));
-  const organized = organizingTasks(tasksQuery.data ?? [], spaceNameById);
+  const inboxSpaceId = boards.find((board) => board.isInbox)?.id ?? null;
+  const organized = organizingTasks(tasksQuery.data ?? [], inboxSpaceId);
   const waiting =
     boardsQuery.isPending || (boardsQuery.isSuccess && tasksQuery.isPending);
   const failed = boardsQuery.isError || tasksQuery.isError;
@@ -265,7 +266,7 @@ function NeedsOrganizingSection() {
         >
           <TaskRows
             tasks={organized.inbox.slice(0, ORGANIZING_PREVIEW_LIMIT)}
-            hrefFor={(task) => taskHref(task, "later", spaceNameById)}
+            hrefFor={(task) => taskHref(task, "later")}
             onToggleDone={(task) => toggleDone.mutate(task)}
           />
           <HiddenCount
@@ -285,7 +286,7 @@ function NeedsOrganizingSection() {
         >
           <TaskRows
             tasks={organized.unscheduled.slice(0, ORGANIZING_PREVIEW_LIMIT)}
-            hrefFor={(task) => taskHref(task, "later", spaceNameById)}
+            hrefFor={(task) => taskHref(task, "later")}
             spaceNameById={spaceNameById}
             onToggleDone={(task) => toggleDone.mutate(task)}
           />
@@ -548,7 +549,6 @@ function DayList({
                 localDayKey(group.day) === localDayKey(tomorrow)
                   ? "tomorrow"
                   : "later",
-                spaceNameById,
               )
             }
             onToggleDone={onToggleDone}
@@ -582,20 +582,14 @@ function dayGroups(
   });
 }
 
-function taskHref(
-  task: Task,
-  when: "today" | "tomorrow" | "later",
-  spaceNameById: Map<string, string>,
-): string {
+function taskHref(task: Task, when: "today" | "tomorrow" | "later"): string {
   if (when === "today") {
     return tasksUrlHelper.routing.buildScheduleUrl("today", task.taskKey);
   }
   if (when === "tomorrow") {
     return tasksUrlHelper.routing.buildScheduleUrl("tomorrow", task.taskKey);
   }
-  const spaceName = spaceNameById.get(task.spaceId);
-  if (!spaceName) return tasksUrlHelper.routing.buildRootUrl();
-  return tasksUrlHelper.routing.buildBoardUrl(spaceName, task.taskKey);
+  return tasksUrlHelper.routing.buildBoardUrl(task.spaceId, task.taskKey);
 }
 
 function sortEvents(events: CalendarBlock[]): CalendarBlock[] {

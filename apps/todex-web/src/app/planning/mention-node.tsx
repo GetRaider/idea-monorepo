@@ -125,6 +125,6 @@ function useMentionHref(targetType: string, targetId: string) {
     targetType: DocMentionTarget.TASK,
     targetId,
     taskKey: task?.taskKey,
-    spaceName,
+    spaceId: task?.spaceId,
   });
 }

@@ -67,6 +67,7 @@ export const UpdateGoalDocBodySchema = z
 const DocSummaryFields = {
   id: z.string(),
   workspaceId: z.string(),
+  spaceId: z.string(),
   folderId: z.string().nullable(),
   docKey: z.string(),
   title: z.string(),
@@ -102,6 +103,7 @@ export const DocSchema = z.discriminatedUnion("type", [
 
 export const ListDocsQuerySchema = z.object({
   type: z.enum([DocType.COMMON, DocType.GOAL]).optional(),
+  spaceId: z.string().min(1).optional(),
   folderId: z.string().min(1).optional(),
 });
 
@@ -110,6 +112,7 @@ export const CreateDocBodySchema = z.discriminatedUnion("type", [
     .object({
       type: z.literal(DocType.COMMON),
       title: TitleSchema,
+      spaceId: z.string().min(1),
       folderId: z.string().min(1).nullable().optional(),
       body: CommonDocBodySchema.optional(),
     })
@@ -118,6 +121,7 @@ export const CreateDocBodySchema = z.discriminatedUnion("type", [
     .object({
       type: z.literal(DocType.GOAL),
       title: TitleSchema,
+      spaceId: z.string().min(1),
       folderId: z.string().min(1).nullable().optional(),
       body: GoalDocBodySchema.optional(),
       linkedTaskIds: LinkedTaskIdsSchema.optional(),
@@ -128,6 +132,7 @@ export const CreateDocBodySchema = z.discriminatedUnion("type", [
 export const UpdateDocBodySchema = z
   .object({
     title: TitleSchema.optional(),
+    spaceId: z.string().min(1).optional(),
     folderId: z.string().min(1).nullable().optional(),
     body: z.unknown().optional(),
     linkedTaskIds: LinkedTaskIdsSchema.optional(),

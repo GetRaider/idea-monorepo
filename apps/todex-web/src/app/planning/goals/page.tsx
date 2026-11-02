@@ -20,9 +20,20 @@ export default function GoalsPage() {
     queryKey: ["docs", { type: DocType.GOAL }],
     queryFn: () => todexClient.docs.list({ type: DocType.GOAL }),
   });
+  const spacesQuery = useQuery({
+    queryKey: ["boards"],
+    queryFn: () => todexClient.spaces.list(),
+  });
+  const inboxSpaceId = spacesQuery.data?.find((space) => space.isInbox)?.id;
   const createGoal = useMutation({
-    mutationFn: () =>
-      todexClient.docs.create({ type: DocType.GOAL, title: "Untitled" }),
+    mutationFn: () => {
+      if (!inboxSpaceId) throw new Error("Choose a space");
+      return todexClient.docs.create({
+        type: DocType.GOAL,
+        title: "Untitled",
+        spaceId: inboxSpaceId,
+      });
+    },
     onSuccess: async (goal) => {
       await queryClient.invalidateQueries({ queryKey: ["docs"] });
       router.push(`/planning/goals/${goal.id}`);

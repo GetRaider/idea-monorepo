@@ -27,8 +27,8 @@ import {
 const NAV = [
   { href: "/overview", label: "Overview", enabled: true, icon: OverviewIcon },
   { href: "/planning", label: "Planning", enabled: true, icon: PlanningIcon },
-  { href: "/calendar", label: "Calendar", enabled: true, icon: CalendarIcon },
   { href: "/knowledge", label: "Knowledge", enabled: true, icon: KnowledgeIcon },
+  { href: "/calendar", label: "Calendar", enabled: true, icon: CalendarIcon },
 ] as const;
 
 export function AppNavRail() {

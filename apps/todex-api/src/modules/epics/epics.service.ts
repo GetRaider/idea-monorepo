@@ -7,7 +7,12 @@ import {
 import { eq, inArray } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import { TaskPriority, TaskStatus } from "@repo/api/todex";
+import {
+  collectHtmlMentions,
+  RelationEntityType,
+  TaskPriority,
+  TaskStatus,
+} from "@repo/api/todex";
 import type {
   CreateEpicBody,
   Epic,
@@ -25,6 +30,7 @@ import {
   type TaskRow,
 } from "../../db/schema";
 import { DRIZZLE_DB } from "../../db/tokens";
+import { RelationsService } from "../relations/relations.service";
 import { SpacesService } from "../spaces/spaces.service";
 import { planningProgress } from "./progress";
 
@@ -33,6 +39,7 @@ export class EpicsService {
   constructor(
     @Inject(DRIZZLE_DB) private readonly db: NodePgDatabase,
     private readonly spacesService: SpacesService,
+    private readonly relations: RelationsService,
   ) {}
 
   async list(workspaceId: string, spaceId: string): Promise<Epic[]> {
@@ -137,13 +144,27 @@ export class EpicsService {
       .where(eq(epics.id, existing.id))
       .returning();
     if (!updated) throw new ForbiddenException();
+    if (body.description !== undefined) {
+      await this.relations.replaceReferences(
+        this.db,
+        workspaceId,
+        "epic",
+        updated.id,
+        collectHtmlMentions(updated.description),
+      );
+    }
     const progress = await this.progressByEpic([updated.id]);
     return mapEpic(updated, progress.get(updated.id));
   }
 
   async remove(workspaceId: string, epicId: string) {
     const existing = await this.requireEpic(workspaceId, epicId);
-    await this.db.delete(epics).where(eq(epics.id, existing.id));
+    await this.db.transaction(async (tx) => {
+      await this.relations.deleteTouching(tx, workspaceId, [
+        { type: RelationEntityType.EPIC, ids: [existing.id] },
+      ]);
+      await tx.delete(epics).where(eq(epics.id, existing.id));
+    });
   }
 
   async requireEpic(workspaceId: string, epicId: string) {

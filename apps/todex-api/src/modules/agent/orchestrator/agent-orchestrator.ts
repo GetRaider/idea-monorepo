@@ -80,6 +80,9 @@ export class AgentOrchestrator {
         run.maxTokens,
         job.mode,
         { webResearch: job.webResearch, capability: job.webSearchCapability },
+        job.focalType && job.focalId
+          ? { type: job.focalType, id: job.focalId }
+          : null,
       );
       if (!assembled.ok) {
         return this.failJob(

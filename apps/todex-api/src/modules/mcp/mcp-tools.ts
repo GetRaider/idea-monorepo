@@ -22,6 +22,7 @@ import type { ExecutionResultsService } from "./execution-results.service";
 import { hasScope, type McpCaller } from "./mcp-auth";
 import { KnowledgeSearchError, type KnowledgeSearch } from "./knowledge-search";
 import { omitActualTime } from "./omit-actual-time";
+import type { RelationsService } from "../relations/relations.service";
 import type { TaskContextService } from "./task-context.service";
 
 const httpUrl = z
@@ -45,6 +46,7 @@ export const getDocumentSchema = z.object({ docId: z.string().min(1) }).strict()
 export const createDocumentSchema = z
   .object({
     title: z.string().trim().min(1).max(200),
+    spaceId: z.string().min(1),
     content: z.string().max(20_000).optional(),
     folderId: z.string().min(1).nullable().optional(),
   })
@@ -54,6 +56,7 @@ export const updateDocumentSchema = z
   .object({
     docId: z.string().min(1),
     title: z.string().trim().min(1).max(200).optional(),
+    spaceId: z.string().min(1).optional(),
     content: z.string().max(20_000).optional(),
     folderId: z.string().min(1).nullable().optional(),
   })
@@ -153,6 +156,7 @@ function documentView(doc: {
   type: string;
   docKey: string;
   title: string;
+  spaceId?: string;
   folderId?: string | null;
   updatedAt: string;
   body: unknown;
@@ -164,6 +168,7 @@ function documentView(doc: {
     type: doc.type,
     docKey: doc.docKey,
     title: doc.title,
+    spaceId: doc.spaceId ?? null,
     folderId: doc.folderId ?? null,
     plainText: text,
     truncated: plain.length > 24_000,
@@ -212,7 +217,36 @@ const TOOLS: McpTool[] = [
     handle: async (deps, caller, args) => {
       const { docId } = args as z.infer<typeof getDocumentSchema>;
       const doc = await deps.docs.get(caller.workspaceId, docId);
-      return documentView(doc);
+      const neighbors = await deps.relations.hop(
+        caller.workspaceId,
+        "doc",
+        docId,
+        10,
+      );
+      const related = [];
+      for (const neighbor of neighbors) {
+        if (neighbor.type === "doc") {
+          try {
+            related.push(
+              documentView(await deps.docs.get(caller.workspaceId, neighbor.id)),
+            );
+          } catch {
+            continue;
+          }
+        }
+        if (neighbor.type === "task") {
+          try {
+            related.push(
+              omitActualTime(
+                await deps.tasks.get(caller.workspaceId, neighbor.id),
+              ),
+            );
+          } catch {
+            continue;
+          }
+        }
+      }
+      return { ...documentView(doc), related };
     },
   },
   {
@@ -225,6 +259,7 @@ const TOOLS: McpTool[] = [
       const doc = await deps.docs.create(caller.workspaceId, {
         type: DocType.COMMON,
         title: body.title,
+        spaceId: body.spaceId,
         ...(body.folderId !== undefined ? { folderId: body.folderId } : {}),
         ...(body.content !== undefined
           ? { body: { content: proseFromText(body.content) } }
@@ -246,6 +281,7 @@ const TOOLS: McpTool[] = [
           : null;
       const doc = await deps.docs.update(caller.workspaceId, body.docId, {
         ...(body.title !== undefined ? { title: body.title } : {}),
+        ...(body.spaceId !== undefined ? { spaceId: body.spaceId } : {}),
         ...(body.folderId !== undefined ? { folderId: body.folderId } : {}),
         ...(body.content !== undefined && existing
           ? {
@@ -368,6 +404,7 @@ interface McpTool {
 export interface McpToolDeps {
   docs: DocsService;
   tasks: TasksService;
+  relations: Pick<RelationsService, "hop">;
   spaces: SpacesService;
   knowledge: KnowledgeSearch;
   context: TaskContextService;

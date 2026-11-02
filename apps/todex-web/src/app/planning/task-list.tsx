@@ -7,7 +7,8 @@ import {
   type ComponentProps,
   type ReactNode,
 } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   DndContext,
   DragOverlay,
@@ -23,6 +24,10 @@ import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -33,8 +38,9 @@ import {
   SelectValue,
   cn,
 } from "@repo/ui";
-import { TaskStatus } from "@repo/api/todex";
+import { DocType, TaskStatus } from "@repo/api/todex";
 import type { Task } from "@repo/api/todex";
+import { toast } from "sonner";
 
 import {
   ChevronIcon,
@@ -44,6 +50,7 @@ import {
 } from "@components/icons";
 import { NewButton } from "@components/new-button";
 
+import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
 import { todexClient } from "@/lib/todex-client";
 
 import { boardCollisionDetection, type BoardDropData } from "./task-board-dnd";
@@ -155,8 +162,36 @@ export function TaskList() {
     () => sortGroupsByListSort(visibleGroups, listSort),
     [listSort, visibleGroups],
   );
+  const router = useRouter();
   const queryClient = useQueryClient();
   const spaceId = view.kind === "board" ? selectedBoard?.id : undefined;
+  const createEpic = useMutation({
+    mutationFn: () => {
+      if (!spaceId) throw new Error("Choose a space");
+      return todexClient.epics.create(spaceId, { name: "Untitled" });
+    },
+    onSuccess: async (epic) => {
+      await queryClient.invalidateQueries({ queryKey: ["epics", spaceId] });
+      if (!spaceId) return;
+      router.push(tasksUrlHelper.routing.buildEpicUrl(spaceId, epic.id));
+    },
+    onError: () => toast.error("Could not create the epic"),
+  });
+  const createGoal = useMutation({
+    mutationFn: () => {
+      if (!spaceId) throw new Error("Choose a space");
+      return todexClient.docs.create({
+        type: DocType.GOAL,
+        title: "Untitled",
+        spaceId,
+      });
+    },
+    onSuccess: async (goal) => {
+      await queryClient.invalidateQueries({ queryKey: ["docs"] });
+      router.push(`/planning/goals/${goal.id}`);
+    },
+    onError: () => toast.error("Could not create the goal"),
+  });
   const epicsQuery = useQuery({
     queryKey: ["epics", spaceId],
     queryFn: () => todexClient.epics.list(spaceId ?? ""),
@@ -507,21 +542,48 @@ export function TaskList() {
               onShowEpicsChange={setShowEpics}
               onShowTasksChange={setShowTasks}
             />
-            <NewButton
-              onClick={() => {
-                if (view.kind === "schedule") {
-                  const spaceId = scheduleSections[0]?.board.id;
-                  if (!spaceId) return;
-                  if (collapsedBoardIds.has(spaceId)) {
-                    toggleBoardCollapsed(spaceId);
+            {view.kind === "board" ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <NewButton
+                    disabled={
+                      !createBoardId ||
+                      createEpic.isPending ||
+                      createGoal.isPending
+                    }
+                  />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onSelect={openComposer}>
+                    Task
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    disabled={!spaceId || createEpic.isPending}
+                    onSelect={() => createEpic.mutate()}
+                  >
+                    Epic
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    disabled={!spaceId || createGoal.isPending}
+                    onSelect={() => createGoal.mutate()}
+                  >
+                    Goal
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <NewButton
+                onClick={() => {
+                  const nextSpaceId = scheduleSections[0]?.board.id;
+                  if (!nextSpaceId) return;
+                  if (collapsedBoardIds.has(nextSpaceId)) {
+                    toggleBoardCollapsed(nextSpaceId);
                   }
-                  setComposerBoardId(spaceId);
-                  return;
-                }
-                openComposer();
-              }}
-              disabled={!createBoardId}
-            />
+                  setComposerBoardId(nextSpaceId);
+                }}
+                disabled={!createBoardId}
+              />
+            )}
           </div>
         </div>
         {view.kind === "schedule" && boards.length === 0 ? (

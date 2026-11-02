@@ -38,11 +38,6 @@ describe("upcomingBounds", () => {
 });
 
 describe("organizingTasks", () => {
-  const boards = new Map([
-    ["inbox-board", "Inbox"],
-    ["growth", "Software Growth"],
-  ]);
-
   it("puts Inbox-board tasks in Inbox and other unscheduled tasks with their board", () => {
     const organized = organizingTasks(
       [
@@ -59,7 +54,7 @@ describe("organizingTasks", () => {
         }),
         task({ id: "done", spaceId: "inbox-board", status: TaskStatus.DONE }),
       ],
-      boards,
+      "inbox-board",
     );
     expect(organized.inbox.map((item) => item.id)).toEqual(["inbox"]);
     expect(organized.unscheduled.map((item) => item.id)).toEqual(["growth"]);

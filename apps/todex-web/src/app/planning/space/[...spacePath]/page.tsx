@@ -27,7 +27,7 @@ export default function TasksSpacePage({ params }: TasksSpacePageProps) {
   if (!selectedBoard || view.kind !== "board") {
     return (
       <p className="px-6 py-10 text-sm text-muted-foreground">
-        Space &quot;{parsed.spaceName}&quot; not found.
+        Space not found.
       </p>
     );
   }

@@ -52,26 +52,24 @@ describe("tasksUrlHelper.routing.getActiveViewFromPathname", () => {
 });
 
 describe("tasksUrlHelper.routing board urls", () => {
-  it("encodes board names and parses them back", () => {
-    const href = tasksUrlHelper.routing.buildBoardUrl("My Board");
-    expect(href).toBe("/planning/space/My%20Board");
-    expect(tasksUrlHelper.routing.getBoardNameFromPathname(href)).toBe(
-      "My Board",
-    );
+  it("encodes space ids and parses them back", () => {
+    const href = tasksUrlHelper.routing.buildBoardUrl("space-1");
+    expect(href).toBe("/planning/space/space-1");
+    expect(tasksUrlHelper.routing.getSpaceIdFromPathname(href)).toBe("space-1");
   });
 
-  it("parses optional taskKey without using it in P0", () => {
-    const parsed = tasksUrlHelper.routing.parseBoardPath(["Inbox", "T-1"]);
-    expect(parsed).toEqual({ spaceName: "Inbox", taskKey: "T-1" });
+  it("parses optional taskKey", () => {
+    const parsed = tasksUrlHelper.routing.parseBoardPath(["space-1", "T-1"]);
+    expect(parsed).toEqual({ spaceId: "space-1", taskKey: "T-1" });
   });
 
   it("treats an epics segment as an epic page", () => {
-    expect(tasksUrlHelper.routing.buildEpicUrl("Todex", "epic-1")).toBe(
-      "/planning/space/Todex/epics/epic-1",
+    expect(tasksUrlHelper.routing.buildEpicUrl("space-1", "epic-1")).toBe(
+      "/planning/space/space-1/epics/epic-1",
     );
     expect(
-      tasksUrlHelper.routing.parseSpacePath(["Todex", "epics", "epic-1"]),
-    ).toEqual({ kind: "epic", spaceName: "Todex", epicId: "epic-1" });
+      tasksUrlHelper.routing.parseSpacePath(["space-1", "epics", "epic-1"]),
+    ).toEqual({ kind: "epic", spaceId: "space-1", epicId: "epic-1" });
     expect(
       tasksUrlHelper.routing.getTaskKeyFromPathname(
         "/planning/space/Todex/epics/epic-1",
@@ -80,8 +78,8 @@ describe("tasksUrlHelper.routing board urls", () => {
   });
 
   it("builds and reads taskKey segments", () => {
-    expect(tasksUrlHelper.routing.buildBoardUrl("Inbox", "T-1")).toBe(
-      "/planning/space/Inbox/T-1",
+    expect(tasksUrlHelper.routing.buildBoardUrl("space-1", "T-1")).toBe(
+      "/planning/space/space-1/T-1",
     );
     expect(tasksUrlHelper.routing.buildScheduleUrl("today", "T-12")).toBe(
       "/planning/schedule/today/T-12",

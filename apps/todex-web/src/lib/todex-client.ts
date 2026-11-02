@@ -9,10 +9,13 @@ import {
   CreateCalendarEventBodySchema,
   CreateCalendarEventTemplateBodySchema,
   CreateDocBodySchema,
-  CreateFolderBodySchema,
+  CreateDocFolderBodySchema,
   CreateEpicBodySchema,
+  CreateRelationBodySchema,
+  CreateSpaceFolderBodySchema,
   CreateSpaceBodySchema,
   CreateTaskBodySchema,
+  DocFolderSchema,
   DocSchema,
   DocSummarySchema,
   EpicDetailSchema,
@@ -27,16 +30,18 @@ import {
   FocusExecutionTaskBodySchema,
   ReorderExecutionQueueBodySchema,
   UpdateExecutionSessionBodySchema,
-  FolderKind,
   GoogleCalendarIntegrationSchema,
-  FolderSchema,
+  RelationNeighborSchema,
+  SpaceDeletionPreviewSchema,
+  SpaceFolderSchema,
   MoveTaskBodySchema,
   ReplaceSpaceProgressStagesBodySchema,
   SpaceDetailSchema,
   SpaceSchema,
   TaskSchema,
   UpdateSpaceSectionBodySchema,
-  UpdateFolderBodySchema,
+  UpdateDocFolderBodySchema,
+  UpdateSpaceFolderBodySchema,
   UpdateSpaceBodySchema,
   UpdateCalendarEventBodySchema,
   UpdateCalendarEventTemplateBodySchema,
@@ -189,25 +194,79 @@ export const todexClient = {
         z.array(WorkspaceMemberProfileSchema),
       ),
   },
-  folders: {
-    list: (kind: "tasks" | "docs" = FolderKind.TASKS) =>
-      call("get", `/v1/folders?kind=${kind}`, z.array(FolderSchema)),
+  spaceFolders: {
+    list: () => call("get", "/v1/space-folders", z.array(SpaceFolderSchema)),
     create: (body: unknown) =>
       call(
         "post",
-        "/v1/folders",
-        FolderSchema,
-        CreateFolderBodySchema.parse(body),
+        "/v1/space-folders",
+        SpaceFolderSchema,
+        CreateSpaceFolderBodySchema.parse(body),
       ),
     update: (folderId: string, body: unknown) =>
       call(
         "patch",
-        `/v1/folders/${folderId}`,
-        FolderSchema,
-        UpdateFolderBodySchema.parse(body),
+        `/v1/space-folders/${folderId}`,
+        SpaceFolderSchema,
+        UpdateSpaceFolderBodySchema.parse(body),
       ),
     remove: (folderId: string) =>
-      call("delete", `/v1/folders/${folderId}`, z.object({ ok: z.boolean() })),
+      call(
+        "delete",
+        `/v1/space-folders/${folderId}`,
+        z.object({ ok: z.boolean() }),
+      ),
+  },
+  docFolders: {
+    list: (spaceId?: string) =>
+      call(
+        "get",
+        spaceId
+          ? `/v1/doc-folders?spaceId=${encodeURIComponent(spaceId)}`
+          : "/v1/doc-folders",
+        z.array(DocFolderSchema),
+      ),
+    create: (body: unknown) =>
+      call(
+        "post",
+        "/v1/doc-folders",
+        DocFolderSchema,
+        CreateDocFolderBodySchema.parse(body),
+      ),
+    update: (folderId: string, body: unknown) =>
+      call(
+        "patch",
+        `/v1/doc-folders/${folderId}`,
+        DocFolderSchema,
+        UpdateDocFolderBodySchema.parse(body),
+      ),
+    remove: (folderId: string) =>
+      call(
+        "delete",
+        `/v1/doc-folders/${folderId}`,
+        z.object({ ok: z.boolean() }),
+      ),
+  },
+  relations: {
+    list: (entityType: string, entityId: string) =>
+      call(
+        "get",
+        `/v1/relations?entityType=${encodeURIComponent(entityType)}&entityId=${encodeURIComponent(entityId)}`,
+        z.array(RelationNeighborSchema),
+      ),
+    create: (body: unknown) =>
+      call(
+        "post",
+        "/v1/relations",
+        z.object({ id: z.string(), kind: z.string() }),
+        CreateRelationBodySchema.parse(body),
+      ),
+    remove: (relationId: string) =>
+      call(
+        "delete",
+        `/v1/relations/${relationId}`,
+        z.object({ ok: z.boolean() }),
+      ),
   },
   spaces: {
     list: () => call("get", "/v1/spaces", z.array(SpaceSchema)),
@@ -227,6 +286,13 @@ export const todexClient = {
       ),
     remove: (spaceId: string) =>
       call("delete", `/v1/spaces/${spaceId}`, z.object({ ok: z.boolean() })),
+    ensureInbox: () => call("post", "/v1/spaces/ensure-inbox", SpaceSchema),
+    deletionPreview: (spaceId: string) =>
+      call(
+        "get",
+        `/v1/spaces/${spaceId}/deletion-preview`,
+        SpaceDeletionPreviewSchema,
+      ),
     get: (spaceId: string) =>
       call("get", `/v1/spaces/${spaceId}`, SpaceDetailSchema),
     createSection: (spaceId: string, body: unknown) =>
@@ -406,9 +472,14 @@ export const todexClient = {
       call("post", "/v1/execution/complete", ExecutionStateSchema),
   },
   docs: {
-    list: (query?: { type?: "common" | "goal"; folderId?: string }) => {
+    list: (query?: {
+      type?: "common" | "goal";
+      spaceId?: string;
+      folderId?: string;
+    }) => {
       const searchParams = new URLSearchParams();
       if (query?.type) searchParams.set("type", query.type);
+      if (query?.spaceId) searchParams.set("spaceId", query.spaceId);
       if (query?.folderId) searchParams.set("folderId", query.folderId);
       const suffix = searchParams.size > 0 ? `?${searchParams}` : "";
       return call("get", `/v1/docs${suffix}`, z.array(DocSummarySchema));
@@ -453,6 +524,7 @@ export const todexClient = {
         message: string,
         mode: "execute" | "ask" = "execute",
         webResearch = false,
+        focal?: { focalType: "task" | "doc"; focalId: string },
       ) =>
         call(
           "post",
@@ -462,6 +534,7 @@ export const todexClient = {
             message,
             mode,
             webResearch,
+            ...(focal ?? {}),
           },
         ),
     },
@@ -476,12 +549,20 @@ export const todexClient = {
   },
   calendar: {
     events: {
-      list: (query: { from: string; to: string }) =>
-        call(
+      list: (query: { from: string; to: string; spaceIds?: string[] }) => {
+        const search = new URLSearchParams({
+          from: query.from,
+          to: query.to,
+        });
+        for (const spaceId of query.spaceIds ?? []) {
+          search.append("spaceId", spaceId);
+        }
+        return call(
           "get",
-          `/v1/calendar/events?from=${encodeURIComponent(query.from)}&to=${encodeURIComponent(query.to)}`,
+          `/v1/calendar/events?${search.toString()}`,
           z.array(CalendarEventSchema),
-        ),
+        );
+      },
       get: (eventId: string) =>
         call("get", `/v1/calendar/events/${eventId}`, CalendarEventSchema),
       create: (body: unknown) =>

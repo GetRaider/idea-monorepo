@@ -7,7 +7,10 @@ export default function TemplatesPage() {
   return (
     <section className={docsSectionClassName()}>
       <DocsCanvasHeader
-        crumbs={[{ label: "Knowledge", href: "/knowledge" }, { label: "Templates" }]}
+        crumbs={[
+          { label: "Knowledge", href: "/knowledge" },
+          { label: "Templates" },
+        ]}
         showNew={false}
       />
       <p className="text-sm text-muted-foreground">

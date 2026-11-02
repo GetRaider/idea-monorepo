@@ -31,14 +31,23 @@ describe("DocToolHandler", () => {
       agentRunId: "run-1",
       toolCallId: "call-create-folder",
       name: "create_doc",
-      args: { type: "common", title: "Doc #1", folderId: "Magnus" },
+      args: {
+        type: "common",
+        title: "Doc #1",
+        spaceId: "space-1",
+        folderId: "Magnus",
+      },
     });
 
     expect(created.ok).toBe(true);
-    expect(folders.list).toHaveBeenCalledWith("workspace-1", "docs");
+    expect(folders.list).toHaveBeenCalledWith("workspace-1", "space-1");
     expect(docs.create).toHaveBeenCalledWith(
       "workspace-1",
-      expect.objectContaining({ title: "Doc #1", folderId: "folder-magnus" }),
+      expect.objectContaining({
+        title: "Doc #1",
+        spaceId: "space-1",
+        folderId: "folder-magnus",
+      }),
     );
 
     const moved = await layer.execute({
@@ -48,11 +57,12 @@ describe("DocToolHandler", () => {
       agentRunId: "run-1",
       toolCallId: "call-move",
       name: "update_doc",
-      args: { docId: "doc-1", folderName: "Magnus" },
+      args: { docId: "doc-1", spaceId: "space-1", folderName: "Magnus" },
     });
 
     expect(moved.ok).toBe(true);
     expect(docs.update).toHaveBeenCalledWith("workspace-1", "doc-1", {
+      spaceId: "space-1",
       folderId: "folder-magnus",
     });
   });
@@ -81,7 +91,12 @@ describe("DocToolHandler", () => {
       agentRunId: "run-1",
       toolCallId: "call-missing-folder",
       name: "create_doc",
-      args: { type: "common", title: "Doc #1", folderName: "Magnus" },
+      args: {
+        type: "common",
+        title: "Doc #1",
+        spaceId: "space-1",
+        folderName: "Magnus",
+      },
     });
 
     expect(created).toEqual({
@@ -121,13 +136,19 @@ describe("DocToolHandler", () => {
       agentRunId: "run-1",
       toolCallId: "call-create",
       name: "create_doc",
-      args: { type: "common", title: "Agent smoke test", content: "Hello" },
+      args: {
+        type: "common",
+        title: "Agent smoke test",
+        spaceId: "space-1",
+        content: "Hello",
+      },
     });
 
     expect(created.ok).toBe(true);
     expect(docs.create).toHaveBeenCalledWith("workspace-1", {
       type: "common",
       title: "Agent smoke test",
+      spaceId: "space-1",
       body: {
         content: {
           type: "doc",

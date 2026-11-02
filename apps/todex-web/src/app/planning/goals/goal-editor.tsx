@@ -526,16 +526,14 @@ function relatedEpicsFor(
       {
         id: epic.id,
         name: epic.name,
-        href: tasksUrlHelper.routing.buildEpicUrl(spaceName, epic.id),
+        href: tasksUrlHelper.routing.buildEpicUrl(task.spaceId, epic.id),
       },
     ];
   });
 }
 
 function taskHref(task: Task, spaceNameById: Map<string, string>) {
-  const spaceName = spaceNameById.get(task.spaceId);
-  if (!spaceName) return null;
-  return tasksUrlHelper.routing.buildBoardUrl(spaceName, task.taskKey);
+  return tasksUrlHelper.routing.buildBoardUrl(task.spaceId, task.taskKey);
 }
 
 async function listWorkspaceTasks() {

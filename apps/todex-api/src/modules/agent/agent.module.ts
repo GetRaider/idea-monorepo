@@ -3,6 +3,7 @@ import { Module } from "@nestjs/common";
 import { CalendarModule } from "../calendar/calendar.module";
 import { DocsModule } from "../docs/docs.module";
 import { FoldersModule } from "../folders/folders.module";
+import { RelationsModule } from "../relations/relations.module";
 import { TasksModule } from "../tasks/tasks.module";
 import { ToolAllowsRepository } from "./allows/tool-allows.repository";
 import { ContextService } from "./context/context.service";
@@ -40,7 +41,7 @@ import { ToolExecutionLayer } from "./tools/tool-execution-layer";
 import { ToolRegistry } from "./tools/tool-registry";
 
 @Module({
-  imports: [TasksModule, DocsModule, FoldersModule, CalendarModule],
+  imports: [TasksModule, DocsModule, FoldersModule, CalendarModule, RelationsModule],
   controllers: [ConversationsController, JobsController],
   providers: [
     ConversationsRepository,

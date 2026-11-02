@@ -28,6 +28,7 @@ export const CalendarEventSchema = z.object({
   taskScope: z.array(z.string()),
   participants: z.array(z.string()),
   rsvpStatus: CalendarRsvpStatusSchema.nullable(),
+  spaceId: z.string().nullable(),
   googleEventId: z.string().nullable(),
   googleEtag: z.string().nullable(),
   organizerSelf: z.boolean(),
@@ -41,6 +42,20 @@ export const ListCalendarEventsQuerySchema = z
   .object({
     from: IsoDateTimeSchema,
     to: IsoDateTimeSchema,
+    spaceId: z
+      .union([z.string().min(1), z.array(z.string().min(1))])
+      .optional()
+      .transform((value) => {
+        if (!value) return undefined;
+        const values = Array.isArray(value) ? value : [value];
+        const ids = values.flatMap((item) =>
+          item
+            .split(",")
+            .map((part) => part.trim())
+            .filter(Boolean),
+        );
+        return ids.length > 0 ? ids : undefined;
+      }),
   })
   .refine((value) => Date.parse(value.from) < Date.parse(value.to), {
     message: "to must be after from",
@@ -58,6 +73,7 @@ const eventFields = {
   taskScope: z.array(z.string().trim().min(1)).max(50).optional(),
   participants: z.array(z.string().trim().email()).max(50).optional(),
   rsvpStatus: CalendarRsvpStatusSchema.nullable().optional(),
+  spaceId: z.string().min(1).nullable().optional(),
 };
 
 export const CreateCalendarEventBodySchema = z
@@ -92,6 +108,7 @@ export const DeleteCalendarEventQuerySchema = z.object({
 export const CalendarEventTemplateSchema = z.object({
   id: z.string(),
   workspaceId: z.string(),
+  spaceId: z.string().nullable(),
   title: z.string(),
   durationMinutes: z.number().int().positive(),
   color: CalendarColorSchema,
@@ -107,6 +124,7 @@ export const CreateCalendarEventTemplateBodySchema = z.object({
   color: CalendarColorSchema.optional(),
   description: z.string().max(20_000).optional(),
   taskScope: z.array(z.string().trim().min(1)).max(50).optional(),
+  spaceId: z.string().min(1).nullable().optional(),
 });
 
 export const UpdateCalendarEventTemplateBodySchema =

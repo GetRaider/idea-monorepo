@@ -7,6 +7,7 @@ import {
 import { and, eq, gt, gte, inArray, isNotNull, isNull, lt, or } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { randomUUID } from "crypto";
+import { RelationEntityType } from "@repo/api/todex";
 import type {
   CreateCalendarEventBody,
   DeleteCalendarEventQuery,
@@ -15,9 +16,10 @@ import type {
 } from "@repo/api/todex";
 
 import { mapCalendarEvent } from "../../db/mappers";
-import { calendarEvents, tasks } from "../../db/schema";
+import { calendarEvents, spaces, tasks } from "../../db/schema";
 import type { CalendarEventRow } from "../../db/schema";
 import { DRIZZLE_DB } from "../../db/tokens";
+import { RelationsService } from "../relations/relations.service";
 import { GoogleCalendarService } from "./google-calendar.service";
 
 @Injectable()
@@ -25,6 +27,7 @@ export class CalendarEventsService {
   constructor(
     @Inject(DRIZZLE_DB) private readonly db: NodePgDatabase,
     private readonly googleCalendar: GoogleCalendarService,
+    private readonly relations: RelationsService,
   ) {}
 
   async list(workspaceId: string, query: ListCalendarEventsQuery) {
@@ -52,6 +55,9 @@ export class CalendarEventsService {
               lt(calendarEvents.originalStart, to),
             ),
           ),
+          ...(query.spaceId?.length
+            ? [inArray(calendarEvents.spaceId, query.spaceId)]
+            : []),
         ),
       );
     return rows.map(mapCalendarEvent);
@@ -67,6 +73,7 @@ export class CalendarEventsService {
     body: CreateCalendarEventBody,
   ) {
     await this.requireTasks(workspaceId, body.taskScope ?? []);
+    if (body.spaceId) await this.requireSpace(workspaceId, body.spaceId);
     const now = new Date();
     const id = randomUUID();
     await this.db.insert(calendarEvents).values({
@@ -80,6 +87,7 @@ export class CalendarEventsService {
       timeZone: body.timeZone,
       recurrence: body.recurrence ?? null,
       description: body.description ?? "",
+      spaceId: body.spaceId ?? null,
       taskScope: body.taskScope ?? [],
       participants: body.participants ?? [],
       rsvpStatus: body.rsvpStatus ?? null,
@@ -100,6 +108,7 @@ export class CalendarEventsService {
     const existing = await this.require(workspaceId, eventId);
     this.assertWritable(existing, body);
     if (body.taskScope) await this.requireTasks(workspaceId, body.taskScope);
+    if (body.spaceId) await this.requireSpace(workspaceId, body.spaceId);
     if (
       body.scope === "instance" &&
       isSeriesMaster(existing) &&
@@ -133,6 +142,7 @@ export class CalendarEventsService {
         ...(body.rsvpStatus !== undefined
           ? { rsvpStatus: body.rsvpStatus }
           : {}),
+        ...(body.spaceId !== undefined ? { spaceId: body.spaceId } : {}),
         updatedAt: now,
       })
       .where(eq(calendarEvents.id, existing.id));
@@ -172,7 +182,12 @@ export class CalendarEventsService {
       return;
     }
     await this.googleCalendar.removeEvent(userId, workspaceId, existing);
-    await this.db.delete(calendarEvents).where(eq(calendarEvents.id, existing.id));
+    await this.db.transaction(async (tx) => {
+      await this.relations.deleteTouching(tx, workspaceId, [
+        { type: RelationEntityType.EVENT, ids: [existing.id] },
+      ]);
+      await tx.delete(calendarEvents).where(eq(calendarEvents.id, existing.id));
+    });
   }
 
   private async upsertException(
@@ -207,6 +222,10 @@ export class CalendarEventsService {
       color: body.color === undefined ? (existing?.color ?? master.color) : body.color,
       timeZone: body.timeZone ?? existing?.timeZone ?? master.timeZone,
       description: body.description ?? existing?.description ?? master.description,
+      spaceId:
+        body.spaceId === undefined
+          ? (existing?.spaceId ?? master.spaceId)
+          : body.spaceId,
       taskScope: body.taskScope ?? existing?.taskScope ?? master.taskScope,
       participants: body.participants ?? existing?.participants ?? master.participants,
       rsvpStatus:
@@ -278,6 +297,15 @@ export class CalendarEventsService {
       );
     if (!row) throw new NotFoundException("Calendar event");
     return row;
+  }
+
+  private async requireSpace(workspaceId: string, spaceId: string) {
+    const [space] = await this.db
+      .select({ id: spaces.id })
+      .from(spaces)
+      .where(and(eq(spaces.id, spaceId), eq(spaces.workspaceId, workspaceId)))
+      .limit(1);
+    if (!space) throw new NotFoundException("Space");
   }
 
   private async requireTasks(workspaceId: string, taskIds: string[]) {

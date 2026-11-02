@@ -225,6 +225,13 @@
       "when": 1793350000000,
       "tag": "0031_web_research",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1793632697529,
+      "tag": "0032_shared_workspace_hierarchy",
+      "breakpoints": true
     }
   ]
 }

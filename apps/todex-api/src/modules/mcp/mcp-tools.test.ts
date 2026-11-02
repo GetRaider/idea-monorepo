@@ -143,6 +143,7 @@ function context(): TaskContext {
 function deps(overrides: Partial<McpToolDeps> = {}): McpToolDeps {
   return {
     docs: { get: vi.fn(), create: vi.fn(), update: vi.fn() },
+    relations: { hop: vi.fn(async () => []) },
     tasks: { get: vi.fn(), list: vi.fn(), create: vi.fn(), update: vi.fn() },
     spaces: { list: vi.fn() },
     knowledge: { search: vi.fn() },

@@ -4,12 +4,14 @@ import {
   Inject,
   Injectable,
 } from "@nestjs/common";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, count, eq } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import {
   DEFAULT_SECTION_NAME,
+  DocType,
   PROGRESS_STAGE_TEMPLATES,
+  RelationEntityType,
   type ApplyProgressStageTemplateBody,
   type CreateSpaceSectionBody,
   type CreateSpaceBody,
@@ -24,6 +26,8 @@ import {
   mapSpace,
 } from "../../db/mappers";
 import {
+  docFolders,
+  docs,
   epics,
   spaceSections,
   spaceProgressStages,
@@ -32,6 +36,8 @@ import {
   type SpaceSectionRow,
 } from "../../db/schema";
 import { DRIZZLE_DB } from "../../db/tokens";
+import { SpaceFoldersService } from "../folders/space-folders.service";
+import { RelationsService } from "../relations/relations.service";
 import { WorkspaceService } from "../workspace/workspace.service";
 import {
   planProgressStageReplace,
@@ -43,6 +49,8 @@ export class SpacesService {
   constructor(
     @Inject(DRIZZLE_DB) private readonly db: NodePgDatabase,
     private readonly workspaceService: WorkspaceService,
+    private readonly spaceFolders: SpaceFoldersService,
+    private readonly relations: RelationsService,
   ) {}
 
   async list(workspaceId: string, folderId?: string) {
@@ -53,7 +61,7 @@ export class SpacesService {
         folderId
           ? and(
               eq(spaces.workspaceId, workspaceId),
-              eq(spaces.folderId, folderId),
+              eq(spaces.spaceFolderId, folderId),
             )
           : eq(spaces.workspaceId, workspaceId),
       );
@@ -69,7 +77,61 @@ export class SpacesService {
     return { ...mapSpace(board), sections: areas, progressStages };
   }
 
-  async create(workspaceId: string, body: CreateSpaceBody) {
+  async ensureInbox(workspaceId: string) {
+    const existing = await this.findInbox(workspaceId);
+    if (existing) return mapSpace(existing);
+    try {
+      return await this.create(
+        workspaceId,
+        { name: "Inbox", folderId: null },
+        true,
+      );
+    } catch (error) {
+      if (!isUniqueViolation(error)) throw error;
+      const winner = await this.findInbox(workspaceId);
+      if (!winner) throw error;
+      return mapSpace(winner);
+    }
+  }
+
+  async deletionPreview(workspaceId: string, spaceId: string) {
+    const space = await this.requireInWorkspace(workspaceId, spaceId);
+    const [taskCount, epicCount, docRows, folderCount] = await Promise.all([
+      this.countWhere(tasks, eq(tasks.spaceId, space.id)),
+      this.countWhere(epics, eq(epics.spaceId, space.id)),
+      this.db
+        .select({ type: docs.type, total: count() })
+        .from(docs)
+        .where(eq(docs.spaceId, space.id))
+        .groupBy(docs.type),
+      this.countWhere(docFolders, eq(docFolders.spaceId, space.id)),
+    ]);
+    const goals =
+      docRows.find((row) => row.type === DocType.GOAL)?.total ?? 0;
+    const documents =
+      docRows.find((row) => row.type === DocType.COMMON)?.total ?? 0;
+    return {
+      tasks: taskCount,
+      goals,
+      documents,
+      epics: epicCount,
+      docFolders: folderCount,
+    };
+  }
+
+  async create(
+    workspaceId: string,
+    body: CreateSpaceBody,
+    isInbox = false,
+  ) {
+    if (isInbox && body.folderId) {
+      throw new BadRequestException(
+        "The system Inbox cannot be filed in a folder",
+      );
+    }
+    if (body.folderId) {
+      await this.spaceFolders.requireInWorkspace(workspaceId, body.folderId);
+    }
     const now = new Date();
     const created = await this.db.transaction(async (tx) => {
       const [board] = await tx
@@ -77,7 +139,8 @@ export class SpacesService {
         .values({
           id: randomUUID(),
           workspaceId,
-          folderId: body.folderId ?? null,
+          spaceFolderId: body.folderId ?? null,
+          isInbox,
           name: body.name,
           emoji: body.emoji ?? null,
           createdAt: now,
@@ -102,11 +165,21 @@ export class SpacesService {
 
   async update(workspaceId: string, spaceId: string, body: UpdateSpaceBody) {
     const existing = await this.requireInWorkspace(workspaceId, spaceId);
+    if (existing.isInbox && body.folderId) {
+      throw new BadRequestException(
+        "The system Inbox cannot be filed in a folder",
+      );
+    }
+    if (body.folderId) {
+      await this.spaceFolders.requireInWorkspace(workspaceId, body.folderId);
+    }
     const [updated] = await this.db
       .update(spaces)
       .set({
         ...(body.name !== undefined ? { name: body.name } : {}),
-        ...(body.folderId !== undefined ? { folderId: body.folderId } : {}),
+        ...(body.folderId !== undefined
+          ? { spaceFolderId: body.folderId }
+          : {}),
         ...(body.emoji !== undefined ? { emoji: body.emoji } : {}),
         updatedAt: new Date(),
       })
@@ -119,7 +192,38 @@ export class SpacesService {
 
   async remove(workspaceId: string, spaceId: string) {
     const existing = await this.requireInWorkspace(workspaceId, spaceId);
+    if (existing.isInbox) {
+      throw new BadRequestException("The system Inbox cannot be deleted");
+    }
+    const [taskRows, epicRows, docRows, folderRows] = await Promise.all([
+      this.db
+        .select({ id: tasks.id })
+        .from(tasks)
+        .where(eq(tasks.spaceId, existing.id)),
+      this.db
+        .select({ id: epics.id })
+        .from(epics)
+        .where(eq(epics.spaceId, existing.id)),
+      this.db
+        .select({ id: docs.id })
+        .from(docs)
+        .where(eq(docs.spaceId, existing.id)),
+      this.db
+        .select({ id: docFolders.id })
+        .from(docFolders)
+        .where(eq(docFolders.spaceId, existing.id)),
+    ]);
     await this.db.transaction(async (tx) => {
+      await this.relations.deleteTouching(tx, workspaceId, [
+        { type: RelationEntityType.SPACE, ids: [existing.id] },
+        { type: RelationEntityType.TASK, ids: taskRows.map((row) => row.id) },
+        { type: RelationEntityType.EPIC, ids: epicRows.map((row) => row.id) },
+        { type: RelationEntityType.DOC, ids: docRows.map((row) => row.id) },
+        {
+          type: RelationEntityType.DOC_FOLDER,
+          ids: folderRows.map((row) => row.id),
+        },
+      ]);
       await tx.delete(tasks).where(eq(tasks.spaceId, existing.id));
       await tx.delete(spaces).where(eq(spaces.id, existing.id));
     });
@@ -305,6 +409,26 @@ export class SpacesService {
     });
   }
 
+  private async findInbox(workspaceId: string) {
+    const [row] = await this.db
+      .select()
+      .from(spaces)
+      .where(and(eq(spaces.workspaceId, workspaceId), eq(spaces.isInbox, true)))
+      .limit(1);
+    return row ?? null;
+  }
+
+  private async countWhere(
+    table: typeof tasks | typeof epics | typeof docFolders,
+    where: ReturnType<typeof eq>,
+  ) {
+    const [row] = await this.db
+      .select({ total: count() })
+      .from(table)
+      .where(where);
+    return row?.total ?? 0;
+  }
+
   async requireInWorkspace(workspaceId: string, spaceId: string) {
     const [row] = await this.db
       .select()
@@ -419,6 +543,13 @@ export class SpacesService {
         .where(eq(spaceProgressStages.id, row.id));
     }
   }
+}
+
+function isUniqueViolation(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  if ("code" in error && error.code === "23505") return true;
+  if ("cause" in error) return isUniqueViolation(error.cause);
+  return false;
 }
 
 function moveRow(rows: SpaceSectionRow[], id: string, index: number) {

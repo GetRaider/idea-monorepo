@@ -2,8 +2,10 @@ export {
   DEFAULT_SECTION_NAME,
   DocMentionTarget,
   DocType,
-  FolderKind,
   GoalStatus,
+  RelationEntityType,
+  RelationKind,
+  RelationOrigin,
   PROGRESS_STAGE_TEMPLATES,
   ProgressStageTemplate,
   TaskPriority,
@@ -52,17 +54,42 @@ export type {
   UpdateGoalDocBody,
 } from "./doc.ts";
 export {
-  CreateFolderBodySchema,
-  FolderSchema,
-  ListFoldersQuerySchema,
-  UpdateFolderBodySchema,
-} from "./folder.ts";
+  CreateSpaceFolderBodySchema,
+  SpaceFolderSchema,
+  UpdateSpaceFolderBodySchema,
+} from "./space-folder.ts";
 export type {
-  CreateFolderBody,
-  Folder,
-  ListFoldersQuery,
-  UpdateFolderBody,
-} from "./folder.ts";
+  CreateSpaceFolderBody,
+  SpaceFolder,
+  UpdateSpaceFolderBody,
+} from "./space-folder.ts";
+export {
+  CreateDocFolderBodySchema,
+  DocFolderSchema,
+  ListDocFoldersQuerySchema,
+  UpdateDocFolderBodySchema,
+} from "./doc-folder.ts";
+export type {
+  CreateDocFolderBody,
+  DocFolder,
+  ListDocFoldersQuery,
+  UpdateDocFolderBody,
+} from "./doc-folder.ts";
+export {
+  CreateRelationBodySchema,
+  ListRelationsQuerySchema,
+  RelationEndpointSchema,
+  RelationNeighborSchema,
+  SpaceDeletionPreviewSchema,
+} from "./relation.ts";
+export type {
+  CreateRelationBody,
+  ListRelationsQuery,
+  RelationEndpoint,
+  RelationNeighbor,
+  SpaceDeletionPreview,
+} from "./relation.ts";
+export { collectHtmlMentions } from "./html-mentions.ts";
 export {
   CreateSpaceBodySchema,
   ListSpacesQuerySchema,

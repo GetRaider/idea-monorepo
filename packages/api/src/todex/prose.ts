@@ -188,6 +188,7 @@ const MentionAttrsSchema = z.object({
   targetType: z.enum([
     DocMentionTarget.TASK,
     DocMentionTarget.DOC,
+    DocMentionTarget.EPIC,
     DocMentionTarget.EVENT,
   ]),
   targetId: z.string().trim().min(1).max(128),

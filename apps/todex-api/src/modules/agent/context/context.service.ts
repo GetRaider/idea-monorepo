@@ -1,4 +1,4 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Optional } from "@nestjs/common";
 
 import type {
   AgentMemoryRow,
@@ -14,6 +14,9 @@ import { ConversationsRepository } from "../conversations/conversations.reposito
 import { EMBEDDING_CLIENT, type EmbeddingClient } from "../llm/embedding-client";
 import type { LlmMessage, LlmToolCall } from "../llm/llm-client";
 import { MemoriesRepository } from "../memories/memories.repository";
+import { DocsService } from "../../docs/docs.service";
+import { RelationsService } from "../../relations/relations.service";
+import { TasksService } from "../../tasks/tasks.service";
 
 const RETRIEVAL_LIMIT = 8;
 
@@ -39,6 +42,9 @@ export class ContextService {
     private readonly memories: MemoriesRepository,
     private readonly chunks: ChunksRepository,
     @Inject(EMBEDDING_CLIENT) private readonly embeddings: EmbeddingClient,
+    @Optional() private readonly relations?: RelationsService,
+    @Optional() private readonly docs?: DocsService,
+    @Optional() private readonly tasks?: TasksService,
   ) {}
 
   async assemble(
@@ -47,6 +53,7 @@ export class ContextService {
     maxTokens: number,
     mode: AgentMode = "execute",
     web: WebPrompt = { webResearch: false, capability: "none" },
+    focal: FocalEntity | null = null,
   ): Promise<ContextAssembly> {
     const [history, memories] = await Promise.all([
       this.conversations.listMessages(conversationId),
@@ -54,13 +61,52 @@ export class ContextService {
     ]);
     const query = latestUserText(history);
     const retrieved = query ? await this.retrieve(workspaceId, query) : [];
+    const related = focal ? await this.relatedMessages(workspaceId, focal) : [];
     return filterTranscript(
       history,
       memories,
-      retrieved,
+      [...retrieved, ...related],
       maxTokens,
       systemPrompt(mode, web),
     );
+  }
+
+  private async relatedMessages(
+    workspaceId: string,
+    focal: FocalEntity,
+  ): Promise<RetrievedChunk[]> {
+    if (!this.relations) return [];
+    const neighbors = await this.relations.hop(workspaceId, focal.type, focal.id, 10);
+    const chunks: RetrievedChunk[] = [];
+    for (const neighbor of neighbors) {
+      if (neighbor.type === "doc" && this.docs) {
+        try {
+          const doc = await this.docs.get(workspaceId, neighbor.id);
+          chunks.push({
+            sourceType: "doc",
+            sourceId: doc.id,
+            title: doc.title,
+            content: doc.type === "goal" ? doc.title : doc.title,
+          });
+        } catch {
+          continue;
+        }
+      }
+      if (neighbor.type === "task" && this.tasks) {
+        try {
+          const task = await this.tasks.get(workspaceId, neighbor.id);
+          chunks.push({
+            sourceType: "task",
+            sourceId: task.id,
+            title: task.summary,
+            content: `${task.taskKey} ${task.summary}`,
+          });
+        } catch {
+          continue;
+        }
+      }
+    }
+    return chunks;
   }
 
   private async retrieve(
@@ -187,6 +233,11 @@ function estimate(messages: LlmMessage[]): number {
 export type ContextAssembly =
   | { ok: true; messages: LlmMessage[] }
   | { ok: false };
+
+interface FocalEntity {
+  type: "task" | "doc";
+  id: string;
+}
 
 interface WebPrompt {
   webResearch: boolean;

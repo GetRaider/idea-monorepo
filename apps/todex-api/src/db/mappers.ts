@@ -12,7 +12,8 @@ import {
   type ExecutionQueueItem,
   type ExecutionQueueTask,
   type ExecutionSession,
-  type Folder,
+  type DocFolder,
+  type SpaceFolder,
   type Task,
   type Space,
   type Workspace,
@@ -26,8 +27,9 @@ import type {
   CalendarEventTemplateRow,
   DocRow,
   ExecutionQueueRow,
+  DocFolderRow,
   ExecutionSessionRow,
-  FolderRow,
+  SpaceFolderRow,
   SpaceRow,
   TaskRow,
   WorkspaceMemberRow,
@@ -64,14 +66,23 @@ export function mapWorkspaceMember(row: WorkspaceMemberRow): WorkspaceMember {
   };
 }
 
-export function mapFolder(row: FolderRow): Folder {
+export function mapSpaceFolder(row: SpaceFolderRow): SpaceFolder {
   return {
     id: row.id,
     workspaceId: row.workspaceId,
-    parentId: row.parentId,
-    kind: row.kind,
     name: row.name,
     emoji: row.emoji,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
+export function mapDocFolder(row: DocFolderRow): DocFolder {
+  return {
+    id: row.id,
+    workspaceId: row.workspaceId,
+    spaceId: row.spaceId,
+    name: row.name,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -81,7 +92,8 @@ export function mapSpace(row: SpaceRow): Space {
   return {
     id: row.id,
     workspaceId: row.workspaceId,
-    folderId: row.folderId,
+    folderId: row.spaceFolderId,
+    isInbox: row.isInbox,
     name: row.name,
     emoji: row.emoji,
     createdAt: row.createdAt.toISOString(),
@@ -121,6 +133,7 @@ export function mapDocSummary(
   const summary = {
     id: row.id,
     workspaceId: row.workspaceId,
+    spaceId: row.spaceId,
     folderId: row.folderId,
     type: row.type,
     docKey: row.docKey,
@@ -210,6 +223,7 @@ export function mapCalendarEvent(row: CalendarEventRow): CalendarEvent {
     description: row.description,
     taskScope: row.taskScope ?? [],
     participants: row.participants ?? [],
+    spaceId: row.spaceId,
     rsvpStatus: row.rsvpStatus,
     googleEventId: row.googleEventId,
     googleEtag: row.googleEtag,
@@ -256,6 +270,7 @@ export function mapCalendarEventTemplate(
   return {
     id: row.id,
     workspaceId: row.workspaceId,
+    spaceId: row.spaceId,
     title: row.title,
     durationMinutes: row.durationMinutes,
     color: row.color,
@@ -269,6 +284,7 @@ export function mapCalendarEventTemplate(
 interface DocSummaryRow {
   id: string;
   workspaceId: string;
+  spaceId: string;
   folderId: string | null;
   type: DocRow["type"];
   docKey: string;

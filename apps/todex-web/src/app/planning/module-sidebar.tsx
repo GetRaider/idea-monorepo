@@ -34,7 +34,7 @@ import {
   TooltipTrigger,
   cn,
 } from "@repo/ui";
-import type { Folder, Space } from "@repo/api/todex";
+import type { Space, SpaceFolder } from "@repo/api/todex";
 
 import {
   BoardIcon,
@@ -44,6 +44,7 @@ import {
   EllipsisIcon,
   FolderIcon,
   GoalIcon,
+  PlanningIcon,
   PlusIcon,
 } from "@components/icons";
 import { ResizeHandle } from "@components/resize-handle";
@@ -63,7 +64,6 @@ import {
   useModuleSidebar,
 } from "@components/module-sidebar";
 
-import { INBOX_BOARD_NAME } from "./task-helpers";
 import { useTasks } from "./tasks-provider";
 import { useSpaceDialogs } from "./space-dialogs";
 
@@ -87,13 +87,14 @@ export function TasksModuleSidebar() {
     const drag = event.active.data.current;
     const drop = event.over?.data.current;
     if (!isSpaceDrag(drag) || !isSpaceDrop(drop)) return;
+    if (drag.isInbox) return;
     const folderId = drop.kind === "folder" ? drop.folderId : null;
     if (drag.folderId === folderId) return;
     void updateBoard(drag.spaceId, { folderId });
   }
 
   const activeBoardId = view.kind === "board" ? view.spaceId : null;
-  const inboxBoard = boards.find((board) => board.name === INBOX_BOARD_NAME);
+  const inboxBoard = boards.find((board) => board.isInbox);
   const rootBoards = boards.filter(
     (board) => !board.folderId && board.id !== inboxBoard?.id,
   );
@@ -111,10 +112,16 @@ export function TasksModuleSidebar() {
       />
       <div className="flex min-h-0 flex-1 flex-col px-3 pb-3 pt-3">
         <section className="mb-4 w-full">
-          <h2 className="mb-2 px-2 text-sm text-muted-foreground">Lists</h2>
+          <h2 className="mb-2 px-2 text-sm text-muted-foreground">Views</h2>
+          <NavRow
+            href={tasksUrlHelper.routing.buildRootUrl()}
+            active={tasksUrlHelper.routing.isRootPathname(pathname)}
+            icon={<PlanningIcon size={16} />}
+            label="Home"
+          />
           {inboxBoard ? (
             <NavRow
-              href={tasksUrlHelper.routing.buildBoardUrl(inboxBoard.name)}
+              href={tasksUrlHelper.routing.buildBoardUrl(inboxBoard.id)}
               active={activeBoardId === inboxBoard.id}
               icon={<BoardIcon size={16} />}
               label="Inbox"
@@ -174,7 +181,7 @@ export function TasksModuleSidebar() {
                   key={board.id}
                   spaceId={board.id}
                   folderId={board.folderId}
-                  href={tasksUrlHelper.routing.buildBoardUrl(board.name)}
+                  href={tasksUrlHelper.routing.buildBoardUrl(board.id)}
                   active={activeBoardId === board.id}
                   icon={<BoardIcon size={16} />}
                   label={board.name}
@@ -242,7 +249,7 @@ function FolderGroup({ folder, boards, activeBoardId }: FolderGroupProps) {
               key={board.id}
               spaceId={board.id}
               folderId={board.folderId}
-              href={tasksUrlHelper.routing.buildBoardUrl(board.name)}
+              href={tasksUrlHelper.routing.buildBoardUrl(board.id)}
               active={activeBoardId === board.id}
               icon={<BoardIcon size={16} />}
               label={board.name}
@@ -319,6 +326,7 @@ function SpaceBoardRow({
       kind: "board",
       spaceId,
       folderId,
+      isInbox: false,
       label: row.label,
     } satisfies SpaceDragData,
   });
@@ -384,31 +392,35 @@ function BoardMenu({ board }: { board: Space }) {
       <DropdownMenuItem onSelect={() => actions.openRenameBoard(board)}>
         Rename
       </DropdownMenuItem>
-      <DropdownMenuItem onSelect={() => actions.openMoveBoard(board)}>
-        Move to folder
-      </DropdownMenuItem>
-      <DropdownMenuSeparator />
-      <DropdownMenuItem
-        className="text-destructive"
-        onSelect={() => actions.openDeleteBoard(board)}
-      >
-        Delete
-      </DropdownMenuItem>
+      {board.isInbox ? null : (
+        <DropdownMenuItem onSelect={() => actions.openMoveBoard(board)}>
+          Move to folder
+        </DropdownMenuItem>
+      )}
+      {board.isInbox ? null : <DropdownMenuSeparator />}
+      {board.isInbox ? null : (
+        <DropdownMenuItem
+          className="text-destructive"
+          onSelect={() => actions.openDeleteBoard(board)}
+        >
+          Delete
+        </DropdownMenuItem>
+      )}
     </RowMenu>
   );
 }
 
-function FolderMenu({ folder }: { folder: Folder }) {
+function FolderMenu({ folder }: { folder: SpaceFolder }) {
   const actions = useSpaceDialogs();
   return (
     <RowMenu>
-      <DropdownMenuItem onSelect={() => actions.openRenameFolder(folder)}>
+      <DropdownMenuItem onSelect={() => actions.openRenameSpaceFolder(folder)}>
         Rename
       </DropdownMenuItem>
       <DropdownMenuSeparator />
       <DropdownMenuItem
         className="text-destructive"
-        onSelect={() => actions.openDeleteFolder(folder)}
+        onSelect={() => actions.openDeleteSpaceFolder(folder)}
       >
         Delete
       </DropdownMenuItem>
@@ -441,6 +453,7 @@ function isSpaceDrag(value: unknown): value is SpaceDragData {
   if (!("spaceId" in value) || typeof value.spaceId !== "string") return false;
   if (!("folderId" in value)) return false;
   if (!("label" in value) || typeof value.label !== "string") return false;
+  if (!("isInbox" in value) || typeof value.isInbox !== "boolean") return false;
   return value.folderId === null || typeof value.folderId === "string";
 }
 
@@ -486,7 +499,7 @@ class SpacePointerSensor extends PointerSensor {
 }
 
 interface FolderGroupProps {
-  folder: Folder;
+  folder: SpaceFolder;
   boards: Space[];
   activeBoardId: string | null;
 }
@@ -508,6 +521,7 @@ interface SpaceDragData {
   kind: "board";
   spaceId: string;
   folderId: string | null;
+  isInbox: boolean;
   label: string;
 }
 

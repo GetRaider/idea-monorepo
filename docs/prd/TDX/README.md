@@ -22,3 +22,4 @@ Unified AI context for Tasks, Calendar, and Docs. Successor to Take & Do. **v0:*
 | [space-projects-epics.md](./space-projects-epics.md) | Rename Board→Space and Area→Section; add Projects and Epics. Draft.          |
 | [planning-knowledge-goals.md](./planning-knowledge-goals.md) | Planning / Knowledge labels, Goals under Planning, Knowledge templates placeholder. Draft. |
 | [mcp-server-mvp.md](./mcp-server-mvp.md)                 | Inbound MCP server: OAuth + PAT, knowledge and task tools, task context, execution results. Draft. |
+| [todex-landing.md](./todex-landing.md)                   | Public site for trytodex.com. Four slices: home design, home copy, three pages, then Resources. Pricing hidden. Draft. |

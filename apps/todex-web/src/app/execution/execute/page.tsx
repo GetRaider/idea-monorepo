@@ -11,7 +11,7 @@ import {
 } from "../../planning/task-selection";
 import { useExecution } from "../execution-provider";
 import { ExecutionQueueList } from "../execution-queue-list";
-import { ExecutionCanvas } from "../execution-sidebar";
+import { ExecutionCanvas } from "../execution-canvas";
 import { ExecutionSuggestionsPanel } from "../execution-suggestions-panel";
 import { ExecutionTaskDetail } from "../execution-task-detail";
 import {
@@ -20,7 +20,7 @@ import {
   formatDuration,
 } from "../execution-time";
 
-export default function CurrentExecutionPage() {
+export default function ExecutePage() {
   const {
     state: { session, tasks, focused, queue, isLoading, isError },
     actions: { execute, removeQueued, setMode, setGoalMinutes },
@@ -96,7 +96,7 @@ export default function CurrentExecutionPage() {
 
   return (
     <ExecutionCanvas
-      title="Execution"
+      title="Execute"
       actions={
         <div className="flex gap-2">
           <StatChip value={String(queue.length)} label="in queue" />

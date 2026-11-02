@@ -99,7 +99,7 @@ function ExecutionStatusBar() {
       <Tooltip>
         <TooltipTrigger asChild>
           <Link
-            href="/execution/current"
+            href="/execution/execute"
             aria-label="Execution"
             className={cn(
               "flex size-8 items-center justify-center rounded-lg text-[#c8c8c4] transition-colors hover:bg-white/5 hover:text-foreground",
@@ -137,7 +137,7 @@ function ExecutionStatusBar() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem asChild>
-          <Link href="/execution/current">Open</Link>
+          <Link href="/execution/execute">Open</Link>
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => (tracking ? pause() : resume())}>
           {tracking ? "Pause" : "Resume"}

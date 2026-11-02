@@ -11,20 +11,29 @@ import { ResizeGestureContext } from "./resize-handle";
 export function ModuleSidebarProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname() ?? "";
   const moduleKey = moduleForPath(pathname);
-  const [open, setOpenState] = useState(true);
+  const disabled = moduleKey != null && SIDEBAR_DISABLED.has(moduleKey);
+  const [openState, setOpenState] = useState(true);
 
   useEffect(() => {
-    if (!moduleKey) return;
+    if (!moduleKey || disabled) return;
     setOpenState(readOpen(moduleKey));
-  }, [moduleKey]);
+  }, [moduleKey, disabled]);
 
   function setOpen(next: boolean) {
+    if (disabled) return;
     setOpenState(next);
     if (moduleKey) writeOpen(moduleKey, next);
   }
 
   return (
-    <ModuleSidebarContext value={{ moduleKey, open, setOpen }}>
+    <ModuleSidebarContext
+      value={{
+        moduleKey,
+        open: disabled ? false : openState,
+        setOpen,
+        disabled,
+      }}
+    >
       {children}
     </ModuleSidebarContext>
   );
@@ -72,27 +81,41 @@ export function useModuleSidebar() {
 }
 
 export function SidebarToggle() {
-  const { moduleKey, open, setOpen } = useModuleSidebar();
+  const { moduleKey, open, setOpen, disabled } = useModuleSidebar();
   if (!moduleKey) return null;
+
+  const label = sidebarToggleLabel(disabled, open);
 
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <button
-          type="button"
-          aria-label={open ? "Collapse sidebar" : "Expand sidebar"}
-          aria-pressed={open}
-          onClick={() => setOpen(!open)}
-          className="flex size-11 items-center justify-center rounded-lg text-[#cfcfcc] transition-colors hover:bg-white/5 hover:text-foreground"
-        >
-          <SidebarToggleIcon open={open} size={16} />
-        </button>
+        <span className="inline-flex">
+          <button
+            type="button"
+            disabled={disabled}
+            aria-label={label}
+            aria-pressed={disabled ? undefined : open}
+            onClick={() => setOpen(!open)}
+            className={cn(
+              "flex size-11 items-center justify-center rounded-lg text-[#cfcfcc] transition-colors",
+              disabled
+                ? "cursor-not-allowed opacity-40"
+                : "hover:bg-white/5 hover:text-foreground",
+            )}
+          >
+            <SidebarToggleIcon open={open} size={16} />
+          </button>
+        </span>
       </TooltipTrigger>
-      <TooltipContent side="bottom">
-        {open ? "Collapse sidebar" : "Expand sidebar"}
-      </TooltipContent>
+      <TooltipContent side="bottom">{label}</TooltipContent>
     </Tooltip>
   );
+}
+
+function sidebarToggleLabel(disabled: boolean, open: boolean) {
+  if (disabled) return "Sidebar unavailable";
+  if (open) return "Collapse sidebar";
+  return "Expand sidebar";
 }
 
 function moduleForPath(pathname: string): ModuleKey | null {
@@ -120,6 +143,8 @@ function writeOpen(moduleKey: ModuleKey, shouldOpen: boolean) {
   }
 }
 
+const SIDEBAR_DISABLED = new Set<ModuleKey>(["overview"]);
+
 const OPEN_KEYS = {
   tasks: "todex:tasks-sidebar-open",
   docs: "todex:docs-sidebar-open",
@@ -142,6 +167,7 @@ interface ModuleSidebarContextValue {
   moduleKey: ModuleKey | null;
   open: boolean;
   setOpen: (open: boolean) => void;
+  disabled: boolean;
 }
 
 type ModuleKey = keyof typeof OPEN_KEYS;

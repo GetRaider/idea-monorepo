@@ -119,7 +119,7 @@ function ContinueWorkSection() {
       action={
         hasWork ? (
           <Link
-            href="/execution/current"
+            href="/execution/execute"
             className={buttonVariants({ size: "sm" })}
           >
             Continue

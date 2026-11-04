@@ -16,10 +16,22 @@ export function readMentionTrigger(
 export function mentionMenuItems(
   candidates: MentionCandidate[],
   query: string,
+  options?: MentionMenuOptions,
 ): MentionMenuEntry[] {
-  const parsed = parseMentionQuery(query);
+  const includeEvents = options?.includeEvents !== false;
+  const scopes = includeEvents
+    ? MENTION_SCOPES
+    : MENTION_SCOPES.filter(
+        (scope) => scope.targetType !== DocMentionTarget.EVENT,
+      );
+  const visibleCandidates = includeEvents
+    ? candidates
+    : candidates.filter(
+        (candidate) => candidate.targetType !== DocMentionTarget.EVENT,
+      );
+  const parsed = parseMentionQuery(query, scopes);
   if (parsed.scope) {
-    return candidates
+    return visibleCandidates
       .filter(
         (candidate) =>
           candidate.targetType === parsed.scope &&
@@ -29,22 +41,22 @@ export function mentionMenuItems(
       .map(targetEntry);
   }
   if (parsed.showScopes) {
-    return MENTION_SCOPES.filter((scope) =>
-      scope.token.startsWith(query.toLowerCase()),
-    ).map((scope) => ({
-      kind: "scope",
-      token: scope.token,
-      label: scope.label,
-    }));
+    return scopes
+      .filter((scope) => scope.token.startsWith(query.toLowerCase()))
+      .map((scope) => ({
+        kind: "scope" as const,
+        token: scope.token,
+        label: scope.label,
+      }));
   }
-  return candidates
+  return visibleCandidates
     .filter((candidate) => matchesMention(candidate, query))
     .slice(0, MENTION_RESULT_LIMIT)
     .map(targetEntry);
 }
 
 export function mentionEmptyLabel(query: string): string {
-  const parsed = parseMentionQuery(query);
+  const parsed = parseMentionQuery(query, MENTION_SCOPES);
   if (parsed.scope === DocMentionTarget.EVENT) return "No events";
   if (parsed.scope === DocMentionTarget.TASK) return "No tasks";
   if (parsed.scope === DocMentionTarget.DOC) return "No docs";
@@ -93,11 +105,12 @@ export function mentionHref(input: MentionHrefInput): string | null {
   return tasksUrlHelper.routing.buildBoardUrl(input.spaceId, input.taskKey);
 }
 
-function parseMentionQuery(query: string): ParsedMentionQuery {
+function parseMentionQuery(
+  query: string,
+  scopes: readonly MentionScope[],
+): ParsedMentionQuery {
   const normalized = query.toLowerCase();
-  const scope = MENTION_SCOPES.find((item) =>
-    normalized.startsWith(item.token),
-  );
+  const scope = scopes.find((item) => normalized.startsWith(item.token));
   if (scope) {
     return {
       scope: scope.targetType,
@@ -108,9 +121,7 @@ function parseMentionQuery(query: string): ParsedMentionQuery {
   return {
     scope: null,
     search: query,
-    showScopes: MENTION_SCOPES.some((item) =>
-      item.token.startsWith(normalized),
-    ),
+    showScopes: scopes.some((item) => item.token.startsWith(normalized)),
   };
 }
 
@@ -162,6 +173,12 @@ export type MentionMenuEntry =
       href: string | null;
       hint?: string;
     };
+
+interface MentionMenuOptions {
+  includeEvents?: boolean;
+}
+
+type MentionScope = (typeof MENTION_SCOPES)[number];
 
 interface MentionHrefInput {
   targetType: MentionCandidate["targetType"];

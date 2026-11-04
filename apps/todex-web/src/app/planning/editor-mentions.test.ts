@@ -77,6 +77,26 @@ describe("mentionMenuItems", () => {
     ).toEqual(["doc-1"]);
   });
 
+  it("omits events when calendar is off", () => {
+    const withEvent: MentionCandidate[] = [
+      ...candidates,
+      {
+        targetType: DocMentionTarget.EVENT,
+        id: "event-1",
+        label: "Standup",
+        href: "/calendar/events/event-1",
+      },
+    ];
+    expect(
+      mentionMenuItems(withEvent, "", { includeEvents: false }).map((item) =>
+        item.kind === "scope" ? item.token : item.id,
+      ),
+    ).toEqual(["tasks", "docs"]);
+    expect(
+      mentionMenuItems(withEvent, "events standup", { includeEvents: false }),
+    ).toEqual([]);
+  });
+
   it("searches every kind when the query is not a scope", () => {
     expect(
       mentionMenuItems(candidates, "launch").map((item) =>

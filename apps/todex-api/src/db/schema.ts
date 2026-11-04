@@ -106,6 +106,13 @@ export const workspaceMembers = pgTable(
   ],
 );
 
+export const userPreferences = pgTable("user_preferences", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  calendarEnabled: boolean("calendar_enabled").notNull().default(false),
+});
+
 export const spaceFolders = pgTable(
   "space_folders",
   {

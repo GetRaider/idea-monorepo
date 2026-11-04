@@ -5,15 +5,15 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@repo/ui";
 
-import { ClockIcon, RowsIcon, StatusDoneIcon } from "@components/icons";
+import { OrbitIcon, RowsIcon, StatusDoneIcon } from "@components/icons";
 import { ModuleSidebarFrame, useModuleSidebar } from "@components/module-sidebar";
 
 const EXECUTION_SIDEBAR_WIDTH = 208;
 
 const LINKS = [
-  { href: "/execution/execute", label: "Execute", icon: ClockIcon },
-  { href: "/execution/activity", label: "Activity", icon: RowsIcon },
-  { href: "/execution/history", label: "History", icon: StatusDoneIcon },
+  { href: "/execution", label: "Home", icon: OrbitIcon, exact: true },
+  { href: "/execution/activity", label: "Activity", icon: RowsIcon, exact: false },
+  { href: "/execution/history", label: "History", icon: StatusDoneIcon, exact: false },
 ] as const;
 
 export function ExecutionSidebar() {
@@ -30,7 +30,7 @@ export function ExecutionSidebar() {
               key={link.href}
               href={link.href}
               label={link.label}
-              active={isActive(pathname, link.href)}
+              active={isActive(pathname, link.href, link.exact)}
               icon={<link.icon size={16} />}
             />
           ))}
@@ -67,6 +67,8 @@ function SidebarLink({
   );
 }
 
-function isActive(pathname: string, href: string) {
-  return pathname === href || pathname.startsWith(`${href}/`);
+function isActive(pathname: string, href: string, exact: boolean) {
+  const normalized = pathname.replace(/\/+$/, "") || "/";
+  if (exact) return normalized === href;
+  return normalized === href || normalized.startsWith(`${href}/`);
 }

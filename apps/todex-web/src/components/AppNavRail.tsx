@@ -16,44 +16,35 @@ import {
 
 import { signOut, useSession } from "@lib/auth-client";
 
+import { useCalendarEnabled } from "../app/settings/use-calendar-enabled";
 import {
   BellIcon,
   CalendarIcon,
   KnowledgeIcon,
+  OrbitIcon,
   OverviewIcon,
   PlanningIcon,
 } from "./icons";
 
 const NAV = [
-  { href: "/overview", label: "Overview", enabled: true, icon: OverviewIcon },
-  { href: "/planning", label: "Planning", enabled: true, icon: PlanningIcon },
-  { href: "/knowledge", label: "Knowledge", enabled: true, icon: KnowledgeIcon },
-  { href: "/calendar", label: "Calendar", enabled: true, icon: CalendarIcon },
+  { href: "/overview", label: "Overview", icon: OverviewIcon },
+  { href: "/knowledge", label: "Knowledge", icon: KnowledgeIcon },
+  { href: "/planning", label: "Planning", icon: PlanningIcon },
+  { href: "/execution", label: "Execution", icon: OrbitIcon },
 ] as const;
 
 export function AppNavRail() {
-  const pathname = usePathname();
+  const pathname = usePathname() ?? "";
+  const { enabled: calendarEnabled } = useCalendarEnabled();
+  const items = calendarEnabled
+    ? [...NAV, { href: "/calendar", label: "Calendar", icon: CalendarIcon }]
+    : NAV;
 
   return (
     <aside className="flex h-full w-[53px] shrink-0 flex-col items-center px-[10px] pb-4">
       <nav className="flex flex-col gap-1.5">
-        {NAV.map((item) => {
-          const active =
-            item.enabled &&
-            (pathname === item.href || pathname.startsWith(`${item.href}/`));
-          const icon = <item.icon size={20} />;
-          if (!item.enabled) {
-            return (
-              <RailTooltip
-                key={item.href}
-                label={`${item.label} — Coming soon`}
-              >
-                <span className="flex size-8 cursor-not-allowed items-center justify-center rounded-lg text-[#a3a3a0] opacity-30">
-                  {icon}
-                </span>
-              </RailTooltip>
-            );
-          }
+        {items.map((item) => {
+          const active = isRailActive(pathname, item.href);
           return (
             <RailTooltip key={item.href} label={item.label}>
               <Link
@@ -63,7 +54,7 @@ export function AppNavRail() {
                   active && "bg-[#f2f2f0] text-[#141414] hover:bg-[#f2f2f0] hover:text-[#141414]",
                 )}
               >
-                {icon}
+                <item.icon size={20} />
               </Link>
             </RailTooltip>
           );
@@ -119,6 +110,13 @@ function AccountAvatar() {
       </DropdownMenuContent>
     </DropdownMenu>
   );
+}
+
+function isRailActive(pathname: string, href: string) {
+  if (href.startsWith("/execution")) {
+    return pathname === "/execution" || pathname.startsWith("/execution/");
+  }
+  return pathname === href || pathname.startsWith(`${href}/`);
 }
 
 function RailTooltip({

@@ -48,6 +48,8 @@ import {
   UpdateDocBodySchema,
   UpdateEpicBodySchema,
   UpdateTaskBodySchema,
+  UpdateUserPreferencesBodySchema,
+  UserPreferencesSchema,
   WorkspaceMemberProfileSchema,
   WorkspaceSchema,
 } from "@repo/api/todex";
@@ -185,6 +187,16 @@ function readError(data: unknown): string | null {
 }
 
 export const todexClient = {
+  preferences: {
+    get: () => call("get", "/v1/preferences", UserPreferencesSchema),
+    update: (body: unknown) =>
+      call(
+        "patch",
+        "/v1/preferences",
+        UserPreferencesSchema,
+        UpdateUserPreferencesBodySchema.parse(body),
+      ),
+  },
   workspaces: {
     list: () => call("get", "/v1/workspaces", WorkspaceListSchema),
     members: () =>

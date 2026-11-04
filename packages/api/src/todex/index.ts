@@ -247,6 +247,14 @@ export {
   sumIntervalSeconds,
 } from "./intervals.ts";
 export {
+  UpdateUserPreferencesBodySchema,
+  UserPreferencesSchema,
+} from "./user-preferences.ts";
+export type {
+  UpdateUserPreferencesBody,
+  UserPreferences,
+} from "./user-preferences.ts";
+export {
   WorkspaceMemberProfileSchema,
   WorkspaceMemberSchema,
   WorkspaceSchema,

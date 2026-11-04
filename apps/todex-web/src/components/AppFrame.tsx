@@ -5,16 +5,11 @@ import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 
 import {
-  cn,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
-  Tooltip,
-  TooltipContent,
   TooltipProvider,
-  TooltipTrigger,
 } from "@repo/ui";
 
 import { ExecutionProvider, useExecution } from "../app/execution/execution-provider";
@@ -23,7 +18,7 @@ import { AgentWidget } from "./agent-widget";
 import { AppNavRail } from "./AppNavRail";
 import { AuthGuard } from "./AuthGuard";
 import { CreateMenu, CreateMenuProvider } from "./create-menu";
-import { ExecutionIcon } from "./icons";
+import { PauseIcon, PlayIcon } from "./icons";
 import { ModuleSidebarProvider, SidebarToggle } from "./module-sidebar";
 import { PlatformSearchProvider, SearchButton } from "./platform-search";
 
@@ -85,48 +80,22 @@ export function AppFrame({ children }: { children: ReactNode }) {
 }
 
 function ExecutionStatusBar() {
-  const pathname = usePathname();
   const {
-    state: { session, tasks, focused },
-    actions: { focus, pause, resume, complete },
+    state: { session, focused },
+    actions: { pause, resume, complete },
     meta: { shownSeconds, tracking, isCompleting },
   } = useExecution();
-  const active =
-    pathname === "/execution" || pathname.startsWith("/execution/");
 
-  if (!session) {
-    return (
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Link
-            href="/execution/execute"
-            aria-label="Execution"
-            className={cn(
-              "flex size-8 items-center justify-center rounded-lg text-[#c8c8c4] transition-colors hover:bg-white/5 hover:text-foreground",
-              active &&
-                "bg-[#f2f2f0] text-[#141414] hover:bg-[#f2f2f0] hover:text-[#141414]",
-            )}
-          >
-            <ExecutionIcon size={20} />
-          </Link>
-        </TooltipTrigger>
-        <TooltipContent side="bottom">Execution</TooltipContent>
-      </Tooltip>
-    );
-  }
+  if (!session) return null;
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          className={cn(
-            "flex h-8 min-w-0 max-w-xs items-center gap-2 rounded-lg px-2 text-[#c8c8c4] transition-colors hover:bg-white/5 hover:text-foreground",
-            active &&
-              "bg-[#f2f2f0] text-[#141414] hover:bg-[#f2f2f0] hover:text-[#141414]",
-          )}
+          className="flex h-8 min-w-0 max-w-xs items-center gap-2 rounded-lg px-2 text-[#c8c8c4] transition-colors hover:bg-white/5 hover:text-foreground"
         >
-          <ExecutionIcon size={20} />
+          {tracking ? <PauseIcon size={16} /> : <PlayIcon size={16} />}
           <span className="text-xs font-medium tabular-nums leading-none">
             {shownSeconds == null ? "—" : formatClock(shownSeconds)}
           </span>
@@ -136,25 +105,15 @@ function ExecutionStatusBar() {
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem asChild>
-          <Link href="/execution/execute">Open</Link>
-        </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => (tracking ? pause() : resume())}>
           {tracking ? "Pause" : "Resume"}
         </DropdownMenuItem>
         <DropdownMenuItem disabled={isCompleting} onSelect={() => complete()}>
           Stop
         </DropdownMenuItem>
-        {tasks.length > 0 ? <DropdownMenuSeparator /> : null}
-        {tasks.map((task) => (
-          <DropdownMenuItem
-            key={task.id}
-            onSelect={() => focus(task.id)}
-            className={cn(task.id === focused?.id && "font-medium")}
-          >
-            {task.summary}
-          </DropdownMenuItem>
-        ))}
+        <DropdownMenuItem asChild>
+          <Link href="/execution">Open</Link>
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

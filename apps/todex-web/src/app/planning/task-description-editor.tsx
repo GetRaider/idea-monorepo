@@ -15,6 +15,7 @@ import {
   mentionMenuItems,
   readMentionTrigger,
 } from "./editor-mentions";
+import { useCalendarEnabled } from "../settings/use-calendar-enabled";
 import { MentionMenu, useMentionCandidates } from "./editor-mentions.ui";
 import { MentionNode } from "./mention-node";
 import { normalizeDescriptionHtml } from "./task-helpers";
@@ -110,6 +111,7 @@ export function TaskDescriptionEditor({
   const suppressSlashRef = useRef(false);
   const suppressMentionRef = useRef(false);
   const mentionCandidates = useMentionCandidates(excludeDocId);
+  const { enabled: calendarEnabled } = useCalendarEnabled();
   const [slashMenu, setSlashMenu] = useState<SlashMenuState | null>(null);
   const [activeSlashIndex, setActiveSlashIndex] = useState(0);
   const [mentionMenu, setMentionMenu] = useState<MentionMenuState | null>(null);
@@ -153,8 +155,12 @@ export function TaskDescriptionEditor({
 
   const visibleMentionItems = useMemo(
     () =>
-      mentionMenu ? mentionMenuItems(mentionCandidates, mentionMenu.query) : [],
-    [mentionCandidates, mentionMenu],
+      mentionMenu
+        ? mentionMenuItems(mentionCandidates, mentionMenu.query, {
+            includeEvents: calendarEnabled,
+          })
+        : [],
+    [calendarEnabled, mentionCandidates, mentionMenu],
   );
 
   const visibleSlashItems = useMemo(() => {

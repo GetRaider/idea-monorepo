@@ -84,7 +84,7 @@ describe("mentionMenuItems", () => {
         targetType: DocMentionTarget.EVENT,
         id: "event-1",
         label: "Standup",
-        href: "/calendar/events/event-1",
+        href: "/planning/calendar/events/event-1",
       },
     ];
     expect(
@@ -121,7 +121,7 @@ describe("mentionHref", () => {
     ).toBe("/planning/space/space-1/TDX-4");
     expect(
       mentionHref({ targetType: DocMentionTarget.EVENT, targetId: "event-1" }),
-    ).toBe("/calendar/events/event-1");
+    ).toBe("/planning/calendar/events/event-1");
   });
 });
 describe("mentionEmptyLabel", () => {

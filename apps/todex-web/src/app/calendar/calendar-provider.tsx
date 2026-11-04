@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { todexClient } from "@lib/todex-client";
 
 const CalendarContext = createContext<CalendarContextValue | null>(null);
+const CALENDAR_HOME = "/planning/calendar";
 
 export function CalendarProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
@@ -28,6 +29,8 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
   const [focusRequest, setFocusRequest] = useState<CalendarFocusRequest | null>(
     null,
   );
+  const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [composer, setComposer] = useState<CalendarComposer | null>(null);
   const routeEventId = eventIdFromPath(pathname);
   const occurrence = searchParams.get("occurrence");
   const selectedTaskId = routeEventId ? null : searchParams.get("task");
@@ -86,7 +89,7 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
     }) => todexClient.calendar.events.remove(input.eventId, input),
     onSuccess: async () => {
       await invalidateEvents();
-      router.push("/calendar");
+      router.push(CALENDAR_HOME);
     },
     onError: () => toast.error("Could not delete the event"),
   });
@@ -140,6 +143,8 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
         boards: boardsQuery.data ?? [],
         visibility,
         focusRequest,
+        scheduleOpen,
+        composer,
         selectedEvent,
         selectedTaskId,
         selectedTask,
@@ -160,16 +165,25 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
         focusDay: (day) => {
           setFocusRequest({ date: day.toISOString(), id: Date.now() });
         },
+        setScheduleOpen,
+        openComposer: (next) => {
+          setComposer(next);
+          if (routeEventId || searchParams.get("task")) router.push(CALENDAR_HOME);
+        },
+        closeComposer: () => setComposer(null),
         openEvent: (eventId, originalStart) => {
+          setComposer(null);
           const search = originalStart
             ? `?occurrence=${encodeURIComponent(originalStart)}`
             : "";
-          router.push(`/calendar/events/${eventId}${search}`);
+          router.push(`${CALENDAR_HOME}/events/${eventId}${search}`);
         },
-        closeEvent: () => router.push("/calendar"),
-        openTask: (taskId) =>
-          router.push(`/calendar?task=${encodeURIComponent(taskId)}`),
-        closeTask: () => router.push("/calendar"),
+        closeEvent: () => router.push(CALENDAR_HOME),
+        openTask: (taskId) => {
+          setComposer(null);
+          router.push(`${CALENDAR_HOME}?task=${encodeURIComponent(taskId)}`);
+        },
+        closeTask: () => router.push(CALENDAR_HOME),
         createEvent: (body) => createEvent.mutateAsync(body),
         updateEvent: (eventId, body) =>
           updateEvent.mutateAsync({ eventId, body }),
@@ -192,10 +206,14 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
       boardsQuery.data,
       visibility,
       focusRequest,
+      scheduleOpen,
+      composer,
       selectedEvent,
       selectedTaskId,
       selectedTask,
       occurrence,
+      routeEventId,
+      searchParams,
       router,
       createEvent,
       updateEvent,
@@ -222,7 +240,7 @@ export function useCalendar() {
 }
 
 function eventIdFromPath(pathname: string): string | null {
-  const match = pathname.match(/^\/calendar\/events\/([^/]+)/);
+  const match = pathname.match(/^\/planning\/calendar\/events\/([^/]+)/);
   return match?.[1] ? decodeURIComponent(match[1]) : null;
 }
 
@@ -248,6 +266,8 @@ interface CalendarContextValue {
     boards: Space[];
     visibility: CalendarVisibility;
     focusRequest: CalendarFocusRequest | null;
+    scheduleOpen: boolean;
+    composer: CalendarComposer | null;
     selectedEvent: CalendarEvent | null;
     selectedTaskId: string | null;
     selectedTask: Task | null;
@@ -258,6 +278,9 @@ interface CalendarContextValue {
     setRange: (range: { from: string; to: string }) => void;
     setVisibility: (patch: Partial<CalendarVisibility>) => void;
     focusDay: (day: Date) => void;
+    setScheduleOpen: (open: boolean) => void;
+    openComposer: (draft: CalendarComposer) => void;
+    closeComposer: () => void;
     openEvent: (eventId: string, originalStart?: string | null) => void;
     closeEvent: () => void;
     openTask: (taskId: string) => void;
@@ -289,4 +312,13 @@ interface CalendarContextValue {
 interface CalendarFocusRequest {
   date: string;
   id: number;
+}
+
+export interface CalendarComposer {
+  title: string;
+  start: string;
+  end: string;
+  allDay: boolean;
+  kind: "event" | "task";
+  taskId: string;
 }

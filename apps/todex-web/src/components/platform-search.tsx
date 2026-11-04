@@ -309,7 +309,7 @@ function searchHits({
           kind: "Event",
           title: event.title,
           detail: "",
-          href: `/calendar/events/${event.id}`,
+          href: `/planning/calendar/events/${event.id}`,
         },
       ];
     }),

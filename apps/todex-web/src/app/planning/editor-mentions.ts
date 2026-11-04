@@ -99,7 +99,7 @@ export function mentionHref(input: MentionHrefInput): string | null {
     return `/knowledge/${input.targetId}`;
   }
   if (input.targetType === DocMentionTarget.EVENT) {
-    return `/calendar/events/${input.targetId}`;
+    return `/planning/calendar/events/${input.targetId}`;
   }
   if (!input.taskKey || !input.spaceId) return null;
   return tasksUrlHelper.routing.buildBoardUrl(input.spaceId, input.taskKey);

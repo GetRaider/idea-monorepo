@@ -1,58 +1,66 @@
 "use client";
 
 import { useState, type ReactNode, type Ref } from "react";
-import { Button, Checkbox, Input, Label, cn } from "@repo/ui";
-import type { Task, Space, TaskRecurrence } from "@repo/api/todex";
+import { Button, Input } from "@repo/ui";
+import type { Space, Task } from "@repo/api/todex";
 
-import { TaskRecurrencePicker } from "../planning/task-recurrence-picker";
-import { CalendarColorPicker } from "./calendar-color-picker";
-import { DEFAULT_EVENT_COLOR } from "./calendar-colors";
+import { CloseIcon } from "@components/icons";
+import {
+  combineLocalDateAndTime,
+  isoToDateInput,
+  isoToLocalTimeInput,
+} from "../planning/task-helpers";
+
 import { TaskScopePicker } from "./calendar-task-scope";
-import { withAllDay } from "./calendar-datetime";
-import { CalendarWhenFields } from "./calendar-when";
+
+const DURATION_OPTIONS = [15, 30, 45, 60, 90, 120] as const;
 
 export function CalendarDraft({
   ref,
   draft,
   tasks,
   boards,
+  onRange,
   onKind,
   onCancel,
+  onMore,
   onCreate,
 }: {
   ref?: Ref<HTMLFormElement>;
   draft: DraftSelection;
   tasks: Task[];
   boards: Space[];
+  onRange: (start: Date, end: Date) => void;
   onKind: (kind: DraftKind) => void;
   onCancel: () => void;
+  onMore: (fields: DraftFields) => void;
   onCreate: (body: DraftCreate) => Promise<void>;
 }) {
   const [title, setTitle] = useState("");
-  const [color, setColor] = useState<string | null>(null);
-  const [allDay, setAllDay] = useState(draft.allDay);
-  const [start, setStart] = useState(draft.start.toISOString());
-  const [end, setEnd] = useState(draft.end.toISOString());
-  const [recurrence, setRecurrence] = useState<TaskRecurrence | null>(null);
-  const [taskScope, setTaskScope] = useState<string[]>([]);
   const [taskId, setTaskId] = useState("");
   const [pending, setPending] = useState(false);
-  const rangeValid = Date.parse(start) < Date.parse(end);
-  const canCreate =
-    rangeValid &&
-    (draft.kind === "event" ? title.trim().length > 0 : Boolean(taskId));
+  const startIso = draft.start.toISOString();
+  const endIso = draft.end.toISOString();
+  const minutes = Math.max(
+    15,
+    Math.round((draft.end.getTime() - draft.start.getTime()) / 60_000),
+  );
+  const durationChoices = DURATION_OPTIONS.some((option) => option === minutes)
+    ? DURATION_OPTIONS
+    : [minutes, ...DURATION_OPTIONS].sort((left, right) => left - right);
+  const canCreate = draft.kind === "event" ? title.trim().length > 0 : Boolean(taskId);
 
-  function changeAllDay(next: boolean) {
-    const range = withAllDay(start, end, next);
-    setAllDay(next);
-    setStart(range.start);
-    setEnd(range.end);
+  function applyRange(dateValue: string, timeValue: string, durationMinutes: number) {
+    const iso = combineLocalDateAndTime(dateValue, timeValue || "00:00");
+    if (!iso) return;
+    const start = new Date(iso);
+    onRange(start, new Date(start.getTime() + durationMinutes * 60_000));
   }
 
   return (
     <form
       ref={ref}
-      className="calendar-draft absolute z-30 flex w-80 max-w-[calc(100%-1rem)] flex-col gap-3 overflow-y-auto rounded-xl border border-border bg-popover p-3 shadow-lg"
+      className="calendar-draft absolute z-30 flex w-[22rem] max-w-[calc(100%-1rem)] flex-col gap-3 rounded-xl border border-border bg-popover p-3 shadow-lg"
       style={{ left: draft.left, top: draft.top, maxHeight: draft.maxHeight }}
       onSubmit={(event) => {
         event.preventDefault();
@@ -63,133 +71,126 @@ export function CalendarDraft({
             ? onCreate({
                 kind: "task",
                 taskId,
-                scheduleDate: start,
-                ...(allDay
-                  ? {}
-                  : {
-                      estimation: Math.max(
-                        15,
-                        Math.round(
-                          (Date.parse(end) - Date.parse(start)) / 60_000,
-                        ),
-                      ),
-                    }),
+                scheduleDate: startIso,
+                ...(draft.allDay ? {} : { estimation: minutes }),
               })
             : onCreate({
                 kind: "event",
                 title: title.trim(),
-                start,
-                end,
-                allDay,
-                color,
-                recurrence,
-                taskScope,
+                start: startIso,
+                end: endIso,
+                allDay: draft.allDay,
               });
         void request.finally(() => setPending(false));
       }}
+      onMouseDown={(event) => event.stopPropagation()}
     >
-      <div className="flex rounded-lg bg-surface p-0.5">
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-medium">New event</span>
         <button
           type="button"
-          className={cn(
-            "flex-1 rounded-md py-1 text-xs font-medium",
-            draft.kind === "event"
-              ? "bg-accent text-foreground"
-              : "text-muted-foreground",
-          )}
-          onClick={() => onKind("event")}
+          className="flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:bg-accent"
+          aria-label="Close"
+          onClick={onCancel}
         >
-          Event
-        </button>
-        <button
-          type="button"
-          className={cn(
-            "flex-1 rounded-md py-1 text-xs font-medium",
-            draft.kind === "task"
-              ? "bg-accent text-foreground"
-              : "text-muted-foreground",
-          )}
-          onClick={() => onKind("task")}
-        >
-          Task
+          <CloseIcon size={14} />
         </button>
       </div>
-
       {draft.kind === "event" ? (
-        <div className="flex items-center gap-2">
-          <CalendarColorPicker
-            color={color ?? DEFAULT_EVENT_COLOR}
-            onChange={setColor}
-          />
-          <Input
-            autoFocus
-            value={title}
-            placeholder="Name"
-            aria-label="Name"
-            onChange={(event) => setTitle(event.target.value)}
-          />
-        </div>
+        <Input
+          autoFocus
+          value={title}
+          placeholder="Event title"
+          aria-label="Event title"
+          onChange={(event) => setTitle(event.target.value)}
+        />
       ) : (
-        <Field label="Task">
-          <TaskScopePicker
-            boards={boards}
-            tasks={tasks}
-            value={taskId ? [taskId] : []}
-            selection="single"
-            onChange={(taskIds) => setTaskId(taskIds[0] ?? "")}
+        <TaskScopePicker
+          boards={boards}
+          tasks={tasks}
+          value={taskId ? [taskId] : []}
+          selection="single"
+          onChange={(taskIds) => setTaskId(taskIds[0] ?? "")}
+        />
+      )}
+      <div className="grid grid-cols-2 gap-2">
+        <Field label="Date">
+          <input
+            type="date"
+            aria-label="Date"
+            value={isoToDateInput(startIso)}
+            className="h-9 w-full rounded-md border border-border bg-transparent px-2 text-sm"
+            onChange={(event) =>
+              applyRange(event.target.value, isoToLocalTimeInput(startIso), minutes)
+            }
           />
         </Field>
-      )}
-
-      <label className="flex items-center gap-2 text-sm">
-        <Checkbox
-          checked={allDay}
-          onCheckedChange={(checked) => changeAllDay(checked === true)}
-        />
-        All day
-      </label>
-      <CalendarWhenFields
-        allDay={allDay}
-        start={start}
-        end={end}
-        onStart={setStart}
-        onEnd={setEnd}
-      />
-
-      {draft.kind === "event" ? (
-        <>
-          <Field label="Repeat">
-            <TaskRecurrencePicker
-              recurrence={recurrence}
-              scheduleDate={start}
-              dueDate={null}
-              detail=""
-              onChange={setRecurrence}
-            />
-          </Field>
-          <Field label="Task scope">
-            <TaskScopePicker
-              boards={boards}
-              tasks={tasks}
-              value={taskScope}
-              selection="multiple"
-              onChange={setTaskScope}
-            />
-          </Field>
-        </>
-      ) : null}
-
-      <div className="flex justify-end gap-2">
-        <Button type="button" size="sm" variant="ghost" onClick={onCancel}>
-          Cancel
-        </Button>
-        <Button
-          type="submit"
-          size="sm"
-          variant="solid"
-          disabled={!canCreate || pending}
+        <Field label="Start">
+          <input
+            type="time"
+            aria-label="Start"
+            disabled={draft.allDay}
+            value={isoToLocalTimeInput(startIso)}
+            className="h-9 w-full rounded-md border border-border bg-transparent px-2 text-sm disabled:opacity-40"
+            onChange={(event) =>
+              applyRange(isoToDateInput(startIso), event.target.value, minutes)
+            }
+          />
+        </Field>
+        <Field label="Duration">
+          <select
+            aria-label="Duration"
+            disabled={draft.allDay}
+            value={minutes}
+            className="h-9 w-full rounded-md border border-border bg-transparent px-2 text-sm disabled:opacity-40"
+            onChange={(event) =>
+              applyRange(
+                isoToDateInput(startIso),
+                isoToLocalTimeInput(startIso),
+                Number(event.target.value),
+              )
+            }
+          >
+            {durationChoices.map((choice) => (
+              <option key={choice} value={choice}>
+                {choice} min
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Type">
+          <select
+            aria-label="Type"
+            value={draft.kind}
+            className="h-9 w-full rounded-md border border-border bg-transparent px-2 text-sm"
+            onChange={(event) =>
+              onKind(event.target.value === "task" ? "task" : "event")
+            }
+          >
+            <option value="event">Event</option>
+            <option value="task">Task</option>
+          </select>
+        </Field>
+      </div>
+      <div className="flex items-center justify-between">
+        <button
+          type="button"
+          className="text-sm text-primary"
+          onClick={() =>
+            onMore({
+              title: title.trim(),
+              taskId,
+              kind: draft.kind,
+              start: startIso,
+              end: endIso,
+              allDay: draft.allDay,
+            })
+          }
         >
-          {draft.kind === "task" ? "Schedule" : "Create"}
+          More options
+        </button>
+        <Button type="submit" size="sm" variant="solid" disabled={!canCreate || pending}>
+          Create
         </Button>
       </div>
     </form>
@@ -198,10 +199,10 @@ export function CalendarDraft({
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="flex flex-col gap-1">
-      <Label className="text-xs text-muted-foreground">{label}</Label>
+    <label className="flex flex-col gap-1">
+      <span className="text-xs text-muted-foreground">{label}</span>
       {children}
-    </div>
+    </label>
   );
 }
 
@@ -217,6 +218,15 @@ export interface DraftSelection {
   maxHeight: number;
 }
 
+export interface DraftFields {
+  title: string;
+  taskId: string;
+  kind: DraftKind;
+  start: string;
+  end: string;
+  allDay: boolean;
+}
+
 export type DraftCreate =
   | {
       kind: "event";
@@ -224,9 +234,6 @@ export type DraftCreate =
       start: string;
       end: string;
       allDay: boolean;
-      color: string | null;
-      recurrence: TaskRecurrence | null;
-      taskScope: string[];
     }
   | {
       kind: "task";

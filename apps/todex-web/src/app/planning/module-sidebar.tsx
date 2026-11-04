@@ -38,9 +38,11 @@ import type { Space, SpaceFolder } from "@repo/api/todex";
 
 import {
   BoardIcon,
-  CalendarIcon,
+  CalendarDaysIcon,
   ChevronIcon,
-  ClockIcon,
+  InboxIcon,
+  SunIcon,
+  SunriseIcon,
   EllipsisIcon,
   FolderIcon,
   GoalIcon,
@@ -58,6 +60,7 @@ import {
   writeTasksSidebarWidth,
 } from "@/helpers/tasks-sidebar-open";
 import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
+import { useCalendarEnabled } from "../settings/use-calendar-enabled";
 
 import {
   ModuleSidebarFrame,
@@ -74,6 +77,7 @@ export function TasksModuleSidebar() {
   } = useTasks();
   const { open: isOpen } = useModuleSidebar();
   const pathname = usePathname() ?? "";
+  const { enabled: calendarEnabled } = useCalendarEnabled();
   const [width, setWidth] = useState(TASKS_SIDEBAR_DEFAULT_WIDTH);
   const sensors = useSensors(
     useSensor(SpacePointerSensor, { activationConstraint: { distance: 8 } }),
@@ -123,20 +127,20 @@ export function TasksModuleSidebar() {
             <NavRow
               href={tasksUrlHelper.routing.buildBoardUrl(inboxBoard.id)}
               active={activeBoardId === inboxBoard.id}
-              icon={<BoardIcon size={16} />}
+              icon={<InboxIcon size={16} />}
               label="Inbox"
             />
           ) : null}
           <NavRow
             href={tasksUrlHelper.routing.buildScheduleUrl("today")}
             active={view.kind === "schedule" && view.schedule === "today"}
-            icon={<ClockIcon size={16} />}
+            icon={<SunIcon size={16} />}
             label="Today"
           />
           <NavRow
             href={tasksUrlHelper.routing.buildScheduleUrl("tomorrow")}
             active={view.kind === "schedule" && view.schedule === "tomorrow"}
-            icon={<CalendarIcon size={16} />}
+            icon={<SunriseIcon size={16} />}
             label="Tomorrow"
           />
           <NavRow
@@ -148,6 +152,17 @@ export function TasksModuleSidebar() {
             icon={<GoalIcon size={16} />}
             label="Goals"
           />
+          {calendarEnabled ? (
+            <NavRow
+              href="/planning/calendar"
+              active={
+                pathname === "/planning/calendar" ||
+                pathname.startsWith("/planning/calendar/")
+              }
+              icon={<CalendarDaysIcon size={16} />}
+              label="Calendar"
+            />
+          ) : null}
         </section>
         <section className="flex min-h-0 w-full flex-1 flex-col overflow-auto">
           <div className="mb-2 flex items-center justify-between px-2">

@@ -239,7 +239,7 @@ function CreatePalette({ onClose }: { onClose: () => void }) {
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["calendar-events"] });
-      router.push("/calendar");
+      router.push("/planning/calendar");
       onClose();
     },
     onError: () => toast.error("Could not create the event"),

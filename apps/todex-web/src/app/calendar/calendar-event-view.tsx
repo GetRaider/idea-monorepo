@@ -13,14 +13,15 @@ import { TaskRecurrencePicker } from "../planning/task-recurrence-picker";
 import { CalendarColorPicker } from "./calendar-color-picker";
 import { DEFAULT_EVENT_COLOR } from "./calendar-colors";
 import { deviceTimeZone, withAllDay } from "./calendar-datetime";
-import { useCalendar } from "./calendar-provider";
+import { useCalendar, type CalendarComposer } from "./calendar-provider";
 import { TaskScopePicker } from "./calendar-task-scope";
 import { CalendarWhenFields } from "./calendar-when";
 
 export function CalendarEventView() {
   const {
-    state: { selectedEvent },
+    state: { selectedEvent, composer },
   } = useCalendar();
+  if (composer) return <CreateEventEditor key={composerKey(composer)} draft={composer} />;
   if (!selectedEvent) return null;
   return <EventEditor key={selectedEvent.id} event={selectedEvent} />;
 }
@@ -74,7 +75,7 @@ function EventEditor({ event }: { event: CalendarEvent }) {
   }
 
   return (
-    <aside className="flex w-[22rem] shrink-0 flex-col border-l border-border">
+    <aside className="flex w-80 shrink-0 flex-col border-l border-border">
       <div className="flex items-center justify-between border-b border-border px-3 py-2">
         <span className="text-xs text-muted-foreground">Event</span>
         <Button type="button" size="sm" variant="ghost" onClick={closeEvent}>
@@ -199,7 +200,22 @@ function EventEditor({ event }: { event: CalendarEvent }) {
         {emailsValid ? null : (
           <p className="text-xs text-destructive">Participants need an email address.</p>
         )}
-        <div className="mt-auto flex items-center gap-2 pt-4">
+        <div className="mt-auto flex flex-wrap items-center gap-2 pb-8 pt-4">
+          {locked ? null : (
+            <Button type="button" size="sm" variant="ghost" onClick={closeEvent}>
+              Cancel
+            </Button>
+          )}
+          {locked ? null : (
+            <Button
+              type="submit"
+              size="sm"
+              variant="solid"
+              disabled={!canSave || pending}
+            >
+              Save
+            </Button>
+          )}
           {locked ? null : occurrence && (event.recurrence || event.rawRrule) ? (
             <Button
               type="button"
@@ -225,17 +241,6 @@ function EventEditor({ event }: { event: CalendarEvent }) {
               {event.recurrence || event.rawRrule ? "Delete series" : "Delete"}
             </Button>
           )}
-          {locked ? null : (
-            <Button
-              type="submit"
-              size="sm"
-              variant="solid"
-              className="ml-auto"
-              disabled={!canSave || pending}
-            >
-              Save
-            </Button>
-          )}
         </div>
       </form>
     </aside>
@@ -249,6 +254,196 @@ function EventEditor({ event }: { event: CalendarEvent }) {
         : {}),
     });
   }
+}
+
+function CreateEventEditor({ draft }: { draft: CalendarComposer }) {
+  const {
+    state: { tasks, boards },
+    actions: { closeComposer, createEvent, updateTask },
+  } = useCalendar();
+  const [kind, setKind] = useState(draft.kind);
+  const [title, setTitle] = useState(draft.title);
+  const [taskId, setTaskId] = useState(draft.taskId);
+  const [allDay, setAllDay] = useState(draft.allDay);
+  const [start, setStart] = useState(draft.start);
+  const [end, setEnd] = useState(draft.end);
+  const [color, setColor] = useState<string | null>(null);
+  const [recurrence, setRecurrence] = useState<TaskRecurrence | null>(null);
+  const [participants, setParticipants] = useState("");
+  const [description, setDescription] = useState("");
+  const [taskScope, setTaskScope] = useState<string[]>([]);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const timeZone = deviceTimeZone();
+  const emails = participants
+    .split(",")
+    .map((email) => email.trim())
+    .filter(Boolean);
+  const emailsValid = emails.every((email) => email.includes("@"));
+  const canCreate =
+    Date.parse(start) < Date.parse(end) &&
+    emailsValid &&
+    (kind === "event" ? title.trim().length > 0 : Boolean(taskId));
+
+  function changeAllDay(next: boolean) {
+    const range = withAllDay(start, end, next);
+    setAllDay(next);
+    setStart(range.start);
+    setEnd(range.end);
+  }
+
+  return (
+    <aside className="flex w-80 shrink-0 flex-col border-l border-border">
+      <div className="flex items-center justify-between border-b border-border px-3 py-2">
+        <span className="text-xs text-muted-foreground">
+          {kind === "task" ? "New task" : "New event"}
+        </span>
+        <Button type="button" size="sm" variant="ghost" onClick={closeComposer}>
+          Close
+        </Button>
+      </div>
+      <form
+        className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3"
+        onSubmit={(submitEvent) => {
+          submitEvent.preventDefault();
+          if (!canCreate) return;
+          setError(null);
+          setPending(true);
+          const request =
+            kind === "task"
+              ? updateTask(taskId, {
+                  scheduleDate: start,
+                  ...(allDay
+                    ? {}
+                    : {
+                        estimation: Math.max(
+                          15,
+                          Math.round((Date.parse(end) - Date.parse(start)) / 60_000),
+                        ),
+                      }),
+                })
+              : createEvent({
+                  title: title.trim(),
+                  start,
+                  end,
+                  allDay,
+                  color,
+                  timeZone,
+                  recurrence,
+                  description,
+                  taskScope,
+                  participants: emails,
+                });
+          void request
+            .then(() => closeComposer())
+            .catch(() => setError("Could not create the event"))
+            .finally(() => setPending(false));
+        }}
+      >
+        <Field label="Type">
+          <select
+            aria-label="Type"
+            value={kind}
+            className="h-9 w-full rounded-md border border-border bg-transparent px-2 text-sm"
+            onChange={(event) => setKind(event.target.value === "task" ? "task" : "event")}
+          >
+            <option value="event">Event</option>
+            <option value="task">Task</option>
+          </select>
+        </Field>
+        {kind === "event" ? (
+          <div className="flex items-center gap-2">
+            <CalendarColorPicker
+              color={color ?? DEFAULT_EVENT_COLOR}
+              onChange={setColor}
+            />
+            <Input
+              value={title}
+              aria-label="Title"
+              placeholder="Event title"
+              onChange={(input) => setTitle(input.target.value)}
+            />
+          </div>
+        ) : (
+          <Field label="Task">
+            <TaskScopePicker
+              boards={boards}
+              tasks={tasks}
+              value={taskId ? [taskId] : []}
+              selection="single"
+              onChange={(taskIds) => setTaskId(taskIds[0] ?? "")}
+            />
+          </Field>
+        )}
+        <label className="flex items-center gap-2 text-sm">
+          <Checkbox
+            checked={allDay}
+            onCheckedChange={(checked) => changeAllDay(checked === true)}
+          />
+          All day
+        </label>
+        <CalendarWhenFields
+          allDay={allDay}
+          start={start}
+          end={end}
+          onStart={setStart}
+          onEnd={setEnd}
+        />
+        {kind === "event" ? (
+          <>
+            <Field label="Repeat">
+              <TaskRecurrencePicker
+                recurrence={recurrence}
+                scheduleDate={start}
+                dueDate={null}
+                detail=""
+                onChange={setRecurrence}
+              />
+            </Field>
+            <Field label="Participants">
+              <Input
+                value={participants}
+                placeholder="name@email.com, …"
+                onChange={(input) => setParticipants(input.target.value)}
+              />
+            </Field>
+            <Field label="Task scope">
+              <TaskScopePicker
+                boards={boards}
+                tasks={tasks}
+                value={taskScope}
+                selection="multiple"
+                onChange={setTaskScope}
+              />
+            </Field>
+            <Field label="Description">
+              <Textarea
+                value={description}
+                rows={5}
+                onChange={(input) => setDescription(input.target.value)}
+              />
+            </Field>
+          </>
+        ) : null}
+        {error ? <p className="text-xs text-destructive">{error}</p> : null}
+        {emailsValid ? null : (
+          <p className="text-xs text-destructive">Participants need an email address.</p>
+        )}
+        <div className="mt-auto flex items-center gap-2 pb-8 pt-4">
+          <Button type="button" size="sm" variant="ghost" onClick={closeComposer}>
+            Cancel
+          </Button>
+          <Button type="submit" size="sm" variant="solid" disabled={!canCreate || pending}>
+            Create
+          </Button>
+        </div>
+      </form>
+    </aside>
+  );
+}
+
+function composerKey(draft: CalendarComposer) {
+  return `${draft.kind}:${draft.start}:${draft.end}:${draft.taskId}:${draft.title}`;
 }
 
 function Field({ label, children }: { label: string; children: ReactNode }) {

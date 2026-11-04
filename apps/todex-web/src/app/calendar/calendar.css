@@ -100,7 +100,9 @@
 }
 
 .todex-calendar .fc-highlight {
-  background: var(--fc-highlight-color);
+  background: color-mix(in srgb, #7c6bf2 28%, transparent);
+  border: 1px dashed #9b8cff;
+  border-radius: 6px;
   pointer-events: none;
 }
 
@@ -204,11 +206,12 @@
   z-index: 5 !important;
 }
 
-.todex-calendar .todex-cal-rsvp-no {
-  text-decoration: line-through;
-  opacity: 0.7;
+.todex-calendar .fc-event.todex-cal-rsvp-no,
+.todex-calendar .fc-event.todex-cal-rsvp-maybe {
+  box-shadow: none;
+  border: 1px dashed color-mix(in srgb, var(--foreground) 75%, transparent) !important;
 }
 
-.todex-calendar .todex-cal-rsvp-maybe {
-  opacity: 0.72;
+.todex-calendar .todex-cal-rsvp-no .todex-cal-title {
+  text-decoration: line-through;
 }

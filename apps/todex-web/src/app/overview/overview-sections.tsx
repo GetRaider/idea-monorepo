@@ -82,7 +82,7 @@ function TodaySection() {
           />
         </QueryState>
       </Panel>
-      <Panel title="Events" href="/calendar">
+      <Panel title="Events" href="/planning/calendar">
         <QueryState
           isLoading={eventsQuery.isPending}
           isError={eventsQuery.isError}
@@ -213,7 +213,7 @@ function UpcomingSection() {
           />
         </QueryState>
       </Panel>
-      <Panel title="Events" href="/calendar">
+      <Panel title="Events" href="/planning/calendar">
         <QueryState
           isLoading={eventsQuery.isPending}
           isError={eventsQuery.isError}
@@ -608,9 +608,11 @@ function tasksOnDay(tasks: Task[], day: Date): Task[] {
 }
 
 function eventHref(event: CalendarBlock): string {
-  if (!event.eventId) return "/calendar";
-  if (!event.originalStart) return `/calendar/events/${event.eventId}`;
-  return `/calendar/events/${event.eventId}?occurrence=${encodeURIComponent(event.originalStart)}`;
+  if (!event.eventId) return "/planning/calendar";
+  if (!event.originalStart) {
+    return `/planning/calendar/events/${event.eventId}`;
+  }
+  return `/planning/calendar/events/${event.eventId}?occurrence=${encodeURIComponent(event.originalStart)}`;
 }
 
 function formatBlockWhen(event: CalendarBlock): string {

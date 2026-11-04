@@ -16,10 +16,8 @@ import {
 
 import { signOut, useSession } from "@lib/auth-client";
 
-import { useCalendarEnabled } from "../app/settings/use-calendar-enabled";
 import {
   BellIcon,
-  CalendarIcon,
   KnowledgeIcon,
   OrbitIcon,
   OverviewIcon,
@@ -35,15 +33,11 @@ const NAV = [
 
 export function AppNavRail() {
   const pathname = usePathname() ?? "";
-  const { enabled: calendarEnabled } = useCalendarEnabled();
-  const items = calendarEnabled
-    ? [...NAV, { href: "/calendar", label: "Calendar", icon: CalendarIcon }]
-    : NAV;
 
   return (
     <aside className="flex h-full w-[53px] shrink-0 flex-col items-center px-[10px] pb-4">
       <nav className="flex flex-col gap-1.5">
-        {items.map((item) => {
+        {NAV.map((item) => {
           const active = isRailActive(pathname, item.href);
           return (
             <RailTooltip key={item.href} label={item.label}>

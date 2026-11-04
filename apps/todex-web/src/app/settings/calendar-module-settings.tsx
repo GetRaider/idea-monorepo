@@ -28,7 +28,7 @@ export function CalendarModuleSettings() {
     <section className="mt-6 max-w-lg rounded-xl border border-border p-4">
       <h2 className="text-sm font-medium">Calendar</h2>
       <p className="mt-1 text-sm text-muted-foreground">
-        Calendar stays out of the sidebar until you enable it.
+        Calendar stays out of Planning until you enable it.
       </p>
       <label className="mt-4 flex items-center gap-2 text-sm">
         <Checkbox

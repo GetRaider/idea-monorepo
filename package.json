@@ -27,7 +27,7 @@
     "dev:tempo": "turbo run dev --filter=tempo",
     "docker:take-and-do": "pnpm --filter take-and-do docker:up",
     "docker:take-and-do:down": "pnpm --filter take-and-do docker:down",
-    "docker:todex": "pnpm --filter todex-api docker:up",
+    "docker:todex": "pnpm --filter todex-api docker:up && pnpm --filter todex-api db:migrate",
     "docker:todex:down": "pnpm --filter todex-api docker:down",
     "docker:todex:clean": "pnpm --filter todex-api docker:clean",
     "docker:devinity": "pnpm --filter devinity-api docker:up",

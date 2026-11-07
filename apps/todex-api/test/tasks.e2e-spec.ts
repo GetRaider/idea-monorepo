@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import request from "supertest";
 
 import { WorkspaceGuard } from "../src/guards/workspace.guard";
+import { RecurrenceService } from "../src/modules/tasks/recurrence.service";
 import { TasksController } from "../src/modules/tasks/tasks.controller";
 import { TasksService } from "../src/modules/tasks/tasks.service";
 
@@ -22,7 +23,16 @@ describe("TasksController (e2e smoke)", () => {
             create: async () => ({ id: "t1" }),
             update: async () => ({ id: "t1" }),
             remove: async () => undefined,
+            listByScheduleRange: async () => ({
+              tasks: [],
+              previews: [],
+              conflicts: [],
+            }),
           },
+        },
+        {
+          provide: RecurrenceService,
+          useValue: {},
         },
       ],
     })
@@ -62,7 +72,16 @@ describe("TasksController list query (e2e)", () => {
             create: async () => ({ id: "t1" }),
             update: async () => ({ id: "t1" }),
             remove: async () => undefined,
+            listByScheduleRange: async () => ({
+              tasks: [],
+              previews: [],
+              conflicts: [],
+            }),
           },
+        },
+        {
+          provide: RecurrenceService,
+          useValue: {},
         },
       ],
     })

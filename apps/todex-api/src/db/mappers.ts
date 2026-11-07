@@ -182,6 +182,13 @@ export function mapTask(
   row: TaskRow,
   goalId: string | null = null,
   actualTime = 0,
+  slots: Array<{
+    id: string;
+    startAt: Date;
+    endAt: Date;
+    retiredAt: Date | null;
+  }> = [],
+  conflicts: Task["conflicts"] = [],
 ): Task {
   return {
     id: row.id,
@@ -190,19 +197,34 @@ export function mapTask(
     taskKey: row.taskKey,
     summary: row.summary,
     description: row.description,
+    outcome: row.outcome,
     status: row.status,
     priority: row.priority,
+    complexity: row.complexity,
     dueDate: toIso(row.dueDate),
-    scheduleDate: toIso(row.scheduleDate),
     estimation: row.estimation,
     actualTime,
     acceptanceCriteria: row.acceptanceCriteria ?? [],
     recurrence: readTaskRecurrence(row.recurrence),
+    scheduleSlots: slots.map((slot) => ({
+      id: slot.id,
+      startAt: slot.startAt.toISOString(),
+      endAt: slot.endAt.toISOString(),
+      retiredAt: toIso(slot.retiredAt),
+    })),
     sectionId: row.sectionId,
     progressStageId: row.progressStageId,
     parentTaskId: row.parentTaskId,
     epicId: row.epicId,
     goalId,
+    ownerId: row.ownerId,
+    seriesId: row.seriesId,
+    occurrenceKey: row.occurrenceKey,
+    occurrenceAnchor: toIso(row.occurrenceAnchor),
+    originSeriesId: row.originSeriesId,
+    overriddenFields: row.overriddenFields ?? [],
+    version: row.version,
+    conflicts,
     position: row.position,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),

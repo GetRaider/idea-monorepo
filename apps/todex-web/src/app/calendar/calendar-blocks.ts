@@ -5,15 +5,13 @@ import {
   type ExecutionCalendar,
   type Space,
   type Task,
+  type TaskCalendarPreview,
 } from "@repo/api/todex";
 
-import { isMidnightSchedule } from "../planning/task-helpers";
 import {
   sessionDisplayTitle,
   splitIntervalAtLocalMidnight,
 } from "./calendar-actual";
-
-const DEFAULT_TASK_MINUTES = 30;
 
 export const NEUTRAL_BLOCK_COLOR = "#7c7c86";
 
@@ -26,10 +24,12 @@ export function blocksForRange(
   rangeEnd: Date,
   now: Date,
   timeZone: string,
+  previews: TaskCalendarPreview[] = [],
 ): CalendarBlock[] {
   return [
     ...eventBlocks(events, spaces, rangeStart, rangeEnd),
     ...taskBlocks(tasks, events, spaces, rangeStart, rangeEnd),
+    ...previewBlocks(previews, rangeStart, rangeEnd),
     ...sessionBlocks(sessions, rangeStart, rangeEnd, now, timeZone),
   ];
 }
@@ -67,6 +67,7 @@ export function eventBlocks(
             kind: "event",
             eventId: source.id,
             taskId: null,
+            slotId: null,
             title: source.title,
             start: exception ? new Date(exception.start) : start,
             end: exception
@@ -94,6 +95,7 @@ export function eventBlocks(
           kind: "event",
           eventId: event.id,
           taskId: null,
+          slotId: null,
           title: event.title,
           start,
           end,
@@ -121,7 +123,8 @@ export function visibleBlocks(
     if (mode === "planned" && block.lane === "actual") return false;
     if (mode === "actual" && block.lane === "planned") return false;
     if (block.kind === "session") return true;
-    return block.kind === "task" ? visibility.tasks : visibility.events;
+    if (block.kind === "task" || block.kind === "preview") return visibility.tasks;
+    return visibility.events;
   });
 }
 
@@ -134,39 +137,84 @@ function taskBlocks(
 ): CalendarBlock[] {
   const scopedTaskIds = taskIdsCoveredByEvents(events);
   const blocks: CalendarBlock[] = [];
+  const summaryById = new Map(tasks.map((task) => [task.id, task.summary]));
   for (const task of tasks) {
     if (
-      !task.scheduleDate ||
       task.status === "done" ||
       task.status === "cancelled" ||
       scopedTaskIds.has(task.id)
     ) {
       continue;
     }
-    const start = new Date(task.scheduleDate);
-    const allDay = isMidnightSchedule(task.scheduleDate);
-    const minutes = allDay ? 24 * 60 : (task.estimation ?? DEFAULT_TASK_MINUTES);
-    const end = new Date(start.getTime() + minutes * 60_000);
-    if (start >= rangeEnd || end <= rangeStart) continue;
-    blocks.push(
-      plannedBlock({
-        key: `task:${task.id}`,
-        kind: "task",
-        eventId: null,
-        taskId: task.id,
-        title: task.summary,
-        start,
-        end,
-        allDay,
-        color: spaceColor(task.spaceId, spaces),
-        rsvpStatus: null,
-        originalStart: null,
-        readOnly: false,
-        series: false,
-        seriesEventId: null,
-        spaceId: task.spaceId,
-      }),
-    );
+    const parentSummary = task.parentTaskId
+      ? summaryById.get(task.parentTaskId)
+      : undefined;
+    const title = parentSummary
+      ? `${parentSummary} / ${task.summary}`
+      : task.summary;
+    for (const slot of task.scheduleSlots) {
+      if (slot.retiredAt) continue;
+      const start = new Date(slot.startAt);
+      const end = new Date(slot.endAt);
+      if (start >= rangeEnd || end <= rangeStart) continue;
+      blocks.push(
+        plannedBlock({
+          key: `task:${task.id}:${slot.id}`,
+          kind: "task",
+          eventId: null,
+          taskId: task.id,
+          slotId: slot.id,
+          title,
+          description: task.description,
+          start,
+          end,
+          allDay: end.getTime() - start.getTime() >= 24 * 60 * 60_000,
+          color: spaceColor(task.spaceId, spaces),
+          rsvpStatus: null,
+          originalStart: null,
+          readOnly: false,
+          series: false,
+          seriesEventId: null,
+          spaceId: task.spaceId,
+        }),
+      );
+    }
+  }
+  return blocks;
+}
+
+function previewBlocks(
+  previews: TaskCalendarPreview[],
+  rangeStart: Date,
+  rangeEnd: Date,
+): CalendarBlock[] {
+  const blocks: CalendarBlock[] = [];
+  for (const preview of previews) {
+    preview.slots.forEach((slot, index) => {
+      const start = new Date(slot.startAt);
+      const end = new Date(slot.endAt);
+      if (start >= rangeEnd || end <= rangeStart) return;
+      blocks.push(
+        plannedBlock({
+          key: `preview:${preview.occurrenceKey}:${index}`,
+          kind: "preview",
+          eventId: null,
+          taskId: null,
+          slotId: null,
+          title: preview.title,
+          start,
+          end,
+          allDay: end.getTime() - start.getTime() >= 24 * 60 * 60_000,
+          color: NEUTRAL_BLOCK_COLOR,
+          rsvpStatus: null,
+          originalStart: null,
+          readOnly: true,
+          series: true,
+          seriesEventId: null,
+          spaceId: null,
+        }),
+      );
+    });
   }
   return blocks;
 }
@@ -191,6 +239,7 @@ function sessionBlocks(
           lane: "actual",
           eventId: null,
           taskId: null,
+          slotId: null,
           sessionId: session.id,
           title,
           description: "",
@@ -237,10 +286,11 @@ function spaceColor(spaceId: string | null, spaces: Space[]) {
 
 export interface CalendarBlock {
   key: string;
-  kind: "event" | "task" | "session";
+  kind: "event" | "task" | "session" | "preview";
   lane: "planned" | "actual";
   eventId: string | null;
   taskId: string | null;
+  slotId: string | null;
   sessionId: string | null;
   title: string;
   description: string;

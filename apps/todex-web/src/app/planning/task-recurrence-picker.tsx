@@ -91,7 +91,7 @@ function RecurrenceDraft({
   scheduleDate,
   dueDate,
   canRemove,
-  detail,
+  detail = "",
   onDraft,
   onApply,
   onRemove,
@@ -100,7 +100,7 @@ function RecurrenceDraft({
   scheduleDate: string | null;
   dueDate: string | null;
   canRemove: boolean;
-  detail: string;
+  detail?: string;
   onDraft: (draft: TaskRecurrence) => void;
   onApply: () => void;
   onRemove: () => void;

@@ -35,6 +35,7 @@ export function TaskComposer({
   defaultBoardId,
   defaultScheduleDate = "",
   open = false,
+  addLabel = "Add task",
   onOpenChange,
   onCreate,
 }: {
@@ -43,6 +44,7 @@ export function TaskComposer({
   defaultBoardId?: string | null;
   defaultScheduleDate?: string;
   open?: boolean;
+  addLabel?: string;
   onOpenChange?: (open: boolean) => void;
   onCreate: (values: TaskComposerValues) => void;
 }) {
@@ -110,11 +112,11 @@ export function TaskComposer({
     return (
       <button
         type="button"
-        className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-border bg-transparent px-4 py-3 text-sm text-muted-foreground hover:bg-surface hover:text-foreground"
+        className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-white/15 bg-transparent px-4 py-2 text-sm text-muted-foreground hover:bg-white/5 hover:text-foreground"
         onClick={() => onOpenChange?.(true)}
       >
         <PlusIcon size={16} />
-        Add task
+        {addLabel}
       </button>
     );
   }

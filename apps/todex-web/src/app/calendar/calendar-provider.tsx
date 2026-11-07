@@ -7,7 +7,10 @@ import type {
   CalendarEvent,
   CalendarEventTemplate,
   ExecutionCalendar,
+  ScheduleSlot,
+  ScheduleSlotInput,
   Task,
+  TaskCalendarPreview,
   Space,
 } from "@repo/api/todex";
 
@@ -52,6 +55,14 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
   const boardsQuery = useQuery({
     queryKey: ["boards"],
     queryFn: () => todexClient.spaces.list(),
+  });
+  const scheduleQuery = useQuery({
+    queryKey: ["tasks", "schedule", range.from, range.to],
+    queryFn: () =>
+      todexClient.tasks.list({
+        scheduleFrom: range.from,
+        scheduleTo: range.to,
+      }),
   });
   const tasksQuery = useQuery({
     queryKey: [
@@ -157,18 +168,32 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
   const updateTask = useMutation({
     mutationFn: (input: {
       taskId: string;
-      scheduleDate?: string | null;
-        estimation?: number;
-      },
-    ) =>
-      todexClient.tasks.update(input.taskId, {
-        ...(input.scheduleDate !== undefined
-          ? { scheduleDate: input.scheduleDate }
+      slotId?: string | null;
+      startAt?: string;
+      endAt?: string;
+      estimation?: number;
+    }) => {
+      const task = (tasksQuery.data ?? []).find(
+        (item) => item.id === input.taskId,
+      );
+      if (!task) throw new Error("Task version is missing");
+      return todexClient.tasks.update(input.taskId, {
+        version: task.version,
+        ...(input.startAt && input.endAt
+          ? {
+              scheduleSlots: nextScheduleSlots(
+                task.scheduleSlots,
+                input.slotId ?? null,
+                input.startAt,
+                input.endAt,
+              ),
+            }
           : {}),
         ...(input.estimation !== undefined
           ? { estimation: input.estimation }
           : {}),
-      }),
+      });
+    },
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ["calendar-tasks"] }),
     onError: () => toast.error("Could not update the task"),
@@ -182,6 +207,7 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
         templates: templatesQuery.data ?? [],
         tasks: tasksQuery.data ?? [],
         sessions: sessionsQuery.data?.sessions ?? [],
+        previews: scheduleQuery.data?.previews ?? [],
         boards: boardsQuery.data ?? [],
         visibility,
         mode,
@@ -279,6 +305,7 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
       templatesQuery.data,
       tasksQuery.data,
       sessionsQuery.data,
+      scheduleQuery.data,
       boardsQuery.data,
       visibility,
       mode,
@@ -366,6 +393,24 @@ function initialRange(): { from: string; to: string } {
   return { from: start.toISOString(), to: end.toISOString() };
 }
 
+function nextScheduleSlots(
+  slots: ScheduleSlot[],
+  slotId: string | null,
+  startAt: string,
+  endAt: string,
+): ScheduleSlotInput[] {
+  const kept = slots.map((slot) => ({
+    id: slot.id,
+    startAt: slot.startAt,
+    endAt: slot.endAt,
+    retiredAt: slot.retiredAt,
+  }));
+  if (!slotId) return [...kept, { startAt, endAt }];
+  return kept.map((slot) =>
+    slot.id === slotId ? { ...slot, startAt, endAt } : slot,
+  );
+}
+
 interface CalendarContextValue {
   state: {
     range: { from: string; to: string };
@@ -373,6 +418,7 @@ interface CalendarContextValue {
     templates: CalendarEventTemplate[];
     tasks: Task[];
     sessions: ExecutionCalendar["sessions"];
+    previews: TaskCalendarPreview[];
     boards: Space[];
     visibility: CalendarVisibility;
     mode: CalendarMode;
@@ -419,7 +465,9 @@ interface CalendarContextValue {
     updateTask: (
       taskId: string,
       patch: {
-        scheduleDate?: string | null;
+        slotId?: string | null;
+        startAt?: string;
+        endAt?: string;
         estimation?: number;
       },
     ) => Promise<Task>;

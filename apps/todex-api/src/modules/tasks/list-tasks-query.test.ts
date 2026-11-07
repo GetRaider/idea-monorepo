@@ -54,25 +54,34 @@ describe("ListTasksQuerySchema", () => {
 });
 
 describe("task date bodies", () => {
-  it("allows scheduleDate and dueDate independently on create", () => {
+  it("allows slots and dueDate independently on create", () => {
     const body = CreateTaskBodySchema.parse({
       spaceId: "board-1",
       summary: "Plan it",
       estimation: 60,
-      scheduleDate: "2026-09-10T00:00:00.000Z",
+      scheduleSlots: [
+        {
+          startAt: "2026-09-10T09:00:00.000Z",
+          endAt: "2026-09-10T10:00:00.000Z",
+        },
+      ],
       dueDate: "2026-09-17T00:00:00.000Z",
     });
-    expect(body.scheduleDate).toBe("2026-09-10T00:00:00.000Z");
+    expect(body.scheduleSlots?.[0]?.startAt).toBe("2026-09-10T09:00:00.000Z");
     expect(body.dueDate).toBe("2026-09-17T00:00:00.000Z");
   });
 
-  it("allows clearing scheduleDate without touching dueDate", () => {
-    const body = UpdateTaskBodySchema.parse({ scheduleDate: null });
-    expect(body).toEqual({ scheduleDate: null });
+  it("requires a version when clearing slots", () => {
+    const body = UpdateTaskBodySchema.parse({
+      version: 2,
+      scheduleSlots: [],
+    });
+    expect(body).toEqual({ version: 2, scheduleSlots: [] });
   });
 
   it("accepts an acceptance criteria checklist", () => {
     const body = UpdateTaskBodySchema.parse({
+      version: 1,
       acceptanceCriteria: [
         { id: "criterion-1", text: " Reviewed ", done: false },
       ],
@@ -90,17 +99,18 @@ describe("task date bodies", () => {
       timeZone: "UTC",
       end: { type: "count" as const, count: 4 },
     };
-    expect(UpdateTaskBodySchema.parse({ recurrence }).recurrence).toEqual(
-      recurrence,
-    );
-    expect(UpdateTaskBodySchema.parse({ recurrence: null }).recurrence).toBe(
-      null,
-    );
+    expect(
+      UpdateTaskBodySchema.parse({ version: 1, recurrence }).recurrence,
+    ).toEqual(recurrence);
+    expect(
+      UpdateTaskBodySchema.parse({ version: 1, recurrence: null }).recurrence,
+    ).toBe(null);
   });
 
   it("rejects weekdays on a daily recurrence", () => {
     expect(
       UpdateTaskBodySchema.safeParse({
+        version: 1,
         recurrence: {
           frequency: "daily",
           interval: 1,
@@ -129,7 +139,9 @@ describe("task date bodies", () => {
     expect(UpdateTaskBodySchema.safeParse({ estimation: null }).success).toBe(
       false,
     );
-    expect(UpdateTaskBodySchema.parse({ estimation: 30 }).estimation).toBe(30);
+    expect(
+      UpdateTaskBodySchema.parse({ version: 1, estimation: 30 }).estimation,
+    ).toBe(30);
   });
 
   it("rejects a blank acceptance criterion", () => {

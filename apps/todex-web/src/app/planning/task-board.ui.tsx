@@ -459,7 +459,7 @@ export function TaskFacts({
 }: {
   task: Pick<
     Task,
-    | "scheduleDate"
+    | "scheduleSlots"
     | "dueDate"
     | "estimation"
     | "actualTime"
@@ -468,7 +468,9 @@ export function TaskFacts({
   >;
   className?: string;
 }) {
-  const schedule = formatTaskDay(task.scheduleDate);
+  const schedule = formatTaskDay(
+    task.scheduleSlots.find((slot) => slot.retiredAt == null)?.startAt ?? null,
+  );
   const due = formatTaskDay(task.dueDate);
   const estimate = formatEstimation(task.estimation);
   const executed = task.actualTime > 0 ? formatDuration(task.actualTime) : null;

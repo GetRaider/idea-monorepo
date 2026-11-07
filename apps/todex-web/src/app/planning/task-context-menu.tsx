@@ -52,8 +52,8 @@ import { TaskRecurrenceEditor } from "./task-recurrence-picker";
 import {
   dateInputToLocalDayStartIso,
   dateInputToScheduleIso,
+  earliestActiveSlotStart,
   isoToDateInput,
-  startOfLocalDay,
   STATUS_LABEL,
   STATUS_ORDER,
 } from "./task-helpers";
@@ -142,7 +142,7 @@ function TaskContextMenuItems({
       )
     : [];
 
-  function patch(body: UpdateTaskBody) {
+  function patch(body: Omit<UpdateTaskBody, "version">) {
     for (const task of targets) updateTask(task.id, body, { quiet: true });
   }
 
@@ -303,9 +303,11 @@ function TaskContextMenuItems({
         <DateSubmenu
           icon={<CalendarIcon size={16} />}
           label="Schedule"
-          value={sharedValue(targets, (task) => task.scheduleDate)}
+          value={sharedValue(targets, (task) => earliestActiveSlotStart(task))}
           toIso={dateInputToScheduleIso}
-          onChange={(scheduleDate) => patch({ scheduleDate })}
+          onChange={(startAt) =>
+            patch({ scheduleSlots: slotsFromStart(startAt) })
+          }
         />
       ),
     },
@@ -339,26 +341,11 @@ function TaskContextMenuItems({
             {single ? (
               <TaskRecurrenceEditor
                 recurrence={single.recurrence}
-                scheduleDate={single.scheduleDate}
+                scheduleDate={earliestActiveSlotStart(single)}
                 dueDate={single.dueDate}
-                onChange={(recurrence) => {
-                  if (
-                    recurrence &&
-                    single.scheduleDate == null &&
-                    single.dueDate == null
-                  ) {
-                    updateTask(
-                      single.id,
-                      {
-                        recurrence,
-                        scheduleDate: startOfLocalDay().toISOString(),
-                      },
-                      { quiet: true },
-                    );
-                    return;
-                  }
-                  updateTask(single.id, { recurrence }, { quiet: true });
-                }}
+                onChange={(recurrence) =>
+                  updateTask(single.id, { recurrence }, { quiet: true })
+                }
               />
             ) : null}
           </ContextMenuSubContent>
@@ -777,6 +764,16 @@ function keepNestedPopup(event: {
   ) {
     event.preventDefault();
   }
+}
+
+function slotsFromStart(startAt: string | null) {
+  if (!startAt) return [];
+  return [
+    {
+      startAt,
+      endAt: new Date(Date.parse(startAt) + 60 * 60_000).toISOString(),
+    },
+  ];
 }
 
 function dateFromInput(value: string): Date | undefined {

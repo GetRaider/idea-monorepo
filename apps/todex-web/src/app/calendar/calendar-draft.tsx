@@ -71,8 +71,8 @@ export function CalendarDraft({
             ? onCreate({
                 kind: "task",
                 taskId,
-                scheduleDate: startIso,
-                ...(draft.allDay ? {} : { estimation: minutes }),
+                startAt: startIso,
+                endAt: endIso,
               })
             : onCreate({
                 kind: "event",
@@ -238,6 +238,6 @@ export type DraftCreate =
   | {
       kind: "task";
       taskId: string;
-      scheduleDate: string;
-      estimation?: number;
+      startAt: string;
+      endAt: string;
     };

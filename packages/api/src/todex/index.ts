@@ -144,14 +144,17 @@ export {
 } from "./prose.ts";
 export type { DocMentionRef, ProseDoc, ProseNode } from "./prose.ts";
 export {
-  completeRecurringTask,
+  addCalendarDays,
   defaultTaskRecurrence,
   expandRecurrenceStarts,
+  formatOccurrenceLocalKey,
   formatTaskRecurrence,
+  occurrenceKey,
   readTaskRecurrence,
   TASK_WEEKDAYS,
   TaskRecurrenceSchema,
   TaskWeekdaySchema,
+  zonedLocalDateTime,
 } from "./recurrence.ts";
 export type { TaskRecurrence, TaskWeekday } from "./recurrence.ts";
 export {
@@ -196,19 +199,57 @@ export {
   AcceptanceCriteriaSchema,
   AcceptanceCriterionSchema,
   CreateTaskBodySchema,
+  DeleteTaskBodySchema,
   ListTasksQuerySchema,
   MoveTaskBodySchema,
+  ScheduleSlotSchema,
+  TaskCalendarRangeSchema,
+  TaskComplexitySchema,
+  TaskConflictSchema,
   TaskSchema,
   UpdateTaskBodySchema,
 } from "./task.ts";
 export type {
   AcceptanceCriterion,
   CreateTaskBody,
+  DeleteTaskBody,
   ListTasksQuery,
   MoveTaskBody,
+  ScheduleSlot,
+  ScheduleSlotInput,
   Task,
+  TaskCalendarPreview,
+  TaskCalendarRange,
+  TaskComplexity,
+  TaskConflict,
   UpdateTaskBody,
 } from "./task.ts";
+export {
+  CreateSeriesBodySchema,
+  CreateSeriesExceptionBodySchema,
+  DeleteSeriesResultSchema,
+  SeriesPatchSchema,
+  SeriesTemplateSchema,
+  StopSeriesBodySchema,
+  UpdateSeriesBodySchema,
+} from "./series.ts";
+export type {
+  CreateSeriesBody,
+  CreateSeriesExceptionBody,
+  DeleteSeriesResult,
+  SeriesPatch,
+  SeriesTemplate,
+  StopSeriesBody,
+  UpdateSeriesBody,
+} from "./series.ts";
+export {
+  CreateTaskReferenceBodySchema,
+  TaskReferenceSchema,
+} from "./task-reference.ts";
+export type {
+  CreateTaskReferenceBody,
+  TaskReference,
+} from "./task-reference.ts";
 export {
   CompleteExecutionBodySchema,
   EnqueueExecutionBodySchema,

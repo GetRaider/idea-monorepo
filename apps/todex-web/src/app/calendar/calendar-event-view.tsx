@@ -312,15 +312,8 @@ function CreateEventEditor({ draft }: { draft: CalendarComposer }) {
           const request =
             kind === "task"
               ? updateTask(taskId, {
-                  scheduleDate: start,
-                  ...(allDay
-                    ? {}
-                    : {
-                        estimation: Math.max(
-                          15,
-                          Math.round((Date.parse(end) - Date.parse(start)) / 60_000),
-                        ),
-                      }),
+                  startAt: start,
+                  endAt: end,
                 })
               : createEvent({
                   title: title.trim(),

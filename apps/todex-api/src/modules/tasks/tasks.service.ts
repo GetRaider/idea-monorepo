@@ -5,12 +5,11 @@ import {
   Injectable,
   Optional,
 } from "@nestjs/common";
-import { and, asc, eq, gte, inArray, isNull, lt, sql } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, isNull, lt, sql } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import {
   collectHtmlMentions,
-  completeRecurringTask,
   DocType,
   RelationEntityType,
   readTaskRecurrence,
@@ -20,17 +19,24 @@ import {
 } from "@repo/api/todex";
 import type {
   CreateTaskBody,
+  DeleteTaskBody,
   ListTasksQuery,
   MoveTaskBody,
+  TaskConflict,
   TaskRecurrence,
   UpdateTaskBody,
 } from "@repo/api/todex";
 
 import { DRIZZLE_DB } from "../../db/tokens";
 import {
+  conversations,
   docs,
   docTasks,
+  executionQueue,
   executionSessionTasks,
+  taskLifecycleLocks,
+  taskReferences,
+  taskScheduleSlots,
   tasks,
   workspaces,
   type TaskRow,
@@ -48,6 +54,18 @@ import { SpacesService } from "../spaces/spaces.service";
 import { ContentIndexQueue } from "../content-index/content-index.queue";
 import { WorkspaceService } from "../workspace/workspace.service";
 import { resolveTaskPlacement, TaskPlacementError } from "./task-placement";
+import { assertScheduleSlots } from "./task-slots";
+import {
+  assertNoLiveLifecycleLock,
+  executionIsActive,
+  hasLiveLock,
+  LIFECYCLE_LEASE_MS,
+  lockTaskRows,
+  parentIdsForChildSet,
+  refreshLease,
+  TaskLifecycleException,
+} from "./task-lifecycle";
+import { RecurrenceService } from "./recurrence.service";
 
 @Injectable()
 export class TasksService {
@@ -58,28 +76,25 @@ export class TasksService {
     private readonly relations: RelationsService,
     private readonly workspaceService: WorkspaceService,
     @Optional() private readonly contentIndex?: ContentIndexQueue,
+    @Optional() private readonly recurrence?: RecurrenceService,
   ) {}
 
   async list(workspaceId: string, query: ListTasksQuery) {
-    if (query.scheduleFrom && query.scheduleTo) {
-      return this.listByScheduleRange(
-        workspaceId,
-        new Date(query.scheduleFrom),
-        new Date(query.scheduleTo),
-      );
-    }
     if (query.scheduleFrom || query.scheduleTo) {
       throw new BadRequestException(
-        "scheduleFrom and scheduleTo are both required",
+        "Use the schedule range response for scheduleFrom and scheduleTo",
       );
     }
     return this.listFiltered(workspaceId, query);
   }
 
-  async create(workspaceId: string, body: CreateTaskBody) {
+  async create(workspaceId: string, body: CreateTaskBody, userId: string) {
     await this.spacesService.requireInWorkspace(workspaceId, body.spaceId);
     if (body.parentTaskId) {
       await this.requireTaskInWorkspace(workspaceId, body.parentTaskId);
+    }
+    if (body.recurrence && body.parentTaskId) {
+      throw new BadRequestException("Only root tasks can repeat");
     }
     const placement = await this.placementFor(null, body.spaceId, body);
     const epicId = await this.epicLinkFor(
@@ -90,6 +105,10 @@ export class TasksService {
     );
 
     const created = await this.db.transaction(async (tx) => {
+      if (body.parentTaskId) {
+        await this.assertTaskDepth(tx, workspaceId, null, body.parentTaskId);
+        await assertNoLiveLifecycleLock(tx, [body.parentTaskId]);
+      }
       const [workspace] = await tx
         .update(workspaces)
         .set({
@@ -115,13 +134,17 @@ export class TasksService {
           taskKey: formatTaskKey(workspace.taskSeq),
           summary: body.summary,
           description: sanitizeTaskHtml(body.description ?? ""),
+          outcome: body.outcome?.trim() ?? "",
           status,
           priority: body.priority ?? TaskPriority.MEDIUM,
+          complexity: body.complexity ?? null,
           dueDate: parseIsoDate(body.dueDate),
-          scheduleDate: parseIsoDate(body.scheduleDate),
           estimation: body.estimation,
           acceptanceCriteria: body.acceptanceCriteria ?? [],
-          recurrence: body.recurrence ?? null,
+          recurrence: body.parentTaskId ? null : (body.recurrence ?? null),
+          ownerId: userId,
+          overriddenFields: [],
+          version: 1,
           sectionId: placement.sectionId,
           progressStageId: placement.progressStageId,
           epicId,
@@ -131,6 +154,9 @@ export class TasksService {
           updatedAt: now,
         })
         .returning();
+      if (row && body.scheduleSlots) {
+        await this.replaceSlots(tx, row, body.scheduleSlots);
+      }
       return row;
     });
 
@@ -165,15 +191,64 @@ export class TasksService {
       body,
     );
 
-    if (body.parentTaskId !== undefined) {
-      await this.assertAcyclic(workspaceId, taskId, body.parentTaskId);
+    const nextParentId =
+      body.parentTaskId !== undefined ? body.parentTaskId : existing.parentTaskId;
+    const spaceChanged = destinationSpaceId !== existing.spaceId;
+    const clearsParent = Boolean(existing.parentTaskId) && spaceChanged;
+    if (body.parentTaskId !== undefined || clearsParent) {
+      await this.assertAcyclic(
+        workspaceId,
+        taskId,
+        clearsParent ? null : (body.parentTaskId ?? null),
+      );
       if (body.parentTaskId) {
         await this.requireTaskInWorkspace(workspaceId, body.parentTaskId);
       }
     }
+    if (body.recurrence && (existing.parentTaskId || body.parentTaskId)) {
+      throw new BadRequestException("Only root tasks can repeat");
+    }
+    const closing =
+      (body.status === TaskStatus.DONE || body.status === TaskStatus.CANCELLED) &&
+      body.status !== existing.status;
 
-    const completion = resolveCompletion(existing, body);
     const [updated] = await this.db.transaction(async (tx) => {
+      if (existing.parentTaskId && body.status && body.status !== existing.status) {
+        await lockTaskRows(tx, [existing.id, existing.parentTaskId].sort());
+        if (await hasLiveLock(tx, [existing.parentTaskId])) {
+          throw new TaskLifecycleException("lifecycle_in_progress");
+        }
+      }
+      const parents = await parentIdsForChildSet(
+        tx,
+        existing.id,
+        clearsParent ? null : nextParentId,
+      );
+      if (
+        body.parentTaskId !== undefined ||
+        clearsParent ||
+        (body.parentTaskId && body.parentTaskId !== existing.parentTaskId)
+      ) {
+        await this.assertTaskDepth(
+          tx,
+          workspaceId,
+          existing.id,
+          clearsParent ? null : (body.parentTaskId ?? existing.parentTaskId),
+        );
+        await assertNoLiveLifecycleLock(tx, parents);
+      }
+      if (closing) {
+        if (!body.transitionId) {
+          throw new BadRequestException("transitionId is required");
+        }
+        await this.commitLifecycle(tx, {
+          workspaceId,
+          task: existing,
+          action: body.status === TaskStatus.DONE ? "done" : "cancelled",
+          version: body.version,
+          transitionId: body.transitionId,
+        });
+      }
       const [row] = await tx
         .update(tasks)
         .set({
@@ -182,40 +257,62 @@ export class TasksService {
           progressStageId: placement.progressStageId,
           epicId,
           ...(body.summary !== undefined ? { summary: body.summary } : {}),
+          ...(body.outcome !== undefined
+            ? { outcome: body.outcome.trim() }
+            : {}),
           ...(body.description !== undefined
             ? { description: sanitizeTaskHtml(body.description) }
             : {}),
-          ...(completion.status !== undefined
-            ? { status: completion.status }
-            : {}),
+          ...(body.status !== undefined && !closing ? { status: body.status } : {}),
           ...(body.priority !== undefined ? { priority: body.priority } : {}),
-          ...(completion.dueDate !== undefined
-            ? { dueDate: completion.dueDate }
+          ...(body.complexity !== undefined
+            ? { complexity: body.complexity }
             : {}),
-          ...(completion.scheduleDate !== undefined
-            ? { scheduleDate: completion.scheduleDate }
+          ...(body.dueDate !== undefined
+            ? { dueDate: parseIsoDate(body.dueDate) }
             : {}),
           ...(body.estimation !== undefined
             ? { estimation: body.estimation }
             : {}),
           ...(body.color !== undefined ? { color: body.color } : {}),
-          ...(completion.acceptanceCriteria !== undefined
-            ? { acceptanceCriteria: completion.acceptanceCriteria }
+          ...(body.acceptanceCriteria !== undefined
+            ? { acceptanceCriteria: body.acceptanceCriteria }
             : {}),
-          ...(completion.recurrence !== undefined
-            ? { recurrence: completion.recurrence }
+          ...(body.recurrence !== undefined
+            ? { recurrence: body.recurrence }
             : {}),
-          ...(body.parentTaskId !== undefined
-            ? { parentTaskId: body.parentTaskId }
-            : {}),
+          ...(clearsParent
+            ? { parentTaskId: null }
+            : body.parentTaskId !== undefined
+              ? { parentTaskId: body.parentTaskId }
+              : {}),
+          version: sql`${tasks.version} + 1`,
           updatedAt: new Date(),
         })
-        .where(eq(tasks.id, existing.id))
+        .where(
+          and(
+            eq(tasks.id, existing.id),
+            eq(tasks.version, closing ? body.version + 1 : body.version),
+          ),
+        )
         .returning();
-      if (row && completion.spawn) {
-        await this.insertNextOccurrence(tx, row, completion.spawn);
+      if (!row) {
+        const [current] = await tx
+          .select({ version: tasks.version })
+          .from(tasks)
+          .where(eq(tasks.id, existing.id))
+          .limit(1);
+        throw new TaskLifecycleException("conflict", {
+          version: current?.version,
+        });
       }
-      if (row && body.description !== undefined) {
+      if (body.scheduleSlots) {
+        await this.replaceSlots(tx, row, body.scheduleSlots);
+      }
+      if (spaceChanged && !existing.parentTaskId) {
+        await this.moveChildrenWithRoot(tx, row);
+      }
+      if (body.description !== undefined) {
         await this.relations.replaceReferences(
           tx,
           workspaceId,
@@ -224,7 +321,7 @@ export class TasksService {
           collectHtmlMentions(row.description),
         );
       }
-      if (row && body.goalId !== undefined) {
+      if (body.goalId !== undefined) {
         await this.writeTaskGoal(tx, workspaceId, row.id, body.goalId);
       }
       return [row];
@@ -245,10 +342,6 @@ export class TasksService {
       throw new BadRequestException("Only root tasks can be reordered");
     }
 
-    const completion =
-      body.status === TaskStatus.DONE && existing.status !== TaskStatus.DONE
-        ? completeRecurringTask(recurrenceSnapshot(existing))
-        : null;
     const destinationIds = (
       await this.rootIds(workspaceId, existing.spaceId, body.status)
     ).filter((id) => id !== existing.id);
@@ -265,36 +358,32 @@ export class TasksService {
             await this.rootIds(workspaceId, existing.spaceId, existing.status)
           ).filter((id) => id !== existing.id);
 
+    const closing =
+      (body.status === TaskStatus.DONE || body.status === TaskStatus.CANCELLED) &&
+      body.status !== existing.status;
     await this.db.transaction(async (tx) => {
+      if (closing) {
+        if (!body.transitionId) {
+          throw new BadRequestException("transitionId is required");
+        }
+        await this.commitLifecycle(tx, {
+          workspaceId,
+          task: existing,
+          action: body.status === TaskStatus.DONE ? "done" : "cancelled",
+          version: body.version,
+          transitionId: body.transitionId,
+        });
+      } else if (existing.version !== body.version) {
+        throw new TaskLifecycleException("conflict", {
+          version: existing.version,
+        });
+      }
       await this.writePositions(tx, destinationIds, {
         movedId: existing.id,
         status: body.status,
       });
       if (sourceIds) {
         await this.writePositions(tx, sourceIds, {});
-      }
-      const cancelling =
-        body.status === TaskStatus.CANCELLED &&
-        existing.status !== TaskStatus.CANCELLED;
-      if (
-        cancelling ||
-        completion?.type === "finish-series" ||
-        completion?.type === "advance"
-      ) {
-        await tx
-          .update(tasks)
-          .set({ recurrence: null, updatedAt: new Date() })
-          .where(eq(tasks.id, existing.id));
-      }
-      if (completion?.type === "advance") {
-        const [completed] = await tx
-          .select()
-          .from(tasks)
-          .where(eq(tasks.id, existing.id))
-          .limit(1);
-        if (completed) {
-          await this.insertNextOccurrence(tx, completed, completion);
-        }
       }
     });
 
@@ -312,14 +401,148 @@ export class TasksService {
     return task;
   }
 
-  async remove(workspaceId: string, taskId: string) {
+  async abortLifecycle(
+    workspaceId: string,
+    taskId: string,
+    transitionId: string,
+  ) {
+    await this.requireTaskInWorkspace(workspaceId, taskId);
+    await this.db
+      .delete(taskLifecycleLocks)
+      .where(
+        and(
+          eq(taskLifecycleLocks.transitionId, transitionId),
+          sql`${taskLifecycleLocks.expiresAt} > clock_timestamp()`,
+        ),
+      );
+  }
+
+  async listReferences(workspaceId: string, taskId: string, userId: string) {
+    await this.requireTaskInWorkspace(workspaceId, taskId);
+    const rows = await this.db
+      .select()
+      .from(taskReferences)
+      .where(eq(taskReferences.taskId, taskId));
+    const visible = [];
+    for (const row of rows) {
+      if (row.kind === "conversation" && row.conversationId) {
+        const [conversation] = await this.db
+          .select({ userId: conversations.userId })
+          .from(conversations)
+          .where(eq(conversations.id, row.conversationId))
+          .limit(1);
+        if (!conversation || conversation.userId !== userId) continue;
+      }
+      visible.push({
+        id: row.id,
+        kind: row.kind,
+        docId: row.docId,
+        conversationId: row.conversationId,
+        url: row.url,
+        title: row.title,
+      });
+    }
+    return visible;
+  }
+
+  async addReference(
+    workspaceId: string,
+    taskId: string,
+    userId: string,
+    body: import("@repo/api/todex").CreateTaskReferenceBody,
+  ) {
+    await this.requireTaskInWorkspace(workspaceId, taskId);
+    const now = new Date();
+    let title = "Link";
+    let docId: string | null = null;
+    let conversationId: string | null = null;
+    let url: string | null = null;
+    if (body.kind === "doc") {
+      const [doc] = await this.db
+        .select({ id: docs.id, title: docs.title, workspaceId: docs.workspaceId })
+        .from(docs)
+        .where(eq(docs.id, body.docId))
+        .limit(1);
+      if (!doc || doc.workspaceId !== workspaceId) throw new ForbiddenException();
+      docId = doc.id;
+      title = doc.title;
+    } else if (body.kind === "conversation") {
+      const [conversation] = await this.db
+        .select()
+        .from(conversations)
+        .where(eq(conversations.id, body.conversationId))
+        .limit(1);
+      if (
+        !conversation ||
+        conversation.workspaceId !== workspaceId ||
+        conversation.userId !== userId
+      ) {
+        throw new ForbiddenException();
+      }
+      conversationId = conversation.id;
+      title = conversation.title ?? "Conversation";
+    } else {
+      url = body.url;
+      title = body.title ?? body.url;
+    }
+    const [created] = await this.db
+      .insert(taskReferences)
+      .values({
+        id: randomUUID(),
+        workspaceId,
+        taskId,
+        kind: body.kind,
+        docId,
+        conversationId,
+        url,
+        title,
+        createdAt: now,
+      })
+      .returning();
+    if (!created) throw new ForbiddenException();
+    return {
+      id: created.id,
+      kind: created.kind,
+      docId: created.docId,
+      conversationId: created.conversationId,
+      url: created.url,
+      title: created.title,
+    };
+  }
+
+  async removeReference(
+    workspaceId: string,
+    taskId: string,
+    referenceId: string,
+  ) {
+    await this.requireTaskInWorkspace(workspaceId, taskId);
+    await this.db
+      .delete(taskReferences)
+      .where(
+        and(
+          eq(taskReferences.id, referenceId),
+          eq(taskReferences.taskId, taskId),
+        ),
+      );
+  }
+
+  async remove(workspaceId: string, taskId: string, body: DeleteTaskBody) {
     const existing = await this.requireTaskInWorkspace(workspaceId, taskId);
     const familyIds = await this.descendantIds(existing.id);
     await this.db.transaction(async (tx) => {
+      if (existing.parentTaskId) {
+        await assertNoLiveLifecycleLock(tx, [existing.parentTaskId]);
+      }
+      await this.commitLifecycle(tx, {
+        workspaceId,
+        task: existing,
+        action: "delete",
+        version: body.version,
+        transitionId: body.transitionId,
+      });
       await this.relations.deleteTouching(tx, workspaceId, [
         { type: RelationEntityType.TASK, ids: familyIds },
       ]);
-      await tx.delete(tasks).where(eq(tasks.id, existing.id));
     });
     if (!existing.parentTaskId) {
       const ids = (
@@ -392,19 +615,28 @@ export class TasksService {
     return this.withGoalIds(rows);
   }
 
-  private async listByScheduleRange(workspaceId: string, from: Date, to: Date) {
+  async listByScheduleRange(workspaceId: string, from: Date, to: Date) {
+    if (this.recurrence) await this.recurrence.materializeDue(workspaceId);
     const rows = await this.db
-      .select()
+      .select({ task: tasks })
       .from(tasks)
+      .innerJoin(taskScheduleSlots, eq(taskScheduleSlots.taskId, tasks.id))
       .where(
         and(
           eq(tasks.workspaceId, workspaceId),
-          gte(tasks.scheduleDate, from),
-          lt(tasks.scheduleDate, to),
+          isNull(taskScheduleSlots.retiredAt),
+          lt(taskScheduleSlots.startAt, to),
+          gt(taskScheduleSlots.endAt, from),
+          sql`${tasks.status} not in ('done', 'cancelled')`,
         ),
       )
       .orderBy(asc(tasks.position), asc(tasks.createdAt), asc(tasks.id));
-    return this.withGoalIds(rows);
+    const unique = new Map(rows.map((row) => [row.task.id, row.task]));
+    const tasksInRange = await this.withGoalIds([...unique.values()]);
+    const previews = this.recurrence
+      ? await this.recurrence.previews(workspaceId, from, to)
+      : [];
+    return { tasks: tasksInRange, previews, conflicts: [] as TaskConflict[] };
   }
 
   private async withGoalIds(rows: TaskRow[]) {
@@ -430,11 +662,30 @@ export class TasksService {
       }
     }
     const actualTime = await this.actualTimeByTask(rows.map((row) => row.id));
+    const slotRows =
+      rows.length === 0
+        ? []
+        : await this.db
+            .select()
+            .from(taskScheduleSlots)
+            .where(
+              inArray(
+                taskScheduleSlots.taskId,
+                rows.map((row) => row.id),
+              ),
+            );
+    const slotsByTask = new Map<string, typeof slotRows>();
+    for (const slot of slotRows) {
+      const current = slotsByTask.get(slot.taskId) ?? [];
+      current.push(slot);
+      slotsByTask.set(slot.taskId, current);
+    }
     return rows.map((row) =>
       mapTask(
         row,
         goalIdByTaskId.get(row.id) ?? null,
         actualTime.get(row.id) ?? 0,
+        slotsByTask.get(row.id) ?? [],
       ),
     );
   }
@@ -622,52 +873,264 @@ export class TasksService {
     }
   }
 
-  private async insertNextOccurrence(
+  private async replaceSlots(
     tx: NodePgDatabase,
-    completed: TaskRow,
-    next: NextOccurrence,
+    task: TaskRow,
+    slots: NonNullable<UpdateTaskBody["scheduleSlots"]>,
   ) {
-    const [workspace] = await tx
-      .update(workspaces)
-      .set({
-        taskSeq: sql`${workspaces.taskSeq} + 1`,
-        updatedAt: new Date(),
-      })
-      .where(eq(workspaces.id, completed.workspaceId))
-      .returning();
-    if (!workspace) throw new ForbiddenException();
+    assertScheduleSlots(
+      slots.map((slot) => ({ startAt: slot.startAt, endAt: slot.endAt })),
+    );
+    const previous = await tx
+      .select()
+      .from(taskScheduleSlots)
+      .where(eq(taskScheduleSlots.taskId, task.id));
+    const retiredAtById = new Map(
+      previous
+        .filter((slot) => slot.retiredAt)
+        .map((slot) => [slot.id, slot.retiredAt]),
+    );
+    await tx
+      .delete(taskScheduleSlots)
+      .where(eq(taskScheduleSlots.taskId, task.id));
+    if (slots.length === 0) return;
+    await tx.insert(taskScheduleSlots).values(
+      slots.map((slot) => {
+        const id = slot.id ?? randomUUID();
+        return {
+          id,
+          workspaceId: task.workspaceId,
+          taskId: task.id,
+          startAt: new Date(slot.startAt),
+          endAt: new Date(slot.endAt),
+          retiredAt: slot.retiredAt
+            ? new Date(slot.retiredAt)
+            : (retiredAtById.get(id) ?? null),
+        };
+      }),
+    );
+  }
 
+  private async moveChildrenWithRoot(tx: NodePgDatabase, root: TaskRow) {
+    const children = await tx
+      .select()
+      .from(tasks)
+      .where(eq(tasks.parentTaskId, root.id));
+    for (const child of children) {
+      const placement = await this.placementFor(child, root.spaceId, {});
+      const epicId = await this.epicLinkFor(
+        root.workspaceId,
+        child,
+        root.spaceId,
+        {},
+      );
+      await tx
+        .update(tasks)
+        .set({
+          spaceId: root.spaceId,
+          sectionId: placement.sectionId,
+          epicId,
+          updatedAt: new Date(),
+        })
+        .where(eq(tasks.id, child.id));
+    }
+  }
+
+  private async assertTaskDepth(
+    tx: NodePgDatabase,
+    workspaceId: string,
+    taskId: string | null,
+    parentTaskId: string | null,
+  ) {
+    if (!parentTaskId) return;
+    if (taskId && parentTaskId === taskId) {
+      throw new BadRequestException("Tasks can only be nested one level deep");
+    }
+    const [parent] = await tx
+      .select()
+      .from(tasks)
+      .where(eq(tasks.id, parentTaskId))
+      .limit(1);
+    if (!parent || parent.workspaceId !== workspaceId || parent.parentTaskId) {
+      throw new BadRequestException("Tasks can only be nested one level deep");
+    }
+    if (!taskId) return;
+    const children = await tx
+      .select({ id: tasks.id })
+      .from(tasks)
+      .where(eq(tasks.parentTaskId, taskId))
+      .limit(1);
+    if (children.length > 0) {
+      throw new BadRequestException("Tasks can only be nested one level deep");
+    }
+    await this.assertAcyclic(workspaceId, taskId, parentTaskId);
+  }
+
+  private async commitLifecycle(
+    tx: NodePgDatabase,
+    input: {
+      workspaceId: string;
+      task: TaskRow;
+      action: "done" | "cancelled" | "delete";
+      version: number;
+      transitionId: string;
+    },
+  ) {
+    await lockTaskRows(tx, [input.task.id]);
+    const children = await tx
+      .select()
+      .from(tasks)
+      .where(eq(tasks.parentTaskId, input.task.id));
+    const unfinished = children.filter(
+      (child) =>
+        child.status !== TaskStatus.DONE &&
+        child.status !== TaskStatus.CANCELLED,
+    );
+    const affected = [input.task.id, ...unfinished.map((child) => child.id)];
+    await lockTaskRows(tx, affected);
+    const [lockedParent] = await tx
+      .select()
+      .from(tasks)
+      .where(eq(tasks.id, input.task.id))
+      .limit(1);
+    if (
+      lockedParent &&
+      input.action !== "delete" &&
+      lockedParent.status === input.action &&
+      unfinished.length === 0
+    ) {
+      return;
+    }
+    if (!lockedParent || lockedParent.version !== input.version) {
+      throw new TaskLifecycleException("conflict", {
+        version: lockedParent?.version,
+      });
+    }
+    const locks = await tx
+      .select()
+      .from(taskLifecycleLocks)
+      .where(inArray(taskLifecycleLocks.taskId, affected));
     const now = new Date();
-    const position = completed.parentTaskId
-      ? 0
-      : await this.nextRootPosition(
-          tx,
-          completed.workspaceId,
-          completed.spaceId,
-          TaskStatus.TODO,
-        );
-    await tx.insert(tasks).values({
-      id: randomUUID(),
-      workspaceId: completed.workspaceId,
-      spaceId: completed.spaceId,
-      taskKey: formatTaskKey(workspace.taskSeq),
-      summary: completed.summary,
-      description: completed.description,
-      status: TaskStatus.TODO,
-      priority: completed.priority,
-      dueDate: parseIsoDate(next.dueDate),
-      scheduleDate: parseIsoDate(next.scheduleDate),
-      estimation: completed.estimation,
-      acceptanceCriteria: next.acceptanceCriteria ?? [],
-      recurrence: next.recurrence,
-      sectionId: completed.sectionId,
-      progressStageId: completed.progressStageId,
-      epicId: completed.epicId,
-      parentTaskId: completed.parentTaskId,
-      position,
-      createdAt: now,
-      updatedAt: now,
-    });
+    const live = locks.filter((lock) => lock.expiresAt > now);
+    if (live.some((lock) => lock.transitionId !== input.transitionId)) {
+      throw new TaskLifecycleException("lifecycle_in_progress");
+    }
+    const expiredSame = locks.filter(
+      (lock) =>
+        lock.transitionId === input.transitionId && lock.expiresAt <= now,
+    );
+    if (expiredSame.length > 0 && live.length === 0) {
+      throw new TaskLifecycleException("lease_expired");
+    }
+    if (live.length === 0) {
+      const [current] = await tx
+        .select()
+        .from(tasks)
+        .where(eq(tasks.id, input.task.id))
+        .limit(1);
+      const already =
+        input.action !== "delete" &&
+        current?.status === input.action &&
+        unfinished.length === 0;
+      if (already) return;
+      const expiresAt = new Date(Date.now() + LIFECYCLE_LEASE_MS);
+      await tx.insert(taskLifecycleLocks).values(
+        affected.map((taskId) => ({
+          taskId,
+          transitionId: input.transitionId,
+          action: input.action,
+          expiresAt,
+        })),
+      );
+    }
+    if (await executionIsActive(tx, affected)) {
+      const refreshed = await refreshLease(tx, affected, input.transitionId);
+      if (!refreshed) throw new TaskLifecycleException("lease_expired");
+      throw new TaskLifecycleException("execution_still_active");
+    }
+    const held = await tx
+      .select()
+      .from(taskLifecycleLocks)
+      .where(
+        and(
+          inArray(taskLifecycleLocks.taskId, affected),
+          eq(taskLifecycleLocks.transitionId, input.transitionId),
+          sql`${taskLifecycleLocks.expiresAt} > clock_timestamp()`,
+        ),
+      );
+    if (held.length !== affected.length) {
+      throw new TaskLifecycleException("lease_expired");
+    }
+    const reread = await tx
+      .select()
+      .from(tasks)
+      .where(eq(tasks.parentTaskId, input.task.id));
+    const rereadUnfinished = reread
+      .filter(
+        (child) =>
+          child.status !== TaskStatus.DONE &&
+          child.status !== TaskStatus.CANCELLED,
+      )
+      .map((child) => child.id)
+      .sort();
+    const lockedChildren = affected.filter((id) => id !== input.task.id).sort();
+    if (rereadUnfinished.join() !== lockedChildren.join()) {
+      throw new TaskLifecycleException("lifecycle_in_progress");
+    }
+    if (input.action === "delete") {
+      await tx
+        .delete(executionQueue)
+        .where(inArray(executionQueue.taskId, [input.task.id, ...children.map((child) => child.id)]));
+      await tx.delete(tasks).where(eq(tasks.id, input.task.id));
+      return;
+    }
+    const [parent] = await tx
+      .update(tasks)
+      .set({
+        status: input.action,
+        version: sql`${tasks.version} + 1`,
+        updatedAt: now,
+      })
+      .where(
+        and(eq(tasks.id, input.task.id), eq(tasks.version, input.version)),
+      )
+      .returning();
+    if (!parent) {
+      const [current] = await tx
+        .select({ version: tasks.version })
+        .from(tasks)
+        .where(eq(tasks.id, input.task.id))
+        .limit(1);
+      throw new TaskLifecycleException("conflict", { version: current?.version });
+    }
+    if (rereadUnfinished.length > 0) {
+      await tx
+        .update(tasks)
+        .set({
+          status: TaskStatus.CANCELLED,
+          version: sql`${tasks.version} + 1`,
+          updatedAt: now,
+        })
+        .where(inArray(tasks.id, rereadUnfinished));
+    }
+    await tx
+      .update(taskScheduleSlots)
+      .set({ retiredAt: now })
+      .where(
+        and(
+          inArray(taskScheduleSlots.taskId, [input.task.id, ...rereadUnfinished]),
+          isNull(taskScheduleSlots.retiredAt),
+          gt(taskScheduleSlots.endAt, now),
+        ),
+      );
+    await tx
+      .delete(executionQueue)
+      .where(
+        inArray(executionQueue.taskId, [input.task.id, ...rereadUnfinished]),
+      );
+    await tx
+      .delete(taskLifecycleLocks)
+      .where(eq(taskLifecycleLocks.transitionId, input.transitionId));
   }
 
   private async nextRootPosition(
@@ -732,97 +1195,6 @@ export class TasksService {
   }
 }
 
-function resolveCompletion(
-  existing: TaskRow,
-  body: UpdateTaskBody,
-): CompletionUpdate {
-  const scheduleDate =
-    body.scheduleDate !== undefined
-      ? parseIsoDate(body.scheduleDate)
-      : undefined;
-  const dueDate =
-    body.dueDate !== undefined ? parseIsoDate(body.dueDate) : undefined;
-  const recurrence = body.recurrence;
-  const acceptanceCriteria = body.acceptanceCriteria;
-  if (
-    body.status === TaskStatus.CANCELLED &&
-    existing.status !== TaskStatus.CANCELLED
-  ) {
-    return {
-      status: TaskStatus.CANCELLED,
-      scheduleDate,
-      dueDate,
-      recurrence: null,
-      acceptanceCriteria,
-      spawn: null,
-    };
-  }
-  if (body.status !== TaskStatus.DONE || existing.status === TaskStatus.DONE) {
-    return {
-      status: body.status,
-      scheduleDate,
-      dueDate,
-      recurrence,
-      acceptanceCriteria,
-      spawn: null,
-    };
-  }
-
-  const effect = completeRecurringTask({
-    status: existing.status,
-    scheduleDate:
-      body.scheduleDate !== undefined
-        ? body.scheduleDate
-        : toIso(existing.scheduleDate),
-    dueDate:
-      body.dueDate !== undefined ? body.dueDate : toIso(existing.dueDate),
-    recurrence:
-      body.recurrence !== undefined
-        ? body.recurrence
-        : readTaskRecurrence(existing.recurrence),
-    acceptanceCriteria:
-      body.acceptanceCriteria ?? existing.acceptanceCriteria ?? [],
-  });
-  if (effect.type === "advance") {
-    return {
-      status: TaskStatus.DONE,
-      scheduleDate,
-      dueDate,
-      recurrence: null,
-      acceptanceCriteria,
-      spawn: effect,
-    };
-  }
-  if (effect.type === "finish-series") {
-    return {
-      status: TaskStatus.DONE,
-      scheduleDate,
-      dueDate,
-      recurrence: null,
-      acceptanceCriteria,
-      spawn: null,
-    };
-  }
-  return {
-    status: TaskStatus.DONE,
-    scheduleDate,
-    dueDate,
-    recurrence,
-    acceptanceCriteria,
-    spawn: null,
-  };
-}
-
-function recurrenceSnapshot(row: TaskRow) {
-  return {
-    status: row.status,
-    scheduleDate: toIso(row.scheduleDate),
-    dueDate: toIso(row.dueDate),
-    recurrence: readTaskRecurrence(row.recurrence),
-    acceptanceCriteria: row.acceptanceCriteria ?? [],
-  };
-}
-
 function textFromHtml(value: string): string {
   return value
     .replace(/<[^>]+>/g, " ")
@@ -834,20 +1206,4 @@ function clampIndex(index: number, length: number) {
   if (index < 0) return 0;
   if (index > length) return length;
   return index;
-}
-
-interface NextOccurrence {
-  scheduleDate: string | null;
-  dueDate: string | null;
-  recurrence: TaskRecurrence;
-  acceptanceCriteria: NonNullable<TaskRow["acceptanceCriteria"]>;
-}
-
-interface CompletionUpdate {
-  status?: TaskRow["status"];
-  scheduleDate?: Date | null;
-  dueDate?: Date | null;
-  recurrence?: TaskRecurrence | null;
-  acceptanceCriteria?: TaskRow["acceptanceCriteria"];
-  spawn: NextOccurrence | null;
 }

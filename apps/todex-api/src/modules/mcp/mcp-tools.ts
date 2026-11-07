@@ -334,6 +334,7 @@ const TOOLS: McpTool[] = [
       deps.tasks.create(
         caller.workspaceId,
         args as z.infer<typeof createTaskSchema>,
+        caller.userId,
       ),
   },
   {
@@ -346,7 +347,11 @@ const TOOLS: McpTool[] = [
       const { taskId, ...body } = args as z.infer<typeof updateTaskSchema> & {
         taskId: string;
       };
-      return deps.tasks.update(caller.workspaceId, taskId, body);
+      const current = await deps.tasks.get(caller.workspaceId, taskId);
+      return deps.tasks.update(caller.workspaceId, taskId, {
+        ...body,
+        version: current.version,
+      });
     },
   },
   {

@@ -38,6 +38,7 @@ import {
 import { DRIZZLE_DB } from "../../db/tokens";
 import { SpaceFoldersService } from "../folders/space-folders.service";
 import { RelationsService } from "../relations/relations.service";
+import { RecurrenceService } from "../tasks/recurrence.service";
 import { WorkspaceService } from "../workspace/workspace.service";
 import {
   planProgressStageReplace,
@@ -110,12 +111,17 @@ export class SpacesService {
       docRows.find((row) => row.type === DocType.GOAL)?.total ?? 0;
     const documents =
       docRows.find((row) => row.type === DocType.COMMON)?.total ?? 0;
+    const series = await new RecurrenceService(this.db).seriesCountForSpace(
+      workspaceId,
+      space.id,
+    );
     return {
       tasks: taskCount,
       goals,
       documents,
       epics: epicCount,
       docFolders: folderCount,
+      series,
     };
   }
 
@@ -224,6 +230,10 @@ export class SpacesService {
           ids: folderRows.map((row) => row.id),
         },
       ]);
+      await new RecurrenceService(this.db).deleteSeriesInSpace(
+        workspaceId,
+        existing.id,
+      );
       await tx.delete(tasks).where(eq(tasks.spaceId, existing.id));
       await tx.delete(spaces).where(eq(spaces.id, existing.id));
     });

@@ -36,6 +36,36 @@ const taskStatusSchema = z.enum([
 
 const estimationSchema = z.number().int().positive();
 
+export const TaskComplexitySchema = z.enum(["low", "medium", "high"]);
+
+export const ScheduleSlotSchema = z.object({
+  id: z.string().min(1),
+  startAt: IsoDateTimeSchema,
+  endAt: IsoDateTimeSchema,
+  retiredAt: IsoDateTimeSchema.nullable(),
+});
+
+export const ScheduleSlotInputSchema = z.object({
+  id: z.string().min(1).optional(),
+  startAt: IsoDateTimeSchema,
+  endAt: IsoDateTimeSchema,
+  retiredAt: IsoDateTimeSchema.nullable().optional(),
+});
+
+export const TaskConflictSchema = z.object({
+  slotId: z.string(),
+  title: z.string(),
+});
+
+const taskPrioritySchema = z.enum([
+  TaskPriority.LOW,
+  TaskPriority.MEDIUM,
+  TaskPriority.HIGH,
+  TaskPriority.CRITICAL,
+]);
+
+const outcomeSchema = z.string().trim().max(500);
+
 export const TaskSchema = z.object({
   id: z.string(),
   workspaceId: z.string(),
@@ -43,25 +73,30 @@ export const TaskSchema = z.object({
   taskKey: z.string(),
   summary: z.string(),
   description: z.string(),
+  outcome: z.string(),
   status: taskStatusSchema,
-  priority: z.enum([
-    TaskPriority.LOW,
-    TaskPriority.MEDIUM,
-    TaskPriority.HIGH,
-    TaskPriority.CRITICAL,
-  ]),
+  priority: taskPrioritySchema,
+  complexity: TaskComplexitySchema.nullable(),
   dueDate: IsoDateTimeSchema.nullable(),
-  scheduleDate: IsoDateTimeSchema.nullable(),
   estimation: estimationSchema,
   actualTime: z.number().int().nonnegative(),
   color: z.string().nullable(),
   acceptanceCriteria: AcceptanceCriteriaSchema.default([]),
   recurrence: TaskRecurrenceSchema.nullable(),
+  scheduleSlots: z.array(ScheduleSlotSchema).max(10),
   sectionId: z.string(),
   progressStageId: z.string().nullable(),
   parentTaskId: z.string().nullable(),
   epicId: z.string().nullable(),
   goalId: z.string().nullable(),
+  ownerId: z.string(),
+  seriesId: z.string().nullable(),
+  occurrenceKey: z.string().nullable(),
+  occurrenceAnchor: IsoDateTimeSchema.nullable(),
+  originSeriesId: z.string().nullable(),
+  overriddenFields: z.array(z.string()),
+  version: z.number().int().positive(),
+  conflicts: z.array(TaskConflictSchema).default([]),
   position: z.number().int().nonnegative(),
   createdAt: IsoDateTimeSchema,
   updatedAt: IsoDateTimeSchema,
@@ -126,7 +161,9 @@ export const CreateTaskBodySchema = z.object({
     ])
     .optional(),
   dueDate: IsoDateTimeSchema.nullable().optional(),
-  scheduleDate: IsoDateTimeSchema.nullable().optional(),
+  outcome: outcomeSchema.optional(),
+  complexity: TaskComplexitySchema.nullable().optional(),
+  scheduleSlots: z.array(ScheduleSlotInputSchema).max(10).optional(),
   estimation: estimationSchema,
   acceptanceCriteria: AcceptanceCriteriaSchema.optional(),
   recurrence: TaskRecurrenceSchema.nullable().optional(),
@@ -155,10 +192,14 @@ export const UpdateTaskBodySchema = z.object({
     ])
     .optional(),
   dueDate: IsoDateTimeSchema.nullable().optional(),
-  scheduleDate: IsoDateTimeSchema.nullable().optional(),
+  outcome: outcomeSchema.optional(),
+  complexity: TaskComplexitySchema.nullable().optional(),
+  scheduleSlots: z.array(ScheduleSlotInputSchema).max(10).optional(),
   estimation: estimationSchema.optional(),
   acceptanceCriteria: AcceptanceCriteriaSchema.optional(),
   recurrence: TaskRecurrenceSchema.nullable().optional(),
+  version: z.number().int().positive(),
+  transitionId: z.string().uuid().optional(),
   sectionId: z.string().min(1).optional(),
   progressStageId: z.string().min(1).nullable().optional(),
   parentTaskId: z.string().nullable().optional(),
@@ -169,11 +210,43 @@ export const UpdateTaskBodySchema = z.object({
 export const MoveTaskBodySchema = z.object({
   status: taskStatusSchema,
   index: z.number().int().nonnegative().optional(),
+  version: z.number().int().positive(),
+  transitionId: z.string().uuid().optional(),
+});
+
+export const DeleteTaskBodySchema = z.object({
+  version: z.number().int().positive(),
+  transitionId: z.string().uuid(),
+});
+
+export const TaskCalendarPreviewSchema = z.object({
+  seriesId: z.string(),
+  occurrenceKey: z.string(),
+  title: z.string(),
+  slots: z.array(
+    z.object({
+      startAt: IsoDateTimeSchema,
+      endAt: IsoDateTimeSchema,
+    }),
+  ),
+});
+
+export const TaskCalendarRangeSchema = z.object({
+  tasks: z.array(TaskSchema),
+  previews: z.array(TaskCalendarPreviewSchema),
+  conflicts: z.array(TaskConflictSchema),
 });
 
 export type AcceptanceCriterion = z.infer<typeof AcceptanceCriterionSchema>;
+export type ScheduleSlot = z.infer<typeof ScheduleSlotSchema>;
+export type ScheduleSlotInput = z.infer<typeof ScheduleSlotInputSchema>;
+export type TaskConflict = z.infer<typeof TaskConflictSchema>;
+export type TaskComplexity = z.infer<typeof TaskComplexitySchema>;
 export type Task = z.infer<typeof TaskSchema>;
 export type ListTasksQuery = z.infer<typeof ListTasksQuerySchema>;
 export type CreateTaskBody = z.infer<typeof CreateTaskBodySchema>;
 export type UpdateTaskBody = z.infer<typeof UpdateTaskBodySchema>;
 export type MoveTaskBody = z.infer<typeof MoveTaskBodySchema>;
+export type DeleteTaskBody = z.infer<typeof DeleteTaskBodySchema>;
+export type TaskCalendarPreview = z.infer<typeof TaskCalendarPreviewSchema>;
+export type TaskCalendarRange = z.infer<typeof TaskCalendarRangeSchema>;

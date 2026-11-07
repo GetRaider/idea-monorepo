@@ -64,9 +64,12 @@ function createdTime(task: Task): number {
 }
 
 function scheduleTime(task: Task): number {
-  if (!task.scheduleDate) return Number.POSITIVE_INFINITY;
-  const time = Date.parse(task.scheduleDate);
-  return Number.isNaN(time) ? Number.POSITIVE_INFINITY : time;
+  const start = task.scheduleSlots
+    .filter((slot) => slot.retiredAt == null)
+    .map((slot) => Date.parse(slot.startAt))
+    .sort((left, right) => left - right)[0];
+  if (start == null || Number.isNaN(start)) return Number.POSITIVE_INFINITY;
+  return start;
 }
 
 function startOfLocalDay(date: Date): Date {

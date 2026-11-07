@@ -38,7 +38,11 @@ import {
   ReplaceSpaceProgressStagesBodySchema,
   SpaceDetailSchema,
   SpaceSchema,
+  TaskCalendarRangeSchema,
+  TaskReferenceSchema,
+  CreateTaskReferenceBodySchema,
   TaskSchema,
+  DeleteTaskBodySchema,
   UpdateSpaceSectionBodySchema,
   UpdateDocFolderBodySchema,
   UpdateSpaceFolderBodySchema,
@@ -365,21 +369,32 @@ export const todexClient = {
       call("delete", `/v1/epics/${epicId}`, z.object({ ok: z.boolean() })),
   },
   tasks: {
-    list: (
+    list: ((
       query: { spaceId: string } | { scheduleFrom: string; scheduleTo: string },
     ) => {
-      const searchParams =
-        "spaceId" in query
-          ? new URLSearchParams({ spaceId: query.spaceId })
-          : new URLSearchParams({
-              scheduleFrom: query.scheduleFrom,
-              scheduleTo: query.scheduleTo,
-            });
+      if ("spaceId" in query) {
+        const searchParams = new URLSearchParams({ spaceId: query.spaceId });
+        return call(
+          "get",
+          `/v1/tasks?${searchParams.toString()}`,
+          z.array(TaskSchema),
+        );
+      }
+      const searchParams = new URLSearchParams({
+        scheduleFrom: query.scheduleFrom,
+        scheduleTo: query.scheduleTo,
+      });
       return call(
         "get",
         `/v1/tasks?${searchParams.toString()}`,
-        z.array(TaskSchema),
+        TaskCalendarRangeSchema,
       );
+    }) as {
+      (query: { spaceId: string }): Promise<z.infer<typeof TaskSchema>[]>;
+      (query: {
+        scheduleFrom: string;
+        scheduleTo: string;
+      }): Promise<z.infer<typeof TaskCalendarRangeSchema>>;
     },
     create: (body: unknown) =>
       call("post", "/v1/tasks", TaskSchema, CreateTaskBodySchema.parse(body)),
@@ -397,8 +412,34 @@ export const todexClient = {
         TaskSchema,
         MoveTaskBodySchema.parse(body),
       ),
-    remove: (taskId: string) =>
-      call("delete", `/v1/tasks/${taskId}`, z.object({ ok: z.boolean() })),
+    remove: (taskId: string, body: unknown) =>
+      call(
+        "delete",
+        `/v1/tasks/${taskId}`,
+        z.object({ ok: z.boolean() }),
+        DeleteTaskBodySchema.parse(body),
+      ),
+    references: {
+      list: (taskId: string) =>
+        call(
+          "get",
+          `/v1/tasks/${taskId}/references`,
+          z.array(TaskReferenceSchema),
+        ),
+      create: (taskId: string, body: unknown) =>
+        call(
+          "post",
+          `/v1/tasks/${taskId}/references`,
+          TaskReferenceSchema,
+          CreateTaskReferenceBodySchema.parse(body),
+        ),
+      remove: (taskId: string, referenceId: string) =>
+        call(
+          "delete",
+          `/v1/tasks/${taskId}/references/${referenceId}`,
+          z.object({ ok: z.boolean() }),
+        ),
+    },
   },
   execution: {
     state: () => call("get", "/v1/execution", ExecutionStateSchema),

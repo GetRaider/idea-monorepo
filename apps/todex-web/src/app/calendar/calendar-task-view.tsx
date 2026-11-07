@@ -93,8 +93,12 @@ export function CalendarTaskView() {
               {board && selectedTask.spaceId === board.id ? ` · ${board.name}` : ""}
             </p>
             <p className="text-sm">
-              {selectedTask.scheduleDate
-                ? new Date(selectedTask.scheduleDate).toLocaleString()
+              {selectedTask.scheduleSlots.find((slot) => slot.retiredAt == null)
+                ? new Date(
+                    selectedTask.scheduleSlots.find(
+                      (slot) => slot.retiredAt == null,
+                    )!.startAt,
+                  ).toLocaleString()
                 : "Unscheduled"}
             </p>
             {selectedTask.description.trim() ? (

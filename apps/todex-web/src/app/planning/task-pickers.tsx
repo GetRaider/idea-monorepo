@@ -20,6 +20,8 @@ export function DatePicker({
   value,
   onChange,
   appearance = "chip",
+  label,
+  triggerClassName,
   disabled,
 }: DatePickerProps) {
   const [open, setOpen] = useState(false);
@@ -35,12 +37,13 @@ export function DatePicker({
             appearance === "chip"
               ? "inline-flex items-center gap-1.5 rounded-full border border-border bg-transparent px-2.5 py-1 text-xs hover:text-foreground"
               : "inline-flex h-8 items-center gap-2 bg-transparent text-sm hover:text-foreground",
+            triggerClassName,
             value ? "text-foreground" : "text-muted-foreground",
             disabled && "opacity-40",
           )}
         >
           {appearance === "chip" ? <CalendarIcon size={12} /> : null}
-          {selected ? formatDay(selected) : emptyLabel}
+          {label ?? (selected ? formatDay(selected) : emptyLabel)}
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">
@@ -174,6 +177,8 @@ interface DatePickerProps {
   value: string;
   onChange: (value: string) => void;
   appearance?: "chip" | "plain";
+  label?: string;
+  triggerClassName?: string;
   disabled?: boolean;
 }
 

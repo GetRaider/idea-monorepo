@@ -1,8 +1,4 @@
-import {
-  completeRecurringTask,
-  TaskPriority,
-  TaskStatus,
-} from "@repo/api/todex";
+import { TaskPriority, TaskStatus } from "@repo/api/todex";
 import type { Epic, Task } from "@repo/api/todex";
 
 export const STATUS_ORDER = [
@@ -31,6 +27,61 @@ export function acceptanceCriteriaAreMet(
   criteria: Task["acceptanceCriteria"],
 ): boolean {
   return criteria.length > 0 && criteria.every((criterion) => criterion.done);
+}
+
+export function taskProgressPercent(input: {
+  status: Task["status"];
+  acceptanceCriteria: Array<{ done: boolean }>;
+  subtasks: Array<{ status: Task["status"] }>;
+}): number {
+  const remaining = input.subtasks.filter(
+    (subtask) => subtask.status !== TaskStatus.CANCELLED,
+  );
+  const hasSubtasks = remaining.length > 0;
+  const hasCriteria = input.acceptanceCriteria.length > 0;
+  const subtaskRatio = hasSubtasks
+    ? remaining.filter((subtask) => subtask.status === TaskStatus.DONE).length /
+      remaining.length
+    : 0;
+  const criteriaRatio = hasCriteria
+    ? input.acceptanceCriteria.filter((criterion) => criterion.done).length /
+      input.acceptanceCriteria.length
+    : 0;
+  if (hasSubtasks && hasCriteria) return (subtaskRatio + criteriaRatio) / 2;
+  if (hasSubtasks) return subtaskRatio;
+  if (hasCriteria) return criteriaRatio;
+  if (input.status === TaskStatus.DONE) return 1;
+  return 0;
+}
+
+export function directSubtaskCounts(
+  subtasks: Array<{ status: Task["status"] }>,
+): { done: number; remaining: number; cancelled: number } {
+  const cancelled = subtasks.filter(
+    (subtask) => subtask.status === TaskStatus.CANCELLED,
+  ).length;
+  const remaining = subtasks.length - cancelled;
+  const done = subtasks.filter(
+    (subtask) => subtask.status === TaskStatus.DONE,
+  ).length;
+  return { done, remaining, cancelled };
+}
+
+export function activeScheduleSlots<
+  T extends { retiredAt: string | null },
+>(task: { status: Task["status"]; scheduleSlots: T[] }): T[] {
+  if (task.status === TaskStatus.DONE || task.status === TaskStatus.CANCELLED) {
+    return [];
+  }
+  return task.scheduleSlots.filter((slot) => slot.retiredAt == null);
+}
+
+export function earliestActiveSlotStart(task: Task): string | null {
+  const slots = activeScheduleSlots(task);
+  if (slots.length === 0) return null;
+  return [...slots].sort((left, right) =>
+    left.startAt.localeCompare(right.startAt),
+  )[0]?.startAt ?? null;
 }
 
 export function taskChecklistProgress(input: {
@@ -215,39 +266,7 @@ export function resolveCombinedOpenDrop(
 export function projectCompletedTask(tasks: Task[], taskId: string): Task[] {
   const task = tasks.find((item) => item.id === taskId);
   if (!task || task.status === TaskStatus.DONE) return tasks;
-  const effect = completeRecurringTask(task);
-  const completed: Task = {
-    ...task,
-    status: TaskStatus.DONE,
-    recurrence: effect.type === "complete" ? task.recurrence : null,
-  };
-  const doneTasks = placeCompletedTask(tasks, task, completed);
-  if (effect.type !== "advance") return doneTasks;
-  const position = task.parentTaskId
-    ? 0
-    : doneTasks.filter(
-        (item) =>
-          item.parentTaskId == null &&
-          item.spaceId === task.spaceId &&
-          item.status === TaskStatus.TODO,
-      ).length;
-  const now = new Date().toISOString();
-  return [
-    ...doneTasks,
-    {
-      ...task,
-      id: `next:${task.id}`,
-      taskKey: "",
-      status: TaskStatus.TODO,
-      scheduleDate: effect.scheduleDate,
-      dueDate: effect.dueDate,
-      recurrence: effect.recurrence,
-      acceptanceCriteria: effect.acceptanceCriteria,
-      position,
-      createdAt: now,
-      updatedAt: now,
-    },
-  ];
+  return placeCompletedTask(tasks, task, { ...task, status: TaskStatus.DONE });
 }
 
 function placeCompletedTask(
@@ -428,10 +447,10 @@ export function compareTasksForListSort(
     });
   }
   if (field === "schedule") {
-    const leftTime = left.scheduleDate ? Date.parse(left.scheduleDate) : null;
-    const rightTime = right.scheduleDate
-      ? Date.parse(right.scheduleDate)
-      : null;
+    const leftStart = earliestActiveSlotStart(left);
+    const rightStart = earliestActiveSlotStart(right);
+    const leftTime = leftStart ? Date.parse(leftStart) : null;
+    const rightTime = rightStart ? Date.parse(rightStart) : null;
     if (leftTime == null && rightTime == null) return 0;
     if (leftTime == null) return 1;
     if (rightTime == null) return -1;
@@ -456,7 +475,7 @@ export function isInboxTask(task: Task): boolean {
   return (
     task.parentTaskId == null &&
     task.status === TaskStatus.TODO &&
-    task.scheduleDate == null &&
+    earliestActiveSlotStart(task) == null &&
     task.dueDate == null
   );
 }
@@ -472,7 +491,7 @@ export function normalizeDescriptionHtml(html: string): string {
 }
 
 export function isUnscheduledTask(task: Task): boolean {
-  return !isClosedStatus(task.status) && task.scheduleDate == null;
+  return !isClosedStatus(task.status) && activeScheduleSlots(task).length === 0;
 }
 
 export function isOverdueTask(task: Task, now: Date): boolean {

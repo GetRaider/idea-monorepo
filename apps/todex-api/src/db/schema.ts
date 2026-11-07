@@ -7,6 +7,7 @@ import {
   type DocBody,
   type DocPlainText,
   type ExecutionInterval,
+  type SeriesTemplate,
   type TaskRecurrence,
 } from "@repo/api/todex";
 import { sql } from "drizzle-orm";
@@ -67,6 +68,23 @@ export const relationOriginEnum = pgEnum("relation_origin", [
 export const workspaceMemberRoleEnum = pgEnum("workspace_member_role", [
   "owner",
   "member",
+]);
+
+export const taskComplexityEnum = pgEnum("task_complexity", [
+  "low",
+  "medium",
+  "high",
+]);
+
+export const lifecycleActionEnum = pgEnum("task_lifecycle_action", [
+  "done",
+  "cancelled",
+  "delete",
+]);
+
+export const seriesExceptionKindEnum = pgEnum("series_exception_kind", [
+  "skipped",
+  "deleted",
 ]);
 
 export const workspaces = pgTable("workspaces", {
@@ -275,6 +293,35 @@ export const epics = pgTable(
   ],
 );
 
+export const recurringSeries = pgTable(
+  "recurring_series",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    anchor: timestamp("anchor").notNull(),
+    rule: jsonb("rule").$type<TaskRecurrence>().notNull(),
+    ruleVersion: integer("rule_version").notNull(),
+    stoppedAt: timestamp("stopped_at"),
+    ruleEffectiveAt: timestamp("rule_effective_at").notNull(),
+    cursorRuleVersion: integer("cursor_rule_version").notNull(),
+    generatedThrough: text("generated_through"),
+    createdAt: timestamp("created_at")
+      .$defaultFn(() => new Date())
+      .notNull(),
+    updatedAt: timestamp("updated_at")
+      .$defaultFn(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("recurring_series_workspace_stopped_idx").on(
+      table.workspaceId,
+      table.stoppedAt,
+    ),
+  ],
+);
+
 export const tasks = pgTable(
   "tasks",
   {
@@ -288,12 +335,27 @@ export const tasks = pgTable(
     taskKey: text("task_key").notNull(),
     summary: text("summary").notNull(),
     description: text("description").notNull().default(""),
+    outcome: text("outcome").notNull().default(""),
     status: taskStatusEnum("status").notNull().default("todo"),
     priority: taskPriorityEnum("priority").notNull().default("medium"),
+    complexity: taskComplexityEnum("complexity"),
     dueDate: timestamp("due_date"),
-    scheduleDate: timestamp("schedule_date"),
     estimation: integer("estimation").notNull(),
     color: text("color"),
+    ownerId: text("owner_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    seriesId: text("series_id").references(() => recurringSeries.id, {
+      onDelete: "restrict",
+    }),
+    occurrenceKey: text("occurrence_key"),
+    occurrenceAnchor: timestamp("occurrence_anchor"),
+    originSeriesId: text("origin_series_id"),
+    overriddenFields: jsonb("overridden_fields")
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    version: integer("version").notNull().default(1),
     acceptanceCriteria: jsonb("acceptance_criteria")
       .$type<TaskAcceptanceCriterion[]>()
       .notNull()
@@ -331,6 +393,82 @@ export const tasks = pgTable(
       foreignColumns: [table.id],
     }).onDelete("cascade"),
     check("tasks_estimation_positive", sql`${table.estimation} > 0`),
+    uniqueIndex("tasks_series_occurrence_key_unique")
+      .on(table.seriesId, table.occurrenceKey)
+      .where(sql`${table.seriesId} is not null`),
+    uniqueIndex("tasks_series_occurrence_anchor_unique")
+      .on(table.seriesId, table.occurrenceAnchor)
+      .where(sql`${table.seriesId} is not null`),
+  ],
+);
+
+export const taskScheduleSlots = pgTable(
+  "task_schedule_slots",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    taskId: text("task_id")
+      .notNull()
+      .references(() => tasks.id, { onDelete: "cascade" }),
+    startAt: timestamp("start_at").notNull(),
+    endAt: timestamp("end_at").notNull(),
+    retiredAt: timestamp("retired_at"),
+  },
+  (table) => [
+    index("task_schedule_slots_task_id_idx").on(table.taskId),
+    index("task_schedule_slots_range_idx").on(
+      table.workspaceId,
+      table.startAt,
+      table.endAt,
+    ),
+    check("task_schedule_slots_end_after_start", sql`${table.endAt} > ${table.startAt}`),
+  ],
+);
+
+export const taskLifecycleLocks = pgTable("task_lifecycle_locks", {
+  taskId: text("task_id")
+    .primaryKey()
+    .references(() => tasks.id, { onDelete: "cascade" }),
+  transitionId: text("transition_id").notNull(),
+  action: lifecycleActionEnum("action").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+});
+
+export const seriesTemplateVersions = pgTable(
+  "series_template_versions",
+  {
+    id: text("id").primaryKey(),
+    seriesId: text("series_id")
+      .notNull()
+      .references(() => recurringSeries.id, { onDelete: "cascade" }),
+    effectiveAt: timestamp("effective_at").notNull(),
+    template: jsonb("template").$type<SeriesTemplate>().notNull(),
+  },
+  (table) => [
+    uniqueIndex("series_template_versions_effective_unique").on(
+      table.seriesId,
+      table.effectiveAt,
+    ),
+  ],
+);
+
+export const seriesExceptions = pgTable(
+  "series_exceptions",
+  {
+    id: text("id").primaryKey(),
+    seriesId: text("series_id")
+      .notNull()
+      .references(() => recurringSeries.id, { onDelete: "cascade" }),
+    occurrenceKey: text("occurrence_key").notNull(),
+    kind: seriesExceptionKindEnum("kind").notNull(),
+  },
+  (table) => [
+    uniqueIndex("series_exceptions_key_unique").on(
+      table.seriesId,
+      table.occurrenceKey,
+    ),
   ],
 );
 
@@ -726,6 +864,44 @@ export const conversations = pgTable("conversations", {
     .$defaultFn(() => new Date())
     .notNull(),
 });
+
+export const taskReferences = pgTable(
+  "task_references",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    taskId: text("task_id")
+      .notNull()
+      .references(() => tasks.id, { onDelete: "cascade" }),
+    kind: text("kind").notNull(),
+    docId: text("doc_id").references(() => docs.id, { onDelete: "cascade" }),
+    conversationId: text("conversation_id").references(() => conversations.id, {
+      onDelete: "cascade",
+    }),
+    url: text("url"),
+    title: text("title").notNull(),
+    createdAt: timestamp("created_at")
+      .$defaultFn(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("task_references_task_id_idx").on(table.taskId),
+    check(
+      "task_references_kind",
+      sql`${table.kind} in ('doc', 'conversation', 'url')`,
+    ),
+    check(
+      "task_references_target",
+      sql`(
+        (${table.kind} = 'doc' and ${table.docId} is not null and ${table.conversationId} is null and ${table.url} is null)
+        or (${table.kind} = 'conversation' and ${table.conversationId} is not null and ${table.docId} is null and ${table.url} is null)
+        or (${table.kind} = 'url' and ${table.url} is not null and ${table.docId} is null and ${table.conversationId} is null)
+      )`,
+    ),
+  ],
+);
 
 export const jobs = pgTable(
   "jobs",

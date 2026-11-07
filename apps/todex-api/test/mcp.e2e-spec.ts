@@ -122,12 +122,16 @@ describe("MCP server (e2e)", () => {
     });
     goalId = goal.id;
     const otherSpace = await spaces.create(otherWorkspaceId, { name: "Other" });
-    const foreignTask = await tasksService.create(otherWorkspaceId, {
-      spaceId: otherSpace.id,
-      summary: "Foreign",
-      description: "",
-      estimation: 30,
-    });
+    const foreignTask = await tasksService.create(
+      otherWorkspaceId,
+      {
+        spaceId: otherSpace.id,
+        summary: "Foreign",
+        description: "",
+        estimation: 30,
+      },
+      otherUserId,
+    );
     otherTaskId = foreignTask.id;
     const foreignDoc = await docs.create(otherWorkspaceId, {
       type: DocType.COMMON,

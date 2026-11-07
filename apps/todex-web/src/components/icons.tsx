@@ -583,6 +583,246 @@ export function StatusDoneIcon(props: IconProps) {
   );
 }
 
+export function CircleDashedIcon(props: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      {...iconSvgProps(props)}
+    >
+      <path d="M10.1 2.18a10 10 0 0 1 3.8 0" />
+      <path d="M17.6 3.71a10 10 0 0 1 2.69 2.7" />
+      <path d="M21.82 10.1a10 10 0 0 1 0 3.8" />
+      <path d="M20.29 17.6a10 10 0 0 1-2.7 2.69" />
+      <path d="M13.9 21.82a10 10 0 0 1-3.8 0" />
+      <path d="M6.4 20.29a10 10 0 0 1-2.69-2.7" />
+      <path d="M2.18 13.9a10 10 0 0 1 0-3.8" />
+      <path d="M3.71 6.4a10 10 0 0 1 2.7-2.69" />
+    </svg>
+  );
+}
+
+export function HourglassIcon(props: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...iconSvgProps(props)}
+    >
+      <path d="M6 2h12" />
+      <path d="M6 22h12" />
+      <path d="M8 2c0 5 8 5 8 10S8 17 8 22" />
+      <path d="M16 2c0 5-8 5-8 10s8 5 8 10" />
+    </svg>
+  );
+}
+
+export function MilestoneIcon(props: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...iconSvgProps(props)}
+    >
+      <path d="M12 13v8" />
+      <path d="M12 3v2" />
+      <path d="m4 7 8 4 8-4-8-4Z" />
+    </svg>
+  );
+}
+
+export function GaugeIcon(props: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...iconSvgProps(props)}
+    >
+      <path d="m12 14 4-4" />
+      <path d="M3.34 19a10 10 0 1 1 17.32 0" />
+    </svg>
+  );
+}
+
+export function BoxIcon(props: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...iconSvgProps(props)}
+    >
+      <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
+      <path d="m3.3 7 8.7 5 8.7-5" />
+      <path d="M12 22V12" />
+    </svg>
+  );
+}
+
+export function LayersIcon(props: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...iconSvgProps(props)}
+    >
+      <path d="m12.83 2.18 8.23 3.77a1 1 0 0 1 0 1.82l-8.23 3.77a2 2 0 0 1-1.66 0L2.94 7.77a1 1 0 0 1 0-1.82l8.23-3.77a2 2 0 0 1 1.66 0Z" />
+      <path d="m22 12.5-9.17 4.2a2 2 0 0 1-1.66 0L2 12.5" />
+      <path d="m22 17.5-9.17 4.2a2 2 0 0 1-1.66 0L2 17.5" />
+    </svg>
+  );
+}
+
+export function GitBranchIcon(props: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...iconSvgProps(props)}
+    >
+      <circle cx="6" cy="6" r="2.5" />
+      <circle cx="6" cy="18" r="2.5" />
+      <circle cx="18" cy="8" r="2.5" />
+      <path d="M6 8.5v7" />
+      <path d="M18 10.5a6 6 0 0 1-6 6H8.5" />
+    </svg>
+  );
+}
+
+export function CalendarClockIcon(props: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...iconSvgProps(props)}
+    >
+      <path d="M16 14v2.2l1.6 1" />
+      <path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h8" />
+      <path d="M16 2v4" />
+      <path d="M8 2v4" />
+      <path d="M3 10h10" />
+      <circle cx="16" cy="16" r="5" />
+    </svg>
+  );
+}
+
+export function InfoIcon(props: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      {...iconSvgProps(props)}
+    >
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 11v6" />
+      <path d="M12 8h.01" />
+    </svg>
+  );
+}
+
+export function BarsIcon(props: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      {...iconSvgProps(props)}
+    >
+      <path d="M4 20V10" />
+      <path d="M10 20V4" />
+      <path d="M16 20v-6" />
+    </svg>
+  );
+}
+
+export function FileTextIcon(props: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...iconSvgProps(props)}
+    >
+      <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+      <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+      <path d="M8 13h8" />
+      <path d="M8 17h5" />
+    </svg>
+  );
+}
+
+export function MessageSquareIcon(props: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...iconSvgProps(props)}
+    >
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+    </svg>
+  );
+}
+
+export function ExternalLinkIcon(props: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...iconSvgProps(props)}
+    >
+      <path d="M15 3h6v6" />
+      <path d="M10 14 21 3" />
+      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+    </svg>
+  );
+}
+
 function iconSvgProps({ size = 20, className, ...props }: IconProps) {
   return {
     width: size,

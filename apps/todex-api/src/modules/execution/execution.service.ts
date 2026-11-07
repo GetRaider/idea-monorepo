@@ -18,12 +18,14 @@ import {
 } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { randomUUID } from "crypto";
-import { DocType } from "@repo/api/todex";
 import {
   closeOpenIntervals,
+  DocType,
   hasOpenInterval,
   sumIntervalSeconds,
 } from "@repo/api/todex";
+
+import { assertNoLiveLifecycleLock } from "../tasks/task-lifecycle";
 import type {
   ExecutionActivityQuery,
   ExecutionCurrent,
@@ -141,6 +143,7 @@ export class ExecutionService {
     }
     const now = new Date();
     await this.db.transaction(async (tx) => {
+      await assertNoLiveLifecycleLock(tx, uniqueIds);
       const open = await this.openRow(tx, workspaceId);
       if (open) {
         throw new BadRequestException("An execution is already running");
@@ -182,6 +185,7 @@ export class ExecutionService {
   async focus(workspaceId: string, taskId: string) {
     const now = new Date();
     await this.db.transaction(async (tx) => {
+      await assertNoLiveLifecycleLock(tx, [taskId]);
       const open = await this.openRow(tx, workspaceId);
       if (!open) throw new BadRequestException("No active execution");
       const links = await this.sessionLinks(tx, open.id, true);
@@ -260,6 +264,7 @@ export class ExecutionService {
     }
     const now = new Date();
     await this.db.transaction(async (tx) => {
+      await assertNoLiveLifecycleLock(tx, [taskId]);
       const [highest] = await tx
         .select({ value: max(executionQueue.position) })
         .from(executionQueue)
@@ -674,7 +679,6 @@ export class ExecutionService {
         summary: tasks.summary,
         priority: tasks.priority,
         estimation: tasks.estimation,
-        scheduleDate: tasks.scheduleDate,
         dueDate: tasks.dueDate,
         spaceId: spaces.id,
         spaceName: spaces.name,
@@ -707,7 +711,8 @@ export class ExecutionService {
           summary: row.summary,
           priority: row.priority,
           estimation: row.estimation,
-          scheduleDate: toIso(row.scheduleDate),
+          scheduleDate: null,
+          scheduleSlots: [],
           dueDate: toIso(row.dueDate),
           spaceId: row.spaceId,
           spaceName: row.spaceName,
@@ -824,7 +829,8 @@ function queueTask(
     priority: task.priority,
     estimation: task.estimation,
     actualTime,
-    scheduleDate: toIso(task.scheduleDate),
+    scheduleDate: null,
+    scheduleSlots: [],
     dueDate: toIso(task.dueDate),
     spaceId,
     spaceName,

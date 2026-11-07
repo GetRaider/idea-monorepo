@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import { TaskPriority, TaskStatus } from "./enums.ts";
 import { IsoDateTimeSchema } from "./iso.ts";
-import { AcceptanceCriteriaSchema } from "./task.ts";
+import { AcceptanceCriteriaSchema, ScheduleSlotSchema } from "./task.ts";
 
 export const ExecutionExecutorTypeSchema = z.enum(["human", "ai"]);
 
@@ -37,6 +37,7 @@ export const ExecutionQueueTaskSchema = ExecutionTaskRefSchema.extend({
   estimation: z.number().int().positive(),
   actualTime: z.number().int().nonnegative(),
   scheduleDate: IsoDateTimeSchema.nullable(),
+  scheduleSlots: z.array(ScheduleSlotSchema).default([]),
   spaceId: z.string(),
   spaceName: z.string(),
   sectionName: z.string(),
@@ -52,6 +53,7 @@ export const ExecutionSuggestionSchema = z.object({
   priority: taskPrioritySchema,
   estimation: z.number().int().positive(),
   scheduleDate: IsoDateTimeSchema.nullable(),
+  scheduleSlots: z.array(ScheduleSlotSchema).default([]),
   dueDate: IsoDateTimeSchema.nullable(),
   spaceId: z.string(),
   spaceName: z.string(),

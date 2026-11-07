@@ -50,7 +50,7 @@ describe("organizingTasks", () => {
         task({
           id: "scheduled",
           spaceId: "growth",
-          scheduleDate: "2026-10-08T09:00:00.000Z",
+          scheduleSlots: [slot("2026-10-08T09:00:00.000Z")],
         }),
         task({ id: "done", spaceId: "inbox-board", status: TaskStatus.DONE }),
       ],
@@ -64,17 +64,26 @@ describe("organizingTasks", () => {
 describe("overviewTasks", () => {
   it("hides cancelled tasks and sorts by schedule", () => {
     const tasks = overviewTasks([
-      task({ id: "later", scheduleDate: "2026-10-08T15:00:00.000Z" }),
+      task({ id: "later", scheduleSlots: [slot("2026-10-08T15:00:00.000Z")] }),
       task({
         id: "cancelled",
         status: TaskStatus.CANCELLED,
-        scheduleDate: "2026-10-08T08:00:00.000Z",
+        scheduleSlots: [slot("2026-10-08T08:00:00.000Z")],
       }),
-      task({ id: "earlier", scheduleDate: "2026-10-08T09:00:00.000Z" }),
+      task({ id: "earlier", scheduleSlots: [slot("2026-10-08T09:00:00.000Z")] }),
     ]);
     expect(tasks.map((item) => item.id)).toEqual(["earlier", "later"]);
   });
 });
+
+function slot(startAt: string) {
+  return {
+    id: startAt,
+    startAt,
+    endAt: new Date(Date.parse(startAt) + 60 * 60_000).toISOString(),
+    retiredAt: null,
+  };
+}
 
 function task(overrides: Partial<Task>): Task {
   return {
@@ -84,12 +93,22 @@ function task(overrides: Partial<Task>): Task {
     taskKey: "T-1",
     summary: "Task",
     description: "",
+    outcome: "",
     acceptanceCriteria: [],
     status: TaskStatus.TODO,
     priority: TaskPriority.MEDIUM,
+    complexity: null,
     dueDate: null,
-    scheduleDate: null,
+    scheduleSlots: [],
     recurrence: null,
+    ownerId: "owner",
+    seriesId: null,
+    occurrenceKey: null,
+    occurrenceAnchor: null,
+    originSeriesId: null,
+    overriddenFields: [],
+    version: 1,
+    conflicts: [],
     sectionId: "area",
     progressStageId: null,
     estimation: 30,

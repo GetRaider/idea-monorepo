@@ -49,7 +49,7 @@ function TodaySection() {
   const to = new Date(range.scheduleTo);
   const tasksQuery = useQuery({
     queryKey: ["tasks", "schedule", range.scheduleFrom, range.scheduleTo],
-    queryFn: () => todexClient.tasks.list(range),
+    queryFn: () => todexClient.tasks.list(range).then((range) => range.tasks),
   });
   const eventsQuery = useQuery({
     queryKey: ["calendar-events", range.scheduleFrom, range.scheduleTo],
@@ -172,7 +172,9 @@ function UpcomingSection() {
   const tasksQuery = useQuery({
     queryKey: ["tasks", "schedule", from, to],
     queryFn: () =>
-      todexClient.tasks.list({ scheduleFrom: from, scheduleTo: to }),
+      todexClient.tasks
+        .list({ scheduleFrom: from, scheduleTo: to })
+        .then((range) => range.tasks),
   });
   const eventsQuery = useQuery({
     queryKey: ["calendar-events", from, to],
@@ -456,7 +458,10 @@ function TaskRows({
   return (
     <ul>
       {tasks.map((task) => {
-        const time = isoToLocalTimeInput(task.scheduleDate);
+        const time = isoToLocalTimeInput(
+          task.scheduleSlots.find((slot) => slot.retiredAt == null)?.startAt ??
+            null,
+        );
         const done = task.status === TaskStatus.DONE;
         const spaceName = spaceNameById?.get(task.spaceId);
         return (
@@ -601,9 +606,13 @@ function sortEvents(events: CalendarBlock[]): CalendarBlock[] {
 function tasksOnDay(tasks: Task[], day: Date): Task[] {
   const key = localDayKey(day);
   return tasks.filter((task) => {
-    if (!task.scheduleDate) return false;
-    const scheduled = new Date(task.scheduleDate);
-    return !Number.isNaN(scheduled.getTime()) && localDayKey(scheduled) === key;
+    return task.scheduleSlots.some((slot) => {
+      if (slot.retiredAt) return false;
+      const scheduled = new Date(slot.startAt);
+      return (
+        !Number.isNaN(scheduled.getTime()) && localDayKey(scheduled) === key
+      );
+    });
   });
 }
 

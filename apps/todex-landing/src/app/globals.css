@@ -1,0 +1,59 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    @apply bg-black text-zinc-100 antialiased;
+  }
+
+  body {
+    @apply min-h-screen bg-black;
+  }
+
+  body::before {
+    content: "";
+    pointer-events: none;
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    opacity: 0.14;
+    background-image: url("/noise-surface.svg");
+    background-size: 180px 180px;
+  }
+
+  body > * {
+    position: relative;
+    z-index: 1;
+  }
+}
+
+@layer components {
+  .primary-noise {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+  }
+
+  .primary-noise::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0.45;
+    background-image: url("/noise-button.svg");
+    background-size: 96px 96px;
+    mix-blend-mode: multiply;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

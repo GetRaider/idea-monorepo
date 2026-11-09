@@ -1,8 +1,8 @@
+import Constants from 'expo-constants';
+
 import { errorEnvelopeSchema, type ErrorEnvelope } from '@repo/evolin-shared';
 
-const apiBaseUrl =
-  process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, '') ??
-  'http://localhost:8092';
+const apiPort = 8092;
 
 export async function apiRequest<T>(
   path: string,
@@ -11,7 +11,7 @@ export async function apiRequest<T>(
   let response: Response;
 
   try {
-    response = await fetch(`${apiBaseUrl}${path}`, {
+    response = await fetch(`${resolveApiBaseUrl()}${path}`, {
       ...options,
       headers: {
         'Content-Type': 'application/json',
@@ -45,6 +45,36 @@ export async function apiRequest<T>(
 
   if (response.status === 204) return undefined as T;
   return (await response.json()) as T;
+}
+
+function resolveApiBaseUrl(): string {
+  const configured = process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, '');
+  if (configured && !isLoopbackUrl(configured)) return configured;
+
+  const host = metroHostname();
+  if (host && !isLoopbackHost(host)) return `http://${host}:${apiPort}`;
+
+  return configured ?? `http://localhost:${apiPort}`;
+}
+
+function metroHostname(): string | undefined {
+  const hostUri = Constants.expoConfig?.hostUri;
+  if (!hostUri) return undefined;
+
+  const withProtocol = hostUri.includes('://') ? hostUri : `http://${hostUri}`;
+  try {
+    return new URL(withProtocol).hostname;
+  } catch {
+    return hostUri.split(':')[0];
+  }
+}
+
+function isLoopbackUrl(url: string): boolean {
+  return url.includes('://localhost') || url.includes('://127.0.0.1');
+}
+
+function isLoopbackHost(host: string): boolean {
+  return host === 'localhost' || host === '127.0.0.1';
 }
 
 export class ApiClientError extends Error {

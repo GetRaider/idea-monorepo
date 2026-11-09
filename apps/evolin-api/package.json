@@ -1,0 +1,47 @@
+{
+  "name": "evolin-api",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "build": "nest build",
+    "clean": "rm -rf dist coverage .turbo",
+    "dev": "NODE_ENV=development nest start --watch",
+    "prod": "NODE_ENV=production node dist/main",
+    "lint": "eslint \"{src,test}/**/*.ts\"",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "vitest run --config vitest.e2e.config.ts",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate"
+  },
+  "dependencies": {
+    "@nestjs/common": "catalog:",
+    "@nestjs/config": "catalog:",
+    "@nestjs/core": "catalog:",
+    "@nestjs/platform-express": "catalog:",
+    "@repo/evolin-shared": "workspace:*",
+    "dotenv": "catalog:",
+    "drizzle-orm": "catalog:",
+    "express": "catalog:",
+    "pg": "catalog:",
+    "reflect-metadata": "catalog:",
+    "rxjs": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "catalog:",
+    "@nestjs/testing": "catalog:",
+    "@repo/eslint-config": "workspace:*",
+    "@repo/typescript-config": "workspace:*",
+    "@repo/vitest-config": "workspace:*",
+    "@types/node": "catalog:",
+    "@types/express": "catalog:",
+    "@types/pg": "catalog:",
+    "@types/supertest": "catalog:",
+    "drizzle-kit": "catalog:",
+    "eslint": "catalog:",
+    "supertest": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

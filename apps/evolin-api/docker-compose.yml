@@ -1,0 +1,48 @@
+name: evolin
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: evolin
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      TZ: UTC
+    ports:
+      - "127.0.0.1:5435:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d evolin"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ../..
+      dockerfile: apps/evolin-api/Dockerfile
+    environment:
+      NODE_ENV: development
+      PORT: 8092
+      DATABASE_URL: postgresql://postgres:password@postgres:5432/evolin
+      WEB_ORIGIN: http://localhost:8081
+      TZ: UTC
+      CHOKIDAR_USEPOLLING: "true"
+    ports:
+      - "127.0.0.1:8092:8092"
+    volumes:
+      - ./src:/workspace/apps/evolin-api/src
+      - ./drizzle:/workspace/apps/evolin-api/drizzle
+      - ../../packages/evolin-shared/src:/workspace/packages/evolin-shared/src
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8092/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  pgdata:

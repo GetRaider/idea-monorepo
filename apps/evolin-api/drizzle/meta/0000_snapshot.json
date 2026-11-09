@@ -1,0 +1,364 @@
+{
+  "id": "e94f3cca-80c8-408f-97b4-cba6a41a7536",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.habit_status_events": {
+      "name": "habit_status_events",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "habit_id": {
+          "name": "habit_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "from_status": {
+          "name": "from_status",
+          "type": "habit_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "to_status": {
+          "name": "to_status",
+          "type": "habit_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "occurred_at": {
+          "name": "occurred_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "habit_status_events_habit_occurred_idx": {
+          "name": "habit_status_events_habit_occurred_idx",
+          "columns": [
+            {
+              "expression": "habit_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "occurred_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "habit_status_events_habit_id_habits_id_fk": {
+          "name": "habit_status_events_habit_id_habits_id_fk",
+          "tableFrom": "habit_status_events",
+          "tableTo": "habits",
+          "columnsFrom": [
+            "habit_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.habits": {
+      "name": "habits",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "category": {
+          "name": "category",
+          "type": "habit_category",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "why": {
+          "name": "why",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "minimum_action": {
+          "name": "minimum_action",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "trigger": {
+          "name": "trigger",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "weekdays": {
+          "name": "weekdays",
+          "type": "smallint[]",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "estimated_duration_minutes": {
+          "name": "estimated_duration_minutes",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "habit_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'backlog'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "activated_at": {
+          "name": "activated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "paused_at": {
+          "name": "paused_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "established_at": {
+          "name": "established_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "habits_status_updated_idx": {
+          "name": "habits_status_updated_idx",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "updated_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "habits_title_length_check": {
+          "name": "habits_title_length_check",
+          "value": "char_length(\"habits\".\"title\") between 1 and 80"
+        },
+        "habits_description_length_check": {
+          "name": "habits_description_length_check",
+          "value": "\"habits\".\"description\" is null or char_length(\"habits\".\"description\") <= 500"
+        },
+        "habits_why_length_check": {
+          "name": "habits_why_length_check",
+          "value": "\"habits\".\"why\" is null or char_length(\"habits\".\"why\") between 1 and 500"
+        },
+        "habits_minimum_action_length_check": {
+          "name": "habits_minimum_action_length_check",
+          "value": "\"habits\".\"minimum_action\" is null or char_length(\"habits\".\"minimum_action\") between 1 and 200"
+        },
+        "habits_trigger_length_check": {
+          "name": "habits_trigger_length_check",
+          "value": "\"habits\".\"trigger\" is null or char_length(\"habits\".\"trigger\") between 1 and 200"
+        },
+        "habits_duration_check": {
+          "name": "habits_duration_check",
+          "value": "\"habits\".\"estimated_duration_minutes\" is null or \"habits\".\"estimated_duration_minutes\" between 1 and 180"
+        },
+        "habits_weekdays_check": {
+          "name": "habits_weekdays_check",
+          "value": "\"habits\".\"weekdays\" is null or (\n        cardinality(\"habits\".\"weekdays\") between 1 and 7\n        and \"habits\".\"weekdays\" <@ array[1,2,3,4,5,6,7]::smallint[]\n      )"
+        },
+        "habits_complete_plan_check": {
+          "name": "habits_complete_plan_check",
+          "value": "\"habits\".\"status\" = 'backlog' or (\n        \"habits\".\"why\" is not null\n        and \"habits\".\"minimum_action\" is not null\n        and \"habits\".\"trigger\" is not null\n        and \"habits\".\"weekdays\" is not null\n        and \"habits\".\"estimated_duration_minutes\" is not null\n      )"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.practice_records": {
+      "name": "practice_records",
+      "schema": "",
+      "columns": {
+        "habit_id": {
+          "name": "habit_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "practice_date": {
+          "name": "practice_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "outcome": {
+          "name": "outcome",
+          "type": "practice_outcome",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "practice_records_habit_id_habits_id_fk": {
+          "name": "practice_records_habit_id_habits_id_fk",
+          "tableFrom": "practice_records",
+          "tableTo": "habits",
+          "columnsFrom": [
+            "habit_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "practice_records_habit_id_practice_date_pk": {
+          "name": "practice_records_habit_id_practice_date_pk",
+          "columns": [
+            "habit_id",
+            "practice_date"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {
+    "public.habit_category": {
+      "name": "habit_category",
+      "schema": "public",
+      "values": [
+        "health",
+        "mind",
+        "work",
+        "home",
+        "relationships",
+        "learning",
+        "other"
+      ]
+    },
+    "public.habit_status": {
+      "name": "habit_status",
+      "schema": "public",
+      "values": [
+        "backlog",
+        "establishing",
+        "paused",
+        "established"
+      ]
+    },
+    "public.practice_outcome": {
+      "name": "practice_outcome",
+      "schema": "public",
+      "values": [
+        "completed",
+        "skipped"
+      ]
+    }
+  },
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

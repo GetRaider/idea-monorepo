@@ -18,11 +18,14 @@ A repository where I develop, test, and validate product ideas. This monorepo co
     │   ├── take-and-do               # Next.js full-stack app for the Take&Do (AI Productivity Management app)
     │   ├── todex-api                 # Nest.js API for Todex (Tasks / Calendar / Docs)
     │   ├── todex-web                 # Next.js WEB for Todex
+    │   ├── evolin                    # Expo Web app for Evolin
+    │   ├── evolin-api                # Nest.js API for Evolin
     │   ├── personal-website           # Next.js personal site
     │   └── tempo                     # Electron app (Tempo)
     └── packages
         ├── @repo/api                 # Shared Nest.js resources
         ├── @repo/eslint-config       # ESLint configurations (includes Prettier)
+        ├── @repo/evolin-shared       # Evolin contracts and domain helpers
         ├── @repo/shared              # Shared TS utilities/modules used across apps
         ├── @repo/vitest-config       # Vitest configurations
         ├── @repo/typescript-config   # `tsconfig.json`s used throughout the monorepo
@@ -59,6 +62,7 @@ Format:
   - `DVN` — devinity
   - `PRT` — personal website
   - `TMP` — tempo
+  - `EVN` — evolin
 - After `<SCOPE>-`, use a short slug: a descriptive name, a version (e.g. `v1`, `1.2.0`), or both (e.g. `1.2.0-changelog`). The segment starts with a letter or digit; the rest may use letters, digits, hyphens, and dots.
 
 **Other rules**
@@ -83,7 +87,7 @@ Format:
 Rules:
 
 - Allowed `type`: `feat`, `fix`, `test`, `chore`, `docs`, `refactor`, `style`, `release`
-- Allowed `SCOPE`: `GEN`, `TAD`, `TDX`, `DVN`, `PRT`, `TMP`
+- Allowed `SCOPE`: `GEN`, `TAD`, `TDX`, `DVN`, `PRT`, `TMP`, `EVN`
 - Max header length: **60** characters (single line), enforced by Commitlint
 - Commit body and footer are not used (enforced)
 
@@ -138,6 +142,9 @@ pnpm run dev:todex
 
 # Start Tempo Electron app
 pnpm run dev:tempo
+
+# Start Evolin Expo Web (+ @repo/evolin-shared)
+pnpm run dev:evolin
 
 # Run in production mode
 pnpm run prod

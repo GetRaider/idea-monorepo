@@ -28,6 +28,7 @@ playwright-report/
 
 # Build Outputs
 .next/
+.expo/
 out/
 build
 dist

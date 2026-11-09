@@ -16,6 +16,8 @@ apps/
   todex-web/        # Next.js frontend Todex (TDX)
   personal-website/ # Next.js site (PRT)
   tempo/            # Electron app Tempo (TMP)
+  evolin/           # Expo Web app Evolin (EVL)
+  evolin-api/       # NestJS API Evolin (EVL)
 packages/
   @repo/api         # Shared models, DTOs, HTTP helpers (+ /todex Zod barrel)
   @repo/ui          # Shared React components
@@ -23,6 +25,7 @@ packages/
   @repo/eslint-config
   @repo/typescript-config
   @repo/vitest-config
+  @repo/evolin-shared
 ```
 
 ## Import boundaries
@@ -50,6 +53,7 @@ When adding a new package or app task, register it in `turbo.json` and `pnpm-wor
 - `pnpm dev:todex` — todex-api + todex-web + @repo/api + @repo/ui (when wired)
 - `pnpm dev:personal-website` — personal-website + @repo/ui
 - `pnpm dev:tempo` — Tempo
+- `pnpm dev:evolin` — Evolin Expo Web + @repo/evolin-shared
 
 ## Scope mapping (git / releases)
 
@@ -61,3 +65,4 @@ When adding a new package or app task, register it in `turbo.json` and `pnpm-wor
 | `DVN` | devinity-api + devinity-web |
 | `PRT` | personal-website |
 | `TMP` | tempo (Tempo) |
+| `EVL` | evolin + evolin-api (+ `@repo/evolin-shared`) |

@@ -1,0 +1,18 @@
+{
+  "expo": {
+    "name": "Evolin",
+    "slug": "evolin",
+    "version": "0.0.0",
+    "orientation": "portrait",
+    "scheme": "evolin",
+    "userInterfaceStyle": "light",
+    "web": {
+      "bundler": "metro",
+      "output": "static"
+    },
+    "plugins": ["expo-router"],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

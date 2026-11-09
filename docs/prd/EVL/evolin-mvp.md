@@ -77,7 +77,7 @@ The opportunity for this MVP is a single coherent loop — plan, limit, practice
 - Show recommended capacity (2) in the UI without blocking the third slot.
 - Record at most one practice outcome per habit per local calendar date.
 - Let the user graduate an Establishing habit and keep its history read-only.
-- Run the API and Postgres in Docker from `apps/evolin-api/docker-compose.yml`, and Expo Web on the host.
+- Run Postgres in Docker from `apps/evolin-api/docker-compose.yml`. Run the API and Expo Web on the host.
 
 ### Non-goals
 
@@ -660,7 +660,7 @@ Neutral surface, one accent for primary buttons, destructive color only for dele
 ```mermaid
 flowchart LR
   browser["Expo Web on the host :8081"]
-  api["NestJS in Docker :8092"]
+  api["NestJS on the host :8092"]
   db["Postgres in Docker :5435"]
   shared["@repo/evolin-shared Zod contracts"]
   browser --> api
@@ -695,8 +695,6 @@ apps/evolin-api/
     habits/habits.service.ts
     habits/habit-transitions.ts
     habits/practice-rules.ts
-  Dockerfile
-  Dockerfile.dockerignore
   docker-compose.yml
   drizzle.config.ts
   package.json
@@ -846,10 +844,11 @@ Until that lands, commits on Evolin files cannot pass hooks. That tooling edit i
 ### Root scripts to add
 
 ```text
-dev:evolin    turbo run dev --filter=evolin --filter=@repo/evolin-shared
+dev:evolin    turbo run dev --filter=evolin --filter=evolin-api --filter=@repo/evolin-shared
+docker:evolin pnpm --filter evolin-api docker:up && pnpm --filter evolin-api db:migrate
 ```
 
-`dev:evolin` starts Expo Web only. Do not add `docker:evolin*` root scripts and do not add a Compose file at the repo root. Backend and Postgres start with the `docker compose` command in [section 17](#17-local-development-infrastructure).
+`pnpm docker:evolin` starts Postgres and applies migrations from the host. `pnpm dev:evolin` starts the API and Expo Web on the host. Do not add a Compose file at the repo root.
 
 Register `EXPO_PUBLIC_API_URL`, `DATABASE_URL`, `WEB_ORIGIN`, and `PORT` in `turbo.json` `globalEnv` when those apps start reading them through Turbo.
 
@@ -857,7 +856,7 @@ Register `EXPO_PUBLIC_API_URL`, `DATABASE_URL`, `WEB_ORIGIN`, and `PORT` in `tur
 
 ## 15. Backend & REST API Contracts
 
-Base URL: `http://localhost:8092`. Global prefix: `v1`. `GET /health` is excluded from the prefix and returns `{ "status": "ok" }`. It exists so Compose can wait on the API.
+Base URL: `http://localhost:8092`. Global prefix: `v1`. `GET /health` is excluded from the prefix and returns `{ "status": "ok" }`.
 
 JSON error envelope, every 4xx and 5xx:
 
@@ -1114,7 +1113,7 @@ The service uses Drizzle's transaction callback. No nested transactions.
 ### Migrations
 
 - `apps/evolin-api/drizzle.config.ts` points at `src/database/schema.ts` and `out: ./drizzle`.
-- Generate and migrate run as one-off commands inside the API container (section 17), so Drizzle uses `postgres:5432` rather than a host port.
+- Generate and migrate run on the host against `localhost:5435` (section 17).
 - First migration creates enums and the three tables.
 - No seed. The app starts empty.
 - No `db:push` in the documented flow.
@@ -1127,39 +1126,34 @@ The service uses Drizzle's transaction callback. No nested transactions.
 
 ```text
 apps/evolin-api/
-  Dockerfile
-  Dockerfile.dockerignore
   docker-compose.yml
   drizzle.config.ts
   package.json
   src/
 ```
 
-`packages/evolin-shared` is the folder for `@repo/evolin-shared`. Expo stays in `apps/evolin` and is not a Compose service.
+`packages/evolin-shared` is the folder for `@repo/evolin-shared`. The API and Expo stay on the host and are not Compose services.
 
 ### Ports
 
-| Service | Where | Host → container | Notes |
+| Service | Where | Port | Notes |
 | --- | --- | --- | --- |
-| Postgres | Compose service `postgres` | **5435 → 5432** | 5432 is Devinity, **5433 is Take&Do**, 5434 is Todex. 5433 is not free, so Evolin does not publish it. |
-| API | Compose service `api` | **8092 → 8092** | 3001 is `devinity-web`. 8090 is Devinity API. 8091 is Todex API. |
-| Expo Web | host process | **8081** | Not Docker. Expo's web default. |
+| Postgres | Compose service `postgres` | **5435 → 5432** | 5432 is Devinity, **5433 is Take&Do**, 5434 is Todex. |
+| API | host process | **8092** | 8090 is Devinity API. 8091 is Todex API. |
+| Expo Web | host process | **8081** | Expo's web default. |
 
-Compose binds both published ports to `127.0.0.1`.
+Compose binds Postgres to `127.0.0.1`.
 
 ### Connection URLs
 
 | Caller | URL |
 | --- | --- |
-| API container → Postgres | `postgresql://postgres:password@postgres:5432/evolin` |
-| Host tool → Postgres (psql, a GUI) | `postgresql://postgres:password@localhost:5435/evolin` |
+| API on the host → Postgres | `postgresql://postgres:password@localhost:5435/evolin` |
 | Expo on the host → API | `http://localhost:8092` |
-
-`postgres` is the Compose service name on the Compose network. It is not a hostname on the Mac. The browser never uses it. Inside the API container, `localhost` is the container, not the host, so the API must not use the host URL.
 
 ### Compose file
 
-Path: `apps/evolin-api/docker-compose.yml`. Top-level `name: evolin` so volumes and the network are prefixed `evolin_` and do not collide with other apps. Two services. No Redis.
+Path: `apps/evolin-api/docker-compose.yml`. Top-level `name: evolin` so the volume is prefixed `evolin_` and does not collide with other apps. One service. No Redis. No API image.
 
 **postgres**
 
@@ -1169,33 +1163,9 @@ Path: `apps/evolin-api/docker-compose.yml`. Top-level `name: evolin` so volumes 
 - Healthcheck `pg_isready -U postgres -d evolin`.
 - Port `127.0.0.1:5435:5432`.
 
-**api**
-
-- `build.context` is `../..` (the monorepo root). `build.dockerfile` is `apps/evolin-api/Dockerfile`.
-- Image: `node:22-bookworm` with Corepack pnpm `10.9.0` (the repo `packageManager`).
-- Dependencies install **during the image build**, not at container start. The Dockerfile copies the lockfile, workspace manifests, and the `package.json` of `evolin-api` plus the workspace packages that filter needs, then runs `pnpm install --frozen-lockfile --filter evolin-api...`. It then copies sources (the ignore file has already dropped every `node_modules`) and runs `pnpm --filter @repo/evolin-shared build`.
-- Linux `node_modules` stay in the image. Do not bind-mount the repo root. Do not mount a volume over any `node_modules` path. A root bind mount would hide the image install with the Mac's `node_modules`, and a volume only on some of those paths breaks pnpm's relative symlinks into `node_modules/.pnpm`.
-- Dev bind mounts are source only:
-  - `apps/evolin-api/src`
-  - `apps/evolin-api/drizzle` (so `db:generate` writes SQL onto the host)
-  - `packages/evolin-shared/src`
-- `dist` for `@repo/evolin-shared` stays in the container writable layer. The container command runs `pnpm --filter @repo/evolin-shared dev` (`tsc --watch`) and `pnpm --filter evolin-api dev` (`nest start --watch`) together.
-- Env `CHOKIDAR_USEPOLLING=true` so both watchers see bind-mount events on Docker Desktop.
-- `PORT=8092`, listen `0.0.0.0` inside the container. Published as `127.0.0.1:8092:8092`.
-- `DATABASE_URL` is the container URL in the table above, set in the Compose `environment` block.
-- `WEB_ORIGIN=http://localhost:8081`.
-- `depends_on.postgres.condition: service_healthy`.
-- Healthcheck: `wget -qO- http://127.0.0.1:8092/health`.
-- `env.ts` reads `process.env` and does not override variables Compose already set.
-- A lockfile or `package.json` change requires `docker compose ... up -d --build`. There is no entrypoint `pnpm install`.
-
-**Ignore file**
-
-Do not add a repo-root `.dockerignore`. Other builds must not inherit Evolin's exclusions. Use `apps/evolin-api/Dockerfile.dockerignore` (BuildKit loads `<dockerfile>.dockerignore` next to the Dockerfile). Patterns are relative to the context root. Exclude `**/node_modules`, `.git`, `**/.turbo`, `**/dist`, `**/.next`, and `**/coverage`. Do not exclude `pnpm-lock.yaml`, `package.json`, `apps/evolin-api`, or `packages`.
-
 ### Environment examples
 
-`apps/evolin-api/.env.example` documents the **host** URL for tools running on the Mac. The API container does not use this file for `DATABASE_URL`.
+`apps/evolin-api/.env.example` is what the host API reads:
 
 ```text
 PORT=8092
@@ -1216,8 +1186,7 @@ Expo inlines `EXPO_PUBLIC_*` at bundle time. Restart Expo after changing it. Do 
 Host `pnpm install` once, from the repo root, before Expo. Then, still from the repo root:
 
 ```bash
-docker compose -f apps/evolin-api/docker-compose.yml up -d --build
-docker compose -f apps/evolin-api/docker-compose.yml exec api pnpm --filter evolin-api db:migrate
+pnpm docker:evolin
 pnpm dev:evolin
 ```
 
@@ -1225,27 +1194,25 @@ Open `http://localhost:8081`. The API is `http://localhost:8092`.
 
 | Goal | Command |
 | --- | --- |
-| Start API and Postgres | `docker compose -f apps/evolin-api/docker-compose.yml up -d --build` |
-| Logs | `docker compose -f apps/evolin-api/docker-compose.yml logs -f` |
-| Generate a migration | `docker compose -f apps/evolin-api/docker-compose.yml exec api pnpm --filter evolin-api db:generate` |
-| Apply migrations | `docker compose -f apps/evolin-api/docker-compose.yml exec api pnpm --filter evolin-api db:migrate` |
-| Stop, keep data | `docker compose -f apps/evolin-api/docker-compose.yml down` |
-| Wipe the database volume | `docker compose -f apps/evolin-api/docker-compose.yml down -v` |
-| Start Expo Web | `pnpm dev:evolin` |
-| Stop Expo | Ctrl+C in that terminal |
+| Start Postgres and migrate | `pnpm docker:evolin` |
+| Postgres logs | `docker compose -f apps/evolin-api/docker-compose.yml logs -f` |
+| Generate a migration | `pnpm --filter evolin-api db:generate` |
+| Apply migrations | `pnpm --filter evolin-api db:migrate` |
+| Stop Postgres, keep data | `pnpm docker:evolin:down` |
+| Wipe the database volume | `pnpm docker:evolin:clean` |
+| Start API and Expo Web | `pnpm dev:evolin` |
+| Stop API and Expo | Ctrl+C in that terminal |
 
-`down -v` removes `evolin_pgdata`. It does not delete host source or the host `node_modules`. Linux dependencies stay in the image until `up -d --build`. Run `db:migrate` again after a database wipe.
-
-Migrations are one-off `exec` commands. They do not run on container start.
+`docker:evolin:clean` removes `evolin_pgdata`. Run `db:migrate` again after a database wipe. Migrations do not run when the Postgres container starts.
 
 ### Hot reload
 
-- API and `@repo/evolin-shared`: `tsc --watch` and `nest start --watch` inside the container, on the source bind mounts, polling on.
-- Expo: Fast Refresh on the host. The API container is not in the Expo process. The host `pnpm install` is what Expo uses. The image install is a separate Linux tree.
+- API: `nest start --watch` on the host. `@repo/evolin-shared` rebuilds through the Turbo `dev` dependency.
+- Expo: Fast Refresh on the host.
 
 ### What is not run in Docker
 
-Expo, Metro, and the web bundle. `docker-compose.yml` has no frontend service.
+The API, Expo, Metro, and the web bundle. `docker-compose.yml` has no API service and no frontend service.
 
 ---
 
@@ -1253,11 +1220,11 @@ Expo, Metro, and the web bundle. `docker-compose.yml` has no frontend service.
 
 | Topic | Requirement |
 | --- | --- |
-| Audience | One local user. The API has no auth. Do not publish it beyond the machine. Compose binds `127.0.0.1:8092:8092` and `127.0.0.1:5435:5432`. |
+| Audience | One local user. The API has no auth. Do not publish it beyond the machine. Compose binds Postgres to `127.0.0.1:5435`. |
 | Queries | List uses one query for habits plus today's practice (left join on `practice_date = date`) and one count for capacity. Detail adds one practice aggregate and one status-event read. No per-card HTTP calls. |
 | Payload | List returns habit fields only. `progress.recent` is detail-only. |
 | Transactions | Capacity races are covered by the advisory lock, not by a UI disable. |
-| Time | Server comparisons that need "today" use the request `timeZone`, not the container TZ. Set container `TZ=UTC` anyway. |
+| Time | Server comparisons that need "today" use the request `timeZone`. Postgres runs with `TZ=UTC`. |
 | Accessibility | Section 12 keyboard and naming rules. Color is not the only status signal; the status label is text. |
 | Bundle | Do not import `@repo/ui`, `@repo/api`, or icon barrels outside `lucide-react-native` icons that are named imports. Expo's package import optimization may stay on. |
 | Logging | Nest logger for 5xx. No analytics SDK. |
@@ -1391,7 +1358,7 @@ Ordered so each step is demoable. Do not start the Expo UI before the API transi
 
 - [ ] **M0 — Scope tooling.** Add `EVL` to commitlint, Husky, and the scope docs listed in section 14.
 - [ ] **M1 — `@repo/evolin-shared`.** CommonJS build, Zod schemas, constants, weekday helper, plan completeness helper. Unit tests for weekday and plan rules. A Nest test `require`s `dist`. No app yet.
-- [ ] **M2 — Compose and API shell.** `apps/evolin-api/docker-compose.yml`, Dockerfile, env example, health route, Drizzle schema, first migration, empty `HabitsModule`. `docker compose -f apps/evolin-api/docker-compose.yml up -d --build` becomes healthy.
+- [ ] **M2 — Compose and API shell.** `apps/evolin-api/docker-compose.yml` with Postgres only, env example, health route, Drizzle schema, first migration, empty `HabitsModule`. The API runs on the host.
 - [ ] **M3 — Habit writes.** Create, patch, delete, five transitions, advisory lock, status events. Vitest coverage for the pure transition table and an e2e test that the fourth establishing habit returns 409.
 - [ ] **M4 — Practice.** Put, delete, list history, detail progress. E2e for the unique date key, for `PRACTICE_NOT_SCHEDULED` on insert, and for updating an existing row after its weekday leaves the schedule.
 - [ ] **M5 — Expo shell.** Router, NativeWind 4, default Expo Metro config, Query client, API client, RNR primitives including checkbox. List loads from the API. `pnpm why react` still shows the catalog range for `devinity-web`.
@@ -1411,7 +1378,7 @@ Ordered so each step is demoable. Do not start the Expo UI before the API transi
 
 - Do not import `@repo/ui` or `@repo/api` from `apps/evolin`.
 - Do not set `node-linker=hoisted`, root `pnpm.overrides`, or manual Metro `watchFolders` / `nodeModulesPaths`.
-- Do not bind-mount the repo root into the API container or volume-mount `node_modules`.
+- Do not put the API in Docker. Compose runs Postgres only.
 - Do not add auth, Redis, Zustand, notifications, or a Today route.
 - Do not store a graduation score.
 - Do not enforce the recommended cap of 2 in the API.
@@ -1450,9 +1417,9 @@ Each line is a **proposed default** already specified above. Change the PRD befo
 ### Assumptions that are not product choices
 
 - The implementer can add `EVL` to Husky without a separate product review.
-- Docker Desktop on macOS needs `CHOKIDAR_USEPOLLING` for Nest watch. If watch works without it, the env var can stay; it is harmless.
+- Nest watch runs on the host, so Docker file-watch polling is not required.
 - A single advisory lock is correct only while the database holds one person's habits. That matches the no-auth MVP.
-- Binding Postgres and the API to `127.0.0.1` is sufficient local isolation.
+- Binding Postgres to `127.0.0.1` is sufficient local isolation. The API is a host process.
 
 ---
 
@@ -1460,7 +1427,7 @@ Each line is a **proposed default** already specified above. Change the PRD befo
 
 - [ ] M0 scope tooling (`EVL`)
 - [ ] M1 `@repo/evolin-shared` schemas, constants, pure helpers, unit tests
-- [ ] M2 `apps/evolin-api/docker-compose.yml`, Dockerfile, health, Drizzle migration
+- [ ] M2 `apps/evolin-api/docker-compose.yml` (Postgres only), health, Drizzle migration
 - [ ] M3 habit CRUD, state machine, capacity lock, e2e for the fourth slot
 - [ ] M4 practice put/delete/history and detail progress
 - [ ] M5 Expo Router, NativeWind, TanStack Query, API client

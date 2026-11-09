@@ -3,6 +3,7 @@ name: evolin
 services:
   postgres:
     image: postgres:16-alpine
+    restart: unless-stopped
     environment:
       POSTGRES_DB: evolin
       POSTGRES_USER: postgres
@@ -17,32 +18,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
-
-  api:
-    build:
-      context: ../..
-      dockerfile: apps/evolin-api/Dockerfile
-    environment:
-      NODE_ENV: development
-      PORT: 8092
-      DATABASE_URL: postgresql://postgres:password@postgres:5432/evolin
-      WEB_ORIGIN: http://localhost:8081
-      TZ: UTC
-      CHOKIDAR_USEPOLLING: "true"
-    ports:
-      - "127.0.0.1:8092:8092"
-    volumes:
-      - ./src:/workspace/apps/evolin-api/src
-      - ./drizzle:/workspace/apps/evolin-api/drizzle
-      - ../../packages/evolin-shared/src:/workspace/packages/evolin-shared/src
-    depends_on:
-      postgres:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8092/health"]
-      interval: 5s
-      timeout: 5s
-      retries: 20
 
 volumes:
   pgdata:

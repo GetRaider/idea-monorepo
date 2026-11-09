@@ -143,7 +143,7 @@ pnpm run dev:todex
 # Start Tempo Electron app
 pnpm run dev:tempo
 
-# Start Evolin Expo Web (+ @repo/evolin-shared)
+# Start Evolin API and Expo Web (Postgres: pnpm docker:evolin)
 pnpm run dev:evolin
 
 # Run in production mode

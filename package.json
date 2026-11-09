@@ -25,7 +25,7 @@
     "dev:personal-website": "turbo run dev --filter=personal-website --filter=@repo/ui",
     "dev:todex": "turbo run dev --filter=todex-api --filter=todex-web --filter=@repo/api --filter=@repo/ui",
     "dev:tempo": "turbo run dev --filter=tempo",
-    "dev:evolin": "turbo run dev --filter=evolin --filter=@repo/evolin-shared",
+    "dev:evolin": "turbo run dev --filter=evolin --filter=evolin-api --filter=@repo/evolin-shared",
     "docker:take-and-do": "pnpm --filter take-and-do docker:up",
     "docker:take-and-do:down": "pnpm --filter take-and-do docker:down",
     "docker:todex": "pnpm --filter todex-api docker:up && pnpm --filter todex-api db:migrate",

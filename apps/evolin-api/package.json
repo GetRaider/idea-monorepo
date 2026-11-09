@@ -13,7 +13,7 @@
     "test:e2e": "vitest run --config vitest.e2e.config.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "docker:up": "docker compose up -d --wait",
+    "docker:up": "docker compose up -d --wait --remove-orphans",
     "docker:down": "docker compose down",
     "docker:clean": "docker compose down -v"
   },

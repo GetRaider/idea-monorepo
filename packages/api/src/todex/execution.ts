@@ -83,6 +83,8 @@ export const ExecutionCurrentSchema = ExecutionQueueTaskSchema.extend({
 export const ExecutionSessionSchema = z.object({
   id: z.string(),
   workspaceId: z.string(),
+  spaceId: z.string(),
+  title: z.string().nullable(),
   tasks: z.array(ExecutionTaskRefSchema),
   startedAt: IsoDateTimeSchema,
   endedAt: IsoDateTimeSchema.nullable(),
@@ -129,9 +131,74 @@ export const CompleteExecutionBodySchema = z.object({
     .optional(),
 });
 
-export const UpdateExecutionSessionBodySchema = z.object({
-  startedAt: IsoDateTimeSchema,
-  endedAt: IsoDateTimeSchema,
+export const UpdateExecutionSessionBodySchema = z
+  .object({
+    title: z.string().trim().max(200).optional(),
+    startedAt: IsoDateTimeSchema.optional(),
+    endedAt: IsoDateTimeSchema.optional(),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    const hasStart = value.startedAt != null;
+    const hasEnd = value.endedAt != null;
+    if (hasStart !== hasEnd) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "startedAt and endedAt are both required",
+      });
+    }
+    if (!hasStart && value.title === undefined) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "No changes",
+      });
+    }
+    if (
+      hasStart &&
+      hasEnd &&
+      Date.parse(value.startedAt!) >= Date.parse(value.endedAt!)
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Ended time must be after the start",
+      });
+    }
+  });
+
+export const ExecutionCalendarQuerySchema = z
+  .object({
+    from: IsoDateTimeSchema,
+    to: IsoDateTimeSchema,
+    timeZone: z.string().trim().min(1).max(100),
+  })
+  .refine((value) => Date.parse(value.from) < Date.parse(value.to), {
+    message: "to must be after from",
+  });
+
+export const ExecutionCalendarSchema = z.object({
+  sessions: z.array(
+    z.object({
+      id: z.string(),
+      spaceId: z.string(),
+      spaceName: z.string(),
+      color: z.string(),
+      title: z.string().nullable(),
+      tasks: z.array(
+        z.object({
+          id: z.string(),
+          taskKey: z.string(),
+          summary: z.string(),
+          position: z.number().int(),
+        }),
+      ),
+      slices: z.array(
+        z.object({
+          startedAt: IsoDateTimeSchema,
+          endedAt: IsoDateTimeSchema.nullable(),
+        }),
+      ),
+    }),
+  ),
 });
 
 export const ExecutionActivityQuerySchema = z
@@ -198,3 +265,7 @@ export type ExecutionActivityQuery = z.infer<
   typeof ExecutionActivityQuerySchema
 >;
 export type ExecutionActivity = z.infer<typeof ExecutionActivitySchema>;
+export type ExecutionCalendar = z.infer<typeof ExecutionCalendarSchema>;
+export type ExecutionCalendarQuery = z.infer<
+  typeof ExecutionCalendarQuerySchema
+>;

@@ -242,7 +242,6 @@ export class GoogleCalendarService {
     await this.db.insert(calendarEvents).values({
       id: randomUUID(),
       workspaceId,
-      color: null,
       createdAt: now,
       ...values,
     });

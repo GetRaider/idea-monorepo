@@ -16,10 +16,15 @@ import type {
 } from "@repo/api/todex";
 
 import { mapCalendarEvent } from "../../db/mappers";
-import { calendarEvents, spaces, tasks } from "../../db/schema";
+import { calendarEvents, spaces } from "../../db/schema";
 import type { CalendarEventRow } from "../../db/schema";
 import { DRIZZLE_DB } from "../../db/tokens";
 import { RelationsService } from "../relations/relations.service";
+import {
+  assertTaskScope,
+  assertTimedEventRange,
+  lockWorkspaceTasks,
+} from "./calendar-scope";
 import { GoogleCalendarService } from "./google-calendar.service";
 
 @Injectable()
@@ -72,28 +77,39 @@ export class CalendarEventsService {
     userId: string,
     body: CreateCalendarEventBody,
   ) {
-    await this.requireTasks(workspaceId, body.taskScope ?? []);
     if (body.spaceId) await this.requireSpace(workspaceId, body.spaceId);
+    const allDay = body.allDay ?? false;
+    const start = new Date(body.start);
+    const end = new Date(body.end);
+    assertTimedEventRange({ allDay, start, end });
+    const taskScope = body.taskScope ?? [];
     const now = new Date();
     const id = randomUUID();
-    await this.db.insert(calendarEvents).values({
-      id,
-      workspaceId,
-      title: body.title,
-      start: new Date(body.start),
-      end: new Date(body.end),
-      allDay: body.allDay ?? false,
-      color: body.color ?? null,
-      timeZone: body.timeZone,
-      recurrence: body.recurrence ?? null,
-      description: body.description ?? "",
-      spaceId: body.spaceId ?? null,
-      taskScope: body.taskScope ?? [],
-      participants: body.participants ?? [],
-      rsvpStatus: body.rsvpStatus ?? null,
-      organizerSelf: true,
-      createdAt: now,
-      updatedAt: now,
+    await this.db.transaction(async (tx) => {
+      const locked = await lockWorkspaceTasks(tx, workspaceId, taskScope);
+      assertTaskScope({
+        spaceId: body.spaceId ?? null,
+        taskIds: taskScope,
+        tasks: locked,
+      });
+      await tx.insert(calendarEvents).values({
+        id,
+        workspaceId,
+        title: body.title,
+        start,
+        end,
+        allDay,
+        timeZone: body.timeZone,
+        recurrence: body.recurrence ?? null,
+        description: body.description ?? "",
+        spaceId: body.spaceId ?? null,
+        taskScope,
+        participants: body.participants ?? [],
+        rsvpStatus: body.rsvpStatus ?? null,
+        organizerSelf: true,
+        createdAt: now,
+        updatedAt: now,
+      });
     });
     await this.googleCalendar.pushEvent(userId, workspaceId, id);
     return this.get(workspaceId, id);
@@ -107,45 +123,86 @@ export class CalendarEventsService {
   ) {
     const existing = await this.require(workspaceId, eventId);
     this.assertWritable(existing, body);
-    if (body.taskScope) await this.requireTasks(workspaceId, body.taskScope);
     if (body.spaceId) await this.requireSpace(workspaceId, body.spaceId);
+    const nextAllDay = body.allDay ?? existing.allDay;
+    const nextStart = body.start ? new Date(body.start) : existing.start;
+    const nextEnd = body.end ? new Date(body.end) : existing.end;
+    const rangeTouched =
+      body.start !== undefined ||
+      body.end !== undefined ||
+      body.allDay !== undefined;
+    if (rangeTouched) {
+      assertTimedEventRange({
+        allDay: nextAllDay,
+        start: nextStart,
+        end: nextEnd,
+      });
+    }
+    const nextSpaceId =
+      body.spaceId === undefined ? existing.spaceId : body.spaceId;
+    const nextScope = body.taskScope ?? existing.taskScope ?? [];
     if (
       body.scope === "instance" &&
       isSeriesMaster(existing) &&
       body.originalStart
     ) {
-      const exception = await this.upsertException(workspaceId, existing, body);
+      const exception = await this.db.transaction(async (tx) => {
+        const locked = await lockWorkspaceTasks(tx, workspaceId, nextScope);
+        assertTaskScope({
+          spaceId: nextSpaceId,
+          taskIds: nextScope,
+          tasks: locked,
+        });
+        await tx
+          .select({ id: calendarEvents.id })
+          .from(calendarEvents)
+          .where(eq(calendarEvents.id, existing.id))
+          .for("update");
+        return this.upsertException(tx, workspaceId, existing, body);
+      });
       await this.googleCalendar.pushEvent(userId, workspaceId, existing.id);
       await this.googleCalendar.pushEvent(userId, workspaceId, exception.id);
       return mapCalendarEvent(exception);
     }
     const now = new Date();
-    await this.db
-      .update(calendarEvents)
-      .set({
-        ...(body.title !== undefined ? { title: body.title } : {}),
-        ...(body.start !== undefined ? { start: new Date(body.start) } : {}),
-        ...(body.end !== undefined ? { end: new Date(body.end) } : {}),
-        ...(body.allDay !== undefined ? { allDay: body.allDay } : {}),
-        ...(body.color !== undefined ? { color: body.color } : {}),
-        ...(body.timeZone !== undefined ? { timeZone: body.timeZone } : {}),
-        ...(body.recurrence !== undefined
-          ? { recurrence: body.recurrence, rawRrule: null }
-          : {}),
-        ...(body.description !== undefined
-          ? { description: body.description }
-          : {}),
-        ...(body.taskScope !== undefined ? { taskScope: body.taskScope } : {}),
-        ...(body.participants !== undefined
-          ? { participants: body.participants }
-          : {}),
-        ...(body.rsvpStatus !== undefined
-          ? { rsvpStatus: body.rsvpStatus }
-          : {}),
-        ...(body.spaceId !== undefined ? { spaceId: body.spaceId } : {}),
-        updatedAt: now,
-      })
-      .where(eq(calendarEvents.id, existing.id));
+    await this.db.transaction(async (tx) => {
+      const locked = await lockWorkspaceTasks(tx, workspaceId, nextScope);
+      assertTaskScope({
+        spaceId: nextSpaceId,
+        taskIds: nextScope,
+        tasks: locked,
+      });
+      await tx
+        .select({ id: calendarEvents.id })
+        .from(calendarEvents)
+        .where(eq(calendarEvents.id, existing.id))
+        .for("update");
+      await tx
+        .update(calendarEvents)
+        .set({
+          ...(body.title !== undefined ? { title: body.title } : {}),
+          ...(body.start !== undefined ? { start: new Date(body.start) } : {}),
+          ...(body.end !== undefined ? { end: new Date(body.end) } : {}),
+          ...(body.allDay !== undefined ? { allDay: body.allDay } : {}),
+          ...(body.timeZone !== undefined ? { timeZone: body.timeZone } : {}),
+          ...(body.recurrence !== undefined
+            ? { recurrence: body.recurrence, rawRrule: null }
+            : {}),
+          ...(body.description !== undefined
+            ? { description: body.description }
+            : {}),
+          ...(body.taskScope !== undefined ? { taskScope: body.taskScope } : {}),
+          ...(body.participants !== undefined
+            ? { participants: body.participants }
+            : {}),
+          ...(body.rsvpStatus !== undefined
+            ? { rsvpStatus: body.rsvpStatus }
+            : {}),
+          ...(body.spaceId !== undefined ? { spaceId: body.spaceId } : {}),
+          updatedAt: now,
+        })
+        .where(eq(calendarEvents.id, existing.id));
+    });
     await this.googleCalendar.pushEvent(userId, workspaceId, existing.id);
     return this.get(workspaceId, existing.id);
   }
@@ -164,7 +221,7 @@ export class CalendarEventsService {
       if (!existing.organizerSelf) {
         throw new BadRequestException("This event can only be RSVP'd");
       }
-      const exception = await this.upsertException(workspaceId, existing, {
+      const exception = await this.upsertException(this.db, workspaceId, existing, {
         originalStart: query.originalStart,
         title: existing.title,
       });
@@ -191,12 +248,13 @@ export class CalendarEventsService {
   }
 
   private async upsertException(
+    db: Pick<NodePgDatabase, "select" | "insert" | "update">,
     workspaceId: string,
     master: CalendarEventRow,
     body: UpdateCalendarEventBody,
   ) {
     const originalStart = new Date(body.originalStart ?? master.start);
-    const rows = await this.db
+    const rows = await db
       .select()
       .from(calendarEvents)
       .where(
@@ -219,7 +277,6 @@ export class CalendarEventsService {
       start,
       end,
       allDay: body.allDay ?? existing?.allDay ?? master.allDay,
-      color: body.color === undefined ? (existing?.color ?? master.color) : body.color,
       timeZone: body.timeZone ?? existing?.timeZone ?? master.timeZone,
       description: body.description ?? existing?.description ?? master.description,
       spaceId:
@@ -236,11 +293,11 @@ export class CalendarEventsService {
       updatedAt: now,
     };
     if (existing) {
-      await this.db
+      await db
         .update(calendarEvents)
         .set(values)
         .where(eq(calendarEvents.id, existing.id));
-      const [updated] = await this.db
+      const [updated] = await db
         .select()
         .from(calendarEvents)
         .where(eq(calendarEvents.id, existing.id));
@@ -248,7 +305,7 @@ export class CalendarEventsService {
       return updated;
     }
     const id = randomUUID();
-    const [created] = await this.db
+    const [created] = await db
       .insert(calendarEvents)
       .values({
         id,
@@ -273,7 +330,6 @@ export class CalendarEventsService {
       body.start,
       body.end,
       body.allDay,
-      body.color,
       body.timeZone,
       body.recurrence,
       body.description,
@@ -306,17 +362,6 @@ export class CalendarEventsService {
       .where(and(eq(spaces.id, spaceId), eq(spaces.workspaceId, workspaceId)))
       .limit(1);
     if (!space) throw new NotFoundException("Space");
-  }
-
-  private async requireTasks(workspaceId: string, taskIds: string[]) {
-    if (taskIds.length === 0) return;
-    const rows = await this.db
-      .select({ id: tasks.id })
-      .from(tasks)
-      .where(and(eq(tasks.workspaceId, workspaceId), inArray(tasks.id, taskIds)));
-    if (rows.length !== new Set(taskIds).size) {
-      throw new BadRequestException("Unknown task in scope");
-    }
   }
 }
 

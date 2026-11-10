@@ -7,11 +7,6 @@ export const CalendarRsvpStatusSchema = z.enum(["yes", "no", "maybe"]);
 
 export const CalendarEventScopeSchema = z.enum(["instance", "series"]);
 
-const CalendarColorSchema = z
-  .string()
-  .regex(/^#[0-9a-fA-F]{6}$/)
-  .nullable();
-
 export const CalendarEventSchema = z.object({
   id: z.string(),
   workspaceId: z.string(),
@@ -20,7 +15,6 @@ export const CalendarEventSchema = z.object({
   start: IsoDateTimeSchema,
   end: IsoDateTimeSchema,
   allDay: z.boolean(),
-  color: z.string().nullable(),
   timeZone: z.string(),
   recurrence: TaskRecurrenceSchema.nullable(),
   rawRrule: z.string().nullable(),
@@ -66,7 +60,6 @@ const eventFields = {
   start: IsoDateTimeSchema,
   end: IsoDateTimeSchema,
   allDay: z.boolean().optional(),
-  color: CalendarColorSchema.optional(),
   timeZone: z.string().trim().min(1).max(100),
   recurrence: TaskRecurrenceSchema.nullable().optional(),
   description: z.string().max(20_000).optional(),
@@ -78,6 +71,7 @@ const eventFields = {
 
 export const CreateCalendarEventBodySchema = z
   .object(eventFields)
+  .strict()
   .refine((value) => Date.parse(value.start) < Date.parse(value.end), {
     message: "end must be after start",
   });
@@ -92,6 +86,7 @@ export const UpdateCalendarEventBodySchema = z
     scope: CalendarEventScopeSchema.optional(),
     originalStart: IsoDateTimeSchema.optional(),
   })
+  .strict()
   .refine(
     (value) =>
       value.start == null ||
@@ -111,24 +106,24 @@ export const CalendarEventTemplateSchema = z.object({
   spaceId: z.string().nullable(),
   title: z.string(),
   durationMinutes: z.number().int().positive(),
-  color: CalendarColorSchema,
   description: z.string(),
   taskScope: z.array(z.string()),
   createdAt: IsoDateTimeSchema,
   updatedAt: IsoDateTimeSchema,
 });
 
-export const CreateCalendarEventTemplateBodySchema = z.object({
-  title: z.string().trim().min(1).max(500),
-  durationMinutes: z.number().int().min(5).max(24 * 60),
-  color: CalendarColorSchema.optional(),
-  description: z.string().max(20_000).optional(),
-  taskScope: z.array(z.string().trim().min(1)).max(50).optional(),
-  spaceId: z.string().min(1).nullable().optional(),
-});
+export const CreateCalendarEventTemplateBodySchema = z
+  .object({
+    title: z.string().trim().min(1).max(500),
+    durationMinutes: z.number().int().min(15).max(24 * 60),
+    description: z.string().max(20_000).optional(),
+    taskScope: z.array(z.string().trim().min(1)).max(50).optional(),
+    spaceId: z.string().min(1).nullable().optional(),
+  })
+  .strict();
 
 export const UpdateCalendarEventTemplateBodySchema =
-  CreateCalendarEventTemplateBodySchema.partial();
+  CreateCalendarEventTemplateBodySchema.partial().strict();
 
 export const GoogleCalendarIntegrationSchema = z.object({
   connected: z.boolean(),

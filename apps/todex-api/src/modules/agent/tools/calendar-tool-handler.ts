@@ -8,11 +8,6 @@ const isoDateTimeSchema = z.string().refine((value) => !Number.isNaN(Date.parse(
   message: "Expected an ISO date string",
 });
 
-const colorSchema = z
-  .string()
-  .regex(/^#[0-9a-fA-F]{6}$/)
-  .nullable();
-
 @Injectable()
 export class CalendarToolHandler {
   constructor(private readonly events: CalendarEventsService) {}
@@ -60,7 +55,6 @@ export class CalendarToolHandler {
             timeZone: z.string().trim().min(1).max(100),
             allDay: z.boolean().optional(),
             description: z.string().max(20_000).optional(),
-            color: colorSchema.optional(),
           })
           .strict()
           .refine((value) => Date.parse(value.start) < Date.parse(value.end), {
@@ -75,7 +69,6 @@ export class CalendarToolHandler {
             timeZone: body.timeZone,
             ...(body.allDay !== undefined ? { allDay: body.allDay } : {}),
             ...(body.description !== undefined ? { description: body.description } : {}),
-            ...(body.color !== undefined ? { color: body.color } : {}),
           });
         },
       },
@@ -92,7 +85,6 @@ export class CalendarToolHandler {
             timeZone: z.string().trim().min(1).max(100).optional(),
             allDay: z.boolean().optional(),
             description: z.string().max(20_000).optional(),
-            color: colorSchema.optional(),
           })
           .strict()
           .refine(
@@ -110,8 +102,7 @@ export class CalendarToolHandler {
             body.end === undefined &&
             body.timeZone === undefined &&
             body.allDay === undefined &&
-            body.description === undefined &&
-            body.color === undefined
+            body.description === undefined
           ) {
             throw new BadRequestException("No changes");
           }
@@ -122,7 +113,6 @@ export class CalendarToolHandler {
             ...(body.timeZone !== undefined ? { timeZone: body.timeZone } : {}),
             ...(body.allDay !== undefined ? { allDay: body.allDay } : {}),
             ...(body.description !== undefined ? { description: body.description } : {}),
-            ...(body.color !== undefined ? { color: body.color } : {}),
           });
         },
       },
@@ -148,7 +138,6 @@ interface CreateCalendarEventArgs {
   timeZone: string;
   allDay?: boolean;
   description?: string;
-  color?: string | null;
 }
 
 interface UpdateCalendarEventArgs {
@@ -159,5 +148,4 @@ interface UpdateCalendarEventArgs {
   timeZone?: string;
   allDay?: boolean;
   description?: string;
-  color?: string | null;
 }

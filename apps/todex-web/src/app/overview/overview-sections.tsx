@@ -59,9 +59,15 @@ function TodaySection() {
         to: range.scheduleTo,
       }),
   });
+  const boardsQuery = useQuery({
+    queryKey: ["boards"],
+    queryFn: () => todexClient.spaces.list(),
+  });
   const toggleDone = useToggleTaskDone();
   const tasks = overviewTasks(tasksQuery.data ?? []);
-  const events = sortEvents(eventBlocks(eventsQuery.data ?? [], from, to));
+  const events = sortEvents(
+    eventBlocks(eventsQuery.data ?? [], boardsQuery.data ?? [], from, to),
+  );
 
   return (
     <Section id={OVERVIEW_CHAPTERS[0].id} title="Today">
@@ -185,7 +191,7 @@ function UpcomingSection() {
   const toggleDone = useToggleTaskDone();
   const tasks = overviewTasks(tasksQuery.data ?? []);
   const events = sortEvents(
-    eventBlocks(eventsQuery.data ?? [], bounds.from, bounds.to),
+    eventBlocks(eventsQuery.data ?? [], boardsQuery.data ?? [], bounds.from, bounds.to),
   );
   const spaceNameById = new Map(
     (boardsQuery.data ?? []).map((board) => [board.id, board.name]),

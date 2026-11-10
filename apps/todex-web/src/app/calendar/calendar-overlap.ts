@@ -1,6 +1,4 @@
-import type { CalendarBlock } from "./calendar-blocks";
-
-export const OVERLAP_SAME_START_COLUMN_CLASS = "todex-overlap-same-start-column";
+import type { CalendarBlock, CalendarMode } from "./calendar-blocks";
 
 const EVENT_ID_ATTR = "data-todex-event-id";
 const WALL_START_ATTR = "data-todex-wall-start";
@@ -36,17 +34,54 @@ export function isSameLocalDay(left: Date, right: Date): boolean {
   );
 }
 
-export function eventUsesSameStartColumnLayout(
-  event: TimedEventInterval,
-  peers: readonly TimedEventInterval[],
-): boolean {
-  for (const peer of peers) {
-    if (peer.key === event.key) continue;
-    if (!intervalsOverlap(event.start, event.end, peer.start, peer.end)) continue;
-    if (event.wallStart !== peer.wallStart) continue;
-    if (event.end.getTime() < peer.end.getTime()) return true;
+export function lanePlacements(
+  blocks: readonly CalendarBlock[],
+  mode: CalendarMode,
+): Map<string, HarnessPlacement> {
+  const placements = new Map<string, HarnessPlacement>();
+  const byDay = new Map<string, CalendarBlock[]>();
+  for (const block of blocks) {
+    if (block.allDay) {
+      const half = mode === "both";
+      placements.set(block.key, {
+        left: half && block.lane === "actual" ? "50%" : "0%",
+        width: half ? "50%" : "100%",
+      });
+      continue;
+    }
+    const key = localDayKey(block.start);
+    const day = byDay.get(key) ?? [];
+    day.push(block);
+    byDay.set(key, day);
   }
-  return false;
+  for (const day of byDay.values()) {
+    const laneNames =
+      mode === "both"
+        ? (["planned", "actual"] as const)
+        : [...new Set(day.map((block) => block.lane))];
+    for (const lane of laneNames) {
+      const packed = packLane(day.filter((block) => block.lane === lane));
+      const laneIndex = mode === "both" ? (lane === "planned" ? 0 : 1) : 0;
+      const laneCount = mode === "both" ? 2 : 1;
+      for (const item of packed) {
+        const laneWidth = 100 / laneCount;
+        const width = laneWidth / item.columns;
+        const left = laneIndex * laneWidth + item.column * width;
+        placements.set(item.key, {
+          left: `${roundPercent(left)}%`,
+          width: `${roundPercent(width)}%`,
+        });
+      }
+    }
+  }
+  return placements;
+}
+
+export function stampHarnessEvent(element: HTMLElement, eventId: string) {
+  element.setAttribute(EVENT_ID_ATTR, eventId);
+  element
+    .closest(".fc-timegrid-event-harness, .fc-daygrid-event-harness")
+    ?.setAttribute(EVENT_ID_ATTR, eventId);
 }
 
 export function overlapStamp(block: CalendarBlock): Record<string, string> {
@@ -62,34 +97,32 @@ export function overlapStamp(block: CalendarBlock): Record<string, string> {
 export function repaintTimegridOverlapLayout(
   root: HTMLElement | null,
   blocks: readonly CalendarBlock[],
+  mode: CalendarMode,
 ): void {
   if (!root) return;
-  const intervals = blocks.filter((block) => !block.allDay).map(intervalFromBlock);
-  const harnesses = root.querySelectorAll(".fc-timegrid-event-harness");
+  const placements = lanePlacements(blocks, mode);
+  const harnesses = root.querySelectorAll(
+    ".fc-timegrid-event-harness, .fc-daygrid-event-harness",
+  );
   for (const harness of harnesses) {
     if (!(harness instanceof HTMLElement)) continue;
     const eventElement = harness.querySelector(".fc-event");
     if (!(eventElement instanceof HTMLElement)) continue;
     if (eventElement.classList.contains("fc-event-mirror")) continue;
-    const eventInterval = readInterval(eventElement);
-    if (!eventInterval) continue;
-    const peers = intervals.filter(
-      (peer) =>
-        peer.key !== eventInterval.key &&
-        isSameLocalDay(peer.start, eventInterval.start),
-    );
-    applyHarnessLayout(
-      harness,
-      eventUsesSameStartColumnLayout(eventInterval, peers),
-    );
+    const eventId = readEventId(harness) ?? readEventId(eventElement);
+    if (!eventId) continue;
+    const placement = placements.get(eventId);
+    if (!placement) continue;
+    applyHarnessLayout(harness, placement.left, placement.width);
   }
 }
 
 export function scheduleRepaintTimegridOverlapLayout(
   root: HTMLElement | null,
   blocks: readonly CalendarBlock[],
+  mode: CalendarMode,
 ): void {
-  const paint = () => repaintTimegridOverlapLayout(root, blocks);
+  const paint = () => repaintTimegridOverlapLayout(root, blocks, mode);
   paint();
   requestAnimationFrame(() => {
     paint();
@@ -103,6 +136,7 @@ export function scheduleRepaintTimegridOverlapLayout(
 export function ensureTimegridOverlapLayoutObserver(
   root: HTMLElement | null,
   getBlocks: () => readonly CalendarBlock[],
+  getMode: () => CalendarMode,
 ): void {
   if (!root) return;
   if (overlapObserver && overlapObserverRoot === root) return;
@@ -112,7 +146,7 @@ export function ensureTimegridOverlapLayoutObserver(
   const schedule = () => {
     cancelAnimationFrame(frame);
     frame = requestAnimationFrame(() =>
-      repaintTimegridOverlapLayout(root, getBlocks()),
+      repaintTimegridOverlapLayout(root, getBlocks(), getMode()),
     );
   };
   overlapObserver = new MutationObserver((mutations) => {
@@ -123,7 +157,8 @@ export function ensureTimegridOverlapLayoutObserver(
       const target = mutation.target;
       if (
         target instanceof HTMLElement &&
-        target.classList.contains("fc-timegrid-event-harness")
+        (target.classList.contains("fc-timegrid-event-harness") ||
+          target.classList.contains("fc-daygrid-event-harness"))
       ) {
         schedule();
         return;
@@ -137,47 +172,86 @@ export function ensureTimegridOverlapLayoutObserver(
   });
 }
 
-function applyHarnessLayout(harness: HTMLElement, sameStartColumn: boolean) {
-  harness.classList.toggle(OVERLAP_SAME_START_COLUMN_CLASS, sameStartColumn);
-  harness.style.setProperty("left", sameStartColumn ? "50%" : "0", "important");
-  harness.style.setProperty("right", "0", "important");
-  harness.style.setProperty("margin-left", "0", "important");
-  harness.style.setProperty("margin-right", "0", "important");
-  harness.style.setProperty("z-index", sameStartColumn ? "5" : "1", "important");
+function packLane(blocks: readonly CalendarBlock[]) {
+  const groups = new Map<string, CalendarBlock[]>();
+  const singles: CalendarBlock[] = [];
+  for (const block of blocks) {
+    if (!block.sessionId) {
+      singles.push(block);
+      continue;
+    }
+    const group = groups.get(block.sessionId) ?? [];
+    group.push(block);
+    groups.set(block.sessionId, group);
+  }
+  const items: PackItem[] = singles.map((block) => ({
+    keys: [block.key],
+    start: block.start.getTime(),
+    end: block.end.getTime(),
+  }));
+  for (const group of groups.values()) {
+    items.push({
+      keys: group.map((block) => block.key),
+      start: Math.min(...group.map((block) => block.start.getTime())),
+      end: Math.max(...group.map((block) => block.end.getTime())),
+    });
+  }
+  const sorted = [...items].sort((left, right) => left.start - right.start);
+  const columnEnds: number[] = [];
+  const placed: { keys: string[]; column: number; start: number; end: number }[] =
+    [];
+  for (const item of sorted) {
+    let column = columnEnds.findIndex((end) => end <= item.start);
+    if (column < 0) {
+      column = columnEnds.length;
+      columnEnds.push(item.end);
+    } else {
+      columnEnds[column] = item.end;
+    }
+    placed.push({ ...item, column });
+  }
+  return placed.flatMap((item) => {
+    const columns =
+      placed.reduce((highest, peer) => {
+        if (peer.start >= item.end || item.start >= peer.end) return highest;
+        return Math.max(highest, peer.column + 1);
+      }, 1) || 1;
+    return item.keys.map((key) => ({ key, column: item.column, columns }));
+  });
 }
 
-function intervalFromBlock(block: CalendarBlock): TimedEventInterval {
-  return {
-    key: timedEventIntervalKey(block.key, block.start),
-    wallStart: wallClockStartKeyFromDate(block.start),
-    start: block.start,
-    end: block.end,
-  };
+function applyHarnessLayout(harness: HTMLElement, left: string, width: string) {
+  harness.dataset.todexPlaced = "true";
+  harness.style.setProperty("--todex-harness-left", left);
+  harness.style.setProperty("--todex-harness-width", width);
 }
 
-function readInterval(eventElement: HTMLElement): TimedEventInterval | null {
-  const marker = eventElement.querySelector(`[${START_MS_ATTR}]`) ?? eventElement;
-  const eventId = marker.getAttribute(EVENT_ID_ATTR);
-  const wallStart = marker.getAttribute(WALL_START_ATTR);
-  const startMs = marker.getAttribute(START_MS_ATTR);
-  const endMs = marker.getAttribute(END_MS_ATTR);
-  if (!eventId || !wallStart || !startMs || !endMs) return null;
-  const start = new Date(Number(startMs));
-  const end = new Date(Number(endMs));
-  return {
-    key: timedEventIntervalKey(eventId, start),
-    wallStart,
-    start,
-    end,
-  };
+function readEventId(eventElement: HTMLElement) {
+  return (
+    eventElement.getAttribute(EVENT_ID_ATTR) ??
+    eventElement.querySelector(`[${EVENT_ID_ATTR}]`)?.getAttribute(EVENT_ID_ATTR) ??
+    null
+  );
+}
+
+function localDayKey(date: Date) {
+  return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+}
+
+function roundPercent(value: number) {
+  return Math.round(value * 1000) / 1000;
 }
 
 let overlapObserver: MutationObserver | null = null;
 let overlapObserverRoot: HTMLElement | null = null;
 
-interface TimedEventInterval {
-  key: string;
-  wallStart: string;
-  start: Date;
-  end: Date;
+interface HarnessPlacement {
+  left: string;
+  width: string;
+}
+
+interface PackItem {
+  keys: string[];
+  start: number;
+  end: number;
 }

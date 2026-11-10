@@ -14,13 +14,14 @@ import FullCalendar from "@fullcalendar/react";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import { CalendarIcon, TasksIcon } from "@components/icons";
 
+import { formatChipRange } from "./calendar-actual";
 import { blocksForRange, visibleBlocks, type CalendarBlock } from "./calendar-blocks";
-import { blockColor, fillIsLight } from "./calendar-colors";
 import { deviceTimeZone } from "./calendar-datetime";
 import {
   ensureTimegridOverlapLayoutObserver,
   overlapStamp,
   scheduleRepaintTimegridOverlapLayout,
+  stampHarnessEvent,
 } from "./calendar-overlap";
 import { CalendarDraft, type DraftFields, type DraftSelection } from "./calendar-draft";
 import { CalendarEventPreview, type EventPreview } from "./calendar-event-preview";
@@ -35,7 +36,6 @@ export function CalendarGrid() {
   const draftFormRef = useRef<HTMLFormElement>(null);
   const draftOriginRef = useRef<SelectionOrigin | null>(null);
   const keepDraftFields = useRef(false);
-  const [viewId, setViewId] = useState("timeGridRollingWeek");
   const [draft, setDraft] = useState<DraftSelection | null>(null);
   const [draftSession, setDraftSession] = useState(0);
   const [preview, setPreview] = useState<EventPreview | null>(null);
@@ -60,30 +60,54 @@ export function CalendarGrid() {
     setDraft((current) => (current ? { ...current, ...anchor } : current));
   }, [draft]);
   const {
-    state: { events, tasks, boards, range, visibility, focusRequest },
-    actions: { setRange, openEvent, openTask, openComposer, createEvent, updateEvent, updateTask },
+    state: { events, tasks, sessions, boards, range, visibility, focusRequest, mode, dayCount, preferencesReady },
+    actions: { setRange, openEvent, openTask, openComposer, openSession, createEvent, updateEvent, updateTask },
   } = useCalendar();
+  const timeZone = deviceTimeZone();
   const blocks = useMemo(
     () =>
       visibleBlocks(
-        blocksForRange(events, tasks, new Date(range.from), new Date(range.to)),
+        blocksForRange(
+          events,
+          tasks,
+          sessions,
+          boards,
+          new Date(range.from),
+          new Date(range.to),
+          new Date(),
+          timeZone,
+        ),
         visibility,
+        mode,
       ),
-    [events, tasks, range.from, range.to, visibility],
+    [events, tasks, sessions, boards, range.from, range.to, visibility, mode, timeZone],
   );
-  const timeZone = deviceTimeZone();
 
   useEffect(() => {
     if (!focusRequest) return;
     calendarRef.current?.getApi().gotoDate(focusRequest.date);
   }, [focusRequest]);
 
+  const modeRef = useRef(mode);
+  modeRef.current = mode;
   const blocksRef = useRef(blocks);
   blocksRef.current = blocks;
 
   useEffect(() => {
-    ensureTimegridOverlapLayoutObserver(rootRef.current, () => blocksRef.current);
+    ensureTimegridOverlapLayoutObserver(
+      rootRef.current,
+      () => blocksRef.current,
+      () => modeRef.current,
+    );
   }, []);
+
+  useEffect(() => {
+    const api = calendarRef.current?.getApi();
+    if (!api || !preferencesReady) return;
+    const view = CALENDAR_VIEW_BY_DAY_COUNT[dayCount];
+    if (!view || api.view.type === view) return;
+    api.changeView(view);
+  }, [dayCount, preferencesReady]);
 
   useEffect(() => {
     if (!preview) return;
@@ -98,10 +122,10 @@ export function CalendarGrid() {
   }, [preview]);
 
   useLayoutEffect(() => {
-    scheduleRepaintTimegridOverlapLayout(rootRef.current, blocks);
-  }, [blocks]);
+    scheduleRepaintTimegridOverlapLayout(rootRef.current, blocks, mode);
+  }, [blocks, mode]);
 
-  const dayCount = DAY_COUNT[viewId] ?? 7;
+  const dayCountForGrid = dayCount;
 
   function openFullEditor(fields: DraftFields) {
     openComposer({
@@ -133,7 +157,8 @@ export function CalendarGrid() {
       ref={rootRef}
       className="todex-calendar flex min-h-0 flex-1 flex-col"
       data-draft-kind={draft?.kind}
-      style={{ ["--todex-day-count" as string]: String(dayCount) }}
+      data-calendar-mode={mode}
+      style={{ ["--todex-day-count" as string]: String(dayCountForGrid) }}
     >
       <CalendarToolbar
         rangeFrom={range.from}
@@ -147,7 +172,7 @@ export function CalendarGrid() {
         <FullCalendar
           ref={calendarRef}
           plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
-          initialView="timeGridRollingWeek"
+          initialView={CALENDAR_VIEW_BY_DAY_COUNT[dayCount] ?? "timeGridRollingWeek"}
           headerToolbar={false}
           height="100%"
           nowIndicator
@@ -159,7 +184,7 @@ export function CalendarGrid() {
           editable
           eventResizableFromStart
           eventDurationEditable
-          slotEventOverlap
+          slotEventOverlap={false}
           firstDay={1}
           slotDuration="00:30:00"
           snapDuration="00:15:00"
@@ -180,21 +205,21 @@ export function CalendarGrid() {
             start: block.start,
             end: block.end,
             allDay: block.allDay,
-            backgroundColor: blockColor(block.kind, block.color),
+            backgroundColor: "transparent",
             borderColor: "transparent",
+            textColor: "var(--foreground)",
             editable: !block.readOnly,
             classNames: chipClassNames(block),
             extendedProps: block,
           }))}
           dayHeaderContent={(arg) => (
-            <DayHeader date={arg.date} isToday={arg.isToday} />
+            <DayHeader date={arg.date} isToday={arg.isToday} mode={mode} />
           )}
           nowIndicatorContent={(arg) =>
             arg.isAxis ? <span className="todex-now-pill">{formatClock(arg.date, false)}</span> : null
           }
-          eventContent={(arg) => <CalendarChip arg={arg} hour12={false} />}
+          eventContent={(arg) => <CalendarChip arg={arg} />}
           datesSet={(arg) => {
-            setViewId(arg.view.type);
             rememberRange(arg, setRange);
             const axis = rootRef.current?.querySelector(
               ".fc-col-header .fc-timegrid-axis",
@@ -235,6 +260,11 @@ export function CalendarGrid() {
           eventClick={(arg) => {
             const block = arg.event.extendedProps as CalendarBlock;
             calendarRef.current?.getApi().unselect();
+            if (block.kind === "session" && block.sessionId) {
+              setPreview(null);
+              openSession(block.sessionId);
+              return;
+            }
             if (block.kind === "task") {
               setPreview(null);
               openBlock(arg, openEvent, openTask);
@@ -257,10 +287,11 @@ export function CalendarGrid() {
             });
           }}
           eventsSet={() => {
-            scheduleRepaintTimegridOverlapLayout(rootRef.current, blocksRef.current);
+            scheduleRepaintTimegridOverlapLayout(rootRef.current, blocksRef.current, modeRef.current);
           }}
-          eventDidMount={() => {
-            scheduleRepaintTimegridOverlapLayout(rootRef.current, blocksRef.current);
+          eventDidMount={(arg) => {
+            stampHarnessEvent(arg.el, arg.event.id);
+            scheduleRepaintTimegridOverlapLayout(rootRef.current, blocksRef.current, modeRef.current);
           }}
           eventDrop={(arg) => {
             void moveBlock(arg, updateEvent, updateTask);
@@ -281,13 +312,15 @@ export function CalendarGrid() {
               return;
             }
             if (!templateId) return;
+            const duration = end.getTime() - start.getTime();
+            if (!arg.event.allDay && duration < 15 * 60 * 1000) return;
             void createEvent({
               title,
               start: start.toISOString(),
               end: end.toISOString(),
               allDay: arg.event.allDay,
               timeZone,
-              color: (arg.event.extendedProps.color as string | null | undefined) ?? null,
+              spaceId: (arg.event.extendedProps.spaceId as string | null | undefined) ?? null,
               description:
                 (arg.event.extendedProps.description as string | undefined) ?? "",
               taskScope:
@@ -377,37 +410,68 @@ export function CalendarGrid() {
   );
 }
 
-function DayHeader({ date, isToday }: { date: Date; isToday: boolean }) {
+function DayHeader({
+  date,
+  isToday,
+  mode,
+}: {
+  date: Date;
+  isToday: boolean;
+  mode: "planned" | "actual" | "both";
+}) {
   const weekday = date.toLocaleDateString(undefined, { weekday: "short" });
   return (
-    <span className="inline-flex items-center gap-1 text-[11px] font-semibold tabular-nums">
-      <span className="font-medium text-muted-foreground">{weekday}</span>
-      <span className={isToday ? "text-foreground" : undefined}>{date.getDate()}</span>
+    <span className="flex w-full flex-col items-stretch gap-1">
+      <span className="flex w-full justify-center">
+        <span
+          className={
+            isToday
+              ? "todex-day-pill inline-flex items-center gap-1 rounded-full px-2 py-0.5"
+              : "inline-flex items-center gap-1 text-muted-foreground"
+          }
+        >
+          <span className="font-medium">{weekday}</span>
+          <span>{date.getDate()}</span>
+        </span>
+      </span>
+      {mode === "both" ? (
+        <span className="relative grid w-full grid-cols-2 text-[10px] font-medium text-muted-foreground">
+          <span
+            aria-hidden
+            className="pointer-events-none absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-border"
+          />
+          <span className="text-center">Planned</span>
+          <span className="text-center">Actual</span>
+        </span>
+      ) : null}
     </span>
   );
 }
 
-function CalendarChip({ arg, hour12 }: { arg: EventContentArg; hour12: boolean }) {
+function CalendarChip({ arg }: { arg: EventContentArg }) {
   const block = arg.event.extendedProps as CalendarBlock;
   const start = arg.event.start;
   const end = arg.event.end;
   const time =
-    !arg.event.allDay && start && end ? formatRange(start, end, hour12) : null;
-  const Icon = block.kind === "task" ? TasksIcon : CalendarIcon;
+    !arg.event.allDay && start && end ? formatChipRange(start, end) : null;
+  const Icon = block.kind === "event" ? CalendarIcon : TasksIcon;
   return (
     <div
       className="fc-event-main-frame todex-cal-event-inner"
+      style={{ ["--todex-block-color" as string]: block.color }}
       {...overlapStamp(block)}
     >
-      <Icon size={11} className="todex-cal-secondary mt-px shrink-0" />
-      <span className="todex-cal-title text-[10px] font-medium leading-tight">
-        {arg.event.title}
-      </span>
-      {time ? (
-        <span className="todex-cal-secondary text-[9px] tabular-nums leading-tight">
-          {time}
+      <Icon size={11} className="todex-cal-secondary mt-0.5 shrink-0" />
+      <span className="flex min-w-0 flex-1 flex-col">
+        <span className="todex-cal-title text-[10px] font-medium leading-tight">
+          {arg.event.title}
         </span>
-      ) : null}
+        {time ? (
+          <span className="todex-cal-time todex-cal-secondary text-[9px] tabular-nums leading-tight">
+            {time}
+          </span>
+        ) : null}
+      </span>
     </div>
   );
 }
@@ -452,6 +516,10 @@ async function moveBlock(
   const start = arg.event.start;
   const end = arg.event.end;
   if (!start || !end) return arg.revert();
+  if (!arg.event.allDay && end.getTime() - start.getTime() < 15 * 60 * 1000) {
+    arg.revert();
+    return;
+  }
   try {
     if (block.kind === "task" && block.taskId) {
       await updateTask(block.taskId, { scheduleDate: start.toISOString() });
@@ -489,6 +557,10 @@ async function resizeBlock(
   const start = arg.event.start;
   const end = arg.event.end;
   if (!start || !end) return arg.revert();
+  if (!arg.event.allDay && end.getTime() - start.getTime() < 15 * 60 * 1000) {
+    arg.revert();
+    return;
+  }
   try {
     if (block.kind === "task" && block.taskId) {
       const minutes = Math.max(
@@ -528,10 +600,6 @@ function formatClock(date: Date, hour12: boolean) {
     minute: "2-digit",
     hour12,
   }).format(date);
-}
-
-function formatRange(start: Date, end: Date, hour12: boolean) {
-  return `${formatClock(start, hour12)}–${formatClock(end, hour12)}`;
 }
 
 function shortZoneName() {
@@ -596,11 +664,10 @@ function clamp(value: number, min: number, max: number) {
 }
 
 function chipClassNames(block: CalendarBlock) {
-  const fill = blockColor(block.kind, block.color);
   return [
     "todex-cal-chip",
     block.kind === "task" ? "todex-cal-task" : "",
-    fillIsLight(fill) ? "todex-cal-light" : "",
+    block.kind === "session" ? "todex-cal-session" : "",
     block.rsvpStatus === "no" ? "todex-cal-rsvp-no" : "",
     block.rsvpStatus === "maybe" ? "todex-cal-rsvp-maybe" : "",
   ].filter(Boolean);
@@ -619,20 +686,22 @@ function scrollTime(): string {
   return `${String(hour).padStart(2, "0")}:00:00`;
 }
 
-const DAY_COUNT: Record<string, number> = {
-  timeGridDay: 1,
-  timeGridTwoDay: 2,
-  timeGridThreeDay: 3,
-  timeGridFourDay: 4,
-  timeGridFiveDay: 5,
-  timeGridRollingWeek: 7,
+const CALENDAR_VIEW_BY_DAY_COUNT: Record<number, string> = {
+  1: "timeGridDay",
+  2: "timeGridTwoDay",
+  3: "timeGridThreeDay",
+  4: "timeGridFourDay",
+  5: "timeGridFiveDay",
+  6: "timeGridSixDay",
+  7: "timeGridRollingWeek",
 };
 
 const CALENDAR_VIEWS = {
-  timeGridTwoDay: { type: "timeGrid", duration: { days: 2 } },
-  timeGridThreeDay: { type: "timeGrid", duration: { days: 3 } },
-  timeGridFourDay: { type: "timeGrid", duration: { days: 4 } },
-  timeGridFiveDay: { type: "timeGrid", duration: { days: 5 } },
+  timeGridTwoDay: { type: "timeGrid", duration: { days: 2 }, dateAlignment: "day" },
+  timeGridThreeDay: { type: "timeGrid", duration: { days: 3 }, dateAlignment: "day" },
+  timeGridFourDay: { type: "timeGrid", duration: { days: 4 }, dateAlignment: "day" },
+  timeGridFiveDay: { type: "timeGrid", duration: { days: 5 }, dateAlignment: "day" },
+  timeGridSixDay: { type: "timeGrid", duration: { days: 6 }, dateAlignment: "day" },
   timeGridRollingWeek: {
     type: "timeGrid",
     duration: { days: 7 },

@@ -14,6 +14,7 @@ import {
   EnqueueExecutionBodySchema,
   ExecuteTaskBodySchema,
   ExecutionActivityQuerySchema,
+  ExecutionCalendarQuerySchema,
   FocusExecutionTaskBodySchema,
   ReorderExecutionQueueBodySchema,
   UpdateExecutionSessionBodySchema,
@@ -22,6 +23,7 @@ import type {
   EnqueueExecutionBody,
   ExecuteTaskBody,
   ExecutionActivityQuery,
+  ExecutionCalendarQuery,
   FocusExecutionTaskBody,
   ReorderExecutionQueueBody,
   UpdateExecutionSessionBody,
@@ -60,6 +62,14 @@ export class ExecutionController {
     @Query(zodPipe(ExecutionActivityQuerySchema)) query: ExecutionActivityQuery,
   ) {
     return this.executionService.activity(request.workspaceId, query);
+  }
+
+  @Get("calendar")
+  async calendar(
+    @Req() request: WorkspaceRequest,
+    @Query(zodPipe(ExecutionCalendarQuerySchema)) query: ExecutionCalendarQuery,
+  ) {
+    return this.executionService.calendar(request.workspaceId, query);
   }
 
   @Patch("sessions/:sessionId")

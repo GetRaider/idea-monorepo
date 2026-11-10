@@ -145,6 +145,7 @@ export const spaces = pgTable(
     isInbox: boolean("is_inbox").notNull().default(false),
     name: text("name").notNull(),
     emoji: text("emoji"),
+    color: text("color").notNull().default("#B8A4D1"),
     createdAt: timestamp("created_at")
       .$defaultFn(() => new Date())
       .notNull(),
@@ -293,7 +294,6 @@ export const tasks = pgTable(
     dueDate: timestamp("due_date"),
     scheduleDate: timestamp("schedule_date"),
     estimation: integer("estimation").notNull(),
-    color: text("color"),
     acceptanceCriteria: jsonb("acceptance_criteria")
       .$type<TaskAcceptanceCriterion[]>()
       .notNull()
@@ -468,7 +468,6 @@ export const calendarEvents = pgTable(
     start: timestamp("start").notNull(),
     end: timestamp("end").notNull(),
     allDay: boolean("all_day").notNull().default(false),
-    color: text("color"),
     timeZone: text("time_zone").notNull(),
     recurrence: jsonb("recurrence").$type<TaskRecurrence | null>(),
     rawRrule: text("raw_rrule"),
@@ -522,7 +521,6 @@ export const calendarEventTemplates = pgTable("calendar_event_templates", {
   }),
   title: text("title").notNull(),
   durationMinutes: integer("duration_minutes").notNull(),
-  color: text("color"),
   description: text("description").notNull().default(""),
   taskScope: jsonb("task_scope")
     .$type<string[]>()
@@ -574,6 +572,10 @@ export const executionSessions = pgTable(
     workspaceId: text("workspace_id")
       .notNull()
       .references(() => workspaces.id, { onDelete: "cascade" }),
+    spaceId: text("space_id")
+      .notNull()
+      .references(() => spaces.id, { onDelete: "restrict" }),
+    title: text("title"),
     startedAt: timestamp("started_at").notNull(),
     endedAt: timestamp("ended_at"),
     duration: integer("duration"),
@@ -593,6 +595,11 @@ export const executionSessions = pgTable(
       .where(sql`${table.endedAt} is null`),
     index("execution_sessions_workspace_started_idx").on(
       table.workspaceId,
+      table.startedAt,
+    ),
+    index("execution_sessions_workspace_space_started_idx").on(
+      table.workspaceId,
+      table.spaceId,
       table.startedAt,
     ),
   ],

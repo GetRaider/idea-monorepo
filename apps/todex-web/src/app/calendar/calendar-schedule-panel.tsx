@@ -1,14 +1,12 @@
 "use client";
 
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useState } from "react";
 import { Draggable } from "@fullcalendar/interaction";
 import { Button, cn } from "@repo/ui";
 import type { CalendarEventTemplate } from "@repo/api/todex";
 
 import { CloseIcon, PlusIcon } from "@components/icons";
 
-import { CalendarColorPicker } from "./calendar-color-picker";
-import { DEFAULT_EVENT_COLOR } from "./calendar-colors";
 import { useCalendar } from "./calendar-provider";
 
 export function CalendarSchedulePanel() {
@@ -20,7 +18,6 @@ export function CalendarSchedulePanel() {
   const [query, setQuery] = useState("");
   const [title, setTitle] = useState("");
   const [minutes, setMinutes] = useState("30");
-  const [color, setColor] = useState<string>(DEFAULT_EVENT_COLOR);
   const [composing, setComposing] = useState(false);
   const [spaceId, setSpaceId] = useState("");
   const needle = query.trim().toLowerCase();
@@ -56,8 +53,8 @@ export function CalendarSchedulePanel() {
           duration: { minutes: Number(element.dataset.duration) || 30 },
           extendedProps: {
             templateId: element.dataset.templateId,
-            color: element.dataset.color || null,
             description: element.dataset.description ?? "",
+            spaceId: element.dataset.spaceId || null,
             taskScope: (element.dataset.taskScope ?? "")
               .split(",")
               .filter((id) => id.length > 0),
@@ -134,24 +131,19 @@ export function CalendarSchedulePanel() {
               void createTemplate({
                 title: title.trim(),
                 durationMinutes,
-                color,
               }).then(() => {
                 setTitle("");
                 setMinutes("30");
-                setColor(DEFAULT_EVENT_COLOR);
                 setComposing(false);
               });
             }}
           >
-            <div className="flex items-center gap-2">
-              <CalendarColorPicker color={color} onChange={setColor} />
-              <input
+            <input
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
                 placeholder="Reusable event"
                 className="min-w-0 flex-1 rounded-md border border-border bg-transparent px-2 py-1.5 text-sm"
               />
-            </div>
             <div className="flex gap-2">
               <input
                 value={minutes}
@@ -170,6 +162,10 @@ export function CalendarSchedulePanel() {
               <BacklogRow
                 key={template.id}
                 template={template}
+                color={
+                  boards.find((board) => board.id === template.spaceId)?.color ??
+                  "#7c7c86"
+                }
                 onSave={(body) => updateTemplate(template.id, body)}
                 onDelete={() => removeTemplate(template.id)}
               />
@@ -249,28 +245,28 @@ function TabButton({
 
 function BacklogRow({
   template,
+  color,
   onSave,
   onDelete,
 }: {
   template: CalendarEventTemplate;
+  color: string;
   onSave: (body: {
     title: string;
     durationMinutes: number;
-    color: string;
   }) => Promise<unknown>;
   onDelete: () => Promise<unknown>;
 }) {
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(template.title);
   const [minutes, setMinutes] = useState(String(template.durationMinutes));
-  const [color, setColor] = useState(template.color ?? DEFAULT_EVENT_COLOR);
 
   return (
     <div
       data-template-id={template.id}
       data-title={template.title}
       data-duration={template.durationMinutes}
-      data-color={template.color ?? ""}
+      data-space-id={template.spaceId ?? ""}
       data-description={template.description}
       data-task-scope={template.taskScope.join(",")}
       className="rounded-lg border border-border px-2 py-1.5 text-sm"
@@ -282,20 +278,17 @@ function BacklogRow({
             event.preventDefault();
             const durationMinutes = Number(minutes);
             if (!title.trim() || !Number.isFinite(durationMinutes)) return;
-            void onSave({ title: title.trim(), durationMinutes, color }).then(() =>
+            void onSave({ title: title.trim(), durationMinutes }).then(() =>
               setEditing(false),
             );
           }}
         >
-          <div className="flex items-center gap-2">
-            <CalendarColorPicker color={color} onChange={setColor} />
             <input
               value={title}
               aria-label="Template title"
               onChange={(event) => setTitle(event.target.value)}
               className="min-w-0 flex-1 rounded-md border border-border bg-transparent px-2 py-1 text-sm"
             />
-          </div>
           <div className="flex gap-2">
             <input
               value={minutes}
@@ -319,8 +312,8 @@ function BacklogRow({
       ) : (
         <div className="group flex cursor-grab items-center gap-2 active:cursor-grabbing">
           <span
-            className="h-2.5 w-2.5 shrink-0 rounded-full bg-[var(--swatch)]"
-            style={{ "--swatch": template.color ?? DEFAULT_EVENT_COLOR } as CSSProperties}
+            className="h-2.5 w-2.5 shrink-0 rounded-full bg-[var(--todex-swatch)]"
+            style={{ ["--todex-swatch" as string]: color }}
           />
           <span className="min-w-0 flex-1 truncate">{template.title}</span>
           <button

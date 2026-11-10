@@ -6,14 +6,12 @@ import { Button, cn } from "@repo/ui";
 
 import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
 
-import { CalendarColorPicker } from "./calendar-color-picker";
-import { DEFAULT_TASK_COLOR } from "./calendar-colors";
 import { useCalendar } from "./calendar-provider";
 
 export function CalendarTaskView() {
   const {
     state: { selectedEvent, selectedTaskId, selectedTask, tasks, boards },
-    actions: { closeTask, openTask, updateTask },
+    actions: { closeTask, openTask },
   } = useCalendar();
   const router = useRouter();
   const [spaceId, setSpaceId] = useState("");
@@ -81,13 +79,7 @@ export function CalendarTaskView() {
         </ul>
         {selectedTask ? (
           <>
-            <div className="flex items-center gap-2">
-              <CalendarColorPicker
-                color={selectedTask.color ?? DEFAULT_TASK_COLOR}
-                onChange={(color) => void updateTask(selectedTask.id, { color })}
-              />
-              <h2 className="text-lg font-medium">{selectedTask.summary}</h2>
-            </div>
+            <h2 className="text-lg font-medium">{selectedTask.summary}</h2>
             <p className="text-sm text-muted-foreground">
               {selectedTask.taskKey}
               {board && selectedTask.spaceId === board.id ? ` · ${board.name}` : ""}

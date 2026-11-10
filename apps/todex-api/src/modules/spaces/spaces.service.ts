@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Inject,
   Injectable,
@@ -9,6 +10,7 @@ import { randomUUID } from "crypto";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import {
   DEFAULT_SECTION_NAME,
+  DEFAULT_SPACE_COLOR,
   DocType,
   PROGRESS_STAGE_TEMPLATES,
   RelationEntityType,
@@ -29,6 +31,7 @@ import {
   docFolders,
   docs,
   epics,
+  executionSessions,
   spaceSections,
   spaceProgressStages,
   spaces,
@@ -96,7 +99,8 @@ export class SpacesService {
 
   async deletionPreview(workspaceId: string, spaceId: string) {
     const space = await this.requireInWorkspace(workspaceId, spaceId);
-    const [taskCount, epicCount, docRows, folderCount] = await Promise.all([
+    const [taskCount, epicCount, docRows, folderCount, sessionCount] =
+      await Promise.all([
       this.countWhere(tasks, eq(tasks.spaceId, space.id)),
       this.countWhere(epics, eq(epics.spaceId, space.id)),
       this.db
@@ -105,6 +109,10 @@ export class SpacesService {
         .where(eq(docs.spaceId, space.id))
         .groupBy(docs.type),
       this.countWhere(docFolders, eq(docFolders.spaceId, space.id)),
+      this.countWhere(
+        executionSessions,
+        eq(executionSessions.spaceId, space.id),
+      ),
     ]);
     const goals =
       docRows.find((row) => row.type === DocType.GOAL)?.total ?? 0;
@@ -116,6 +124,7 @@ export class SpacesService {
       documents,
       epics: epicCount,
       docFolders: folderCount,
+      sessionCount,
     };
   }
 
@@ -143,6 +152,7 @@ export class SpacesService {
           isInbox,
           name: body.name,
           emoji: body.emoji ?? null,
+          color: body.color ?? DEFAULT_SPACE_COLOR,
           createdAt: now,
           updatedAt: now,
         })
@@ -181,6 +191,7 @@ export class SpacesService {
           ? { spaceFolderId: body.folderId }
           : {}),
         ...(body.emoji !== undefined ? { emoji: body.emoji } : {}),
+        ...(body.color !== undefined ? { color: body.color } : {}),
         updatedAt: new Date(),
       })
       .where(eq(spaces.id, existing.id))
@@ -194,6 +205,15 @@ export class SpacesService {
     const existing = await this.requireInWorkspace(workspaceId, spaceId);
     if (existing.isInbox) {
       throw new BadRequestException("The system Inbox cannot be deleted");
+    }
+    const sessionCount = await this.countWhere(
+      executionSessions,
+      eq(executionSessions.spaceId, existing.id),
+    );
+    if (sessionCount > 0) {
+      throw new ConflictException(
+        "Finish or delete the executions in this space first",
+      );
     }
     const [taskRows, epicRows, docRows, folderRows] = await Promise.all([
       this.db
@@ -419,7 +439,7 @@ export class SpacesService {
   }
 
   private async countWhere(
-    table: typeof tasks | typeof epics | typeof docFolders,
+    table: typeof tasks | typeof epics | typeof docFolders | typeof executionSessions,
     where: ReturnType<typeof eq>,
   ) {
     const [row] = await this.db

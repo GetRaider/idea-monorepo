@@ -22,9 +22,11 @@ import {
   SelectValue,
 } from "@repo/ui";
 import type { Space, SpaceFolder } from "@repo/api/todex";
+import { DEFAULT_SPACE_COLOR } from "@repo/api/todex";
 
 import { todexClient } from "@lib/todex-client";
 
+import { SpaceColorPicker } from "./space-color-picker";
 import { useTasks } from "./tasks-provider";
 
 const SpaceDialogsContext = createContext<SpaceDialogsContextValue | null>(
@@ -78,11 +80,10 @@ function SpaceDialogsHost({ dialog, onClose }: SpaceDialogsHostProps) {
 
   if (dialog?.kind === "renameBoard") {
     return (
-      <NameDialog
-        title="Rename space"
-        initialName={dialog.board.name}
+      <RenameSpaceDialog
+        board={dialog.board}
         onClose={onClose}
-        onSubmit={(name) => updateBoard(dialog.board.id, { name })}
+        onSubmit={(body) => updateBoard(dialog.board.id, body)}
       />
     );
   }
@@ -149,7 +150,7 @@ function DeleteSpaceDialog({
   });
   const preview = previewQuery.data;
   const counts = preview
-    ? `${preview.tasks} tasks, ${preview.goals} goals, ${preview.documents} documents, ${preview.epics} epics, ${preview.docFolders} document folders`
+    ? `${preview.tasks} tasks, ${preview.goals} goals, ${preview.documents} documents, ${preview.epics} epics, ${preview.docFolders} document folders, ${preview.sessionCount} sessions`
     : "its tasks, goals, documents, epics, and document folders";
 
   return (
@@ -175,6 +176,7 @@ function CreateSpaceDialog({
   } = useTasks();
   const [kind, setKind] = useState<"board" | "folder">("board");
   const [name, setName] = useState("");
+  const [color, setColor] = useState<Space["color"]>(DEFAULT_SPACE_COLOR);
   const [folderId, setSpaceFolderId] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -186,7 +188,7 @@ function CreateSpaceDialog({
       if (kind === "folder") {
         await createFolder(name.trim());
       } else {
-        await createBoard(name.trim(), folderId || null);
+        await createBoard(name.trim(), folderId || null, color);
       }
       onClose();
     } finally {
@@ -217,12 +219,23 @@ function CreateSpaceDialog({
           </div>
         </Field>
         <Field label="Name">
-          <Input
-            autoFocus
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-          />
+          <div className="flex items-center gap-2">
+            <span
+              className="h-4 w-4 shrink-0 rounded-full bg-[var(--todex-swatch)]"
+              style={{ ["--todex-swatch" as string]: color }}
+            />
+            <Input
+              autoFocus
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+            />
+          </div>
         </Field>
+        {kind === "board" ? (
+          <Field label="Color">
+            <SpaceColorPicker value={color} onChange={setColor} />
+          </Field>
+        ) : null}
         {kind === "board" ? (
           <Field label="Folder">
             <Select
@@ -251,6 +264,59 @@ function CreateSpaceDialog({
           </Button>
           <Button type="submit" disabled={isSubmitting || !name.trim()}>
             Create
+          </Button>
+        </DialogActions>
+      </form>
+    </Dialog>
+  );
+}
+
+function RenameSpaceDialog({
+  board,
+  onClose,
+  onSubmit,
+}: {
+  board: Space;
+  onClose: () => void;
+  onSubmit: (body: { name: string; color: Space["color"] }) => Promise<Space>;
+}) {
+  const [name, setName] = useState(board.name);
+  const [color, setColor] = useState<Space["color"]>(board.color);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  return (
+    <Dialog title="Rename space" onClose={onClose}>
+      <form
+        className="space-y-4"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (!name.trim()) return;
+          setIsSubmitting(true);
+          void onSubmit({ name: name.trim(), color }).finally(() => {
+            setIsSubmitting(false);
+            onClose();
+          });
+        }}
+      >
+        <div className="flex items-center gap-2">
+          <span
+            className="h-4 w-4 shrink-0 rounded-full bg-[var(--todex-swatch)]"
+            style={{ ["--todex-swatch" as string]: color }}
+          />
+          <Input
+            autoFocus
+            aria-label="Name"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+          />
+        </div>
+        <SpaceColorPicker value={color} onChange={setColor} />
+        <DialogActions>
+          <Button type="button" variant="ghost" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={isSubmitting || !name.trim()}>
+            Save
           </Button>
         </DialogActions>
       </form>

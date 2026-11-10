@@ -23,6 +23,7 @@ import {
   EnqueueExecutionBodySchema,
   ExecuteTaskBodySchema,
   ExecutionActivitySchema,
+  ExecutionCalendarSchema,
   ExecutionCurrentSchema,
   ExecutionSessionSchema,
   ExecutionStateSchema,
@@ -420,6 +421,14 @@ export const todexClient = {
         "get",
         `/v1/execution/activity?${params}`,
         ExecutionActivitySchema,
+      );
+    },
+    calendar: (query: { from: string; to: string; timeZone: string }) => {
+      const params = new URLSearchParams(query);
+      return call(
+        "get",
+        `/v1/execution/calendar?${params}`,
+        ExecutionCalendarSchema,
       );
     },
     updateSession: (sessionId: string, body: unknown) =>

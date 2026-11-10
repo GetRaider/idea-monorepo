@@ -94,7 +94,6 @@ function task(overrides: Partial<Task>): Task {
     progressStageId: null,
     estimation: 30,
     actualTime: 0,
-    color: null,
     parentTaskId: null,
     epicId: null,
     goalId: null,

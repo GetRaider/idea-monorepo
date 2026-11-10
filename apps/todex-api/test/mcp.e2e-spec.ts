@@ -198,6 +198,7 @@ describe("MCP server (e2e)", () => {
     await database.insert(executionSessions).values({
       id: sessionId,
       workspaceId,
+      spaceId,
       startedAt: new Date("2026-10-28T10:00:00.000Z"),
       endedAt: new Date("2026-10-28T11:00:00.000Z"),
       duration: 3600,

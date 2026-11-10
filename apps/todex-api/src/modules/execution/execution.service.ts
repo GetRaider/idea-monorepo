@@ -26,7 +26,9 @@ import {
 } from "@repo/api/todex";
 import type {
   ExecutionActivityQuery,
+  ExecutionCalendarQuery,
   ExecutionCurrent,
+  ExecutionInterval,
   ExecutionQueueTask,
   ExecutionTaskRef,
   UpdateExecutionSessionBody,
@@ -54,6 +56,10 @@ import type {
   TaskRow,
 } from "../../db/schema";
 import { DRIZZLE_DB } from "../../db/tokens";
+import {
+  assertOneSpace,
+  lockWorkspaceTasks,
+} from "../calendar/calendar-scope";
 import {
   allocateSessionSpans,
   buildExecutionActivity,
@@ -141,7 +147,21 @@ export class ExecutionService {
     }
     const now = new Date();
     await this.db.transaction(async (tx) => {
-      const open = await this.openRow(tx, workspaceId);
+      const locked = await lockWorkspaceTasks(tx, workspaceId, taskIds);
+      if (locked.length !== taskIds.length) {
+        throw new NotFoundException("Task");
+      }
+      const spaceId = assertOneSpace(locked);
+      const [open] = await tx
+        .select({ id: executionSessions.id })
+        .from(executionSessions)
+        .where(
+          and(
+            eq(executionSessions.workspaceId, workspaceId),
+            isNull(executionSessions.endedAt),
+          ),
+        )
+        .for("update");
       if (open) {
         throw new BadRequestException("An execution is already running");
       }
@@ -149,12 +169,13 @@ export class ExecutionService {
       await tx.insert(executionSessions).values({
         id: sessionId,
         workspaceId,
+        spaceId,
+        title: null,
         startedAt: now,
         executorType: "human",
         createdAt: now,
         updatedAt: now,
       });
-      await this.requireTasks(tx, workspaceId, taskIds);
       await tx.insert(executionSessionTasks).values(
         taskIds.map((taskId, index) => ({
           id: randomUUID(),
@@ -337,7 +358,7 @@ export class ExecutionService {
       .select({
         sessionId: executionSessions.id,
         intervals: executionSessionTasks.intervals,
-        spaceId: tasks.spaceId,
+        spaceId: executionSessions.spaceId,
         spaceName: spaces.name,
         sectionId: tasks.sectionId,
         sectionName: spaceSections.name,
@@ -349,7 +370,7 @@ export class ExecutionService {
         eq(executionSessionTasks.sessionId, executionSessions.id),
       )
       .innerJoin(tasks, eq(tasks.id, executionSessionTasks.taskId))
-      .innerJoin(spaces, eq(spaces.id, tasks.spaceId))
+      .innerJoin(spaces, eq(spaces.id, executionSessions.spaceId))
       .innerJoin(spaceSections, eq(spaceSections.id, tasks.sectionId))
       .where(
         and(
@@ -375,11 +396,93 @@ export class ExecutionService {
     }
   }
 
+  async calendar(workspaceId: string, query: ExecutionCalendarQuery) {
+    const from = new Date(query.from);
+    const to = new Date(query.to);
+    const rows = await this.db
+      .select({
+        id: executionSessions.id,
+        spaceId: executionSessions.spaceId,
+        title: executionSessions.title,
+        spaceName: spaces.name,
+        color: spaces.color,
+      })
+      .from(executionSessions)
+      .innerJoin(spaces, eq(spaces.id, executionSessions.spaceId))
+      .where(
+        and(
+          eq(executionSessions.workspaceId, workspaceId),
+          lt(executionSessions.startedAt, to),
+          or(
+            isNull(executionSessions.endedAt),
+            gt(executionSessions.endedAt, from),
+          ),
+        ),
+      );
+    if (rows.length === 0) return { sessions: [] };
+    const links = await this.db
+      .select({
+        sessionId: executionSessionTasks.sessionId,
+        taskId: executionSessionTasks.taskId,
+        position: executionSessionTasks.position,
+        intervals: executionSessionTasks.intervals,
+        taskKey: tasks.taskKey,
+        summary: tasks.summary,
+      })
+      .from(executionSessionTasks)
+      .innerJoin(tasks, eq(tasks.id, executionSessionTasks.taskId))
+      .where(
+        inArray(
+          executionSessionTasks.sessionId,
+          rows.map((row) => row.id),
+        ),
+      )
+      .orderBy(asc(executionSessionTasks.position));
+    const sessions = rows.flatMap((row) => {
+      const sessionLinks = links.filter((link) => link.sessionId === row.id);
+      const slices = sessionLinks
+        .flatMap((link) => link.intervals ?? [])
+        .sort((left, right) => left.startedAt.localeCompare(right.startedAt));
+      if (!intervalsOverlapRange(slices, from, to)) return [];
+      return [
+        {
+          id: row.id,
+          spaceId: row.spaceId,
+          spaceName: row.spaceName,
+          color: row.color,
+          title: row.title,
+          tasks: sessionLinks.map((link) => ({
+            id: link.taskId,
+            taskKey: link.taskKey,
+            summary: link.summary,
+            position: link.position,
+          })),
+          slices,
+        },
+      ];
+    });
+    return { sessions };
+  }
+
   async updateSession(
     workspaceId: string,
     sessionId: string,
     body: UpdateExecutionSessionBody,
   ) {
+    if (isTitleOnlySessionUpdate(body) && body.title !== undefined) {
+      const title = normalizeSessionTitle(body.title);
+      await this.db.transaction(async (tx) => {
+        const row = await this.sessionRow(tx, workspaceId, sessionId);
+        await tx
+          .update(executionSessions)
+          .set({ title, updatedAt: new Date() })
+          .where(eq(executionSessions.id, row.id));
+      });
+      return this.sessions(workspaceId);
+    }
+    if (!body.startedAt || !body.endedAt) {
+      throw new BadRequestException("startedAt and endedAt are both required");
+    }
     const started = new Date(body.startedAt);
     const ended = new Date(body.endedAt);
     const duration = Math.floor((ended.getTime() - started.getTime()) / 1000);
@@ -420,6 +523,9 @@ export class ExecutionService {
           startedAt: started,
           endedAt: ended,
           duration,
+          ...(body.title !== undefined
+            ? { title: normalizeSessionTitle(body.title) }
+            : {}),
           updatedAt: new Date(),
         })
         .where(eq(executionSessions.id, row.id));
@@ -436,20 +542,6 @@ export class ExecutionService {
       .delete(executionSessions)
       .where(eq(executionSessions.id, row.id));
     return { ok: true as const };
-  }
-
-  private async requireTasks(
-    tx: ExecutionDb,
-    workspaceId: string,
-    taskIds: string[],
-  ) {
-    const selected = await tx
-      .select({ id: tasks.id })
-      .from(tasks)
-      .where(
-        and(eq(tasks.workspaceId, workspaceId), inArray(tasks.id, taskIds)),
-      );
-    if (selected.length !== taskIds.length) throw new NotFoundException("Task");
   }
 
   private async sessionRow(
@@ -645,6 +737,13 @@ export class ExecutionService {
     if (uniqueIds.length !== taskIds.length) {
       throw new BadRequestException("Duplicate task");
     }
+    await this.db.transaction(async (tx) => {
+      const locked = await lockWorkspaceTasks(tx, workspaceId, taskIds);
+      if (locked.length !== taskIds.length) {
+        throw new NotFoundException("Task");
+      }
+      assertOneSpace(locked);
+    });
     const details: ExecutionCurrent[] = [];
     for (const taskId of taskIds) {
       const detail = await this.taskDetail(this.db, workspaceId, taskId, []);
@@ -869,3 +968,30 @@ type ExecutionDb = Pick<
   NodePgDatabase,
   "select" | "insert" | "update" | "delete"
 >;
+
+export function isTitleOnlySessionUpdate(body: UpdateExecutionSessionBody) {
+  return (
+    body.title !== undefined && body.startedAt == null && body.endedAt == null
+  );
+}
+
+export function normalizeSessionTitle(title: string) {
+  const trimmed = title.trim();
+  return trimmed.length === 0 ? null : trimmed;
+}
+
+export function intervalsOverlapRange(
+  intervals: ExecutionInterval[],
+  from: Date,
+  to: Date,
+) {
+  const fromMs = from.getTime();
+  const toMs = to.getTime();
+  return intervals.some((interval) => {
+    const started = Date.parse(interval.startedAt);
+    if (!Number.isFinite(started) || started >= toMs) return false;
+    if (interval.endedAt == null) return true;
+    const ended = Date.parse(interval.endedAt);
+    return Number.isFinite(ended) && ended > fromMs;
+  });
+}

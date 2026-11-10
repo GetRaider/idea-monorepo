@@ -266,10 +266,12 @@ export function TasksProvider({ children }: { children: ReactNode }) {
       name: string;
       folderId: string | null;
       quiet?: boolean;
+      color?: string;
     }) =>
       todexClient.spaces.create({
         name: input.name,
         folderId: input.folderId,
+        ...(input.color ? { color: input.color as Space["color"] } : {}),
       }),
     onSuccess: (board, input) => {
       queryClient.setQueryData<Space[]>(["boards"], (current) =>
@@ -577,8 +579,8 @@ export function TasksProvider({ children }: { children: ReactNode }) {
       removeFolder: async (folderId) => {
         await removeFolder.mutateAsync(folderId);
       },
-      createBoard: (name, folderId) =>
-        createBoard.mutateAsync({ name, folderId }),
+      createBoard: (name, folderId, color) =>
+        createBoard.mutateAsync({ name, folderId, color }),
       updateBoard: (spaceId, body) =>
         updateBoard.mutateAsync({ spaceId, body }),
       removeBoard: async (spaceId) => {
@@ -739,7 +741,11 @@ interface TasksContextValue {
       body: UpdateSpaceFolderBody,
     ) => Promise<SpaceFolder>;
     removeFolder: (folderId: string) => Promise<void>;
-    createBoard: (name: string, folderId: string | null) => Promise<Space>;
+    createBoard: (
+      name: string,
+      folderId: string | null,
+      color?: string,
+    ) => Promise<Space>;
     updateBoard: (spaceId: string, body: UpdateSpaceBody) => Promise<Space>;
     removeBoard: (spaceId: string) => Promise<void>;
     createTask: (

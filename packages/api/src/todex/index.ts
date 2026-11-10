@@ -105,6 +105,12 @@ export type {
   UpdateSpaceBody,
 } from "./space.ts";
 export {
+  DEFAULT_SPACE_COLOR,
+  SPACE_COLORS,
+  SpaceColorSchema,
+} from "./space-colors.ts";
+export type { SpaceColor } from "./space-colors.ts";
+export {
   CreateEpicBodySchema,
   EpicDetailSchema,
   EpicSchema,
@@ -209,6 +215,8 @@ export {
   ExecuteTaskBodySchema,
   ExecutionActivityQuerySchema,
   ExecutionActivitySchema,
+  ExecutionCalendarQuerySchema,
+  ExecutionCalendarSchema,
   ExecutionCurrentSchema,
   ExecutionExecutorTypeSchema,
   ExecutionIntervalSchema,
@@ -227,6 +235,8 @@ export type {
   ExecuteTaskBody,
   ExecutionActivity,
   ExecutionActivityQuery,
+  ExecutionCalendar,
+  ExecutionCalendarQuery,
   ExecutionCurrent,
   ExecutionExecutorType,
   ExecutionInterval,

@@ -13,6 +13,12 @@ import { NewButton } from "@components/new-button";
 import { useCalendar } from "./calendar-provider";
 
 const WEEK_LETTERS = ["M", "T", "W", "T", "F", "S", "S"] as const;
+const DAY_OPTIONS = [1, 2, 3, 4, 5, 6, 7] as const;
+const MODES = [
+  { id: "planned", label: "Planned" },
+  { id: "actual", label: "Actual" },
+  { id: "both", label: "Both" },
+] as const;
 
 export function CalendarToolbar({
   rangeFrom,
@@ -30,11 +36,12 @@ export function CalendarToolbar({
   onNew: () => void;
 }) {
   const {
-    state: { visibility, scheduleOpen },
-    actions: { focusDay, setVisibility, setScheduleOpen },
+    state: { visibility, scheduleOpen, mode, dayCount },
+    actions: { focusDay, setVisibility, setScheduleOpen, setMode, setDayCount },
   } = useCalendar();
   const [dateOpen, setDateOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [daysOpen, setDaysOpen] = useState(false);
   const anchor = new Date(rangeFrom);
   const [pickerMonth, setPickerMonth] = useState(() => monthStart(anchor));
 
@@ -76,6 +83,61 @@ export function CalendarToolbar({
         </PopoverContent>
       </Popover>
       <div className="ml-auto flex flex-wrap items-center gap-1.5">
+        <div className="inline-flex h-8 overflow-hidden rounded-lg border border-border">
+          {MODES.map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              aria-pressed={mode === option.id}
+              className={cn(
+                "px-2.5 text-sm",
+                mode === option.id ? "bg-accent text-foreground" : "bg-surface text-muted-foreground",
+              )}
+              onClick={() => setMode(option.id)}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+        <Popover open={daysOpen} onOpenChange={setDaysOpen}>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              className="inline-flex h-8 items-center gap-1 rounded-lg border border-border bg-surface px-2.5 text-sm"
+              aria-label="Days"
+            >
+              {dayCount} {dayCount === 1 ? "day" : "days"}
+              <ChevronIcon size={14} className="text-muted-foreground" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-36 p-1">
+            <ul className="flex flex-col">
+              {DAY_OPTIONS.map((count) => {
+                const disabled = mode === "both" && count > 2;
+                return (
+                  <li key={count}>
+                    <button
+                      type="button"
+                      disabled={disabled}
+                      className={cn(
+                        "flex h-8 w-full items-center gap-2 rounded-md px-2 text-sm",
+                        count === dayCount && "bg-accent",
+                        disabled && "cursor-not-allowed text-muted-foreground",
+                      )}
+                      onClick={() => {
+                        setDayCount(count);
+                        setDaysOpen(false);
+                      }}
+                    >
+                      <span className="w-3 text-xs">{count === dayCount ? "✓" : ""}</span>
+                      {count} {count === 1 ? "day" : "days"}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </PopoverContent>
+        </Popover>
         <ToolbarButton label="Previous" onClick={onPrevious}>
           <ChevronIcon size={14} className="rotate-180" />
         </ToolbarButton>
@@ -89,7 +151,8 @@ export function CalendarToolbar({
           <PopoverTrigger asChild>
             <button
               type="button"
-              className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 text-sm"
+              disabled={mode === "actual"}
+              className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
               aria-expanded={filtersOpen}
             >
               <SlidersIcon size={14} />

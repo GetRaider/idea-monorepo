@@ -1,10 +1,9 @@
 import {
-  BadRequestException,
   Inject,
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { randomUUID } from "crypto";
 import type {
@@ -13,8 +12,12 @@ import type {
 } from "@repo/api/todex";
 
 import { mapCalendarEventTemplate } from "../../db/mappers";
-import { calendarEventTemplates, spaces, tasks } from "../../db/schema";
+import { calendarEventTemplates, spaces } from "../../db/schema";
 import { DRIZZLE_DB } from "../../db/tokens";
+import {
+  assertTaskScope,
+  lockWorkspaceTasks,
+} from "./calendar-scope";
 
 @Injectable()
 export class CalendarTemplatesService {
@@ -30,24 +33,31 @@ export class CalendarTemplatesService {
   }
 
   async create(workspaceId: string, body: CreateCalendarEventTemplateBody) {
-    await this.requireTasks(workspaceId, body.taskScope ?? []);
     if (body.spaceId) await this.requireSpace(workspaceId, body.spaceId);
+    const taskScope = body.taskScope ?? [];
     const now = new Date();
-    const [created] = await this.db
-      .insert(calendarEventTemplates)
-      .values({
-        id: randomUUID(),
-        workspaceId,
-        title: body.title,
-        durationMinutes: body.durationMinutes,
-        color: body.color ?? null,
-        description: body.description ?? "",
+    const [created] = await this.db.transaction(async (tx) => {
+      const locked = await lockWorkspaceTasks(tx, workspaceId, taskScope);
+      assertTaskScope({
         spaceId: body.spaceId ?? null,
-        taskScope: body.taskScope ?? [],
-        createdAt: now,
-        updatedAt: now,
-      })
-      .returning();
+        taskIds: taskScope,
+        tasks: locked,
+      });
+      return tx
+        .insert(calendarEventTemplates)
+        .values({
+          id: randomUUID(),
+          workspaceId,
+          title: body.title,
+          durationMinutes: body.durationMinutes,
+          description: body.description ?? "",
+          spaceId: body.spaceId ?? null,
+          taskScope,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .returning();
+    });
     if (!created) throw new NotFoundException("Calendar template");
     return mapCalendarEventTemplate(created);
   }
@@ -57,26 +67,40 @@ export class CalendarTemplatesService {
     templateId: string,
     body: UpdateCalendarEventTemplateBody,
   ) {
-    await this.require(workspaceId, templateId);
-    if (body.taskScope) await this.requireTasks(workspaceId, body.taskScope);
+    const existing = await this.require(workspaceId, templateId);
     if (body.spaceId) await this.requireSpace(workspaceId, body.spaceId);
-    const [updated] = await this.db
-      .update(calendarEventTemplates)
-      .set({
-        ...(body.title !== undefined ? { title: body.title } : {}),
-        ...(body.durationMinutes !== undefined
-          ? { durationMinutes: body.durationMinutes }
-          : {}),
-        ...(body.color !== undefined ? { color: body.color } : {}),
-        ...(body.description !== undefined
-          ? { description: body.description }
-          : {}),
-        ...(body.taskScope !== undefined ? { taskScope: body.taskScope } : {}),
-        ...(body.spaceId !== undefined ? { spaceId: body.spaceId } : {}),
-        updatedAt: new Date(),
-      })
-      .where(eq(calendarEventTemplates.id, templateId))
-      .returning();
+    const nextSpaceId =
+      body.spaceId === undefined ? existing.spaceId : body.spaceId;
+    const nextScope = body.taskScope ?? existing.taskScope ?? [];
+    const [updated] = await this.db.transaction(async (tx) => {
+      const locked = await lockWorkspaceTasks(tx, workspaceId, nextScope);
+      assertTaskScope({
+        spaceId: nextSpaceId,
+        taskIds: nextScope,
+        tasks: locked,
+      });
+      await tx
+        .select({ id: calendarEventTemplates.id })
+        .from(calendarEventTemplates)
+        .where(eq(calendarEventTemplates.id, templateId))
+        .for("update");
+      return tx
+        .update(calendarEventTemplates)
+        .set({
+          ...(body.title !== undefined ? { title: body.title } : {}),
+          ...(body.durationMinutes !== undefined
+            ? { durationMinutes: body.durationMinutes }
+            : {}),
+          ...(body.description !== undefined
+            ? { description: body.description }
+            : {}),
+          ...(body.taskScope !== undefined ? { taskScope: body.taskScope } : {}),
+          ...(body.spaceId !== undefined ? { spaceId: body.spaceId } : {}),
+          updatedAt: new Date(),
+        })
+        .where(eq(calendarEventTemplates.id, templateId))
+        .returning();
+    });
     if (!updated) throw new NotFoundException("Calendar template");
     return mapCalendarEventTemplate(updated);
   }
@@ -109,18 +133,5 @@ export class CalendarTemplatesService {
       .where(and(eq(spaces.id, spaceId), eq(spaces.workspaceId, workspaceId)))
       .limit(1);
     if (!space) throw new NotFoundException("Space");
-  }
-
-  private async requireTasks(workspaceId: string, taskIds: string[]) {
-    if (taskIds.length === 0) return;
-    const rows = await this.db
-      .select({ id: tasks.id })
-      .from(tasks)
-      .where(
-        and(eq(tasks.workspaceId, workspaceId), inArray(tasks.id, taskIds)),
-      );
-    if (rows.length !== new Set(taskIds).size) {
-      throw new BadRequestException("Unknown task in scope");
-    }
   }
 }

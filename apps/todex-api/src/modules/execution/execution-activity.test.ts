@@ -59,6 +59,34 @@ describe("execution activity", () => {
     ]);
   });
 
+  it("keeps totals on the session space after the task space would have changed", () => {
+    const report = buildExecutionActivity({
+      from: "2026-10-07",
+      to: "2026-10-07",
+      timeZone: "UTC",
+      spaceId: null,
+      now: new Date("2026-10-07T18:00:00.000Z"),
+      slices: [
+        {
+          sessionId: "session-1",
+          spaceId: "space-original",
+          spaceName: "Original",
+          sectionId: "area",
+          sectionName: "General",
+          isDefaultSection: true,
+          intervals: [
+            {
+              startedAt: "2026-10-07T10:00:00.000Z",
+              endedAt: "2026-10-07T11:00:00.000Z",
+            },
+          ],
+        },
+      ],
+    });
+    expect(report.activities.map((activity) => activity.label)).toEqual(["Original"]);
+    expect(report.executionSeconds).toBe(60 * 60);
+  });
+
   it("keeps the board list when a board filter hides its time", () => {
     const report = buildExecutionActivity({
       from: "2026-10-07",

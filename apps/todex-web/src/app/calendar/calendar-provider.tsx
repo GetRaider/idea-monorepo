@@ -1,16 +1,18 @@
 "use client";
 
-import { createContext, use, useMemo, useState, type ReactNode } from "react";
+import { createContext, use, useEffect, useMemo, useState, type ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   CalendarEvent,
   CalendarEventTemplate,
+  ExecutionCalendar,
   Task,
   Space,
 } from "@repo/api/todex";
 
-import type { CalendarVisibility } from "./calendar-blocks";
+import type { CalendarMode, CalendarVisibility } from "./calendar-blocks";
+import { deviceTimeZone } from "./calendar-datetime";
 import { toast } from "sonner";
 
 import { todexClient } from "@lib/todex-client";
@@ -26,11 +28,15 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
   const [range, setRange] = useState(initialRange);
   const [visibility, setVisibility] =
     useState<CalendarVisibility>(DEFAULT_VISIBILITY);
+  const [mode, setModeState] = useState<CalendarMode>("planned");
+  const [dayCount, setDayCountState] = useState(7);
+  const [preferencesReady, setPreferencesReady] = useState(false);
   const [focusRequest, setFocusRequest] = useState<CalendarFocusRequest | null>(
     null,
   );
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [composer, setComposer] = useState<CalendarComposer | null>(null);
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const routeEventId = eventIdFromPath(pathname);
   const occurrence = searchParams.get("occurrence");
   const selectedTaskId = routeEventId ? null : searchParams.get("task");
@@ -61,6 +67,42 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
       return groups.flat();
     },
   });
+  const timeZone = deviceTimeZone();
+  const spaceColorKey = (boardsQuery.data ?? [])
+    .map((board) => `${board.id}:${board.color}`)
+    .join(",");
+  const sessionsQuery = useQuery({
+    queryKey: ["calendar-sessions", range.from, range.to, timeZone, spaceColorKey],
+    enabled: mode === "actual" || mode === "both",
+    queryFn: () =>
+      todexClient.execution.calendar({
+        from: range.from,
+        to: range.to,
+        timeZone,
+      }),
+    refetchInterval: (query) =>
+      query.state.data?.sessions.some((session) =>
+        session.slices.some((slice) => slice.endedAt == null),
+      )
+        ? 30_000
+        : false,
+  });
+
+  useEffect(() => {
+    const storedMode = readStorage(MODE_KEY);
+    const storedCount = Number(readStorage(DAY_KEY));
+    if (
+      storedMode === "planned" ||
+      storedMode === "actual" ||
+      storedMode === "both"
+    ) {
+      setModeState(storedMode);
+    }
+    if (Number.isInteger(storedCount) && storedCount >= 1 && storedCount <= 7) {
+      setDayCountState(storedCount);
+    }
+    setPreferencesReady(true);
+  }, []);
 
   const selectedEvent =
     eventsQuery.data?.find((event) => event.id === routeEventId) ?? null;
@@ -116,9 +158,9 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
     mutationFn: (input: {
       taskId: string;
       scheduleDate?: string | null;
-      estimation?: number;
-      color?: string | null;
-    }) =>
+        estimation?: number;
+      },
+    ) =>
       todexClient.tasks.update(input.taskId, {
         ...(input.scheduleDate !== undefined
           ? { scheduleDate: input.scheduleDate }
@@ -126,7 +168,6 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
         ...(input.estimation !== undefined
           ? { estimation: input.estimation }
           : {}),
-        ...(input.color !== undefined ? { color: input.color } : {}),
       }),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ["calendar-tasks"] }),
@@ -140,11 +181,16 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
         events: eventsQuery.data ?? [],
         templates: templatesQuery.data ?? [],
         tasks: tasksQuery.data ?? [],
+        sessions: sessionsQuery.data?.sessions ?? [],
         boards: boardsQuery.data ?? [],
         visibility,
+        mode,
+        dayCount: mode === "both" ? Math.min(dayCount, 2) : dayCount,
+        preferencesReady,
         focusRequest,
         scheduleOpen,
         composer,
+        selectedSessionId,
         selectedEvent,
         selectedTaskId,
         selectedTask,
@@ -162,6 +208,24 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
         setVisibility: (patch) => {
           setVisibility((current) => ({ ...current, ...patch }));
         },
+        setMode: (next) => {
+          setModeState((current) => {
+            if (next === "both" && current !== "both" && dayCount > 2) {
+              writeStorage(BEFORE_KEY, String(dayCount));
+            }
+            if (current === "both" && next !== "both") {
+              removeStorage(BEFORE_KEY);
+            }
+            writeStorage(MODE_KEY, next);
+            return next;
+          });
+        },
+        setDayCount: (count) => {
+          if (mode === "both" && count > 2) return;
+          if (mode === "both") removeStorage(BEFORE_KEY);
+          writeStorage(DAY_KEY, String(count));
+          setDayCountState(count);
+        },
         focusDay: (day) => {
           setFocusRequest({ date: day.toISOString(), id: Date.now() });
         },
@@ -171,6 +235,12 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
           if (routeEventId || searchParams.get("task")) router.push(CALENDAR_HOME);
         },
         closeComposer: () => setComposer(null),
+        openSession: (sessionId) => {
+          setComposer(null);
+          setSelectedSessionId(sessionId);
+          if (routeEventId || searchParams.get("task")) router.push(CALENDAR_HOME);
+        },
+        closeSession: () => setSelectedSessionId(null),
         openEvent: (eventId, originalStart) => {
           setComposer(null);
           const search = originalStart
@@ -195,6 +265,11 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
         removeTemplate: (templateId) => removeTemplate.mutateAsync(templateId),
         updateTask: (taskId, patch) =>
           updateTask.mutateAsync({ taskId, ...patch }),
+        updateSessionTitle: (sessionId, title) =>
+          todexClient.execution.updateSession(sessionId, { title }).then(async (sessions) => {
+            await queryClient.invalidateQueries({ queryKey: ["calendar-sessions"] });
+            return sessions;
+          }),
       },
     }),
     [
@@ -203,11 +278,16 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
       eventsQuery.isLoading,
       templatesQuery.data,
       tasksQuery.data,
+      sessionsQuery.data,
       boardsQuery.data,
       visibility,
+      mode,
+      dayCount,
+      preferencesReady,
       focusRequest,
       scheduleOpen,
       composer,
+      selectedSessionId,
       selectedEvent,
       selectedTaskId,
       selectedTask,
@@ -222,6 +302,7 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
       updateTemplate,
       removeTemplate,
       updateTask,
+      queryClient,
     ],
   );
 
@@ -249,6 +330,34 @@ const DEFAULT_VISIBILITY: CalendarVisibility = {
   tasks: true,
 };
 
+const MODE_KEY = "todex.calendar.mode";
+const DAY_KEY = "todex.calendar.dayCount";
+const BEFORE_KEY = "todex.calendar.dayCountBeforeBoth";
+
+function readStorage(key: string) {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function writeStorage(key: string, value: string) {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    return;
+  }
+}
+
+function removeStorage(key: string) {
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    return;
+  }
+}
+
 function initialRange(): { from: string; to: string } {
   const start = new Date();
   start.setHours(0, 0, 0, 0);
@@ -263,11 +372,16 @@ interface CalendarContextValue {
     events: CalendarEvent[];
     templates: CalendarEventTemplate[];
     tasks: Task[];
+    sessions: ExecutionCalendar["sessions"];
     boards: Space[];
     visibility: CalendarVisibility;
+    mode: CalendarMode;
+    dayCount: number;
+    preferencesReady: boolean;
     focusRequest: CalendarFocusRequest | null;
     scheduleOpen: boolean;
     composer: CalendarComposer | null;
+    selectedSessionId: string | null;
     selectedEvent: CalendarEvent | null;
     selectedTaskId: string | null;
     selectedTask: Task | null;
@@ -277,10 +391,14 @@ interface CalendarContextValue {
   actions: {
     setRange: (range: { from: string; to: string }) => void;
     setVisibility: (patch: Partial<CalendarVisibility>) => void;
+    setMode: (mode: CalendarMode) => void;
+    setDayCount: (count: number) => void;
     focusDay: (day: Date) => void;
     setScheduleOpen: (open: boolean) => void;
     openComposer: (draft: CalendarComposer) => void;
     closeComposer: () => void;
+    openSession: (sessionId: string) => void;
+    closeSession: () => void;
     openEvent: (eventId: string, originalStart?: string | null) => void;
     closeEvent: () => void;
     openTask: (taskId: string) => void;
@@ -303,9 +421,9 @@ interface CalendarContextValue {
       patch: {
         scheduleDate?: string | null;
         estimation?: number;
-        color?: string | null;
       },
     ) => Promise<Task>;
+    updateSessionTitle: (sessionId: string, title: string) => Promise<unknown>;
   };
 }
 

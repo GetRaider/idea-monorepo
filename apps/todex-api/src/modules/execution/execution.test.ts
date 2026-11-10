@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { closeOpenIntervals, sumIntervalSeconds } from "@repo/api/todex";
 
-import { resolveSessionDuration } from "./execution.service";
+import {
+  intervalsOverlapRange,
+  isTitleOnlySessionUpdate,
+  normalizeSessionTitle,
+  resolveSessionDuration,
+} from "./execution.service";
+import { assertOneSpace, withoutTaskId } from "../calendar/calendar-scope";
 
 describe("resolveSessionDuration", () => {
   const startedAt = new Date("2026-10-07T10:00:00.000Z");
@@ -60,5 +66,70 @@ describe("execution intervals", () => {
         endedAt: "2026-10-07T10:10:00.000Z",
       },
     ]);
+  });
+});
+
+describe("session space and title", () => {
+  it("rejects mixed spaces and strips a moved task from scope", () => {
+    expect(() =>
+      assertOneSpace([
+        { spaceId: "space-a" },
+        { spaceId: "space-b" },
+      ]),
+    ).toThrow("Tasks must belong to one space");
+    expect(assertOneSpace([{ spaceId: "space-a" }, { spaceId: "space-a" }])).toBe(
+      "space-a",
+    );
+    expect(withoutTaskId(["task-1", "task-2"], "task-1")).toEqual(["task-2"]);
+  });
+
+  it("treats a title-only patch as leaving intervals alone", () => {
+    const intervals = [
+      {
+        startedAt: "2026-10-07T10:00:00.000Z",
+        endedAt: "2026-10-07T10:20:00.000Z",
+      },
+    ];
+    const before = JSON.stringify(intervals);
+    expect(isTitleOnlySessionUpdate({ title: "  Focus  " })).toBe(true);
+    expect(normalizeSessionTitle("  Focus  ")).toBe("Focus");
+    expect(normalizeSessionTitle("   ")).toBeNull();
+    expect(JSON.stringify(intervals)).toBe(before);
+    expect(
+      isTitleOnlySessionUpdate({
+        title: "Focus",
+        startedAt: intervals[0]!.startedAt,
+        endedAt: intervals[0]!.endedAt,
+      }),
+    ).toBe(false);
+  });
+
+  it("returns a session that overlaps the range and skips one that does not", () => {
+    const from = new Date("2026-10-07T12:00:00.000Z");
+    const to = new Date("2026-10-07T18:00:00.000Z");
+    expect(
+      intervalsOverlapRange(
+        [
+          {
+            startedAt: "2026-10-07T11:00:00.000Z",
+            endedAt: "2026-10-07T12:30:00.000Z",
+          },
+        ],
+        from,
+        to,
+      ),
+    ).toBe(true);
+    expect(
+      intervalsOverlapRange(
+        [
+          {
+            startedAt: "2026-10-07T08:00:00.000Z",
+            endedAt: "2026-10-07T09:00:00.000Z",
+          },
+        ],
+        from,
+        to,
+      ),
+    ).toBe(false);
   });
 });

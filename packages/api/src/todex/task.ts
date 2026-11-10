@@ -54,7 +54,6 @@ export const TaskSchema = z.object({
   scheduleDate: IsoDateTimeSchema.nullable(),
   estimation: estimationSchema,
   actualTime: z.number().int().nonnegative(),
-  color: z.string().nullable(),
   acceptanceCriteria: AcceptanceCriteriaSchema.default([]),
   recurrence: TaskRecurrenceSchema.nullable(),
   sectionId: z.string(),
@@ -136,15 +135,11 @@ export const CreateTaskBodySchema = z.object({
   epicId: z.string().nullable().optional(),
 });
 
-export const UpdateTaskBodySchema = z.object({
+export const UpdateTaskBodySchema = z
+  .object({
   spaceId: z.string().min(1).optional(),
   summary: z.string().min(1).optional(),
   description: z.string().optional(),
-  color: z
-    .string()
-    .regex(/^#[0-9a-fA-F]{6}$/)
-    .nullable()
-    .optional(),
   status: taskStatusSchema.optional(),
   priority: z
     .enum([
@@ -164,7 +159,8 @@ export const UpdateTaskBodySchema = z.object({
   parentTaskId: z.string().nullable().optional(),
   epicId: z.string().nullable().optional(),
   goalId: z.string().nullable().optional(),
-});
+})
+  .strict();
 
 export const MoveTaskBodySchema = z.object({
   status: taskStatusSchema,

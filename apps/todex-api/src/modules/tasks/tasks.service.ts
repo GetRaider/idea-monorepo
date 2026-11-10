@@ -28,14 +28,21 @@ import type {
 
 import { DRIZZLE_DB } from "../../db/tokens";
 import {
+  calendarEvents,
+  calendarEventTemplates,
   docs,
   docTasks,
+  executionSessions,
   executionSessionTasks,
   tasks,
   workspaces,
   type TaskRow,
 } from "../../db/schema";
 import { mapTask, parseIsoDate, toIso } from "../../db/mappers";
+import {
+  lockWorkspaceTasks,
+  withoutTaskId,
+} from "../calendar/calendar-scope";
 import {
   formatTaskKey,
   hasParentCycle,
@@ -173,7 +180,32 @@ export class TasksService {
     }
 
     const completion = resolveCompletion(existing, body);
+    const spaceChanged =
+      body.spaceId !== undefined && body.spaceId !== existing.spaceId;
     const [updated] = await this.db.transaction(async (tx) => {
+      await lockWorkspaceTasks(tx, workspaceId, [existing.id]);
+      if (spaceChanged) {
+        const openSessions = await tx
+          .select({ id: executionSessions.id })
+          .from(executionSessionTasks)
+          .innerJoin(
+            executionSessions,
+            eq(executionSessionTasks.sessionId, executionSessions.id),
+          )
+          .where(
+            and(
+              eq(executionSessionTasks.taskId, existing.id),
+              isNull(executionSessions.endedAt),
+            ),
+          )
+          .for("update");
+        if (openSessions.length > 0) {
+          throw new BadRequestException(
+            "Finish the execution before moving this task",
+          );
+        }
+        await this.detachTaskFromScopes(tx, workspaceId, existing.id);
+      }
       const [row] = await tx
         .update(tasks)
         .set({
@@ -198,7 +230,6 @@ export class TasksService {
           ...(body.estimation !== undefined
             ? { estimation: body.estimation }
             : {}),
-          ...(body.color !== undefined ? { color: body.color } : {}),
           ...(completion.acceptanceCriteria !== undefined
             ? { acceptanceCriteria: completion.acceptanceCriteria }
             : {}),
@@ -619,6 +650,58 @@ export class TasksService {
       ).filter((id) => id !== after.id);
       ids.push(after.id);
       await this.writePositions(this.db, ids, {});
+    }
+  }
+
+  private async detachTaskFromScopes(
+    tx: NodePgDatabase,
+    workspaceId: string,
+    taskId: string,
+  ) {
+    const needle = JSON.stringify([taskId]);
+    const events = await tx
+      .select({
+        id: calendarEvents.id,
+        taskScope: calendarEvents.taskScope,
+      })
+      .from(calendarEvents)
+      .where(
+        and(
+          eq(calendarEvents.workspaceId, workspaceId),
+          sql`${calendarEvents.taskScope} @> cast(${needle} as jsonb)`,
+        ),
+      )
+      .for("update");
+    for (const event of events) {
+      await tx
+        .update(calendarEvents)
+        .set({
+          taskScope: withoutTaskId(event.taskScope ?? [], taskId),
+          updatedAt: new Date(),
+        })
+        .where(eq(calendarEvents.id, event.id));
+    }
+    const templates = await tx
+      .select({
+        id: calendarEventTemplates.id,
+        taskScope: calendarEventTemplates.taskScope,
+      })
+      .from(calendarEventTemplates)
+      .where(
+        and(
+          eq(calendarEventTemplates.workspaceId, workspaceId),
+          sql`${calendarEventTemplates.taskScope} @> cast(${needle} as jsonb)`,
+        ),
+      )
+      .for("update");
+    for (const template of templates) {
+      await tx
+        .update(calendarEventTemplates)
+        .set({
+          taskScope: withoutTaskId(template.taskScope ?? [], taskId),
+          updatedAt: new Date(),
+        })
+        .where(eq(calendarEventTemplates.id, template.id));
     }
   }
 

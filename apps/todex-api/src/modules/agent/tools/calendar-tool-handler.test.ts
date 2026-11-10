@@ -85,6 +85,34 @@ describe("CalendarToolHandler", () => {
     if (missing.ok) return;
     expect(missing.error).toContain("Calendar event");
   });
+
+  it("rejects color because the tool schema does not have it", async () => {
+    const events = {
+      create: vi.fn(),
+      list: vi.fn(),
+      get: vi.fn(),
+      update: vi.fn(),
+      remove: vi.fn(),
+    };
+    const layer = layerFor(events);
+    const rejected = await layer.execute({
+      workspaceId: "workspace-1",
+      userId: "user-1",
+      jobId: "job-1",
+      agentRunId: "run-1",
+      toolCallId: "call-color",
+      name: "create_calendar_event",
+      args: {
+        title: "Painted",
+        start: "2026-10-23T10:00:00.000Z",
+        end: "2026-10-23T11:00:00.000Z",
+        timeZone: "Europe/Warsaw",
+        color: "#B8A4D1",
+      },
+    });
+    expect(rejected.ok).toBe(false);
+    expect(events.create).not.toHaveBeenCalled();
+  });
 });
 
 function layerFor(events: {

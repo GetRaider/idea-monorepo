@@ -3,6 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import {
   DndContext,
   DragOverlay,
@@ -24,30 +25,29 @@ import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
   Tooltip,
   TooltipContent,
   TooltipTrigger,
   cn,
 } from "@repo/ui";
-import type { Space, SpaceFolder } from "@repo/api/todex";
+import type { Space, SpaceFolder, Task } from "@repo/api/todex";
+import { TaskStatus } from "@repo/api/todex";
 
 import {
-  BoardIcon,
   CalendarDaysIcon,
   ChevronIcon,
-  InboxIcon,
-  SunIcon,
-  SunriseIcon,
-  EllipsisIcon,
   FolderIcon,
   GoalIcon,
+  InboxIcon,
   PlanningIcon,
   PlusIcon,
+  SunIcon,
+  SunriseIcon,
 } from "@components/icons";
 import { ResizeHandle } from "@components/resize-handle";
 import {
@@ -60,6 +60,7 @@ import {
   writeTasksSidebarWidth,
 } from "@/helpers/tasks-sidebar-open";
 import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
+import { todexClient } from "@lib/todex-client";
 import { useCalendarEnabled } from "../settings/use-calendar-enabled";
 
 import {
@@ -69,6 +70,7 @@ import {
 
 import { useTasks } from "./tasks-provider";
 import { useSpaceDialogs } from "./space-dialogs";
+import { isInboxTask, localDayScheduleQuery } from "./task-helpers";
 
 export function TasksModuleSidebar() {
   const {
@@ -102,6 +104,26 @@ export function TasksModuleSidebar() {
   const rootBoards = boards.filter(
     (board) => !board.folderId && board.id !== inboxBoard?.id,
   );
+  const taskQuery = useQuery({
+    queryKey: ["tasks", "root", boards.map((board) => board.id).join("\n")],
+    enabled: boards.length > 0,
+    queryFn: () =>
+      Promise.all(
+        boards.map((board) => todexClient.tasks.list({ spaceId: board.id })),
+      ).then((lists) => lists.flat()),
+  });
+  const countedTasks = taskQuery.data ?? [];
+  const inboxCount = countedTasks.filter(isInboxTask).length;
+  const todayCount = scheduledCount(countedTasks, 0);
+  const tomorrowCount = scheduledCount(countedTasks, 1);
+  const spaceCount = (spaceId: string) =>
+    countedTasks.filter(
+      (task) =>
+        task.spaceId === spaceId &&
+        task.parentTaskId == null &&
+        task.status !== TaskStatus.DONE &&
+        task.status !== TaskStatus.CANCELLED,
+    ).length;
 
   return (
     <ModuleSidebarFrame open={isOpen} width={width}>
@@ -129,6 +151,7 @@ export function TasksModuleSidebar() {
               active={activeBoardId === inboxBoard.id}
               icon={<InboxIcon size={16} />}
               label="Inbox"
+              count={inboxCount}
             />
           ) : null}
           <NavRow
@@ -136,12 +159,14 @@ export function TasksModuleSidebar() {
             active={view.kind === "schedule" && view.schedule === "today"}
             icon={<SunIcon size={16} />}
             label="Today"
+            count={todayCount}
           />
           <NavRow
             href={tasksUrlHelper.routing.buildScheduleUrl("tomorrow")}
             active={view.kind === "schedule" && view.schedule === "tomorrow"}
             icon={<SunriseIcon size={16} />}
             label="Tomorrow"
+            count={tomorrowCount}
           />
           <NavRow
             href="/planning/goals"
@@ -198,8 +223,9 @@ export function TasksModuleSidebar() {
                   folderId={board.folderId}
                   href={tasksUrlHelper.routing.buildBoardUrl(board.id)}
                   active={activeBoardId === board.id}
-                  icon={<BoardIcon size={16} />}
+                  icon={<SpaceSwatch color={board.color} />}
                   label={board.name}
+                  count={spaceCount(board.id)}
                   menu={<BoardMenu board={board} />}
                 />
               ))}
@@ -212,6 +238,7 @@ export function TasksModuleSidebar() {
                     (board) => board.folderId === folder.id,
                   )}
                   activeBoardId={activeBoardId}
+                  taskCount={spaceCount}
                 />
               ))}
             </RootSpaceList>
@@ -223,7 +250,7 @@ export function TasksModuleSidebar() {
   );
 }
 
-function FolderGroup({ folder, boards, activeBoardId }: FolderGroupProps) {
+function FolderGroup({ folder, boards, activeBoardId, taskCount }: FolderGroupProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const { setNodeRef, isOver } = useDroppable({
     id: `space-folder:${folder.id}`,
@@ -237,27 +264,30 @@ function FolderGroup({ folder, boards, activeBoardId }: FolderGroupProps) {
     <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
       <div ref={setNodeRef} className="relative rounded-lg">
         {showDrop ? <DropSlot /> : null}
-        <div className="group relative my-1 flex items-center rounded-lg text-muted-foreground hover:bg-surface hover:text-foreground">
-          <CollapsibleTrigger asChild>
-            <button
-              type="button"
-              className="flex min-w-0 flex-1 items-center gap-2 rounded-lg py-1.5 pl-2 pr-8 text-left text-sm"
-            >
-              <ChevronIcon
-                size={12}
-                className={cn(
-                  "shrink-0 transition-transform",
-                  isExpanded && "rotate-90",
-                )}
-              />
-              <FolderIcon size={16} />
-              <span className="min-w-0 truncate">{folder.name}</span>
-            </button>
-          </CollapsibleTrigger>
-          <div className="absolute right-0.5 top-1/2 -translate-y-1/2">
-            <FolderMenu folder={folder} />
-          </div>
-        </div>
+        <ContextMenu>
+          <ContextMenuTrigger asChild>
+            <div className="my-1 flex items-center rounded-lg text-muted-foreground hover:bg-surface hover:text-foreground">
+              <CollapsibleTrigger asChild>
+                <button
+                  type="button"
+                  className="flex min-w-0 flex-1 items-center gap-2 rounded-lg py-1.5 pl-2 pr-3 text-left text-sm"
+                >
+                  <ChevronIcon
+                    size={12}
+                    className={cn(
+                      "shrink-0 transition-transform",
+                      isExpanded && "rotate-90",
+                    )}
+                  />
+                  <FolderIcon size={16} />
+                  <span className="min-w-0 flex-1 truncate">{folder.name}</span>
+                  <span className="w-8 shrink-0" />
+                </button>
+              </CollapsibleTrigger>
+            </div>
+          </ContextMenuTrigger>
+          <FolderMenu folder={folder} />
+        </ContextMenu>
         <CollapsibleContent>
           {boards.map((board) => (
             <SpaceBoardRow
@@ -266,8 +296,9 @@ function FolderGroup({ folder, boards, activeBoardId }: FolderGroupProps) {
               folderId={board.folderId}
               href={tasksUrlHelper.routing.buildBoardUrl(board.id)}
               active={activeBoardId === board.id}
-              icon={<BoardIcon size={16} />}
+              icon={<SpaceSwatch color={board.color} />}
               label={board.name}
+              count={taskCount(board.id)}
               nested
               menu={<BoardMenu board={board} />}
             />
@@ -358,6 +389,7 @@ function NavRow({
   active,
   icon,
   label,
+  count = 0,
   nested = false,
   menu,
   drag,
@@ -369,7 +401,6 @@ function NavRow({
       className={cn(
         "flex min-w-0 flex-1 items-center gap-3 rounded-lg px-3 py-1.5 text-left text-sm",
         nested && "pl-8",
-        menu && "pr-8",
         drag && "cursor-grab active:cursor-grabbing",
       )}
       draggable={drag ? false : undefined}
@@ -377,88 +408,76 @@ function NavRow({
       {...drag?.attributes}
     >
       {icon}
-      <span className="min-w-0 truncate">{label}</span>
+      <span className="min-w-0 flex-1 truncate">{label}</span>
+      <span className="w-8 shrink-0 text-right text-xs tabular-nums text-muted-foreground">
+        {count > 0 ? count : null}
+      </span>
     </Link>
   );
 
-  return (
+  const frame = (
     <div
       className={cn(
-        "group relative my-1 flex items-center rounded-lg",
+        "my-1 flex items-center rounded-lg",
         active
           ? "bg-surface text-foreground"
           : "text-muted-foreground hover:bg-surface hover:text-foreground",
       )}
     >
       {row}
-      {menu ? (
-        <div className="absolute right-0.5 top-1/2 -translate-y-1/2">
-          {menu}
-        </div>
-      ) : null}
     </div>
+  );
+
+  if (!menu) return frame;
+
+  return (
+    <ContextMenu>
+      <ContextMenuTrigger asChild>{frame}</ContextMenuTrigger>
+      {menu}
+    </ContextMenu>
   );
 }
 
 function BoardMenu({ board }: { board: Space }) {
   const actions = useSpaceDialogs();
   return (
-    <RowMenu>
-      <DropdownMenuItem onSelect={() => actions.openRenameBoard(board)}>
+    <ContextMenuContent>
+      <ContextMenuItem onSelect={() => actions.openRenameBoard(board)}>
         Rename
-      </DropdownMenuItem>
+      </ContextMenuItem>
       {board.isInbox ? null : (
-        <DropdownMenuItem onSelect={() => actions.openMoveBoard(board)}>
+        <ContextMenuItem onSelect={() => actions.openMoveBoard(board)}>
           Move to folder
-        </DropdownMenuItem>
+        </ContextMenuItem>
       )}
-      {board.isInbox ? null : <DropdownMenuSeparator />}
+      {board.isInbox ? null : <ContextMenuSeparator />}
       {board.isInbox ? null : (
-        <DropdownMenuItem
+        <ContextMenuItem
           className="text-destructive"
           onSelect={() => actions.openDeleteBoard(board)}
         >
           Delete
-        </DropdownMenuItem>
+        </ContextMenuItem>
       )}
-    </RowMenu>
+    </ContextMenuContent>
   );
 }
 
 function FolderMenu({ folder }: { folder: SpaceFolder }) {
   const actions = useSpaceDialogs();
   return (
-    <RowMenu>
-      <DropdownMenuItem onSelect={() => actions.openRenameSpaceFolder(folder)}>
+    <ContextMenuContent>
+      <ContextMenuItem onSelect={() => actions.openRenameSpaceFolder(folder)}>
         Rename
-      </DropdownMenuItem>
-      <DropdownMenuSeparator />
-      <DropdownMenuItem
+      </ContextMenuItem>
+      <ContextMenuSeparator />
+      <ContextMenuItem
         className="text-destructive"
         onSelect={() => actions.openDeleteSpaceFolder(folder)}
       >
         Delete
-      </DropdownMenuItem>
-    </RowMenu>
-  );
-}
-
-function RowMenu({ children }: { children: ReactNode }) {
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          type="button"
-          size="icon"
-          variant="ghost"
-          className="pointer-events-none h-7 w-7 shrink-0 text-muted-foreground opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100 data-[state=open]:pointer-events-auto data-[state=open]:opacity-100"
-          aria-label="Space actions"
-        >
-          <EllipsisIcon size={14} />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">{children}</DropdownMenuContent>
-    </DropdownMenu>
+      </ContextMenuItem>
+    </ContextMenuContent>
   );
 }
 
@@ -517,6 +536,7 @@ interface FolderGroupProps {
   folder: SpaceFolder;
   boards: Space[];
   activeBoardId: string | null;
+  taskCount: (spaceId: string) => number;
 }
 
 interface NavRowProps {
@@ -524,6 +544,7 @@ interface NavRowProps {
   active: boolean;
   icon: ReactNode;
   label: string;
+  count?: number;
   nested?: boolean;
   menu?: ReactNode;
   drag?: {
@@ -541,3 +562,27 @@ interface SpaceDragData {
 }
 
 type SpaceDropData = { kind: "folder"; folderId: string } | { kind: "root" };
+
+function SpaceSwatch({ color }: { color: string }) {
+  return (
+    <span
+      aria-hidden
+      className="h-2 w-2 shrink-0 rounded-full bg-[var(--todex-swatch)]"
+      style={{ ["--todex-swatch" as string]: color }}
+    />
+  );
+}
+
+function scheduledCount(tasks: Task[], offsetDays: number) {
+  const range = localDayScheduleQuery(offsetDays);
+  const from = Date.parse(range.scheduleFrom);
+  const to = Date.parse(range.scheduleTo);
+  return tasks.filter((task) => {
+    if (!task.scheduleDate || task.parentTaskId != null) return false;
+    if (task.status === TaskStatus.DONE || task.status === TaskStatus.CANCELLED) {
+      return false;
+    }
+    const scheduled = Date.parse(task.scheduleDate);
+    return scheduled >= from && scheduled < to;
+  }).length;
+}

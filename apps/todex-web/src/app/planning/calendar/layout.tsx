@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useCalendarEnabled } from "../../settings/use-calendar-enabled";
 import { CalendarEventView } from "../../calendar/calendar-event-view";
 import { CalendarSchedulePanel } from "../../calendar/calendar-schedule-panel";
+import { CalendarSessionView } from "../../calendar/calendar-session-view";
 import { CalendarTaskView } from "../../calendar/calendar-task-view";
 import { CalendarProvider, useCalendar } from "../../calendar/calendar-provider";
 
@@ -30,10 +31,11 @@ export default function PlanningCalendarLayout({
 
 function CalendarSideSlot() {
   const {
-    state: { composer, selectedEvent, selectedTaskId, scheduleOpen },
+    state: { composer, selectedEvent, selectedTaskId, selectedSessionId, scheduleOpen },
   } = useCalendar();
   if (composer || selectedEvent) return <CalendarEventView />;
   if (selectedTaskId) return <CalendarTaskView />;
+  if (selectedSessionId) return <CalendarSessionView />;
   if (scheduleOpen) return <CalendarSchedulePanel />;
   return null;
 }

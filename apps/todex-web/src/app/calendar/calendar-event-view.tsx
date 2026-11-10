@@ -10,8 +10,6 @@ import {
 } from "@repo/api/todex";
 
 import { TaskRecurrencePicker } from "../planning/task-recurrence-picker";
-import { CalendarColorPicker } from "./calendar-color-picker";
-import { DEFAULT_EVENT_COLOR } from "./calendar-colors";
 import { deviceTimeZone, withAllDay } from "./calendar-datetime";
 import { useCalendar, type CalendarComposer } from "./calendar-provider";
 import { TaskScopePicker } from "./calendar-task-scope";
@@ -36,7 +34,7 @@ function EventEditor({ event }: { event: CalendarEvent }) {
   const [allDay, setAllDay] = useState(event.allDay);
   const [start, setStart] = useState(event.start);
   const [end, setEnd] = useState(event.end);
-  const [color, setColor] = useState<string | null>(event.color);
+  const [spaceId, setSpaceId] = useState<string | null>(event.spaceId);
   const [recurrence, setRecurrence] = useState<TaskRecurrence | null>(event.recurrence);
   const [participants, setParticipants] = useState(event.participants.join(", "));
   const [description, setDescription] = useState(event.description);
@@ -54,7 +52,7 @@ function EventEditor({ event }: { event: CalendarEvent }) {
     allDay !== event.allDay ||
     start !== event.start ||
     end !== event.end ||
-    color !== event.color ||
+    spaceId !== event.spaceId ||
     JSON.stringify(recurrence) !== JSON.stringify(event.recurrence) ||
     description !== event.description ||
     JSON.stringify(taskScope) !== JSON.stringify(event.taskScope) ||
@@ -95,7 +93,7 @@ function EventEditor({ event }: { event: CalendarEvent }) {
             start,
             end,
             allDay,
-            color,
+            spaceId,
             timeZone,
             ...(event.rawRrule ? {} : { recurrence }),
             description,
@@ -109,19 +107,25 @@ function EventEditor({ event }: { event: CalendarEvent }) {
             .finally(() => setPending(false));
         }}
       >
-        <div className="flex items-center gap-2">
-          <CalendarColorPicker
-            color={color ?? DEFAULT_EVENT_COLOR}
-            disabled={locked}
-            onChange={setColor}
-          />
-          <Input
-            value={title}
-            disabled={locked}
-            aria-label="Title"
-            onChange={(input) => setTitle(input.target.value)}
-          />
-        </div>
+        <Input
+          value={title}
+          disabled={locked}
+          aria-label="Title"
+          onChange={(input) => setTitle(input.target.value)}
+        />
+        <SpaceSelect
+          boards={boards}
+          spaceId={spaceId}
+          disabled={locked}
+          tasksSelected={taskScope.length > 0}
+          onChange={(next) => {
+            if (taskScope.length > 0 && next !== spaceId) {
+              if (!window.confirm("Changing space clears the selected tasks.")) return;
+              setTaskScope([]);
+            }
+            setSpaceId(next);
+          }}
+        />
         <label className="flex items-center gap-2 text-sm">
           <Checkbox
             checked={allDay}
@@ -184,6 +188,7 @@ function EventEditor({ event }: { event: CalendarEvent }) {
             tasks={tasks}
             value={taskScope}
             selection="multiple"
+            spaceId={spaceId}
             disabled={locked}
             onChange={setTaskScope}
           />
@@ -267,7 +272,7 @@ function CreateEventEditor({ draft }: { draft: CalendarComposer }) {
   const [allDay, setAllDay] = useState(draft.allDay);
   const [start, setStart] = useState(draft.start);
   const [end, setEnd] = useState(draft.end);
-  const [color, setColor] = useState<string | null>(null);
+  const [spaceId, setSpaceId] = useState<string | null>(null);
   const [recurrence, setRecurrence] = useState<TaskRecurrence | null>(null);
   const [participants, setParticipants] = useState("");
   const [description, setDescription] = useState("");
@@ -327,7 +332,7 @@ function CreateEventEditor({ draft }: { draft: CalendarComposer }) {
                   start,
                   end,
                   allDay,
-                  color,
+                  spaceId,
                   timeZone,
                   recurrence,
                   description,
@@ -352,18 +357,26 @@ function CreateEventEditor({ draft }: { draft: CalendarComposer }) {
           </select>
         </Field>
         {kind === "event" ? (
-          <div className="flex items-center gap-2">
-            <CalendarColorPicker
-              color={color ?? DEFAULT_EVENT_COLOR}
-              onChange={setColor}
-            />
+          <>
             <Input
               value={title}
               aria-label="Title"
               placeholder="Event title"
               onChange={(input) => setTitle(input.target.value)}
             />
-          </div>
+            <SpaceSelect
+              boards={boards}
+              spaceId={spaceId}
+              tasksSelected={taskScope.length > 0}
+              onChange={(next) => {
+                if (taskScope.length > 0 && next !== spaceId) {
+                  if (!window.confirm("Changing space clears the selected tasks.")) return;
+                  setTaskScope([]);
+                }
+                setSpaceId(next);
+              }}
+            />
+          </>
         ) : (
           <Field label="Task">
             <TaskScopePicker
@@ -413,6 +426,7 @@ function CreateEventEditor({ draft }: { draft: CalendarComposer }) {
                 tasks={tasks}
                 value={taskScope}
                 selection="multiple"
+                spaceId={spaceId}
                 onChange={setTaskScope}
               />
             </Field>
@@ -444,6 +458,42 @@ function CreateEventEditor({ draft }: { draft: CalendarComposer }) {
 
 function composerKey(draft: CalendarComposer) {
   return `${draft.kind}:${draft.start}:${draft.end}:${draft.taskId}:${draft.title}`;
+}
+
+function SpaceSelect({
+  boards,
+  spaceId,
+  disabled,
+  tasksSelected,
+  onChange,
+}: {
+  boards: { id: string; name: string }[];
+  spaceId: string | null;
+  disabled?: boolean;
+  tasksSelected: boolean;
+  onChange: (spaceId: string | null) => void;
+}) {
+  return (
+    <label className="flex flex-col gap-1 text-sm">
+      Space
+      <select
+        aria-label="Space"
+        disabled={disabled}
+        value={spaceId ?? ""}
+        className="h-9 w-full rounded-md border border-border bg-transparent px-2 text-sm"
+        onChange={(event) => onChange(event.target.value || null)}
+      >
+        <option value="" disabled={tasksSelected}>
+          No space
+        </option>
+        {boards.map((board) => (
+          <option key={board.id} value={board.id}>
+            {board.name}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
 }
 
 function Field({ label, children }: { label: string; children: ReactNode }) {

@@ -426,7 +426,6 @@ function task(overrides: Partial<NestedTask>): NestedTask {
     progressStageId: null,
     estimation: 30,
     actualTime: 0,
-    color: null,
     parentTaskId: null,
     epicId: null,
     goalId: null,

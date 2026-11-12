@@ -1,0 +1,335 @@
+import { join } from "node:path";
+import { pathToFileURL } from "node:url";
+
+import {
+  app,
+  BrowserWindow,
+  WebContentsView,
+  dialog,
+  ipcMain,
+  session,
+  shell,
+  type WebContents,
+  type IpcMainInvokeEvent,
+} from "electron";
+
+import {
+  actions,
+  providers,
+  toolbarHeight,
+  type HubState,
+  type Provider,
+  type ProviderState,
+} from "../shared";
+import {
+  isConversation,
+  isEmbeddedDestination,
+  isHttps,
+  isProviderOrigin,
+  safeUrl,
+} from "./policy";
+
+app.setName("Airove");
+app.setPath("userData", join(app.getPath("appData"), "airove"));
+let mainWindow: BrowserWindow | null = null;
+let disposeWindow: (() => void) | undefined;
+const rendererFile = join(__dirname, "../renderer/index.html");
+const rendererUrl =
+  !app.isPackaged && process.env.ELECTRON_RENDERER_URL
+    ? new URL(process.env.ELECTRON_RENDERER_URL).href
+    : pathToFileURL(rendererFile).href;
+
+function createWindow() {
+  const window = new BrowserWindow({
+    width: 1280,
+    height: 900,
+    minWidth: 900,
+    minHeight: 600,
+    title: "Airove",
+    webPreferences: {
+      preload: join(__dirname, "../preload/index.js"),
+      sandbox: true,
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+  mainWindow = window;
+  window.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+  window.webContents.on("will-navigate", (event) => event.preventDefault());
+  window.webContents.on("will-redirect", (event) => event.preventDefault());
+  window.webContents.setVisualZoomLevelLimits(1, 1);
+  const state: HubState = {
+    selected: "chatgpt",
+    providers: {} as Record<Provider, ProviderState>,
+  };
+  const views = {} as Record<Provider, WebContentsView>;
+  const popups = new Set<BrowserWindow>();
+  const publish = () => {
+    if (!window.isDestroyed()) window.webContents.send("airove:changed", state);
+  };
+  const resize = () => {
+    const [width, height] = window.getContentSize();
+    views[state.selected].setBounds({
+      x: 0,
+      y: toolbarHeight,
+      width: width ?? 0,
+      height: Math.max(0, (height ?? 0) - toolbarHeight),
+    });
+  };
+  for (const provider of Object.keys(providers) as Provider[]) {
+    const providerSession = session.fromPartition(`persist:${provider}`);
+    const grants = new Set<string>();
+    const owned = new Set<WebContents>();
+    providerSession.setPermissionCheckHandler(
+      (contents, permission, origin, details) =>
+        !!contents &&
+        owned.has(contents) &&
+        isProviderOrigin(provider, origin) &&
+        isProviderOrigin(provider, contents.getURL()) &&
+        details.isMainFrame !== false &&
+        grants.has(permission),
+    );
+    providerSession.setPermissionRequestHandler(
+      (contents, permission, callback, details) => {
+        const allowed = [
+          "media",
+          "clipboard-read",
+          "clipboard-sanitized-write",
+          "fullscreen",
+        ];
+        if (
+          !owned.has(contents) ||
+          !details.isMainFrame ||
+          !isProviderOrigin(provider, details.requestingUrl) ||
+          !isProviderOrigin(provider, contents.getURL()) ||
+          !allowed.includes(permission)
+        ) {
+          callback(false);
+          return;
+        }
+        void dialog
+          .showMessageBox(window, {
+            type: "question",
+            title: "Airove permission",
+            message: `${new URL(providers[provider]).hostname} requests ${permission}`,
+            detail:
+              "Allow for this window session? Camera and microphone also require macOS permission.",
+            buttons: ["Deny", "Allow"],
+            defaultId: 0,
+            cancelId: 0,
+          })
+          .then(({ response }) => {
+            if (response === 1) grants.add(permission);
+            callback(response === 1);
+          })
+          .catch(() => callback(false));
+      },
+    );
+    const view = new WebContentsView({
+      webPreferences: {
+        session: providerSession,
+        sandbox: true,
+        contextIsolation: true,
+        nodeIntegration: false,
+        backgroundThrottling: false,
+      },
+    });
+    views[provider] = view;
+    const contents = view.webContents;
+    owned.add(contents);
+    state.providers[provider] = {
+      provider,
+      url: providers[provider],
+      title: provider,
+      loading: true,
+      canGoBack: false,
+      canGoForward: false,
+      conversation: false,
+      timestamp: new Date().toISOString(),
+      error: null,
+    };
+    const update = (eventName: string) => {
+      if (contents.isDestroyed()) return;
+      const current = state.providers[provider];
+      const url = contents.getURL() || providers[provider];
+      Object.assign(current, {
+        url: isProviderOrigin(provider, url)
+          ? new URL(url).origin + new URL(url).pathname
+          : safeUrl(url),
+        title: contents.getTitle(),
+        loading: contents.isLoading(),
+        canGoBack: contents.navigationHistory.canGoBack(),
+        canGoForward: contents.navigationHistory.canGoForward(),
+        conversation: isConversation(provider, url),
+        timestamp: new Date().toISOString(),
+      });
+      console.info("[airove]", eventName, {
+        provider,
+        url: safeUrl(url),
+        loading: current.loading,
+        conversation: current.conversation,
+        timestamp: current.timestamp,
+        error: current.error,
+      });
+      publish();
+    };
+    secureContents(contents, provider, window, popups, owned);
+    contents.on("did-start-loading", () => {
+      state.providers[provider].error = null;
+      update("loading");
+    });
+    contents.on("did-stop-loading", () => update("loaded"));
+    contents.on("did-navigate", () => update("did-navigate"));
+    contents.on("did-navigate-in-page", () => update("did-navigate-in-page"));
+    contents.on("page-title-updated", () => update("page-title-updated"));
+    contents.on(
+      "did-fail-load",
+      (_event, code, _description, _url, mainFrame) => {
+        if (!mainFrame || code === -3) return;
+        state.providers[provider].error =
+          `Navigation failed (${code}). Reload or open in browser.`;
+        update("did-fail-load");
+      },
+    );
+    contents.on("render-process-gone", () => {
+      state.providers[provider].error =
+        "Provider process exited. Reload to recover.";
+      publish();
+    });
+    void contents.loadURL(providers[provider]).catch(() => {});
+  }
+  window.contentView.addChildView(views.chatgpt);
+  resize();
+  window.on("resize", resize);
+  window.webContents.on("did-finish-load", publish);
+  const validate = (event: IpcMainInvokeEvent) => {
+    if (
+      event.sender !== window.webContents ||
+      event.senderFrame !== window.webContents.mainFrame ||
+      event.senderFrame.url !== rendererUrl
+    )
+      throw new Error("Untrusted IPC sender");
+  };
+  ipcMain.handle("airove:state", (event) => {
+    validate(event);
+    return state;
+  });
+  ipcMain.handle("airove:select", (event, provider: unknown) => {
+    validate(event);
+    if (provider !== "chatgpt" && provider !== "claude")
+      throw new Error("Invalid provider");
+    if (state.selected !== provider) {
+      window.contentView.removeChildView(views[state.selected]);
+      state.selected = provider;
+      window.contentView.addChildView(views[provider]);
+      resize();
+      views[provider].webContents.focus();
+      publish();
+    }
+    return state;
+  });
+  ipcMain.handle("airove:navigate", async (event, action: unknown) => {
+    validate(event);
+    if (
+      typeof action !== "string" ||
+      !actions.some((candidate) => candidate === action)
+    )
+      throw new Error("Invalid action");
+    const contents = views[state.selected].webContents;
+    if (action === "back" && contents.navigationHistory.canGoBack())
+      contents.navigationHistory.goBack();
+    if (action === "forward" && contents.navigationHistory.canGoForward())
+      contents.navigationHistory.goForward();
+    if (action === "reload") contents.reload();
+    if (action === "external") await openExternal(contents.getURL(), window);
+  });
+  disposeWindow = () => {
+    for (const channel of ["airove:state", "airove:select", "airove:navigate"])
+      ipcMain.removeHandler(channel);
+    for (const popup of popups) if (!popup.isDestroyed()) popup.destroy();
+    for (const view of Object.values(views))
+      if (!view.webContents.isDestroyed()) view.webContents.close();
+  };
+  window.on("closed", () => {
+    disposeWindow?.();
+    disposeWindow = undefined;
+    mainWindow = null;
+  });
+  void window.loadURL(rendererUrl);
+}
+
+function secureContents(
+  contents: WebContents,
+  provider: Provider,
+  parent: BrowserWindow,
+  popups: Set<BrowserWindow>,
+  owned: Set<WebContents>,
+) {
+  contents.on("will-navigate", (event, url) => {
+    if (!isEmbeddedDestination(provider, url)) {
+      event.preventDefault();
+      void openExternal(url, parent);
+    }
+  });
+  contents.on("will-redirect", (event, url) => {
+    if (!isEmbeddedDestination(provider, url)) event.preventDefault();
+  });
+  contents.setWindowOpenHandler(({ url }) => {
+    if (!isEmbeddedDestination(provider, url)) {
+      void openExternal(url, parent);
+      return { action: "deny" };
+    }
+    return {
+      action: "allow",
+      overrideBrowserWindowOptions: {
+        parent,
+        width: 620,
+        height: 780,
+        autoHideMenuBar: true,
+        webPreferences: {
+          session: contents.session,
+          sandbox: true,
+          nodeIntegration: false,
+          contextIsolation: true,
+          preload: undefined,
+        },
+      },
+    };
+  });
+  contents.on("did-create-window", (popup) => {
+    const popupContents = popup.webContents;
+    popups.add(popup);
+    owned.add(popupContents);
+    secureContents(popup.webContents, provider, parent, popups, owned);
+    popup.on("closed", () => {
+      popups.delete(popup);
+      owned.delete(popupContents);
+    });
+  });
+  contents.on("will-attach-webview", (event) => event.preventDefault());
+}
+
+async function openExternal(url: string, parent: BrowserWindow) {
+  if (!isHttps(url) || parent.isDestroyed()) return;
+  const { response } = await dialog.showMessageBox(parent, {
+    type: "question",
+    title: "Open browser",
+    message: `Open ${new URL(url).origin} in your default browser?`,
+    detail: "Browser sign-in uses a separate session from Airove.",
+    buttons: ["Cancel", "Open"],
+    defaultId: 0,
+    cancelId: 0,
+  });
+  if (response === 1) await shell.openExternal(url).catch(() => {});
+}
+
+void app.whenReady().then(() => {
+  createWindow();
+  app.on("activate", () => {
+    if (!mainWindow) createWindow();
+    else mainWindow.show();
+  });
+});
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") app.quit();
+});

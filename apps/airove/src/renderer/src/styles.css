@@ -1,0 +1,13 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  margin: 0;
+  background: #18181b;
+  color: #fafafa;
+  font-family: system-ui, sans-serif;
+}
+button {
+  @apply rounded px-3 py-1 text-sm hover:bg-zinc-700 disabled:opacity-40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400;
+}

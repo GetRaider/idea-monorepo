@@ -17,6 +17,8 @@ import {
   actions,
   providers,
   toolbarHeight,
+  sidebarWidth,
+  newChatUrls,
   type HubState,
   type Provider,
   type ProviderState,
@@ -29,9 +31,19 @@ import {
   safeUrl,
 } from "./policy";
 
+import { openLibrary, type ChatLibrary } from "./library";
+import { ConversationCapture } from "./capture";
+import {
+  nullableId,
+  validId,
+  validProvider,
+  validateCommand,
+} from "./validation";
+
 app.setName("Airove");
 app.setPath("userData", join(app.getPath("appData"), "airove"));
 let mainWindow: BrowserWindow | null = null;
+let library: ChatLibrary;
 let disposeWindow: (() => void) | undefined;
 const rendererFile = join(__dirname, "../renderer/index.html");
 const rendererUrl =
@@ -43,7 +55,7 @@ function createWindow() {
   const window = new BrowserWindow({
     width: 1280,
     height: 900,
-    minWidth: 900,
+    minWidth: 1180,
     minHeight: 600,
     title: "Airove",
     webPreferences: {
@@ -59,9 +71,13 @@ function createWindow() {
   window.webContents.on("will-redirect", (event) => event.preventDefault());
   window.webContents.setVisualZoomLevelLimits(1, 1);
   const state: HubState = {
-    selected: "chatgpt",
+    selected: library.snapshot().lastProvider,
+    selectedSpaceId: null,
+    library: library.snapshot(),
+    metadataError: null,
     providers: {} as Record<Provider, ProviderState>,
   };
+  const capture = new ConversationCapture(library);
   const views = {} as Record<Provider, WebContentsView>;
   const popups = new Set<BrowserWindow>();
   const publish = () => {
@@ -70,9 +86,9 @@ function createWindow() {
   const resize = () => {
     const [width, height] = window.getContentSize();
     views[state.selected].setBounds({
-      x: 0,
+      x: sidebarWidth,
       y: toolbarHeight,
-      width: width ?? 0,
+      width: Math.max(0, (width ?? 0) - sidebarWidth),
       height: Math.max(0, (height ?? 0) - toolbarHeight),
     });
   };
@@ -148,15 +164,19 @@ function createWindow() {
       timestamp: new Date().toISOString(),
       error: null,
     };
-    const update = (eventName: string) => {
+    const update = (
+      eventName: string,
+      navigationUrl?: string,
+      pageTitle?: string,
+    ) => {
       if (contents.isDestroyed()) return;
       const current = state.providers[provider];
-      const url = contents.getURL() || providers[provider];
+      const url = navigationUrl ?? (contents.getURL() || providers[provider]);
       Object.assign(current, {
         url: isProviderOrigin(provider, url)
           ? new URL(url).origin + new URL(url).pathname
           : safeUrl(url),
-        title: contents.getTitle(),
+        title: pageTitle ?? contents.getTitle(),
         loading: contents.isLoading(),
         canGoBack: contents.navigationHistory.canGoBack(),
         canGoForward: contents.navigationHistory.canGoForward(),
@@ -171,6 +191,28 @@ function createWindow() {
         timestamp: current.timestamp,
         error: current.error,
       });
+      if (
+        eventName === "did-navigate" ||
+        eventName === "did-navigate-in-page" ||
+        eventName === "page-title-updated"
+      ) {
+        try {
+          if (
+            capture.observe(
+              provider,
+              url,
+              current.title,
+              eventName === "page-title-updated" ? "title" : "navigation",
+            )
+          ) {
+            state.library = library.snapshot();
+            state.metadataError = null;
+          }
+        } catch {
+          state.metadataError =
+            "Could not save chat metadata. Check available disk space and restart Airove.";
+        }
+      }
       publish();
     };
     secureContents(contents, provider, window, popups, owned);
@@ -179,26 +221,41 @@ function createWindow() {
       update("loading");
     });
     contents.on("did-stop-loading", () => update("loaded"));
-    contents.on("did-navigate", () => update("did-navigate"));
-    contents.on("did-navigate-in-page", () => update("did-navigate-in-page"));
-    contents.on("page-title-updated", () => update("page-title-updated"));
+    contents.on("did-navigate", (_event, url, httpResponseCode) => {
+      if (httpResponseCode >= 400) {
+        capture.cancel(provider);
+        state.providers[provider].error =
+          `Provider returned HTTP ${httpResponseCode}. Saved chat metadata has been kept.`;
+        update("navigation-error", url);
+        return;
+      }
+      update("did-navigate", url);
+    });
+    contents.on("did-navigate-in-page", (_event, url, isMainFrame) => {
+      if (isMainFrame) update("did-navigate-in-page", url);
+    });
+    contents.on("page-title-updated", (_event, title) =>
+      update("page-title-updated", undefined, title),
+    );
     contents.on(
       "did-fail-load",
       (_event, code, _description, _url, mainFrame) => {
         if (!mainFrame || code === -3) return;
+        capture.cancel(provider);
         state.providers[provider].error =
           `Navigation failed (${code}). Reload or open in browser.`;
         update("did-fail-load");
       },
     );
     contents.on("render-process-gone", () => {
+      capture.cancel(provider);
       state.providers[provider].error =
         "Provider process exited. Reload to recover.";
       publish();
     });
     void contents.loadURL(providers[provider]).catch(() => {});
   }
-  window.contentView.addChildView(views.chatgpt);
+  window.contentView.addChildView(views[state.selected]);
   resize();
   window.on("resize", resize);
   window.webContents.on("did-finish-load", publish);
@@ -214,19 +271,77 @@ function createWindow() {
     validate(event);
     return state;
   });
-  ipcMain.handle("airove:select", (event, provider: unknown) => {
-    validate(event);
-    if (provider !== "chatgpt" && provider !== "claude")
-      throw new Error("Invalid provider");
+  const selectProvider = (provider: Provider) => {
     if (state.selected !== provider) {
       window.contentView.removeChildView(views[state.selected]);
       state.selected = provider;
       window.contentView.addChildView(views[provider]);
       resize();
       views[provider].webContents.focus();
-      publish();
     }
+  };
+  const refreshLibrary = () => {
+    state.library = library.snapshot();
+    state.metadataError = null;
+    publish();
+  };
+  ipcMain.handle("airove:select", (event, input: unknown) => {
+    validate(event);
+    const provider = validProvider(input);
+    library.rememberProvider(provider, state.selectedSpaceId);
+    selectProvider(provider);
+    refreshLibrary();
     return state;
+  });
+  ipcMain.handle("airove:space", (event, input: unknown) => {
+    validate(event);
+    const spaceId = nullableId(input);
+    const snapshot = library.snapshot();
+    const space = snapshot.spaces.find((candidate) => candidate.id === spaceId);
+    if (spaceId && !space) throw new Error("Space no longer exists");
+    state.selectedSpaceId = spaceId;
+    selectProvider(space?.preferredProvider ?? snapshot.lastProvider);
+    publish();
+    return state;
+  });
+  ipcMain.handle("airove:library", (event, input: unknown) => {
+    validate(event);
+    const command = validateCommand(input);
+    const removed =
+      command.type === "chat:remove" ? library.getChat(command.id) : null;
+    library.edit(command);
+    if (removed) capture.removed(removed.provider, removed.url);
+    if (command.type === "space:delete" && command.id === state.selectedSpaceId)
+      state.selectedSpaceId = null;
+    refreshLibrary();
+  });
+  ipcMain.handle("airove:new", async (event) => {
+    validate(event);
+    const provider = state.selected;
+    library.rememberProvider(provider, state.selectedSpaceId);
+    refreshLibrary();
+    const token = capture.begin(provider, state.selectedSpaceId);
+    try {
+      await views[provider].webContents.loadURL(newChatUrls[provider]);
+    } catch {
+      capture.cancel(provider, token);
+      throw new Error("Could not open a new conversation");
+    }
+  });
+  ipcMain.handle("airove:open", async (event, input: unknown) => {
+    validate(event);
+    const chat = library.getChat(validId(input));
+    capture.cancel(chat.provider);
+    selectProvider(chat.provider);
+    library.rememberProvider(chat.provider, state.selectedSpaceId);
+    refreshLibrary();
+    try {
+      await views[chat.provider].webContents.loadURL(chat.url);
+    } catch {
+      throw new Error(
+        "Could not open this conversation. Its local record has been kept.",
+      );
+    }
   });
   ipcMain.handle("airove:navigate", async (event, action: unknown) => {
     validate(event);
@@ -236,6 +351,8 @@ function createWindow() {
     )
       throw new Error("Invalid action");
     const contents = views[state.selected].webContents;
+    if (action === "back" || action === "forward")
+      capture.cancel(state.selected);
     if (action === "back" && contents.navigationHistory.canGoBack())
       contents.navigationHistory.goBack();
     if (action === "forward" && contents.navigationHistory.canGoForward())
@@ -244,7 +361,15 @@ function createWindow() {
     if (action === "external") await openExternal(contents.getURL(), window);
   });
   disposeWindow = () => {
-    for (const channel of ["airove:state", "airove:select", "airove:navigate"])
+    for (const channel of [
+      "airove:state",
+      "airove:select",
+      "airove:navigate",
+      "airove:space",
+      "airove:library",
+      "airove:new",
+      "airove:open",
+    ])
       ipcMain.removeHandler(channel);
     for (const popup of popups) if (!popup.isDestroyed()) popup.destroy();
     for (const view of Object.values(views))
@@ -323,13 +448,34 @@ async function openExternal(url: string, parent: BrowserWindow) {
   if (response === 1) await shell.openExternal(url).catch(() => {});
 }
 
-void app.whenReady().then(() => {
-  createWindow();
-  app.on("activate", () => {
-    if (!mainWindow) createWindow();
-    else mainWindow.show();
+if (!app.requestSingleInstanceLock()) {
+  app.quit();
+} else {
+  app.on("second-instance", () => {
+    if (mainWindow?.isMinimized()) mainWindow.restore();
+    mainWindow?.show();
+    mainWindow?.focus();
   });
-});
+  void app.whenReady().then(async () => {
+    try {
+      library = await openLibrary(
+        join(app.getPath("userData"), "airove.sqlite"),
+      );
+      createWindow();
+      app.on("activate", () => {
+        if (!mainWindow) createWindow();
+        else mainWindow.show();
+      });
+    } catch {
+      dialog.showErrorBox(
+        "Airove could not start",
+        "Could not open the local metadata database. Check disk access. Your existing data has not been replaced.",
+      );
+      app.quit();
+    }
+  });
+}
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();
 });
+app.on("will-quit", () => library?.close());

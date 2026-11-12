@@ -1,8 +1,8 @@
 {
   "name": "airove",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
-  "description": "Airove — Native AI Hub compatibility POC",
+  "description": "Airove — Spaces and native AI chat management",
   "type": "module",
   "main": "./out/main/index.js",
   "scripts": {
@@ -17,7 +17,8 @@
   },
   "dependencies": {
     "react": "catalog:",
-    "react-dom": "catalog:"
+    "react-dom": "catalog:",
+    "sql.js": "^1.13.0"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
@@ -35,6 +36,8 @@
     "tailwindcss": "^3.4.17",
     "typescript": "catalog:",
     "vite": "^6.3.5",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "@types/sql.js": "^1.4.9",
+    "jsdom": "catalog:"
   }
 }

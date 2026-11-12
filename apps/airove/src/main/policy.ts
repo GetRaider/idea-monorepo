@@ -1,4 +1,5 @@
 import { providers, type Provider } from "../shared";
+import { conversationUrl } from "./conversation";
 
 export function isHttps(value: string): boolean {
   try {
@@ -42,13 +43,11 @@ export function isEmbeddedDestination(
 export function safeUrl(value: string): string {
   if (!isHttps(value)) return "[non-HTTPS URL]";
   const url = new URL(value);
-  const conversation = /^\/(c|chat)\/[^/]+/.test(url.pathname);
+  const conversation =
+    !!conversationUrl("chatgpt", value) || !!conversationUrl("claude", value);
   return `${url.origin}${conversation ? "/[conversation]" : "/"}`;
 }
 
 export function isConversation(provider: Provider, value: string): boolean {
-  return (
-    isProviderOrigin(provider, value) &&
-    /^\/(c|chat)\/[^/]+/.test(new URL(value).pathname)
-  );
+  return conversationUrl(provider, value) !== null;
 }

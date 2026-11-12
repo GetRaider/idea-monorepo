@@ -18,7 +18,9 @@
   "dependencies": {
     "react": "catalog:",
     "react-dom": "catalog:",
-    "sql.js": "^1.13.0"
+    "sql.js": "^1.13.0",
+    "@huggingface/transformers": "^4.2.0",
+    "onnxruntime-web": "1.26.0-dev.20260416-b7804b056c"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",

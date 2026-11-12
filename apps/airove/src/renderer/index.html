@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' ws://localhost:*; object-src 'none'; base-uri 'none'; frame-src 'none'"
+      content="default-src 'self'; script-src 'self' blob: 'wasm-unsafe-eval'; style-src 'self'; connect-src 'self' ws://localhost:* https://huggingface.co https://*.huggingface.co https://*.hf.co; worker-src 'self' blob:; media-src 'self' blob:; object-src 'none'; base-uri 'none'; frame-src 'none'"
     />
     <title>Airove</title>
   </head>

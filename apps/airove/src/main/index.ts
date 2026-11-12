@@ -9,6 +9,10 @@ import {
   ipcMain,
   session,
   shell,
+  clipboard,
+  systemPreferences,
+  protocol,
+  net,
   type WebContents,
   type IpcMainInvokeEvent,
 } from "electron";
@@ -31,6 +35,8 @@ import {
   safeUrl,
 } from "./policy";
 
+import { rendererAssetPath } from "./renderer-assets";
+import { DraftHandoff } from "./draft";
 import { openLibrary, type ChatLibrary } from "./library";
 import { ConversationCapture } from "./capture";
 import {
@@ -38,18 +44,30 @@ import {
   validId,
   validProvider,
   validateCommand,
+  validateNewChat,
 } from "./validation";
 
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: "airove",
+    privileges: {
+      standard: true,
+      secure: true,
+      supportFetchAPI: true,
+      stream: true,
+    },
+  },
+]);
 app.setName("Airove");
 app.setPath("userData", join(app.getPath("appData"), "airove"));
 let mainWindow: BrowserWindow | null = null;
 let library: ChatLibrary;
 let disposeWindow: (() => void) | undefined;
-const rendererFile = join(__dirname, "../renderer/index.html");
+const rendererDirectory = join(__dirname, "../renderer");
 const rendererUrl =
   !app.isPackaged && process.env.ELECTRON_RENDERER_URL
     ? new URL(process.env.ELECTRON_RENDERER_URL).href
-    : pathToFileURL(rendererFile).href;
+    : "airove://app/index.html";
 
 function createWindow() {
   const window = new BrowserWindow({
@@ -71,6 +89,8 @@ function createWindow() {
   window.webContents.on("will-redirect", (event) => event.preventDefault());
   window.webContents.setVisualZoomLevelLimits(1, 1);
   const state: HubState = {
+    composing: false,
+    drafts: {},
     selected: library.snapshot().lastProvider,
     selectedSpaceId: null,
     library: library.snapshot(),
@@ -83,6 +103,28 @@ function createWindow() {
   const publish = () => {
     if (!window.isDestroyed()) window.webContents.send("airove:changed", state);
   };
+  const handoff = new DraftHandoff(
+    (provider) => {
+      const contents = views[provider].webContents;
+      return {
+        active: () =>
+          state.selected === provider &&
+          !state.composing &&
+          !contents.isDestroyed(),
+        getURL: () => (contents.isDestroyed() ? "" : contents.getURL()),
+        isLoading: () => contents.isLoading(),
+        executeJavaScript: (script) => {
+          contents.focus();
+          return contents.executeJavaScript(script);
+        },
+        insertText: (text) => contents.insertText(text),
+      };
+    },
+    (drafts) => {
+      state.drafts = drafts;
+      publish();
+    },
+  );
   const resize = () => {
     const [width, height] = window.getContentSize();
     views[state.selected].setBounds({
@@ -214,6 +256,7 @@ function createWindow() {
         }
       }
       publish();
+      handoff.observe(provider);
     };
     secureContents(contents, provider, window, popups, owned);
     contents.on("did-start-loading", () => {
@@ -241,7 +284,7 @@ function createWindow() {
       "did-fail-load",
       (_event, code, _description, _url, mainFrame) => {
         if (!mainFrame || code === -3) return;
-        capture.cancel(provider);
+        if (handoff.text(provider) === null) capture.cancel(provider);
         state.providers[provider].error =
           `Navigation failed (${code}). Reload or open in browser.`;
         update("did-fail-load");
@@ -273,11 +316,12 @@ function createWindow() {
   });
   const selectProvider = (provider: Provider) => {
     if (state.selected !== provider) {
-      window.contentView.removeChildView(views[state.selected]);
+      if (!state.composing)
+        window.contentView.removeChildView(views[state.selected]);
       state.selected = provider;
-      window.contentView.addChildView(views[provider]);
+      if (!state.composing) window.contentView.addChildView(views[provider]);
       resize();
-      views[provider].webContents.focus();
+      if (!state.composing) views[provider].webContents.focus();
     }
   };
   const refreshLibrary = () => {
@@ -291,6 +335,7 @@ function createWindow() {
     library.rememberProvider(provider, state.selectedSpaceId);
     selectProvider(provider);
     refreshLibrary();
+    handoff.observe(provider);
     return state;
   });
   ipcMain.handle("airove:space", (event, input: unknown) => {
@@ -302,6 +347,7 @@ function createWindow() {
     state.selectedSpaceId = spaceId;
     selectProvider(space?.preferredProvider ?? snapshot.lastProvider);
     publish();
+    handoff.observe(state.selected);
     return state;
   });
   ipcMain.handle("airove:library", (event, input: unknown) => {
@@ -315,22 +361,110 @@ function createWindow() {
       state.selectedSpaceId = null;
     refreshLibrary();
   });
-  ipcMain.handle("airove:new", async (event) => {
-    validate(event);
-    const provider = state.selected;
-    library.rememberProvider(provider, state.selectedSpaceId);
-    refreshLibrary();
-    const token = capture.begin(provider, state.selectedSpaceId);
-    try {
-      await views[provider].webContents.loadURL(newChatUrls[provider]);
-    } catch {
-      capture.cancel(provider, token);
-      throw new Error("Could not open a new conversation");
+  const showComposer = (visible: boolean) => {
+    if (state.composing === visible) return;
+    state.composing = visible;
+    if (visible) window.contentView.removeChildView(views[state.selected]);
+    else {
+      window.contentView.addChildView(views[state.selected]);
+      resize();
     }
+    publish();
+    if (!visible) handoff.observe(state.selected);
+  };
+  ipcMain.handle("airove:compose", (event, visible: unknown) => {
+    validate(event);
+    if (typeof visible !== "boolean") throw new Error("Invalid composer state");
+    showComposer(visible);
+  });
+  ipcMain.handle("airove:new", async (event, input: unknown) => {
+    validate(event);
+    const draft = validateNewChat(input);
+    if (
+      draft.spaceId &&
+      !library.snapshot().spaces.some((space) => space.id === draft.spaceId)
+    )
+      throw new Error("Space no longer exists");
+    library.rememberProvider(draft.provider, draft.spaceId);
+    state.selectedSpaceId = draft.spaceId;
+    selectProvider(draft.provider);
+    handoff.queue(draft.provider, draft.text);
+    capture.begin(draft.provider, draft.spaceId);
+    showComposer(false);
+    refreshLibrary();
+    try {
+      await views[draft.provider].webContents.loadURL(
+        newChatUrls[draft.provider],
+      );
+      handoff.arm(draft.provider);
+    } catch {
+      throw new Error(
+        "Could not open a new conversation. Your draft is available to copy or retry.",
+      );
+    }
+  });
+  ipcMain.handle("airove:draft:retry", async (event) => {
+    validate(event);
+    await handoff.retry(state.selected);
+  });
+  ipcMain.handle("airove:draft:copy", (event) => {
+    validate(event);
+    const text = handoff.text(state.selected);
+    if (text !== null) clipboard.writeText(text);
+  });
+  ipcMain.handle("airove:draft:dismiss", (event) => {
+    validate(event);
+    handoff.clear(state.selected);
+  });
+  let microphoneGranted = false;
+  session.defaultSession.setPermissionCheckHandler(
+    (contents, permission, _origin, details) =>
+      microphoneGranted &&
+      contents === window.webContents &&
+      contents.getURL() === rendererUrl &&
+      permission === "media" &&
+      details.isMainFrame !== false &&
+      details.mediaType !== "video",
+  );
+  session.defaultSession.setPermissionRequestHandler(
+    (contents, permission, callback, details) => {
+      callback(
+        microphoneGranted &&
+          contents === window.webContents &&
+          contents.getURL() === rendererUrl &&
+          permission === "media" &&
+          details.isMainFrame &&
+          "mediaTypes" in details &&
+          Array.isArray(details.mediaTypes) &&
+          details.mediaTypes.length > 0 &&
+          details.mediaTypes.every((type) => type === "audio"),
+      );
+    },
+  );
+  ipcMain.handle("airove:microphone", async (event) => {
+    validate(event);
+    if (microphoneGranted) return true;
+    const { response } = await dialog.showMessageBox(window, {
+      type: "question",
+      title: "Microphone for dictation",
+      message: "Allow Airove to use your microphone for dictation?",
+      detail:
+        "Speech is transcribed on this device. The speech model downloads on first use.",
+      buttons: ["Cancel", "Allow"],
+      defaultId: 0,
+      cancelId: 0,
+    });
+    if (response !== 1) return false;
+    microphoneGranted =
+      process.platform !== "darwin" ||
+      (await systemPreferences.askForMediaAccess("microphone"));
+    return microphoneGranted;
   });
   ipcMain.handle("airove:open", async (event, input: unknown) => {
     validate(event);
     const chat = library.getChat(validId(input));
+    showComposer(false);
+    handoff.clear(chat.provider);
     capture.cancel(chat.provider);
     selectProvider(chat.provider);
     library.rememberProvider(chat.provider, state.selectedSpaceId);
@@ -361,6 +495,7 @@ function createWindow() {
     if (action === "external") await openExternal(contents.getURL(), window);
   });
   disposeWindow = () => {
+    handoff.dispose();
     for (const channel of [
       "airove:state",
       "airove:select",
@@ -369,6 +504,11 @@ function createWindow() {
       "airove:library",
       "airove:new",
       "airove:open",
+      "airove:compose",
+      "airove:draft:retry",
+      "airove:draft:copy",
+      "airove:draft:dismiss",
+      "airove:microphone",
     ])
       ipcMain.removeHandler(channel);
     for (const popup of popups) if (!popup.isDestroyed()) popup.destroy();
@@ -458,6 +598,12 @@ if (!app.requestSingleInstanceLock()) {
   });
   void app.whenReady().then(async () => {
     try {
+      protocol.handle("airove", (request) => {
+        const filePath = rendererAssetPath(request.url, rendererDirectory);
+        if (!filePath || request.method !== "GET")
+          return new Response(null, { status: 404 });
+        return net.fetch(pathToFileURL(filePath).href);
+      });
       library = await openLibrary(
         join(app.getPath("userData"), "airove.sqlite"),
       );

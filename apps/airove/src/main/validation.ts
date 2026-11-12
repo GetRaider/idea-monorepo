@@ -1,4 +1,4 @@
-import type { LibraryCommand, Provider } from "../shared";
+import type { LibraryCommand, Provider, NewChatInput } from "../shared";
 
 export function validateCommand(input: unknown): LibraryCommand {
   if (!input || typeof input !== "object" || Array.isArray(input))
@@ -67,4 +67,22 @@ function validName(input: unknown): string {
   )
     throw new Error("Enter a name between 1 and 240 characters");
   return input.trim();
+}
+
+export function validateNewChat(input: unknown): NewChatInput {
+  if (!input || typeof input !== "object" || Array.isArray(input))
+    throw new Error("Invalid new chat");
+  const draft = input as Record<string, unknown>;
+  if (
+    typeof draft.text !== "string" ||
+    !draft.text.trim() ||
+    draft.text.length > 32000 ||
+    draft.text.includes(String.fromCharCode(0))
+  )
+    throw new Error("Enter a draft between 1 and 32000 characters");
+  return {
+    provider: validProvider(draft.provider),
+    spaceId: nullableId(draft.spaceId),
+    text: draft.text,
+  };
 }

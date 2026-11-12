@@ -28,6 +28,8 @@ export interface ProviderState {
   error: string | null;
 }
 export interface HubState {
+  composing: boolean;
+  drafts: Partial<Record<Provider, DraftStatus>>;
   selected: Provider;
   selectedSpaceId: string | null;
   library: Library;
@@ -38,9 +40,21 @@ export interface AiroveApi {
   getState: () => Promise<HubState>;
   select: (provider: Provider) => Promise<HubState>;
   selectSpace: (spaceId: string | null) => Promise<HubState>;
-  newChat: () => Promise<void>;
+  showComposer: (visible: boolean) => Promise<void>;
+  newChat: (input: NewChatInput) => Promise<void>;
+  retryDraft: () => Promise<void>;
+  copyDraft: () => Promise<void>;
+  dismissDraft: () => Promise<void>;
+  requestMicrophone: () => Promise<boolean>;
   openChat: (id: string) => Promise<void>;
   editLibrary: (command: LibraryCommand) => Promise<void>;
   navigate: (action: Action) => Promise<void>;
   subscribe: (listener: (state: HubState) => void) => () => void;
+}
+
+export type DraftStatus = "waiting" | "ready" | "occupied" | "unavailable";
+export interface NewChatInput {
+  provider: Provider;
+  spaceId: string | null;
+  text: string;
 }

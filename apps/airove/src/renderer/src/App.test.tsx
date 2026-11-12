@@ -35,7 +35,15 @@ beforeEach(async () => {
       listener?.(snapshot);
       return snapshot;
     }),
+    showComposer: vi.fn(async (composing) => {
+      snapshot = { ...snapshot, composing };
+      listener?.(snapshot);
+    }),
     newChat: vi.fn(async () => {}),
+    retryDraft: vi.fn(async () => {}),
+    copyDraft: vi.fn(async () => {}),
+    dismissDraft: vi.fn(async () => {}),
+    requestMicrophone: vi.fn(async () => true),
     openChat: vi.fn(async () => {}),
     editLibrary: vi.fn(async () => {}),
     navigate: vi.fn(async () => {}),
@@ -62,20 +70,22 @@ async function click(element: HTMLElement) {
   await act(async () => element.click());
 }
 async function change(
-  element: HTMLInputElement | HTMLSelectElement,
+  element: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement,
   value: string,
 ) {
   await act(async () => {
     const prototype =
       element instanceof HTMLInputElement
         ? HTMLInputElement.prototype
-        : HTMLSelectElement.prototype;
+        : element instanceof HTMLTextAreaElement
+          ? HTMLTextAreaElement.prototype
+          : HTMLSelectElement.prototype;
     Object.getOwnPropertyDescriptor(prototype, "value")!.set!.call(
       element,
       value,
     );
     element.dispatchEvent(
-      new Event(element instanceof HTMLInputElement ? "input" : "change", {
+      new Event(element instanceof HTMLSelectElement ? "change" : "input", {
         bubbles: true,
       }),
     );
@@ -97,6 +107,8 @@ function createState(): HubState {
     error: null,
   };
   return {
+    composing: false,
+    drafts: {},
     selected: "chatgpt",
     selectedSpaceId: null,
     metadataError: null,
@@ -175,7 +187,16 @@ describe("Space-first library UI", () => {
     expect(api.select).toHaveBeenCalledWith("claude");
     expect(button("Claude").getAttribute("aria-pressed")).toBe("true");
     await click(button("New Chat"));
-    expect(api.newChat).toHaveBeenCalledOnce();
+    expect(api.newChat).not.toHaveBeenCalled();
+    expect(api.showComposer).toHaveBeenCalledWith(true);
+    await change(container.querySelector("textarea")!, "My first question");
+    await change(container.querySelector('[aria-label="Space"]')!, "space");
+    await click(button("Continue in Claude →"));
+    expect(api.newChat).toHaveBeenCalledWith({
+      provider: "claude",
+      spaceId: "space",
+      text: "My first question",
+    });
     const open = [...savedChats().querySelectorAll("button")].find((element) =>
       element.textContent?.includes("Project planning"),
     )!;
@@ -240,8 +261,10 @@ describe("Space-first library UI", () => {
       new Error("Network unavailable"),
     );
     await click(button("New Chat"));
+    await change(container.querySelector("textarea")!, "Keep this draft");
+    await click(button("Continue in ChatGPT →"));
     expect(container.querySelector('[role="alert"]')?.textContent).toContain(
-      "Could not complete this action",
+      "Could not open the provider",
     );
     expect(savedChats().textContent).toContain("Project planning");
   });

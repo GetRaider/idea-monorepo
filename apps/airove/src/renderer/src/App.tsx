@@ -1,12 +1,20 @@
 import { useEffect, useState } from "react";
 
-import type { Action, HubState, Provider } from "../../shared";
+import type {
+  Action,
+  HubState,
+  Provider,
+  NewChatInput,
+  DraftStatus,
+} from "../../shared";
+import { NewChat } from "./NewChat";
 import { Sidebar } from "./Sidebar";
 
 export function App() {
   const [state, setState] = useState<HubState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [copied, setCopied] = useState(false);
   useEffect(() => {
     let active = true;
     let receivedUpdate = false;
@@ -46,7 +54,23 @@ export function App() {
   const navigate = (action: Action) => {
     void run(() => window.airove.navigate(action));
   };
+  const continueDraft = async (input: NewChatInput) => {
+    setBusy(true);
+    setError(null);
+    setCopied(false);
+    try {
+      await window.airove.newChat(input);
+    } catch (cause) {
+      setError(
+        "Could not open the provider. Your draft is available to copy or retry.",
+      );
+      throw cause;
+    } finally {
+      setBusy(false);
+    }
+  };
   const current = state?.providers[state.selected];
+  const draftStatus = state?.drafts[state.selected];
   const selectedSpace = state?.library.spaces.find(
     (space) => space.id === state.selectedSpaceId,
   );
@@ -77,7 +101,7 @@ export function App() {
               disabled={busy || !state}
               className="mr-2 bg-sky-800"
               onClick={() => {
-                void run(() => window.airove.newChat());
+                void run(() => window.airove.showComposer(true));
               }}
             >
               New Chat
@@ -123,13 +147,82 @@ export function App() {
               {current?.conversation ? " · Conversation" : ""}
             </span>
           </div>
-          {(error || state?.metadataError || current?.error) && (
-            <p role="alert" className="truncate text-xs text-red-300">
-              {error || state?.metadataError || current?.error}
-            </p>
+          {(error || state?.metadataError || current?.error || draftStatus) && (
+            <div
+              className="flex min-w-0 items-center gap-2 text-xs"
+              role="status"
+            >
+              <p
+                className="min-w-0 flex-1 truncate text-sky-200"
+                role={
+                  error || state?.metadataError || current?.error
+                    ? "alert"
+                    : undefined
+                }
+              >
+                {error ||
+                  state?.metadataError ||
+                  current?.error ||
+                  draftMessage(state!.selected, draftStatus!)}
+              </p>
+              {draftStatus && draftStatus !== "ready" && (
+                <>
+                  <button
+                    disabled={busy}
+                    onClick={() => {
+                      void run(() => window.airove.retryDraft());
+                    }}
+                  >
+                    Retry
+                  </button>
+                  <button
+                    disabled={busy}
+                    onClick={() => {
+                      void run(async () => {
+                        await window.airove.copyDraft();
+                        setCopied(true);
+                      });
+                    }}
+                  >
+                    {copied ? "Copied" : "Copy draft"}
+                  </button>
+                </>
+              )}
+              {draftStatus && (
+                <button
+                  disabled={busy}
+                  aria-label="Dismiss draft handoff"
+                  onClick={() => {
+                    void run(() => window.airove.dismissDraft());
+                  }}
+                >
+                  Dismiss
+                </button>
+              )}
+            </div>
           )}
         </header>
+        {state?.composing && (
+          <NewChat
+            state={state}
+            onContinue={continueDraft}
+            onCancel={() => {
+              void run(() => window.airove.showComposer(false));
+            }}
+          />
+        )}
       </main>
     </div>
   );
+}
+
+function draftMessage(provider: Provider, status: DraftStatus): string {
+  const name = provider === "chatgpt" ? "ChatGPT" : "Claude";
+  if (status === "ready")
+    return `Draft filled. Review and press Send in ${name}.`;
+  if (status === "occupied")
+    return `${name} already has a draft. Copy this draft to keep both.`;
+  if (status === "unavailable")
+    return `Could not fill ${name}. Retry or copy your draft.`;
+  return `Draft waiting for ${name}. Sign in if needed, then Retry.`;
 }

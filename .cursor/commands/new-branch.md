@@ -14,7 +14,7 @@ Format: `<type>/<SCOPE>-<slug>`
 
 **Types:** `feat`, `fix`, `test`, `chore`, `docs`, `refactor`, `style`, `release`
 
-**Scopes:** `GEN` (repo-wide), `TAD` (take-and-do), `DVN` (devinity-api/web), `PRT` (personal-website), `TMP` (Tempo), `TDX` (todex-api/web)
+**Scopes:** `GEN` (repo-wide), `TAD` (take-and-do), `DVN` (devinity-api/web), `PRT` (personal-website), `TMP` (Tempo), `TDX` (todex-api/web), `ARV` (airove)
 
 **Slug:** lowercase, hyphens between words; may include version like `1.2.0` or `v1`
 

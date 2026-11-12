@@ -14,7 +14,7 @@ Format: `<type>(<SCOPE>): <subject>`
 
 **Types:** `feat`, `fix`, `test`, `chore`, `docs`, `refactor`, `style`, `release`
 
-**Scopes:** `GEN`, `TAD`, `DVN`, `PRT`, `TMP`, `TDX` — required
+**Scopes:** `GEN`, `TAD`, `DVN`, `PRT`, `TMP`, `TDX`, `ARV` — required
 
 **Max header length:** 70 characters
 
@@ -30,6 +30,7 @@ Use imperative mood: "add", "fix", "remove" — not "added" or "fixes".
 - `PRT` — apps/personal-website
 - `TMP` — apps/tempo
 - `TDX` — apps/todex-api, apps/todex-web, `@repo/api/todex`
+- `ARV` — apps/airove
 
 If changes span multiple apps, pick the primary scope or `GEN`.
 

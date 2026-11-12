@@ -10,7 +10,7 @@ module.exports = {
     "scope-enum": [
       2,
       "always",
-      ["GEN", "TAD", "DVN", "PRT", "TMP", "TDX", "EVN"],
+      ["GEN", "TAD", "DVN", "PRT", "TMP", "TDX", "EVN", "ARV"],
     ],
     "scope-empty": [2, "never"],
     "header-max-length": [2, "always", 70],

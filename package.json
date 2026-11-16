@@ -44,7 +44,8 @@
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "codeCheck": "npx tsc && pnpm lint",
     "prepare": "husky",
-    "dev:airove": "turbo run dev --filter=airove"
+    "dev:airove": "turbo run dev --filter=airove",
+    "verify:affected": "node .cursor/scripts/verify-affected.mjs"
   },
   "devDependencies": {
     "@better-auth/cli": "1.3.8",

@@ -41,7 +41,6 @@ import { ResizeHandle } from "@components/resize-handle";
 import { useExecutionCommands } from "../execution/execution-commands";
 import { formatDuration } from "../execution/execution-time";
 import {
-  BarsIcon,
   CalendarClockIcon,
   CalendarIcon,
   ChevronIcon,
@@ -58,8 +57,6 @@ import {
   GaugeIcon,
   GitBranchIcon,
   GoalIcon,
-  HourglassIcon,
-  InfoIcon,
   LayersIcon,
   MessageSquareIcon,
   MilestoneIcon,
@@ -810,33 +807,20 @@ function TaskViewBody({
       item.parentTaskId == null &&
       !descendantIds.has(item.id),
   );
-  const parsedEstimation = parseEstimation(estimationText);
-  const estimationInvalid =
-    estimationText.trim() === "" ||
-    parsedEstimation == null ||
-    parsedEstimation <= 0;
   const board = boards.find((item) => item.id === task.spaceId);
   const spaceName = board?.name ?? "Space";
-  const activeSlots = task.scheduleSlots.filter((slot) => slot.retiredAt == null);
+  const activeSlots = task.scheduleSlots.filter(
+    (slot) => slot.retiredAt == null,
+  );
   const activeSlot = [...activeSlots].sort((left, right) =>
     left.startAt.localeCompare(right.startAt),
   )[0];
   const [sectionsOpen, setSectionsOpen] = useState({
     criteria: task.acceptanceCriteria.length > 0,
     subtasks: true,
-    progress: true,
     execution: true,
     organization: true,
-    timeline:
-      activeSlot != null ||
-      task.dueDate != null ||
-      task.recurrence != null ||
-      task.seriesId != null,
   });
-  const timeUsedPercent =
-    task.estimation > 0
-      ? Math.round((task.actualTime / (task.estimation * 60)) * 100)
-      : 0;
   const subtaskExecuted = children.reduce(
     (total, child) => total + child.actualTime,
     0,
@@ -861,7 +845,7 @@ function TaskViewBody({
     >
       <div
         className={cn(
-          "min-w-0 flex-1 py-6",
+          "min-w-0 flex-1 py-6 lg:py-7",
           stacked ? "px-4" : "px-6 sm:px-10 lg:overflow-y-auto",
         )}
       >
@@ -875,51 +859,46 @@ function TaskViewBody({
             }
           />
           <textarea
-          aria-label="Summary"
-          value={summary}
-          rows={1}
-          className={cn(
-            "w-full resize-none bg-transparent text-2xl font-semibold leading-tight outline-none placeholder:text-muted-foreground",
-            isClosedStatus(task.status)
-              ? "text-muted-foreground line-through"
-              : "text-foreground",
-          )}
-          onChange={(event) => {
-            const nextSummary = event.target.value;
-            setSummary(nextSummary);
-            const trimmed = nextSummary.trim();
-            if (trimmed && trimmed !== task.summary) {
-              queueUpdate({ summary: trimmed });
-            }
-          }}
-          onBlur={() => {
-            const nextSummary = summary.trim();
-            if (!nextSummary) {
-              setSummary(task.summary);
-              const next = { ...pendingUpdateRef.current };
-              delete next.summary;
-              pendingUpdateRef.current = next;
-              return;
-            }
-            if (nextSummary !== task.summary)
-              queueUpdate({ summary: nextSummary });
-            flushPendingUpdate();
-          }}
-        />
+            aria-label="Summary"
+            value={summary}
+            rows={1}
+            className={cn(
+              "w-full resize-none bg-transparent text-2xl font-semibold leading-tight outline-none placeholder:text-muted-foreground",
+              isClosedStatus(task.status)
+                ? "text-muted-foreground line-through"
+                : "text-foreground",
+            )}
+            onChange={(event) => {
+              const nextSummary = event.target.value;
+              setSummary(nextSummary);
+              const trimmed = nextSummary.trim();
+              if (trimmed && trimmed !== task.summary) {
+                queueUpdate({ summary: trimmed });
+              }
+            }}
+            onBlur={() => {
+              const nextSummary = summary.trim();
+              if (!nextSummary) {
+                setSummary(task.summary);
+                const next = { ...pendingUpdateRef.current };
+                delete next.summary;
+                pendingUpdateRef.current = next;
+                return;
+              }
+              if (nextSummary !== task.summary)
+                queueUpdate({ summary: nextSummary });
+              flushPendingUpdate();
+            }}
+          />
         </div>
-        <div className="mt-3 flex flex-wrap items-center gap-2 pl-7">
+        <div className="mt-3 flex flex-wrap items-center gap-3">
           <Select
             value={task.status}
             onValueChange={(value) =>
               onUpdateStatus(task.id, value as Task["status"])
             }
           >
-            <SelectTrigger
-              className={cn(
-                CHIP,
-                STATUS_PILL[task.status],
-              )}
-            >
+            <SelectTrigger className={cn(CHIP, STATUS_PILL[task.status])}>
               <span
                 aria-hidden
                 className={cn(
@@ -948,7 +927,8 @@ function TaskViewBody({
               queueUpdate({ priority: value as Task["priority"] })
             }
           >
-            <SelectTrigger className={cn(CHIP, PRIORITY_PILL[task.priority])}>
+            <SelectTrigger className={cn(CHIP, "bg-transparent px-1")}>
+              <TaskPriorityDot priority={task.priority} />
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -959,17 +939,28 @@ function TaskViewBody({
               ))}
             </SelectContent>
           </Select>
-          <span className="inline-flex h-7 items-center gap-1.5 rounded-full bg-white/10 px-2.5 text-xs text-foreground/90">
-            <ClockIcon size={13} />
-            Est. {formatEstimation(task.estimation)}
-          </span>
-          <span className="inline-flex h-7 items-center gap-1.5 rounded-full bg-white/10 px-2.5 text-xs text-foreground/90">
-            <BarsIcon size={13} />
-            Progress {progressPercent}%
-          </span>
+          <div className="inline-flex h-8 items-center gap-2 rounded-full bg-white/10 px-3 text-sm">
+            <ClockIcon size={16} />
+            <EstimatePicker
+              appearance="plain"
+              value={estimationText}
+              onChange={setEstimationText}
+              onCommit={(next) => {
+                const parsed = parseEstimation(next);
+                if (parsed == null || parsed <= 0) {
+                  setEstimationText(formatEstimation(task.estimation));
+                  return;
+                }
+                queueUpdate({ estimation: parsed });
+                flushPendingUpdate();
+              }}
+            />
+          </div>
         </div>
         <label className="mt-6 block">
-          <span className="mb-1.5 block text-sm font-semibold">Outcome</span>
+          <span className="mb-1.5 block text-base font-semibold text-foreground/80">
+            Outcome
+          </span>
           <textarea
             aria-label="Outcome"
             value={outcome}
@@ -986,7 +977,9 @@ function TaskViewBody({
           />
         </label>
         <div className="mt-6">
-          <p className="mb-1.5 text-sm font-semibold">Description</p>
+          <p className="mb-1.5 text-base font-semibold text-foreground/80">
+            Description
+          </p>
           <TaskDescriptionEditor
             appearance="plain"
             contentClassName="min-h-0"
@@ -1006,7 +999,10 @@ function TaskViewBody({
           <AcceptanceCriteriaSection
             criteria={task.acceptanceCriteria}
             onChange={(acceptanceCriteria) => {
-              if (task.acceptanceCriteria.length === 0 && acceptanceCriteria.length > 0) {
+              if (
+                task.acceptanceCriteria.length === 0 &&
+                acceptanceCriteria.length > 0
+              ) {
                 setSectionsOpen((current) => ({ ...current, criteria: true }));
               }
               onUpdate({ acceptanceCriteria });
@@ -1046,89 +1042,50 @@ function TaskViewBody({
           "flex w-full shrink-0 flex-col gap-3 border-t border-border bg-background p-4",
           stacked
             ? null
-            : "lg:w-[22rem] lg:overflow-y-auto lg:border-l lg:border-t-0",
+            : "lg:w-[29%] lg:min-w-[20rem] lg:overflow-y-auto lg:border-l lg:border-t-0",
         )}
       >
         <SideGroup
-          title="Progress"
-          open={sectionsOpen.progress}
-          onToggle={() => toggleSection("progress")}
+          title="Execution"
+          open={sectionsOpen.execution}
+          onToggle={() => toggleSection("execution")}
         >
-          <div className="py-1.5">
+          <div className="py-2.5">
             <div className="flex items-center gap-1.5 text-sm">
               <CircleDashedIcon size={15} className="text-muted-foreground" />
               <span>Task Progress</span>
-              <InfoIcon size={13} className="text-muted-foreground" />
               <span className="ml-auto text-sm font-medium tabular-nums">
                 {progressPercent}%
               </span>
             </div>
-            <Meter value={progressPercent} />
-            <p className="mt-1.5 text-xs text-muted-foreground">
+            <div className="ml-7">
+              <Meter value={progressPercent} />
+            </div>
+            <p className="mt-1.5 ml-7 text-xs text-muted-foreground">
               Subtasks: {subtaskCounts.done}/{subtaskCounts.remaining}
               {" · "}
-              Acceptance criteria: {criteriaMetCount}/{task.acceptanceCriteria.length}
+              Acceptance criteria: {criteriaMetCount}/
+              {task.acceptanceCriteria.length}
               {subtaskCounts.cancelled > 0
                 ? ` · ${subtaskCounts.cancelled} cancelled`
                 : ""}
             </p>
           </div>
-          <div className="py-1.5">
+          <div className="py-2.5">
             <div className="flex items-center gap-1.5 text-sm">
               <ClockIcon size={15} className="text-muted-foreground" />
               <span>Time Used</span>
-              <InfoIcon size={13} className="text-muted-foreground" />
               <span className="ml-auto text-sm font-medium tabular-nums">
-                {timeUsedPercent}%
+                {executedLabel(task.actualTime)} /{" "}
+                {formatEstimation(task.estimation)}
               </span>
             </div>
-            <Meter value={timeUsedPercent} />
-            <p className="mt-1.5 text-xs text-muted-foreground">
-              {executedLabel(task.actualTime)} executed /{" "}
-              {formatEstimation(task.estimation)} estimated
-            </p>
             {children.length > 0 ? (
               <p className="mt-0.5 text-xs text-muted-foreground">
                 Subtasks {executedLabel(subtaskExecuted)}
               </p>
             ) : null}
           </div>
-        </SideGroup>
-        <SideGroup
-          title="Execution"
-          open={sectionsOpen.execution}
-          onToggle={() => toggleSection("execution")}
-        >
-          <DetailRow icon={<HourglassIcon size={16} />} label="Estimation">
-            <div className="min-w-0">
-              <EstimatePicker
-                appearance="plain"
-                value={estimationText}
-                onChange={setEstimationText}
-                onCommit={(next) => {
-                  const parsed = parseEstimation(next);
-                  if (parsed == null || parsed <= 0) {
-                    setEstimationText(formatEstimation(task.estimation));
-                    return;
-                  }
-                  if (parsed !== task.estimation) {
-                    queueUpdate({ estimation: parsed });
-                  }
-                  flushPendingUpdate();
-                }}
-              />
-              {estimationInvalid ? (
-                <p className="text-xs text-destructive">
-                  {estimationText.trim() && parsedEstimation === null
-                    ? "Use 1h, 30m, or 2d"
-                    : "Estimate is required"}
-                </p>
-              ) : null}
-            </div>
-          </DetailRow>
-          <DetailRow icon={<ClockIcon size={16} />} label="Executed">
-            <span>{executedLabel(task.actualTime)}</span>
-          </DetailRow>
           <DetailRow icon={<MilestoneIcon size={16} />} label="Progress Stage">
             <Select
               value={
@@ -1182,7 +1139,7 @@ function TaskViewBody({
           </DetailRow>
         </SideGroup>
         <SideGroup
-          title="Organization"
+          title="Planning"
           open={sectionsOpen.organization}
           onToggle={() => toggleSection("organization")}
         >
@@ -1310,78 +1267,71 @@ function TaskViewBody({
               </SelectContent>
             </Select>
           </DetailRow>
-        </SideGroup>
-        <SideGroup
-          title="Timeline"
-          open={sectionsOpen.timeline}
-          onToggle={() => toggleSection("timeline")}
-        >
           <DetailRow icon={<CalendarIcon size={16} />} label="Schedule">
-            <div className="inline-flex h-7 items-center gap-1 rounded-md bg-white/10 px-2">
-                <DatePicker
-                  appearance="plain"
-                  emptyLabel="None"
-                  triggerClassName="h-7 px-0 font-medium"
-                  value={isoToDateInput(activeSlot?.startAt ?? null)}
-                  onChange={(next) => {
-                    if (!next) {
-                      queueUpdate({ scheduleSlots: [] });
-                      return;
-                    }
-                    const time =
-                      isoToLocalTimeInput(activeSlot?.startAt ?? null) ||
-                      "09:00";
-                    const startAt = dateInputToScheduleIso(next, time);
-                    if (!startAt) return;
-                    queueUpdate({
-                      scheduleSlots: [
-                        {
-                          startAt,
-                          endAt: new Date(
-                            Date.parse(startAt) + 60 * 60_000,
-                          ).toISOString(),
-                        },
-                      ],
-                    });
-                  }}
-                />
-                <input
-                  type="time"
-                  aria-label="Schedule time"
-                  value={isoToLocalTimeInput(activeSlot?.startAt ?? null)}
-                  disabled={!activeSlot}
-                  className="w-[4.6rem] bg-transparent text-sm font-medium text-foreground disabled:hidden"
-                  onChange={(event) => {
-                    const date = isoToDateInput(activeSlot?.startAt ?? null);
-                    const startAt = event.target.value
-                      ? combineLocalDateAndTime(date, event.target.value)
-                      : dateInputToLocalDayStartIso(date);
-                    if (!startAt) {
-                      queueUpdate({ scheduleSlots: [] });
-                      return;
-                    }
-                    queueUpdate({
-                      scheduleSlots: [
-                        {
-                          startAt,
-                          endAt: new Date(
-                            Date.parse(startAt) + 60 * 60_000,
-                          ).toISOString(),
-                        },
-                      ],
-                    });
-                  }}
-                />
-                {activeSlot ? (
-                  <span className="text-muted-foreground">
-                    –{" "}
-                    {new Date(activeSlot.endAt).toLocaleTimeString(undefined, {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                      hour12: false,
-                    })}
-                  </span>
-                ) : null}
+            <div className="inline-flex h-7 items-center gap-1">
+              <DatePicker
+                appearance="plain"
+                emptyLabel="None"
+                triggerClassName="h-7 px-0 font-medium"
+                value={isoToDateInput(activeSlot?.startAt ?? null)}
+                onChange={(next) => {
+                  if (!next) {
+                    queueUpdate({ scheduleSlots: [] });
+                    return;
+                  }
+                  const time =
+                    isoToLocalTimeInput(activeSlot?.startAt ?? null) || "09:00";
+                  const startAt = dateInputToScheduleIso(next, time);
+                  if (!startAt) return;
+                  queueUpdate({
+                    scheduleSlots: [
+                      {
+                        startAt,
+                        endAt: new Date(
+                          Date.parse(startAt) + 60 * 60_000,
+                        ).toISOString(),
+                      },
+                    ],
+                  });
+                }}
+              />
+              <input
+                type="time"
+                aria-label="Schedule time"
+                value={isoToLocalTimeInput(activeSlot?.startAt ?? null)}
+                disabled={!activeSlot}
+                className="w-[4.6rem] bg-transparent text-sm font-medium text-foreground disabled:hidden"
+                onChange={(event) => {
+                  const date = isoToDateInput(activeSlot?.startAt ?? null);
+                  const startAt = event.target.value
+                    ? combineLocalDateAndTime(date, event.target.value)
+                    : dateInputToLocalDayStartIso(date);
+                  if (!startAt) {
+                    queueUpdate({ scheduleSlots: [] });
+                    return;
+                  }
+                  queueUpdate({
+                    scheduleSlots: [
+                      {
+                        startAt,
+                        endAt: new Date(
+                          Date.parse(startAt) + 60 * 60_000,
+                        ).toISOString(),
+                      },
+                    ],
+                  });
+                }}
+              />
+              {activeSlot ? (
+                <span className="text-muted-foreground">
+                  –{" "}
+                  {new Date(activeSlot.endAt).toLocaleTimeString(undefined, {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    hour12: false,
+                  })}
+                </span>
+              ) : null}
             </div>
           </DetailRow>
           <DetailRow icon={<CalendarClockIcon size={16} />} label="Due">
@@ -1418,15 +1368,21 @@ function TaskViewBody({
 function TaskReferences({ taskId }: { taskId: string }) {
   const queryClient = useQueryClient();
   const [url, setUrl] = useState("");
+  const [adding, setAdding] = useState(false);
   const referencesQuery = useQuery({
     queryKey: ["task-references", taskId],
     queryFn: () => todexClient.tasks.references.list(taskId),
   });
   const createReference = useMutation({
     mutationFn: (nextUrl: string) =>
-      todexClient.tasks.references.create(taskId, { kind: "url", url: nextUrl }),
+      todexClient.tasks.references.create(taskId, {
+        kind: "url",
+        url: nextUrl,
+      }),
     onSuccess: () => {
       setUrl("");
+      setAdding(false);
+      setOpen(true);
       void queryClient.invalidateQueries({
         queryKey: ["task-references", taskId],
       });
@@ -1443,65 +1399,73 @@ function TaskReferences({ taskId }: { taskId: string }) {
       open={visible}
       onToggle={() => setOpen(!visible)}
     >
-      {references.length > 0 ? (
-        <ul className="mb-2 flex flex-col gap-2">
-          {references.map((reference) => (
-            <li
-              key={reference.id}
-              className="flex items-center gap-3 rounded-lg border border-border px-3 py-2"
-            >
-              <span className="text-muted-foreground">
-                {reference.kind === "conversation" ? (
-                  <MessageSquareIcon size={16} />
-                ) : (
-                  <FileTextIcon size={16} />
-                )}
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm">{reference.title}</span>
-                <span className="block truncate text-xs text-muted-foreground">
-                  {reference.kind === "conversation"
-                    ? "Conversation · External"
-                    : reference.kind === "url"
-                      ? "Link"
-                      : "Knowledge Document · Todex"}
+      <div className="overflow-hidden rounded-xl border border-border bg-white/[0.015]">
+        {references.length > 0 ? (
+          <ul className="flex flex-col divide-y divide-border">
+            {references.map((reference) => (
+              <li
+                key={reference.id}
+                className="flex items-center gap-4 px-4 py-3"
+              >
+                <span className="text-muted-foreground">
+                  {reference.kind === "conversation" ? (
+                    <MessageSquareIcon size={16} />
+                  ) : (
+                    <FileTextIcon size={16} />
+                  )}
                 </span>
-              </span>
-              {reference.url ? (
-                <a
-                  href={reference.url}
-                  aria-label="Open reference"
-                  className="text-muted-foreground hover:text-foreground"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  <ExternalLinkIcon size={14} />
-                </a>
-              ) : null}
-            </li>
-          ))}
-        </ul>
-      ) : null}
-      <form
-        className="flex gap-2"
-        onSubmit={(event) => {
-          event.preventDefault();
-          const nextUrl = url.trim();
-          if (!nextUrl) return;
-          createReference.mutate(nextUrl);
-        }}
-      >
-        <input
-          aria-label="Reference URL"
-          value={url}
-          placeholder="https://"
-          className="h-8 min-w-0 flex-1 bg-transparent text-sm outline-none"
-          onChange={(event) => setUrl(event.target.value)}
-        />
-        <Button type="submit" size="sm" variant="ghost">
-          Add
-        </Button>
-      </form>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm">
+                    {reference.title}
+                  </span>
+                </span>
+                {reference.url ? (
+                  <a
+                    href={reference.url}
+                    aria-label="Open reference"
+                    className="text-muted-foreground hover:text-foreground"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <ExternalLinkIcon size={14} />
+                  </a>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        {adding ? (
+          <form
+            className="flex gap-2 border-t border-border px-4 py-2"
+            onSubmit={(event) => {
+              event.preventDefault();
+              const nextUrl = url.trim();
+              if (!nextUrl) return;
+              createReference.mutate(nextUrl);
+            }}
+          >
+            <input
+              aria-label="Reference URL"
+              autoFocus
+              value={url}
+              placeholder="https://"
+              className="h-8 min-w-0 flex-1 bg-transparent text-sm outline-none"
+              onChange={(event) => setUrl(event.target.value)}
+            />
+            <Button type="submit" size="sm" variant="ghost">
+              Add
+            </Button>
+          </form>
+        ) : (
+          <button
+            type="button"
+            className="flex w-full items-center justify-center gap-3 border-t border-border py-2.5 text-sm text-muted-foreground hover:bg-white/5 hover:text-foreground"
+            onClick={() => setAdding(true)}
+          >
+            <PlusIcon size={16} /> Add reference
+          </button>
+        )}
+      </div>
     </Fold>
   );
 }
@@ -1529,16 +1493,17 @@ function SubtasksSection({
   }
 
   return (
-    <div>
+    <div className="overflow-hidden rounded-xl border border-border bg-white/[0.015]">
       {subtasks.length > 0 ? (
         <ul className="flex flex-col">
           {subtasks.map((subtask) => (
-            <li key={subtask.id} className="flex items-center gap-2 py-1">
+            <li key={subtask.id} className="flex items-center gap-3 px-4 py-3">
               <Checkbox
                 checked={subtask.status === TaskStatus.DONE}
                 aria-label={`Mark "${subtask.summary}" done`}
                 onCheckedChange={() => onToggleDone(subtask)}
               />
+              <TaskPriorityDot priority={subtask.priority} />
               <button
                 type="button"
                 className={cn(
@@ -1549,10 +1514,22 @@ function SubtasksSection({
                 )}
                 onClick={() => onOpen(subtask.id)}
               >
-                {subtask.summary}
+                <span className="block text-sm font-normal text-muted-foreground">
+                  {subtask.taskKey}
+                </span>
+                <span className="font-semibold">{subtask.summary}</span>
               </button>
-              <span className="text-sm tabular-nums text-muted-foreground">
-                {formatEstimation(subtask.estimation)}
+              <span className="inline-flex items-center gap-2 text-sm tabular-nums text-muted-foreground">
+                <ClockIcon size={14} /> {formatEstimation(subtask.estimation)}
+              </span>
+              <span
+                className={cn(
+                  "ml-4 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm",
+                  STATUS_PILL[subtask.status],
+                )}
+              >
+                <StatusGlyph status={subtask.status} />{" "}
+                {STATUS_LABEL[subtask.status]}
               </span>
             </li>
           ))}
@@ -1560,7 +1537,7 @@ function SubtasksSection({
       ) : null}
       {canAdd ? (
         <form
-          className="mt-1 flex items-center gap-2"
+          className="flex items-center justify-center gap-3 border-t border-border px-4 py-2.5 focus-within:bg-white/[0.03]"
           onSubmit={(event) => {
             event.preventDefault();
             addSubtask(draft);
@@ -1571,7 +1548,7 @@ function SubtasksSection({
             aria-label="Add subtask"
             value={draft}
             placeholder="Add subtask"
-            className="min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+            className="w-28 min-w-0 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground focus:flex-1"
             onChange={(event) => setDraft(event.target.value)}
           />
         </form>
@@ -1600,7 +1577,7 @@ function AcceptanceCriteriaSection({
   }
 
   return (
-    <div>
+    <div className="overflow-hidden rounded-xl border border-border bg-white/[0.015]">
       {criteria.length > 0 ? (
         <ul className="flex flex-col">
           {criteria.map((criterion) => (
@@ -1629,7 +1606,7 @@ function AcceptanceCriteriaSection({
         </ul>
       ) : null}
       <form
-        className="mt-1 flex items-center gap-2"
+        className="flex items-center justify-center gap-3 border-t border-border px-4 py-2.5 focus-within:bg-white/[0.03]"
         onSubmit={(event) => {
           event.preventDefault();
           addCriterion(draft);
@@ -1640,7 +1617,7 @@ function AcceptanceCriteriaSection({
           aria-label="Add acceptance criterion"
           value={draft}
           placeholder="Add criterion"
-          className="min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+          className="w-28 min-w-0 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground focus:flex-1"
           onChange={(event) => setDraft(event.target.value)}
         />
       </form>
@@ -1662,11 +1639,11 @@ function AcceptanceCriterionRow({
   const [text, setText] = useState(criterion.text);
 
   return (
-    <li className="flex items-start gap-2">
+    <li className="group flex items-center gap-4 px-4 py-2">
       <Checkbox
         checked={criterion.done}
         aria-label={`Mark "${criterion.text}" done`}
-        className="mt-0.5"
+        className="shrink-0"
         onCheckedChange={(checked) => onToggle(checked === true)}
       />
       <input
@@ -1696,7 +1673,7 @@ function AcceptanceCriterionRow({
       <button
         type="button"
         aria-label={`Remove "${criterion.text}"`}
-        className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-surface hover:text-foreground"
+        className="flex h-5 w-5 opacity-0 group-hover:opacity-100 focus:opacity-100 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-surface hover:text-foreground"
         onClick={onRemove}
       >
         ×
@@ -1802,22 +1779,23 @@ function Fold({
   children: ReactNode;
 }) {
   return (
-    <section className="mt-5">
+    <section className="mt-6">
       <button
         type="button"
-        className="flex items-center gap-1.5 text-sm font-semibold"
+        className="flex items-center gap-3 text-base font-semibold text-foreground/80"
+        aria-expanded={open}
         onClick={onToggle}
       >
+        {title}
+        {count != null ? (
+          <span className="font-normal text-muted-foreground">{count}</span>
+        ) : null}
         <ChevronIcon
           size={14}
           className={cn("text-muted-foreground", open && "rotate-90")}
         />
-        {title}
-        {count != null ? (
-          <span className="font-normal text-muted-foreground">({count})</span>
-        ) : null}
       </button>
-      {open ? <div className="mt-2 pl-5">{children}</div> : null}
+      {open ? <div className="mt-2">{children}</div> : null}
     </section>
   );
 }
@@ -1837,7 +1815,8 @@ function SideGroup({
     <section className="rounded-xl border border-border bg-background">
       <button
         type="button"
-        className="flex w-full items-center px-3.5 py-2.5 text-sm font-medium"
+        className="flex w-full items-center px-4 py-3 text-base font-semibold"
+        aria-expanded={open}
         onClick={onToggle}
       >
         {title}
@@ -1849,7 +1828,7 @@ function SideGroup({
           )}
         />
       </button>
-      {open ? <div className="flex flex-col px-4 pb-2">{children}</div> : null}
+      {open ? <div className="flex flex-col px-4 pb-3">{children}</div> : null}
     </section>
   );
 }
@@ -1864,7 +1843,7 @@ function DetailRow({
   children: ReactNode;
 }) {
   return (
-    <div className="flex min-h-9 items-center gap-2.5">
+    <div className="flex min-h-10 items-center gap-3">
       <span className="flex size-4 shrink-0 items-center justify-center text-muted-foreground">
         {icon}
       </span>
@@ -1933,7 +1912,7 @@ const PRIORITY_LABEL: Record<Task["priority"], string> = {
 };
 
 const CHIP =
-  "h-7 w-fit gap-1 rounded-full border-0 px-2.5 text-xs font-medium text-white shadow-none [&>svg]:h-3 [&>svg]:w-3 [&>svg]:opacity-70";
+  "h-8 w-fit gap-1.5 rounded-full border-0 px-3 text-sm font-medium text-white shadow-none [&>svg]:h-3 [&>svg]:w-3 [&>svg]:opacity-70";
 
 const VALUE =
   "h-7 w-fit justify-end gap-1 border-0 bg-transparent px-0 text-sm font-medium shadow-none [&>svg]:h-3.5 [&>svg]:w-3.5 [&>svg]:opacity-60";
@@ -1951,3 +1930,18 @@ const PRIORITY_PILL: Record<Task["priority"], string> = {
   [TaskPriority.HIGH]: "bg-red-600 text-white",
   [TaskPriority.CRITICAL]: "bg-red-700 text-white",
 };
+
+function TaskPriorityDot({ priority }: { priority: Task["priority"] }) {
+  const colors = {
+    [TaskPriority.LOW]: "bg-zinc-400",
+    [TaskPriority.MEDIUM]: "bg-blue-500",
+    [TaskPriority.HIGH]: "bg-yellow-400",
+    [TaskPriority.CRITICAL]: "bg-red-500",
+  };
+  return (
+    <span
+      aria-hidden
+      className={cn("size-3.5 shrink-0 rounded-full", colors[priority])}
+    />
+  );
+}

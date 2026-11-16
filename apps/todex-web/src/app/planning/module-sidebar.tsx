@@ -72,8 +72,8 @@ import { useTasks } from "./tasks-provider";
 import { useSpaceDialogs } from "./space-dialogs";
 import {
   earliestActiveSlotStart,
-  isInboxTask,
   localDayScheduleQuery,
+  openSpaceTaskCount,
 } from "./task-helpers";
 
 export function TasksModuleSidebar() {
@@ -117,17 +117,10 @@ export function TasksModuleSidebar() {
       ).then((lists) => lists.flat()),
   });
   const countedTasks = taskQuery.data ?? [];
-  const inboxCount = countedTasks.filter(isInboxTask).length;
   const todayCount = scheduledCount(countedTasks, 0);
   const tomorrowCount = scheduledCount(countedTasks, 1);
   const spaceCount = (spaceId: string) =>
-    countedTasks.filter(
-      (task) =>
-        task.spaceId === spaceId &&
-        task.parentTaskId == null &&
-        task.status !== TaskStatus.DONE &&
-        task.status !== TaskStatus.CANCELLED,
-    ).length;
+    openSpaceTaskCount(countedTasks, spaceId);
 
   return (
     <ModuleSidebarFrame open={isOpen} width={width}>
@@ -155,7 +148,7 @@ export function TasksModuleSidebar() {
               active={activeBoardId === inboxBoard.id}
               icon={<InboxIcon size={16} />}
               label="Inbox"
-              count={inboxCount}
+              count={spaceCount(inboxBoard.id)}
             />
           ) : null}
           <NavRow
@@ -254,7 +247,12 @@ export function TasksModuleSidebar() {
   );
 }
 
-function FolderGroup({ folder, boards, activeBoardId, taskCount }: FolderGroupProps) {
+function FolderGroup({
+  folder,
+  boards,
+  activeBoardId,
+  taskCount,
+}: FolderGroupProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const { setNodeRef, isOver } = useDroppable({
     id: `space-folder:${folder.id}`,
@@ -584,7 +582,10 @@ function scheduledCount(tasks: Task[], offsetDays: number) {
   return tasks.filter((task) => {
     const start = earliestActiveSlotStart(task);
     if (!start || task.parentTaskId != null) return false;
-    if (task.status === TaskStatus.DONE || task.status === TaskStatus.CANCELLED) {
+    if (
+      task.status === TaskStatus.DONE ||
+      task.status === TaskStatus.CANCELLED
+    ) {
       return false;
     }
     const scheduled = Date.parse(start);

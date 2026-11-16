@@ -13,6 +13,7 @@ import {
   resolveCombinedOpenDrop,
   sameBoardDropIndex,
   isInboxTask,
+  openSpaceTaskCount,
   isOverdueTask,
   statusAfterDoneToggle,
   normalizeDescriptionHtml,
@@ -104,6 +105,25 @@ describe("quick access", () => {
     expect(isInboxTask(done)).toBe(false);
     expect(isUnscheduledTask(done)).toBe(false);
     expect(isOverdueTask(done, now)).toBe(false);
+  });
+
+  it("counts open root tasks in that space only", () => {
+    const tasks = [
+      task({ id: "elsewhere", spaceId: "work" }),
+      task({ id: "inbox-open", spaceId: "inbox" }),
+      task({
+        id: "inbox-child",
+        spaceId: "inbox",
+        parentTaskId: "inbox-open",
+      }),
+      task({ id: "inbox-done", spaceId: "inbox", status: TaskStatus.DONE }),
+      task({
+        id: "inbox-cancelled",
+        spaceId: "inbox",
+        status: TaskStatus.CANCELLED,
+      }),
+    ];
+    expect(openSpaceTaskCount(tasks, "inbox")).toBe(1);
   });
 
   it("excludes cancelled tasks from inbox, unscheduled, and overdue", () => {

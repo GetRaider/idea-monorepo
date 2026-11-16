@@ -79,9 +79,11 @@ export function activeScheduleSlots<
 export function earliestActiveSlotStart(task: Task): string | null {
   const slots = activeScheduleSlots(task);
   if (slots.length === 0) return null;
-  return [...slots].sort((left, right) =>
-    left.startAt.localeCompare(right.startAt),
-  )[0]?.startAt ?? null;
+  return (
+    [...slots].sort((left, right) =>
+      left.startAt.localeCompare(right.startAt),
+    )[0]?.startAt ?? null
+  );
 }
 
 export function taskChecklistProgress(input: {
@@ -519,6 +521,15 @@ export function isInboxTask(task: Task): boolean {
     earliestActiveSlotStart(task) == null &&
     task.dueDate == null
   );
+}
+
+export function openSpaceTaskCount(tasks: Task[], spaceId: string): number {
+  return tasks.filter(
+    (task) =>
+      task.spaceId === spaceId &&
+      task.parentTaskId == null &&
+      !isClosedStatus(task.status),
+  ).length;
 }
 
 export function normalizeDescriptionHtml(html: string): string {

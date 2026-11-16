@@ -146,6 +146,7 @@ function TaskContextMenuItems({
     for (const task of targets) updateTask(task.id, body, { quiet: true });
   }
 
+  const stageAvailable = status === TaskStatus.IN_PROGRESS;
   const stageDisabled = !sharedBoardId || stages.length === 0;
   const areaDisabled = !sharedBoardId || areas.length === 0;
   const boardDisabled = boards.length < 2;
@@ -174,38 +175,42 @@ function TaskContextMenuItems({
         </RadioSubmenu>
       ),
     },
-    {
-      key: "stage",
-      disabled: stageDisabled,
-      node: (
-        <RadioSubmenu
-          icon={<StageMark />}
-          label="Stage"
-          value={
-            stages.some((stage) => stage.id === stageId)
-              ? (stageId ?? "none")
-              : "none"
-          }
-          disabled={stageDisabled}
-        >
-          <ContextMenuRadioItem
-            value="none"
-            onSelect={() => patch({ progressStageId: null })}
-          >
-            None
-          </ContextMenuRadioItem>
-          {stages.map((stage) => (
-            <ContextMenuRadioItem
-              key={stage.id}
-              value={stage.id}
-              onSelect={() => patch({ progressStageId: stage.id })}
-            >
-              {stage.name}
-            </ContextMenuRadioItem>
-          ))}
-        </RadioSubmenu>
-      ),
-    },
+    ...(stageAvailable
+      ? [
+          {
+            key: "stage",
+            disabled: stageDisabled,
+            node: (
+              <RadioSubmenu
+                icon={<StageMark />}
+                label="Stage"
+                value={
+                  stages.some((stage) => stage.id === stageId)
+                    ? (stageId ?? "none")
+                    : "none"
+                }
+                disabled={stageDisabled}
+              >
+                <ContextMenuRadioItem
+                  value="none"
+                  onSelect={() => patch({ progressStageId: null })}
+                >
+                  None
+                </ContextMenuRadioItem>
+                {stages.map((stage) => (
+                  <ContextMenuRadioItem
+                    key={stage.id}
+                    value={stage.id}
+                    onSelect={() => patch({ progressStageId: stage.id })}
+                  >
+                    {stage.name}
+                  </ContextMenuRadioItem>
+                ))}
+              </RadioSubmenu>
+            ),
+          },
+        ]
+      : []),
     {
       key: "priority",
       disabled: false,
@@ -435,7 +440,6 @@ function TaskContextMenuItems({
                   createTask(summary, single.id, {
                     estimation: single.estimation,
                     sectionId: single.sectionId,
-                    progressStageId: single.progressStageId,
                   })
                 }
               />

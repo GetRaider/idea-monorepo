@@ -465,6 +465,7 @@ export function TaskFacts({
     | "actualTime"
     | "recurrence"
     | "progressStageId"
+    | "status"
   >;
   className?: string;
 }) {
@@ -477,7 +478,9 @@ export function TaskFacts({
   const recurrence = task.recurrence
     ? formatTaskRecurrence(task.recurrence)
     : null;
-  const stageName = useStageName(task.progressStageId);
+  const resolvedStageName = useStageName(task.progressStageId);
+  const stageName =
+    task.status === TaskStatus.IN_PROGRESS ? resolvedStageName : null;
   if (
     !schedule &&
     !due &&

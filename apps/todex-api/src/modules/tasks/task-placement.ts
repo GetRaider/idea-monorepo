@@ -1,3 +1,8 @@
+import {
+  TaskStatus,
+  type TaskStatus as TaskStatusValue,
+} from "@repo/api/todex";
+
 export function resolveTaskPlacement(input: TaskPlacementInput): TaskPlacement {
   if (input.requestedSectionId !== undefined && !input.sectionOnDestination) {
     throw new TaskPlacementError("Section does not belong to this space");
@@ -20,6 +25,17 @@ export function resolveTaskPlacement(input: TaskPlacementInput): TaskPlacement {
         ? input.currentProgressStageId
         : input.requestedProgressStageId,
   };
+}
+
+export function assertProgressStageForStatus(
+  status: TaskStatusValue,
+  progressStageId: string | null | undefined,
+) {
+  if (progressStageId && status !== TaskStatus.IN_PROGRESS) {
+    throw new TaskPlacementError(
+      "Progress stage is available only when status is In Progress",
+    );
+  }
 }
 
 export class TaskPlacementError extends Error {

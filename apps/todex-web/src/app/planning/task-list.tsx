@@ -390,7 +390,6 @@ export function TaskList() {
     createTask("New subtask", parentTaskId, {
       estimation: parent.estimation,
       sectionId: parent.sectionId,
-      progressStageId: parent.progressStageId,
     });
   }
 

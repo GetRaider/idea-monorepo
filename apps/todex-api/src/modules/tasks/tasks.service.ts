@@ -45,10 +45,7 @@ import {
   type TaskRow,
 } from "../../db/schema";
 import { mapTask, parseIsoDate, toIso } from "../../db/mappers";
-import {
-  lockWorkspaceTasks,
-  withoutTaskId,
-} from "../calendar/calendar-scope";
+import { lockWorkspaceTasks, withoutTaskId } from "../calendar/calendar-scope";
 import {
   formatTaskKey,
   hasParentCycle,
@@ -60,7 +57,11 @@ import { RelationsService } from "../relations/relations.service";
 import { SpacesService } from "../spaces/spaces.service";
 import { ContentIndexQueue } from "../content-index/content-index.queue";
 import { WorkspaceService } from "../workspace/workspace.service";
-import { resolveTaskPlacement, TaskPlacementError } from "./task-placement";
+import {
+  assertProgressStageForStatus,
+  resolveTaskPlacement,
+  TaskPlacementError,
+} from "./task-placement";
 import { assertScheduleSlots } from "./task-slots";
 import {
   assertNoLiveLifecycleLock,
@@ -199,7 +200,9 @@ export class TasksService {
     );
 
     const nextParentId =
-      body.parentTaskId !== undefined ? body.parentTaskId : existing.parentTaskId;
+      body.parentTaskId !== undefined
+        ? body.parentTaskId
+        : existing.parentTaskId;
     const spaceChanged = destinationSpaceId !== existing.spaceId;
     const clearsParent = Boolean(existing.parentTaskId) && spaceChanged;
     if (body.parentTaskId !== undefined || clearsParent) {
@@ -216,7 +219,8 @@ export class TasksService {
       throw new BadRequestException("Only root tasks can repeat");
     }
     const closing =
-      (body.status === TaskStatus.DONE || body.status === TaskStatus.CANCELLED) &&
+      (body.status === TaskStatus.DONE ||
+        body.status === TaskStatus.CANCELLED) &&
       body.status !== existing.status;
 
     const [updated] = await this.db.transaction(async (tx) => {
@@ -243,7 +247,11 @@ export class TasksService {
         }
         await this.detachTaskFromScopes(tx, workspaceId, existing.id);
       }
-      if (existing.parentTaskId && body.status && body.status !== existing.status) {
+      if (
+        existing.parentTaskId &&
+        body.status &&
+        body.status !== existing.status
+      ) {
         await lockTaskRows(tx, [existing.id, existing.parentTaskId].sort());
         if (await hasLiveLock(tx, [existing.parentTaskId])) {
           throw new TaskLifecycleException("lifecycle_in_progress");
@@ -293,7 +301,9 @@ export class TasksService {
           ...(body.description !== undefined
             ? { description: sanitizeTaskHtml(body.description) }
             : {}),
-          ...(body.status !== undefined && !closing ? { status: body.status } : {}),
+          ...(body.status !== undefined && !closing
+            ? { status: body.status }
+            : {}),
           ...(body.priority !== undefined ? { priority: body.priority } : {}),
           ...(body.complexity !== undefined
             ? { complexity: body.complexity }
@@ -388,7 +398,8 @@ export class TasksService {
           ).filter((id) => id !== existing.id);
 
     const closing =
-      (body.status === TaskStatus.DONE || body.status === TaskStatus.CANCELLED) &&
+      (body.status === TaskStatus.DONE ||
+        body.status === TaskStatus.CANCELLED) &&
       body.status !== existing.status;
     await this.db.transaction(async (tx) => {
       if (closing) {
@@ -488,11 +499,16 @@ export class TasksService {
     let url: string | null = null;
     if (body.kind === "doc") {
       const [doc] = await this.db
-        .select({ id: docs.id, title: docs.title, workspaceId: docs.workspaceId })
+        .select({
+          id: docs.id,
+          title: docs.title,
+          workspaceId: docs.workspaceId,
+        })
         .from(docs)
         .where(eq(docs.id, body.docId))
         .limit(1);
-      if (!doc || doc.workspaceId !== workspaceId) throw new ForbiddenException();
+      if (!doc || doc.workspaceId !== workspaceId)
+        throw new ForbiddenException();
       docId = doc.id;
       title = doc.title;
     } else if (body.kind === "conversation") {
@@ -836,7 +852,11 @@ export class TasksService {
   private async placementFor(
     existing: TaskRow | null,
     spaceId: string,
-    body: { sectionId?: string; progressStageId?: string | null },
+    body: {
+      sectionId?: string;
+      progressStageId?: string | null;
+      status?: TaskRow["status"];
+    },
   ) {
     const defaultSectionId = await this.spacesService.defaultSectionId(spaceId);
     const sectionOnDestination =
@@ -853,7 +873,9 @@ export class TasksService {
             spaceId,
             body.progressStageId,
           );
+    const status = body.status ?? existing?.status ?? TaskStatus.TODO;
     try {
+      assertProgressStageForStatus(status, body.progressStageId);
       return resolveTaskPlacement({
         spaceChanged: existing == null || existing.spaceId !== spaceId,
         currentSectionId: existing?.sectionId ?? defaultSectionId,
@@ -1161,7 +1183,12 @@ export class TasksService {
     if (input.action === "delete") {
       await tx
         .delete(executionQueue)
-        .where(inArray(executionQueue.taskId, [input.task.id, ...children.map((child) => child.id)]));
+        .where(
+          inArray(executionQueue.taskId, [
+            input.task.id,
+            ...children.map((child) => child.id),
+          ]),
+        );
       await tx.delete(tasks).where(eq(tasks.id, input.task.id));
       return;
     }
@@ -1172,9 +1199,7 @@ export class TasksService {
         version: sql`${tasks.version} + 1`,
         updatedAt: now,
       })
-      .where(
-        and(eq(tasks.id, input.task.id), eq(tasks.version, input.version)),
-      )
+      .where(and(eq(tasks.id, input.task.id), eq(tasks.version, input.version)))
       .returning();
     if (!parent) {
       const [current] = await tx
@@ -1182,7 +1207,9 @@ export class TasksService {
         .from(tasks)
         .where(eq(tasks.id, input.task.id))
         .limit(1);
-      throw new TaskLifecycleException("conflict", { version: current?.version });
+      throw new TaskLifecycleException("conflict", {
+        version: current?.version,
+      });
     }
     if (rereadUnfinished.length > 0) {
       await tx
@@ -1199,7 +1226,10 @@ export class TasksService {
       .set({ retiredAt: now })
       .where(
         and(
-          inArray(taskScheduleSlots.taskId, [input.task.id, ...rereadUnfinished]),
+          inArray(taskScheduleSlots.taskId, [
+            input.task.id,
+            ...rereadUnfinished,
+          ]),
           isNull(taskScheduleSlots.retiredAt),
           gt(taskScheduleSlots.endAt, now),
         ),

@@ -230,9 +230,7 @@ export function TaskView() {
             taskKey={selectedTask.taskKey}
             parentTaskKey={parentTask?.taskKey}
             onOpenParent={
-              parentTask
-                ? () => setSelectedTaskId(parentTask.id)
-                : undefined
+              parentTask ? () => setSelectedTaskId(parentTask.id) : undefined
             }
             trailing={<BoardGlyph />}
           />
@@ -317,7 +315,9 @@ export function TaskView() {
             epicId: selectedTask.epicId,
             scheduleDate: values.scheduleDate,
             dueDate: values.dueDate,
-            progressStageId: selectedTask.progressStageId,
+            ...(values.status === TaskStatus.IN_PROGRESS
+              ? { progressStageId: selectedTask.progressStageId }
+              : {}),
           })
         }
       />
@@ -1142,36 +1142,41 @@ function TaskViewBody({
               </SelectContent>
             </Select>
           </DetailRow>
-          <DetailRow icon={<MilestoneIcon size={16} />} label="Progress Stage">
-            <Select
-              value={
-                stages.some((stage) => stage.id === task.progressStageId)
-                  ? (task.progressStageId ?? "none")
-                  : "none"
-              }
-              disabled={stages.length === 0}
-              onValueChange={(value) =>
-                onUpdate({
-                  progressStageId: value === "none" ? null : value,
-                })
-              }
+          {task.status === TaskStatus.IN_PROGRESS ? (
+            <DetailRow
+              icon={<MilestoneIcon size={16} />}
+              label="Progress Stage"
             >
-              <SelectTrigger
-                className={cn(VALUE, "disabled:opacity-50")}
+              <Select
+                value={
+                  stages.some((stage) => stage.id === task.progressStageId)
+                    ? (task.progressStageId ?? "none")
+                    : "none"
+                }
                 disabled={stages.length === 0}
+                onValueChange={(value) =>
+                  onUpdate({
+                    progressStageId: value === "none" ? null : value,
+                  })
+                }
               >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">None</SelectItem>
-                {stages.map((stage) => (
-                  <SelectItem key={stage.id} value={stage.id}>
-                    {stage.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </DetailRow>
+                <SelectTrigger
+                  className={cn(VALUE, "disabled:opacity-50")}
+                  disabled={stages.length === 0}
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  {stages.map((stage) => (
+                    <SelectItem key={stage.id} value={stage.id}>
+                      {stage.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </DetailRow>
+          ) : null}
         </SideGroup>
         <SideGroup
           title="Planning"
@@ -1616,10 +1621,7 @@ function AcceptanceCriteriaSection({
   onChange: (criteria: AcceptanceCriterion[]) => void;
 }) {
   function addCriterion(text: string) {
-    onChange([
-      ...criteria,
-      { id: crypto.randomUUID(), text, done: false },
-    ]);
+    onChange([...criteria, { id: crypto.randomUUID(), text, done: false }]);
   }
 
   return (
@@ -1941,7 +1943,8 @@ function AddDraftRow({
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState("");
 
-  if (!adding) return <AddRowButton label={label} onClick={() => setAdding(true)} />;
+  if (!adding)
+    return <AddRowButton label={label} onClick={() => setAdding(true)} />;
 
   return (
     <form
@@ -2017,7 +2020,9 @@ async function duplicateTask(
         ? { recurrence: task.recurrence }
         : {}),
       sectionId: task.sectionId,
-      progressStageId: task.progressStageId,
+      ...(task.status === TaskStatus.IN_PROGRESS
+        ? { progressStageId: task.progressStageId }
+        : {}),
       parentTaskId: task.parentTaskId,
       epicId: task.epicId,
       ...(activeSlots.length > 0
@@ -2036,7 +2041,9 @@ async function duplicateTask(
         })
       : created;
     const references = await todexClient.tasks.references.list(task.id);
-    await Promise.all(references.map((reference) => copyReference(saved.id, reference)));
+    await Promise.all(
+      references.map((reference) => copyReference(saved.id, reference)),
+    );
     rememberTask(queryClient, saved);
     onOpen(saved.id);
     void queryClient.invalidateQueries({ queryKey: ["tasks"] });

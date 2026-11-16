@@ -257,7 +257,7 @@ export function EpicTaskCard({
       {estimate ? (
         <span className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
           <ClockIcon size={12} />
-          Estimate {estimate}
+          {estimate}
         </span>
       ) : null}
     </div>

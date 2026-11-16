@@ -128,6 +128,7 @@ function suggestion(
     priority: "medium",
     estimation: 60,
     scheduleDate: null,
+    scheduleSlots: [],
     dueDate: null,
     spaceId: "board",
     spaceName: "Software Growth",

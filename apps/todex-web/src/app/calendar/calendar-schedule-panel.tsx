@@ -28,7 +28,11 @@ export function CalendarSchedulePanel() {
     : templates;
   const matchedTasks = tasks.filter((task) => {
     if (task.spaceId !== activeSpaceId) return false;
-    if (task.scheduleDate || task.status === "done" || task.status === "cancelled") {
+    if (
+      task.scheduleSlots.some((slot) => slot.retiredAt == null) ||
+      task.status === "done" ||
+      task.status === "cancelled"
+    ) {
       return false;
     }
     if (!needle) return true;

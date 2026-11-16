@@ -19,9 +19,15 @@ export const tasksUrlHelper = {
       return taskKey ? `${base}/${encodeURIComponent(taskKey)}` : base;
     },
 
-    buildBoardUrl(spaceId: string, taskKey?: string): string {
+    buildBoardUrl(
+      spaceId: string,
+      taskKey?: string,
+      parentTaskKey?: string,
+    ): string {
       const base = `${TASKS_ROOT_PATH}/space/${encodeURIComponent(spaceId)}`;
-      return taskKey ? `${base}/${encodeURIComponent(taskKey)}` : base;
+      if (!taskKey) return base;
+      if (!parentTaskKey) return `${base}/${encodeURIComponent(taskKey)}`;
+      return `${base}/${encodeURIComponent(parentTaskKey)}/${encodeURIComponent(taskKey)}`;
     },
 
     buildEpicUrl(spaceId: string, epicId: string): string {
@@ -35,10 +41,14 @@ export const tasksUrlHelper = {
       if (spacePath[1] === "epics" && spacePath[2]) {
         return { kind: "epic", spaceId, epicId: spacePath[2] };
       }
+      const taskSegment = spacePath[spacePath.length - 1];
       return {
         kind: "space",
         spaceId,
-        taskKey: spacePath[1] ? decodePathSegment(spacePath[1]) : undefined,
+        taskKey:
+          spacePath.length > 1 && taskSegment
+            ? decodePathSegment(taskSegment)
+            : undefined,
       };
     },
 
@@ -55,9 +65,11 @@ export const tasksUrlHelper = {
     },
 
     getTaskKeyFromPathname(pathname: string): string | undefined {
-      const boardMatch = pathname.match(/^\/planning\/space\/[^/]+\/([^/]+)/);
-      if (boardMatch?.[1] && boardMatch[1] !== "epics") {
-        return decodePathSegment(boardMatch[1]);
+      const boardMatch = pathname.match(/^\/planning\/space\/[^/]+\/(.+)/);
+      if (boardMatch?.[1] && !boardMatch[1].startsWith("epics/") && boardMatch[1] !== "epics") {
+        const segments = boardMatch[1].split("/").filter(Boolean);
+        const taskKey = segments[segments.length - 1];
+        return taskKey ? decodePathSegment(taskKey) : undefined;
       }
       const scheduleMatch = pathname.match(
         /^\/planning\/schedule\/(?:today|tomorrow)\/([^/]+)/,

@@ -3,6 +3,7 @@ import {
   TaskPriority,
   TaskStatus,
   type CalendarEvent,
+  type ScheduleSlot,
   type Task,
 } from "@repo/api/todex";
 
@@ -24,8 +25,18 @@ describe("event task scope", () => {
     const blocks = blocksForRange(
       [event({ id: "event-1", taskScope: ["scoped"], cancelled: false })],
       [
-        task({ id: "scoped", scheduleDate: "2026-10-07T10:00:00.000Z" }),
-        task({ id: "loose", scheduleDate: "2026-10-07T12:00:00.000Z" }),
+        task({
+          id: "scoped",
+          scheduleSlots: [
+            slot("scoped-slot", "2026-10-07T10:00:00.000Z", "2026-10-07T11:00:00.000Z"),
+          ],
+        }),
+        task({
+          id: "loose",
+          scheduleSlots: [
+            slot("loose-slot", "2026-10-07T12:00:00.000Z", "2026-10-07T13:00:00.000Z"),
+          ],
+        }),
       ],
       [],
       [],
@@ -68,6 +79,10 @@ function event(overrides: Partial<CalendarEvent>): CalendarEvent {
   };
 }
 
+function slot(id: string, startAt: string, endAt: string): ScheduleSlot {
+  return { id, startAt, endAt, retiredAt: null };
+}
+
 function task(overrides: Partial<Task>): Task {
   return {
     id: "task",
@@ -76,12 +91,22 @@ function task(overrides: Partial<Task>): Task {
     taskKey: "T-1",
     summary: "Task",
     description: "",
+    outcome: "",
     acceptanceCriteria: [],
     status: TaskStatus.TODO,
     priority: TaskPriority.MEDIUM,
+    complexity: null,
     dueDate: null,
-    scheduleDate: null,
+    scheduleSlots: [],
     recurrence: null,
+    ownerId: "user",
+    seriesId: null,
+    occurrenceKey: null,
+    occurrenceAnchor: null,
+    originSeriesId: null,
+    overriddenFields: [],
+    version: 1,
+    conflicts: [],
     sectionId: "section",
     progressStageId: null,
     estimation: 60,

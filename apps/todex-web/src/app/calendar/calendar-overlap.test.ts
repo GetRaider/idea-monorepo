@@ -73,6 +73,7 @@ function block(
     lane,
     eventId: sessionId ? null : key,
     taskId: null,
+    slotId: null,
     sessionId,
     title: key,
     description: "",

@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { Injectable } from "@nestjs/common";
 import { TaskPriority, TaskStatus } from "@repo/api/todex";
 import { z } from "zod";
@@ -60,7 +61,7 @@ export class TaskToolHandler {
             priority: taskPrioritySchema.optional(),
           })
           .strict(),
-        handle: async ({ workspaceId, args }) => {
+        handle: async ({ workspaceId, userId, args }) => {
           const body = args as {
             spaceId: string;
             summary: string;
@@ -68,14 +69,18 @@ export class TaskToolHandler {
             status?: (typeof TaskStatus)[keyof typeof TaskStatus];
             priority?: (typeof TaskPriority)[keyof typeof TaskPriority];
           };
-          return this.tasks.create(workspaceId, {
-            spaceId: body.spaceId,
-            summary: body.summary,
-            description: body.description ?? "",
-            status: body.status,
-            priority: body.priority,
-            estimation: DEFAULT_TASK_ESTIMATION_MINUTES,
-          });
+          return this.tasks.create(
+            workspaceId,
+            {
+              spaceId: body.spaceId,
+              summary: body.summary,
+              description: body.description ?? "",
+              status: body.status,
+              priority: body.priority,
+              estimation: DEFAULT_TASK_ESTIMATION_MINUTES,
+            },
+            userId,
+          );
         },
       },
       {
@@ -99,11 +104,13 @@ export class TaskToolHandler {
             status?: (typeof TaskStatus)[keyof typeof TaskStatus];
             priority?: (typeof TaskPriority)[keyof typeof TaskPriority];
           };
+          const current = await this.tasks.get(workspaceId, body.taskId);
           return this.tasks.update(workspaceId, body.taskId, {
             summary: body.summary,
             description: body.description,
             status: body.status,
             priority: body.priority,
+            version: current.version,
           });
         },
       },
@@ -114,7 +121,11 @@ export class TaskToolHandler {
         parameters: z.object({ taskId: z.string().min(1) }).strict(),
         handle: async ({ workspaceId, args }) => {
           const { taskId } = args as { taskId: string };
-          await this.tasks.remove(workspaceId, taskId);
+          const current = await this.tasks.get(workspaceId, taskId);
+          await this.tasks.remove(workspaceId, taskId, {
+            version: current.version,
+            transitionId: randomUUID(),
+          });
           return { ok: true };
         },
       },

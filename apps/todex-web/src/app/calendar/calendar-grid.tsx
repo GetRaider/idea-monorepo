@@ -60,8 +60,29 @@ export function CalendarGrid() {
     setDraft((current) => (current ? { ...current, ...anchor } : current));
   }, [draft]);
   const {
-    state: { events, tasks, sessions, boards, range, visibility, focusRequest, mode, dayCount, preferencesReady },
-    actions: { setRange, openEvent, openTask, openComposer, openSession, createEvent, updateEvent, updateTask },
+    state: {
+      events,
+      tasks,
+      sessions,
+      boards,
+      range,
+      visibility,
+      focusRequest,
+      mode,
+      dayCount,
+      preferencesReady,
+      previews,
+    },
+    actions: {
+      setRange,
+      openEvent,
+      openTask,
+      openComposer,
+      openSession,
+      createEvent,
+      updateEvent,
+      updateTask,
+    },
   } = useCalendar();
   const timeZone = deviceTimeZone();
   const blocks = useMemo(
@@ -76,11 +97,23 @@ export function CalendarGrid() {
           new Date(range.to),
           new Date(),
           timeZone,
+          previews,
         ),
         visibility,
         mode,
       ),
-    [events, tasks, sessions, boards, range.from, range.to, visibility, mode, timeZone],
+    [
+      events,
+      tasks,
+      sessions,
+      boards,
+      range.from,
+      range.to,
+      visibility,
+      mode,
+      timeZone,
+      previews,
+    ],
   );
 
   useEffect(() => {
@@ -308,7 +341,10 @@ export function CalendarGrid() {
             arg.event.remove();
             if (!start || !end) return;
             if (taskId) {
-              void updateTask(taskId, { scheduleDate: start.toISOString() });
+              void updateTask(taskId, {
+                startAt: start.toISOString(),
+                endAt: end.toISOString(),
+              });
               return;
             }
             if (!templateId) return;
@@ -348,10 +384,8 @@ export function CalendarGrid() {
             onCreate={async (body) => {
               if (body.kind === "task") {
                 await updateTask(body.taskId, {
-                  scheduleDate: body.scheduleDate,
-                  ...(body.estimation != null
-                    ? { estimation: body.estimation }
-                    : {}),
+                  startAt: body.startAt,
+                  endAt: body.endAt,
                 });
               } else {
                 await createEvent({
@@ -488,6 +522,7 @@ function openBlock(
     originalStart?: string | null;
     seriesEventId?: string | null;
   };
+  if (block.kind === "preview") return;
   if (block.kind === "task" && block.taskId) {
     openTask(block.taskId);
     return;
@@ -503,13 +538,14 @@ async function moveBlock(
   updateEvent: (eventId: string, body: unknown) => Promise<unknown>,
   updateTask: (
     taskId: string,
-    patch: { scheduleDate?: string | null },
+    patch: { slotId?: string | null; startAt?: string; endAt?: string },
   ) => Promise<unknown>,
 ) {
   const block = arg.event.extendedProps as {
     kind?: string;
     eventId?: string | null;
     taskId?: string | null;
+    slotId?: string | null;
     originalStart?: string | null;
     series?: boolean;
   };
@@ -522,7 +558,11 @@ async function moveBlock(
   }
   try {
     if (block.kind === "task" && block.taskId) {
-      await updateTask(block.taskId, { scheduleDate: start.toISOString() });
+      await updateTask(block.taskId, {
+        slotId: block.slotId,
+        startAt: start.toISOString(),
+        endAt: end.toISOString(),
+      });
       return;
     }
     if (!block.eventId) return arg.revert();
@@ -544,13 +584,14 @@ async function resizeBlock(
   updateEvent: (eventId: string, body: unknown) => Promise<unknown>,
   updateTask: (
     taskId: string,
-    patch: { scheduleDate?: string; estimation?: number },
+    patch: { slotId?: string | null; startAt?: string; endAt?: string },
   ) => Promise<unknown>,
 ) {
   const block = arg.event.extendedProps as {
     kind?: string;
     eventId?: string | null;
     taskId?: string | null;
+    slotId?: string | null;
     originalStart?: string | null;
     series?: boolean;
   };
@@ -563,13 +604,10 @@ async function resizeBlock(
   }
   try {
     if (block.kind === "task" && block.taskId) {
-      const minutes = Math.max(
-        15,
-        Math.round((end.getTime() - start.getTime()) / 60_000),
-      );
       await updateTask(block.taskId, {
-        scheduleDate: start.toISOString(),
-        estimation: minutes,
+        slotId: block.slotId,
+        startAt: start.toISOString(),
+        endAt: end.toISOString(),
       });
       return;
     }
@@ -666,7 +704,8 @@ function clamp(value: number, min: number, max: number) {
 function chipClassNames(block: CalendarBlock) {
   return [
     "todex-cal-chip",
-    block.kind === "task" ? "todex-cal-task" : "",
+    block.kind === "task" || block.kind === "preview" ? "todex-cal-task" : "",
+    block.kind === "preview" ? "opacity-50" : "",
     block.kind === "session" ? "todex-cal-session" : "",
     block.rsvpStatus === "no" ? "todex-cal-rsvp-no" : "",
     block.rsvpStatus === "maybe" ? "todex-cal-rsvp-maybe" : "",

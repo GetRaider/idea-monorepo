@@ -3,7 +3,13 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+} from "@tanstack/react-query";
+import { toast } from "sonner";
 import {
   Button,
   Checkbox,
@@ -30,25 +36,40 @@ import type {
   AcceptanceCriterion,
   Epic,
   Task,
+  TaskReference,
   Space,
   UpdateEpicBody,
   UpdateTaskBody,
 } from "@repo/api/todex";
 
+type TaskPatch = Omit<UpdateTaskBody, "version">;
+
 import { ResizeHandle } from "@components/resize-handle";
 import { useExecutionCommands } from "../execution/execution-commands";
 import { formatDuration } from "../execution/execution-time";
 import {
+  CalendarClockIcon,
   CalendarIcon,
   ChevronIcon,
+  CircleDashedIcon,
   ClockIcon,
   CloseIcon,
   DockRightIcon,
   EllipsisIcon,
   ExpandIcon,
+  ExternalLinkIcon,
+  BoxIcon,
+  FileTextIcon,
+  FolderIcon,
+  GaugeIcon,
+  GitBranchIcon,
+  GoalIcon,
+  LayersIcon,
+  LinkIcon,
+  MessageSquareIcon,
+  MilestoneIcon,
   PlusIcon,
   RepeatIcon,
-  StatusDoneIcon,
 } from "@components/icons";
 import { todexClient } from "@lib/todex-client";
 import {
@@ -73,10 +94,8 @@ import {
   AreaMark,
   BoardGlyph,
   BoardMark,
-  InlineTitle,
-  ParentMark,
   PriorityGlyph,
-  StageMark,
+  PriorityMenu,
   StatusGlyph,
   TaskProgressBar,
   TasksBreadcrumb,
@@ -84,16 +103,16 @@ import {
 import { EpicTaskCard } from "./epic-row";
 import { TaskComposer, type TaskComposerValues } from "./task-composer";
 import {
-  acceptanceCriteriaAreMet,
   combineLocalDateAndTime,
   dateInputToLocalDayStartIso,
   dateInputToScheduleIso,
   isoToDateInput,
   isoToLocalTimeInput,
-  startOfLocalDay,
+  nextScheduleSlots,
   isClosedStatus,
   statusAfterDoneToggle,
-  taskChecklistProgress,
+  directSubtaskCounts,
+  taskProgressPercent,
   STATUS_LABEL,
   STATUS_ORDER,
 } from "./task-helpers";
@@ -116,6 +135,7 @@ export function TaskView() {
       removeTask,
     },
   } = useTasks();
+  const queryClient = useQueryClient();
   const { execute, enqueue } = useExecutionCommands();
   const isLargeScreen = useMinWidthLg();
   const [mode, setMode] = useState<TaskViewMode>("docked");
@@ -156,6 +176,9 @@ export function TaskView() {
 
   const board = boards.find((item) => item.id === selectedTask.spaceId);
   const spaceName = board?.name ?? "Space";
+  const parentTask = selectedTask.parentTaskId
+    ? tasks.find((task) => task.id === selectedTask.parentTaskId)
+    : null;
 
   return (
     <div
@@ -184,19 +207,33 @@ export function TaskView() {
         )}
       >
         {isDocked ? (
-          <span className="min-w-0 flex-1 truncate text-sm font-medium tabular-nums text-muted-foreground">
-            {selectedTask.taskKey}
+          <span className="flex min-w-0 flex-1 items-center gap-2 truncate text-sm font-medium tabular-nums text-muted-foreground">
+            {parentTask ? (
+              <button
+                type="button"
+                className="truncate hover:text-foreground"
+                onClick={() => setSelectedTaskId(parentTask.id)}
+              >
+                {parentTask.taskKey}
+              </button>
+            ) : null}
+            {parentTask ? <span>›</span> : null}
+            <span className="truncate">{selectedTask.taskKey}</span>
           </span>
         ) : (
           <TasksBreadcrumb
             className="min-w-0 flex-1 text-2xl font-semibold tracking-tight"
             spaceName={spaceName}
             boardHref={
-              board
-                ? tasksUrlHelper.routing.buildBoardUrl(board.id)
-                : undefined
+              board ? tasksUrlHelper.routing.buildBoardUrl(board.id) : undefined
             }
             taskKey={selectedTask.taskKey}
+            parentTaskKey={parentTask?.taskKey}
+            onOpenParent={
+              parentTask
+                ? () => setSelectedTaskId(parentTask.id)
+                : undefined
+            }
             trailing={<BoardGlyph />}
           />
         )}
@@ -232,6 +269,9 @@ export function TaskView() {
           <TaskViewMenu
             summary={selectedTask.summary}
             onEnqueue={() => enqueue(selectedTask.id)}
+            onDuplicate={() =>
+              void duplicateTask(selectedTask, queryClient, setSelectedTaskId)
+            }
             onDelete={() => removeTask(selectedTask.id)}
           />
           {isLargeScreen ? (
@@ -726,17 +766,17 @@ function TaskViewBody({
   tasks: Task[];
   boards: Space[];
   stacked: boolean;
-  onUpdate: (body: UpdateTaskBody) => void;
+  onUpdate: (body: TaskPatch) => void;
   onUpdateStatus: (taskId: string, status: Task["status"]) => void;
   onOpenTask: (taskId: string) => void;
   onCreateSubtask: (values: TaskComposerValues) => void;
 }) {
-  const [addingTask, setAddingTask] = useState(false);
   const [summary, setSummary] = useState(task.summary);
+  const [outcome, setOutcome] = useState(task.outcome);
   const [estimationText, setEstimationText] = useState(
     formatEstimation(task.estimation),
   );
-  const pendingUpdateRef = useRef<UpdateTaskBody>({});
+  const pendingUpdateRef = useRef<TaskPatch>({});
   const saveTimerRef = useRef<number | null>(null);
   const onUpdateRef = useRef(onUpdate);
   onUpdateRef.current = onUpdate;
@@ -767,7 +807,7 @@ function TaskViewBody({
     onUpdateRef.current(body);
   }
 
-  function queueUpdate(body: UpdateTaskBody) {
+  function queueUpdate(body: TaskPatch) {
     pendingUpdateRef.current = { ...pendingUpdateRef.current, ...body };
     if (saveTimerRef.current != null) {
       window.clearTimeout(saveTimerRef.current);
@@ -780,25 +820,46 @@ function TaskViewBody({
   const children = tasks
     .filter((item) => item.parentTaskId === task.id)
     .sort(compareTasksForNavigation);
-  const doneCount = children.filter(
-    (item) => item.status === TaskStatus.DONE,
+  const progressPercent = Math.round(
+    taskProgressPercent({
+      status: task.status,
+      acceptanceCriteria: task.acceptanceCriteria,
+      subtasks: children,
+    }) * 100,
+  );
+  const subtaskCounts = directSubtaskCounts(children);
+  const criteriaMetCount = task.acceptanceCriteria.filter(
+    (criterion) => criterion.done,
   ).length;
-  const progress = taskChecklistProgress({
-    acceptanceCriteria: task.acceptanceCriteria,
-    subtasks: children,
-  });
   const descendantIds = collectDescendantIds(tasks, task.id);
   const parentOptions = tasks.filter(
-    (item) => item.id !== task.id && !descendantIds.has(item.id),
+    (item) =>
+      item.id !== task.id &&
+      item.parentTaskId == null &&
+      !descendantIds.has(item.id),
   );
-  const criteriaMet = acceptanceCriteriaAreMet(task.acceptanceCriteria);
-  const parsedEstimation = parseEstimation(estimationText);
-  const estimationInvalid =
-    estimationText.trim() === "" ||
-    parsedEstimation == null ||
-    parsedEstimation <= 0;
   const board = boards.find((item) => item.id === task.spaceId);
   const spaceName = board?.name ?? "Space";
+  const activeSlots = task.scheduleSlots.filter(
+    (slot) => slot.retiredAt == null,
+  );
+  const activeSlot = [...activeSlots].sort((left, right) =>
+    left.startAt.localeCompare(right.startAt),
+  )[0];
+  const [sectionsOpen, setSectionsOpen] = useState({
+    criteria: task.acceptanceCriteria.length > 0,
+    subtasks: true,
+    execution: true,
+    organization: true,
+  });
+  const subtaskExecuted = children.reduce(
+    (total, child) => total + child.actualTime,
+    0,
+  );
+
+  function toggleSection(key: keyof typeof sectionsOpen) {
+    setSectionsOpen((current) => ({ ...current, [key]: !current[key] }));
+  }
 
   useEffect(() => {
     return () => {
@@ -815,48 +876,137 @@ function TaskViewBody({
     >
       <div
         className={cn(
-          "min-w-0 flex-1 py-6",
+          "min-w-0 flex-1 py-6 lg:py-7",
           stacked ? "px-4" : "px-6 sm:px-10 lg:overflow-y-auto",
         )}
       >
-        <textarea
-          aria-label="Summary"
-          value={summary}
-          rows={2}
-          className={cn(
-            "w-full resize-none bg-transparent text-2xl font-semibold leading-tight outline-none placeholder:text-muted-foreground",
-            isClosedStatus(task.status)
-              ? "text-muted-foreground line-through"
-              : "text-foreground",
-          )}
-          onChange={(event) => {
-            const nextSummary = event.target.value;
-            setSummary(nextSummary);
-            const trimmed = nextSummary.trim();
-            if (trimmed && trimmed !== task.summary) {
-              queueUpdate({ summary: trimmed });
+        <div className="flex items-start gap-3">
+          <Checkbox
+            checked={task.status === TaskStatus.DONE}
+            aria-label="Mark task done"
+            className="mt-2"
+            onCheckedChange={() =>
+              onUpdateStatus(task.id, statusAfterDoneToggle(task.status))
             }
-          }}
-          onBlur={() => {
-            const nextSummary = summary.trim();
-            if (!nextSummary) {
-              setSummary(task.summary);
-              const next = { ...pendingUpdateRef.current };
-              delete next.summary;
-              pendingUpdateRef.current = next;
-              return;
+          />
+          <textarea
+            aria-label="Summary"
+            value={summary}
+            rows={1}
+            className={cn(
+              "w-full resize-none bg-transparent text-2xl font-semibold leading-tight outline-none placeholder:text-muted-foreground",
+              isClosedStatus(task.status)
+                ? "text-muted-foreground line-through"
+                : "text-foreground",
+            )}
+            onChange={(event) => {
+              const nextSummary = event.target.value;
+              setSummary(nextSummary);
+              const trimmed = nextSummary.trim();
+              if (trimmed && trimmed !== task.summary) {
+                queueUpdate({ summary: trimmed });
+              }
+            }}
+            onBlur={() => {
+              const nextSummary = summary.trim();
+              if (!nextSummary) {
+                setSummary(task.summary);
+                const next = { ...pendingUpdateRef.current };
+                delete next.summary;
+                pendingUpdateRef.current = next;
+                return;
+              }
+              if (nextSummary !== task.summary)
+                queueUpdate({ summary: nextSummary });
+              flushPendingUpdate();
+            }}
+          />
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <Select
+            value={task.status}
+            onValueChange={(value) =>
+              onUpdateStatus(task.id, value as Task["status"])
             }
-            if (nextSummary !== task.summary)
-              queueUpdate({ summary: nextSummary });
-            flushPendingUpdate();
-          }}
-        />
-        <div className="mt-1">
-          <p className="mb-3 text-lg font-medium text-muted-foreground">
+          >
+            <SelectTrigger className={cn(CHIP, STATUS_PILL[task.status])}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {STATUS_ORDER.map((status) => (
+                <SelectItem key={status} value={status}>
+                  <span className="flex items-center gap-2">
+                    <StatusMark status={status} />
+                    {STATUS_LABEL[status]}
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select
+            value={task.priority}
+            onValueChange={(value) =>
+              queueUpdate({ priority: value as Task["priority"] })
+            }
+          >
+            <SelectTrigger className={cn(CHIP, "bg-white/10")}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PRIORITY_OPTIONS.map((priority) => (
+                <SelectItem key={priority} value={priority}>
+                  <span className="flex items-center gap-2">
+                    <PriorityGlyph priority={priority} />
+                    {PRIORITY_LABEL[priority]}
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <div className="inline-flex h-8 items-center gap-2 rounded-full bg-white/10 px-3 text-sm">
+            <ClockIcon size={16} />
+            <EstimatePicker
+              appearance="plain"
+              value={estimationText}
+              onChange={setEstimationText}
+              onCommit={(next) => {
+                const parsed = parseEstimation(next);
+                if (parsed == null || parsed <= 0) {
+                  setEstimationText(formatEstimation(task.estimation));
+                  return;
+                }
+                queueUpdate({ estimation: parsed });
+                flushPendingUpdate();
+              }}
+            />
+          </div>
+        </div>
+        <label className="mt-6 block">
+          <span className="mb-1.5 block text-base font-semibold text-muted-foreground">
+            Outcome
+          </span>
+          <textarea
+            aria-label="Outcome"
+            value={outcome}
+            rows={1}
+            maxLength={500}
+            placeholder="Add an outcome before you execute."
+            className="w-full resize-none bg-transparent text-sm leading-relaxed outline-none placeholder:text-muted-foreground"
+            onChange={(event) => {
+              const nextOutcome = event.target.value;
+              setOutcome(nextOutcome);
+              queueUpdate({ outcome: nextOutcome.trim() });
+            }}
+            onBlur={() => flushPendingUpdate()}
+          />
+        </label>
+        <div className="mt-6">
+          <p className="mb-1.5 text-base font-semibold text-muted-foreground">
             Description
           </p>
           <TaskDescriptionEditor
             appearance="plain"
+            contentClassName="min-h-0"
             content={task.description}
             onChange={(html) => {
               if (html === task.description) return;
@@ -864,394 +1014,596 @@ function TaskViewBody({
             }}
           />
         </div>
-        <section className="mt-8">
-          <div className="mb-3 flex items-center">
-            <h2 className="text-lg font-medium text-muted-foreground">
-              Subtasks
-            </h2>
-            <span className="ml-auto text-sm font-medium tabular-nums text-muted-foreground">
-              {doneCount}/{children.length}
-            </span>
-          </div>
-          {children.length === 0 ? (
-            <p className="mb-2 text-sm text-muted-foreground">No tasks yet.</p>
-          ) : (
-            <div className="mb-2 flex flex-col gap-2">
-              {children.map((child) => (
-                <EpicTaskCard
-                  key={child.id}
-                  task={child}
-                  draggable={false}
-                  onOpen={() => onOpenTask(child.id)}
-                  onToggleDone={() =>
-                    onUpdateStatus(
-                      child.id,
-                      statusAfterDoneToggle(child.status),
-                    )
-                  }
-                />
-              ))}
-            </div>
-          )}
-          <TaskComposer
-            open={addingTask}
-            defaultBoardId={task.spaceId}
-            onOpenChange={setAddingTask}
-            onCreate={onCreateSubtask}
+        <Fold
+          title="Acceptance Criteria"
+          count={`${criteriaMetCount}/${task.acceptanceCriteria.length}`}
+          open={sectionsOpen.criteria}
+          onToggle={() => toggleSection("criteria")}
+        >
+          <AcceptanceCriteriaSection
+            criteria={task.acceptanceCriteria}
+            onChange={(acceptanceCriteria) => {
+              if (
+                task.acceptanceCriteria.length === 0 &&
+                acceptanceCriteria.length > 0
+              ) {
+                setSectionsOpen((current) => ({ ...current, criteria: true }));
+              }
+              onUpdate({ acceptanceCriteria });
+            }}
           />
-        </section>
+        </Fold>
+        {task.parentTaskId == null ? (
+          <Fold
+            title="Subtasks"
+            count={`${subtaskCounts.done}/${children.length}`}
+            open={sectionsOpen.subtasks}
+            onToggle={() => toggleSection("subtasks")}
+          >
+            <SubtasksSection
+              subtasks={children}
+              canAdd
+              onToggleDone={(subtask) =>
+                onUpdateStatus(
+                  subtask.id,
+                  statusAfterDoneToggle(subtask.status),
+                )
+              }
+              onUpdateStatus={(subtask, status) =>
+                onUpdateStatus(subtask.id, status)
+              }
+              onOpen={onOpenTask}
+              onCreate={(summary) =>
+                onCreateSubtask({
+                  summary,
+                  status: TaskStatus.TODO,
+                  priority: task.priority,
+                  estimation: task.estimation,
+                  spaceId: task.spaceId,
+                  scheduleDate: null,
+                  dueDate: null,
+                })
+              }
+            />
+          </Fold>
+        ) : null}
+        <TaskReferences taskId={task.id} />
       </div>
       <aside
         className={cn(
           "flex w-full shrink-0 flex-col gap-3 border-t border-border bg-background p-4",
           stacked
             ? null
-            : "lg:w-[22rem] lg:overflow-y-auto lg:border-l lg:border-t-0",
+            : "lg:w-[29%] lg:min-w-[20rem] lg:overflow-y-auto lg:border-l lg:border-t-0",
         )}
       >
-        <section className="rounded-xl border border-border bg-background p-4">
-          <h2 className="text-sm font-medium text-foreground">Details</h2>
-          <div className="mt-4 flex flex-col gap-3">
-            {progress.total > 0 ? (
-              <DetailRow icon={<StatusDoneIconMark />} label="Progress">
-                <TaskProgressBar
-                  done={progress.done}
-                  total={progress.total}
-                  className="text-sm"
-                />
-              </DetailRow>
+        <SideGroup
+          title="Execution"
+          open={sectionsOpen.execution}
+          onToggle={() => toggleSection("execution")}
+        >
+          <div className="py-2.5">
+            <div className="flex items-center gap-1.5 text-sm">
+              <CircleDashedIcon size={15} className="text-muted-foreground" />
+              <span>Task Progress</span>
+              <span className="ml-auto text-sm font-medium tabular-nums">
+                {progressPercent}%
+              </span>
+            </div>
+            <Meter value={progressPercent} />
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Subtasks: {subtaskCounts.done}/{subtaskCounts.remaining}
+              {" · "}
+              Acceptance criteria: {criteriaMetCount}/
+              {task.acceptanceCriteria.length}
+              {subtaskCounts.cancelled > 0
+                ? ` · ${subtaskCounts.cancelled} cancelled`
+                : ""}
+            </p>
+          </div>
+          <div className="py-2.5">
+            <div className="flex items-center gap-1.5 text-sm">
+              <ClockIcon size={15} className="text-muted-foreground" />
+              <span>Time Used</span>
+              <span className="ml-auto text-sm font-medium tabular-nums">
+                {executedLabel(task.actualTime)} /{" "}
+                {formatEstimation(task.estimation)}
+              </span>
+            </div>
+            {children.length > 0 ? (
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Subtasks {executedLabel(subtaskExecuted)}
+              </p>
             ) : null}
-            <DetailRow
-              icon={<StatusGlyph status={task.status} />}
-              label="Status"
+          </div>
+          <DetailRow icon={<GaugeIcon size={16} />} label="Complexity">
+            <Select
+              value={task.complexity ?? "none"}
+              onValueChange={(value) =>
+                queueUpdate({
+                  complexity:
+                    value === "none" ? null : (value as Task["complexity"]),
+                })
+              }
             >
-              <div className="flex flex-wrap items-center gap-2">
-                <Select
-                  value={task.status}
-                  onValueChange={(value) =>
-                    onUpdateStatus(task.id, value as Task["status"])
-                  }
-                >
-                  <SelectTrigger
-                    className={cn(
-                      "h-7 w-fit gap-1.5 rounded-full px-2.5 text-xs font-medium shadow-none",
-                      STATUS_PILL[task.status],
-                    )}
-                  >
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {STATUS_ORDER.map((status) => (
-                      <SelectItem key={status} value={status}>
-                        <span className="flex items-center gap-2">
-                          <StatusGlyph status={status} />
-                          {STATUS_LABEL[status]}
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {criteriaMet && !isClosedStatus(task.status) ? (
-                  <button
-                    type="button"
-                    className="text-xs font-medium text-emerald-300 hover:text-emerald-200"
-                    onClick={() => onUpdateStatus(task.id, TaskStatus.DONE)}
-                  >
-                    Mark done
-                  </button>
-                ) : null}
-              </div>
-            </DetailRow>
-            <DetailRow icon={<StageMark />} label="Stage">
-              <Select
-                value={
-                  stages.some((stage) => stage.id === task.progressStageId)
-                    ? (task.progressStageId ?? "none")
-                    : "none"
-                }
+              <SelectTrigger className={VALUE}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">None</SelectItem>
+                {COMPLEXITY_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    <span className="flex items-center gap-2">
+                      <PriorityGlyph priority={option.priority} />
+                      {option.label}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </DetailRow>
+          <DetailRow icon={<MilestoneIcon size={16} />} label="Progress Stage">
+            <Select
+              value={
+                stages.some((stage) => stage.id === task.progressStageId)
+                  ? (task.progressStageId ?? "none")
+                  : "none"
+              }
+              disabled={stages.length === 0}
+              onValueChange={(value) =>
+                onUpdate({
+                  progressStageId: value === "none" ? null : value,
+                })
+              }
+            >
+              <SelectTrigger
+                className={cn(VALUE, "disabled:opacity-50")}
                 disabled={stages.length === 0}
-                onValueChange={(value) =>
-                  onUpdate({
-                    progressStageId: value === "none" ? null : value,
-                  })
-                }
               >
-                <SelectTrigger
-                  className="h-8 w-full border-0 bg-transparent px-0 text-sm shadow-none disabled:opacity-50"
-                  disabled={stages.length === 0}
-                >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">None</SelectItem>
+                {stages.map((stage) => (
+                  <SelectItem key={stage.id} value={stage.id}>
+                    {stage.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </DetailRow>
+        </SideGroup>
+        <SideGroup
+          title="Planning"
+          open={sectionsOpen.organization}
+          onToggle={() => toggleSection("organization")}
+        >
+          <DetailRow icon={<BoxIcon size={16} />} label="Space">
+            {boards.length > 1 ? (
+              <Select
+                value={task.spaceId}
+                onValueChange={(value) => {
+                  queueUpdate({
+                    spaceId: value,
+                    epicId: null,
+                  });
+                  flushPendingUpdate();
+                }}
+              >
+                <SelectTrigger className={VALUE}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">None</SelectItem>
-                  {stages.map((stage) => (
-                    <SelectItem key={stage.id} value={stage.id}>
-                      {stage.name}
+                  {boards.map((board) => (
+                    <SelectItem key={board.id} value={board.id}>
+                      {board.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-            </DetailRow>
-            <DetailRow
-              icon={<PriorityGlyph priority={task.priority} />}
-              label="Priority"
-            >
+            ) : (
+              <span>{spaceName}</span>
+            )}
+          </DetailRow>
+          <DetailRow icon={<LayersIcon size={16} />} label="Section">
+            {areas.some((area) => area.id === task.sectionId) ? (
               <Select
-                value={task.priority}
+                value={task.sectionId}
+                onValueChange={(value) => onUpdate({ sectionId: value })}
+              >
+                <SelectTrigger className={VALUE}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {areas.map((area) => (
+                    <SelectItem key={area.id} value={area.id}>
+                      {area.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <span>General</span>
+            )}
+          </DetailRow>
+          <DetailRow icon={<FolderIcon size={16} />} label="Epic">
+            <Select
+              value={task.epicId ?? "none"}
+              onValueChange={(value) => {
+                queueUpdate({ epicId: value === "none" ? null : value });
+                flushPendingUpdate();
+              }}
+            >
+              <SelectTrigger className={VALUE}>
+                <SelectValue placeholder="None" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">None</SelectItem>
+                {epics.map((epic) => (
+                  <SelectItem key={epic.id} value={epic.id}>
+                    {epic.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </DetailRow>
+          <DetailRow icon={<GoalIcon size={16} />} label="Goal">
+            <div className="flex min-w-0 items-center gap-2">
+              <Select
+                value={task.goalId ?? "none"}
+                onValueChange={(value) => {
+                  queueUpdate({ goalId: value === "none" ? null : value });
+                  flushPendingUpdate();
+                }}
+              >
+                <SelectTrigger className={VALUE}>
+                  <SelectValue placeholder="None" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  {task.goalId &&
+                  !goals.some((goal) => goal.id === task.goalId) ? (
+                    <SelectItem value={task.goalId}>Goal</SelectItem>
+                  ) : null}
+                  {goals.map((goal) => (
+                    <SelectItem key={goal.id} value={goal.id}>
+                      {goal.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {task.goalId ? (
+                <Link
+                  href={`/planning/goals/${task.goalId}`}
+                  className="shrink-0 text-xs text-muted-foreground hover:underline"
+                >
+                  Open
+                </Link>
+              ) : null}
+            </div>
+          </DetailRow>
+          <DetailRow icon={<GitBranchIcon size={16} />} label="Parent">
+            <Select
+              value={task.parentTaskId ?? "none"}
+              onValueChange={(value) =>
+                queueUpdate({ parentTaskId: value === "none" ? null : value })
+              }
+            >
+              <SelectTrigger className={VALUE}>
+                <SelectValue placeholder="None" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">None</SelectItem>
+                {parentOptions.map((item) => (
+                  <SelectItem key={item.id} value={item.id}>
+                    {item.taskKey} {item.summary}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </DetailRow>
+          <DetailRow icon={<CalendarIcon size={16} />} label="Schedule">
+            <div className="inline-flex h-7 items-center gap-1">
+              <DatePicker
+                appearance="plain"
+                emptyLabel="None"
+                triggerClassName="h-7 px-0 font-medium"
+                value={isoToDateInput(activeSlot?.startAt ?? null)}
+                onChange={(next) => {
+                  if (!next) {
+                    queueUpdate({
+                      scheduleSlots: nextScheduleSlots(
+                        task.scheduleSlots,
+                        null,
+                      ),
+                    });
+                    return;
+                  }
+                  const time =
+                    isoToLocalTimeInput(activeSlot?.startAt ?? null) || "09:00";
+                  const startAt = dateInputToScheduleIso(next, time);
+                  if (!startAt) return;
+                  queueUpdate({
+                    scheduleSlots: nextScheduleSlots(
+                      task.scheduleSlots,
+                      startAt,
+                    ),
+                  });
+                }}
+              />
+              <input
+                type="time"
+                aria-label="Schedule time"
+                value={isoToLocalTimeInput(activeSlot?.startAt ?? null)}
+                disabled={!activeSlot}
+                className="w-[4.6rem] bg-transparent text-sm font-medium text-foreground disabled:hidden"
+                onChange={(event) => {
+                  const date = isoToDateInput(activeSlot?.startAt ?? null);
+                  const startAt = event.target.value
+                    ? combineLocalDateAndTime(date, event.target.value)
+                    : dateInputToLocalDayStartIso(date);
+                  if (!startAt) return;
+                  queueUpdate({
+                    scheduleSlots: nextScheduleSlots(
+                      task.scheduleSlots,
+                      startAt,
+                    ),
+                  });
+                }}
+              />
+              {activeSlot ? (
+                <span className="text-muted-foreground">
+                  –{" "}
+                  {new Date(activeSlot.endAt).toLocaleTimeString(undefined, {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    hour12: false,
+                  })}
+                </span>
+              ) : null}
+            </div>
+          </DetailRow>
+          <DetailRow icon={<CalendarClockIcon size={16} />} label="Due">
+            <DatePicker
+              appearance="plain"
+              emptyLabel="None"
+              value={isoToDateInput(task.dueDate)}
+              onChange={(next) =>
+                queueUpdate({
+                  dueDate: dateInputToLocalDayStartIso(next),
+                })
+              }
+            />
+          </DetailRow>
+          {task.parentTaskId == null ? (
+            <DetailRow icon={<RepeatIcon size={16} />} label="Repeat">
+              <TaskRecurrencePicker
+                recurrence={task.recurrence}
+                scheduleDate={activeSlot?.startAt ?? null}
+                dueDate={task.dueDate}
+                onChange={(recurrence) => {
+                  queueUpdate({ recurrence });
+                  flushPendingUpdate();
+                }}
+              />
+            </DetailRow>
+          ) : null}
+        </SideGroup>
+      </aside>
+    </div>
+  );
+}
+
+function TaskReferences({ taskId }: { taskId: string }) {
+  const queryClient = useQueryClient();
+  const [title, setTitle] = useState("");
+  const [url, setUrl] = useState("");
+  const [adding, setAdding] = useState(false);
+  const [open, setOpen] = useState<boolean | null>(null);
+  const referencesQuery = useQuery({
+    queryKey: ["task-references", taskId],
+    queryFn: () => todexClient.tasks.references.list(taskId),
+  });
+  const createReference = useMutation({
+    mutationFn: (input: { url: string; title?: string }) =>
+      todexClient.tasks.references.create(taskId, {
+        kind: "url",
+        url: input.url,
+        ...(input.title ? { title: input.title } : {}),
+      }),
+    onSuccess: () => {
+      setTitle("");
+      setUrl("");
+      setAdding(false);
+      setOpen(true);
+      void queryClient.invalidateQueries({
+        queryKey: ["task-references", taskId],
+      });
+    },
+  });
+  const removeReference = useMutation({
+    mutationFn: (referenceId: string) =>
+      todexClient.tasks.references.remove(taskId, referenceId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: ["task-references", taskId],
+      });
+    },
+  });
+  const references = referencesQuery.data ?? [];
+  const visible = open ?? references.length > 0;
+
+  return (
+    <Fold
+      title="References"
+      count={String(references.length)}
+      open={visible}
+      onToggle={() => setOpen(!visible)}
+    >
+      <div className="overflow-hidden rounded-xl border border-border bg-white/[0.015]">
+        {references.length > 0 ? (
+          <ul className="flex flex-col divide-y divide-border">
+            {references.map((reference) => (
+              <li
+                key={reference.id}
+                className="group flex items-center gap-4 px-4 py-3"
+              >
+                <span className="text-muted-foreground">
+                  <ReferenceIcon kind={reference.kind} />
+                </span>
+                <span className="min-w-0 flex-1 truncate text-sm">
+                  {reference.title}
+                </span>
+                {reference.url ? (
+                  <a
+                    href={reference.url}
+                    aria-label="Open reference"
+                    className="text-muted-foreground hover:text-foreground"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <ExternalLinkIcon size={14} />
+                  </a>
+                ) : null}
+                <button
+                  type="button"
+                  aria-label={`Remove "${reference.title}"`}
+                  className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-muted-foreground opacity-0 hover:bg-surface hover:text-foreground group-hover:opacity-100 focus:opacity-100"
+                  onClick={() => removeReference.mutate(reference.id)}
+                >
+                  ×
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        {adding ? (
+          <form
+            className="flex items-center gap-2 border-t border-border px-4 py-2.5"
+            onSubmit={(event) => {
+              event.preventDefault();
+              const nextTitle = title.trim();
+              const nextUrl = url.trim();
+              if (!nextTitle || !nextUrl) return;
+              createReference.mutate({ url: nextUrl, title: nextTitle });
+            }}
+          >
+            <input
+              aria-label="Reference name"
+              autoFocus
+              required
+              value={title}
+              placeholder="Name"
+              className="h-8 min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+              onChange={(event) => setTitle(event.target.value)}
+            />
+            <input
+              aria-label="Reference URL"
+              required
+              value={url}
+              placeholder="https://"
+              className="h-8 min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+              onChange={(event) => setUrl(event.target.value)}
+            />
+            <Button type="submit" size="sm" variant="ghost">
+              Add
+            </Button>
+          </form>
+        ) : (
+          <AddRowButton label="Add reference" onClick={() => setAdding(true)} />
+        )}
+      </div>
+    </Fold>
+  );
+}
+
+function SubtasksSection({
+  subtasks,
+  canAdd,
+  onToggleDone,
+  onUpdateStatus,
+  onOpen,
+  onCreate,
+}: {
+  subtasks: Task[];
+  canAdd: boolean;
+  onToggleDone: (subtask: Task) => void;
+  onUpdateStatus: (subtask: Task, status: Task["status"]) => void;
+  onOpen: (taskId: string) => void;
+  onCreate: (summary: string) => void;
+}) {
+  const {
+    actions: { updateTask },
+  } = useTasks();
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-border bg-white/[0.015]">
+      {subtasks.length > 0 ? (
+        <ul className="flex flex-col">
+          {subtasks.map((subtask) => (
+            <li key={subtask.id} className="flex items-center gap-3 px-4 py-3">
+              <Checkbox
+                checked={subtask.status === TaskStatus.DONE}
+                aria-label={`Mark "${subtask.summary}" done`}
+                onCheckedChange={() => onToggleDone(subtask)}
+              />
+              <PriorityMenu
+                priority={subtask.priority}
+                onSelect={(priority) => updateTask(subtask.id, { priority })}
+              />
+              <button
+                type="button"
+                className={cn(
+                  "min-w-0 flex-1 truncate text-left text-sm",
+                  subtask.status === TaskStatus.DONE
+                    ? "text-muted-foreground line-through"
+                    : "text-foreground",
+                )}
+                onClick={() => onOpen(subtask.id)}
+              >
+                <span className="block text-sm font-normal text-muted-foreground">
+                  {subtask.taskKey}
+                </span>
+                <span className="font-semibold">{subtask.summary}</span>
+              </button>
+              <span className="inline-flex items-center gap-2 text-sm tabular-nums text-muted-foreground">
+                <ClockIcon size={14} /> {formatEstimation(subtask.estimation)}
+              </span>
+              <Select
+                value={subtask.status}
                 onValueChange={(value) =>
-                  queueUpdate({ priority: value as Task["priority"] })
+                  onUpdateStatus(subtask, value as Task["status"])
                 }
               >
                 <SelectTrigger
-                  className={cn(
-                    "h-7 w-fit gap-1.5 rounded-full px-2.5 text-xs font-medium shadow-none",
-                    PRIORITY_PILL[task.priority],
-                  )}
+                  className={cn(CHIP, STATUS_PILL[subtask.status])}
+                  onPointerDown={(event) => event.stopPropagation()}
+                  onClick={(event) => event.stopPropagation()}
                 >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {PRIORITY_OPTIONS.map((priority) => (
-                    <SelectItem key={priority} value={priority}>
+                  {STATUS_ORDER.map((status) => (
+                    <SelectItem key={status} value={status}>
                       <span className="flex items-center gap-2">
-                        <PriorityGlyph priority={priority} />
-                        {PRIORITY_LABEL[priority]}
+                        <StatusMark status={status} />
+                        {STATUS_LABEL[status]}
                       </span>
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-            </DetailRow>
-            <DetailRow icon={<BoardMark />} label="Space">
-              {boards.length > 1 ? (
-                <Select
-                  value={task.spaceId}
-                  onValueChange={(value) => {
-                    queueUpdate({
-                      spaceId: value,
-                      epicId: null,
-                    });
-                    flushPendingUpdate();
-                  }}
-                >
-                  <SelectTrigger className="h-8 w-full border-0 bg-transparent px-0 text-sm shadow-none">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {boards.map((board) => (
-                      <SelectItem key={board.id} value={board.id}>
-                        {board.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <span className="text-sm">{spaceName}</span>
-              )}
-            </DetailRow>
-            <DetailRow icon={<AreaMark />} label="Section">
-              {areas.some((area) => area.id === task.sectionId) ? (
-                <Select
-                  value={task.sectionId}
-                  onValueChange={(value) => onUpdate({ sectionId: value })}
-                >
-                  <SelectTrigger className="h-8 w-full border-0 bg-transparent px-0 text-sm shadow-none">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {areas.map((area) => (
-                      <SelectItem key={area.id} value={area.id}>
-                        {area.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <span className="text-sm text-muted-foreground">General</span>
-              )}
-            </DetailRow>
-            <DetailRow icon={<AreaMark />} label="Epic">
-              <Select
-                value={task.epicId ?? "none"}
-                onValueChange={(value) => {
-                  queueUpdate({ epicId: value === "none" ? null : value });
-                  flushPendingUpdate();
-                }}
-              >
-                <SelectTrigger className="h-8 w-full border-0 bg-transparent px-0 text-sm shadow-none">
-                  <SelectValue placeholder="None" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">None</SelectItem>
-                  {epics.map((epic) => (
-                    <SelectItem key={epic.id} value={epic.id}>
-                      {epic.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </DetailRow>
-            <DetailRow icon={<ClockIcon size={16} />} label="Executed">
-              <span className="text-sm">{formatDuration(task.actualTime)}</span>
-            </DetailRow>
-            <DetailRow icon={<ClockIcon size={16} />} label="Estimate">
-              <div className="min-w-0 flex-1">
-                <EstimatePicker
-                  appearance="plain"
-                  value={estimationText}
-                  onChange={setEstimationText}
-                  onCommit={(next) => {
-                    const parsed = parseEstimation(next);
-                    if (parsed == null || parsed <= 0) {
-                      setEstimationText(formatEstimation(task.estimation));
-                      return;
-                    }
-                    if (parsed !== task.estimation) {
-                      queueUpdate({ estimation: parsed });
-                    }
-                    flushPendingUpdate();
-                  }}
-                />
-                {estimationInvalid ? (
-                  <p className="text-xs text-destructive">
-                    {estimationText.trim() && parsedEstimation === null
-                      ? "Use 1h, 30m, or 2d"
-                      : "Estimate is required"}
-                  </p>
-                ) : null}
-              </div>
-            </DetailRow>
-            <DetailRow icon={<CalendarIcon size={16} />} label="Schedule">
-              <div className="flex items-center gap-2">
-                <DatePicker
-                  appearance="plain"
-                  emptyLabel="None"
-                  value={isoToDateInput(task.scheduleDate)}
-                  onChange={(next) => {
-                    if (!next) {
-                      queueUpdate({ scheduleDate: null });
-                      return;
-                    }
-                    const time =
-                      isoToLocalTimeInput(task.scheduleDate) || "09:00";
-                    queueUpdate({
-                      scheduleDate: dateInputToScheduleIso(next, time),
-                    });
-                  }}
-                />
-                <input
-                  type="time"
-                  aria-label="Schedule time"
-                  value={isoToLocalTimeInput(task.scheduleDate)}
-                  disabled={!task.scheduleDate}
-                  className="bg-transparent text-sm text-foreground disabled:opacity-40"
-                  onChange={(event) => {
-                    const date = isoToDateInput(task.scheduleDate);
-                    queueUpdate({
-                      scheduleDate: event.target.value
-                        ? combineLocalDateAndTime(date, event.target.value)
-                        : dateInputToLocalDayStartIso(date),
-                    });
-                  }}
-                />
-              </div>
-            </DetailRow>
-            <DetailRow icon={<CalendarIcon size={16} />} label="Due">
-              <DatePicker
-                appearance="plain"
-                emptyLabel="None"
-                value={isoToDateInput(task.dueDate)}
-                onChange={(next) =>
-                  queueUpdate({
-                    dueDate: dateInputToLocalDayStartIso(next),
-                  })
-                }
-              />
-            </DetailRow>
-            <DetailRow icon={<RepeatIcon size={16} />} label="Repeat">
-              <TaskRecurrencePicker
-                recurrence={task.recurrence}
-                scheduleDate={task.scheduleDate}
-                dueDate={task.dueDate}
-                onChange={(recurrence) => {
-                  if (
-                    recurrence &&
-                    task.scheduleDate == null &&
-                    task.dueDate == null
-                  ) {
-                    queueUpdate({
-                      recurrence,
-                      scheduleDate: startOfLocalDay().toISOString(),
-                    });
-                  } else {
-                    queueUpdate({ recurrence });
-                  }
-                  flushPendingUpdate();
-                }}
-              />
-            </DetailRow>
-            <DetailRow icon={<StatusDoneIcon size={16} />} label="Goal">
-              <div className="flex min-w-0 items-center gap-2">
-                <Select
-                  value={task.goalId ?? "none"}
-                  onValueChange={(value) => {
-                    queueUpdate({ goalId: value === "none" ? null : value });
-                    flushPendingUpdate();
-                  }}
-                >
-                  <SelectTrigger className="h-8 w-full border-0 bg-transparent px-0 text-sm shadow-none">
-                    <SelectValue placeholder="None" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
-                    {task.goalId &&
-                    !goals.some((goal) => goal.id === task.goalId) ? (
-                      <SelectItem value={task.goalId}>Goal</SelectItem>
-                    ) : null}
-                    {goals.map((goal) => (
-                      <SelectItem key={goal.id} value={goal.id}>
-                        {goal.title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {task.goalId ? (
-                  <Link
-                    href={`/planning/goals/${task.goalId}`}
-                    className="shrink-0 text-xs text-muted-foreground hover:underline"
-                  >
-                    Open
-                  </Link>
-                ) : null}
-              </div>
-            </DetailRow>
-            <DetailRow icon={<ParentMark />} label="Parent">
-              <Select
-                value={task.parentTaskId ?? "none"}
-                onValueChange={(value) =>
-                  queueUpdate({ parentTaskId: value === "none" ? null : value })
-                }
-              >
-                <SelectTrigger className="h-8 w-full border-0 bg-transparent px-0 text-sm shadow-none">
-                  <SelectValue placeholder="None" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">None</SelectItem>
-                  {parentOptions.map((item) => (
-                    <SelectItem key={item.id} value={item.id}>
-                      {item.taskKey} {item.summary}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </DetailRow>
-          </div>
-        </section>
-        <AcceptanceCriteriaSection
-          criteria={task.acceptanceCriteria}
-          onChange={(acceptanceCriteria) => onUpdate({ acceptanceCriteria })}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {canAdd ? (
+        <AddDraftRow
+          label="Add subtask"
+          placeholder="Add subtask"
+          onAdd={onCreate}
         />
-      </aside>
+      ) : null}
     </div>
   );
 }
@@ -1263,33 +1615,17 @@ function AcceptanceCriteriaSection({
   criteria: AcceptanceCriterion[];
   onChange: (criteria: AcceptanceCriterion[]) => void;
 }) {
-  const [draft, setDraft] = useState("");
-  const doneCount = criteria.filter((criterion) => criterion.done).length;
-
   function addCriterion(text: string) {
-    const trimmed = text.trim();
-    if (!trimmed) return;
     onChange([
       ...criteria,
-      { id: crypto.randomUUID(), text: trimmed, done: false },
+      { id: crypto.randomUUID(), text, done: false },
     ]);
-    setDraft("");
   }
 
   return (
-    <section className="rounded-xl border border-border bg-background p-4">
-      <div className="flex items-center gap-2">
-        <h2 className="text-sm font-medium text-foreground">
-          Acceptance criteria
-        </h2>
-        {criteria.length > 0 ? (
-          <span className="ml-auto text-xs tabular-nums text-muted-foreground">
-            {doneCount}/{criteria.length}
-          </span>
-        ) : null}
-      </div>
+    <div className="overflow-hidden rounded-xl border border-border bg-white/[0.015]">
       {criteria.length > 0 ? (
-        <ul className="mt-3 flex flex-col gap-2">
+        <ul className="flex flex-col">
           {criteria.map((criterion) => (
             <AcceptanceCriterionRow
               key={criterion.id}
@@ -1315,23 +1651,12 @@ function AcceptanceCriteriaSection({
           ))}
         </ul>
       ) : null}
-      <form
-        className="mt-3 flex items-center gap-2"
-        onSubmit={(event) => {
-          event.preventDefault();
-          addCriterion(draft);
-        }}
-      >
-        <PlusIcon size={14} className="shrink-0 text-muted-foreground" />
-        <input
-          aria-label="Add acceptance criterion"
-          value={draft}
-          placeholder="Add criterion"
-          className="min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
-          onChange={(event) => setDraft(event.target.value)}
-        />
-      </form>
-    </section>
+      <AddDraftRow
+        label="Add criterion"
+        placeholder="Add criterion"
+        onAdd={addCriterion}
+      />
+    </div>
   );
 }
 
@@ -1349,11 +1674,11 @@ function AcceptanceCriterionRow({
   const [text, setText] = useState(criterion.text);
 
   return (
-    <li className="flex items-start gap-2">
+    <li className="group flex items-center gap-4 px-4 py-2">
       <Checkbox
         checked={criterion.done}
         aria-label={`Mark "${criterion.text}" done`}
-        className="mt-0.5"
+        className="shrink-0"
         onCheckedChange={(checked) => onToggle(checked === true)}
       />
       <input
@@ -1383,7 +1708,7 @@ function AcceptanceCriterionRow({
       <button
         type="button"
         aria-label={`Remove "${criterion.text}"`}
-        className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-surface hover:text-foreground"
+        className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-muted-foreground opacity-0 hover:bg-surface hover:text-foreground group-hover:opacity-100 focus:opacity-100"
         onClick={onRemove}
       >
         ×
@@ -1395,10 +1720,12 @@ function AcceptanceCriterionRow({
 function TaskViewMenu({
   summary,
   onEnqueue,
+  onDuplicate,
   onDelete,
 }: {
   summary: string;
   onEnqueue: () => void;
+  onDuplicate: () => void;
   onDelete: () => void;
 }) {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
@@ -1419,6 +1746,7 @@ function TaskViewMenu({
           <DropdownMenuItem onSelect={onEnqueue}>
             Add to Execution Queue
           </DropdownMenuItem>
+          <DropdownMenuItem onSelect={onDuplicate}>Duplicate</DropdownMenuItem>
           <DropdownMenuItem onSelect={() => setIsDeleteOpen(true)}>
             Delete
           </DropdownMenuItem>
@@ -1475,6 +1803,74 @@ function PagerButton({
   );
 }
 
+function Fold({
+  title,
+  count,
+  open,
+  onToggle,
+  children,
+}: {
+  title: string;
+  count?: string;
+  open: boolean;
+  onToggle: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <section className="mt-6">
+      <button
+        type="button"
+        className="flex items-center gap-3 text-base font-semibold text-muted-foreground"
+        aria-expanded={open}
+        onClick={onToggle}
+      >
+        {title}
+        {count != null ? (
+          <span className="font-normal text-muted-foreground">{count}</span>
+        ) : null}
+        <ChevronIcon
+          size={14}
+          className={cn("text-muted-foreground", open && "rotate-90")}
+        />
+      </button>
+      {open ? <div className="mt-2">{children}</div> : null}
+    </section>
+  );
+}
+
+function SideGroup({
+  title,
+  open,
+  onToggle,
+  children,
+}: {
+  title: string;
+  open: boolean;
+  onToggle: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <section className="rounded-xl border border-border bg-background">
+      <button
+        type="button"
+        className="flex w-full items-center px-4 py-3 text-base font-semibold"
+        aria-expanded={open}
+        onClick={onToggle}
+      >
+        {title}
+        <ChevronIcon
+          size={16}
+          className={cn(
+            "ml-auto text-muted-foreground transition-transform",
+            open ? "-rotate-90" : "rotate-90",
+          )}
+        />
+      </button>
+      {open ? <div className="flex flex-col px-4 pb-3">{children}</div> : null}
+    </section>
+  );
+}
+
 function DetailRow({
   icon,
   label,
@@ -1485,14 +1881,203 @@ function DetailRow({
   children: ReactNode;
 }) {
   return (
-    <div className="flex items-center gap-3">
-      <span className="flex w-28 shrink-0 items-center gap-2 text-xs text-muted-foreground">
-        <span className="flex h-4 w-4 items-center justify-center">{icon}</span>
-        {label}
+    <div className="flex min-h-10 items-center gap-3">
+      <span className="flex size-4 shrink-0 items-center justify-center text-muted-foreground">
+        {icon}
       </span>
-      <div className="min-w-0 flex-1">{children}</div>
+      <span className="shrink-0 text-sm text-muted-foreground">{label}</span>
+      <div className="ml-auto flex min-w-0 items-center justify-end text-sm font-medium">
+        {children}
+      </div>
     </div>
   );
+}
+
+function Meter({ value }: { value: number }) {
+  const width = Math.min(Math.max(value, 0), 100);
+  return (
+    <div className="mt-0.5 h-1.5 overflow-hidden rounded-full bg-surface">
+      <div
+        className="h-full rounded-full bg-emerald-500"
+        style={{ width: `${width}%` }}
+      />
+    </div>
+  );
+}
+
+function executedLabel(seconds: number) {
+  if (seconds <= 0) return "0m";
+  return formatDuration(seconds);
+}
+
+function AddRowButton({
+  label,
+  onClick,
+}: {
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className="flex w-full items-center justify-center gap-2 border-t border-border py-2.5 text-sm text-muted-foreground hover:bg-white/5 hover:text-foreground"
+      onClick={onClick}
+    >
+      <PlusIcon size={14} />
+      {label}
+    </button>
+  );
+}
+
+function AddDraftRow({
+  label,
+  placeholder,
+  onAdd,
+}: {
+  label: string;
+  placeholder: string;
+  onAdd: (value: string) => void;
+}) {
+  const [adding, setAdding] = useState(false);
+  const [draft, setDraft] = useState("");
+
+  if (!adding) return <AddRowButton label={label} onClick={() => setAdding(true)} />;
+
+  return (
+    <form
+      className="flex items-center gap-2 border-t border-border px-4 py-2.5"
+      onSubmit={(event) => {
+        event.preventDefault();
+        const next = draft.trim();
+        if (!next) return;
+        onAdd(next);
+        setDraft("");
+        setAdding(false);
+      }}
+    >
+      <PlusIcon size={14} className="shrink-0 text-muted-foreground" />
+      <input
+        aria-label={label}
+        autoFocus
+        value={draft}
+        placeholder={placeholder}
+        className="min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+        onChange={(event) => setDraft(event.target.value)}
+      />
+    </form>
+  );
+}
+
+function ReferenceIcon({ kind }: { kind: TaskReference["kind"] }) {
+  if (kind === "conversation") return <MessageSquareIcon size={16} />;
+  if (kind === "doc") return <FileTextIcon size={16} />;
+  return <LinkIcon size={16} />;
+}
+
+function StatusMark({ status }: { status: Task["status"] }) {
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "size-3 shrink-0 rounded-full border-[1.5px]",
+        status === TaskStatus.TODO && "border-amber-500",
+        status === TaskStatus.IN_PROGRESS && "border-sky-300 bg-sky-400/50",
+        status === TaskStatus.DONE && "border-emerald-300 bg-emerald-400",
+        status === TaskStatus.CANCELLED && "border-zinc-400",
+      )}
+    />
+  );
+}
+
+async function duplicateTask(
+  task: Task,
+  queryClient: QueryClient,
+  onOpen: (taskId: string) => void,
+) {
+  try {
+    const activeSlots = task.scheduleSlots.filter(
+      (slot) => slot.retiredAt == null,
+    );
+    const created = await todexClient.tasks.create({
+      spaceId: task.spaceId,
+      summary: task.summary,
+      description: task.description,
+      outcome: task.outcome,
+      status: task.status,
+      priority: task.priority,
+      complexity: task.complexity,
+      estimation: task.estimation,
+      dueDate: task.dueDate,
+      acceptanceCriteria: task.acceptanceCriteria.map((criterion) => ({
+        id: crypto.randomUUID(),
+        text: criterion.text,
+        done: criterion.done,
+      })),
+      ...(task.parentTaskId == null && task.recurrence
+        ? { recurrence: task.recurrence }
+        : {}),
+      sectionId: task.sectionId,
+      progressStageId: task.progressStageId,
+      parentTaskId: task.parentTaskId,
+      epicId: task.epicId,
+      ...(activeSlots.length > 0
+        ? {
+            scheduleSlots: activeSlots.map((slot) => ({
+              startAt: slot.startAt,
+              endAt: slot.endAt,
+            })),
+          }
+        : {}),
+    });
+    const saved = task.goalId
+      ? await todexClient.tasks.update(created.id, {
+          goalId: task.goalId,
+          version: created.version,
+        })
+      : created;
+    const references = await todexClient.tasks.references.list(task.id);
+    await Promise.all(references.map((reference) => copyReference(saved.id, reference)));
+    rememberTask(queryClient, saved);
+    onOpen(saved.id);
+    void queryClient.invalidateQueries({ queryKey: ["tasks"] });
+    toast.success(`Task "${saved.summary}" duplicated`);
+  } catch {
+    toast.error("Could not duplicate task");
+  }
+}
+
+function copyReference(taskId: string, reference: TaskReference) {
+  if (reference.kind === "url" && reference.url) {
+    return todexClient.tasks.references.create(taskId, {
+      kind: "url",
+      url: reference.url,
+      title: reference.title,
+    });
+  }
+  if (reference.kind === "doc" && reference.docId) {
+    return todexClient.tasks.references.create(taskId, {
+      kind: "doc",
+      docId: reference.docId,
+    });
+  }
+  if (reference.kind === "conversation" && reference.conversationId) {
+    return todexClient.tasks.references.create(taskId, {
+      kind: "conversation",
+      conversationId: reference.conversationId,
+    });
+  }
+  return Promise.resolve();
+}
+
+function rememberTask(queryClient: QueryClient, task: Task) {
+  const lists = queryClient.getQueriesData<Task[]>({ queryKey: ["tasks"] });
+  for (const [queryKey, data] of lists) {
+    if (!Array.isArray(data)) continue;
+    const sameSpace = data.some((item) => item.spaceId === task.spaceId);
+    const keyedToSpace = queryKey.some((part) => part === task.spaceId);
+    if (!sameSpace && !keyedToSpace && data.length > 0) continue;
+    queryClient.setQueryData(queryKey, [task, ...data]);
+  }
 }
 
 function StatusDoneIconMark() {
@@ -1534,16 +2119,28 @@ const PRIORITY_LABEL: Record<Task["priority"], string> = {
   [TaskPriority.CRITICAL]: "Critical",
 };
 
+const CHIP =
+  "h-8 w-fit gap-1.5 rounded-full border-0 px-3 text-sm font-medium text-white shadow-none [&>svg]:h-3 [&>svg]:w-3 [&>svg]:opacity-70";
+
+const VALUE =
+  "h-7 w-fit justify-end gap-1 border-0 bg-transparent px-0 text-sm font-medium shadow-none [&>svg]:h-3.5 [&>svg]:w-3.5 [&>svg]:opacity-60";
+
 const STATUS_PILL: Record<Task["status"], string> = {
-  [TaskStatus.TODO]: "border-transparent bg-amber-400/15 text-amber-200",
-  [TaskStatus.IN_PROGRESS]: "border-transparent bg-sky-400/15 text-sky-200",
-  [TaskStatus.DONE]: "border-transparent bg-emerald-400/15 text-emerald-200",
-  [TaskStatus.CANCELLED]: "border-transparent bg-zinc-400/15 text-zinc-300",
+  [TaskStatus.TODO]: "bg-[#3c3228] text-[#f4e7d4]",
+  [TaskStatus.IN_PROGRESS]: "bg-sky-900/80 text-sky-100",
+  [TaskStatus.DONE]: "bg-emerald-900/70 text-emerald-100",
+  [TaskStatus.CANCELLED]: "bg-zinc-800 text-zinc-300",
 };
 
 const PRIORITY_PILL: Record<Task["priority"], string> = {
-  [TaskPriority.LOW]: "border-transparent bg-surface text-muted-foreground",
-  [TaskPriority.MEDIUM]: "border-transparent bg-sky-400/10 text-sky-200",
-  [TaskPriority.HIGH]: "border-transparent bg-orange-400/15 text-orange-200",
-  [TaskPriority.CRITICAL]: "border-transparent bg-red-500/15 text-red-200",
+  [TaskPriority.LOW]: "bg-zinc-700 text-zinc-100",
+  [TaskPriority.MEDIUM]: "bg-sky-900 text-sky-100",
+  [TaskPriority.HIGH]: "bg-red-600 text-white",
+  [TaskPriority.CRITICAL]: "bg-red-700 text-white",
 };
+
+const COMPLEXITY_OPTIONS = [
+  { value: "low", label: "Low", priority: TaskPriority.LOW },
+  { value: "medium", label: "Medium", priority: TaskPriority.MEDIUM },
+  { value: "high", label: "High", priority: TaskPriority.HIGH },
+] as const;

@@ -70,7 +70,11 @@ import {
 
 import { useTasks } from "./tasks-provider";
 import { useSpaceDialogs } from "./space-dialogs";
-import { isInboxTask, localDayScheduleQuery } from "./task-helpers";
+import {
+  earliestActiveSlotStart,
+  isInboxTask,
+  localDayScheduleQuery,
+} from "./task-helpers";
 
 export function TasksModuleSidebar() {
   const {
@@ -578,11 +582,12 @@ function scheduledCount(tasks: Task[], offsetDays: number) {
   const from = Date.parse(range.scheduleFrom);
   const to = Date.parse(range.scheduleTo);
   return tasks.filter((task) => {
-    if (!task.scheduleDate || task.parentTaskId != null) return false;
+    const start = earliestActiveSlotStart(task);
+    if (!start || task.parentTaskId != null) return false;
     if (task.status === TaskStatus.DONE || task.status === TaskStatus.CANCELLED) {
       return false;
     }
-    const scheduled = Date.parse(task.scheduleDate);
+    const scheduled = Date.parse(start);
     return scheduled >= from && scheduled < to;
   }).length;
 }

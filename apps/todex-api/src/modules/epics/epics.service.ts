@@ -31,6 +31,7 @@ import {
 } from "../../db/schema";
 import { DRIZZLE_DB } from "../../db/tokens";
 import { RelationsService } from "../relations/relations.service";
+import { RecurrenceService } from "../tasks/recurrence.service";
 import { SpacesService } from "../spaces/spaces.service";
 import { planningProgress } from "./progress";
 
@@ -165,6 +166,7 @@ export class EpicsService {
       ]);
       await tx.delete(epics).where(eq(epics.id, existing.id));
     });
+    await new RecurrenceService(this.db).clearEpic(workspaceId, existing.id);
   }
 
   async requireEpic(workspaceId: string, epicId: string) {

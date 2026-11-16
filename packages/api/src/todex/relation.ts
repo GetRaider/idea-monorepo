@@ -49,6 +49,7 @@ export const SpaceDeletionPreviewSchema = z.object({
   epics: z.number().int().nonnegative(),
   docFolders: z.number().int().nonnegative(),
   sessionCount: z.number().int().nonnegative(),
+  series: z.number().int().nonnegative(),
 });
 
 export type RelationEndpoint = z.infer<typeof RelationEndpointSchema>;

@@ -1,7 +1,5 @@
 import { z } from "zod";
 
-import { TaskStatus } from "./enums.ts";
-
 export const TASK_WEEKDAYS = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"] as const;
 
 export const TaskWeekdaySchema = z.enum(TASK_WEEKDAYS);
@@ -93,43 +91,6 @@ export function formatTaskRecurrence(rule: TaskRecurrence): string {
   return `${cadence}${days}`;
 }
 
-export function completeRecurringTask<T extends RecurrenceCriterion>(
-  task: RecurringTaskSnapshot<T>,
-): RecurrenceCompletion<T> {
-  const rule = task.recurrence;
-  if (!rule) return { type: "complete" };
-  const anchorIso = task.scheduleDate ?? task.dueDate;
-  if (!anchorIso) return { type: "complete" };
-  if (rule.end.type === "count" && rule.end.count <= 1) {
-    return { type: "finish-series" };
-  }
-
-  const anchor = new Date(anchorIso);
-  const nextAnchor = nextOccurrence(anchor, rule);
-  if (!nextAnchor) return { type: "complete" };
-  if (
-    rule.end.type === "until" &&
-    dateKey(nextAnchor, rule.timeZone) > rule.end.until
-  ) {
-    return { type: "finish-series" };
-  }
-
-  const dayDelta = calendarDayDelta(anchor, nextAnchor, rule.timeZone);
-  return {
-    type: "advance",
-    scheduleDate: shiftDate(task.scheduleDate, anchorIso, nextAnchor, dayDelta, rule.timeZone),
-    dueDate: shiftDate(task.dueDate, anchorIso, nextAnchor, dayDelta, rule.timeZone),
-    recurrence:
-      rule.end.type === "count"
-        ? { ...rule, end: { type: "count", count: rule.end.count - 1 } }
-        : rule,
-    acceptanceCriteria: task.acceptanceCriteria.map((criterion) => ({
-      ...criterion,
-      done: false,
-    })),
-  };
-}
-
 /** Occurrence starts inside `[rangeStart, rangeEnd)`, counting from the series start. */
 export function expandRecurrenceStarts(input: {
   start: Date;
@@ -205,18 +166,6 @@ function nextWeekly(anchor: Date, rule: TaskRecurrence): Date | null {
   return null;
 }
 
-function shiftDate(
-  iso: string | null,
-  anchorIso: string,
-  nextAnchor: Date,
-  dayDelta: number,
-  timeZone: string,
-): string | null {
-  if (!iso) return null;
-  if (iso === anchorIso) return nextAnchor.toISOString();
-  return addCalendarDays(new Date(iso), dayDelta, timeZone).toISOString();
-}
-
 function dateKey(instant: Date, timeZone: string): string {
   const parts = zonedParts(instant, timeZone);
   const month = String(parts.month).padStart(2, "0");
@@ -224,15 +173,11 @@ function dateKey(instant: Date, timeZone: string): string {
   return `${parts.year}-${month}-${day}`;
 }
 
-function calendarDayDelta(from: Date, to: Date, timeZone: string): number {
-  const start = zonedParts(from, timeZone);
-  const end = zonedParts(to, timeZone);
-  const startUtc = Date.UTC(start.year, start.month - 1, start.day);
-  const endUtc = Date.UTC(end.year, end.month - 1, end.day);
-  return Math.round((endUtc - startUtc) / 86_400_000);
-}
-
-function addCalendarDays(instant: Date, days: number, timeZone: string): Date {
+export function addCalendarDays(
+  instant: Date,
+  days: number,
+  timeZone: string,
+): Date {
   const parts = zonedParts(instant, timeZone);
   const shifted = new Date(Date.UTC(parts.year, parts.month - 1, parts.day + days));
   return zonedWallTimeToUtc(
@@ -304,6 +249,46 @@ function zonedParts(instant: Date, timeZone: string): ZonedParts {
     second: Number(read("second")),
     weekday: new Date(Date.UTC(year, month - 1, day)).getUTCDay(),
   };
+}
+
+export function formatOccurrenceLocalKey(
+  instant: Date,
+  timeZone: string,
+): string {
+  const parts = zonedParts(instant, timeZone);
+  const month = String(parts.month).padStart(2, "0");
+  const day = String(parts.day).padStart(2, "0");
+  const hour = String(parts.hour).padStart(2, "0");
+  const minute = String(parts.minute).padStart(2, "0");
+  return `${parts.year}-${month}-${day}T${hour}:${minute}`;
+}
+
+export function occurrenceKey(
+  ruleVersion: number,
+  instant: Date,
+  timeZone: string,
+): string {
+  return `${ruleVersion}/${formatOccurrenceLocalKey(instant, timeZone)}`;
+}
+
+export function zonedLocalDateTime(
+  date: string,
+  time: string,
+  timeZone: string,
+): Date {
+  const [year, month, day] = date.split("-").map(Number);
+  const [hour, minute] = time.split(":").map(Number);
+  return zonedWallTimeToUtc(
+    {
+      year: year ?? 1970,
+      month: month ?? 1,
+      day: day ?? 1,
+      hour: hour ?? 0,
+      minute: minute ?? 0,
+      second: 0,
+    },
+    timeZone,
+  );
 }
 
 function zonedWallTimeToUtc(wall: WallTime, timeZone: string): Date {
@@ -388,31 +373,6 @@ const FREQUENCY_UNIT: Record<TaskRecurrence["frequency"], string> = {
 
 export type TaskWeekday = z.infer<typeof TaskWeekdaySchema>;
 export type TaskRecurrence = z.infer<typeof TaskRecurrenceSchema>;
-
-interface RecurrenceCriterion {
-  id: string;
-  text: string;
-  done: boolean;
-}
-
-interface RecurringTaskSnapshot<T extends RecurrenceCriterion> {
-  status: (typeof TaskStatus)[keyof typeof TaskStatus];
-  scheduleDate: string | null;
-  dueDate: string | null;
-  recurrence: TaskRecurrence | null;
-  acceptanceCriteria: T[];
-}
-
-type RecurrenceCompletion<T extends RecurrenceCriterion> =
-  | { type: "complete" }
-  | { type: "finish-series" }
-  | {
-      type: "advance";
-      scheduleDate: string | null;
-      dueDate: string | null;
-      recurrence: TaskRecurrence;
-      acceptanceCriteria: T[];
-    };
 
 interface ZonedParts {
   year: number;

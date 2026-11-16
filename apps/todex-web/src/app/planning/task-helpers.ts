@@ -1,5 +1,5 @@
 import { TaskPriority, TaskStatus } from "@repo/api/todex";
-import type { Epic, Task } from "@repo/api/todex";
+import type { Epic, ScheduleSlotInput, Task } from "@repo/api/todex";
 
 export const STATUS_ORDER = [
   TaskStatus.TODO,
@@ -373,6 +373,47 @@ export function combineLocalDateAndTime(
   const minute = match ? Number(match[2]) : 0;
   if (hour > 23 || minute > 59) return null;
   return new Date(year, month - 1, day, hour, minute, 0, 0).toISOString();
+}
+
+const NEW_SLOT_DURATION_MS = 60 * 60_000;
+
+export function nextScheduleSlots(
+  slots: Task["scheduleSlots"],
+  startAt: string | null,
+): ScheduleSlotInput[] {
+  const retired = slots.filter((slot) => slot.retiredAt != null);
+  const active = slots
+    .filter((slot) => slot.retiredAt == null)
+    .toSorted((left, right) => left.startAt.localeCompare(right.startAt));
+  const [first, ...rest] = active;
+  if (!startAt) return [...rest, ...retired].map(scheduleSlotInput);
+  const parsedDuration = first
+    ? Date.parse(first.endAt) - Date.parse(first.startAt)
+    : NEW_SLOT_DURATION_MS;
+  const duration =
+    Number.isFinite(parsedDuration) && parsedDuration > 0
+      ? parsedDuration
+      : NEW_SLOT_DURATION_MS;
+  const endAt = new Date(Date.parse(startAt) + duration).toISOString();
+  const updated = first
+    ? { id: first.id, startAt, endAt, retiredAt: null }
+    : { startAt, endAt };
+  return [
+    updated,
+    ...rest.map(scheduleSlotInput),
+    ...retired.map(scheduleSlotInput),
+  ];
+}
+
+function scheduleSlotInput(
+  slot: Task["scheduleSlots"][number],
+): ScheduleSlotInput {
+  return {
+    id: slot.id,
+    startAt: slot.startAt,
+    endAt: slot.endAt,
+    retiredAt: slot.retiredAt,
+  };
 }
 
 export function isoToLocalTimeInput(iso: string | null): string {

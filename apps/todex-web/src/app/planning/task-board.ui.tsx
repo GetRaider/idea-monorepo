@@ -499,25 +499,25 @@ export function TaskFacts({
       {schedule ? (
         <span className="inline-flex items-center gap-1">
           <CalendarIcon size={12} />
-          Schedule {schedule}
+          {schedule}
         </span>
       ) : null}
       {due ? (
         <span className="inline-flex items-center gap-1">
           <CalendarIcon size={12} />
-          Due {due}
+          {due}
         </span>
       ) : null}
       {estimate ? (
         <span className="inline-flex items-center gap-1">
           <ClockIcon size={12} />
-          Estimate {estimate}
+          {estimate}
         </span>
       ) : null}
       {executed ? (
         <span className="inline-flex items-center gap-1">
           <ClockIcon size={12} />
-          Executed {executed}
+          {executed}
         </span>
       ) : null}
       {recurrence ? (
@@ -534,6 +534,8 @@ export function TasksBreadcrumb({
   spaceName,
   boardHref,
   taskKey,
+  parentTaskKey,
+  onOpenParent,
   epicName,
   trailing,
   className,
@@ -541,6 +543,8 @@ export function TasksBreadcrumb({
   spaceName?: string;
   boardHref?: string;
   taskKey?: string;
+  parentTaskKey?: string;
+  onOpenParent?: () => void;
   epicName?: string;
   trailing?: ReactNode;
   className?: string;
@@ -582,6 +586,18 @@ export function TasksBreadcrumb({
         <>
           <span className="shrink-0 text-muted-foreground">›</span>
           <span className="truncate">{epicName}</span>
+        </>
+      ) : null}
+      {parentTaskKey ? (
+        <>
+          <span className="shrink-0 text-muted-foreground">›</span>
+          <button
+            type="button"
+            className="truncate text-muted-foreground hover:text-foreground"
+            onClick={onOpenParent}
+          >
+            {parentTaskKey}
+          </button>
         </>
       ) : null}
       {taskKey ? (

@@ -3,7 +3,13 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+} from "@tanstack/react-query";
+import { toast } from "sonner";
 import {
   Button,
   Checkbox,
@@ -30,6 +36,7 @@ import type {
   AcceptanceCriterion,
   Epic,
   Task,
+  TaskReference,
   Space,
   UpdateEpicBody,
   UpdateTaskBody,
@@ -58,6 +65,7 @@ import {
   GitBranchIcon,
   GoalIcon,
   LayersIcon,
+  LinkIcon,
   MessageSquareIcon,
   MilestoneIcon,
   PlusIcon,
@@ -87,6 +95,7 @@ import {
   BoardGlyph,
   BoardMark,
   PriorityGlyph,
+  PriorityMenu,
   StatusGlyph,
   TaskProgressBar,
   TasksBreadcrumb,
@@ -99,6 +108,7 @@ import {
   dateInputToScheduleIso,
   isoToDateInput,
   isoToLocalTimeInput,
+  nextScheduleSlots,
   isClosedStatus,
   statusAfterDoneToggle,
   directSubtaskCounts,
@@ -125,6 +135,7 @@ export function TaskView() {
       removeTask,
     },
   } = useTasks();
+  const queryClient = useQueryClient();
   const { execute, enqueue } = useExecutionCommands();
   const isLargeScreen = useMinWidthLg();
   const [mode, setMode] = useState<TaskViewMode>("docked");
@@ -165,6 +176,9 @@ export function TaskView() {
 
   const board = boards.find((item) => item.id === selectedTask.spaceId);
   const spaceName = board?.name ?? "Space";
+  const parentTask = selectedTask.parentTaskId
+    ? tasks.find((task) => task.id === selectedTask.parentTaskId)
+    : null;
 
   return (
     <div
@@ -193,19 +207,33 @@ export function TaskView() {
         )}
       >
         {isDocked ? (
-          <span className="min-w-0 flex-1 truncate text-sm font-medium tabular-nums text-muted-foreground">
-            {selectedTask.taskKey}
+          <span className="flex min-w-0 flex-1 items-center gap-2 truncate text-sm font-medium tabular-nums text-muted-foreground">
+            {parentTask ? (
+              <button
+                type="button"
+                className="truncate hover:text-foreground"
+                onClick={() => setSelectedTaskId(parentTask.id)}
+              >
+                {parentTask.taskKey}
+              </button>
+            ) : null}
+            {parentTask ? <span>›</span> : null}
+            <span className="truncate">{selectedTask.taskKey}</span>
           </span>
         ) : (
           <TasksBreadcrumb
             className="min-w-0 flex-1 text-2xl font-semibold tracking-tight"
             spaceName={spaceName}
             boardHref={
-              board
-                ? tasksUrlHelper.routing.buildBoardUrl(board.id)
-                : undefined
+              board ? tasksUrlHelper.routing.buildBoardUrl(board.id) : undefined
             }
             taskKey={selectedTask.taskKey}
+            parentTaskKey={parentTask?.taskKey}
+            onOpenParent={
+              parentTask
+                ? () => setSelectedTaskId(parentTask.id)
+                : undefined
+            }
             trailing={<BoardGlyph />}
           />
         )}
@@ -241,6 +269,9 @@ export function TaskView() {
           <TaskViewMenu
             summary={selectedTask.summary}
             onEnqueue={() => enqueue(selectedTask.id)}
+            onDuplicate={() =>
+              void duplicateTask(selectedTask, queryClient, setSelectedTaskId)
+            }
             onDelete={() => removeTask(selectedTask.id)}
           />
           {isLargeScreen ? (
@@ -899,24 +930,15 @@ function TaskViewBody({
             }
           >
             <SelectTrigger className={cn(CHIP, STATUS_PILL[task.status])}>
-              <span
-                aria-hidden
-                className={cn(
-                  "size-3 shrink-0 rounded-full border-[1.5px]",
-                  task.status === TaskStatus.TODO && "border-amber-500",
-                  task.status === TaskStatus.IN_PROGRESS &&
-                    "border-sky-300 bg-sky-400/50",
-                  task.status === TaskStatus.DONE &&
-                    "border-emerald-300 bg-emerald-400",
-                  task.status === TaskStatus.CANCELLED && "border-zinc-400",
-                )}
-              />
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {STATUS_ORDER.map((status) => (
                 <SelectItem key={status} value={status}>
-                  {STATUS_LABEL[status]}
+                  <span className="flex items-center gap-2">
+                    <StatusMark status={status} />
+                    {STATUS_LABEL[status]}
+                  </span>
                 </SelectItem>
               ))}
             </SelectContent>
@@ -927,14 +949,16 @@ function TaskViewBody({
               queueUpdate({ priority: value as Task["priority"] })
             }
           >
-            <SelectTrigger className={cn(CHIP, "bg-transparent px-1")}>
-              <TaskPriorityDot priority={task.priority} />
+            <SelectTrigger className={cn(CHIP, "bg-white/10")}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {PRIORITY_OPTIONS.map((priority) => (
                 <SelectItem key={priority} value={priority}>
-                  {PRIORITY_LABEL[priority]}
+                  <span className="flex items-center gap-2">
+                    <PriorityGlyph priority={priority} />
+                    {PRIORITY_LABEL[priority]}
+                  </span>
                 </SelectItem>
               ))}
             </SelectContent>
@@ -958,7 +982,7 @@ function TaskViewBody({
           </div>
         </div>
         <label className="mt-6 block">
-          <span className="mb-1.5 block text-base font-semibold text-foreground/80">
+          <span className="mb-1.5 block text-base font-semibold text-muted-foreground">
             Outcome
           </span>
           <textarea
@@ -977,7 +1001,7 @@ function TaskViewBody({
           />
         </label>
         <div className="mt-6">
-          <p className="mb-1.5 text-base font-semibold text-foreground/80">
+          <p className="mb-1.5 text-base font-semibold text-muted-foreground">
             Description
           </p>
           <TaskDescriptionEditor
@@ -1009,32 +1033,40 @@ function TaskViewBody({
             }}
           />
         </Fold>
-        <Fold
-          title="Subtasks"
-          count={`${subtaskCounts.done}/${children.length}`}
-          open={sectionsOpen.subtasks}
-          onToggle={() => toggleSection("subtasks")}
-        >
-          <SubtasksSection
-            subtasks={children}
-            canAdd={task.parentTaskId == null}
-            onToggleDone={(subtask) =>
-              onUpdateStatus(subtask.id, statusAfterDoneToggle(subtask.status))
-            }
-            onOpen={onOpenTask}
-            onCreate={(summary) =>
-              onCreateSubtask({
-                summary,
-                status: TaskStatus.TODO,
-                priority: task.priority,
-                estimation: task.estimation,
-                spaceId: task.spaceId,
-                scheduleDate: null,
-                dueDate: null,
-              })
-            }
-          />
-        </Fold>
+        {task.parentTaskId == null ? (
+          <Fold
+            title="Subtasks"
+            count={`${subtaskCounts.done}/${children.length}`}
+            open={sectionsOpen.subtasks}
+            onToggle={() => toggleSection("subtasks")}
+          >
+            <SubtasksSection
+              subtasks={children}
+              canAdd
+              onToggleDone={(subtask) =>
+                onUpdateStatus(
+                  subtask.id,
+                  statusAfterDoneToggle(subtask.status),
+                )
+              }
+              onUpdateStatus={(subtask, status) =>
+                onUpdateStatus(subtask.id, status)
+              }
+              onOpen={onOpenTask}
+              onCreate={(summary) =>
+                onCreateSubtask({
+                  summary,
+                  status: TaskStatus.TODO,
+                  priority: task.priority,
+                  estimation: task.estimation,
+                  spaceId: task.spaceId,
+                  scheduleDate: null,
+                  dueDate: null,
+                })
+              }
+            />
+          </Fold>
+        ) : null}
         <TaskReferences taskId={task.id} />
       </div>
       <aside
@@ -1058,10 +1090,8 @@ function TaskViewBody({
                 {progressPercent}%
               </span>
             </div>
-            <div className="ml-7">
-              <Meter value={progressPercent} />
-            </div>
-            <p className="mt-1.5 ml-7 text-xs text-muted-foreground">
+            <Meter value={progressPercent} />
+            <p className="mt-0.5 text-xs text-muted-foreground">
               Subtasks: {subtaskCounts.done}/{subtaskCounts.remaining}
               {" · "}
               Acceptance criteria: {criteriaMetCount}/
@@ -1086,6 +1116,32 @@ function TaskViewBody({
               </p>
             ) : null}
           </div>
+          <DetailRow icon={<GaugeIcon size={16} />} label="Complexity">
+            <Select
+              value={task.complexity ?? "none"}
+              onValueChange={(value) =>
+                queueUpdate({
+                  complexity:
+                    value === "none" ? null : (value as Task["complexity"]),
+                })
+              }
+            >
+              <SelectTrigger className={VALUE}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">None</SelectItem>
+                {COMPLEXITY_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    <span className="flex items-center gap-2">
+                      <PriorityGlyph priority={option.priority} />
+                      {option.label}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </DetailRow>
           <DetailRow icon={<MilestoneIcon size={16} />} label="Progress Stage">
             <Select
               value={
@@ -1113,27 +1169,6 @@ function TaskViewBody({
                     {stage.name}
                   </SelectItem>
                 ))}
-              </SelectContent>
-            </Select>
-          </DetailRow>
-          <DetailRow icon={<GaugeIcon size={16} />} label="Complexity">
-            <Select
-              value={task.complexity ?? "none"}
-              onValueChange={(value) =>
-                queueUpdate({
-                  complexity:
-                    value === "none" ? null : (value as Task["complexity"]),
-                })
-              }
-            >
-              <SelectTrigger className={VALUE}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">None</SelectItem>
-                <SelectItem value="low">Low</SelectItem>
-                <SelectItem value="medium">Medium</SelectItem>
-                <SelectItem value="high">High</SelectItem>
               </SelectContent>
             </Select>
           </DetailRow>
@@ -1276,7 +1311,12 @@ function TaskViewBody({
                 value={isoToDateInput(activeSlot?.startAt ?? null)}
                 onChange={(next) => {
                   if (!next) {
-                    queueUpdate({ scheduleSlots: [] });
+                    queueUpdate({
+                      scheduleSlots: nextScheduleSlots(
+                        task.scheduleSlots,
+                        null,
+                      ),
+                    });
                     return;
                   }
                   const time =
@@ -1284,14 +1324,10 @@ function TaskViewBody({
                   const startAt = dateInputToScheduleIso(next, time);
                   if (!startAt) return;
                   queueUpdate({
-                    scheduleSlots: [
-                      {
-                        startAt,
-                        endAt: new Date(
-                          Date.parse(startAt) + 60 * 60_000,
-                        ).toISOString(),
-                      },
-                    ],
+                    scheduleSlots: nextScheduleSlots(
+                      task.scheduleSlots,
+                      startAt,
+                    ),
                   });
                 }}
               />
@@ -1306,19 +1342,12 @@ function TaskViewBody({
                   const startAt = event.target.value
                     ? combineLocalDateAndTime(date, event.target.value)
                     : dateInputToLocalDayStartIso(date);
-                  if (!startAt) {
-                    queueUpdate({ scheduleSlots: [] });
-                    return;
-                  }
+                  if (!startAt) return;
                   queueUpdate({
-                    scheduleSlots: [
-                      {
-                        startAt,
-                        endAt: new Date(
-                          Date.parse(startAt) + 60 * 60_000,
-                        ).toISOString(),
-                      },
-                    ],
+                    scheduleSlots: nextScheduleSlots(
+                      task.scheduleSlots,
+                      startAt,
+                    ),
                   });
                 }}
               />
@@ -1367,19 +1396,23 @@ function TaskViewBody({
 
 function TaskReferences({ taskId }: { taskId: string }) {
   const queryClient = useQueryClient();
+  const [title, setTitle] = useState("");
   const [url, setUrl] = useState("");
   const [adding, setAdding] = useState(false);
+  const [open, setOpen] = useState<boolean | null>(null);
   const referencesQuery = useQuery({
     queryKey: ["task-references", taskId],
     queryFn: () => todexClient.tasks.references.list(taskId),
   });
   const createReference = useMutation({
-    mutationFn: (nextUrl: string) =>
+    mutationFn: (input: { url: string; title?: string }) =>
       todexClient.tasks.references.create(taskId, {
         kind: "url",
-        url: nextUrl,
+        url: input.url,
+        ...(input.title ? { title: input.title } : {}),
       }),
     onSuccess: () => {
+      setTitle("");
       setUrl("");
       setAdding(false);
       setOpen(true);
@@ -1388,8 +1421,16 @@ function TaskReferences({ taskId }: { taskId: string }) {
       });
     },
   });
+  const removeReference = useMutation({
+    mutationFn: (referenceId: string) =>
+      todexClient.tasks.references.remove(taskId, referenceId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: ["task-references", taskId],
+      });
+    },
+  });
   const references = referencesQuery.data ?? [];
-  const [open, setOpen] = useState<boolean | null>(null);
   const visible = open ?? references.length > 0;
 
   return (
@@ -1405,19 +1446,13 @@ function TaskReferences({ taskId }: { taskId: string }) {
             {references.map((reference) => (
               <li
                 key={reference.id}
-                className="flex items-center gap-4 px-4 py-3"
+                className="group flex items-center gap-4 px-4 py-3"
               >
                 <span className="text-muted-foreground">
-                  {reference.kind === "conversation" ? (
-                    <MessageSquareIcon size={16} />
-                  ) : (
-                    <FileTextIcon size={16} />
-                  )}
+                  <ReferenceIcon kind={reference.kind} />
                 </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm">
-                    {reference.title}
-                  </span>
+                <span className="min-w-0 flex-1 truncate text-sm">
+                  {reference.title}
                 </span>
                 {reference.url ? (
                   <a
@@ -1430,26 +1465,44 @@ function TaskReferences({ taskId }: { taskId: string }) {
                     <ExternalLinkIcon size={14} />
                   </a>
                 ) : null}
+                <button
+                  type="button"
+                  aria-label={`Remove "${reference.title}"`}
+                  className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-muted-foreground opacity-0 hover:bg-surface hover:text-foreground group-hover:opacity-100 focus:opacity-100"
+                  onClick={() => removeReference.mutate(reference.id)}
+                >
+                  ×
+                </button>
               </li>
             ))}
           </ul>
         ) : null}
         {adding ? (
           <form
-            className="flex gap-2 border-t border-border px-4 py-2"
+            className="flex items-center gap-2 border-t border-border px-4 py-2.5"
             onSubmit={(event) => {
               event.preventDefault();
+              const nextTitle = title.trim();
               const nextUrl = url.trim();
-              if (!nextUrl) return;
-              createReference.mutate(nextUrl);
+              if (!nextTitle || !nextUrl) return;
+              createReference.mutate({ url: nextUrl, title: nextTitle });
             }}
           >
             <input
-              aria-label="Reference URL"
+              aria-label="Reference name"
               autoFocus
+              required
+              value={title}
+              placeholder="Name"
+              className="h-8 min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+              onChange={(event) => setTitle(event.target.value)}
+            />
+            <input
+              aria-label="Reference URL"
+              required
               value={url}
               placeholder="https://"
-              className="h-8 min-w-0 flex-1 bg-transparent text-sm outline-none"
+              className="h-8 min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
               onChange={(event) => setUrl(event.target.value)}
             />
             <Button type="submit" size="sm" variant="ghost">
@@ -1457,13 +1510,7 @@ function TaskReferences({ taskId }: { taskId: string }) {
             </Button>
           </form>
         ) : (
-          <button
-            type="button"
-            className="flex w-full items-center justify-center gap-3 border-t border-border py-2.5 text-sm text-muted-foreground hover:bg-white/5 hover:text-foreground"
-            onClick={() => setAdding(true)}
-          >
-            <PlusIcon size={16} /> Add reference
-          </button>
+          <AddRowButton label="Add reference" onClick={() => setAdding(true)} />
         )}
       </div>
     </Fold>
@@ -1474,23 +1521,20 @@ function SubtasksSection({
   subtasks,
   canAdd,
   onToggleDone,
+  onUpdateStatus,
   onOpen,
   onCreate,
 }: {
   subtasks: Task[];
   canAdd: boolean;
   onToggleDone: (subtask: Task) => void;
+  onUpdateStatus: (subtask: Task, status: Task["status"]) => void;
   onOpen: (taskId: string) => void;
   onCreate: (summary: string) => void;
 }) {
-  const [draft, setDraft] = useState("");
-
-  function addSubtask(summary: string) {
-    const trimmed = summary.trim();
-    if (!trimmed) return;
-    onCreate(trimmed);
-    setDraft("");
-  }
+  const {
+    actions: { updateTask },
+  } = useTasks();
 
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-white/[0.015]">
@@ -1503,7 +1547,10 @@ function SubtasksSection({
                 aria-label={`Mark "${subtask.summary}" done`}
                 onCheckedChange={() => onToggleDone(subtask)}
               />
-              <TaskPriorityDot priority={subtask.priority} />
+              <PriorityMenu
+                priority={subtask.priority}
+                onSelect={(priority) => updateTask(subtask.id, { priority })}
+              />
               <button
                 type="button"
                 className={cn(
@@ -1522,36 +1569,40 @@ function SubtasksSection({
               <span className="inline-flex items-center gap-2 text-sm tabular-nums text-muted-foreground">
                 <ClockIcon size={14} /> {formatEstimation(subtask.estimation)}
               </span>
-              <span
-                className={cn(
-                  "ml-4 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm",
-                  STATUS_PILL[subtask.status],
-                )}
+              <Select
+                value={subtask.status}
+                onValueChange={(value) =>
+                  onUpdateStatus(subtask, value as Task["status"])
+                }
               >
-                <StatusGlyph status={subtask.status} />{" "}
-                {STATUS_LABEL[subtask.status]}
-              </span>
+                <SelectTrigger
+                  className={cn(CHIP, STATUS_PILL[subtask.status])}
+                  onPointerDown={(event) => event.stopPropagation()}
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {STATUS_ORDER.map((status) => (
+                    <SelectItem key={status} value={status}>
+                      <span className="flex items-center gap-2">
+                        <StatusMark status={status} />
+                        {STATUS_LABEL[status]}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </li>
           ))}
         </ul>
       ) : null}
       {canAdd ? (
-        <form
-          className="flex items-center justify-center gap-3 border-t border-border px-4 py-2.5 focus-within:bg-white/[0.03]"
-          onSubmit={(event) => {
-            event.preventDefault();
-            addSubtask(draft);
-          }}
-        >
-          <PlusIcon size={14} className="shrink-0 text-muted-foreground" />
-          <input
-            aria-label="Add subtask"
-            value={draft}
-            placeholder="Add subtask"
-            className="w-28 min-w-0 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground focus:flex-1"
-            onChange={(event) => setDraft(event.target.value)}
-          />
-        </form>
+        <AddDraftRow
+          label="Add subtask"
+          placeholder="Add subtask"
+          onAdd={onCreate}
+        />
       ) : null}
     </div>
   );
@@ -1564,16 +1615,11 @@ function AcceptanceCriteriaSection({
   criteria: AcceptanceCriterion[];
   onChange: (criteria: AcceptanceCriterion[]) => void;
 }) {
-  const [draft, setDraft] = useState("");
-
   function addCriterion(text: string) {
-    const trimmed = text.trim();
-    if (!trimmed) return;
     onChange([
       ...criteria,
-      { id: crypto.randomUUID(), text: trimmed, done: false },
+      { id: crypto.randomUUID(), text, done: false },
     ]);
-    setDraft("");
   }
 
   return (
@@ -1605,22 +1651,11 @@ function AcceptanceCriteriaSection({
           ))}
         </ul>
       ) : null}
-      <form
-        className="flex items-center justify-center gap-3 border-t border-border px-4 py-2.5 focus-within:bg-white/[0.03]"
-        onSubmit={(event) => {
-          event.preventDefault();
-          addCriterion(draft);
-        }}
-      >
-        <PlusIcon size={14} className="shrink-0 text-muted-foreground" />
-        <input
-          aria-label="Add acceptance criterion"
-          value={draft}
-          placeholder="Add criterion"
-          className="w-28 min-w-0 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground focus:flex-1"
-          onChange={(event) => setDraft(event.target.value)}
-        />
-      </form>
+      <AddDraftRow
+        label="Add criterion"
+        placeholder="Add criterion"
+        onAdd={addCriterion}
+      />
     </div>
   );
 }
@@ -1673,7 +1708,7 @@ function AcceptanceCriterionRow({
       <button
         type="button"
         aria-label={`Remove "${criterion.text}"`}
-        className="flex h-5 w-5 opacity-0 group-hover:opacity-100 focus:opacity-100 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-surface hover:text-foreground"
+        className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-muted-foreground opacity-0 hover:bg-surface hover:text-foreground group-hover:opacity-100 focus:opacity-100"
         onClick={onRemove}
       >
         ×
@@ -1685,10 +1720,12 @@ function AcceptanceCriterionRow({
 function TaskViewMenu({
   summary,
   onEnqueue,
+  onDuplicate,
   onDelete,
 }: {
   summary: string;
   onEnqueue: () => void;
+  onDuplicate: () => void;
   onDelete: () => void;
 }) {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
@@ -1709,6 +1746,7 @@ function TaskViewMenu({
           <DropdownMenuItem onSelect={onEnqueue}>
             Add to Execution Queue
           </DropdownMenuItem>
+          <DropdownMenuItem onSelect={onDuplicate}>Duplicate</DropdownMenuItem>
           <DropdownMenuItem onSelect={() => setIsDeleteOpen(true)}>
             Delete
           </DropdownMenuItem>
@@ -1782,7 +1820,7 @@ function Fold({
     <section className="mt-6">
       <button
         type="button"
-        className="flex items-center gap-3 text-base font-semibold text-foreground/80"
+        className="flex items-center gap-3 text-base font-semibold text-muted-foreground"
         aria-expanded={open}
         onClick={onToggle}
       >
@@ -1858,9 +1896,9 @@ function DetailRow({
 function Meter({ value }: { value: number }) {
   const width = Math.min(Math.max(value, 0), 100);
   return (
-    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/15">
+    <div className="mt-0.5 h-1.5 overflow-hidden rounded-full bg-surface">
       <div
-        className="h-full rounded-full bg-zinc-300"
+        className="h-full rounded-full bg-emerald-500"
         style={{ width: `${width}%` }}
       />
     </div>
@@ -1870,6 +1908,176 @@ function Meter({ value }: { value: number }) {
 function executedLabel(seconds: number) {
   if (seconds <= 0) return "0m";
   return formatDuration(seconds);
+}
+
+function AddRowButton({
+  label,
+  onClick,
+}: {
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className="flex w-full items-center justify-center gap-2 border-t border-border py-2.5 text-sm text-muted-foreground hover:bg-white/5 hover:text-foreground"
+      onClick={onClick}
+    >
+      <PlusIcon size={14} />
+      {label}
+    </button>
+  );
+}
+
+function AddDraftRow({
+  label,
+  placeholder,
+  onAdd,
+}: {
+  label: string;
+  placeholder: string;
+  onAdd: (value: string) => void;
+}) {
+  const [adding, setAdding] = useState(false);
+  const [draft, setDraft] = useState("");
+
+  if (!adding) return <AddRowButton label={label} onClick={() => setAdding(true)} />;
+
+  return (
+    <form
+      className="flex items-center gap-2 border-t border-border px-4 py-2.5"
+      onSubmit={(event) => {
+        event.preventDefault();
+        const next = draft.trim();
+        if (!next) return;
+        onAdd(next);
+        setDraft("");
+        setAdding(false);
+      }}
+    >
+      <PlusIcon size={14} className="shrink-0 text-muted-foreground" />
+      <input
+        aria-label={label}
+        autoFocus
+        value={draft}
+        placeholder={placeholder}
+        className="min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+        onChange={(event) => setDraft(event.target.value)}
+      />
+    </form>
+  );
+}
+
+function ReferenceIcon({ kind }: { kind: TaskReference["kind"] }) {
+  if (kind === "conversation") return <MessageSquareIcon size={16} />;
+  if (kind === "doc") return <FileTextIcon size={16} />;
+  return <LinkIcon size={16} />;
+}
+
+function StatusMark({ status }: { status: Task["status"] }) {
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "size-3 shrink-0 rounded-full border-[1.5px]",
+        status === TaskStatus.TODO && "border-amber-500",
+        status === TaskStatus.IN_PROGRESS && "border-sky-300 bg-sky-400/50",
+        status === TaskStatus.DONE && "border-emerald-300 bg-emerald-400",
+        status === TaskStatus.CANCELLED && "border-zinc-400",
+      )}
+    />
+  );
+}
+
+async function duplicateTask(
+  task: Task,
+  queryClient: QueryClient,
+  onOpen: (taskId: string) => void,
+) {
+  try {
+    const activeSlots = task.scheduleSlots.filter(
+      (slot) => slot.retiredAt == null,
+    );
+    const created = await todexClient.tasks.create({
+      spaceId: task.spaceId,
+      summary: task.summary,
+      description: task.description,
+      outcome: task.outcome,
+      status: task.status,
+      priority: task.priority,
+      complexity: task.complexity,
+      estimation: task.estimation,
+      dueDate: task.dueDate,
+      acceptanceCriteria: task.acceptanceCriteria.map((criterion) => ({
+        id: crypto.randomUUID(),
+        text: criterion.text,
+        done: criterion.done,
+      })),
+      ...(task.parentTaskId == null && task.recurrence
+        ? { recurrence: task.recurrence }
+        : {}),
+      sectionId: task.sectionId,
+      progressStageId: task.progressStageId,
+      parentTaskId: task.parentTaskId,
+      epicId: task.epicId,
+      ...(activeSlots.length > 0
+        ? {
+            scheduleSlots: activeSlots.map((slot) => ({
+              startAt: slot.startAt,
+              endAt: slot.endAt,
+            })),
+          }
+        : {}),
+    });
+    const saved = task.goalId
+      ? await todexClient.tasks.update(created.id, {
+          goalId: task.goalId,
+          version: created.version,
+        })
+      : created;
+    const references = await todexClient.tasks.references.list(task.id);
+    await Promise.all(references.map((reference) => copyReference(saved.id, reference)));
+    rememberTask(queryClient, saved);
+    onOpen(saved.id);
+    void queryClient.invalidateQueries({ queryKey: ["tasks"] });
+    toast.success(`Task "${saved.summary}" duplicated`);
+  } catch {
+    toast.error("Could not duplicate task");
+  }
+}
+
+function copyReference(taskId: string, reference: TaskReference) {
+  if (reference.kind === "url" && reference.url) {
+    return todexClient.tasks.references.create(taskId, {
+      kind: "url",
+      url: reference.url,
+      title: reference.title,
+    });
+  }
+  if (reference.kind === "doc" && reference.docId) {
+    return todexClient.tasks.references.create(taskId, {
+      kind: "doc",
+      docId: reference.docId,
+    });
+  }
+  if (reference.kind === "conversation" && reference.conversationId) {
+    return todexClient.tasks.references.create(taskId, {
+      kind: "conversation",
+      conversationId: reference.conversationId,
+    });
+  }
+  return Promise.resolve();
+}
+
+function rememberTask(queryClient: QueryClient, task: Task) {
+  const lists = queryClient.getQueriesData<Task[]>({ queryKey: ["tasks"] });
+  for (const [queryKey, data] of lists) {
+    if (!Array.isArray(data)) continue;
+    const sameSpace = data.some((item) => item.spaceId === task.spaceId);
+    const keyedToSpace = queryKey.some((part) => part === task.spaceId);
+    if (!sameSpace && !keyedToSpace && data.length > 0) continue;
+    queryClient.setQueryData(queryKey, [task, ...data]);
+  }
 }
 
 function StatusDoneIconMark() {
@@ -1931,17 +2139,8 @@ const PRIORITY_PILL: Record<Task["priority"], string> = {
   [TaskPriority.CRITICAL]: "bg-red-700 text-white",
 };
 
-function TaskPriorityDot({ priority }: { priority: Task["priority"] }) {
-  const colors = {
-    [TaskPriority.LOW]: "bg-zinc-400",
-    [TaskPriority.MEDIUM]: "bg-blue-500",
-    [TaskPriority.HIGH]: "bg-yellow-400",
-    [TaskPriority.CRITICAL]: "bg-red-500",
-  };
-  return (
-    <span
-      aria-hidden
-      className={cn("size-3.5 shrink-0 rounded-full", colors[priority])}
-    />
-  );
-}
+const COMPLEXITY_OPTIONS = [
+  { value: "low", label: "Low", priority: TaskPriority.LOW },
+  { value: "medium", label: "Medium", priority: TaskPriority.MEDIUM },
+  { value: "high", label: "High", priority: TaskPriority.HIGH },
+] as const;

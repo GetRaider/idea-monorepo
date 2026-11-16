@@ -112,7 +112,7 @@ export function EstimatePicker({
           )}
         >
           {appearance === "chip" ? <ClockIcon size={12} /> : null}
-          {value.trim() || "Estimate"}
+          {value.trim() || "Estimation"}
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-56 p-3" align="start">
@@ -134,7 +134,7 @@ export function EstimatePicker({
           ))}
         </div>
         <Input
-          aria-label="Estimate"
+          aria-label="Estimation"
           value={value}
           placeholder="1h 30m"
           className="mt-2 h-8"

@@ -95,5 +95,16 @@ describe("tasksUrlHelper.routing board urls", () => {
     expect(
       tasksUrlHelper.routing.getTaskKeyFromPathname("/planning/space/Inbox"),
     ).toBeUndefined();
+    expect(
+      tasksUrlHelper.routing.buildBoardUrl("space-1", "T-2", "T-1"),
+    ).toBe("/planning/space/space-1/T-1/T-2");
+    expect(
+      tasksUrlHelper.routing.getTaskKeyFromPathname(
+        "/planning/space/Inbox/T-1/T-2",
+      ),
+    ).toBe("T-2");
+    expect(
+      tasksUrlHelper.routing.parseBoardPath(["space-1", "T-1", "T-2"]),
+    ).toEqual({ spaceId: "space-1", taskKey: "T-2" });
   });
 });

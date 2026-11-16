@@ -90,7 +90,7 @@ export function TaskComposer({
       return;
     }
     if (parsedEstimation == null || parsedEstimation <= 0) {
-      setEstimationError("Estimate is required");
+      setEstimationError("Estimation is required");
       return;
     }
     setEstimationError(null);
@@ -139,6 +139,13 @@ export function TaskComposer({
         onChange={(event) => setSummary(event.target.value)}
       />
       <div className="flex flex-wrap items-center gap-1.5">
+        <EstimatePicker
+          value={estimationText}
+          onChange={(next) => {
+            setEstimationText(next);
+            setEstimationError(null);
+          }}
+        />
         <ChoiceChip label={STATUS_LABEL[status]} menuLabel="Status">
           {STATUS_ORDER.map((option) => (
             <DropdownMenuItem key={option} onSelect={() => setStatus(option)}>
@@ -172,13 +179,6 @@ export function TaskComposer({
           emptyLabel="Due date"
           value={dueDate}
           onChange={setDueDate}
-        />
-        <EstimatePicker
-          value={estimationText}
-          onChange={(next) => {
-            setEstimationText(next);
-            setEstimationError(null);
-          }}
         />
         {showBoardSelect ? (
           <ChoiceChip

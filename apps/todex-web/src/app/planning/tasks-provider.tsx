@@ -176,11 +176,13 @@ export function TasksProvider({ children }: { children: ReactNode }) {
     setSelectedTaskIdState(taskId);
     anchorIdRef.current = taskId;
     setSelectedTaskIds(taskId ? new Set([taskId]) : new Set());
-    const taskKey =
-      taskId == null
-        ? undefined
-        : loadedTasks.find((task) => task.id === taskId)?.taskKey;
-    const href = hrefForTasksView(view, taskKey);
+    const selected = taskId
+      ? loadedTasks.find((task) => task.id === taskId)
+      : undefined;
+    const parentTaskKey = selected?.parentTaskId
+      ? loadedTasks.find((task) => task.id === selected.parentTaskId)?.taskKey
+      : undefined;
+    const href = hrefForTasksView(view, selected?.taskKey, parentTaskKey);
     if (href && href !== pathname) {
       router.replace(href);
     }
@@ -213,6 +215,17 @@ export function TasksProvider({ children }: { children: ReactNode }) {
           anchorIdRef.current = match.id;
           return new Set([match.id]);
         });
+        if (view.kind === "board" && match.parentTaskId) {
+          const parentTaskKey = loadedTasks.find(
+            (task) => task.id === match.parentTaskId,
+          )?.taskKey;
+          const nestedHref = hrefForTasksView(
+            view,
+            match.taskKey,
+            parentTaskKey,
+          );
+          if (nestedHref && nestedHref !== pathname) router.replace(nestedHref);
+        }
         return;
       }
       setSelectedTaskIdState(null);
@@ -227,7 +240,7 @@ export function TasksProvider({ children }: { children: ReactNode }) {
       dismissedTaskKeyRef.current = null;
       setSelectedTaskIdState(null);
     }
-  }, [isTasksLoading, loadedTasks, pathname, router, view.kind, viewHref]);
+  }, [isTasksLoading, loadedTasks, pathname, router, view, view.kind, viewHref]);
 
   const invalidateTasks = () => {
     void queryClient.invalidateQueries({ queryKey: ["tasks"] });
@@ -742,9 +755,17 @@ function clearRecurrenceOnCancel(
   );
 }
 
-function hrefForTasksView(view: TasksView, taskKey?: string): string | null {
+function hrefForTasksView(
+  view: TasksView,
+  taskKey?: string,
+  parentTaskKey?: string,
+): string | null {
   if (view.kind === "board") {
-    return tasksUrlHelper.routing.buildBoardUrl(view.spaceId, taskKey);
+    return tasksUrlHelper.routing.buildBoardUrl(
+      view.spaceId,
+      taskKey,
+      parentTaskKey,
+    );
   }
   if (view.kind === "schedule") {
     return tasksUrlHelper.routing.buildScheduleUrl(view.schedule, taskKey);

@@ -8,6 +8,7 @@ import {
   applyRootMove,
   compareTasksForListSort,
   dateInputToLocalDayStartIso,
+  nextScheduleSlots,
   filterStatusGroups,
   resolveCombinedOpenDrop,
   sameBoardDropIndex,
@@ -356,10 +357,12 @@ describe("projectCompletedTask", () => {
     expect(done?.id).toBe("repeat");
     expect(done?.status).toBe(TaskStatus.DONE);
     expect(done?.recurrence).toEqual(weekly);
-    expect(projectCompletedTask(
-      [task({ id: "repeat", status: TaskStatus.TODO, recurrence: weekly })],
-      "repeat",
-    )).toHaveLength(1);
+    expect(
+      projectCompletedTask(
+        [task({ id: "repeat", status: TaskStatus.TODO, recurrence: weekly })],
+        "repeat",
+      ),
+    ).toHaveLength(1);
   });
 });
 
@@ -396,10 +399,7 @@ describe("taskProgressPercent", () => {
     expect(
       taskProgressPercent({
         status: TaskStatus.TODO,
-        acceptanceCriteria: [
-          { done: true },
-          { done: false },
-        ],
+        acceptanceCriteria: [{ done: true }, { done: false }],
         subtasks: [
           { status: TaskStatus.DONE },
           { status: TaskStatus.TODO },
@@ -424,6 +424,63 @@ describe("taskProgressPercent", () => {
         subtasks: [],
       }),
     ).toBe(0);
+  });
+});
+
+describe("nextScheduleSlots", () => {
+  it("keeps the other slots and the edited slot duration", () => {
+    const slots = [
+      {
+        id: "later",
+        startAt: "2026-09-11T07:00:00.000Z",
+        endAt: "2026-09-11T08:00:00.000Z",
+        retiredAt: null,
+      },
+      {
+        id: "earlier",
+        startAt: "2026-09-10T07:00:00.000Z",
+        endAt: "2026-09-10T09:30:00.000Z",
+        retiredAt: null,
+      },
+      {
+        id: "retired",
+        startAt: "2026-09-01T07:00:00.000Z",
+        endAt: "2026-09-01T08:00:00.000Z",
+        retiredAt: "2026-09-02T00:00:00.000Z",
+      },
+    ];
+
+    const next = nextScheduleSlots(slots, "2026-09-12T10:00:00.000Z");
+
+    expect(next[0]).toEqual({
+      id: "earlier",
+      startAt: "2026-09-12T10:00:00.000Z",
+      endAt: "2026-09-12T12:30:00.000Z",
+      retiredAt: null,
+    });
+    expect(next.map((item) => item.id)).toEqual([
+      "earlier",
+      "later",
+      "retired",
+    ]);
+  });
+
+  it("drops only the earliest active slot when the date is cleared", () => {
+    const next = nextScheduleSlots(
+      [slot("2026-09-10T07:00:00.000Z"), slot("2026-09-11T07:00:00.000Z")],
+      null,
+    );
+
+    expect(next.map((item) => item.id)).toEqual(["2026-09-11T07:00:00.000Z"]);
+  });
+
+  it("adds a one hour slot when nothing is active", () => {
+    expect(nextScheduleSlots([], "2026-09-12T07:00:00.000Z")).toEqual([
+      {
+        startAt: "2026-09-12T07:00:00.000Z",
+        endAt: "2026-09-12T08:00:00.000Z",
+      },
+    ]);
   });
 });
 

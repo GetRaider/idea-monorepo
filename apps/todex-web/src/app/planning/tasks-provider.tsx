@@ -90,8 +90,7 @@ export function TasksProvider({ children }: { children: ReactNode }) {
     view.kind === "schedule"
       ? localDayScheduleQuery(view.schedule === "today" ? 0 : 1)
       : null;
-  const inboxBoardId =
-    boards.find((board) => board.isInbox)?.id ?? null;
+  const inboxBoardId = boards.find((board) => board.isInbox)?.id ?? null;
   const resolvedScheduleBoardId =
     (scheduleTargetBoardId &&
     boards.some((board) => board.id === scheduleTargetBoardId)
@@ -240,7 +239,15 @@ export function TasksProvider({ children }: { children: ReactNode }) {
       dismissedTaskKeyRef.current = null;
       setSelectedTaskIdState(null);
     }
-  }, [isTasksLoading, loadedTasks, pathname, router, view, view.kind, viewHref]);
+  }, [
+    isTasksLoading,
+    loadedTasks,
+    pathname,
+    router,
+    view,
+    view.kind,
+    viewHref,
+  ]);
 
   const invalidateTasks = () => {
     void queryClient.invalidateQueries({ queryKey: ["tasks"] });
@@ -436,7 +443,10 @@ export function TasksProvider({ children }: { children: ReactNode }) {
       });
       toast.error("Could not save task");
     },
-    onSuccess: (_task, input) => {
+    onSuccess: (task, input) => {
+      queryClient.setQueriesData<Task[]>({ queryKey: ["tasks"] }, (current) =>
+        current?.map((item) => (item.id === task.id ? task : item)),
+      );
       if (input.optimistic) return;
       toast.success("Task saved");
     },
@@ -645,7 +655,7 @@ export function TasksProvider({ children }: { children: ReactNode }) {
       createTask: (summary, parentTaskId, draft) =>
         createTask.mutate({ summary, parentTaskId, ...draft }),
       updateTask: (taskId, body, options) =>
-        updateTask.mutate({ taskId, body, optimistic: options?.quiet }),
+        updateTask.mutateAsync({ taskId, body, optimistic: options?.quiet }),
       updateTaskStatus: (taskId, status) =>
         updateTask.mutate({ taskId, body: { status }, optimistic: true }),
       moveTask: (taskId, body) => moveTask.mutate({ taskId, body }),
@@ -840,7 +850,7 @@ interface TasksContextValue {
       taskId: string,
       body: TaskPatch,
       options?: { quiet?: boolean },
-    ) => void;
+    ) => Promise<Task>;
     updateTaskStatus: (taskId: string, status: Task["status"]) => void;
     moveTask: (taskId: string, body: TaskMove) => void;
     removeTask: (taskId: string) => void;
@@ -877,7 +887,10 @@ function draftScheduleSlots(
   };
 }
 
-function cachedTask(queryClient: QueryClient, taskId: string): Task | undefined {
+function cachedTask(
+  queryClient: QueryClient,
+  taskId: string,
+): Task | undefined {
   const lists = queryClient.getQueriesData<Task[]>({ queryKey: ["tasks"] });
   for (const [, data] of lists) {
     const found = data?.find((task) => task.id === taskId);

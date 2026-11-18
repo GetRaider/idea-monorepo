@@ -118,6 +118,14 @@ export class ExecutionController {
     return this.executionService.focus(request.workspaceId, body.taskId);
   }
 
+  @Post("release")
+  async release(
+    @Req() request: WorkspaceRequest,
+    @Body(zodPipe(FocusExecutionTaskBodySchema)) body: FocusExecutionTaskBody,
+  ) {
+    return this.executionService.release(request.workspaceId, body.taskId);
+  }
+
   @Post("pause")
   async pause(@Req() request: WorkspaceRequest) {
     return this.executionService.pause(request.workspaceId);

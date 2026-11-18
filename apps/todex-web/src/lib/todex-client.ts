@@ -528,6 +528,13 @@ export const todexClient = {
         ExecutionStateSchema,
         FocusExecutionTaskBodySchema.parse(body),
       ),
+    release: (body: unknown) =>
+      call(
+        "post",
+        "/v1/execution/release",
+        ExecutionStateSchema,
+        FocusExecutionTaskBodySchema.parse(body),
+      ),
     pause: () => call("post", "/v1/execution/pause", ExecutionStateSchema),
     resume: () => call("post", "/v1/execution/resume", ExecutionStateSchema),
     complete: () =>

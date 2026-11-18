@@ -766,7 +766,7 @@ function TaskViewBody({
   tasks: Task[];
   boards: Space[];
   stacked: boolean;
-  onUpdate: (body: TaskPatch) => void;
+  onUpdate: (body: TaskPatch) => void | Promise<unknown>;
   onUpdateStatus: (taskId: string, status: Task["status"]) => void;
   onOpenTask: (taskId: string) => void;
   onCreateSubtask: (values: TaskComposerValues) => void;
@@ -1029,7 +1029,7 @@ function TaskViewBody({
               ) {
                 setSectionsOpen((current) => ({ ...current, criteria: true }));
               }
-              onUpdate({ acceptanceCriteria });
+              return onUpdate({ acceptanceCriteria });
             }}
           />
         </Fold>
@@ -1618,36 +1618,64 @@ function AcceptanceCriteriaSection({
   onChange,
 }: {
   criteria: AcceptanceCriterion[];
-  onChange: (criteria: AcceptanceCriterion[]) => void;
+  onChange: (criteria: AcceptanceCriterion[]) => void | Promise<unknown>;
 }) {
+  const [items, setItems] = useState(criteria);
+  const itemsRef = useRef(criteria);
+  const chain = useRef(Promise.resolve());
+  useEffect(() => {
+    setItems((current) => {
+      const incoming = new Set(criteria.map((criterion) => criterion.id));
+      const extras = current.filter((criterion) => !incoming.has(criterion.id));
+      const next = extras.length === 0 ? criteria : current;
+      itemsRef.current = next;
+      return next;
+    });
+  }, [criteria]);
+
+  function commit(next: AcceptanceCriterion[]) {
+    itemsRef.current = next;
+    setItems(next);
+    const save = chain.current.then(() => onChange(itemsRef.current));
+    chain.current = save.then(
+      () => undefined,
+      () => undefined,
+    );
+  }
+
   function addCriterion(text: string) {
-    onChange([...criteria, { id: crypto.randomUUID(), text, done: false }]);
+    commit([
+      ...itemsRef.current,
+      { id: crypto.randomUUID(), text, done: false },
+    ]);
   }
 
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-white/[0.015]">
-      {criteria.length > 0 ? (
+      {items.length > 0 ? (
         <ul className="flex flex-col">
-          {criteria.map((criterion) => (
+          {items.map((criterion) => (
             <AcceptanceCriterionRow
               key={criterion.id}
               criterion={criterion}
               onToggle={(done) =>
-                onChange(
-                  criteria.map((item) =>
+                commit(
+                  itemsRef.current.map((item) =>
                     item.id === criterion.id ? { ...item, done } : item,
                   ),
                 )
               }
               onRename={(text) =>
-                onChange(
-                  criteria.map((item) =>
+                commit(
+                  itemsRef.current.map((item) =>
                     item.id === criterion.id ? { ...item, text } : item,
                   ),
                 )
               }
               onRemove={() =>
-                onChange(criteria.filter((item) => item.id !== criterion.id))
+                commit(
+                  itemsRef.current.filter((item) => item.id !== criterion.id),
+                )
               }
             />
           ))}

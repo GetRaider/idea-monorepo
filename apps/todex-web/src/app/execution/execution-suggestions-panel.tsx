@@ -1,9 +1,17 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { formatEstimation } from "@repo/api/todex";
-import { Spinner, cn } from "@repo/ui";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Spinner,
+  cn,
+} from "@repo/ui";
 import { toast } from "sonner";
 
 import { todexClient } from "@lib/todex-client";
@@ -33,6 +41,7 @@ export function ExecutionSuggestionsPanel() {
           : "Could not add the task to the queue",
       ),
   });
+  const [filtersOpen, setFiltersOpen] = useState(true);
   const [filters, setFilters] = useState<SuggestionFilters>(
     EMPTY_SUGGESTION_FILTERS,
   );
@@ -55,120 +64,100 @@ export function ExecutionSuggestionsPanel() {
         <h2 className="text-sm font-semibold text-[#f2f2f0]">Suggestions</h2>
         <button
           type="button"
-          className="rounded-md px-2 py-1.5 text-sm text-[#a3a3a0] hover:bg-surface hover:text-[#f2f2f0]"
-          onClick={() => setFilters(EMPTY_SUGGESTION_FILTERS)}
+          aria-expanded={filtersOpen}
+          className="flex h-7 items-center gap-1 rounded-md border border-white/10 bg-white/[0.04] px-2 text-xs text-[#cfcfcc] hover:bg-white/[0.08]"
+          onClick={() => setFiltersOpen((open) => !open)}
         >
-          Reset
+          {filtersOpen ? "Hide" : "Show"}
+          <HeaderChevron open={filtersOpen} />
         </button>
       </header>
-      <div className="flex flex-wrap gap-2 px-4">
-        <FilterSelect
-          label="Sort"
-          value={filters.sort}
-          onChange={(sort) =>
-            update({ sort: sort as SuggestionFilters["sort"] })
-          }
-        >
-          <option value="priority">Priority</option>
-          <option value="board">Space</option>
-          <option value="estimation">Estimation</option>
-          <option value="schedule">Schedule</option>
-          <option value="due">Due</option>
-          <option value="stage">Stage</option>
-        </FilterSelect>
-        <FilterSelect
-          label="Priority"
-          value={filters.priority}
-          onChange={(priority) =>
-            update({ priority: priority as SuggestionFilters["priority"] })
-          }
-        >
-          <option value="all">Any</option>
-          <option value="critical">Critical</option>
-          <option value="high">High</option>
-          <option value="medium">Medium</option>
-          <option value="low">Low</option>
-        </FilterSelect>
-        <FilterSelect
-          label="Board"
-          value={filters.spaceId}
-          onChange={(spaceId) => update({ spaceId })}
-        >
-          <option value="all">Any</option>
-          {boards.map((board) => (
-            <option key={board.id} value={board.id}>
-              {board.name}
-            </option>
-          ))}
-        </FilterSelect>
-        {areas.length > 0 ? (
+      {filtersOpen ? (
+        <div className="grid grid-cols-2 items-center gap-2 px-4 pb-1">
           <FilterSelect
-            label="Area"
-            value={filters.sectionName}
-            onChange={(sectionName) => update({ sectionName })}
-          >
-            <option value="all">Any</option>
-            {areas.map((area) => (
-              <option key={area} value={area}>
-                {area}
-              </option>
-            ))}
-          </FilterSelect>
-        ) : null}
-        <FilterSelect
-          label="Estimation"
-          value={filters.estimation}
-          onChange={(estimation) =>
-            update({
-              estimation: estimation as SuggestionFilters["estimation"],
-            })
-          }
-        >
-          <option value="all">Any</option>
-          <option value="short">≤ 30m</option>
-          <option value="medium">31m–2h</option>
-          <option value="long">&gt; 2h</option>
-        </FilterSelect>
-        <FilterSelect
-          label="Schedule"
-          value={filters.schedule}
-          onChange={(schedule) =>
-            update({ schedule: schedule as SuggestionFilters["schedule"] })
-          }
-        >
-          <option value="all">Any</option>
-          <option value="today">Today</option>
-          <option value="week">This week</option>
-          <option value="later">Later</option>
-          <option value="unscheduled">Unscheduled</option>
-        </FilterSelect>
-        <FilterSelect
-          label="Due"
-          value={filters.due}
-          onChange={(due) => update({ due: due as SuggestionFilters["due"] })}
-        >
-          <option value="all">Any</option>
-          <option value="overdue">Overdue</option>
-          <option value="today">Today</option>
-          <option value="week">This week</option>
-          <option value="none">No due date</option>
-        </FilterSelect>
-        {stages.length > 0 ? (
+            label="Sort"
+            value={filters.sort}
+            options={SORT_OPTIONS}
+            onChange={(sort) =>
+              update({ sort: sort as SuggestionFilters["sort"] })
+            }
+          />
           <FilterSelect
-            label="Stage"
-            value={filters.stage}
-            onChange={(stage) => update({ stage })}
+            label="Priority"
+            value={filters.priority}
+            options={PRIORITY_OPTIONS}
+            onChange={(priority) =>
+              update({ priority: priority as SuggestionFilters["priority"] })
+            }
+          />
+          <FilterSelect
+            label="Space"
+            value={filters.spaceId}
+            options={[
+              { value: "all", label: "Any" },
+              ...boards.map((board) => ({
+                value: board.id,
+                label: board.name,
+              })),
+            ]}
+            onChange={(spaceId) => update({ spaceId })}
+          />
+          {areas.length > 0 ? (
+            <FilterSelect
+              label="Area"
+              value={filters.sectionName}
+              options={[
+                { value: "all", label: "Any" },
+                ...areas.map((area) => ({ value: area, label: area })),
+              ]}
+              onChange={(sectionName) => update({ sectionName })}
+            />
+          ) : null}
+          <FilterSelect
+            label="Estimation"
+            value={filters.estimation}
+            options={ESTIMATION_OPTIONS}
+            onChange={(estimation) =>
+              update({
+                estimation: estimation as SuggestionFilters["estimation"],
+              })
+            }
+          />
+          <FilterSelect
+            label="Schedule"
+            value={filters.schedule}
+            options={SCHEDULE_OPTIONS}
+            onChange={(schedule) =>
+              update({ schedule: schedule as SuggestionFilters["schedule"] })
+            }
+          />
+          <FilterSelect
+            label="Due"
+            value={filters.due}
+            options={DUE_OPTIONS}
+            onChange={(due) => update({ due: due as SuggestionFilters["due"] })}
+          />
+          {stages.length > 0 ? (
+            <FilterSelect
+              label="Stage"
+              value={filters.stage}
+              options={[
+                { value: "all", label: "Any" },
+                { value: "none", label: "No stage" },
+                ...stages.map((stage) => ({ value: stage, label: stage })),
+              ]}
+              onChange={(stage) => update({ stage })}
+            />
+          ) : null}
+          <button
+            type="button"
+            className="h-7 justify-self-start px-1 text-xs text-[#8f8f8c] hover:text-[#f2f2f0]"
+            onClick={() => setFilters(EMPTY_SUGGESTION_FILTERS)}
           >
-            <option value="all">Any</option>
-            <option value="none">No stage</option>
-            {stages.map((stage) => (
-              <option key={stage} value={stage}>
-                {stage}
-              </option>
-            ))}
-          </FilterSelect>
-        ) : null}
-      </div>
+            Reset
+          </button>
+        </div>
+      ) : null}
       <div className="h-px w-full bg-white/[0.06]" />
       {suggestions.isLoading ? (
         <Spinner className="flex-1" />
@@ -230,50 +219,11 @@ function PlusIcon() {
   );
 }
 
-function FilterSelect({
-  label,
-  value,
-  onChange,
-  children,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  children: ReactNode;
-}) {
-  const solid = label === "Sort";
-
-  return (
-    <label
-      className={cn(
-        "inline-flex h-8 items-center gap-1.5 rounded-md pl-2.5 pr-1.5 text-sm",
-        solid
-          ? "primary-noise bg-[#f2f2f0] text-[#3a3a38]"
-          : "border border-white/[0.09] bg-white/[0.04] text-[#8f8f8c]",
-      )}
-    >
-      <span>{solid ? "Sort." : label}</span>
-      <select
-        aria-label={label}
-        value={value}
-        className={cn(
-          "max-w-28 appearance-none bg-transparent pr-4 font-medium outline-none",
-          solid ? "text-[#0b0b0b]" : "text-[#e6e6e3]",
-        )}
-        onChange={(event) => onChange(event.target.value)}
-      >
-        {children}
-      </select>
-      <ChevronIcon className={solid ? "text-[#0b0b0b]" : "text-[#e6e6e3]"} />
-    </label>
-  );
-}
-
-function ChevronIcon({ className }: { className?: string }) {
+function HeaderChevron({ open }: { open: boolean }) {
   return (
     <svg
       viewBox="0 0 14 14"
-      className={cn("pointer-events-none -ml-4 size-3.5", className)}
+      className={cn("size-3.5", open && "rotate-180")}
       aria-hidden
     >
       <path
@@ -287,3 +237,80 @@ function ChevronIcon({ className }: { className?: string }) {
     </svg>
   );
 }
+
+function FilterSelect({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: ReadonlyArray<{ value: string; label: string }>;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger
+        aria-label={label}
+        className="h-8 w-full min-w-0 gap-2 rounded-md border-white/10 bg-white/[0.04] px-2.5 text-xs text-[#e6e6e3] shadow-none focus:ring-0 [&>svg]:size-3"
+      >
+        <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
+          <span className="shrink-0 text-[#8f8f8c]">{label}</span>
+          <SelectValue />
+        </div>
+      </SelectTrigger>
+      <SelectContent>
+        {options.map((option) => (
+          <SelectItem
+            key={option.value}
+            value={option.value}
+            className="text-xs"
+          >
+            {option.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
+const SORT_OPTIONS = [
+  { value: "priority", label: "Priority" },
+  { value: "board", label: "Space" },
+  { value: "estimation", label: "Estimation" },
+  { value: "schedule", label: "Schedule" },
+  { value: "due", label: "Due" },
+  { value: "stage", label: "Stage" },
+] as const;
+
+const PRIORITY_OPTIONS = [
+  { value: "all", label: "Any" },
+  { value: "critical", label: "Critical" },
+  { value: "high", label: "High" },
+  { value: "medium", label: "Medium" },
+  { value: "low", label: "Low" },
+] as const;
+
+const ESTIMATION_OPTIONS = [
+  { value: "all", label: "Any" },
+  { value: "short", label: "≤ 30m" },
+  { value: "medium", label: "31m–2h" },
+  { value: "long", label: "> 2h" },
+] as const;
+
+const SCHEDULE_OPTIONS = [
+  { value: "all", label: "Any" },
+  { value: "today", label: "Today" },
+  { value: "week", label: "This week" },
+  { value: "later", label: "Later" },
+  { value: "unscheduled", label: "Unscheduled" },
+] as const;
+
+const DUE_OPTIONS = [
+  { value: "all", label: "Any" },
+  { value: "overdue", label: "Overdue" },
+  { value: "today", label: "Today" },
+  { value: "week", label: "This week" },
+  { value: "none", label: "No due date" },
+] as const;

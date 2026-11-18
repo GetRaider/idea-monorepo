@@ -23,6 +23,7 @@ import {
   DocType,
   hasOpenInterval,
   sumIntervalSeconds,
+  TaskStatus,
 } from "@repo/api/todex";
 
 import { assertNoLiveLifecycleLock } from "../tasks/task-lifecycle";
@@ -58,10 +59,7 @@ import type {
   TaskRow,
 } from "../../db/schema";
 import { DRIZZLE_DB } from "../../db/tokens";
-import {
-  assertOneSpace,
-  lockWorkspaceTasks,
-} from "../calendar/calendar-scope";
+import { assertOneSpace, lockWorkspaceTasks } from "../calendar/calendar-scope";
 import {
   allocateSessionSpans,
   buildExecutionActivity,
@@ -231,6 +229,44 @@ export class ExecutionService {
           ],
         })
         .where(eq(executionSessionTasks.id, target.id));
+    });
+    return this.state(workspaceId);
+  }
+
+  async release(workspaceId: string, taskId: string) {
+    const now = new Date();
+    await this.db.transaction(async (tx) => {
+      const open = await this.openRow(tx, workspaceId);
+      if (!open) return;
+      const links = await this.sessionLinks(tx, open.id, true);
+      const target = links.find((link) => link.taskId === taskId);
+      if (!target || !hasOpenInterval(target.intervals)) return;
+      await this.closeTracking(tx, [target], now);
+      const rows = await tx
+        .select({ id: tasks.id, status: tasks.status })
+        .from(tasks)
+        .where(
+          inArray(
+            tasks.id,
+            links.map((link) => link.taskId),
+          ),
+        );
+      const statusById = new Map(rows.map((row) => [row.id, row.status]));
+      const next = links.find((link) => {
+        if (link.taskId === taskId) return false;
+        const status = statusById.get(link.taskId);
+        return status !== TaskStatus.DONE && status !== TaskStatus.CANCELLED;
+      });
+      if (!next) return;
+      await tx
+        .update(executionSessionTasks)
+        .set({
+          intervals: [
+            ...next.intervals,
+            { startedAt: now.toISOString(), endedAt: null },
+          ],
+        })
+        .where(eq(executionSessionTasks.id, next.id));
     });
     return this.state(workspaceId);
   }

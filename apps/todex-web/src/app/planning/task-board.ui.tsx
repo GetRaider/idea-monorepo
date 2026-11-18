@@ -613,13 +613,20 @@ export function TasksBreadcrumb({
   );
 }
 
-export function StatusGlyph({ status }: { status: Task["status"] }) {
+export function StatusGlyph({
+  status,
+  large = false,
+}: {
+  status: Task["status"];
+  large?: boolean;
+}) {
   const glyph = STATUS_GLYPH[status];
   return (
     <span
       aria-hidden
       className={cn(
-        "inline-flex h-3.5 w-3.5 items-center justify-center text-sm leading-none",
+        "inline-flex items-center justify-center leading-none",
+        large ? "h-6 w-6 text-xl" : "h-3.5 w-3.5 text-sm",
         glyph.className,
       )}
     >
@@ -657,15 +664,17 @@ export function PriorityMenu({
 export function StatusMenu({
   status,
   onSelect,
+  large = false,
 }: {
   status: Task["status"];
   onSelect: (status: Task["status"]) => void;
+  large?: boolean;
 }) {
   return (
     <TextMenu
       ariaLabel="Status"
-      className="px-0.5"
-      trigger={<StatusGlyph status={status} />}
+      className={large ? "px-1.5 py-1" : "px-0.5"}
+      trigger={<StatusGlyph status={status} large={large} />}
       options={STATUS_MENU_OPTIONS}
       onSelect={(value) => onSelect(value as Task["status"])}
     />

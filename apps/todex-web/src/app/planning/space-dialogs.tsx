@@ -24,9 +24,9 @@ import {
 import type { Space, SpaceFolder } from "@repo/api/todex";
 import { DEFAULT_SPACE_COLOR } from "@repo/api/todex";
 
+import { SpaceColorPicker } from "@components/space-color-picker";
 import { todexClient } from "@lib/todex-client";
 
-import { SpaceColorPicker } from "./space-color-picker";
 import { useTasks } from "./tasks-provider";
 
 const SpaceDialogsContext = createContext<SpaceDialogsContextValue | null>(
@@ -220,10 +220,12 @@ function CreateSpaceDialog({
         </Field>
         <Field label="Name">
           <div className="flex items-center gap-2">
-            <span
-              className="h-4 w-4 shrink-0 rounded-full bg-[var(--todex-swatch)]"
-              style={{ ["--todex-swatch" as string]: color }}
-            />
+            {kind === "board" ? (
+              <span
+                className="h-4 w-4 shrink-0 rounded-full bg-[var(--todex-swatch)]"
+                style={{ ["--todex-swatch" as string]: color }}
+              />
+            ) : null}
             <Input
               autoFocus
               value={name}

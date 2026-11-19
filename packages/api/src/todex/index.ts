@@ -111,6 +111,11 @@ export {
 } from "./space-colors.ts";
 export type { SpaceColor } from "./space-colors.ts";
 export {
+  SPACE_POSITION_GAP,
+  positionAfterHighest,
+  positionForDrop,
+} from "./space-order.ts";
+export {
   CreateEpicBodySchema,
   EpicDetailSchema,
   EpicSchema,

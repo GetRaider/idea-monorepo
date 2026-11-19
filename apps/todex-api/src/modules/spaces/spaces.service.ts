@@ -47,6 +47,10 @@ import {
   planProgressStageReplace,
   ProgressStagePlanError,
 } from "./progress-stage-plan";
+import {
+  nextFolderSpacePosition,
+  nextTopLevelPosition,
+} from "./space-position";
 
 @Injectable()
 export class SpacesService {
@@ -68,7 +72,8 @@ export class SpacesService {
               eq(spaces.spaceFolderId, folderId),
             )
           : eq(spaces.workspaceId, workspaceId),
-      );
+      )
+      .orderBy(asc(spaces.position), asc(spaces.id));
     return rows.map(mapSpace);
   }
 
@@ -102,21 +107,20 @@ export class SpacesService {
     const space = await this.requireInWorkspace(workspaceId, spaceId);
     const [taskCount, epicCount, docRows, folderCount, sessionCount] =
       await Promise.all([
-      this.countWhere(tasks, eq(tasks.spaceId, space.id)),
-      this.countWhere(epics, eq(epics.spaceId, space.id)),
-      this.db
-        .select({ type: docs.type, total: count() })
-        .from(docs)
-        .where(eq(docs.spaceId, space.id))
-        .groupBy(docs.type),
-      this.countWhere(docFolders, eq(docFolders.spaceId, space.id)),
-      this.countWhere(
-        executionSessions,
-        eq(executionSessions.spaceId, space.id),
-      ),
-    ]);
-    const goals =
-      docRows.find((row) => row.type === DocType.GOAL)?.total ?? 0;
+        this.countWhere(tasks, eq(tasks.spaceId, space.id)),
+        this.countWhere(epics, eq(epics.spaceId, space.id)),
+        this.db
+          .select({ type: docs.type, total: count() })
+          .from(docs)
+          .where(eq(docs.spaceId, space.id))
+          .groupBy(docs.type),
+        this.countWhere(docFolders, eq(docFolders.spaceId, space.id)),
+        this.countWhere(
+          executionSessions,
+          eq(executionSessions.spaceId, space.id),
+        ),
+      ]);
+    const goals = docRows.find((row) => row.type === DocType.GOAL)?.total ?? 0;
     const documents =
       docRows.find((row) => row.type === DocType.COMMON)?.total ?? 0;
     const series = await new RecurrenceService(this.db).seriesCountForSpace(
@@ -134,11 +138,7 @@ export class SpacesService {
     };
   }
 
-  async create(
-    workspaceId: string,
-    body: CreateSpaceBody,
-    isInbox = false,
-  ) {
+  async create(workspaceId: string, body: CreateSpaceBody, isInbox = false) {
     if (isInbox && body.folderId) {
       throw new BadRequestException(
         "The system Inbox cannot be filed in a folder",
@@ -148,17 +148,24 @@ export class SpacesService {
       await this.spaceFolders.requireInWorkspace(workspaceId, body.folderId);
     }
     const now = new Date();
+    const folderId = body.folderId ?? null;
     const created = await this.db.transaction(async (tx) => {
+      const position = isInbox
+        ? 0
+        : folderId
+          ? await nextFolderSpacePosition(tx, workspaceId, folderId)
+          : await nextTopLevelPosition(tx, workspaceId);
       const [board] = await tx
         .insert(spaces)
         .values({
           id: randomUUID(),
           workspaceId,
-          spaceFolderId: body.folderId ?? null,
+          spaceFolderId: folderId,
           isInbox,
           name: body.name,
           emoji: body.emoji ?? null,
           color: body.color ?? DEFAULT_SPACE_COLOR,
+          position,
           createdAt: now,
           updatedAt: now,
         })
@@ -198,6 +205,9 @@ export class SpacesService {
           : {}),
         ...(body.emoji !== undefined ? { emoji: body.emoji } : {}),
         ...(body.color !== undefined ? { color: body.color } : {}),
+        ...(body.position !== undefined && !existing.isInbox
+          ? { position: body.position }
+          : {}),
         updatedAt: new Date(),
       })
       .where(eq(spaces.id, existing.id))
@@ -449,7 +459,11 @@ export class SpacesService {
   }
 
   private async countWhere(
-    table: typeof tasks | typeof epics | typeof docFolders | typeof executionSessions,
+    table:
+      | typeof tasks
+      | typeof epics
+      | typeof docFolders
+      | typeof executionSessions,
     where: ReturnType<typeof eq>,
   ) {
     const [row] = await this.db

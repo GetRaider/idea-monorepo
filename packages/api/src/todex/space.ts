@@ -13,6 +13,7 @@ export const SpaceSchema = z.object({
   name: z.string(),
   emoji: z.string().nullable(),
   color: SpaceColorSchema,
+  position: z.number().finite(),
   createdAt: IsoDateTimeSchema,
   updatedAt: IsoDateTimeSchema,
 });
@@ -33,6 +34,7 @@ export const UpdateSpaceBodySchema = z.object({
   folderId: z.string().nullable().optional(),
   emoji: z.string().nullable().optional(),
   color: SpaceColorSchema.optional(),
+  position: z.number().finite().optional(),
 });
 
 export const SpaceDetailSchema = SpaceSchema.extend({

@@ -1,13 +1,17 @@
 import { ForbiddenException, Inject, Injectable } from "@nestjs/common";
-import { eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import type { CreateSpaceFolderBody, UpdateSpaceFolderBody } from "@repo/api/todex";
+import type {
+  CreateSpaceFolderBody,
+  UpdateSpaceFolderBody,
+} from "@repo/api/todex";
 
 import { DRIZZLE_DB } from "../../db/tokens";
 import { spaceFolders } from "../../db/schema";
 import { mapSpaceFolder } from "../../db/mappers";
 import { WorkspaceService } from "../workspace/workspace.service";
+import { nextTopLevelPosition } from "../spaces/space-position";
 
 @Injectable()
 export class SpaceFoldersService {
@@ -20,12 +24,14 @@ export class SpaceFoldersService {
     const rows = await this.db
       .select()
       .from(spaceFolders)
-      .where(eq(spaceFolders.workspaceId, workspaceId));
+      .where(eq(spaceFolders.workspaceId, workspaceId))
+      .orderBy(asc(spaceFolders.position), asc(spaceFolders.id));
     return rows.map(mapSpaceFolder);
   }
 
   async create(workspaceId: string, body: CreateSpaceFolderBody) {
     const now = new Date();
+    const position = await nextTopLevelPosition(this.db, workspaceId);
     const [created] = await this.db
       .insert(spaceFolders)
       .values({
@@ -33,6 +39,7 @@ export class SpaceFoldersService {
         workspaceId,
         name: body.name,
         emoji: body.emoji ?? null,
+        position,
         createdAt: now,
         updatedAt: now,
       })
@@ -53,6 +60,7 @@ export class SpaceFoldersService {
       .set({
         ...(body.name !== undefined ? { name: body.name } : {}),
         ...(body.emoji !== undefined ? { emoji: body.emoji } : {}),
+        ...(body.position !== undefined ? { position: body.position } : {}),
         updatedAt: new Date(),
       })
       .where(eq(spaceFolders.id, existing.id))

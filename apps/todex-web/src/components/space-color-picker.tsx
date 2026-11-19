@@ -21,7 +21,8 @@ export function SpaceColorPicker({
           aria-label={color}
           className={cn(
             "h-6 w-6 rounded-full bg-[var(--todex-swatch)]",
-            value === color && "ring-2 ring-foreground ring-offset-2 ring-offset-background",
+            value === color &&
+              "ring-2 ring-foreground ring-offset-2 ring-offset-background",
           )}
           style={{ ["--todex-swatch" as string]: color }}
           onClick={() => onChange(color)}

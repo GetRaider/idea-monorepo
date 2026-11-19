@@ -16,6 +16,7 @@ import {
   check,
   foreignKey,
   index,
+  doublePrecision,
   integer,
   jsonb,
   pgEnum,
@@ -140,6 +141,7 @@ export const spaceFolders = pgTable(
       .references(() => workspaces.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     emoji: text("emoji"),
+    position: doublePrecision("position").notNull().default(0),
     createdAt: timestamp("created_at")
       .$defaultFn(() => new Date())
       .notNull(),
@@ -164,6 +166,7 @@ export const spaces = pgTable(
     name: text("name").notNull(),
     emoji: text("emoji"),
     color: text("color").notNull().default("#B8A4D1"),
+    position: doublePrecision("position").notNull().default(0),
     createdAt: timestamp("created_at")
       .$defaultFn(() => new Date())
       .notNull(),
@@ -423,7 +426,10 @@ export const taskScheduleSlots = pgTable(
       table.startAt,
       table.endAt,
     ),
-    check("task_schedule_slots_end_after_start", sql`${table.endAt} > ${table.startAt}`),
+    check(
+      "task_schedule_slots_end_after_start",
+      sql`${table.endAt} > ${table.startAt}`,
+    ),
   ],
 );
 

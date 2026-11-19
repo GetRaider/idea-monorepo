@@ -4,7 +4,7 @@ import { createContext, use, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { DocType } from "@repo/api/todex";
-import type { DocFolder, DocSummary, Space } from "@repo/api/todex";
+import type { DocFolder, DocSummary, Space, SpaceColor } from "@repo/api/todex";
 import { toast } from "sonner";
 
 import { todexClient } from "@lib/todex-client";
@@ -61,8 +61,12 @@ export function DocsProvider({ children }: { children: ReactNode }) {
     onError: () => toast.error("Could not create the folder"),
   });
   const createSpace = useMutation({
-    mutationFn: (name: string) =>
-      todexClient.spaces.create({ name, folderId: null }),
+    mutationFn: (input: { name: string; color: SpaceColor }) =>
+      todexClient.spaces.create({
+        name: input.name,
+        folderId: null,
+        color: input.color,
+      }),
     onSuccess: async (space) => {
       await queryClient.invalidateQueries({ queryKey: ["boards"] });
       toast.success(`Space "${space.name}" created`);
@@ -86,7 +90,7 @@ export function DocsProvider({ children }: { children: ReactNode }) {
       },
       createFolder: (name, spaceId) =>
         createFolder.mutateAsync({ name, spaceId }),
-      createSpace: (name) => createSpace.mutateAsync(name),
+      createSpace: (name, color) => createSpace.mutateAsync({ name, color }),
     },
   };
 
@@ -115,6 +119,6 @@ interface DocsContextValue {
       folderId?: string | null,
     ) => Promise<void>;
     createFolder: (name: string, spaceId: string) => Promise<DocFolder>;
-    createSpace: (name: string) => Promise<Space>;
+    createSpace: (name: string, color: SpaceColor) => Promise<Space>;
   };
 }

@@ -74,6 +74,7 @@ export function mapSpaceFolder(row: SpaceFolderRow): SpaceFolder {
     workspaceId: row.workspaceId,
     name: row.name,
     emoji: row.emoji,
+    position: row.position,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -99,6 +100,7 @@ export function mapSpace(row: SpaceRow): Space {
     name: row.name,
     emoji: row.emoji,
     color: SpaceColorSchema.catch(DEFAULT_SPACE_COLOR).parse(row.color),
+    position: row.position,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };

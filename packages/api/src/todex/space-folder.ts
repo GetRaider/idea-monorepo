@@ -7,6 +7,7 @@ export const SpaceFolderSchema = z.object({
   workspaceId: z.string(),
   name: z.string(),
   emoji: z.string().nullable(),
+  position: z.number().finite(),
   createdAt: IsoDateTimeSchema,
   updatedAt: IsoDateTimeSchema,
 });
@@ -22,6 +23,7 @@ export const UpdateSpaceFolderBodySchema = z
   .object({
     name: z.string().min(1).optional(),
     emoji: z.string().nullable().optional(),
+    position: z.number().finite().optional(),
   })
   .strict()
   .refine((value) => Object.values(value).some((item) => item !== undefined), {

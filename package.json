@@ -65,6 +65,9 @@
     "drizzle-orm": "catalog:"
   },
   "pnpm": {
+    "overrides": {
+      "fast-xml-parser": ">=5.7.0"
+    },
     "onlyBuiltDependencies": [
       "@nestjs/core",
       "@prisma/client",

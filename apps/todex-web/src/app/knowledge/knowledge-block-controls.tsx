@@ -74,7 +74,15 @@ export function relocateKnowledgeBlock(
   if (!node || !destination || from === target) return false;
   if (target > from && target < from + node.nodeSize) return false;
   try {
-    const tr = state.tr.delete(from, from + node.nodeSize);
+    const sourceParent = state.doc.resolve(from).parent;
+    const mustKeepEmptyBlock =
+      (sourceParent.type.name === "column" ||
+        sourceParent.type.name === "detailsContent") &&
+      sourceParent.childCount === 1;
+    const paragraph = state.schema.nodes.paragraph;
+    const tr = mustKeepEmptyBlock && paragraph
+      ? state.tr.replaceWith(from, from + node.nodeSize, paragraph.create())
+      : state.tr.delete(from, from + node.nodeSize);
     const mappedTarget = tr.mapping.map(target, 1);
     const currentTarget = tr.doc.nodeAt(mappedTarget);
     if (!currentTarget) return false;

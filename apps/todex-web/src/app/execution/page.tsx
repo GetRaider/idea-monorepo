@@ -62,8 +62,9 @@ export default function ExecutionPage() {
   const defaultGoalMinutes = startTasks.reduce((sum, task) => sum + task.estimation, 0);
   const preparedGoalMinutes = goalMinutes ?? (defaultGoalMinutes || null);
   const mixedSpace = startBoards.size > 1;
+  const hasCompletedSelection = startTasks.some((task) => task.status === TaskStatus.DONE);
   const canStart =
-    startIds.length > 0 && startBoards.size <= 1 && !isExecuting && !session;
+    startIds.length > 0 && startBoards.size <= 1 && !hasCompletedSelection && !isExecuting && !session;
   const scheduledMinutes = queue.reduce(
     (total, item) => total + item.task.estimation,
     0,
@@ -165,6 +166,11 @@ export default function ExecutionPage() {
               {mixedSpace ? (
                 <p className="px-4 pt-3 text-xs text-destructive">
                   Selected tasks must belong to the same space.
+                </p>
+              ) : null}
+              {hasCompletedSelection ? (
+                <p className="px-4 pt-3 text-xs text-destructive">
+                  Completed tasks can be viewed but cannot be started again.
                 </p>
               ) : null}
               {visibleQueue.length === 0 ? (

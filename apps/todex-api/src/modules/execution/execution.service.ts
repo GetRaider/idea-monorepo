@@ -791,6 +791,7 @@ export class ExecutionService {
         id: tasks.id,
         taskKey: tasks.taskKey,
         summary: tasks.summary,
+        status: tasks.status,
         priority: tasks.priority,
         estimation: tasks.estimation,
         dueDate: tasks.dueDate,
@@ -811,7 +812,7 @@ export class ExecutionService {
         and(
           eq(tasks.workspaceId, workspaceId),
           isNull(tasks.parentTaskId),
-          inArray(tasks.status, ["todo", "in_progress"]),
+          inArray(tasks.status, ["todo", "in_progress", "done"]),
         ),
       )
       .orderBy(desc(tasks.updatedAt))
@@ -823,6 +824,7 @@ export class ExecutionService {
           id: row.id,
           taskKey: row.taskKey,
           summary: row.summary,
+          status: row.status,
           priority: row.priority,
           estimation: row.estimation,
           scheduleDate: null,

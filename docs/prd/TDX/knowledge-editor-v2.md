@@ -2,6 +2,8 @@
 
 ## Product goal
 
+> Scope clarification (user QA, Nov 20, 2026): this PR implements **simple rich-text document tables**, not Notion-style database tables. Property types, filtering and sorting require a separate database resource and view renderer. See [issue #55](https://github.com/GetRaider/idea-monorepo/issues/55). The screenshot exposed missing grid styling; explicit table CSS and contextual table controls were added in response.
+
 Make Knowledge Docs comfortable for technical specifications, product briefs, research notes, and AI-readable documentation. Keep the existing Tiptap document JSON, Todex entity mentions, Space/Folder hierarchy, and API/MCP contract.
 
 The Knowledge document editor is intentionally richer than Task/Epic/Goal descriptions. Task descriptions continue to use the existing HTML-based editor and sanitizer.
@@ -20,7 +22,7 @@ The Knowledge document editor is intentionally richer than Task/Epic/Goal descri
 ## Interaction notes
 
 1. Type `/` at the beginning of a block to open the existing insertion menu.
-2. Choose **Table** to insert a 3×3 table; placing the caret in a table reveals row/column actions.
+2. Choose **Simple table** to insert a 3×3 table; placing the caret in a table reveals row/column actions.
 3. Choose **Callout** or **Toggle** for documentation blocks; both are stored directly in Tiptap JSON.
 4. Choose **Image from URL** to insert a safe HTTP(S) image URL; upload-backed images are deferred until an attachment service exists.
 5. Type `@` to insert existing Todex Task, Document, Epic, or Event mentions.
@@ -51,4 +53,4 @@ The Knowledge document editor is intentionally richer than Task/Epic/Goal descri
 - [ ] Verify autosave order under slow or throttled network requests.
 - [ ] Verify Planning Task descriptions still use their original formatting and sanitization.
 
-This scope deliberately does not claim complete Notion parity.
+This scope deliberately does not claim Notion database parity. Do not merge this PR as evidence that property-based sorting/filtering is implemented; that is tracked separately in issue #55.

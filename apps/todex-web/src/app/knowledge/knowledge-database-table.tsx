@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Popover, PopoverContent, PopoverTrigger } from "@repo/ui";
@@ -13,6 +13,9 @@ import type {
 
 import { todexClient } from "@lib/todex-client";
 import { visibleKnowledgeRows } from "./knowledge-database-view";
+import { KnowledgeCellEditor } from "./knowledge-database-cell";
+import { KnowledgeDatabaseRecordPage } from "./knowledge-database-record-page";
+import { Sheet, SheetContent, SheetTitle } from "@repo/ui";
 
 const PROPERTY_TYPES: Exclude<KnowledgePropertyType, "title">[] = [
   "text", "number", "select", "multi_select", "date", "checkbox",
@@ -42,6 +45,7 @@ export function KnowledgeDatabaseTable({ databaseId }: { databaseId: string }) {
   });
 
   const [addingProperty, setAddingProperty] = useState(false);
+  const [openedRowId, setOpenedRowId] = useState<string | null>(null);
   const [newName, setNewName] = useState("");
   const [newType, setNewType] = useState<Exclude<KnowledgePropertyType, "title">>("text");
   const [newOptions, setNewOptions] = useState("");
@@ -212,6 +216,8 @@ export function KnowledgeDatabaseTable({ databaseId }: { databaseId: string }) {
               <tr key={row.id} className="group/row hover:bg-[#202020]">
                 {data.properties.map((property) => (
                   <td key={property.id} className="h-10 border-b border-r border-border p-0 last:border-r-0">
+                    <div className={property.type === "title" ? "flex items-center gap-0" : ""}>
+                      <div className="min-w-0 flex-1">
                     <KnowledgeCellEditor
                       value={row.cells[property.id] ?? null}
                       property={property}
@@ -220,6 +226,15 @@ export function KnowledgeDatabaseTable({ databaseId }: { databaseId: string }) {
                         propertyId: property.id, value,
                       }))}
                     />
+                      </div>
+                      {property.type === "title" ? (
+                        <button type="button" title="Open page" aria-label="Open record page"
+                          onClick={() => setOpenedRowId(row.id)}
+                          className="mr-2 shrink-0 rounded px-1.5 py-1 text-xs text-muted-foreground opacity-0 transition-opacity hover:bg-surface hover:text-foreground focus:opacity-100 group-hover/row:opacity-100">
+                          ↗
+                        </button>
+                      ) : null}
+                    </div>
                   </td>
                 ))}
                 <td className="border-b border-border text-center">
@@ -260,6 +275,20 @@ export function KnowledgeDatabaseTable({ databaseId }: { databaseId: string }) {
           + New row
         </button>
       )}
+      <Sheet open={openedRowId !== null} onOpenChange={(open) => { if (!open) setOpenedRowId(null); }}>
+        <SheetContent side="right" className="!w-[min(920px,92vw)] !max-w-none overflow-hidden border-border bg-[#131313] p-0">
+          <SheetTitle className="sr-only">Database record page</SheetTitle>
+          {openedRowId ? (
+            <KnowledgeDatabaseRecordPage
+              key={openedRowId}
+              databaseId={databaseId}
+              rowId={openedRowId}
+              mode="peek"
+              onClose={() => setOpenedRowId(null)}
+            />
+          ) : null}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
@@ -355,74 +384,3 @@ function PropertyMenu({
   );
 }
 
-function KnowledgeCellEditor({
-  value, property, disabled, onSave,
-}: {
-  value: KnowledgeCellValue;
-  property: KnowledgeProperty;
-  disabled: boolean;
-  onSave: (value: KnowledgeCellValue) => void;
-}) {
-  const [draft, setDraft] = useState(value === null ? "" : Array.isArray(value) ? value.join(", ") : String(value));
-  const before = useRef(value);
-  useEffect(() => {
-    before.current = value;
-    setDraft(value === null ? "" : Array.isArray(value) ? value.join(", ") : String(value));
-  }, [value]);
-
-  if (property.type === "checkbox") {
-    return <input type="checkbox" aria-label={property.name} className="ml-3 size-4 accent-white"
-      checked={value === true} disabled={disabled} onChange={(event) => onSave(event.target.checked)} />;
-  }
-  if (property.type === "select") {
-    return <select aria-label={property.name} className="knowledge-db-cell"
-      value={typeof value === "string" ? value : ""} disabled={disabled}
-      onChange={(event) => onSave(event.target.value || null)}>
-      <option value="">Empty</option>
-      {property.options.map((item) => <option key={item} value={item}>{item}</option>)}
-    </select>;
-  }
-  if (property.type === "multi_select") {
-    const selected = Array.isArray(value) ? value : [];
-    return (
-      <Popover>
-        <PopoverTrigger asChild>
-          <button type="button" disabled={disabled}
-            className="h-9 w-full truncate px-3 text-left text-xs hover:bg-surface">
-            {selected.length ? selected.join(", ") :
-              <span className="text-muted-foreground">Choose…</span>}
-          </button>
-        </PopoverTrigger>
-        <PopoverContent align="start" className="w-48 bg-[#242424] p-2" sideOffset={4}>
-          {property.options.length ? property.options.map((option) =>
-            <label key={option} className="flex items-center gap-2 rounded px-1 py-1.5 text-xs hover:bg-surface">
-              <input type="checkbox" checked={selected.includes(option)} disabled={disabled}
-                onChange={(event) => onSave(event.target.checked
-                  ? [...selected, option] : selected.filter((item) => item !== option))} />
-              {option}
-            </label>) : <span className="text-xs text-muted-foreground">Configure options first</span>}
-        </PopoverContent>
-      </Popover>
-    );
-  }
-
-  const type = property.type === "number" ? "number" : property.type === "date" ? "date" : "text";
-  function commit() {
-    const next = type === "number" ? (draft.trim() === "" ? null : Number(draft))
-      : (draft.trim() === "" ? null : draft);
-    const prev = before.current;
-    if (JSON.stringify(next) !== JSON.stringify(prev)) {
-      onSave(next);
-      before.current = next;
-    }
-  }
-  return <input type={type} className="knowledge-db-cell"
-    aria-label={property.name} disabled={disabled} value={draft}
-    onChange={(event) => setDraft(event.target.value)}
-    onBlur={commit}
-    onKeyDown={(event) => {
-      if (event.key === "Enter") event.currentTarget.blur();
-    }}
-    placeholder={property.type === "title" ? "Untitled" : ""}
-  />;
-}

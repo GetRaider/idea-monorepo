@@ -6,6 +6,7 @@ import type { ExecutionCurrent, ExecutionQueueTask } from "@repo/api/todex";
 import { cn } from "@repo/ui";
 
 import { STATUS_LABEL } from "../planning/task-helpers";
+import { PriorityGlyph, StatusGlyph } from "../planning/task-board.ui";
 import {
   formatSessionClock,
   sessionClockSeconds,
@@ -21,6 +22,8 @@ export function ReadyExecutionPanel({
   goalMinutes,
   mode,
   canStart,
+  focusModeOn,
+  onFocusModeChange,
   onMode,
   onGoalMinutes,
   onRemove,
@@ -30,6 +33,8 @@ export function ReadyExecutionPanel({
   goalMinutes: number | null;
   mode: FocusMode;
   canStart: boolean;
+  focusModeOn: boolean;
+  onFocusModeChange: (value: boolean) => void;
   onMode: (mode: FocusMode) => void;
   onGoalMinutes: (minutes: number | null) => void;
   onRemove: (taskId: string) => void;
@@ -60,6 +65,19 @@ export function ReadyExecutionPanel({
             ))}
           </div>
         </div>
+        <label className="flex cursor-pointer items-center justify-between rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2.5 text-sm text-[#d7d7d4]">
+          <span>
+            Focus Mode <span className="ml-1 text-xs text-[#8f8f8c]">(on by default)</span>
+          </span>
+          <input
+            type="checkbox"
+            role="switch"
+            aria-label="Start in Focus Mode"
+            checked={focusModeOn}
+            onChange={(event) => onFocusModeChange(event.target.checked)}
+            className="size-4 accent-white"
+          />
+        </label>
         <WorkSummary
           items={[
             {
@@ -82,7 +100,7 @@ export function ReadyExecutionPanel({
         <SelectedWorkHeader count={tasks.length} />
         {tasks.length === 0 ? (
           <p className="text-sm text-[#8f8f8c]">
-            Select tasks from the queue — or run the entire queue at once.
+            Select one or more tasks from the queue to start.
           </p>
         ) : (
           <ol className="flex flex-col gap-2">
@@ -92,8 +110,10 @@ export function ReadyExecutionPanel({
                 className="flex items-center gap-2 rounded-lg bg-white/[0.03] px-2 py-2"
               >
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-[#f2f2f0]">
-                    {index + 1}. {task.summary}
+                  <p className="flex items-center gap-1.5 truncate text-sm font-medium text-[#f2f2f0]">
+                    <StatusGlyph status={task.status} />
+                    <PriorityGlyph priority={task.priority} />
+                    <span className="truncate">{index + 1}. {task.summary}</span>
                   </p>
                   <p className="mt-0.5 truncate text-xs text-[#8f8f8c]">
                     {workContext(task)} · {STATUS_LABEL[task.status]}
@@ -235,8 +255,10 @@ export function RunningExecutionPanel({
                 >
                   <PhaseIcon phase={phase} />
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-medium text-[#f2f2f0]">
-                      {index + 1}. {task.summary}
+                    <span className="flex items-center gap-1.5 text-sm font-medium text-[#f2f2f0]">
+                      <StatusGlyph status={task.status} />
+                      <PriorityGlyph priority={task.priority} />
+                      <span className="truncate">{index + 1}. {task.summary}</span>
                     </span>
                     <span className="mt-0.5 block truncate text-xs text-[#8f8f8c]">
                       {workContext(task)} ·{" "}

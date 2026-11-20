@@ -3,7 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { formatEstimation, parseEstimation, TaskStatus } from "@repo/api/todex";
 import type { ExecutionCurrent, ExecutionQueueTask } from "@repo/api/todex";
-import { cn } from "@repo/ui";
+import { cn, Switch } from "@repo/ui";
 
 import { STATUS_LABEL } from "../planning/task-helpers";
 import { PriorityGlyph, StatusGlyph } from "../planning/task-board.ui";
@@ -65,19 +65,17 @@ export function ReadyExecutionPanel({
             ))}
           </div>
         </div>
-        <label className="flex cursor-pointer items-center justify-between rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2.5 text-sm text-[#d7d7d4]">
-          <span>
-            Focus Mode <span className="ml-1 text-xs text-[#8f8f8c]">(on by default)</span>
-          </span>
-          <input
-            type="checkbox"
-            role="switch"
+        <div className="flex items-center justify-between rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2.5">
+          <label htmlFor="start-focus-mode" className="cursor-pointer text-sm text-[#d7d7d4]">
+            Focus Mode
+          </label>
+          <Switch
+            id="start-focus-mode"
             aria-label="Start in Focus Mode"
             checked={focusModeOn}
-            onChange={(event) => onFocusModeChange(event.target.checked)}
-            className="size-4 accent-white"
+            onCheckedChange={onFocusModeChange}
           />
-        </label>
+        </div>
         <WorkSummary
           items={[
             {
@@ -253,7 +251,6 @@ export function RunningExecutionPanel({
                   )}
                   onClick={() => onOpenTask(task.id)}
                 >
-                  <PhaseIcon phase={phase} />
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center gap-1.5 text-sm font-medium text-[#f2f2f0]">
                       <StatusGlyph status={task.status} />
@@ -297,7 +294,7 @@ export function RunningExecutionPanel({
             onClick={onOpen}
           >
             <OpenIcon />
-            Open
+            Open Session
           </button>
         </div>
       </footer>
@@ -519,39 +516,6 @@ function RemoveButton({
     >
       <CloseIcon />
     </button>
-  );
-}
-
-function PhaseIcon({ phase }: { phase: ExecutionWorkPhase }) {
-  if (phase === "completed") {
-    return (
-      <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-[#1f8f5f] text-[#04140c]">
-        <svg viewBox="0 0 16 16" className="size-3" aria-hidden>
-          <path
-            d="M3.5 8.2 6.4 11l6.1-6.2"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.8"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      </span>
-    );
-  }
-  if (phase === "in_progress") {
-    return (
-      <span
-        className="flex size-5 shrink-0 animate-spin items-center justify-center rounded-full border-2 border-[#f2f2f0] border-t-transparent"
-        aria-hidden
-      />
-    );
-  }
-  return (
-    <span
-      className="size-5 shrink-0 rounded-full border border-white/25"
-      aria-hidden
-    />
   );
 }
 

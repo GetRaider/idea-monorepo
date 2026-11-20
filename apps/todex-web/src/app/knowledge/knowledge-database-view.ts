@@ -1,7 +1,6 @@
 import type {
   KnowledgeCellValue,
   KnowledgeDatabase,
-  KnowledgeFilterSchema,
 } from "@repo/api/todex";
 
 type Row = KnowledgeDatabase["rows"][number];
@@ -59,7 +58,10 @@ export function visibleKnowledgeRows(data: KnowledgeDatabase): Row[] {
   );
   return [...filtered].sort((a, b) => {
     for (const sort of data.view.sorts) {
-      const diff = compare(a.cells[sort.propertyId], b.cells[sort.propertyId]);
+      const left = a.cells[sort.propertyId];
+      const right = b.cells[sort.propertyId];
+      if (isEmpty(left) !== isEmpty(right)) return isEmpty(left) ? 1 : -1;
+      const diff = compare(left, right);
       if (diff) return diff * (sort.direction === "asc" ? 1 : -1);
     }
     return a.position - b.position;

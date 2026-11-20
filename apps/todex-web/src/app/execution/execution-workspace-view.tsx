@@ -5,6 +5,7 @@ import Link from "next/link";
 import { formatEstimation, TaskStatus } from "@repo/api/todex";
 import type { ExecutionCurrent } from "@repo/api/todex";
 import { PauseIcon } from "@components/icons";
+import { Switch } from "@repo/ui";
 
 import { STATUS_LABEL, taskProgressPercent } from "../planning/task-helpers";
 import { PriorityGlyph, StatusGlyph } from "../planning/task-board.ui";
@@ -63,10 +64,10 @@ export function ExecutionWorkspaceView({
   const showQueue = tasks.length > 1 && queueVisible;
 
   return (
-    <div className="flex min-h-0 min-w-0 flex-col gap-5">
+    <div className="flex min-h-0 min-w-0 flex-col gap-4">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
-          <div className="flex min-w-0 items-center gap-2 text-xl font-semibold tracking-tight sm:text-2xl">
+          <div className="flex min-w-0 items-center gap-2 text-lg font-semibold tracking-tight sm:text-xl">
             <Link href="/execution" className="shrink-0 text-[#9b9b99] hover:text-[#f2f2f0]">
               Execution
             </Link>
@@ -91,15 +92,19 @@ export function ExecutionWorkspaceView({
               {showQueue ? "Hide tasks" : "Show tasks"}
             </button>
           ) : null}
-          <button
-            type="button"
-            onClick={onEnterFocus}
-            role="switch"
-            aria-checked={false}
-            className="rounded-lg border border-white/15 bg-white/[0.04] px-4 py-2 text-sm font-medium text-[#f2f2f0] hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
-          >
-            Focus Mode: Off
-          </button>
+          <div className="flex items-center gap-2.5">
+            <label htmlFor="session-focus-mode" className="cursor-pointer text-sm font-medium text-[#d7d7d4]">
+              Focus Mode
+            </label>
+            <Switch
+              id="session-focus-mode"
+              aria-label="Focus Mode"
+              checked={false}
+              onCheckedChange={(enabled) => {
+                if (enabled) onEnterFocus();
+              }}
+            />
+          </div>
         </div>
       </header>
 

@@ -17,6 +17,7 @@ import { todexClient } from "@lib/todex-client";
 import { KnowledgeDatabaseNode } from "../knowledge/knowledge-database-node";
 import { KnowledgeColumn, KnowledgeColumns, emptyKnowledgeColumns } from "../knowledge/knowledge-columns";
 import { KnowledgeBlockControls } from "../knowledge/knowledge-block-controls";
+import { KnowledgeBlockAppearance } from "../knowledge/knowledge-block-appearance";
 
 import {
   applyMentionEntry,
@@ -237,6 +238,7 @@ export function TaskDescriptionEditor({
         KnowledgeDatabaseNode,
         KnowledgeColumns,
         KnowledgeColumn,
+        KnowledgeBlockAppearance,
       ] : []),
       Placeholder.configure({
         placeholder: knowledgeMode ? "Type / for blocks, @ to mention…" : DESCRIPTION_PLACEHOLDER,

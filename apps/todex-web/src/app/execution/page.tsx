@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { formatEstimation } from "@repo/api/todex";
+import { formatEstimation, TaskStatus } from "@repo/api/todex";
 import { ConfirmDialog, Spinner } from "@repo/ui";
 
 import { applyTaskSelection, isToggleClick } from "../planning/task-selection";
@@ -44,21 +44,28 @@ export default function ExecutionPage() {
   const [finishOpen, setFinishOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [anchorId, setAnchorId] = useState<string | null>(null);
-  const [explicit, setExplicit] = useState(false);
-  const queueIds = queue.map((item) => item.taskId);
+  const [explicit, setExplicit] = useState(true);
+  const [showDone, setShowDone] = useState(false);
+  const [focusModeOn, setFocusModeOn] = useState(false);
+  const [pendingStart, setPendingStart] = useState(false);
+  const visibleQueue = showDone ? queue : queue.filter((item) => item.task.status !== TaskStatus.DONE);
+  const queueIds = visibleQueue.map((item) => item.taskId);
   const selectedInQueue = selectedIds.filter((taskId) =>
     queueIds.includes(taskId),
   );
   const startIds = queuedStartIds(queueIds, selectedInQueue, explicit);
   const startTasks = startIds.flatMap((taskId) => {
-    const item = queue.find((queued) => queued.taskId === taskId);
+    const item = visibleQueue.find((queued) => queued.taskId === taskId);
     return item ? [item.task] : [];
   });
   const startBoards = new Set(startTasks.map((task) => task.spaceId));
+  const defaultGoalMinutes = startTasks.reduce((sum, task) => sum + task.estimation, 0);
+  const preparedGoalMinutes = goalMinutes ?? (defaultGoalMinutes || null);
   const mixedSpace = startBoards.size > 1;
+  const hasCompletedSelection = startTasks.some((task) => task.status === TaskStatus.DONE);
   const canStart =
-    startIds.length > 0 && startBoards.size <= 1 && !isExecuting && !session;
-  const scheduledMinutes = queue.reduce(
+    startIds.length > 0 && startBoards.size <= 1 && !hasCompletedSelection && !isExecuting && !session;
+  const scheduledMinutes = visibleQueue.reduce(
     (total, item) => total + item.task.estimation,
     0,
   );
@@ -72,8 +79,16 @@ export default function ExecutionPage() {
 
   function start() {
     if (!canStart) return;
+    setGoalMinutes(preparedGoalMinutes);
+    setPendingStart(true);
     execute(startIds);
   }
+
+  useEffect(() => {
+    if (!pendingStart || !session) return;
+    setPendingStart(false);
+    router.push("/execution/session" + (focusModeOn ? "?view=focus" : ""));
+  }, [pendingStart, session, focusModeOn, router]);
 
   function selectQueued(
     taskId: string,
@@ -91,9 +106,16 @@ export default function ExecutionPage() {
   }
 
   function selectAll() {
-    setExplicit(false);
-    setSelectedIds([]);
-    setAnchorId(null);
+    applySelection(queueIds, queueIds[0] ?? null);
+  }
+
+  function clearSelection() {
+    applySelection([], null);
+  }
+
+  function reorderVisible(taskIds: string[]) {
+    const hidden = queue.map((item) => item.taskId).filter((id) => !queueIds.includes(id));
+    reorder([...taskIds, ...hidden]);
   }
 
   return (
@@ -102,7 +124,7 @@ export default function ExecutionPage() {
         title="Execution"
         actions={
           <div className="flex gap-2">
-            <StatChip value={String(queue.length)} label="in queue" />
+            <StatChip value={String(visibleQueue.length)} label="in queue" />
             <StatChip value={scheduledLabel} label="scheduled" />
           </div>
         }
@@ -113,7 +135,7 @@ export default function ExecutionPage() {
           <p className="text-sm text-[#8f8f8c]">Could not load execution.</p>
         ) : (
           <div className="flex min-h-0 flex-1 gap-3">
-            <ExecutionSuggestionsPanel />
+            <ExecutionSuggestionsPanel showDone={showDone} onShowDoneChange={setShowDone} />
             <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-white/[0.06] bg-[#121212]">
               <header className="flex items-center justify-between px-4 pt-3">
                 <div className="flex items-center gap-2">
@@ -121,15 +143,19 @@ export default function ExecutionPage() {
                     Queue
                   </h2>
                   <span className="flex h-5 min-w-5 items-center justify-center rounded-md bg-white/10 px-1 font-mono text-xs text-[#f2f2f0]">
-                    {queue.length}
+                    {visibleQueue.length}
                   </span>
-                  {queue.length > 0 && startIds.length !== queue.length ? (
+                  {queueIds.length > 0 && startIds.length !== queueIds.length ? (
                     <button
                       type="button"
                       className="text-xs text-[#a3a3a0] hover:text-[#f2f2f0]"
                       onClick={selectAll}
                     >
                       Select all
+                    </button>
+                  ) : startIds.length > 0 ? (
+                    <button type="button" className="text-xs text-[#a3a3a0] hover:text-[#f2f2f0]" onClick={clearSelection}>
+                      Clear
                     </button>
                   ) : null}
                 </div>
@@ -142,18 +168,23 @@ export default function ExecutionPage() {
                   Selected tasks must belong to the same space.
                 </p>
               ) : null}
-              {queue.length === 0 ? (
+              {hasCompletedSelection ? (
+                <p className="px-4 pt-3 text-xs text-destructive">
+                  Completed tasks can be viewed but cannot be started again.
+                </p>
+              ) : null}
+              {visibleQueue.length === 0 ? (
                 <p className="px-4 py-6 text-sm text-[#8f8f8c]">
                   No tasks in the queue.
                 </p>
               ) : (
                 <div className="min-h-0 flex-1 overflow-auto px-2 py-2">
                   <ExecutionQueueList
-                    queue={queue}
+                    queue={visibleQueue}
                     selectedTaskIds={startIds}
                     onSelect={selectQueued}
                     onRemove={removeQueued}
-                    onReorder={reorder}
+                    onReorder={reorderVisible}
                   />
                 </div>
               )}
@@ -171,6 +202,7 @@ export default function ExecutionPage() {
                   sessionTitle={executionSessionTitle({
                     startedAt: session.startedAt,
                     spaceName: tasks[0]?.spaceName ?? null,
+                    title: session.title,
                   })}
                   tracking={tracking}
                   mode={mode}
@@ -191,8 +223,10 @@ export default function ExecutionPage() {
               ) : (
                 <ReadyExecutionPanel
                   tasks={startTasks}
-                  goalMinutes={goalMinutes}
+                  goalMinutes={preparedGoalMinutes}
                   mode={mode}
+                  focusModeOn={focusModeOn}
+                  onFocusModeChange={setFocusModeOn}
                   canStart={canStart}
                   onMode={setMode}
                   onGoalMinutes={setGoalMinutes}

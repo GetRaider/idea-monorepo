@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  executionSessionTitle,
   executionWorkPhase,
   extendGoalMinutes,
   focusSeconds,
@@ -17,6 +18,14 @@ import {
 } from "./execution-time";
 
 describe("execution time", () => {
+  it("prefers a saved execution title and falls back to Space and start time", () => {
+    const startedAt = "2026-11-20T19:02:00.000Z";
+    expect(executionSessionTitle({ startedAt, spaceName: "Side Product", title: "Website Polish" })).toBe("Website Polish");
+    const fallback = executionSessionTitle({ startedAt, spaceName: "Side Product", title: "   " });
+    expect(fallback).toContain("Side Product");
+    expect(fallback).not.toContain("Website Polish");
+  });
+
   it("formats clocks and durations", () => {
     expect(formatClock(65)).toBe("01:05");
     expect(formatClock(3661)).toBe("1:01:01");
@@ -63,6 +72,26 @@ describe("execution time", () => {
         now,
       ),
     ).toBe(600);
+  });
+
+  it("counts simultaneous task intervals only once in the session timer", () => {
+    const now = new Date("2026-11-18T12:30:00.000Z");
+    const tasks = [
+      {
+        intervals: [
+          { startedAt: "2026-11-18T12:00:00.000Z", endedAt: "2026-11-18T12:10:00.000Z" },
+          { startedAt: "2026-11-18T12:15:00.000Z", endedAt: null },
+        ],
+      },
+      {
+        intervals: [
+          { startedAt: "2026-11-18T12:00:00.000Z", endedAt: "2026-11-18T12:20:00.000Z" },
+          { startedAt: "2026-11-18T12:25:00.000Z", endedAt: null },
+        ],
+      },
+    ];
+    // Overlapping intervals form one continuous 30-minute focus window.
+    expect(sessionElapsedSeconds(tasks, now)).toBe(30 * 60);
   });
 
   it("keeps an implicit queue selection and derives work phase", () => {

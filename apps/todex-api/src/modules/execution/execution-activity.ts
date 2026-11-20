@@ -2,89 +2,115 @@ import type { ExecutionActivity, ExecutionInterval } from "@repo/api/todex";
 
 const MAX_RANGE_DAYS = 366;
 
-export function buildExecutionActivity(
-  input: BuildActivityInput,
-): ExecutionActivity {
+export function buildExecutionActivity(input: BuildActivityInput): ExecutionActivity {
   const days = eachDay(input.from, input.to);
-  if (days.length === 0 || days.length > MAX_RANGE_DAYS) {
-    throw new Error("Invalid range");
-  }
-  const rangeStart = zonedBoundary(input.from, input.timeZone, false);
-  const rangeEnd = zonedBoundary(input.to, input.timeZone, true);
+  if (days.length === 0 || days.length > MAX_RANGE_DAYS) throw new Error("Invalid range");
+
+  const rangeStart = zonedBoundary(input.from, input.timeZone, false).getTime();
+  const rangeEnd = zonedBoundary(input.to, input.timeZone, true).getTime();
+  const now = input.now.getTime();
   const daySeconds = new Map(days.map((day) => [day, 0]));
+  const filteredDaySeconds = new Map(days.map((day) => [day, 0]));
   const sessionSeconds = new Map<string, number>();
   const activitySeconds = new Map<string, { label: string; seconds: number }>();
   const boards = new Map<string, string>();
+  const bySession = new Map<string, BuildActivityInput["slices"]>();
 
   for (const slice of input.slices) {
-    let tracked = 0;
-    for (const interval of slice.intervals) {
-      const started = Date.parse(interval.startedAt);
-      const ended = Date.parse(interval.endedAt ?? input.now.toISOString());
-      if (!Number.isFinite(started) || !Number.isFinite(ended)) continue;
-      const from = Math.max(started, rangeStart.getTime());
-      const to = Math.min(ended, rangeEnd.getTime());
-      if (to <= from) continue;
-      const seconds = splitOverlap(from, to, input.timeZone, (day, amount) => {
-        if (!daySeconds.has(day)) return;
-        daySeconds.set(day, (daySeconds.get(day) ?? 0) + amount);
-      });
-      tracked += seconds;
-    }
-    if (tracked === 0) continue;
-    boards.set(slice.spaceId, slice.spaceName);
-    if (input.spaceId && slice.spaceId !== input.spaceId) continue;
-    sessionSeconds.set(
-      slice.sessionId,
-      (sessionSeconds.get(slice.sessionId) ?? 0) + tracked,
+    const group = bySession.get(slice.sessionId) ?? [];
+    group.push(slice);
+    bySession.set(slice.sessionId, group);
+  }
+
+  for (const [sessionId, slices] of bySession) {
+    const primary = slices[0];
+    if (!primary) continue;
+    const spans = mergeSpans(
+      slices.flatMap((slice) => clippedSpans(slice.intervals, rangeStart, rangeEnd, now)),
     );
-    const section = slice.isDefaultSection ? null : slice.sectionName;
-    const id = section ? `${slice.spaceId}:${slice.sectionId}` : slice.spaceId;
-    const label = section ? `${slice.spaceName} · ${section}` : slice.spaceName;
-    const current = activitySeconds.get(id);
-    activitySeconds.set(id, {
-      label,
-      seconds: (current?.seconds ?? 0) + tracked,
+    if (spans.length === 0) continue;
+
+    boards.set(primary.spaceId, primary.spaceName);
+    let uniqueSeconds = 0;
+    for (const span of spans) {
+      uniqueSeconds += splitOverlap(span.start, span.end, input.timeZone, (day, seconds) => {
+        if (!daySeconds.has(day)) return;
+        daySeconds.set(day, (daySeconds.get(day) ?? 0) + seconds);
+        if (!input.spaceId || input.spaceId === primary.spaceId) {
+          filteredDaySeconds.set(day, (filteredDaySeconds.get(day) ?? 0) + seconds);
+        }
+      });
+    }
+    if (uniqueSeconds === 0 || (input.spaceId && input.spaceId !== primary.spaceId)) continue;
+    sessionSeconds.set(sessionId, uniqueSeconds);
+
+    // Attribute session wall time across task areas proportionally, without
+    // counting concurrent work multiple times in analytics.
+    const weights = slices.map((slice) =>
+      clippedSpans(slice.intervals, rangeStart, rangeEnd, now).reduce(
+        (sum, span) => sum + Math.floor((span.end - span.start) / 1000),
+        0,
+      ),
+    );
+    const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
+    let assigned = 0;
+    slices.forEach((slice, index) => {
+      const seconds = index === slices.length - 1
+        ? uniqueSeconds - assigned
+        : Math.floor(uniqueSeconds * (weights[index] ?? 0) / Math.max(1, totalWeight));
+      assigned += seconds;
+      if (seconds <= 0) return;
+      const section = slice.isDefaultSection ? null : slice.sectionName;
+      const id = section ? `${slice.spaceId}:${slice.sectionId}` : slice.spaceId;
+      const label = section ? `${slice.spaceName} · ${section}` : slice.spaceName;
+      const current = activitySeconds.get(id);
+      activitySeconds.set(id, { label, seconds: (current?.seconds ?? 0) + seconds });
     });
   }
 
-  const filteredDaySeconds = input.spaceId
-    ? daySecondsFromSlices(input, rangeStart, rangeEnd, days)
-    : daySeconds;
   const executionSeconds = [...filteredDaySeconds.values()].reduce(
     (total, seconds) => total + seconds,
     0,
   );
   const sessionTotals = [...sessionSeconds.values()];
-  const activeDays = [...filteredDaySeconds.values()].filter(
-    (seconds) => seconds > 0,
-  ).length;
+  const activeDays = [...filteredDaySeconds.values()].filter((seconds) => seconds > 0).length;
 
   return {
     executionSeconds,
     sessionCount: sessionTotals.length,
     dailyAverageSeconds: Math.round(executionSeconds / days.length),
-    averageSessionSeconds:
-      sessionTotals.length === 0
-        ? 0
-        : Math.round(executionSeconds / sessionTotals.length),
-    longestSessionSeconds: sessionTotals.reduce(
-      (longest, seconds) => Math.max(longest, seconds),
-      0,
-    ),
+    averageSessionSeconds: sessionTotals.length === 0
+      ? 0
+      : Math.round(executionSeconds / sessionTotals.length),
+    longestSessionSeconds: sessionTotals.reduce((longest, seconds) => Math.max(longest, seconds), 0),
     activeDays,
     rangeDays: days.length,
-    days: days.map((date) => ({
-      date,
-      seconds: filteredDaySeconds.get(date) ?? 0,
-    })),
-    spaces: [...boards.entries()]
-      .map(([id, name]) => ({ id, name }))
+    days: days.map((date) => ({ date, seconds: filteredDaySeconds.get(date) ?? 0 })),
+    spaces: [...boards.entries()].map(([id, name]) => ({ id, name }))
       .sort((left, right) => left.name.localeCompare(right.name)),
-    activities: [...activitySeconds.entries()]
-      .map(([id, activity]) => ({ id, ...activity }))
+    activities: [...activitySeconds.entries()].map(([id, activity]) => ({ id, ...activity }))
       .sort((left, right) => right.seconds - left.seconds),
   };
+}
+
+function clippedSpans(intervals: ExecutionInterval[], from: number, to: number, now: number) {
+  return intervals.flatMap((interval) => {
+    const start = Math.max(from, Date.parse(interval.startedAt));
+    const end = Math.min(to, interval.endedAt == null ? now : Date.parse(interval.endedAt));
+    if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return [];
+    return [{ start, end }];
+  });
+}
+
+function mergeSpans(spans: Array<{ start: number; end: number }>) {
+  const sorted = [...spans].sort((left, right) => left.start - right.start);
+  const merged: Array<{ start: number; end: number }> = [];
+  for (const span of sorted) {
+    const previous = merged[merged.length - 1];
+    if (previous && span.start <= previous.end) previous.end = Math.max(previous.end, span.end);
+    else merged.push({ ...span });
+  }
+  return merged;
 }
 
 export function allocateSessionSpans(weights: number[], duration: number) {
@@ -103,31 +129,6 @@ export function allocateSessionSpans(weights: number[], duration: number) {
     }
   }
   return spans;
-}
-
-function daySecondsFromSlices(
-  input: BuildActivityInput,
-  rangeStart: Date,
-  rangeEnd: Date,
-  days: string[],
-) {
-  const daySeconds = new Map(days.map((day) => [day, 0]));
-  for (const slice of input.slices) {
-    if (slice.spaceId !== input.spaceId) continue;
-    for (const interval of slice.intervals) {
-      const started = Date.parse(interval.startedAt);
-      const ended = Date.parse(interval.endedAt ?? input.now.toISOString());
-      if (!Number.isFinite(started) || !Number.isFinite(ended)) continue;
-      const from = Math.max(started, rangeStart.getTime());
-      const to = Math.min(ended, rangeEnd.getTime());
-      if (to <= from) continue;
-      splitOverlap(from, to, input.timeZone, (day, amount) => {
-        if (!daySeconds.has(day)) return;
-        daySeconds.set(day, (daySeconds.get(day) ?? 0) + amount);
-      });
-    }
-  }
-  return daySeconds;
 }
 
 function splitOverlap(

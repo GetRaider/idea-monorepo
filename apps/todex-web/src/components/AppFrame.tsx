@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
 import {
+  ConfirmDialog,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -13,7 +14,7 @@ import {
 } from "@repo/ui";
 
 import { ExecutionProvider, useExecution } from "../app/execution/execution-provider";
-import { formatClock } from "../app/execution/execution-time";
+import { executionSessionTitle, formatClock } from "../app/execution/execution-time";
 import { AgentWidget } from "./agent-widget";
 import { AppNavRail } from "./AppNavRail";
 import { AuthGuard } from "./AuthGuard";
@@ -80,41 +81,61 @@ export function AppFrame({ children }: { children: ReactNode }) {
 }
 
 function ExecutionStatusBar() {
+  const [finishOpen, setFinishOpen] = useState(false);
   const {
-    state: { session, focused },
+    state: { session, tasks },
     actions: { pause, resume, complete },
     meta: { shownSeconds, tracking, isCompleting },
   } = useExecution();
 
   if (!session) return null;
 
+  const title = executionSessionTitle({
+    title: session.title,
+    startedAt: session.startedAt,
+    spaceName: tasks[0]?.spaceName ?? null,
+  });
+
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          className="flex h-8 min-w-0 max-w-xs items-center gap-2 rounded-lg px-2 text-[#c8c8c4] transition-colors hover:bg-white/5 hover:text-foreground"
-        >
-          {tracking ? <PauseIcon size={16} /> : <PlayIcon size={16} />}
-          <span className="text-xs font-medium tabular-nums leading-none">
-            {shownSeconds == null ? "—" : formatClock(shownSeconds)}
-          </span>
-          <span className="min-w-0 truncate text-sm">
-            {focused?.summary ?? "Active execution"}
-          </span>
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem onSelect={() => (tracking ? pause() : resume())}>
-          {tracking ? "Pause" : "Resume"}
-        </DropdownMenuItem>
-        <DropdownMenuItem disabled={isCompleting} onSelect={() => complete()}>
-          Stop
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/execution">Open</Link>
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            aria-label={`Active execution session: ${title}`}
+            className="flex h-8 min-w-0 max-w-xs items-center gap-2 rounded-lg px-2 text-[#c8c8c4] transition-colors hover:bg-white/5 hover:text-foreground"
+          >
+            {tracking ? <PauseIcon size={16} /> : <PlayIcon size={16} />}
+            <span className="text-xs font-medium tabular-nums leading-none">
+              {shownSeconds == null ? "—" : formatClock(shownSeconds)}
+            </span>
+            <span className="min-w-0 truncate text-sm">{title}</span>
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem asChild>
+            <Link href="/execution/session">Open Session</Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => (tracking ? pause() : resume())}>
+            {tracking ? "Pause" : "Resume"}
+          </DropdownMenuItem>
+          <DropdownMenuItem disabled={isCompleting} onSelect={() => setFinishOpen(true)}>
+            Finish
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      {finishOpen ? (
+        <ConfirmDialog
+          title="Finish execution"
+          description="Unfinished tasks stay as they are. This session is saved to History."
+          confirmLabel="Finish"
+          onConfirm={() => {
+            complete();
+            setFinishOpen(false);
+          }}
+          onClose={() => setFinishOpen(false)}
+        />
+      ) : null}
+    </>
   );
 }

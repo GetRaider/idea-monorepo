@@ -38,11 +38,10 @@ export function ExecutionProvider({ children }: { children: ReactNode }) {
   const tasks = stateQuery.data?.tasks ?? [];
   const focusedTaskId = stateQuery.data?.focusedTaskId ?? null;
   const focused = tasks.find((task) => task.id === focusedTaskId) ?? null;
-  const tracking =
-    focused?.intervals.some((interval) => interval.endedAt == null) ?? false;
+  const tracking = tasks.some((task) => task.intervals.some((interval) => interval.endedAt == null));
   const [focus, setFocus] = useState<StoredFocus>({
     mode: "timer",
-    goalMinutes: DEFAULT_GOAL_MINUTES,
+    goalMinutes: null,
   });
   const [storageReady, setStorageReady] = useState(false);
   const { mode, goalMinutes } = focus;
@@ -74,6 +73,23 @@ export function ExecutionProvider({ children }: { children: ReactNode }) {
     if (!storageReady) return;
     writeStoredFocus(focus);
   }, [focus, storageReady]);
+
+  // Discard a stale goal from an earlier session when opening Preparation.
+  const [initialGoalChecked, setInitialGoalChecked] = useState(false);
+  useEffect(() => {
+    if (!storageReady || stateQuery.isLoading || initialGoalChecked) return;
+    setInitialGoalChecked(true);
+    if (!session) setFocus((current) => ({ ...current, goalMinutes: null }));
+  }, [storageReady, stateQuery.isLoading, initialGoalChecked, session]);
+
+  // The next session should derive its goal from the next selected scope.
+  const [previousSessionId, setPreviousSessionId] = useState<string | null>(null);
+  if (previousSessionId !== (session?.id ?? null)) {
+    if (previousSessionId !== null && session == null) {
+      setFocus((current) => ({ ...current, goalMinutes: null }));
+    }
+    setPreviousSessionId(session?.id ?? null);
+  }
 
   useEffect(() => {
     if (!tracking) return;
@@ -178,7 +194,7 @@ export function ExecutionProvider({ children }: { children: ReactNode }) {
       (tracking ? Math.max(0, Math.floor((now - syncedAt) / 1000)) : 0)
     : 0;
   const sessionElapsed = sessionElapsedSeconds(tasks, new Date(now));
-  const estimateMinutes = focused?.estimation ?? null;
+  const estimateMinutes = tasks.reduce((sum, task) => sum + task.estimation, 0) || null;
   const shownSeconds =
     mode === "timer" && goalMinutes == null && estimateMinutes == null
       ? null
@@ -314,7 +330,6 @@ interface ExecutionContextValue {
 }
 
 const FOCUS_STORAGE_KEY = "todex.execution.focus";
-const DEFAULT_GOAL_MINUTES = 90;
 const MAX_STORED_GOAL_MINUTES = 24 * 60;
 
 interface StoredFocus {

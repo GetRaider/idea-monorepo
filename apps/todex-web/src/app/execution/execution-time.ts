@@ -1,4 +1,4 @@
-import { TaskStatus, sumIntervalSeconds } from "@repo/api/todex";
+import { TaskStatus } from "@repo/api/todex";
 
 export function formatClock(totalSeconds: number) {
   const seconds = Math.max(0, Math.floor(totalSeconds));
@@ -45,10 +45,29 @@ export function sessionElapsedSeconds(
   tasks: Array<{ intervals: SessionInterval[] }>,
   now: Date,
 ) {
-  return tasks.reduce(
-    (total, task) => total + sumIntervalSeconds(task.intervals, now),
-    0,
-  );
+  // Tasks within the same session may have overlapping active intervals.
+  // Count the union of wall-clock time, not the sum of task-time intervals.
+  const spans = tasks.flatMap((task) => task.intervals).map((interval) => ({
+    start: Date.parse(interval.startedAt),
+    end: Date.parse(interval.endedAt ?? now.toISOString()),
+  })).filter((span) => Number.isFinite(span.start) && Number.isFinite(span.end) && span.end > span.start)
+    .sort((left, right) => left.start - right.start);
+  let total = 0;
+  let start = -1;
+  let end = -1;
+  for (const span of spans) {
+    if (start < 0) {
+      start = span.start;
+      end = span.end;
+    } else if (span.start <= end) {
+      end = Math.max(end, span.end);
+    } else {
+      total += Math.floor((end - start) / 1000);
+      start = span.start;
+      end = span.end;
+    }
+  }
+  return total + (start < 0 ? 0 : Math.floor((end - start) / 1000));
 }
 
 export function queuedStartIds(
@@ -162,7 +181,10 @@ export function extendGoalMinutes(input: {
 export function executionSessionTitle(input: {
   startedAt: string;
   spaceName: string | null;
+  title?: string | null;
 }) {
+  const explicitTitle = input.title?.trim();
+  if (explicitTitle) return explicitTitle;
   const when = new Date(input.startedAt).toLocaleString(undefined, {
     month: "short",
     day: "numeric",

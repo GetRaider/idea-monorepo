@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { formatEstimation } from "@repo/api/todex";
+import { formatEstimation, TaskStatus } from "@repo/api/todex";
 import {
   Select,
   SelectContent,
@@ -15,6 +15,7 @@ import {
 import { toast } from "sonner";
 
 import { todexClient } from "@lib/todex-client";
+import { PriorityGlyph, StatusGlyph } from "../planning/task-board.ui";
 
 import {
   EMPTY_SUGGESTION_FILTERS,
@@ -25,11 +26,17 @@ import {
   type SuggestionFilters,
 } from "./execution-suggestions";
 
-export function ExecutionSuggestionsPanel() {
+export function ExecutionSuggestionsPanel({
+  showDone,
+  onShowDoneChange,
+}: {
+  showDone: boolean;
+  onShowDoneChange: (show: boolean) => void;
+}) {
   const queryClient = useQueryClient();
   const suggestions = useQuery({
-    queryKey: ["execution", "suggestions"],
-    queryFn: () => todexClient.execution.suggestions(),
+    queryKey: ["execution", "suggestions", showDone],
+    queryFn: () => todexClient.execution.suggestions(showDone),
   });
   const enqueue = useMutation({
     mutationFn: (taskId: string) => todexClient.execution.enqueue({ taskId }),
@@ -52,7 +59,11 @@ export function ExecutionSuggestionsPanel() {
   if (filters.sectionName !== "all" && !areas.includes(filters.sectionName)) {
     setFilters((current) => ({ ...current, sectionName: "all" }));
   }
-  const visible = applySuggestionFilters(tasks, filters, new Date());
+  const visible = applySuggestionFilters(
+    showDone ? tasks : tasks.filter((task) => task.status !== TaskStatus.DONE),
+    filters,
+    new Date(),
+  );
 
   function update(patch: Partial<SuggestionFilters>) {
     setFilters((current) => ({ ...current, ...patch }));
@@ -149,10 +160,17 @@ export function ExecutionSuggestionsPanel() {
               onChange={(stage) => update({ stage })}
             />
           ) : null}
+          <label className="col-span-2 flex cursor-pointer items-center gap-2 py-1 text-xs text-[#cfcfcc]">
+            <input type="checkbox" checked={showDone} onChange={(event) => onShowDoneChange(event.target.checked)} className="size-4 accent-white" />
+            Show completed tasks
+          </label>
           <button
             type="button"
             className="h-7 justify-self-start px-1 text-xs text-[#8f8f8c] hover:text-[#f2f2f0]"
-            onClick={() => setFilters(EMPTY_SUGGESTION_FILTERS)}
+            onClick={() => {
+              setFilters(EMPTY_SUGGESTION_FILTERS);
+              onShowDoneChange(false);
+            }}
           >
             Reset
           </button>
@@ -177,8 +195,10 @@ export function ExecutionSuggestionsPanel() {
               className="flex items-center gap-2 rounded-md px-2 py-2 hover:bg-surface"
             >
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-[#f2f2f0]">
-                  {task.summary}
+                <p className="flex items-center gap-1.5 text-sm font-medium text-[#f2f2f0]">
+                  <StatusGlyph status={task.status} />
+                  <PriorityGlyph priority={task.priority} />
+                  <span className="truncate">{task.summary}</span>
                 </p>
                 <p className="mt-0.5 truncate text-xs text-[#8f8f8c]">
                   {task.spaceName}

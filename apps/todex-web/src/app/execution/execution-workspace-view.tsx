@@ -7,6 +7,7 @@ import type { ExecutionCurrent } from "@repo/api/todex";
 import { PauseIcon } from "@components/icons";
 
 import { STATUS_LABEL, taskProgressPercent } from "../planning/task-helpers";
+import { PriorityGlyph, StatusGlyph } from "../planning/task-board.ui";
 import { ExecutionTaskDetails } from "./execution-task-details";
 import {
   formatDuration,
@@ -19,7 +20,6 @@ interface ExecutionWorkspaceViewProps {
   sessionTitle: string;
   tasks: ExecutionCurrent[];
   selectedTask: ExecutionCurrent | null;
-  trackedTaskId: string | null;
   mode: FocusMode;
   goalMinutes: number | null;
   elapsedSeconds: number;
@@ -27,7 +27,6 @@ interface ExecutionWorkspaceViewProps {
   tracking: boolean;
   isCompleting: boolean;
   onSelectTask: (taskId: string) => void;
-  onTrackTask: (taskId: string) => void;
   onPause: () => void;
   onResume: () => void;
   onFinish: () => void;
@@ -39,7 +38,6 @@ export function ExecutionWorkspaceView({
   sessionTitle,
   tasks,
   selectedTask,
-  trackedTaskId,
   mode,
   goalMinutes,
   elapsedSeconds,
@@ -47,7 +45,6 @@ export function ExecutionWorkspaceView({
   tracking,
   isCompleting,
   onSelectTask,
-  onTrackTask,
   onPause,
   onResume,
   onFinish,
@@ -97,9 +94,11 @@ export function ExecutionWorkspaceView({
           <button
             type="button"
             onClick={onEnterFocus}
+            role="switch"
+            aria-checked={false}
             className="rounded-lg border border-white/15 bg-white/[0.04] px-4 py-2 text-sm font-medium text-[#f2f2f0] hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
           >
-            Focus Mode
+            Focus Mode: Off
           </button>
         </div>
       </header>
@@ -193,7 +192,6 @@ export function ExecutionWorkspaceView({
               {tasks.map((task, index) => {
                 const selected = selectedTask?.id === task.id;
                 const isDone = task.status === TaskStatus.DONE;
-                const isTracked = task.id === trackedTaskId;
                 const taskProgress = taskProgressPercent({
                   status: task.status,
                   acceptanceCriteria: task.acceptanceCriteria,
@@ -215,15 +213,16 @@ export function ExecutionWorkspaceView({
                       <span className="flex items-start gap-2">
                         <span aria-hidden className="mt-0.5 text-xs text-[#999996]">{index + 1}.</span>
                         <span className="min-w-0 flex-1">
-                          <span className={"block break-words text-sm font-medium " + (isDone ? "text-[#999996] line-through" : "text-[#f2f2f0]")}>
-                            {task.summary}
+                          <span className={"flex items-start gap-1.5 break-words text-sm font-medium " + (isDone ? "text-[#999996] line-through" : "text-[#f2f2f0]")}>
+                            <StatusGlyph status={task.status} />
+                            <PriorityGlyph priority={task.priority} />
+                            <span>{task.summary}</span>
                           </span>
                           <span className="mt-1 flex flex-wrap items-center gap-2 text-xs text-[#999996]">
                             <span>{STATUS_LABEL[task.status]}</span>
                             <span>·</span>
                             <span>{formatEstimation(task.estimation) || "—"}</span>
                           </span>
-                          {isTracked ? <span className="mt-1.5 block text-[11px] text-[#d7d7d4]">Tracking time</span> : null}
                           <span className="mt-2 block h-1 overflow-hidden rounded-full bg-white/10">
                             <span className="block h-full rounded-full bg-[#d7d7d4]" style={{ width: String(Math.round(taskProgress * 100)) + "%" }} />
                           </span>
@@ -240,20 +239,6 @@ export function ExecutionWorkspaceView({
         <div className="min-w-0">
           {selectedTask ? (
             <div className="flex flex-col gap-3">
-              {tasks.length > 1 && selectedTask.id !== trackedTaskId ? (
-                <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-[#141414] px-4 py-3">
-                  <p className="text-xs text-[#a3a3a0]">
-                    Viewing this task does not switch time tracking.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => onTrackTask(selectedTask.id)}
-                    className="rounded-lg border border-white/15 px-3 py-2 text-xs font-medium text-[#f2f2f0] hover:bg-white/10"
-                  >
-                    Track time on this task
-                  </button>
-                </div>
-              ) : null}
               <ExecutionTaskDetails key={selectedTask.id} task={selectedTask} />
             </div>
           ) : (

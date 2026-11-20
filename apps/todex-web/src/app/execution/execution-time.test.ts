@@ -81,9 +81,8 @@ describe("execution time", () => {
         ],
       },
     ];
-    // 20 minutes in the first window, then 15 more minutes through 12:30,
-    // with five minutes of overlap and a five-minute gap in the middle.
-    expect(sessionElapsedSeconds(tasks, now)).toBe(35 * 60);
+    // Overlapping intervals form one continuous 30-minute focus window.
+    expect(sessionElapsedSeconds(tasks, now)).toBe(30 * 60);
   });
 
   it("keeps an implicit queue selection and derives work phase", () => {

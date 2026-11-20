@@ -143,7 +143,14 @@ const DOCUMENT_SLASH_COMMANDS: SlashCommandItem[] = [
     title: "Toggle",
     aliases: ["toggle", "details", "collapse", "expand"],
     command: (editor, range) =>
-      editor.chain().focus().deleteRange(range).setDetails().run(),
+      editor.chain().focus().deleteRange(range).insertContent({
+        type: "details",
+        attrs: { open: true },
+        content: [
+          { type: "detailsSummary", content: [{ type: "text", text: "Toggle heading" }] },
+          { type: "detailsContent", content: [{ type: "paragraph" }] },
+        ],
+      }).run(),
   },
   {
     title: "Divider",

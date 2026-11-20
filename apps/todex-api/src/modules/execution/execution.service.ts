@@ -508,6 +508,7 @@ export class ExecutionService {
         throw new BadRequestException("Stop the session before editing it");
       }
       const links = await this.sessionLinks(tx, row.id);
+      const originalEndedAt = row.endedAt;
       const totalTaskSeconds = links.reduce(
         (sum, link) => sum + sumIntervalSeconds(link.intervals ?? [], row.endedAt),
         0,
@@ -529,7 +530,7 @@ export class ExecutionService {
         for (const link of links) {
           const intervals = (link.intervals ?? []).flatMap((interval) => {
             const from = remap(interval.startedAt);
-            const to = remap(interval.endedAt ?? row.endedAt.toISOString());
+            const to = remap(interval.endedAt ?? originalEndedAt.toISOString());
             return to > from
               ? [{ startedAt: new Date(from).toISOString(), endedAt: new Date(to).toISOString() }]
               : [];

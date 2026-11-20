@@ -65,7 +65,7 @@ export default function ExecutionPage() {
   const hasCompletedSelection = startTasks.some((task) => task.status === TaskStatus.DONE);
   const canStart =
     startIds.length > 0 && startBoards.size <= 1 && !hasCompletedSelection && !isExecuting && !session;
-  const scheduledMinutes = queue.reduce(
+  const scheduledMinutes = visibleQueue.reduce(
     (total, item) => total + item.task.estimation,
     0,
   );

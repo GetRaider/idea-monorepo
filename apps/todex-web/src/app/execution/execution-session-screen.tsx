@@ -41,7 +41,7 @@ function SessionScreenBody() {
   const [finishOpen, setFinishOpen] = useState(false);
   const [stored, setStored] = useState<StoredSelection | null>(null);
   const [pickedTaskId, setPickedTaskId] = useState<string | null | undefined>(undefined);
-  const isFocusView = params.get("view") !== "workspace";
+  const isFocusView = params.get("view") === "focus";
 
   const storedSelection = session
     ? selectedSessionTaskId({
@@ -73,8 +73,8 @@ function SessionScreenBody() {
 
   function setFocusView(enabled: boolean) {
     const next = new URLSearchParams(params.toString());
-    if (enabled) next.delete("view");
-    else next.set("view", "workspace");
+    if (enabled) next.set("view", "focus");
+    else next.delete("view");
     router.replace("/execution/session" + (next.size ? "?" + next.toString() : ""));
   }
 
@@ -104,6 +104,7 @@ function SessionScreenBody() {
   const sessionTitle = executionSessionTitle({
     startedAt: session.startedAt,
     spaceName: tasks[0]?.spaceName ?? null,
+    title: session.title,
   });
   const clockSeconds = sessionClockSeconds({
     mode,

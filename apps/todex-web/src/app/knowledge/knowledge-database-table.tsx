@@ -18,7 +18,7 @@ const PROPERTY_TYPES: Exclude<KnowledgePropertyType, "title">[] = [
 ];
 
 function displayType(type: KnowledgePropertyType) {
-  return type === "multi_select" ? "Multi-select" : type[0].toUpperCase() + type.slice(1);
+  return type === "multi_select" ? "Multi-select" : type.charAt(0).toUpperCase() + type.slice(1);
 }
 
 function valueForFilter(property: KnowledgeProperty | undefined, input: string): KnowledgeCellValue {

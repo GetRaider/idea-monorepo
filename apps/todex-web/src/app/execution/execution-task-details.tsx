@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { formatEstimation, TaskStatus } from "@repo/api/todex";
+import { formatEstimation, parseEstimation, TaskStatus } from "@repo/api/todex";
 import type { ExecutionCurrent, Task } from "@repo/api/todex";
 import { buttonVariants, Checkbox, cn } from "@repo/ui";
 import { toast } from "sonner";
@@ -12,7 +12,8 @@ import { ChevronIcon, ExternalLinkIcon, LinkIcon } from "@components/icons";
 import { todexClient } from "@lib/todex-client";
 import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
 
-import { StatusMenu } from "../planning/task-board.ui";
+import { PriorityMenu, StatusMenu, PriorityGlyph, StatusGlyph } from "../planning/task-board.ui";
+import { EstimatePicker } from "../planning/task-pickers";
 import { TaskDescriptionEditor } from "../planning/task-description-editor";
 import {
   isClosedStatus,
@@ -66,12 +67,22 @@ export function ExecutionTaskDetails({ task }: { task: ExecutionCurrent }) {
           <div className="mt-2 flex min-w-0 items-center gap-3">
             <StatusMenu
               large
-              status={task.status}
+              status={loaded?.status ?? task.status}
               onSelect={(status) => {
-                if (!loaded || status === task.status) return;
+                if (!loaded || status === loaded.status) return;
                 void saveTaskStatus(loaded, status).then(refresh, () =>
                   toast.error("Could not update the task"),
                 );
+              }}
+            />
+            <PriorityMenu
+              priority={loaded?.priority ?? task.priority}
+              onSelect={(priority) => {
+                if (!loaded || priority === loaded.priority) return;
+                void todexClient.tasks.update(loaded.id, {
+                  priority,
+                  version: loaded.version,
+                }).then(refresh, () => toast.error("Could not update task priority"));
               }}
             />
             <h3
@@ -140,7 +151,12 @@ export function ExecutionTaskDetails({ task }: { task: ExecutionCurrent }) {
                       key={subtask.id}
                       className="py-1.5 text-sm text-[#d7d7d4]"
                     >
-                      {subtask.summary}
+                      <span className="flex items-center gap-2">
+                        <StatusGlyph status={subtask.status} />
+                        <PriorityGlyph priority={subtask.priority} />
+                        <span className="min-w-0 flex-1 truncate">{subtask.summary}</span>
+                        <span className="text-xs text-[#8f8f8c]">{formatEstimation(subtask.estimation)}</span>
+                      </span>
                     </li>
                   ))
                 : null}
@@ -278,19 +294,43 @@ function SubtaskRow({
   subtask: Task;
   onSaved: () => void;
 }) {
+  const [estimationText, setEstimationText] = useState(formatEstimation(subtask.estimation));
+
+  useEffect(() => {
+    setEstimationText(formatEstimation(subtask.estimation));
+  }, [subtask.estimation]);
+
   const update = useMutation({
-    mutationFn: () =>
-      saveTaskStatus(subtask, statusAfterDoneToggle(subtask.status)),
+    mutationFn: async (patch: Partial<Pick<Task, "status" | "priority" | "estimation">>) => {
+      if (patch.status !== undefined) {
+        await saveTaskStatus(subtask, patch.status);
+      } else {
+        await todexClient.tasks.update(subtask.id, {
+          ...patch,
+          version: subtask.version,
+        });
+      }
+    },
     onSuccess: onSaved,
-    onError: () => toast.error("Could not update the subtask"),
+    onError: () => {
+      setEstimationText(formatEstimation(subtask.estimation));
+      toast.error("Could not update the subtask");
+    },
   });
 
   return (
-    <li className="flex items-center gap-2.5 py-1.5">
-      <Checkbox
-        checked={subtask.status === TaskStatus.DONE}
-        aria-label={`Mark ${subtask.summary} done`}
-        onCheckedChange={() => update.mutate()}
+    <li className="flex flex-wrap items-center gap-x-2 gap-y-1.5 py-2 text-sm">
+      <StatusMenu
+        status={subtask.status}
+        onSelect={(status) => {
+          if (!update.isPending && status !== subtask.status) update.mutate({ status });
+        }}
+      />
+      <PriorityMenu
+        priority={subtask.priority}
+        onSelect={(priority) => {
+          if (!update.isPending && priority !== subtask.priority) update.mutate({ priority });
+        }}
       />
       <span
         className={cn(
@@ -299,9 +339,34 @@ function SubtaskRow({
             ? "text-[#8f8f8c] line-through"
             : "text-[#f2f2f0]",
         )}
+        title={subtask.summary}
       >
         {subtask.summary}
       </span>
+      <span className="shrink-0 text-xs text-[#8f8f8c]">{subtask.taskKey}</span>
+      <EstimatePicker
+        appearance="plain"
+        value={estimationText}
+        onChange={setEstimationText}
+        onCommit={(value) => {
+          const estimation = parseEstimation(value);
+          if (estimation == null || estimation <= 0) {
+            setEstimationText(formatEstimation(subtask.estimation));
+            return;
+          }
+          if (estimation !== subtask.estimation && !update.isPending) {
+            update.mutate({ estimation });
+          }
+        }}
+      />
+      <Link
+        href={tasksUrlHelper.routing.buildBoardUrl(subtask.spaceId, subtask.taskKey, subtask.parentTaskId ? undefined : undefined)}
+        aria-label={`Open subtask ${subtask.summary} in Planning`}
+        title="Open subtask in Planning"
+        className="shrink-0 text-[#8f8f8c] hover:text-[#f2f2f0]"
+      >
+        <ExternalLinkIcon size={14} />
+      </Link>
     </li>
   );
 }

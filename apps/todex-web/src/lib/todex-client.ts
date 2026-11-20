@@ -11,6 +11,7 @@ import {
   CreateDocBodySchema,
   KnowledgeDatabaseSchema,
   CreateKnowledgeDatabaseSchema,
+  RenameKnowledgeDatabaseSchema,
   CreateKnowledgePropertySchema,
   UpdateKnowledgePropertySchema,
   PatchKnowledgeCellSchema,
@@ -553,6 +554,9 @@ export const todexClient = {
     get: (id: string) =>
       call("get", `/v1/knowledge-databases/${encodeURIComponent(id)}`,
         KnowledgeDatabaseSchema),
+    rename: (id: string, body: unknown) =>
+      call("patch", `/v1/knowledge-databases/${encodeURIComponent(id)}`,
+        KnowledgeDatabaseSchema, RenameKnowledgeDatabaseSchema.parse(body)),
     addProperty: (id: string, body: unknown) =>
       call("post", `/v1/knowledge-databases/${encodeURIComponent(id)}/properties`,
         KnowledgeDatabaseSchema, CreateKnowledgePropertySchema.parse(body)),

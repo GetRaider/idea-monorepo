@@ -447,7 +447,7 @@ export function TaskDescriptionEditor({
     <div
       ref={rootRef}
       className={cn(
-        knowledgeMode ? "relative text-base leading-7" : "relative text-sm",
+        knowledgeMode ? "knowledge-doc-editor relative text-base leading-7" : "relative text-sm",
         (appearance === "plain" || knowledgeMode)
           ? "bg-transparent px-0 py-1"
           : "rounded-md border border-input bg-background px-3 py-2",
@@ -625,37 +625,41 @@ function getMentionMenuState(
 }
 
 function DocumentTableToolbar({ editor }: { editor: Editor }) {
-  const [insideTable, setInsideTable] = useState(editor.isActive("table"));
-  useEffect(() => {
-    const update = () => setInsideTable(editor.isActive("table"));
-    editor.on("selectionUpdate", update);
-    editor.on("update", update);
-    return () => {
-      editor.off("selectionUpdate", update);
-      editor.off("update", update);
-    };
-  }, [editor]);
-  if (!insideTable) return null;
+  const actions = [
+    { label: "Add row", run: () => editor.chain().focus().addRowAfter().run() },
+    { label: "Add column", run: () => editor.chain().focus().addColumnAfter().run() },
+    { label: "Delete row", run: () => editor.chain().focus().deleteRow().run() },
+    { label: "Delete column", run: () => editor.chain().focus().deleteColumn().run() },
+    { label: "Delete table", run: () => editor.chain().focus().deleteTable().run() },
+  ];
   return (
-    <div className="mb-2 flex flex-wrap gap-1 rounded-md border border-border bg-popover p-1 text-xs">
-      {[
-        { label: "+ Row", run: () => editor.chain().focus().addRowAfter().run() },
-        { label: "+ Column", run: () => editor.chain().focus().addColumnAfter().run() },
-        { label: "Remove row", run: () => editor.chain().focus().deleteRow().run() },
-        { label: "Remove column", run: () => editor.chain().focus().deleteColumn().run() },
-        { label: "Remove table", run: () => editor.chain().focus().deleteTable().run() },
-      ].map(({ label, run }) => (
-        <button
-          key={label}
-          type="button"
-          className="rounded px-2 py-1 hover:bg-surface"
-          onMouseDown={(event) => event.preventDefault()}
-          onClick={run}
-        >
-          {label}
-        </button>
-      ))}
-    </div>
+    <BubbleMenu
+      editor={editor}
+      shouldShow={({ editor: current }) => current.isEditable && current.isActive("table")}
+      options={{ placement: "top-start", offset: 6 }}
+    >
+      <div
+        role="toolbar"
+        aria-label="Table editing"
+        className="flex flex-wrap items-center gap-1 rounded-lg border border-border bg-popover p-1 shadow-lg"
+        onMouseDown={(event) => event.preventDefault()}
+      >
+        {actions.map(({ label, run }, index) => (
+          <button
+            key={label}
+            type="button"
+            className={cn(
+              "rounded px-2 py-1 text-xs text-popover-foreground hover:bg-surface",
+              index === 4 && "border-l border-border pl-3 text-muted-foreground",
+            )}
+            onClick={run}
+            aria-label={label}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+    </BubbleMenu>
   );
 }
 

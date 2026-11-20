@@ -67,7 +67,8 @@ export function KnowledgeDatabaseRecordPage({
         if (patch.icon !== undefined || patch.cover !== undefined) {
           void client.invalidateQueries({ queryKey: ["knowledge-database", databaseId] });
         }
-        setSaveStatus("saved");
+        setSaveStatus(JSON.stringify(draftRef.current) === savedContentRef.current
+          ? "saved" : "editing");
       } catch (error) {
         const message = error instanceof Error ? error.message : "Unable to save this page";
         queuedContentRef.current = "";
@@ -161,7 +162,7 @@ export function KnowledgeDatabaseRecordPage({
           )}
           {onClose ? (
             <button type="button" onClick={() => {
-              void saveNow().finally(() => onClose()).catch(() => undefined);
+              void saveNow().then(() => onClose()).catch(() => undefined);
             }} className="rounded px-2 py-1 text-xs hover:bg-surface">
               Close
             </button>

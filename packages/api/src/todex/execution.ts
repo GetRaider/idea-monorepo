@@ -49,6 +49,7 @@ export const ExecutionQueueTaskSchema = ExecutionTaskRefSchema.extend({
 export const ExecutionSuggestionSchema = z.object({
   id: z.string(),
   taskKey: z.string(),
+  status: taskStatusSchema,
   summary: z.string(),
   priority: taskPrioritySchema,
   estimation: z.number().int().positive(),
@@ -67,6 +68,8 @@ export const ExecutionSubtaskSchema = z.object({
   taskKey: z.string(),
   summary: z.string(),
   status: taskStatusSchema,
+  priority: taskPrioritySchema,
+  estimation: z.number().int().positive(),
 });
 
 export const ExecutionCurrentSchema = ExecutionQueueTaskSchema.extend({

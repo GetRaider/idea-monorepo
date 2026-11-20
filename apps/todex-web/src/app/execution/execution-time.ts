@@ -181,7 +181,10 @@ export function extendGoalMinutes(input: {
 export function executionSessionTitle(input: {
   startedAt: string;
   spaceName: string | null;
+  title?: string | null;
 }) {
+  const explicitTitle = input.title?.trim();
+  if (explicitTitle) return explicitTitle;
   const when = new Date(input.startedAt).toLocaleString(undefined, {
     month: "short",
     day: "numeric",

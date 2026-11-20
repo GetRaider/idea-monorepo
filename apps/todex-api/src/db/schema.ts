@@ -546,6 +546,8 @@ export const knowledgeDatabaseProperties = pgTable(
   (table) => [
     index("knowledge_database_properties_database_idx").on(table.databaseId),
     uniqueIndex("knowledge_database_properties_position_unique").on(table.databaseId, table.position),
+    check("knowledge_database_properties_type_check",
+      sql`${table.type} IN ('title', 'text', 'number', 'select', 'multi_select', 'date', 'checkbox')`),
   ],
 );
 
@@ -577,7 +579,10 @@ export const knowledgeDatabaseViews = pgTable(
     sorts: jsonb("sorts").$type<KnowledgeView["sorts"]>().notNull().default(sql`'[]'::jsonb`),
     filters: jsonb("filters").$type<KnowledgeView["filters"]>().notNull().default(sql`'[]'::jsonb`),
   },
-  (table) => [index("knowledge_database_views_database_idx").on(table.databaseId)],
+  (table) => [
+    index("knowledge_database_views_database_idx").on(table.databaseId),
+    check("knowledge_database_views_kind_check", sql`${table.kind} = 'table'`),
+  ],
 );
 
 export const docTasks = pgTable(

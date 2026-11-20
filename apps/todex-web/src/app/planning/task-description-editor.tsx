@@ -2,6 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useEditor, EditorContent, type Editor } from "@tiptap/react";
+import { Node, mergeAttributes } from "@tiptap/core";
+import { TableKit } from "@tiptap/extension-table";
+import { Details, DetailsSummary, DetailsContent } from "@tiptap/extension-details";
+import Image from "@tiptap/extension-image";
 import { BubbleMenu } from "@tiptap/react/menus";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
@@ -90,6 +94,81 @@ const SLASH_COMMANDS: SlashCommandItem[] = [
   },
 ];
 
+// Document-only block; task/goal descriptions keep their existing HTML schema.
+const Callout = Node.create({
+  name: "callout",
+  group: "block",
+  content: "block+",
+  defining: true,
+  addAttributes() {
+    return {
+      variant: {
+        default: "info",
+        parseHTML: (element: HTMLElement) => element.getAttribute("data-variant") ?? "info",
+      },
+    };
+  },
+  parseHTML() {
+    return [{ tag: 'div[data-type="callout"]' }];
+  },
+  renderHTML({ node, HTMLAttributes }) {
+    return ["div", mergeAttributes(HTMLAttributes, {
+      class: "todex-callout",
+      "data-type": "callout",
+      "data-variant": node.attrs.variant,
+    }), 0];
+  },
+});
+
+const DOCUMENT_SLASH_COMMANDS: SlashCommandItem[] = [
+  {
+    title: "Table",
+    shortcut: "3 × 3",
+    aliases: ["table", "grid", "rows", "columns"],
+    command: (editor, range) =>
+      editor.chain().focus().deleteRange(range)
+        .insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(),
+  },
+  {
+    title: "Callout",
+    aliases: ["callout", "info", "note", "tip"],
+    command: (editor, range) =>
+      editor.chain().focus().deleteRange(range).insertContent({
+        type: "callout",
+        attrs: { variant: "info" },
+        content: [{ type: "paragraph" }],
+      }).run(),
+  },
+  {
+    title: "Toggle",
+    aliases: ["toggle", "details", "collapse", "expand"],
+    command: (editor, range) =>
+      editor.chain().focus().deleteRange(range).setDetails().run(),
+  },
+  {
+    title: "Divider",
+    aliases: ["divider", "separator", "horizontal rule"],
+    command: (editor, range) =>
+      editor.chain().focus().deleteRange(range).setHorizontalRule().run(),
+  },
+  {
+    title: "Image from URL",
+    aliases: ["image", "picture", "media", "photo"],
+    command: (editor, range) => {
+      const src = window.prompt("Image URL (https://)");
+      if (!src) return;
+      try {
+        const url = new URL(src);
+        if (url.protocol !== "https:" && url.protocol !== "http:") return;
+        editor.chain().focus().deleteRange(range)
+          .setImage({ src: url.toString() }).run();
+      } catch {
+        // Invalid URLs are ignored; do not persist unsafe image sources.
+      }
+    },
+  },
+];
+
 export function TaskDescriptionEditor({
   content,
   document,
@@ -98,6 +177,7 @@ export function TaskDescriptionEditor({
   excludeDocId,
   appearance = "field",
   contentClassName,
+  knowledgeMode = false,
 }: TaskDescriptionEditorProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const onChangeRef = useRef(onChange);
@@ -127,7 +207,17 @@ export function TaskDescriptionEditor({
       TaskList,
       TaskItem.configure({ nested: true }),
       MentionNode,
-      Placeholder.configure({ placeholder: DESCRIPTION_PLACEHOLDER }),
+      ...(knowledgeMode ? [
+        TableKit.configure({ table: { resizable: true, HTMLAttributes: { class: "todex-table" } } }),
+        Details.configure({ persist: true, HTMLAttributes: { class: "todex-details" } }),
+        DetailsSummary,
+        DetailsContent,
+        Image,
+        Callout,
+      ] : []),
+      Placeholder.configure({
+        placeholder: knowledgeMode ? "Type / for blocks, @ to mention…" : DESCRIPTION_PLACEHOLDER,
+      }),
     ],
     content: document ?? content,
     immediatelyRender: false,
@@ -144,7 +234,7 @@ export function TaskDescriptionEditor({
       attributes: {
         class: cn(
           "outline-none",
-          appearance === "plain" ? "min-h-40" : "min-h-20",
+          (appearance === "plain" || knowledgeMode) ? "min-h-40" : "min-h-20",
           contentClassName,
         ),
       },
@@ -163,12 +253,16 @@ export function TaskDescriptionEditor({
     [calendarEnabled, mentionCandidates, mentionMenu],
   );
 
+  const slashCommands = useMemo(
+    () => knowledgeMode ? [...SLASH_COMMANDS, ...DOCUMENT_SLASH_COMMANDS] : SLASH_COMMANDS,
+    [knowledgeMode],
+  );
   const visibleSlashItems = useMemo(() => {
     if (!slashMenu) return [];
-    return SLASH_COMMANDS.filter((item) =>
+    return slashCommands.filter((item) =>
       matchesSlashQuery(item, slashMenu.query),
     );
-  }, [slashMenu]);
+  }, [slashMenu, slashCommands]);
 
   slashKeyDownRef.current = (event) => {
     if (!slashMenu || visibleSlashItems.length === 0) return false;
@@ -261,7 +355,7 @@ export function TaskDescriptionEditor({
         closeSlashMenu();
         return;
       }
-      const nextMenu = getSlashMenuState(editor, root);
+      const nextMenu = getSlashMenuState(editor, root, slashCommands);
       if (!nextMenu) suppressSlashRef.current = false;
       if (suppressSlashRef.current) {
         closeSlashMenu();
@@ -280,7 +374,7 @@ export function TaskDescriptionEditor({
       editor.off("selectionUpdate", updateSlashMenu);
       editor.off("blur", closeSlashMenu);
     };
-  }, [editor]);
+  }, [editor, slashCommands]);
 
   useEffect(() => {
     if (!editor) return;
@@ -339,7 +433,7 @@ export function TaskDescriptionEditor({
       <div
         className={cn(
           "text-sm text-muted-foreground",
-          appearance === "plain"
+          (appearance === "plain" || knowledgeMode)
             ? "min-h-40 px-0 py-2"
             : "min-h-24 rounded-md border border-input bg-background px-3 py-2",
         )}
@@ -353,8 +447,8 @@ export function TaskDescriptionEditor({
     <div
       ref={rootRef}
       className={cn(
-        "relative text-sm",
-        appearance === "plain"
+        knowledgeMode ? "relative text-base leading-7" : "relative text-sm",
+        (appearance === "plain" || knowledgeMode)
           ? "bg-transparent px-0 py-1"
           : "rounded-md border border-input bg-background px-3 py-2",
         "[&_.tiptap_p]:my-1",
@@ -378,8 +472,26 @@ export function TaskDescriptionEditor({
         "[&_.tiptap_h3]:text-sm [&_.tiptap_h3]:font-semibold",
         "[&_.tiptap_h4]:text-sm [&_.tiptap_h4]:font-medium",
         "[&_span[data-target-type]]:rounded-md [&_span[data-target-type]]:bg-surface [&_span[data-target-type]]:px-1 [&_span[data-target-type]]:text-foreground",
+        knowledgeMode && [
+          "[&_.tiptap_p]:my-2",
+          "[&_.tiptap_h2]:!mt-8 [&_.tiptap_h2]:!mb-3 [&_.tiptap_h2]:!text-2xl",
+          "[&_.tiptap_h3]:!mt-6 [&_.tiptap_h3]:!mb-2 [&_.tiptap_h3]:!text-xl",
+          "[&_.tiptap_h4]:!mt-5 [&_.tiptap_h4]:!text-lg",
+          "[&_.todex-table]:w-full [&_.todex-table]:border-collapse",
+          "[&_.todex-table_td]:border [&_.todex-table_th]:border",
+          "[&_.todex-table_td]:border-border [&_.todex-table_th]:border-border",
+          "[&_.todex-table_td]:p-2 [&_.todex-table_th]:p-2",
+          "[&_.todex-table_th]:bg-surface [&_.todex-table_th]:text-left",
+          "[&_.todex-table_.selectedCell]:bg-surface",
+          "[&_.todex-callout]:my-3 [&_.todex-callout]:rounded-lg [&_.todex-callout]:border-l-4",
+          "[&_.todex-callout]:border-primary [&_.todex-callout]:bg-surface [&_.todex-callout]:px-4 [&_.todex-callout]:py-3",
+          "[&_.todex-details]:my-3 [&_.todex-details]:rounded-lg [&_.todex-details]:border",
+          "[&_.todex-details]:border-border [&_.todex-details]:px-3 [&_.todex-details]:py-2",
+          "[&_.tiptap_img]:my-4 [&_.tiptap_img]:h-auto [&_.tiptap_img]:max-w-full [&_.tiptap_img]:rounded-lg",
+        ],
       )}
     >
+      {knowledgeMode ? <DocumentTableToolbar editor={editor} /> : null}
       <EditorContent editor={editor} />
       <DescriptionBubbleMenu editor={editor} />
       {slashMenu && visibleSlashItems.length > 0 ? (
@@ -430,6 +542,7 @@ function matchesSlashQuery(item: SlashCommandItem, query: string): boolean {
 function getSlashMenuState(
   editor: Editor,
   root: HTMLDivElement,
+  commands: SlashCommandItem[],
 ): SlashMenuState | null {
   const { state, view } = editor;
   const { selection } = state;
@@ -448,7 +561,7 @@ function getSlashMenuState(
   const query = match[1].toLowerCase();
   const coords = view.coordsAtPos(selection.from);
   const rootRect = root.getBoundingClientRect();
-  const visibleItemCount = SLASH_COMMANDS.filter((item) =>
+  const visibleItemCount = commands.filter((item) =>
     matchesSlashQuery(item, query),
   ).length;
   const estimatedMenuHeight = Math.min(
@@ -509,6 +622,41 @@ function getMentionMenuState(
       to: selection.from,
     },
   };
+}
+
+function DocumentTableToolbar({ editor }: { editor: Editor }) {
+  const [insideTable, setInsideTable] = useState(editor.isActive("table"));
+  useEffect(() => {
+    const update = () => setInsideTable(editor.isActive("table"));
+    editor.on("selectionUpdate", update);
+    editor.on("update", update);
+    return () => {
+      editor.off("selectionUpdate", update);
+      editor.off("update", update);
+    };
+  }, [editor]);
+  if (!insideTable) return null;
+  return (
+    <div className="mb-2 flex flex-wrap gap-1 rounded-md border border-border bg-popover p-1 text-xs">
+      {[
+        { label: "+ Row", run: () => editor.chain().focus().addRowAfter().run() },
+        { label: "+ Column", run: () => editor.chain().focus().addColumnAfter().run() },
+        { label: "Remove row", run: () => editor.chain().focus().deleteRow().run() },
+        { label: "Remove column", run: () => editor.chain().focus().deleteColumn().run() },
+        { label: "Remove table", run: () => editor.chain().focus().deleteTable().run() },
+      ].map(({ label, run }) => (
+        <button
+          key={label}
+          type="button"
+          className="rounded px-2 py-1 hover:bg-surface"
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={run}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  );
 }
 
 function DescriptionBubbleMenu({ editor }: { editor: Editor }) {
@@ -627,6 +775,7 @@ interface TaskDescriptionEditorProps {
   excludeDocId?: string;
   appearance?: "field" | "plain";
   contentClassName?: string;
+  knowledgeMode?: boolean;
 }
 
 interface MentionMenuState {

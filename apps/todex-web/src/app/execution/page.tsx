@@ -46,7 +46,7 @@ export default function ExecutionPage() {
   const [anchorId, setAnchorId] = useState<string | null>(null);
   const [explicit, setExplicit] = useState(true);
   const [showDone, setShowDone] = useState(false);
-  const [focusModeOn, setFocusModeOn] = useState(true);
+  const [focusModeOn, setFocusModeOn] = useState(false);
   const [pendingStart, setPendingStart] = useState(false);
   const visibleQueue = showDone ? queue : queue.filter((item) => item.task.status !== TaskStatus.DONE);
   const queueIds = visibleQueue.map((item) => item.taskId);
@@ -87,7 +87,7 @@ export default function ExecutionPage() {
   useEffect(() => {
     if (!pendingStart || !session) return;
     setPendingStart(false);
-    router.push("/execution/session" + (focusModeOn ? "" : "?view=workspace"));
+    router.push("/execution/session" + (focusModeOn ? "?view=focus" : ""));
   }, [pendingStart, session, focusModeOn, router]);
 
   function selectQueued(
@@ -202,17 +202,18 @@ export default function ExecutionPage() {
                   sessionTitle={executionSessionTitle({
                     startedAt: session.startedAt,
                     spaceName: tasks[0]?.spaceName ?? null,
+                    title: session.title,
                   })}
                   tracking={tracking}
                   mode={mode}
                   goalMinutes={goalMinutes}
                   elapsedSeconds={sessionElapsedSeconds}
                   isCompleting={isCompleting}
-                  onOpen={() => router.push("/execution/session" + (focusModeOn ? "" : "?view=workspace"))}
+                  onOpen={() => router.push("/execution/session")}
                   onOpenTask={(taskId) => {
                     writeSelectedTask(session.id, taskId);
                     router.push(
-                      `/execution/session?task=${encodeURIComponent(taskId)}&view=workspace`,
+                      `/execution/session?task=${encodeURIComponent(taskId)}`,
                     );
                   }}
                   onPause={pause}

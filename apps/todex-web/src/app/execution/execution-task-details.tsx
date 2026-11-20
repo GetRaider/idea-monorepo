@@ -114,7 +114,7 @@ export function ExecutionTaskDetails({ task }: { task: ExecutionCurrent }) {
             <p className="text-[11px] font-medium tracking-[0.16em] text-[#8d8d8a]">
               TASK ESTIMATE
             </p>
-            <p className="mt-1 text-2xl font-semibold leading-none text-[#f2f2f0]">
+            <p className="mt-1 text-xl font-semibold leading-none text-[#f2f2f0]">
               {formatEstimation(task.estimation) || "—"}
             </p>
           </div>

@@ -52,8 +52,11 @@ export class ExecutionController {
   }
 
   @Get("suggestions")
-  async suggestions(@Req() request: WorkspaceRequest) {
-    return this.executionService.suggestions(request.workspaceId);
+  async suggestions(
+    @Req() request: WorkspaceRequest,
+    @Query("includeDone") includeDone?: string,
+  ) {
+    return this.executionService.suggestions(request.workspaceId, includeDone === "true");
   }
 
   @Get("activity")

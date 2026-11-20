@@ -16,6 +16,7 @@ import type { ExecutionQueueItem } from "@repo/api/todex";
 import { cn } from "@repo/ui";
 
 import { STATUS_LABEL } from "../planning/task-helpers";
+import { PriorityGlyph, StatusGlyph } from "../planning/task-board.ui";
 import { moveQueueItem } from "./execution-queue-order";
 
 export function ExecutionQueueList({
@@ -169,8 +170,10 @@ function QueueCard({
       )}
     >
       <div className="min-w-0 flex-1 text-left">
-        <span className="block truncate text-sm font-medium text-[#f2f2f0]">
-          {task.summary}
+        <span className="flex items-center gap-1.5 text-sm font-medium text-[#f2f2f0]">
+          <StatusGlyph status={task.status} />
+          <PriorityGlyph priority={task.priority} />
+          <span className="truncate">{task.summary}</span>
         </span>
         <span className="mt-0.5 block truncate text-xs text-[#8f8f8c]">
           [{task.spaceName}]{" "}

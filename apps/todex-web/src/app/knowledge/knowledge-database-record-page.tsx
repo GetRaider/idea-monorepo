@@ -38,6 +38,7 @@ export function KnowledgeDatabaseRecordPage({
   const loadedRef = useRef<string | null>(null);
   const draftRef = useRef<ProseDoc | null>(null);
   const savedContentRef = useRef("");
+  const queuedContentRef = useRef("");
   const versionRef = useRef(0);
   const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
   const page = pageQuery.data;
@@ -48,6 +49,7 @@ export function KnowledgeDatabaseRecordPage({
     draftRef.current = page.content;
     setDraft(page.content);
     savedContentRef.current = JSON.stringify(page.content);
+    queuedContentRef.current = "";
     versionRef.current = page.version;
     setSaveStatus("saved");
   }, [page, databaseId, rowId]);
@@ -68,6 +70,7 @@ export function KnowledgeDatabaseRecordPage({
         setSaveStatus("saved");
       } catch (error) {
         const message = error instanceof Error ? error.message : "Unable to save this page";
+        queuedContentRef.current = "";
         setSaveStatus(/changed elsewhere|conflict|409/i.test(message) ? "conflict" : "error");
         toast.error(message);
         throw error;
@@ -77,10 +80,11 @@ export function KnowledgeDatabaseRecordPage({
   }, [client, databaseId, rowId]);
 
   useEffect(() => {
-    if (!draft || !page || saveStatus === "conflict") return;
+    if (!draft || !page || saveStatus === "conflict" || saveStatus === "error") return;
     const signature = JSON.stringify(draft);
-    if (signature === savedContentRef.current) return;
+    if (signature === savedContentRef.current || signature === queuedContentRef.current) return;
     const handle = window.setTimeout(() => {
+      queuedContentRef.current = signature;
       void enqueue({ content: draft }).catch(() => undefined);
     }, 650);
     return () => window.clearTimeout(handle);
@@ -89,6 +93,7 @@ export function KnowledgeDatabaseRecordPage({
   const saveNow = useCallback(() => {
     const current = draftRef.current;
     if (!current || JSON.stringify(current) === savedContentRef.current) return saveQueueRef.current;
+    queuedContentRef.current = JSON.stringify(current);
     return enqueue({ content: current });
   }, [enqueue]);
 

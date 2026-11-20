@@ -508,7 +508,7 @@ export class ExecutionService {
         throw new BadRequestException("Stop the session before editing it");
       }
       const links = await this.sessionLinks(tx, row.id);
-      const originalEndedAt = originalEndedAt;
+      const originalEndedAt = row.endedAt;
       const totalTaskSeconds = links.reduce(
         (sum, link) => sum + sumIntervalSeconds(link.intervals ?? [], originalEndedAt),
         0,

@@ -508,27 +508,58 @@ export class ExecutionService {
         throw new BadRequestException("Stop the session before editing it");
       }
       const links = await this.sessionLinks(tx, row.id);
-      const spans = allocateSessionSpans(
-        links.map((link) => sumIntervalSeconds(link.intervals ?? [], ended)),
-        duration,
+      const totalTaskSeconds = links.reduce(
+        (sum, link) => sum + sumIntervalSeconds(link.intervals ?? [], row.endedAt),
+        0,
       );
-      let cursor = started.getTime();
-      for (const [index, link] of links.entries()) {
-        const span = spans[index] ?? 0;
-        const intervals =
-          span === 0
-            ? []
-            : [
-                {
-                  startedAt: new Date(cursor).toISOString(),
-                  endedAt: new Date(cursor + span * 1000).toISOString(),
-                },
-              ];
-        cursor += span * 1000;
-        await tx
-          .update(executionSessionTasks)
-          .set({ intervals })
-          .where(eq(executionSessionTasks.id, link.id));
+      const uniqueSeconds = uniqueIntervalSeconds(
+        links.flatMap((link) => link.intervals ?? []),
+        row.endedAt,
+      );
+      if (totalTaskSeconds > uniqueSeconds && row.endedAt.getTime() > row.startedAt.getTime()) {
+        // Preserve parallel task-time overlap when adjusting a historical session.
+        const oldStart = row.startedAt.getTime();
+        const oldSpan = row.endedAt.getTime() - oldStart;
+        const newStart = started.getTime();
+        const newSpan = ended.getTime() - newStart;
+        const remap = (iso: string) => {
+          const ratio = Math.max(0, Math.min(1, (Date.parse(iso) - oldStart) / oldSpan));
+          return newStart + Math.round(ratio * newSpan);
+        };
+        for (const link of links) {
+          const intervals = (link.intervals ?? []).flatMap((interval) => {
+            const from = remap(interval.startedAt);
+            const to = remap(interval.endedAt ?? row.endedAt.toISOString());
+            return to > from
+              ? [{ startedAt: new Date(from).toISOString(), endedAt: new Date(to).toISOString() }]
+              : [];
+          });
+          await tx.update(executionSessionTasks).set({ intervals })
+            .where(eq(executionSessionTasks.id, link.id));
+        }
+      } else {
+        const spans = allocateSessionSpans(
+          links.map((link) => sumIntervalSeconds(link.intervals ?? [], ended)),
+          duration,
+        );
+        let cursor = started.getTime();
+        for (const [index, link] of links.entries()) {
+          const span = spans[index] ?? 0;
+          const intervals =
+            span === 0
+              ? []
+              : [
+                  {
+                    startedAt: new Date(cursor).toISOString(),
+                    endedAt: new Date(cursor + span * 1000).toISOString(),
+                  },
+                ];
+          cursor += span * 1000;
+          await tx
+            .update(executionSessionTasks)
+            .set({ intervals })
+            .where(eq(executionSessionTasks.id, link.id));
+        }
       }
       await tx
         .update(executionSessions)

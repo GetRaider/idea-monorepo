@@ -36,8 +36,11 @@ export function suggestionAreas(tasks: ExecutionSuggestion[], spaceId: string) {
   return [...areas].sort((left, right) => left.localeCompare(right));
 }
 
-export function suggestionStages(tasks: ExecutionSuggestion[]) {
-  const stages = new Set<string>();
+export function suggestionStages(
+  tasks: ExecutionSuggestion[],
+  definedStages: readonly string[] = [],
+) {
+  const stages = new Set(definedStages);
   for (const task of tasks) {
     if (task.stageName) stages.add(task.stageName);
   }

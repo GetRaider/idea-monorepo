@@ -1,7 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQueries,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { formatEstimation, TaskStatus } from "@repo/api/todex";
 import {
   Select,
@@ -48,16 +53,41 @@ export function ExecutionSuggestionsPanel({
           : "Could not add the task to the queue",
       ),
   });
-  const [filtersOpen, setFiltersOpen] = useState(true);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [filters, setFilters] = useState<SuggestionFilters>(
     EMPTY_SUGGESTION_FILTERS,
   );
+  const spaces = useQuery({
+    queryKey: ["spaces"],
+    queryFn: () => todexClient.spaces.list(),
+  });
+  const spaceDetails = useQueries({
+    queries: (spaces.data ?? []).map((space) => ({
+      queryKey: ["board", space.id],
+      queryFn: () => todexClient.spaces.get(space.id),
+    })),
+  });
   const tasks = suggestions.data ?? [];
   const boards = suggestionBoards(tasks);
   const areas = suggestionAreas(tasks, filters.spaceId);
-  const stages = suggestionStages(tasks);
-  if (filters.sectionName !== "all" && !areas.includes(filters.sectionName)) {
-    setFilters((current) => ({ ...current, sectionName: "all" }));
+  const stages = suggestionStages(
+    tasks,
+    spaceDetails.flatMap((detail) =>
+      (detail.data?.progressStages ?? []).map((stage) => stage.name),
+    ),
+  );
+  const sectionMissing =
+    filters.sectionName !== "all" && !areas.includes(filters.sectionName);
+  const stageMissing =
+    filters.stage !== "all" &&
+    filters.stage !== "none" &&
+    !stages.includes(filters.stage);
+  if (sectionMissing || stageMissing) {
+    setFilters((current) => ({
+      ...current,
+      ...(sectionMissing ? { sectionName: "all" } : {}),
+      ...(stageMissing ? { stage: "all" } : {}),
+    }));
   }
   const visible = applySuggestionFilters(
     showDone ? tasks : tasks.filter((task) => task.status !== TaskStatus.DONE),
@@ -148,20 +178,23 @@ export function ExecutionSuggestionsPanel({
             options={DUE_OPTIONS}
             onChange={(due) => update({ due: due as SuggestionFilters["due"] })}
           />
-          {stages.length > 0 ? (
-            <FilterSelect
-              label="Stage"
-              value={filters.stage}
-              options={[
-                { value: "all", label: "Any" },
-                { value: "none", label: "No stage" },
-                ...stages.map((stage) => ({ value: stage, label: stage })),
-              ]}
-              onChange={(stage) => update({ stage })}
-            />
-          ) : null}
+          <FilterSelect
+            label="Stage"
+            value={filters.stage}
+            options={[
+              { value: "all", label: "Any" },
+              { value: "none", label: "No stage" },
+              ...stages.map((stage) => ({ value: stage, label: stage })),
+            ]}
+            onChange={(stage) => update({ stage })}
+          />
           <label className="col-span-2 flex cursor-pointer items-center gap-2 py-1 text-xs text-[#cfcfcc]">
-            <input type="checkbox" checked={showDone} onChange={(event) => onShowDoneChange(event.target.checked)} className="size-4 accent-white" />
+            <input
+              type="checkbox"
+              checked={showDone}
+              onChange={(event) => onShowDoneChange(event.target.checked)}
+              className="size-4 accent-white"
+            />
             Show completed tasks
           </label>
           <button

@@ -3,6 +3,7 @@
 import { formatEstimation, TaskStatus } from "@repo/api/todex";
 import type { ExecutionCurrent } from "@repo/api/todex";
 import { PauseIcon } from "@components/icons";
+import { Switch } from "@repo/ui";
 
 import { STATUS_LABEL, taskProgressPercent } from "../planning/task-helpers";
 import { PriorityGlyph, StatusGlyph } from "../planning/task-board.ui";
@@ -70,7 +71,7 @@ export function ExecutionFocusView({
     : 0;
 
   return (
-    <div className="relative isolate flex min-h-[560px] min-w-0 flex-1 flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#0d0d10]">
+    <div className="relative isolate flex min-h-[520px] min-w-0 flex-1 flex-col overflow-y-auto bg-transparent">
       <div
         aria-hidden
         className="pointer-events-none absolute bottom-[-13rem] left-1/2 -z-10 size-[36rem] -translate-x-1/2 rounded-full bg-white/[0.04] blur-[100px]"
@@ -84,15 +85,19 @@ export function ExecutionFocusView({
             {sessionTitle}
           </p>
         </div>
-        <button
-          type="button"
-          className="rounded-xl border border-white/15 px-4 py-2 text-sm text-[#f2f2f0] transition-colors hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-          onClick={onExit}
-          role="switch"
-          aria-checked={true}
-        >
-          Focus Mode: On
-        </button>
+        <div className="flex items-center gap-2.5">
+          <label htmlFor="session-focus-mode" className="cursor-pointer text-sm font-medium text-[#d7d7d4]">
+            Focus Mode
+          </label>
+          <Switch
+            id="session-focus-mode"
+            aria-label="Focus Mode"
+            checked={true}
+            onCheckedChange={(enabled) => {
+              if (!enabled) onExit();
+            }}
+          />
+        </div>
       </header>
 
       <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col items-center justify-center px-5 py-10 text-center sm:px-8">
@@ -102,7 +107,7 @@ export function ExecutionFocusView({
               aria-label="Task to display"
               value={activeTask?.id ?? ""}
               onChange={(event) => onSwitchTask(event.target.value)}
-              className="w-full cursor-pointer rounded-xl border border-white/10 bg-[#19191c] px-4 py-3 text-center text-base font-medium text-[#f2f2f0] outline-none focus-visible:border-white/40"
+              className="w-full cursor-pointer rounded-xl border border-white/10 bg-[#19191c] px-4 py-3 text-center text-sm font-medium text-[#f2f2f0] outline-none focus-visible:border-white/40"
             >
               {tasks.map((task) => (
                 <option
@@ -119,12 +124,12 @@ export function ExecutionFocusView({
               ))}
             </select>
           ) : (
-            <h1 className="truncate text-xl font-semibold tracking-tight text-[#f2f2f0] sm:text-2xl">
+            <h1 className="truncate text-lg font-semibold tracking-tight text-[#f2f2f0] sm:text-xl">
               {activeTask?.summary ?? "Execution session"}
             </h1>
           )}
           {activeTask ? (
-            <p className="mt-3 text-sm text-[#8f8f97]">
+            <p className="mt-2 text-xs text-[#8f8f97]">
               <span className="inline-flex items-center gap-2">
                 <StatusGlyph status={activeTask.status} />
                 <PriorityGlyph priority={activeTask.priority} />

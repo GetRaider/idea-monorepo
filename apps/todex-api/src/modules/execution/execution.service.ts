@@ -183,10 +183,7 @@ export class ExecutionService {
           sessionId,
           taskId,
           position: index,
-          intervals:
-            index === 0
-              ? [{ startedAt: now.toISOString(), endedAt: null }]
-              : [],
+          intervals: [{ startedAt: now.toISOString(), endedAt: null }],
         })),
       );
       await tx
@@ -218,17 +215,20 @@ export class ExecutionService {
       ) {
         return;
       }
-      await this.closeTracking(tx, links, now);
-      const closed = closeOpenIntervals(target.intervals, now);
-      await tx
-        .update(executionSessionTasks)
-        .set({
-          intervals: [
-            ...closed,
-            { startedAt: now.toISOString(), endedAt: null },
-          ],
-        })
-        .where(eq(executionSessionTasks.id, target.id));
+      // Focus no longer transfers time to a single task.
+      if (links.some((link) => hasOpenInterval(link.intervals))) return;
+      const eligible = await this.openTasks(tx, links);
+      for (const link of eligible) {
+        await tx
+          .update(executionSessionTasks)
+          .set({
+            intervals: [
+              ...closeOpenIntervals(link.intervals ?? [], now),
+              { startedAt: now.toISOString(), endedAt: null },
+            ],
+          })
+          .where(eq(executionSessionTasks.id, link.id));
+      }
     });
     return this.state(workspaceId);
   }
@@ -242,31 +242,7 @@ export class ExecutionService {
       const target = links.find((link) => link.taskId === taskId);
       if (!target || !hasOpenInterval(target.intervals)) return;
       await this.closeTracking(tx, [target], now);
-      const rows = await tx
-        .select({ id: tasks.id, status: tasks.status })
-        .from(tasks)
-        .where(
-          inArray(
-            tasks.id,
-            links.map((link) => link.taskId),
-          ),
-        );
-      const statusById = new Map(rows.map((row) => [row.id, row.status]));
-      const next = links.find((link) => {
-        if (link.taskId === taskId) return false;
-        const status = statusById.get(link.taskId);
-        return status !== TaskStatus.DONE && status !== TaskStatus.CANCELLED;
-      });
-      if (!next) return;
-      await tx
-        .update(executionSessionTasks)
-        .set({
-          intervals: [
-            ...next.intervals,
-            { startedAt: now.toISOString(), endedAt: null },
-          ],
-        })
-        .where(eq(executionSessionTasks.id, next.id));
+      // Remaining session tasks keep their open intervals.
     });
     return this.state(workspaceId);
   }
@@ -289,18 +265,16 @@ export class ExecutionService {
       if (!open) throw new BadRequestException("No active execution");
       const links = await this.sessionLinks(tx, open.id, true);
       if (links.some((link) => hasOpenInterval(link.intervals))) return;
-      const taskId = focusedTask(links);
-      const target = links.find((link) => link.taskId === taskId);
-      if (!target) throw new BadRequestException("No task to resume");
-      await tx
-        .update(executionSessionTasks)
-        .set({
-          intervals: [
-            ...target.intervals,
-            { startedAt: now.toISOString(), endedAt: null },
-          ],
-        })
-        .where(eq(executionSessionTasks.id, target.id));
+      const eligible = await this.openTasks(tx, links);
+      if (eligible.length === 0) throw new BadRequestException("No unfinished task to resume");
+      for (const link of eligible) {
+        await tx
+          .update(executionSessionTasks)
+          .set({
+            intervals: [...link.intervals, { startedAt: now.toISOString(), endedAt: null }],
+          })
+          .where(eq(executionSessionTasks.id, link.id));
+      }
     });
     return this.state(workspaceId);
   }
@@ -481,9 +455,7 @@ export class ExecutionService {
       .orderBy(asc(executionSessionTasks.position));
     const sessions = rows.flatMap((row) => {
       const sessionLinks = links.filter((link) => link.sessionId === row.id);
-      const slices = sessionLinks
-        .flatMap((link) => link.intervals ?? [])
-        .sort((left, right) => left.startedAt.localeCompare(right.startedAt));
+      const slices = mergeIntervals(sessionLinks.flatMap((link) => link.intervals ?? []));
       if (!intervalsOverlapRange(slices, from, to)) return [];
       return [
         {
@@ -679,6 +651,16 @@ export class ExecutionService {
     return activeOnly ? links.filter((link) => link.active) : links;
   }
 
+  private async openTasks(db: ExecutionDb, links: ExecutionSessionTaskRow[]) {
+    if (links.length === 0) return [];
+    const rows = await db
+      .select({ id: tasks.id, status: tasks.status })
+      .from(tasks)
+      .where(inArray(tasks.id, links.map((link) => link.taskId)));
+    const live = new Set(rows.filter((row) => row.status !== TaskStatus.DONE && row.status !== TaskStatus.CANCELLED).map((row) => row.id));
+    return links.filter((link) => live.has(link.taskId));
+  }
+
   private async closeTracking(
     db: ExecutionDb,
     links: ExecutionSessionTaskRow[],
@@ -704,10 +686,7 @@ export class ExecutionService {
       ...link,
       intervals: closeOpenIntervals(link.intervals ?? [], endedAt),
     }));
-    const duration = closed.reduce(
-      (total, link) => total + sumIntervalSeconds(link.intervals, endedAt),
-      0,
-    );
+    const duration = uniqueIntervalSeconds(closed.flatMap((link) => link.intervals), endedAt);
     await db
       .update(executionSessions)
       .set({ endedAt, duration, updatedAt: endedAt })
@@ -890,6 +869,8 @@ export class ExecutionService {
           taskKey: tasks.taskKey,
           summary: tasks.summary,
           status: tasks.status,
+          priority: tasks.priority,
+          estimation: tasks.estimation,
         })
         .from(tasks)
         .where(
@@ -945,6 +926,27 @@ export class ExecutionService {
     }
     return totals;
   }
+}
+
+function mergeIntervals(intervals: ExecutionInterval[]): ExecutionInterval[] {
+  const sorted = intervals
+    .map((interval) => ({ start: Date.parse(interval.startedAt), end: interval.endedAt == null ? Infinity : Date.parse(interval.endedAt) }))
+    .filter((interval) => Number.isFinite(interval.start) && !Number.isNaN(interval.end) && interval.end > interval.start)
+    .sort((left, right) => left.start - right.start);
+  const merged: Array<{ start: number; end: number }> = [];
+  for (const interval of sorted) {
+    const last = merged[merged.length - 1];
+    if (last && interval.start <= last.end) last.end = Math.max(last.end, interval.end);
+    else merged.push({ ...interval });
+  }
+  return merged.map((interval) => ({
+    startedAt: new Date(interval.start).toISOString(),
+    endedAt: interval.end === Infinity ? null : new Date(interval.end).toISOString(),
+  }));
+}
+
+function uniqueIntervalSeconds(intervals: ExecutionInterval[], now: Date) {
+  return sumIntervalSeconds(mergeIntervals(intervals), now);
 }
 
 function queueTask(

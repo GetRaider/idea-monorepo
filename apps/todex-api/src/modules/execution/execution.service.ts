@@ -508,19 +508,19 @@ export class ExecutionService {
         throw new BadRequestException("Stop the session before editing it");
       }
       const links = await this.sessionLinks(tx, row.id);
-      const originalEndedAt = row.endedAt;
+      const originalEndedAt = originalEndedAt;
       const totalTaskSeconds = links.reduce(
-        (sum, link) => sum + sumIntervalSeconds(link.intervals ?? [], row.endedAt),
+        (sum, link) => sum + sumIntervalSeconds(link.intervals ?? [], originalEndedAt),
         0,
       );
       const uniqueSeconds = uniqueIntervalSeconds(
         links.flatMap((link) => link.intervals ?? []),
-        row.endedAt,
+        originalEndedAt,
       );
-      if (totalTaskSeconds > uniqueSeconds && row.endedAt.getTime() > row.startedAt.getTime()) {
+      if (totalTaskSeconds > uniqueSeconds && originalEndedAt.getTime() > row.startedAt.getTime()) {
         // Preserve parallel task-time overlap when adjusting a historical session.
         const oldStart = row.startedAt.getTime();
-        const oldSpan = row.endedAt.getTime() - oldStart;
+        const oldSpan = originalEndedAt.getTime() - oldStart;
         const newStart = started.getTime();
         const newSpan = ended.getTime() - newStart;
         const remap = (iso: string) => {

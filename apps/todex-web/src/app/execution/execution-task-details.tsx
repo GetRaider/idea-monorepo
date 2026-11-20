@@ -142,6 +142,7 @@ export function ExecutionTaskDetails({ task }: { task: ExecutionCurrent }) {
                 <SubtaskRow
                   key={subtask.id}
                   subtask={subtask}
+                  parentTaskKey={task.taskKey}
                   onSaved={refresh}
                 />
               ))}
@@ -289,9 +290,11 @@ function DescriptionField({ task }: { task: Task }) {
 
 function SubtaskRow({
   subtask,
+  parentTaskKey,
   onSaved,
 }: {
   subtask: Task;
+  parentTaskKey: string;
   onSaved: () => void;
 }) {
   const [estimationText, setEstimationText] = useState(formatEstimation(subtask.estimation));
@@ -360,7 +363,7 @@ function SubtaskRow({
         }}
       />
       <Link
-        href={tasksUrlHelper.routing.buildBoardUrl(subtask.spaceId, subtask.taskKey, subtask.parentTaskId ? undefined : undefined)}
+        href={tasksUrlHelper.routing.buildBoardUrl(subtask.spaceId, subtask.taskKey, parentTaskKey)}
         aria-label={`Open subtask ${subtask.summary} in Planning`}
         title="Open subtask in Planning"
         className="shrink-0 text-[#8f8f8c] hover:text-[#f2f2f0]"

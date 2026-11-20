@@ -5,6 +5,7 @@ import type { ExecutionCurrent } from "@repo/api/todex";
 import { PauseIcon } from "@components/icons";
 
 import { STATUS_LABEL, taskProgressPercent } from "../planning/task-helpers";
+import { PriorityGlyph, StatusGlyph } from "../planning/task-board.ui";
 import {
   formatDuration,
   formatSessionClock,
@@ -72,7 +73,7 @@ export function ExecutionFocusView({
     <div className="relative isolate flex min-h-[560px] min-w-0 flex-1 flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#0d0d10]">
       <div
         aria-hidden
-        className="pointer-events-none absolute bottom-[-13rem] left-1/2 -z-10 size-[36rem] -translate-x-1/2 rounded-full bg-violet-500/[0.08] blur-[100px]"
+        className="pointer-events-none absolute bottom-[-13rem] left-1/2 -z-10 size-[36rem] -translate-x-1/2 rounded-full bg-white/[0.04] blur-[100px]"
       />
       <header className="flex flex-wrap items-center justify-between gap-3 px-5 py-5 sm:px-8">
         <div className="min-w-0">
@@ -87,8 +88,10 @@ export function ExecutionFocusView({
           type="button"
           className="rounded-xl border border-white/15 px-4 py-2 text-sm text-[#f2f2f0] transition-colors hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
           onClick={onExit}
+          role="switch"
+          aria-checked={true}
         >
-          Exit Focus
+          Focus Mode: On
         </button>
       </header>
 
@@ -96,7 +99,7 @@ export function ExecutionFocusView({
         <div className="mb-7 w-full max-w-xl">
           {tasks.length > 1 ? (
             <select
-              aria-label="Current execution task"
+              aria-label="Task to display"
               value={activeTask?.id ?? ""}
               onChange={(event) => onSwitchTask(event.target.value)}
               className="w-full cursor-pointer rounded-xl border border-white/10 bg-[#19191c] px-4 py-3 text-center text-base font-medium text-[#f2f2f0] outline-none focus-visible:border-white/40"
@@ -122,7 +125,11 @@ export function ExecutionFocusView({
           )}
           {activeTask ? (
             <p className="mt-3 text-sm text-[#8f8f97]">
-              {activeTask.spaceName} · {STATUS_LABEL[activeTask.status]}
+              <span className="inline-flex items-center gap-2">
+                <StatusGlyph status={activeTask.status} />
+                <PriorityGlyph priority={activeTask.priority} />
+                {activeTask.spaceName} · {STATUS_LABEL[activeTask.status]}
+              </span>
             </p>
           ) : null}
         </div>
@@ -153,7 +160,7 @@ export function ExecutionFocusView({
             className="mt-7 h-1 w-full max-w-80 overflow-hidden rounded-full bg-white/10"
           >
             <div
-              className="h-full rounded-full bg-[#c4b5fd] transition-[width] duration-1000"
+              className="h-full rounded-full bg-[#f2f2f0] transition-[width] duration-1000"
               style={{ width: `${Math.round(progress * 100)}%` }}
             />
           </div>
@@ -200,7 +207,11 @@ export function ExecutionFocusView({
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="min-w-0 flex-1 text-left">
                 <p className="truncate text-sm font-medium text-[#f2f2f0]">
-                  {activeTask.summary}
+                  <span className="inline-flex items-center gap-2">
+                    <StatusGlyph status={activeTask.status} />
+                    <PriorityGlyph priority={activeTask.priority} />
+                    {activeTask.summary}
+                  </span>
                 </p>
                 <p className="mt-1 text-xs text-[#94949c]">
                   Task progress · {Math.round(taskProgress * 100)}%

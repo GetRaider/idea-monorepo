@@ -89,7 +89,7 @@ export function ExecutionTaskDetails({ task }: { task: ExecutionCurrent }) {
             />
             <h3
               className={cn(
-                "min-w-0 truncate text-2xl font-semibold leading-none text-[#f2f2f0]",
+                "min-w-0 truncate text-xl font-semibold leading-tight text-[#f2f2f0]",
                 isClosedStatus(task.status) && "text-[#8f8f8c] line-through",
               )}
             >
@@ -123,7 +123,7 @@ export function ExecutionTaskDetails({ task }: { task: ExecutionCurrent }) {
       <DescriptionSection task={loaded} />
       <div className="mt-4 grid border-t border-white/10 pt-4 md:grid-cols-2">
         <div className="md:pr-6">
-          <h4 className="mb-3 text-lg font-semibold text-[#f2f2f0]">
+          <h4 className="mb-3 text-base font-semibold text-[#f2f2f0]">
             Acceptance criteria ({criteria.length})
           </h4>
           {loaded ? (
@@ -133,7 +133,7 @@ export function ExecutionTaskDetails({ task }: { task: ExecutionCurrent }) {
           )}
         </div>
         <div className="mt-6 border-t border-white/10 pt-6 md:mt-0 md:border-t-0 md:border-l md:pl-6 md:pt-0">
-          <h4 className="mb-3 text-lg font-semibold text-[#f2f2f0]">
+          <h4 className="mb-3 text-base font-semibold text-[#f2f2f0]">
             Subtasks ({subtaskCount})
           </h4>
           {subtaskCount === 0 ? (
@@ -218,7 +218,7 @@ function DescriptionSection({ task }: { task: Task | null }) {
     <div className="mt-4 border-t border-white/10 pt-3">
       <button
         type="button"
-        className="flex items-center gap-1.5 text-lg font-semibold text-[#f2f2f0]"
+        className="flex items-center gap-1.5 text-base font-semibold text-[#f2f2f0]"
         onClick={() => setOpen((current) => !current)}
       >
         <ChevronIcon
@@ -474,7 +474,7 @@ function References({ taskId }: { taskId: string }) {
 
   return (
     <div className="mt-4 border-t border-white/10 pt-4">
-      <h4 className="mb-3 text-lg font-semibold text-[#f2f2f0]">
+      <h4 className="mb-3 text-base font-semibold text-[#f2f2f0]">
         References ({items.length})
       </h4>
       {items.length === 0 ? (

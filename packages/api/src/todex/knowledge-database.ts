@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ProseDocSchema } from "./prose.ts";
 
 export const KnowledgePropertyTypeSchema = z.enum([
   "title",
@@ -68,6 +69,28 @@ export const KnowledgeDatabaseSchema = z.object({
   view: KnowledgeViewSchema,
 });
 
+// A database row is also a page. Its rich body is fetched independently of the grid.
+export const KnowledgeDatabasePageSchema = z.object({
+  databaseId: z.string(),
+  spaceId: z.string(),
+  row: KnowledgeRowSchema,
+  properties: z.array(KnowledgePropertySchema),
+  content: ProseDocSchema,
+  icon: z.string().max(16).nullable(),
+  cover: z.string().max(2048).nullable(),
+  version: z.number().int().min(0),
+});
+
+export const UpdateKnowledgeDatabasePageSchema = z.object({
+  expectedVersion: z.number().int().min(0),
+  content: ProseDocSchema.optional(),
+  icon: z.string().max(16).nullable().optional(),
+  cover: z.string().url().max(2048).startsWith("https://").nullable().optional(),
+}).strict().refine((input) =>
+  input.content !== undefined || input.icon !== undefined || input.cover !== undefined,
+  "Provide a page field to update",
+);
+
 export const CreateKnowledgeDatabaseSchema = z.object({
   spaceId: z.string().min(1),
   name: z.string().trim().min(1).max(200).default("Untitled database"),
@@ -111,3 +134,6 @@ export type CreateKnowledgeProperty = z.infer<typeof CreateKnowledgePropertySche
 export type UpdateKnowledgeProperty = z.infer<typeof UpdateKnowledgePropertySchema>;
 export type PatchKnowledgeCell = z.infer<typeof PatchKnowledgeCellSchema>;
 export type UpdateKnowledgeView = z.infer<typeof UpdateKnowledgeViewSchema>;
+
+export type KnowledgeDatabasePage = z.infer<typeof KnowledgeDatabasePageSchema>;
+export type UpdateKnowledgeDatabasePage = z.infer<typeof UpdateKnowledgeDatabasePageSchema>;

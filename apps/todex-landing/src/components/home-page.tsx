@@ -1,6 +1,6 @@
 import Image from "next/image";
 
-import { ONBOARDING_EXAMPLE } from "@/content/home";
+import { HOME_COPY, ONBOARDING_EXAMPLE } from "@/content/home";
 
 import { OpenTodexLink } from "./open-todex-link";
 
@@ -23,10 +23,11 @@ export function HomePage() {
         <div className="mx-auto max-w-page">
           <div className="mx-auto max-w-3xl text-center">
             <h1 className="text-[clamp(2.75rem,7vw,6rem)] font-medium leading-[0.98] tracking-[-0.055em] text-white">
-              Keep the why <span className="block text-zinc-300">with the work.</span>
+              {HOME_COPY.headlineLead}{" "}
+              <span className="block text-zinc-300">{HOME_COPY.headlineRest}</span>
             </h1>
             <p className="mx-auto mt-6 max-w-xl text-base leading-relaxed text-zinc-300 sm:text-lg">
-              Todex connects your research, tasks, and execution. When you sit down to build, the decisions and evidence behind the task are already there.
+              {HOME_COPY.description}
             </p>
             <div className="mt-7 flex flex-wrap items-center justify-center gap-x-5 gap-y-3">
               <OpenTodexLink />
@@ -63,10 +64,10 @@ export function HomePage() {
       <section className="border-y border-white/10 px-5 py-16 sm:py-24" aria-labelledby="problem-title">
         <div className="mx-auto max-w-page">
           <h2 id="problem-title" className="max-w-3xl text-3xl font-medium tracking-tight text-white sm:text-5xl">
-            By the time you’re ready to build, the context is scattered.
+            {HOME_COPY.problem.title}
           </h2>
           <p className="mt-5 max-w-2xl leading-relaxed text-zinc-400">
-            You make sense of customer interviews in ChatGPT and put the next step on your task board. A week later, you open Cursor and have to reconstruct what you decided, why, and what counts as done.
+            {HOME_COPY.problem.description}
           </p>
           <ol className="mt-8 grid gap-3 md:grid-cols-3">
             {example.fragmentedWorkflow.map(({ tool, detail }) => (
@@ -82,50 +83,79 @@ export function HomePage() {
       <section id="workflow" className="scroll-mt-20 px-5 py-16 sm:py-24" aria-labelledby="workflow-title">
         <div className="mx-auto max-w-page">
           <h2 id="workflow-title" className="max-w-3xl text-3xl font-medium tracking-tight text-white sm:text-5xl">
-            Carry the decision all the way into execution.
+            Keep the same context from research to results.
           </h2>
-          <ol className="mt-8 grid overflow-hidden rounded-2xl border border-white/15 bg-zinc-950 md:grid-cols-3">
-            <li id="research-note" className="scroll-mt-24 border-b border-white/10 p-6 target:bg-white/10 md:border-b-0 md:border-r">
+          <p className="mt-5 max-w-2xl leading-relaxed text-zinc-400">
+            Start with a finding or a task you already have. Link the two so you and your agents can pick up the work with the same context.
+          </p>
+          <ol className="mt-8 grid gap-px overflow-hidden rounded-2xl border border-white/15 bg-white/15 sm:grid-cols-2 lg:grid-cols-4">
+            <li id="research-note" className="scroll-mt-24 bg-zinc-950 p-6 target:bg-zinc-800">
               <h3 className="text-sm text-zinc-400">Knowledge</h3>
               <p className="mt-4 text-xl font-medium text-white">{example.source}</p>
               <p className="mt-3 text-sm leading-relaxed text-zinc-300">
-                Save the interview findings and record the decision to offer a sample project.
+                Save the interview findings, their sources, and the decision to offer a sample project.
               </p>
             </li>
-            <li className="border-b border-white/10 p-6 md:border-b-0 md:border-r">
+            <li className="bg-zinc-950 p-6">
               <h3 className="text-sm text-zinc-400">Planning</h3>
               <p className="mt-4 text-xl font-medium text-white">{example.task}</p>
               <p className="mt-3 text-sm leading-relaxed text-zinc-300">
-                Define what counts as done and link the notes so the reasoning is easy to find.
+                Prioritize the task, define what counts as done, and link the interview notes.
               </p>
             </li>
-            <li className="p-6">
+            <li className="bg-zinc-950 p-6">
               <h3 className="text-sm text-zinc-400">Execution</h3>
               <p className="mt-4 text-xl font-medium text-white">Build the sample project</p>
               <p className="mt-3 text-sm leading-relaxed text-zinc-300">
-                Start a Todex work session or pull the task and its context into Cursor through Todex MCP.
+                Start a focused work session or give a connected agent the task and its requirements through Todex MCP.
+              </p>
+            </li>
+            <li className="bg-zinc-950 p-6">
+              <h3 className="text-sm text-zinc-400">Outcomes and feedback</h3>
+              <p className="mt-4 text-xl font-medium text-white">{example.result}</p>
+              <p className="mt-3 text-sm leading-relaxed text-zinc-300">
+                Record the outcome on the task and use it to plan the next check. {example.followUp}
               </p>
             </li>
           </ol>
         </div>
       </section>
 
-      <section className="border-t border-white/10 px-5 py-14 sm:py-20" aria-labelledby="integrations-title">
-        <div className="mx-auto max-w-page">
-          <h2 id="integrations-title" className="text-3xl font-medium tracking-tight text-white">
-            Keep using the AI tools you already work with.
-          </h2>
-          <p className="mt-4 max-w-2xl leading-relaxed text-zinc-400">
-            Save research from ChatGPT or Claude to Todex. When it’s time to build, Todex MCP gives Cursor access to the task, its acceptance criteria, and the context behind it.
-          </p>
+      <section className="border-t border-white/10 px-5 py-14 sm:py-20" aria-labelledby="execution-title">
+        <div className="mx-auto grid max-w-page gap-8 lg:grid-cols-2 lg:gap-16">
+          <div>
+            <h2 id="execution-title" className="text-3xl font-medium tracking-tight text-white sm:text-4xl">
+              Work yourself or hand it to an agent.
+            </h2>
+            <p className="mt-4 max-w-xl leading-relaxed text-zinc-400">
+              Research in ChatGPT or Claude and save the useful findings in Todex. Once the work is planned, the task holds the priority, requirements, and decisions for whoever picks it up.
+            </p>
+          </div>
+          <div className="grid gap-6 sm:grid-cols-2">
+            <div className="border-t border-white/15 pt-4">
+              <h3 className="font-medium text-white">Run a focused session</h3>
+              <p className="mt-2 text-sm leading-relaxed text-zinc-400">
+                Keep the task in view with Focus Mode, track time as you work, and update progress when you finish.
+              </p>
+            </div>
+            <div className="border-t border-white/15 pt-4">
+              <h3 className="font-medium text-white">Hand the task to Cursor</h3>
+              <p className="mt-2 text-sm leading-relaxed text-zinc-400">
+                With Todex MCP, a connected agent can read task context and attach its implementation summary and decisions to the task.
+              </p>
+            </div>
+          </div>
         </div>
       </section>
 
       <section className="px-5 pb-16 sm:pb-24" aria-labelledby="start-title">
         <div className="mx-auto flex max-w-page flex-col items-start gap-6 rounded-2xl border border-white/15 bg-gradient-to-br from-zinc-900 to-zinc-950 p-6 sm:p-10">
           <h2 id="start-title" className="max-w-xl text-3xl font-medium tracking-tight text-white sm:text-4xl">
-            Start with the project you’re already working on.
+            Bring your next project into Todex.
           </h2>
+          <p className="max-w-xl leading-relaxed text-zinc-400">
+            Built for solo founders and small product teams working with AI. Start with one task and the decision behind it.
+          </p>
           <OpenTodexLink />
         </div>
       </section>

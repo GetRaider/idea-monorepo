@@ -35,8 +35,8 @@ export function ExecutionSuggestionsPanel({
 }) {
   const queryClient = useQueryClient();
   const suggestions = useQuery({
-    queryKey: ["execution", "suggestions"],
-    queryFn: () => todexClient.execution.suggestions(),
+    queryKey: ["execution", "suggestions", showDone],
+    queryFn: () => todexClient.execution.suggestions(showDone),
   });
   const enqueue = useMutation({
     mutationFn: (taskId: string) => todexClient.execution.enqueue({ taskId }),

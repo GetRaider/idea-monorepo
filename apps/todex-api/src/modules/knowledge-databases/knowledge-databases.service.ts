@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Inject,
   Injectable,
@@ -18,6 +19,7 @@ import type {
   PatchKnowledgeCell,
   UpdateKnowledgeProperty,
   UpdateKnowledgeView,
+  UpdateKnowledgeDatabasePage,
 } from "@repo/api/todex";
 import {
   knowledgeDatabases,
@@ -279,6 +281,65 @@ export class KnowledgeDatabasesService {
     });
     await this.reindexEmbeddingDocs(workspaceId, databaseId);
     return this.get(workspaceId, databaseId);
+  }
+
+  // A row is a page; load content separately so grid loads stay lightweight.
+  async getRowPage(workspaceId: string, databaseId: string, rowId: string) {
+    const db = await this.requireDatabase(workspaceId, databaseId);
+    const [row] = await this.db.select().from(knowledgeDatabaseRows)
+      .where(and(eq(knowledgeDatabaseRows.id, rowId),
+        eq(knowledgeDatabaseRows.databaseId, databaseId))).limit(1);
+    if (!row) throw new NotFoundException("Database page not found");
+    const properties = await this.db.select().from(knowledgeDatabaseProperties)
+      .where(eq(knowledgeDatabaseProperties.databaseId, databaseId))
+      .orderBy(asc(knowledgeDatabaseProperties.position));
+    return {
+      databaseId,
+      spaceId: db.spaceId,
+      row: {
+        id: row.id, databaseId: row.databaseId, cells: row.cells,
+        position: row.position, updatedAt: row.updatedAt.toISOString(),
+      },
+      properties: properties.map((p) => ({
+        id: p.id, databaseId: p.databaseId, name: p.name, type: p.type,
+        options: p.options, position: p.position,
+      })),
+      content: row.content,
+      icon: row.icon,
+      cover: row.cover,
+      version: row.version,
+    };
+  }
+
+  async updateRowPage(
+    workspaceId: string,
+    databaseId: string,
+    rowId: string,
+    body: UpdateKnowledgeDatabasePage,
+  ) {
+    await this.requireDatabase(workspaceId, databaseId);
+    const updated = await this.db.update(knowledgeDatabaseRows)
+      .set({
+        ...(body.content !== undefined ? { content: body.content } : {}),
+        ...(body.icon !== undefined ? { icon: body.icon } : {}),
+        ...(body.cover !== undefined ? { cover: body.cover } : {}),
+        version: sql`${knowledgeDatabaseRows.version} + 1`,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(knowledgeDatabaseRows.databaseId, databaseId),
+        eq(knowledgeDatabaseRows.id, rowId),
+        eq(knowledgeDatabaseRows.version, body.expectedVersion)))
+      .returning({ id: knowledgeDatabaseRows.id });
+    if (updated.length === 0) {
+      const [existing] = await this.db.select({ id: knowledgeDatabaseRows.id })
+        .from(knowledgeDatabaseRows)
+        .where(and(eq(knowledgeDatabaseRows.databaseId, databaseId),
+          eq(knowledgeDatabaseRows.id, rowId))).limit(1);
+      if (!existing) throw new NotFoundException("Database page not found");
+      throw new ConflictException("This page changed elsewhere. Reload to resolve the conflict.");
+    }
+    await this.reindexEmbeddingDocs(workspaceId, databaseId);
+    return this.getRowPage(workspaceId, databaseId, rowId);
   }
 
   async patchCell(

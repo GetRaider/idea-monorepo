@@ -399,12 +399,12 @@ export class KnowledgeDatabasesService {
   }
   private async reindexEmbeddingDocs(workspaceId: string, databaseId: string) {
     if (!this.contentIndex) return;
-    const embedded = JSON.stringify({
-      content: { content: [{ type: "databaseView", attrs: { databaseId } }] },
-    });
+    // A database block may be nested inside columns or toggles; search recursively.
     const referencing = await this.db.select({ id: docs.id }).from(docs)
       .where(and(eq(docs.workspaceId, workspaceId),
-        sql`${docs.body} @> ${embedded}::jsonb`));
+        sql`jsonb_path_exists(${docs.body},
+          '$.** ? (@.type == "databaseView" && @.attrs.databaseId == $databaseId)'::jsonpath,
+          jsonb_build_object('databaseId', ${databaseId}))`));
     for (const doc of referencing) {
       await this.contentIndex.enqueue({
         workspaceId, sourceType: "doc", sourceId: doc.id,

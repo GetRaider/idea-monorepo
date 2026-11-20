@@ -34,14 +34,14 @@ function SessionScreenBody() {
   const params = useSearchParams();
   const {
     state: { session, tasks, focused, isLoading },
-    actions: { focus, pause, resume, complete, setGoalMinutes },
+    actions: { pause, resume, complete, setGoalMinutes },
     meta: { tracking, mode, goalMinutes, sessionElapsedSeconds, isCompleting },
   } = useExecution();
 
   const [finishOpen, setFinishOpen] = useState(false);
   const [stored, setStored] = useState<StoredSelection | null>(null);
   const [pickedTaskId, setPickedTaskId] = useState<string | null | undefined>(undefined);
-  const isFocusView = params.get("view") === "focus";
+  const isFocusView = params.get("view") !== "workspace";
 
   const storedSelection = session
     ? selectedSessionTaskId({
@@ -59,7 +59,7 @@ function SessionScreenBody() {
     tasks.find((task) => task.status !== TaskStatus.DONE && task.status !== TaskStatus.CANCELLED) ??
     tasks[0] ??
     null;
-  const activeTask = focused ?? selectedTask;
+  const activeTask = selectedTask;
 
   useEffect(() => {
     setStored(readSelectedTask());
@@ -73,16 +73,19 @@ function SessionScreenBody() {
 
   function setFocusView(enabled: boolean) {
     const next = new URLSearchParams(params.toString());
-    if (enabled) next.set("view", "focus");
-    else next.delete("view");
+    if (enabled) next.delete("view");
+    else next.set("view", "workspace");
     router.replace("/execution/session" + (next.size ? "?" + next.toString() : ""));
   }
 
-  function select(taskId: string) {
+  function select(taskId: string, openDetails = false) {
     if (!session) return;
     setPickedTaskId(taskId);
     writeSelectedTask(session.id, taskId);
-    router.replace("/execution/session?task=" + encodeURIComponent(taskId));
+    const next = new URLSearchParams(params.toString());
+    next.set("task", taskId);
+    if (openDetails) next.set("view", "workspace");
+    router.replace("/execution/session?" + next.toString());
   }
 
   function extend(minutes: number) {
@@ -124,9 +127,9 @@ function SessionScreenBody() {
           isCompleting={isCompleting}
           completedTasks={completedTasks}
           onExit={() => setFocusView(false)}
-          onOpenDetails={select}
+          onOpenDetails={(taskId) => select(taskId, true)}
           onSwitchTask={(taskId) => {
-            if (taskId && taskId !== focused?.id) focus(taskId);
+            if (taskId) select(taskId);
           }}
           onExtend={extend}
           onPause={pause}
@@ -138,7 +141,6 @@ function SessionScreenBody() {
           sessionTitle={sessionTitle}
           tasks={tasks}
           selectedTask={selectedTask}
-          trackedTaskId={focused?.id ?? null}
           mode={mode}
           goalMinutes={goalMinutes}
           clockSeconds={clockSeconds}
@@ -146,9 +148,6 @@ function SessionScreenBody() {
           tracking={tracking}
           isCompleting={isCompleting}
           onSelectTask={select}
-          onTrackTask={(taskId) => {
-            if (taskId !== focused?.id) focus(taskId);
-          }}
           onPause={pause}
           onResume={resume}
           onFinish={() => setFinishOpen(true)}

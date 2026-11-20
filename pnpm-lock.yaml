@@ -1326,6 +1326,18 @@ importers:
       '@tiptap/core':
         specifier: 3.22.4
         version: 3.22.4(@tiptap/pm@3.22.4)
+      '@tiptap/extension-details':
+        specifier: 3.22.4
+        version: 3.22.4(@tiptap/core@3.22.4(@tiptap/pm@3.22.4))(@tiptap/extension-text-style@3.22.4(@tiptap/core@3.22.4(@tiptap/pm@3.22.4)))(@tiptap/pm@3.22.4)
+      '@tiptap/extension-image':
+        specifier: 3.22.4
+        version: 3.22.4(@tiptap/core@3.22.4(@tiptap/pm@3.22.4))
+      '@tiptap/extension-table':
+        specifier: 3.22.4
+        version: 3.22.4(@tiptap/core@3.22.4(@tiptap/pm@3.22.4))(@tiptap/pm@3.22.4)
+      '@tiptap/extension-text-style':
+        specifier: 3.22.4
+        version: 3.22.4(@tiptap/core@3.22.4(@tiptap/pm@3.22.4))
       '@tiptap/extension-list':
         specifier: ^3.22.4
         version: 3.22.4(@tiptap/core@3.22.4(@tiptap/pm@3.22.4))(@tiptap/pm@3.22.4)
@@ -6485,6 +6497,29 @@ packages:
     resolution: {integrity: sha512-t/zhker4oIS78AIGYDdFFfZC6zSBlszfD7z/zqFLGCg5PHNNgkZK5hKj6Vyix6D2SapRn/ajnx+8mhbKIUH5eA==}
     peerDependencies:
       '@tiptap/extension-list': 3.22.4
+
+  '@tiptap/extension-details@3.22.4':
+    resolution: {tarball: 'https://registry.npmjs.org/@tiptap/extension-details/-/extension-details-3.22.4.tgz'}
+    peerDependencies:
+      '@tiptap/core': 3.22.4
+      '@tiptap/extension-text-style': 3.22.4
+      '@tiptap/pm': 3.22.4
+
+  '@tiptap/extension-image@3.22.4':
+    resolution: {tarball: 'https://registry.npmjs.org/@tiptap/extension-image/-/extension-image-3.22.4.tgz'}
+    peerDependencies:
+      '@tiptap/core': 3.22.4
+
+  '@tiptap/extension-table@3.22.4':
+    resolution: {tarball: 'https://registry.npmjs.org/@tiptap/extension-table/-/extension-table-3.22.4.tgz'}
+    peerDependencies:
+      '@tiptap/core': 3.22.4
+      '@tiptap/pm': 3.22.4
+
+  '@tiptap/extension-text-style@3.22.4':
+    resolution: {tarball: 'https://registry.npmjs.org/@tiptap/extension-text-style/-/extension-text-style-3.22.4.tgz'}
+    peerDependencies:
+      '@tiptap/core': 3.22.4
 
   '@tiptap/extension-list@3.22.4':
     resolution: {integrity: sha512-Xe8UFvvHmyp/c/TJsFwlwU9CWACYbBirNsluJ3U1+H8BTu1wqdrT/AXR5uIXeyCl5kiWKgX5q71eHWbYFOrqrg==}
@@ -20985,6 +21020,25 @@ snapshots:
   '@tiptap/extension-list-keymap@3.22.4(@tiptap/extension-list@3.22.4(@tiptap/core@3.22.4(@tiptap/pm@3.22.4))(@tiptap/pm@3.22.4))':
     dependencies:
       '@tiptap/extension-list': 3.22.4(@tiptap/core@3.22.4(@tiptap/pm@3.22.4))(@tiptap/pm@3.22.4)
+
+  '@tiptap/extension-details@3.22.4(@tiptap/core@3.22.4(@tiptap/pm@3.22.4))(@tiptap/extension-text-style@3.22.4(@tiptap/core@3.22.4(@tiptap/pm@3.22.4)))(@tiptap/pm@3.22.4)':
+    dependencies:
+      '@tiptap/core': @tiptap/core@3.22.4(@tiptap/pm@3.22.4)
+      '@tiptap/extension-text-style': @tiptap/extension-text-style@3.22.4(@tiptap/core@3.22.4(@tiptap/pm@3.22.4))
+      '@tiptap/pm': 3.22.4
+
+  '@tiptap/extension-image@3.22.4(@tiptap/core@3.22.4(@tiptap/pm@3.22.4))':
+    dependencies:
+      '@tiptap/core': @tiptap/core@3.22.4(@tiptap/pm@3.22.4)
+
+  '@tiptap/extension-table@3.22.4(@tiptap/core@3.22.4(@tiptap/pm@3.22.4))(@tiptap/pm@3.22.4)':
+    dependencies:
+      '@tiptap/core': @tiptap/core@3.22.4(@tiptap/pm@3.22.4)
+      '@tiptap/pm': 3.22.4
+
+  '@tiptap/extension-text-style@3.22.4(@tiptap/core@3.22.4(@tiptap/pm@3.22.4))':
+    dependencies:
+      '@tiptap/core': @tiptap/core@3.22.4(@tiptap/pm@3.22.4)
 
   '@tiptap/extension-list@3.22.4(@tiptap/core@3.22.4(@tiptap/pm@3.22.4))(@tiptap/pm@3.22.4)':
     dependencies:

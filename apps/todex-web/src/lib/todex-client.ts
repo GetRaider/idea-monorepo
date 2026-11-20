@@ -485,10 +485,10 @@ export const todexClient = {
         `/v1/execution/sessions/${sessionId}`,
         z.object({ ok: z.literal(true) }),
       ),
-    suggestions: () =>
+    suggestions: (includeDone = false) =>
       call(
         "get",
-        "/v1/execution/suggestions",
+        `/v1/execution/suggestions${includeDone ? "?includeDone=true" : ""}`,
         z.array(ExecutionSuggestionSchema),
       ),
     preview: (body: unknown) =>

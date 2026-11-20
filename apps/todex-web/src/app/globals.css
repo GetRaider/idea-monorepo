@@ -185,3 +185,124 @@
     cursor: pointer;
   }
 }
+
+
+/* Explicit block UI styles for Tiptap 3's generated node views. */
+@layer components {
+  .knowledge-doc-editor .tiptap ul[data-type="taskList"] {
+    list-style: none !important;
+    margin: 0.625rem 0;
+    padding-left: 0 !important;
+  }
+
+  .knowledge-doc-editor .tiptap ul[data-type="taskList"] > li[data-type="taskItem"] {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.625rem;
+    list-style: none !important;
+    margin: 0.375rem 0;
+    padding: 0;
+  }
+
+  .knowledge-doc-editor .tiptap li[data-type="taskItem"] > label {
+    display: flex;
+    align-items: center;
+    flex: 0 0 17px;
+    margin-top: 0.32rem;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .knowledge-doc-editor .tiptap li[data-type="taskItem"] > label input {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    border: 1px solid var(--muted-foreground);
+    border-radius: 4px;
+    accent-color: #eeeeee;
+    cursor: pointer;
+  }
+
+  .knowledge-doc-editor .tiptap li[data-type="taskItem"] > label span {
+    display: none;
+  }
+
+  .knowledge-doc-editor .tiptap li[data-type="taskItem"] > div {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .knowledge-doc-editor .tiptap li[data-type="taskItem"] > div > p {
+    margin: 0;
+  }
+
+  .knowledge-doc-editor .tiptap li[data-type="taskItem"][data-checked="true"] > div > p {
+    color: var(--muted-foreground);
+    text-decoration: line-through;
+  }
+
+  .knowledge-doc-editor .tiptap .todex-details {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 0.375rem;
+  }
+
+  .knowledge-doc-editor .tiptap .todex-details > button {
+    flex: 0 0 20px;
+    width: 20px;
+    height: 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    background: transparent;
+    color: var(--muted-foreground);
+    border: 0;
+    border-radius: 4px;
+  }
+
+  .knowledge-doc-editor .tiptap .todex-details > button::before {
+    content: "▸";
+    display: block;
+    font-size: 17px;
+    line-height: 1;
+    transition: transform 120ms ease;
+  }
+
+  .knowledge-doc-editor .tiptap .todex-details.is-open > button::before {
+    transform: rotate(90deg);
+  }
+
+  .knowledge-doc-editor .tiptap .todex-details > button:hover {
+    background: var(--surface);
+    color: var(--foreground);
+  }
+
+  .knowledge-doc-editor .tiptap .todex-details > div {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .knowledge-doc-editor .tiptap .todex-details summary {
+    display: block;
+    font-weight: 500;
+    cursor: text;
+    list-style: none;
+  }
+
+  .knowledge-doc-editor .tiptap .todex-details summary::marker,
+  .knowledge-doc-editor .tiptap .todex-details summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .knowledge-doc-editor .tiptap .todex-details div[data-type="detailsContent"] {
+    padding-top: 0.5rem;
+    padding-left: 0.25rem;
+    color: var(--foreground);
+  }
+
+  .knowledge-doc-editor .tiptap .todex-details div[data-type="detailsContent"][hidden] {
+    display: none;
+  }
+}

@@ -6,6 +6,9 @@ import {
   type CalendarRsvpStatus,
   type DocBody,
   type DocPlainText,
+  type KnowledgeCellValue,
+  type KnowledgePropertyType,
+  type KnowledgeView,
   type ExecutionInterval,
   type SeriesTemplate,
   type TaskRecurrence,
@@ -512,6 +515,69 @@ export const docs = pgTable(
     index("docs_space_id_idx").on(table.spaceId),
     index("docs_folder_id_idx").on(table.folderId),
   ],
+);
+
+export const knowledgeDatabases = pgTable(
+  "knowledge_databases",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id").notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    spaceId: text("space_id").notNull()
+      .references(() => spaces.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    createdAt: timestamp("created_at").$defaultFn(() => new Date()).notNull(),
+    updatedAt: timestamp("updated_at").$defaultFn(() => new Date()).notNull(),
+  },
+  (table) => [index("knowledge_databases_workspace_idx").on(table.workspaceId)],
+);
+
+export const knowledgeDatabaseProperties = pgTable(
+  "knowledge_database_properties",
+  {
+    id: text("id").primaryKey(),
+    databaseId: text("database_id").notNull()
+      .references(() => knowledgeDatabases.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    type: text("type").$type<KnowledgePropertyType>().notNull(),
+    options: jsonb("options").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    position: integer("position").notNull(),
+  },
+  (table) => [
+    index("knowledge_database_properties_database_idx").on(table.databaseId),
+    uniqueIndex("knowledge_database_properties_position_unique").on(table.databaseId, table.position),
+  ],
+);
+
+export const knowledgeDatabaseRows = pgTable(
+  "knowledge_database_rows",
+  {
+    id: text("id").primaryKey(),
+    databaseId: text("database_id").notNull()
+      .references(() => knowledgeDatabases.id, { onDelete: "cascade" }),
+    cells: jsonb("cells").$type<Record<string, KnowledgeCellValue>>()
+      .notNull().default(sql`'{}'::jsonb`),
+    position: integer("position").notNull(),
+    updatedAt: timestamp("updated_at").$defaultFn(() => new Date()).notNull(),
+  },
+  (table) => [
+    index("knowledge_database_rows_database_idx").on(table.databaseId),
+    uniqueIndex("knowledge_database_rows_position_unique").on(table.databaseId, table.position),
+  ],
+);
+
+export const knowledgeDatabaseViews = pgTable(
+  "knowledge_database_views",
+  {
+    id: text("id").primaryKey(),
+    databaseId: text("database_id").notNull()
+      .references(() => knowledgeDatabases.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    kind: text("kind").$type<KnowledgeView["kind"]>().notNull().default("table"),
+    sorts: jsonb("sorts").$type<KnowledgeView["sorts"]>().notNull().default(sql`'[]'::jsonb`),
+    filters: jsonb("filters").$type<KnowledgeView["filters"]>().notNull().default(sql`'[]'::jsonb`),
+  },
+  (table) => [index("knowledge_database_views_database_idx").on(table.databaseId)],
 );
 
 export const docTasks = pgTable(

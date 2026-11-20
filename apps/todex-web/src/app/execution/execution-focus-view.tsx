@@ -29,6 +29,7 @@ interface ExecutionFocusViewProps {
   onPause: () => void;
   onResume: () => void;
   onFinish: () => void;
+  onExtend: (minutes: number) => void;
 }
 
 export function ExecutionFocusView({
@@ -48,6 +49,7 @@ export function ExecutionFocusView({
   onPause,
   onResume,
   onFinish,
+  onExtend,
 }: ExecutionFocusViewProps) {
   const goalReached =
     mode === "timer" &&
@@ -154,6 +156,21 @@ export function ExecutionFocusView({
               className="h-full rounded-full bg-[#c4b5fd] transition-[width] duration-1000"
               style={{ width: `${Math.round(progress * 100)}%` }}
             />
+          </div>
+        ) : null}
+
+        {goalReached ? (
+          <div role="status" className="mt-6 flex flex-col items-center gap-3 rounded-xl border border-white/15 bg-white/[0.04] px-5 py-4">
+            <p className="text-sm font-medium text-[#f2f2f0]">Your time goal is complete.</p>
+            <p className="text-xs text-[#9c9ca4]">Extend your session, or finish when ready.</p>
+            <div className="flex flex-wrap justify-center gap-2">
+              <button type="button" onClick={() => onExtend(15)} className="rounded-lg border border-white/20 px-4 py-2 text-sm text-[#f2f2f0] hover:bg-white/10">
+                +15m
+              </button>
+              <button type="button" onClick={() => onExtend(30)} className="rounded-lg border border-white/20 px-4 py-2 text-sm text-[#f2f2f0] hover:bg-white/10">
+                +30m
+              </button>
+            </div>
           </div>
         ) : null}
 

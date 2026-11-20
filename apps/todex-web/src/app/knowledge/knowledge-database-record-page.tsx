@@ -8,7 +8,7 @@ import type { KnowledgeDatabasePage, ProseDoc } from "@repo/api/todex";
 
 import { todexClient } from "@lib/todex-client";
 import { KnowledgeContentEditor } from "./knowledge-content-editor";
-import { KnowledgeCellEditor } from "./knowledge-database-table";
+import { KnowledgeCellEditor } from "./knowledge-database-cell";
 
 type PageUpdate = {
   content?: ProseDoc;
@@ -179,7 +179,7 @@ export function KnowledgeDatabaseRecordPage({
                   ...page, icon: event.target.value || null,
                 });
               }}
-              onBlur={() => { if (page.icon !== null) void enqueue({ icon: page.icon }); }}
+              onBlur={() => { void enqueue({ icon: page.icon }).catch(() => undefined); }}
             />
             <button type="button" className="text-xs text-muted-foreground hover:text-foreground"
               onClick={() => {

@@ -11,6 +11,7 @@ import { randomUUID } from "node:crypto";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type {
   CreateKnowledgeDatabase,
+  RenameKnowledgeDatabase,
   CreateKnowledgeProperty,
   KnowledgeCellValue,
   KnowledgePropertyType,
@@ -149,6 +150,16 @@ export class KnowledgeDatabasesService {
       });
     });
     return this.get(workspaceId, id);
+  }
+
+  async rename(workspaceId: string, databaseId: string, body: RenameKnowledgeDatabase) {
+    await this.requireDatabase(workspaceId, databaseId);
+    await this.db.update(knowledgeDatabases)
+      .set({ name: body.name, updatedAt: new Date() })
+      .where(and(eq(knowledgeDatabases.id, databaseId),
+        eq(knowledgeDatabases.workspaceId, workspaceId)));
+    await this.reindexEmbeddingDocs(workspaceId, databaseId);
+    return this.get(workspaceId, databaseId);
   }
 
   async addProperty(workspaceId: string, databaseId: string, body: CreateKnowledgeProperty) {

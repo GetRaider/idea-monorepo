@@ -12,6 +12,9 @@ import Placeholder from "@tiptap/extension-placeholder";
 import { TaskList, TaskItem } from "@tiptap/extension-list";
 import { ProseDocSchema, type ProseDoc } from "@repo/api/todex";
 import { cn } from "@repo/ui";
+import { toast } from "sonner";
+import { todexClient } from "@lib/todex-client";
+import { KnowledgeDatabaseNode } from "../knowledge/knowledge-database-node";
 
 import {
   applyMentionEntry,
@@ -185,6 +188,7 @@ export function TaskDescriptionEditor({
   appearance = "field",
   contentClassName,
   knowledgeMode = false,
+  knowledgeSpaceId,
 }: TaskDescriptionEditorProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const onChangeRef = useRef(onChange);
@@ -221,6 +225,7 @@ export function TaskDescriptionEditor({
         DetailsContent,
         Image,
         Callout,
+        KnowledgeDatabaseNode,
       ] : []),
       Placeholder.configure({
         placeholder: knowledgeMode ? "Type / for blocks, @ to mention…" : DESCRIPTION_PLACEHOLDER,
@@ -260,10 +265,30 @@ export function TaskDescriptionEditor({
     [calendarEnabled, mentionCandidates, mentionMenu],
   );
 
-  const slashCommands = useMemo(
-    () => knowledgeMode ? [...SLASH_COMMANDS, ...DOCUMENT_SLASH_COMMANDS] : SLASH_COMMANDS,
-    [knowledgeMode],
-  );
+  const slashCommands = useMemo(() => {
+    if (!knowledgeMode) return SLASH_COMMANDS;
+    const commands = [...SLASH_COMMANDS, ...DOCUMENT_SLASH_COMMANDS];
+    if (knowledgeSpaceId) commands.push({
+      title: "Database table",
+      shortcut: "Properties",
+      aliases: ["database", "database table", "data table", "notion", "properties"],
+      command: (currentEditor, range) => {
+        void todexClient.knowledgeDatabases.create({
+          spaceId: knowledgeSpaceId, name: "Untitled database",
+        }).then((database) => {
+          if (!currentEditor.isDestroyed) {
+            currentEditor.chain().focus().deleteRange(range).insertContent({
+              type: "databaseView",
+              attrs: { databaseId: database.id, viewId: database.view.id },
+            }).run();
+          }
+        }).catch((error: unknown) => {
+          toast.error(error instanceof Error ? error.message : "Could not create database");
+        });
+      },
+    });
+    return commands;
+  }, [knowledgeMode, knowledgeSpaceId]);
   const visibleSlashItems = useMemo(() => {
     if (!slashMenu) return [];
     return slashCommands.filter((item) =>
@@ -787,6 +812,7 @@ interface TaskDescriptionEditorProps {
   appearance?: "field" | "plain";
   contentClassName?: string;
   knowledgeMode?: boolean;
+  knowledgeSpaceId?: string;
 }
 
 interface MentionMenuState {

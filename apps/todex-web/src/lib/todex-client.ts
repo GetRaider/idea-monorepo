@@ -10,6 +10,8 @@ import {
   CreateCalendarEventTemplateBodySchema,
   CreateDocBodySchema,
   KnowledgeDatabaseSchema,
+  KnowledgeDatabasePageSchema,
+  UpdateKnowledgeDatabasePageSchema,
   CreateKnowledgeDatabaseSchema,
   RenameKnowledgeDatabaseSchema,
   CreateKnowledgePropertySchema,
@@ -569,6 +571,12 @@ export const todexClient = {
     addRow: (id: string) =>
       call("post", `/v1/knowledge-databases/${encodeURIComponent(id)}/rows`,
         KnowledgeDatabaseSchema),
+    getRowPage: (id: string, rowId: string) =>
+      call("get", `/v1/knowledge-databases/${encodeURIComponent(id)}/rows/${encodeURIComponent(rowId)}`,
+        KnowledgeDatabasePageSchema),
+    updateRowPage: (id: string, rowId: string, body: unknown) =>
+      call("patch", `/v1/knowledge-databases/${encodeURIComponent(id)}/rows/${encodeURIComponent(rowId)}/page`,
+        KnowledgeDatabasePageSchema, UpdateKnowledgeDatabasePageSchema.parse(body)),
     patchCell: (id: string, rowId: string, body: unknown) =>
       call("patch", `/v1/knowledge-databases/${encodeURIComponent(id)}/rows/${encodeURIComponent(rowId)}`,
         KnowledgeDatabaseSchema, PatchKnowledgeCellSchema.parse(body)),

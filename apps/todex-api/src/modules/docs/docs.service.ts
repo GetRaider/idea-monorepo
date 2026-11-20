@@ -256,11 +256,16 @@ export class DocsService {
         const lines = [
           `Database: ${database.name}`,
           fields.map((p) => `${p.name} (${p.type})`).join(" | "),
-          ...records.map((record) => fields.map((p) => {
-            const cell = record.cells[p.id];
-            return (Array.isArray(cell) ? cell.join(", ") : String(cell ?? ""))
-              .replace(/[\r\n|]/g, " ").slice(0, 120);
-          }).join(" | ")),
+          ...records.map((record) => {
+            const propertyText = fields.map((p) => {
+              const cell = record.cells[p.id];
+              return (Array.isArray(cell) ? cell.join(", ") : String(cell ?? ""))
+                .replace(/[\r\n|]/g, " ").slice(0, 120);
+            }).join(" | ");
+            const pageText = projectProse(record.content, () => true, () => "")
+              .plainText.slice(0, 350);
+            return pageText ? `${propertyText}\n${pageText}` : propertyText;
+          }),
         ];
         parts.push(lines.join("\n").slice(0, 4000));
       }

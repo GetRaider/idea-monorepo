@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 
 import { HOME_COPY, ONBOARDING_EXAMPLE } from "@/content/home";
 
@@ -124,7 +125,7 @@ export function HomePage() {
       <section className="border-t border-white/10 px-5 py-14 sm:py-20" aria-labelledby="execution-title">
         <div className="mx-auto grid max-w-page gap-8 lg:grid-cols-2 lg:gap-16">
           <div>
-            <h2 id="execution-title" className="text-3xl font-medium tracking-tight text-white sm:text-4xl">
+            <h2 id="execution-title" className="scroll-mt-24 text-3xl font-medium tracking-tight text-white sm:text-4xl">
               Work yourself or hand it to an agent.
             </h2>
             <p className="mt-4 max-w-xl leading-relaxed text-zinc-400">
@@ -156,7 +157,12 @@ export function HomePage() {
           <p className="max-w-xl leading-relaxed text-zinc-400">
             Built for solo founders and small product teams working with AI. Start with one task and the decision behind it.
           </p>
-          <OpenTodexLink />
+          <div className="flex flex-wrap items-center gap-5">
+            <OpenTodexLink />
+            <Link href="/use-cases" className="text-sm text-white underline decoration-white/50 underline-offset-4 hover:decoration-white">
+              Explore use cases
+            </Link>
+          </div>
         </div>
       </section>
     </div>

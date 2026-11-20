@@ -73,6 +73,10 @@ export const CreateKnowledgeDatabaseSchema = z.object({
   name: z.string().trim().min(1).max(200).default("Untitled database"),
 }).strict();
 
+export const RenameKnowledgeDatabaseSchema = z.object({
+  name: z.string().trim().min(1).max(200),
+}).strict();
+
 export const CreateKnowledgePropertySchema = z.object({
   name: z.string().trim().min(1).max(80),
   type: KnowledgePropertyTypeSchema.exclude(["title"]),
@@ -102,6 +106,7 @@ export type KnowledgeRow = z.infer<typeof KnowledgeRowSchema>;
 export type KnowledgeView = z.infer<typeof KnowledgeViewSchema>;
 export type KnowledgeDatabase = z.infer<typeof KnowledgeDatabaseSchema>;
 export type CreateKnowledgeDatabase = z.infer<typeof CreateKnowledgeDatabaseSchema>;
+export type RenameKnowledgeDatabase = z.infer<typeof RenameKnowledgeDatabaseSchema>;
 export type CreateKnowledgeProperty = z.infer<typeof CreateKnowledgePropertySchema>;
 export type UpdateKnowledgeProperty = z.infer<typeof UpdateKnowledgePropertySchema>;
 export type PatchKnowledgeCell = z.infer<typeof PatchKnowledgeCellSchema>;

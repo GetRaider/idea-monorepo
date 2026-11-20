@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { formatEstimation } from "@repo/api/todex";
+import { formatEstimation, TaskStatus } from "@repo/api/todex";
 import type { ExecutionCurrent } from "@repo/api/todex";
 import { ConfirmDialog, Spinner, cn } from "@repo/ui";
 
@@ -94,7 +94,7 @@ function SessionScreenBody() {
     0,
   );
   const selected = tasks.find((task) => task.id === visibleTaskId) ?? null;
-  const activeTask = focused ?? selected ?? tasks.find((task) => task.status !== "DONE") ?? tasks[0] ?? null;
+  const activeTask = focused ?? selected ?? tasks.find((task) => task.status !== TaskStatus.DONE && task.status !== TaskStatus.CANCELLED) ?? tasks[0] ?? null;
   const sessionTitle = executionSessionTitle({
     startedAt: session.startedAt,
     spaceName: tasks[0]?.spaceName ?? null,

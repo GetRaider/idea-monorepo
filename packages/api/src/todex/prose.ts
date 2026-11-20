@@ -184,7 +184,8 @@ function renderNode(
   if (node.type === "tableRow") return `${inner.trimEnd()}\n`;
   if (node.type === "detailsSummary") return `${inner.trim()}\n`;
   if (node.type === "table" || node.type === "details" ||
-      node.type === "detailsContent" || node.type === "callout") {
+      node.type === "detailsContent" || node.type === "callout" ||
+      node.type === "columns" || node.type === "column") {
     return `${inner.trimEnd()}\n`;
   }
   if (BLOCK_NODE_TYPES.has(node.type)) return `${inner}\n`;

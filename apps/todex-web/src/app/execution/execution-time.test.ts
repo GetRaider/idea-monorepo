@@ -65,6 +65,27 @@ describe("execution time", () => {
     ).toBe(600);
   });
 
+  it("counts simultaneous task intervals only once in the session timer", () => {
+    const now = new Date("2026-11-18T12:30:00.000Z");
+    const tasks = [
+      {
+        intervals: [
+          { startedAt: "2026-11-18T12:00:00.000Z", endedAt: "2026-11-18T12:10:00.000Z" },
+          { startedAt: "2026-11-18T12:15:00.000Z", endedAt: null },
+        ],
+      },
+      {
+        intervals: [
+          { startedAt: "2026-11-18T12:00:00.000Z", endedAt: "2026-11-18T12:20:00.000Z" },
+          { startedAt: "2026-11-18T12:25:00.000Z", endedAt: null },
+        ],
+      },
+    ];
+    // 20 minutes in the first window, then 15 more minutes through 12:30,
+    // with five minutes of overlap and a five-minute gap in the middle.
+    expect(sessionElapsedSeconds(tasks, now)).toBe(35 * 60);
+  });
+
   it("keeps an implicit queue selection and derives work phase", () => {
     expect(queuedStartIds(["a", "b", "c"], [], false)).toEqual(["a", "b", "c"]);
     expect(queuedStartIds(["a", "b", "c"], ["c", "a"], true)).toEqual([

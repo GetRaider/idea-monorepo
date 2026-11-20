@@ -81,6 +81,25 @@ export const ProseDocSchema = z
         stopped = true;
         return false;
       }
+      if (node.type === "image") {
+        const src = node.attrs?.src;
+        let valid = false;
+        if (typeof src === "string" && src.length <= 2048) {
+          try {
+            const url = new URL(src);
+            valid = (url.protocol === "https:" || url.protocol === "http:") &&
+              Boolean(url.hostname);
+          } catch {
+            valid = false;
+          }
+        }
+        if (!valid) {
+          context.addIssue({
+            code: "custom",
+            message: "Image requires a valid HTTP(S) URL",
+          });
+        }
+      }
       if (node.type === "mention" && !readMention(node)) {
         context.addIssue({
           code: "custom",

@@ -49,6 +49,8 @@ export function KnowledgeDatabaseTable({ databaseId }: { databaseId: string }) {
   const [filterOperator, setFilterOperator] = useState<KnowledgeDatabase["view"]["filters"][number]["operator"]>("contains");
   const [filterValue, setFilterValue] = useState("");
   const data = query.data;
+  const [databaseName, setDatabaseName] = useState("");
+  useEffect(() => setDatabaseName(data?.name ?? ""), [data?.name]);
   const rows = useMemo(() => data ? visibleKnowledgeRows(data) : [], [data]);
   const busy = mutation.isPending;
   const run = (perform: () => Promise<KnowledgeDatabase>) => mutation.mutate(perform);
@@ -109,7 +111,15 @@ export function KnowledgeDatabaseTable({ databaseId }: { databaseId: string }) {
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-3 py-2.5">
         <div className="flex min-w-0 items-center gap-2">
           <span aria-hidden="true" className="text-muted-foreground">▦</span>
-          <strong className="truncate font-semibold">{data.name}</strong>
+          <input aria-label="Database name" className="min-w-32 max-w-56 truncate rounded bg-transparent px-1 py-1 font-semibold outline-none focus:bg-[#292929]"
+            value={databaseName} disabled={busy}
+            onChange={(event) => setDatabaseName(event.target.value)}
+            onBlur={() => {
+              if (databaseName.trim() && databaseName.trim() !== data.name) {
+                run(() => todexClient.knowledgeDatabases.rename(databaseId, { name: databaseName.trim() }));
+              } else setDatabaseName(data.name);
+            }}
+            onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); }} />
           <span className="text-xs text-muted-foreground">Table · {data.rows.length} rows</span>
           {busy ? <span className="text-xs text-muted-foreground">Saving…</span> : null}
         </div>

@@ -13,9 +13,11 @@ import { todexClient } from "@lib/todex-client";
 import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
 
 import { PriorityMenu, StatusMenu, PriorityGlyph, StatusGlyph } from "../planning/task-board.ui";
-import { EstimatePicker } from "../planning/task-pickers";
+import { DatePicker, EstimatePicker } from "../planning/task-pickers";
 import { TaskDescriptionEditor } from "../planning/task-description-editor";
 import {
+  dateInputToLocalDayStartIso,
+  isoToDateInput,
   isClosedStatus,
   statusAfterDoneToggle,
   taskProgressPercent,
@@ -304,7 +306,7 @@ function SubtaskRow({
   }, [subtask.estimation]);
 
   const update = useMutation({
-    mutationFn: async (patch: Partial<Pick<Task, "status" | "priority" | "estimation">>) => {
+    mutationFn: async (patch: Partial<Pick<Task, "status" | "priority" | "estimation" | "dueDate">>) => {
       if (patch.status !== undefined) {
         await saveTaskStatus(subtask, patch.status);
       } else {
@@ -360,6 +362,15 @@ function SubtaskRow({
           if (estimation !== subtask.estimation && !update.isPending) {
             update.mutate({ estimation });
           }
+        }}
+      />
+      <DatePicker
+        emptyLabel="Due"
+        appearance="plain"
+        value={isoToDateInput(subtask.dueDate)}
+        disabled={update.isPending}
+        onChange={(value) => {
+          update.mutate({ dueDate: dateInputToLocalDayStartIso(value) });
         }}
       />
       <Link

@@ -141,7 +141,9 @@ export function KnowledgeBlockControls({
     if (menuOpen || sourceRef.current !== null) return;
     if ((event.target as HTMLElement).closest?.("[data-knowledge-block-controls]")) return;
     const hovered = blockAtPoint(editor, event.clientX, event.clientY);
-    setHover((old) => old?.pos === hovered?.pos ? old : hovered);
+    setHover((old) => old?.pos === hovered?.pos &&
+      old?.rect.top === hovered?.rect.top && old?.rect.left === hovered?.rect.left
+      ? old : hovered);
   }, [editor, menuOpen]);
 
   useEffect(() => {
@@ -240,7 +242,6 @@ export function KnowledgeBlockControls({
             <button type="button" draggable title="Drag block or open block menu"
               aria-label="Drag block or open block menu"
               className="cursor-grab rounded p-1 hover:bg-surface hover:text-foreground active:cursor-grabbing"
-              onMouseDown={(event) => event.preventDefault()}
               onDragStart={(event) => {
                 const current = hoverRef.current;
                 if (!current) return;

@@ -9,6 +9,12 @@ import {
   CreateCalendarEventBodySchema,
   CreateCalendarEventTemplateBodySchema,
   CreateDocBodySchema,
+  KnowledgeDatabaseSchema,
+  CreateKnowledgeDatabaseSchema,
+  CreateKnowledgePropertySchema,
+  UpdateKnowledgePropertySchema,
+  PatchKnowledgeCellSchema,
+  UpdateKnowledgeViewSchema,
   CreateDocFolderBodySchema,
   CreateEpicBodySchema,
   CreateRelationBodySchema,
@@ -539,6 +545,35 @@ export const todexClient = {
     resume: () => call("post", "/v1/execution/resume", ExecutionStateSchema),
     complete: () =>
       call("post", "/v1/execution/complete", ExecutionStateSchema),
+  },
+  knowledgeDatabases: {
+    create: (body: unknown) =>
+      call("post", "/v1/knowledge-databases", KnowledgeDatabaseSchema,
+        CreateKnowledgeDatabaseSchema.parse(body)),
+    get: (id: string) =>
+      call("get", `/v1/knowledge-databases/${encodeURIComponent(id)}`,
+        KnowledgeDatabaseSchema),
+    addProperty: (id: string, body: unknown) =>
+      call("post", `/v1/knowledge-databases/${encodeURIComponent(id)}/properties`,
+        KnowledgeDatabaseSchema, CreateKnowledgePropertySchema.parse(body)),
+    updateProperty: (id: string, propertyId: string, body: unknown) =>
+      call("patch", `/v1/knowledge-databases/${encodeURIComponent(id)}/properties/${encodeURIComponent(propertyId)}`,
+        KnowledgeDatabaseSchema, UpdateKnowledgePropertySchema.parse(body)),
+    deleteProperty: (id: string, propertyId: string) =>
+      call("delete", `/v1/knowledge-databases/${encodeURIComponent(id)}/properties/${encodeURIComponent(propertyId)}`,
+        KnowledgeDatabaseSchema),
+    addRow: (id: string) =>
+      call("post", `/v1/knowledge-databases/${encodeURIComponent(id)}/rows`,
+        KnowledgeDatabaseSchema),
+    patchCell: (id: string, rowId: string, body: unknown) =>
+      call("patch", `/v1/knowledge-databases/${encodeURIComponent(id)}/rows/${encodeURIComponent(rowId)}`,
+        KnowledgeDatabaseSchema, PatchKnowledgeCellSchema.parse(body)),
+    deleteRow: (id: string, rowId: string) =>
+      call("delete", `/v1/knowledge-databases/${encodeURIComponent(id)}/rows/${encodeURIComponent(rowId)}`,
+        KnowledgeDatabaseSchema),
+    updateView: (id: string, body: unknown) =>
+      call("patch", `/v1/knowledge-databases/${encodeURIComponent(id)}/view`,
+        KnowledgeDatabaseSchema, UpdateKnowledgeViewSchema.parse(body)),
   },
   docs: {
     list: (query?: {

@@ -773,7 +773,7 @@ export class ExecutionService {
     return details;
   }
 
-  async suggestions(workspaceId: string) {
+  async suggestions(workspaceId: string, includeDone = false) {
     const [queued, open] = await Promise.all([
       this.db
         .select({ taskId: executionQueue.taskId })
@@ -812,7 +812,7 @@ export class ExecutionService {
         and(
           eq(tasks.workspaceId, workspaceId),
           isNull(tasks.parentTaskId),
-          inArray(tasks.status, ["todo", "in_progress", "done"]),
+          inArray(tasks.status, includeDone ? ["todo", "in_progress", "done"] : ["todo", "in_progress"]),
         ),
       )
       .orderBy(desc(tasks.updatedAt))

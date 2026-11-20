@@ -148,6 +148,10 @@ function renderNode(
 ): string {
   if (node.type === "text") return node.text ?? "";
   if (node.type === "hardBreak") return "\n";
+  if (node.type === "image") {
+    const alt = typeof node.attrs?.alt === "string" ? node.attrs.alt.trim() : "";
+    return alt ? `[Image: ${alt}]\n` : "[Image]\n";
+  }
   if (node.type === "mention") {
     const mention = readMention(node);
     return mention ? labelFor(mention) : "";
@@ -155,6 +159,15 @@ function renderNode(
   const inner = (node.content ?? [])
     .map((child) => renderNode(child, labelFor))
     .join("");
+  if (node.type === "tableCell" || node.type === "tableHeader") {
+    return `${inner.trimEnd()}\t`;
+  }
+  if (node.type === "tableRow") return `${inner.trimEnd()}\n`;
+  if (node.type === "detailsSummary") return `${inner.trim()}\n`;
+  if (node.type === "table" || node.type === "details" ||
+      node.type === "detailsContent" || node.type === "callout") {
+    return `${inner.trimEnd()}\n`;
+  }
   if (BLOCK_NODE_TYPES.has(node.type)) return `${inner}\n`;
   return inner;
 }

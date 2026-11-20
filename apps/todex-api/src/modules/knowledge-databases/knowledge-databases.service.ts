@@ -269,7 +269,7 @@ export class KnowledgeDatabasesService {
     await this.db.transaction(async (tx) => {
       const [row] = await tx.select().from(knowledgeDatabaseRows)
         .where(and(eq(knowledgeDatabaseRows.id, rowId),
-          eq(knowledgeDatabaseRows.databaseId, databaseId))).for("update").limit(1);
+          eq(knowledgeDatabaseRows.databaseId, databaseId))).limit(1).for("update");
       if (!row) throw new NotFoundException("Database row not found");
       await tx.update(knowledgeDatabaseRows)
         .set({ cells: { ...row.cells, [body.propertyId]: value }, updatedAt: new Date() })

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   CreateDocBodySchema,
+  ProseDocSchema,
   DocMentionTarget,
   DocType,
   GoalDocBodySchema,
@@ -83,10 +84,23 @@ describe("projectProse", () => {
     expect(projected.doc).toEqual(doc);
   });
 
+  it("rejects unsafe image URLs in persisted Knowledge JSON", () => {
+    const valid = {
+      type: "doc",
+      content: [{ type: "image", attrs: { src: "https://example.com/diagram.png" } }],
+    };
+    expect(ProseDocSchema.safeParse(valid).success).toBe(true);
+    expect(ProseDocSchema.safeParse({
+      type: "doc",
+      content: [{ type: "image", attrs: { src: "javascript:alert(1)" } }],
+    }).success).toBe(false);
+  });
+
   it("rejects a mention without a target", () => {
     const parsed = CreateDocBodySchema.safeParse({
       type: DocType.COMMON,
       title: "Notes",
+      spaceId: "space-1",
       body: {
         content: paragraph([{ type: "mention" }]),
       },

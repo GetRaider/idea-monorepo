@@ -22,6 +22,19 @@ function blockAtPoint(editor: Editor, x: number, y: number): Block | null {
   const hit = editor.view.posAtCoords({ left: x, top: y });
   if (!hit) return null;
   const $hit = editor.state.doc.resolve(hit.pos);
+  if ($hit.depth === 0) {
+    const boundary = hit.inside >= 0 ? hit.inside : hit.pos;
+    const node = editor.state.doc.nodeAt(boundary);
+    const dom = editor.view.nodeDOM(boundary);
+    if (node && dom instanceof HTMLElement) {
+      return {
+        pos: boundary,
+        size: node.nodeSize,
+        type: node.type.name,
+        rect: dom.getBoundingClientRect(),
+      };
+    }
+  }
   for (let depth = $hit.depth; depth > 0; depth--) {
     const parent = $hit.node(depth - 1);
     if (!ACCEPTED_CONTAINERS.has(parent.type.name)) continue;
@@ -188,11 +201,12 @@ export function KnowledgeBlockControls({
   if (!root) return null;
   const rootBounds = root.getBoundingClientRect();
   const top = hover.rect.top - rootBounds.top + root.scrollTop;
-  const left = hover.rect.left - rootBounds.left - 52;
+  const left = Math.max(0, hover.rect.left - rootBounds.left - 52);
   const nonText = !["paragraph", "heading", "blockquote"].includes(hover.type);
 
   function menuAction(action: "duplicate" | "delete" | "columns" | "up" | "down" |
-      "paragraph" | "heading2" | "heading3" | "quote") {
+      "paragraph" | "heading2" | "heading3" | "quote" |
+      "gray" | "brown" | "blue" | "clearTone") {
     const current = hoverRef.current;
     setMenuOpen(false);
     if (!current) return;
@@ -211,6 +225,14 @@ export function KnowledgeBlockControls({
             .reduce((a, b) => a + b, 0);
         relocateKnowledgeBlock(editor, pos, neighbor,
           action === "up" ? "before" : "after");
+      }
+    } else if (["gray", "brown", "blue", "clearTone"].includes(action)) {
+      const node = editor.state.doc.nodeAt(pos);
+      if (node && ["paragraph", "heading", "blockquote", "callout"].includes(node.type.name)) {
+        editor.chain().focus().setTextSelection(pos + 1).updateAttributes(
+          node.type.name,
+          { blockTone: action === "clearTone" ? null : action },
+        ).run();
       }
     } else if (!nonText) {
       const chain = editor.chain().focus().setTextSelection(pos + 1);
@@ -268,6 +290,10 @@ export function KnowledgeBlockControls({
               ["heading2", "Turn into heading"],
               ["heading3", "Turn into subheading"],
               ["quote", "Turn into quote"],
+              ["gray", "Gray background"],
+              ["brown", "Brown background"],
+              ["blue", "Blue background"],
+              ["clearTone", "Remove background"],
               ["delete", "Delete block"],
             ] as const).map(([action, label]) => (
               <button key={action} type="button"

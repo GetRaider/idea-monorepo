@@ -9,6 +9,7 @@ import {
   type KnowledgeCellValue,
   type KnowledgePropertyType,
   type KnowledgeView,
+  type ProseDoc,
   type ExecutionInterval,
   type SeriesTemplate,
   type TaskRecurrence,
@@ -559,6 +560,11 @@ export const knowledgeDatabaseRows = pgTable(
       .references(() => knowledgeDatabases.id, { onDelete: "cascade" }),
     cells: jsonb("cells").$type<Record<string, KnowledgeCellValue>>()
       .notNull().default(sql`'{}'::jsonb`),
+    content: jsonb("content").$type<ProseDoc>()
+      .notNull().default(sql`'{"type":"doc","content":[{"type":"paragraph"}]}'::jsonb`),
+    icon: text("icon"),
+    cover: text("cover"),
+    version: integer("version").notNull().default(0),
     position: integer("position").notNull(),
     updatedAt: timestamp("updated_at").$defaultFn(() => new Date()).notNull(),
   },

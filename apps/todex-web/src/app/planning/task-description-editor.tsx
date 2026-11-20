@@ -122,9 +122,9 @@ const Callout = Node.create({
 
 const DOCUMENT_SLASH_COMMANDS: SlashCommandItem[] = [
   {
-    title: "Table",
+    title: "Simple table",
     shortcut: "3 × 3",
-    aliases: ["table", "grid", "rows", "columns"],
+    aliases: ["simple table", "table", "grid", "rows", "columns"],
     command: (editor, range) =>
       editor.chain().focus().deleteRange(range)
         .insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(),

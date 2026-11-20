@@ -74,6 +74,14 @@ export function ExecutionProvider({ children }: { children: ReactNode }) {
     writeStoredFocus(focus);
   }, [focus, storageReady]);
 
+  // Discard a stale goal from an earlier session when opening Preparation.
+  const [initialGoalChecked, setInitialGoalChecked] = useState(false);
+  useEffect(() => {
+    if (!storageReady || stateQuery.isLoading || initialGoalChecked) return;
+    setInitialGoalChecked(true);
+    if (!session) setFocus((current) => ({ ...current, goalMinutes: null }));
+  }, [storageReady, stateQuery.isLoading, initialGoalChecked, session]);
+
   // The next session should derive its goal from the next selected scope.
   const [previousSessionId, setPreviousSessionId] = useState<string | null>(null);
   if (previousSessionId !== (session?.id ?? null)) {

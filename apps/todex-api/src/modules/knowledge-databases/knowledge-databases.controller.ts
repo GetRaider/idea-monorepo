@@ -3,6 +3,7 @@ import {
 } from "@nestjs/common";
 import {
   CreateKnowledgeDatabaseSchema,
+  RenameKnowledgeDatabaseSchema,
   CreateKnowledgePropertySchema,
   PatchKnowledgeCellSchema,
   UpdateKnowledgePropertySchema,
@@ -10,6 +11,7 @@ import {
 } from "@repo/api/todex";
 import type {
   CreateKnowledgeDatabase,
+  RenameKnowledgeDatabase,
   CreateKnowledgeProperty,
   PatchKnowledgeCell,
   UpdateKnowledgeProperty,
@@ -36,6 +38,12 @@ export class KnowledgeDatabasesController {
   @Get(":id")
   get(@Req() request: WorkspaceRequest, @Param("id") id: string) {
     return this.service.get(request.workspaceId, id);
+  }
+
+  @Patch(":id")
+  rename(@Req() request: WorkspaceRequest, @Param("id") id: string,
+    @Body(zodPipe(RenameKnowledgeDatabaseSchema)) body: RenameKnowledgeDatabase) {
+    return this.service.rename(request.workspaceId, id, body);
   }
 
   @Post(":id/properties")

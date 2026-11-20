@@ -12,6 +12,7 @@ import { OverviewIcon, PauseIcon } from "@components/icons";
 import { taskProgressPercent, STATUS_LABEL } from "../planning/task-helpers";
 import { useExecution } from "./execution-provider";
 import { ExecutionTaskDetails } from "./execution-task-details";
+import { ExecutionFocusView } from "./execution-focus-view";
 import { readSelectedTask, writeSelectedTask } from "./execution-selection";
 import {
   executionSessionTitle,
@@ -37,11 +38,12 @@ function SessionScreenBody() {
   const router = useRouter();
   const params = useSearchParams();
   const {
-    state: { session, tasks, isLoading },
-    actions: { pause, resume, complete },
+    state: { session, tasks, focused, isLoading },
+    actions: { focus, pause, resume, complete },
     meta: { tracking, mode, goalMinutes, sessionElapsedSeconds, isCompleting },
   } = useExecution();
   const [finishOpen, setFinishOpen] = useState(false);
+  const isFocusView = params.get("view") === "focus";
   const [stored, setStored] = useState<StoredSelection | null>(null);
   const [pickedTaskId, setPickedTaskId] = useState<string | null | undefined>(
     undefined,
@@ -67,6 +69,13 @@ function SessionScreenBody() {
     router.replace("/execution");
   }, [isLoading, session, router]);
 
+  function setFocusView(enabled: boolean) {
+    const next = new URLSearchParams(params.toString());
+    if (enabled) next.set("view", "focus");
+    else next.delete("view");
+    router.replace(`/execution/session${next.size ? `?${next.toString()}` : ""}`);
+  }
+
   function select(taskId: string | null) {
     if (!session) return;
     setPickedTaskId(taskId);
@@ -85,6 +94,7 @@ function SessionScreenBody() {
     0,
   );
   const selected = tasks.find((task) => task.id === visibleTaskId) ?? null;
+  const activeTask = focused ?? selected ?? tasks.find((task) => task.status !== "DONE") ?? tasks[0] ?? null;
   const sessionTitle = executionSessionTitle({
     startedAt: session.startedAt,
     spaceName: tasks[0]?.spaceName ?? null,
@@ -98,6 +108,29 @@ function SessionScreenBody() {
 
   return (
     <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-auto px-6 pb-6 pt-3">
+      {isFocusView ? (
+        <ExecutionFocusView
+          sessionTitle={sessionTitle}
+          tasks={tasks}
+          activeTask={activeTask}
+          mode={mode}
+          goalMinutes={goalMinutes}
+          clockSeconds={clockSeconds}
+          elapsedSeconds={sessionElapsedSeconds}
+          tracking={tracking}
+          isCompleting={isCompleting}
+          completedTasks={completion.completed}
+          onExit={() => setFocusView(false)}
+          onOpenDetails={(taskId) => select(taskId)}
+          onSwitchTask={(taskId) => {
+            if (taskId && taskId !== focused?.id) focus(taskId);
+          }}
+          onPause={pause}
+          onResume={resume}
+          onFinish={() => setFinishOpen(true)}
+        />
+      ) : (
+        <>
       <div className="mb-4 flex min-w-0 items-center gap-3 text-2xl font-semibold tracking-tight">
         <Link
           href="/execution"
@@ -126,12 +159,21 @@ function SessionScreenBody() {
           </>
         ) : null}
       </div>
-      <p className="mb-4 flex items-center gap-2 text-sm text-[#a3a3a0]">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+      <p className="flex items-center gap-2 text-sm text-[#a3a3a0]">
         <PersonMark />
         Human execution · {tasks.length} {tasks.length === 1 ? "task" : "tasks"}{" "}
         · {mode === "timer" ? "Timer" : "Stopwatch"}
         {tracking ? "" : " · Paused"}
       </p>
+      <button
+        type="button"
+        onClick={() => setFocusView(true)}
+        className="rounded-lg border border-white/15 bg-white/[0.03] px-4 py-2 text-sm font-medium text-[#f2f2f0] transition-colors hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+      >
+        Focus Mode
+      </button>
+      </div>
       <div className="mb-6 flex flex-wrap items-center gap-5 rounded-2xl border border-white/10 bg-[#141414] px-5 py-4">
         <TimerReadout
           label={formatSessionClock(clockSeconds)}
@@ -239,6 +281,8 @@ function SessionScreenBody() {
         <ExecutionTaskDetails task={selected} />
       ) : (
         <WorkBreakdown tasks={tasks} onView={(taskId) => select(taskId)} />
+      )}
+        </>
       )}
       {finishOpen ? (
         <ConfirmDialog

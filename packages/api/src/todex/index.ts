@@ -1,4 +1,32 @@
 export {
+  KnowledgePropertyTypeSchema,
+  KnowledgeCellValueSchema,
+  KnowledgePropertySchema,
+  KnowledgeRowSchema,
+  KnowledgeSortSchema,
+  KnowledgeFilterSchema,
+  KnowledgeViewSchema,
+  KnowledgeDatabaseSchema,
+  CreateKnowledgeDatabaseSchema,
+  CreateKnowledgePropertySchema,
+  UpdateKnowledgePropertySchema,
+  PatchKnowledgeCellSchema,
+  UpdateKnowledgeViewSchema,
+} from "./knowledge-database.ts";
+export type {
+  KnowledgePropertyType,
+  KnowledgeCellValue,
+  KnowledgeProperty,
+  KnowledgeRow,
+  KnowledgeView,
+  KnowledgeDatabase,
+  CreateKnowledgeDatabase,
+  CreateKnowledgeProperty,
+  UpdateKnowledgeProperty,
+  PatchKnowledgeCell,
+  UpdateKnowledgeView,
+} from "./knowledge-database.ts";
+export {
   DEFAULT_SECTION_NAME,
   DocMentionTarget,
   DocType,

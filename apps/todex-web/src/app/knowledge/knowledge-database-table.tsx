@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { Popover, PopoverContent, PopoverTrigger } from "@repo/ui";
 import type {
   KnowledgeCellValue,
   KnowledgeDatabase,
@@ -271,26 +272,42 @@ function PropertyMenu({
   busy: boolean;
   run: (perform: () => Promise<KnowledgeDatabase>) => void;
 }) {
+  const [open, setOpen] = useState(false);
   const [name, setName] = useState(property.name);
   const [options, setOptions] = useState(property.options.join(", "));
   useEffect(() => setName(property.name), [property.name]);
   useEffect(() => setOptions(property.options.join(", ")), [property.options]);
   const id = database.id;
   const canChange = property.type !== "title";
+
   function saveSettings() {
-    const nextOptions = options.split(",").map((s) => s.trim()).filter(Boolean);
+    const nextOptions = options.split(",").map((option) => option.trim()).filter(Boolean);
     if (!name.trim()) return;
     run(() => todexClient.knowledgeDatabases.updateProperty(id, property.id, {
       name: name.trim(),
       ...(property.type === "select" || property.type === "multi_select"
         ? { options: nextOptions } : {}),
     }));
+    setOpen(false);
   }
+
+  function sort(direction: "asc" | "desc") {
+    run(() => todexClient.knowledgeDatabases.updateView(id, {
+      sorts: [{ propertyId: property.id, direction }],
+    }));
+    setOpen(false);
+  }
+
   return (
-    <details className="group/menu relative shrink-0" onMouseDown={(event) => event.stopPropagation()}>
-      <summary title={`Configure ${property.name}`} aria-label={`Configure ${property.name}`}
-        className="cursor-pointer list-none rounded px-1 text-xs text-muted-foreground hover:bg-surface hover:text-foreground">•••</summary>
-      <div className="absolute right-0 top-7 z-50 w-60 rounded-lg border border-border bg-[#242424] p-2 shadow-xl">
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button type="button" title={`Configure ${property.name}`}
+          aria-label={`Configure ${property.name}`}
+          className="shrink-0 rounded px-1 text-xs text-muted-foreground hover:bg-surface hover:text-foreground">
+          •••
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-60 bg-[#242424] p-2" sideOffset={4}>
         <label className="block text-xs text-muted-foreground">Property name</label>
         <input className="knowledge-db-input my-1 w-full" value={name}
           onChange={(event) => setName(event.target.value)}
@@ -308,36 +325,33 @@ function PropertyMenu({
           <>
             <label className="mt-2 block text-xs text-muted-foreground">Change type (empty cells only)</label>
             <select className="knowledge-db-input my-1 w-full" value={property.type}
-              disabled={busy} onChange={(event) =>
+              disabled={busy} onChange={(event) => {
+                setOpen(false);
                 run(() => todexClient.knowledgeDatabases.updateProperty(id, property.id, {
                   type: event.target.value as Exclude<KnowledgePropertyType, "title">,
-                }))}>
+                }));
+              }}>
               {PROPERTY_TYPES.map((type) => <option key={type} value={type}>{displayType(type)}</option>)}
             </select>
           </>
         ) : null}
         <div className="my-2 border-t border-border" />
         <button type="button" disabled={busy}
-          className="knowledge-db-menu-action"
-          onClick={() => run(() => todexClient.knowledgeDatabases.updateView(id, {
-            sorts: [{ propertyId: property.id, direction: "asc" }],
-          }))}>Sort ascending ↑</button>
+          className="knowledge-db-menu-action" onClick={() => sort("asc")}>Sort ascending ↑</button>
         <button type="button" disabled={busy}
-          className="knowledge-db-menu-action"
-          onClick={() => run(() => todexClient.knowledgeDatabases.updateView(id, {
-            sorts: [{ propertyId: property.id, direction: "desc" }],
-          }))}>Sort descending ↓</button>
+          className="knowledge-db-menu-action" onClick={() => sort("desc")}>Sort descending ↓</button>
         {canChange ? (
           <button type="button" disabled={busy}
             className="knowledge-db-menu-action text-[#e4aaaa]"
             onClick={() => {
               if (window.confirm(`Delete property "${property.name}" and all its values?`)) {
                 run(() => todexClient.knowledgeDatabases.deleteProperty(id, property.id));
+                setOpen(false);
               }
             }}>Delete property</button>
         ) : null}
-      </div>
-    </details>
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -371,20 +385,24 @@ function KnowledgeCellEditor({
   if (property.type === "multi_select") {
     const selected = Array.isArray(value) ? value : [];
     return (
-      <details className="relative px-2 py-1">
-        <summary className="min-h-7 cursor-pointer list-none truncate rounded px-1.5 py-1 text-xs hover:bg-surface">
-          {selected.length > 0 ? selected.join(", ") : <span className="text-muted-foreground">Choose…</span>}
-        </summary>
-        <div className="absolute left-2 top-9 z-30 min-w-40 rounded-lg border border-border bg-[#242424] p-2 shadow-xl">
+      <Popover>
+        <PopoverTrigger asChild>
+          <button type="button" disabled={disabled}
+            className="h-9 w-full truncate px-3 text-left text-xs hover:bg-surface">
+            {selected.length ? selected.join(", ") :
+              <span className="text-muted-foreground">Choose…</span>}
+          </button>
+        </PopoverTrigger>
+        <PopoverContent align="start" className="w-48 bg-[#242424] p-2" sideOffset={4}>
           {property.options.length ? property.options.map((option) =>
             <label key={option} className="flex items-center gap-2 rounded px-1 py-1.5 text-xs hover:bg-surface">
               <input type="checkbox" checked={selected.includes(option)} disabled={disabled}
                 onChange={(event) => onSave(event.target.checked
-                  ? [...selected, option] : selected.filter((s) => s !== option))} />
+                  ? [...selected, option] : selected.filter((item) => item !== option))} />
               {option}
             </label>) : <span className="text-xs text-muted-foreground">Configure options first</span>}
-        </div>
-      </details>
+        </PopoverContent>
+      </Popover>
     );
   }
 

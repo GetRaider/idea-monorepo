@@ -4,6 +4,7 @@ import {
   Inject,
   Injectable,
   NotFoundException,
+  Optional,
 } from "@nestjs/common";
 import { and, asc, eq, sql } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
@@ -22,9 +23,11 @@ import {
   knowledgeDatabaseProperties,
   knowledgeDatabaseRows,
   knowledgeDatabaseViews,
+  docs,
   spaces,
 } from "../../db/schema";
 import { DRIZZLE_DB } from "../../db/tokens";
+import { ContentIndexQueue } from "../content-index/content-index.queue";
 
 type PropertyRow = typeof knowledgeDatabaseProperties.$inferSelect;
 
@@ -70,7 +73,10 @@ function validateOptions(options: string[]) {
 
 @Injectable()
 export class KnowledgeDatabasesService {
-  constructor(@Inject(DRIZZLE_DB) private readonly db: NodePgDatabase) {}
+  constructor(
+    @Inject(DRIZZLE_DB) private readonly db: NodePgDatabase,
+    @Optional() private readonly contentIndex?: ContentIndexQueue,
+  ) {}
 
   private async requireDatabase(workspaceId: string, databaseId: string) {
     const [database] = await this.db.select().from(knowledgeDatabases)
@@ -163,6 +169,7 @@ export class KnowledgeDatabasesService {
         position: Math.max(-1, ...props.map((p) => p.position)) + 1,
       });
     });
+    await this.reindexEmbeddingDocs(workspaceId, databaseId);
     return this.get(workspaceId, databaseId);
   }
 
@@ -211,6 +218,7 @@ export class KnowledgeDatabasesService {
         .set({ ...(body.name ? { name: body.name } : {}), type: nextType, options: nextOptions })
         .where(eq(knowledgeDatabaseProperties.id, propertyId));
     });
+    await this.reindexEmbeddingDocs(workspaceId, databaseId);
     return this.get(workspaceId, databaseId);
   }
 
@@ -242,6 +250,7 @@ export class KnowledgeDatabasesService {
         }).where(eq(knowledgeDatabaseViews.id, view.id));
       }
     });
+    await this.reindexEmbeddingDocs(workspaceId, databaseId);
     return this.get(workspaceId, databaseId);
   }
 
@@ -257,6 +266,7 @@ export class KnowledgeDatabasesService {
         position: Math.max(-1, ...rows.map((row) => row.position)) + 1,
       });
     });
+    await this.reindexEmbeddingDocs(workspaceId, databaseId);
     return this.get(workspaceId, databaseId);
   }
 
@@ -275,6 +285,7 @@ export class KnowledgeDatabasesService {
         .set({ cells: { ...row.cells, [body.propertyId]: value }, updatedAt: new Date() })
         .where(eq(knowledgeDatabaseRows.id, rowId));
     });
+    await this.reindexEmbeddingDocs(workspaceId, databaseId);
     return this.get(workspaceId, databaseId);
   }
 
@@ -284,6 +295,7 @@ export class KnowledgeDatabasesService {
       .where(and(eq(knowledgeDatabaseRows.id, rowId),
         eq(knowledgeDatabaseRows.databaseId, databaseId))).returning({ id: knowledgeDatabaseRows.id });
     if (removed.length === 0) throw new NotFoundException("Database row not found");
+    await this.reindexEmbeddingDocs(workspaceId, databaseId);
     return this.get(workspaceId, databaseId);
   }
 
@@ -310,6 +322,22 @@ export class KnowledgeDatabasesService {
       ...(body.sorts ? { sorts: body.sorts } : {}),
       ...(body.filters ? { filters: body.filters } : {}),
     }).where(eq(knowledgeDatabaseViews.id, database.view.id));
+    await this.reindexEmbeddingDocs(workspaceId, databaseId);
     return this.get(workspaceId, databaseId);
   }
+  private async reindexEmbeddingDocs(workspaceId: string, databaseId: string) {
+    if (!this.contentIndex) return;
+    const embedded = JSON.stringify({
+      content: { content: [{ type: "databaseView", attrs: { databaseId } }] },
+    });
+    const referencing = await this.db.select({ id: docs.id }).from(docs)
+      .where(and(eq(docs.workspaceId, workspaceId),
+        sql`${docs.body} @> ${embedded}::jsonb`));
+    for (const doc of referencing) {
+      await this.contentIndex.enqueue({
+        workspaceId, sourceType: "doc", sourceId: doc.id,
+      });
+    }
+  }
+
 }

@@ -59,6 +59,45 @@ describe("execution activity", () => {
     ]);
   });
 
+  it("deduplicates simultaneous task time and attributes it across sections", () => {
+    const shared = {
+      startedAt: "2026-10-07T10:00:00.000Z",
+      endedAt: "2026-10-07T11:00:00.000Z",
+    };
+    const report = buildExecutionActivity({
+      from: "2026-10-07",
+      to: "2026-10-07",
+      timeZone: "UTC",
+      spaceId: null,
+      now: new Date("2026-10-07T12:00:00.000Z"),
+      slices: [
+        {
+          sessionId: "session-1",
+          spaceId: "space-1",
+          spaceName: "Side Product",
+          sectionId: "section-1",
+          sectionName: "Build",
+          isDefaultSection: false,
+          intervals: [shared],
+        },
+        {
+          sessionId: "session-1",
+          spaceId: "space-1",
+          spaceName: "Side Product",
+          sectionId: "section-2",
+          sectionName: "Testing",
+          isDefaultSection: false,
+          intervals: [shared],
+        },
+      ],
+    });
+    expect(report.executionSeconds).toBe(60 * 60);
+    expect(report.longestSessionSeconds).toBe(60 * 60);
+    expect(report.sessionCount).toBe(1);
+    expect(report.activities.reduce((sum, item) => sum + item.seconds, 0)).toBe(60 * 60);
+    expect(report.activities.map((item) => item.seconds)).toEqual([30 * 60, 30 * 60]);
+  });
+
   it("keeps totals on the session space after the task space would have changed", () => {
     const report = buildExecutionActivity({
       from: "2026-10-07",

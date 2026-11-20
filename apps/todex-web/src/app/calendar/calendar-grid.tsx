@@ -15,7 +15,11 @@ import timeGridPlugin from "@fullcalendar/timegrid";
 import { CalendarIcon, TasksIcon } from "@components/icons";
 
 import { formatChipRange } from "./calendar-actual";
-import { blocksForRange, visibleBlocks, type CalendarBlock } from "./calendar-blocks";
+import {
+  blocksForRange,
+  visibleBlocks,
+  type CalendarBlock,
+} from "./calendar-blocks";
 import { deviceTimeZone } from "./calendar-datetime";
 import {
   ensureTimegridOverlapLayoutObserver,
@@ -23,8 +27,15 @@ import {
   scheduleRepaintTimegridOverlapLayout,
   stampHarnessEvent,
 } from "./calendar-overlap";
-import { CalendarDraft, type DraftFields, type DraftSelection } from "./calendar-draft";
-import { CalendarEventPreview, type EventPreview } from "./calendar-event-preview";
+import {
+  CalendarDraft,
+  type DraftFields,
+  type DraftSelection,
+} from "./calendar-draft";
+import {
+  CalendarEventPreview,
+  type EventPreview,
+} from "./calendar-event-preview";
 import { useCalendar } from "./calendar-provider";
 import { CalendarToolbar } from "./calendar-toolbar";
 import "./calendar.css";
@@ -205,7 +216,9 @@ export function CalendarGrid() {
         <FullCalendar
           ref={calendarRef}
           plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
-          initialView={CALENDAR_VIEW_BY_DAY_COUNT[dayCount] ?? "timeGridRollingWeek"}
+          initialView={
+            CALENDAR_VIEW_BY_DAY_COUNT[dayCount] ?? "timeGridRollingWeek"
+          }
           headerToolbar={false}
           height="100%"
           nowIndicator
@@ -249,7 +262,11 @@ export function CalendarGrid() {
             <DayHeader date={arg.date} isToday={arg.isToday} mode={mode} />
           )}
           nowIndicatorContent={(arg) =>
-            arg.isAxis ? <span className="todex-now-pill">{formatClock(arg.date, false)}</span> : null
+            arg.isAxis ? (
+              <span className="todex-now-pill">
+                {formatClock(arg.date, false)}
+              </span>
+            ) : null
           }
           eventContent={(arg) => <CalendarChip arg={arg} />}
           datesSet={(arg) => {
@@ -272,7 +289,12 @@ export function CalendarGrid() {
             const openDraft = () => {
               const origin = selectionOrigin(frame, point);
               draftOriginRef.current = origin;
-              const anchor = menuAnchor(frame, origin, DRAFT_MENU_WIDTH, DRAFT_MENU_HEIGHT);
+              const anchor = menuAnchor(
+                frame,
+                origin,
+                DRAFT_MENU_WIDTH,
+                DRAFT_MENU_HEIGHT,
+              );
               setDraft((current) => ({
                 start: selection.start,
                 end: selection.end,
@@ -320,11 +342,19 @@ export function CalendarGrid() {
             });
           }}
           eventsSet={() => {
-            scheduleRepaintTimegridOverlapLayout(rootRef.current, blocksRef.current, modeRef.current);
+            scheduleRepaintTimegridOverlapLayout(
+              rootRef.current,
+              blocksRef.current,
+              modeRef.current,
+            );
           }}
           eventDidMount={(arg) => {
             stampHarnessEvent(arg.el, arg.event.id);
-            scheduleRepaintTimegridOverlapLayout(rootRef.current, blocksRef.current, modeRef.current);
+            scheduleRepaintTimegridOverlapLayout(
+              rootRef.current,
+              blocksRef.current,
+              modeRef.current,
+            );
           }}
           eventDrop={(arg) => {
             void moveBlock(arg, updateEvent, updateTask);
@@ -334,7 +364,9 @@ export function CalendarGrid() {
           }}
           eventReceive={(arg) => {
             const taskId = arg.event.extendedProps.taskId as string | undefined;
-            const templateId = arg.event.extendedProps.templateId as string | undefined;
+            const templateId = arg.event.extendedProps.templateId as
+              | string
+              | undefined;
             const title = arg.event.title;
             const start = arg.event.start;
             const end = arg.event.end;
@@ -356,11 +388,17 @@ export function CalendarGrid() {
               end: end.toISOString(),
               allDay: arg.event.allDay,
               timeZone,
-              spaceId: (arg.event.extendedProps.spaceId as string | null | undefined) ?? null,
+              spaceId:
+                (arg.event.extendedProps.spaceId as
+                  | string
+                  | null
+                  | undefined) ?? null,
               description:
-                (arg.event.extendedProps.description as string | undefined) ?? "",
+                (arg.event.extendedProps.description as string | undefined) ??
+                "",
               taskScope:
-                (arg.event.extendedProps.taskScope as string[] | undefined) ?? [],
+                (arg.event.extendedProps.taskScope as string[] | undefined) ??
+                [],
             });
           }}
         />
@@ -427,7 +465,10 @@ export function CalendarGrid() {
               const next = block.rsvpStatus === status ? null : status;
               setPreview((current) =>
                 current
-                  ? { ...current, block: { ...current.block, rsvpStatus: next } }
+                  ? {
+                      ...current,
+                      block: { ...current.block, rsvpStatus: next },
+                    }
                   : current,
               );
               void updateEvent(block.eventId, {
@@ -495,9 +536,11 @@ function CalendarChip({ arg }: { arg: EventContentArg }) {
       style={{ ["--todex-block-color" as string]: block.color }}
       {...overlapStamp(block)}
     >
-      <Icon size={11} className="todex-cal-secondary mt-0.5 shrink-0" />
+      <span className="inline-flex h-3 w-3 shrink-0 items-center justify-center">
+        <Icon size={10} className="todex-cal-secondary" />
+      </span>
       <span className="flex min-w-0 flex-1 flex-col">
-        <span className="todex-cal-title text-[10px] font-medium leading-tight">
+        <span className="todex-cal-title text-[10px] font-medium leading-3">
           {arg.event.title}
         </span>
         {time ? (
@@ -527,9 +570,7 @@ function openBlock(
     openTask(block.taskId);
     return;
   }
-  const eventId = block.originalStart
-    ? block.seriesEventId
-    : block.eventId;
+  const eventId = block.originalStart ? block.seriesEventId : block.eventId;
   if (eventId) openEvent(eventId, block.originalStart);
 }
 
@@ -682,7 +723,9 @@ function selectionOrigin(
   frame: HTMLElement,
   point: { clientX: number; clientY: number } | null,
 ): SelectionOrigin {
-  const highlight = frame.querySelector(".fc-highlight")?.getBoundingClientRect();
+  const highlight = frame
+    .querySelector(".fc-highlight")
+    ?.getBoundingClientRect();
   if (highlight && highlight.width > 0 && highlight.height > 0) {
     return { x: highlight.right, top: highlight.top, bottom: highlight.bottom };
   }
@@ -736,11 +779,31 @@ const CALENDAR_VIEW_BY_DAY_COUNT: Record<number, string> = {
 };
 
 const CALENDAR_VIEWS = {
-  timeGridTwoDay: { type: "timeGrid", duration: { days: 2 }, dateAlignment: "day" },
-  timeGridThreeDay: { type: "timeGrid", duration: { days: 3 }, dateAlignment: "day" },
-  timeGridFourDay: { type: "timeGrid", duration: { days: 4 }, dateAlignment: "day" },
-  timeGridFiveDay: { type: "timeGrid", duration: { days: 5 }, dateAlignment: "day" },
-  timeGridSixDay: { type: "timeGrid", duration: { days: 6 }, dateAlignment: "day" },
+  timeGridTwoDay: {
+    type: "timeGrid",
+    duration: { days: 2 },
+    dateAlignment: "day",
+  },
+  timeGridThreeDay: {
+    type: "timeGrid",
+    duration: { days: 3 },
+    dateAlignment: "day",
+  },
+  timeGridFourDay: {
+    type: "timeGrid",
+    duration: { days: 4 },
+    dateAlignment: "day",
+  },
+  timeGridFiveDay: {
+    type: "timeGrid",
+    duration: { days: 5 },
+    dateAlignment: "day",
+  },
+  timeGridSixDay: {
+    type: "timeGrid",
+    duration: { days: 6 },
+    dateAlignment: "day",
+  },
   timeGridRollingWeek: {
     type: "timeGrid",
     duration: { days: 7 },

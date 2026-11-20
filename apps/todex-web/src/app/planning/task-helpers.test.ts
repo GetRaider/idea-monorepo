@@ -494,6 +494,19 @@ describe("nextScheduleSlots", () => {
     expect(next.map((item) => item.id)).toEqual(["2026-09-11T07:00:00.000Z"]);
   });
 
+  it("uses an explicit end instead of the previous duration", () => {
+    const next = nextScheduleSlots(
+      [slot("2026-09-10T07:00:00.000Z")],
+      "2026-09-12T10:00:00.000Z",
+      "2026-09-12T11:15:00.000Z",
+    );
+
+    expect(next[0]).toMatchObject({
+      startAt: "2026-09-12T10:00:00.000Z",
+      endAt: "2026-09-12T11:15:00.000Z",
+    });
+  });
+
   it("adds a one hour slot when nothing is active", () => {
     expect(nextScheduleSlots([], "2026-09-12T07:00:00.000Z")).toEqual([
       {

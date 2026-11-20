@@ -87,7 +87,7 @@ import {
 import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
 
 import { useBoardAxes } from "./board-axes";
-import { DatePicker, EstimatePicker } from "./task-pickers";
+import { DatePicker, EstimatePicker, TimePicker } from "./task-pickers";
 import { TaskRecurrencePicker } from "./task-recurrence-picker";
 import { TaskDescriptionEditor } from "./task-description-editor";
 import {
@@ -846,9 +846,16 @@ function TaskViewBody({
   const activeSlot = [...activeSlots].sort((left, right) =>
     left.startAt.localeCompare(right.startAt),
   )[0];
+  const savedStartTime = isoToLocalTimeInput(activeSlot?.startAt ?? null);
+  const savedEndTime = isoToLocalTimeInput(activeSlot?.endAt ?? null);
+  const [startTime, setStartTime] = useState(savedStartTime);
+  const [endTime, setEndTime] = useState(savedEndTime);
+  const startTimeRef = useRef(savedStartTime);
+  const endTimeRef = useRef(savedEndTime);
+  const editingScheduleTime = useRef(false);
   const [sectionsOpen, setSectionsOpen] = useState({
     criteria: task.acceptanceCriteria.length > 0,
-    subtasks: true,
+    subtasks: false,
     execution: true,
     organization: true,
   });
@@ -859,6 +866,38 @@ function TaskViewBody({
 
   function toggleSection(key: keyof typeof sectionsOpen) {
     setSectionsOpen((current) => ({ ...current, [key]: !current[key] }));
+  }
+
+  useEffect(() => {
+    if (editingScheduleTime.current) return;
+    if (pendingUpdateRef.current.scheduleSlots) return;
+    startTimeRef.current = savedStartTime;
+    endTimeRef.current = savedEndTime;
+    setStartTime(savedStartTime);
+    setEndTime(savedEndTime);
+  }, [savedStartTime, savedEndTime]);
+
+  function commitScheduleTime(nextStart: string, nextEnd: string) {
+    const date = isoToDateInput(activeSlot?.startAt ?? null);
+    if (!date) return;
+    const startAt = nextStart
+      ? combineLocalDateAndTime(date, nextStart)
+      : dateInputToLocalDayStartIso(date);
+    if (!startAt) return;
+    const endOnSameDay = nextEnd
+      ? combineLocalDateAndTime(date, nextEnd)
+      : null;
+    const endAt =
+      endOnSameDay && Date.parse(endOnSameDay) <= Date.parse(startAt)
+        ? addLocalDays(endOnSameDay, 1)
+        : endOnSameDay;
+    queueUpdate({
+      scheduleSlots: nextScheduleSlots(
+        task.scheduleSlots,
+        startAt,
+        endAt && Date.parse(endAt) > Date.parse(startAt) ? endAt : undefined,
+      ),
+    });
   }
 
   useEffect(() => {
@@ -1308,63 +1347,90 @@ function TaskViewBody({
             </Select>
           </DetailRow>
           <DetailRow icon={<CalendarIcon size={16} />} label="Schedule">
-            <div className="inline-flex h-7 items-center gap-1">
+            <div className="flex h-8 w-full min-w-0 flex-nowrap items-center justify-end gap-1.5">
               <DatePicker
                 appearance="plain"
                 emptyLabel="None"
-                triggerClassName="h-7 px-0 font-medium"
+                triggerClassName="h-8 shrink-0 whitespace-nowrap px-0 font-medium"
                 value={isoToDateInput(activeSlot?.startAt ?? null)}
                 onChange={(next) => {
                   if (!next) {
                     queueUpdate({
-                      scheduleSlots: nextScheduleSlots(
-                        task.scheduleSlots,
-                        null,
-                      ),
+                      scheduleSlots: task.scheduleSlots
+                        .filter((slot) => slot.retiredAt != null)
+                        .map((slot) => ({
+                          id: slot.id,
+                          startAt: slot.startAt,
+                          endAt: slot.endAt,
+                          retiredAt: slot.retiredAt,
+                        })),
                     });
+                    flushPendingUpdate();
                     return;
                   }
-                  const time =
-                    isoToLocalTimeInput(activeSlot?.startAt ?? null) || "09:00";
+                  const time = startTimeRef.current || "09:00";
                   const startAt = dateInputToScheduleIso(next, time);
                   if (!startAt) return;
+                  const endAt = endTimeRef.current
+                    ? combineLocalDateAndTime(next, endTimeRef.current)
+                    : null;
+                  const resolvedEnd =
+                    endAt && Date.parse(endAt) <= Date.parse(startAt)
+                      ? addLocalDays(endAt, 1)
+                      : endAt;
                   queueUpdate({
                     scheduleSlots: nextScheduleSlots(
                       task.scheduleSlots,
                       startAt,
+                      resolvedEnd &&
+                        Date.parse(resolvedEnd) > Date.parse(startAt)
+                        ? resolvedEnd
+                        : undefined,
                     ),
                   });
                 }}
               />
-              <input
-                type="time"
-                aria-label="Schedule time"
-                value={isoToLocalTimeInput(activeSlot?.startAt ?? null)}
+              <TimePicker
+                id="schedule-start-time"
+                label="Schedule time"
+                value={startTime}
                 disabled={!activeSlot}
-                className="w-[4.6rem] bg-transparent text-sm font-medium text-foreground disabled:hidden"
-                onChange={(event) => {
-                  const date = isoToDateInput(activeSlot?.startAt ?? null);
-                  const startAt = event.target.value
-                    ? combineLocalDateAndTime(date, event.target.value)
-                    : dateInputToLocalDayStartIso(date);
-                  if (!startAt) return;
-                  queueUpdate({
-                    scheduleSlots: nextScheduleSlots(
-                      task.scheduleSlots,
-                      startAt,
-                    ),
-                  });
+                onFocus={() => {
+                  editingScheduleTime.current = true;
+                }}
+                onChange={(nextStart) => {
+                  startTimeRef.current = nextStart;
+                  setStartTime(nextStart);
+                  commitScheduleTime(nextStart, endTimeRef.current);
+                }}
+                onBlur={() => {
+                  editingScheduleTime.current = false;
+                  flushPendingUpdate();
                 }}
               />
               {activeSlot ? (
-                <span className="text-muted-foreground">
-                  –{" "}
-                  {new Date(activeSlot.endAt).toLocaleTimeString(undefined, {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    hour12: false,
-                  })}
-                </span>
+                <>
+                  <span className="inline-flex h-8 shrink-0 items-center text-muted-foreground leading-none">
+                    –
+                  </span>
+                  <TimePicker
+                    id="schedule-end-time"
+                    label="Schedule end time"
+                    value={endTime}
+                    onFocus={() => {
+                      editingScheduleTime.current = true;
+                    }}
+                    onChange={(nextEnd) => {
+                      endTimeRef.current = nextEnd;
+                      setEndTime(nextEnd);
+                      commitScheduleTime(startTimeRef.current, nextEnd);
+                    }}
+                    onBlur={() => {
+                      editingScheduleTime.current = false;
+                      flushPendingUpdate();
+                    }}
+                  />
+                </>
               ) : null}
             </div>
           </DetailRow>
@@ -2102,6 +2168,12 @@ function copyReference(taskId: string, reference: TaskReference) {
     });
   }
   return Promise.resolve();
+}
+
+function addLocalDays(iso: string, days: number): string {
+  const date = new Date(iso);
+  date.setDate(date.getDate() + days);
+  return date.toISOString();
 }
 
 function rememberTask(queryClient: QueryClient, task: Task) {

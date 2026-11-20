@@ -433,7 +433,9 @@ export function TasksProvider({ children }: { children: ReactNode }) {
         queryKey: ["tasks"],
       });
       queryClient.setQueriesData<Task[]>({ queryKey: ["tasks"] }, (current) =>
-        applyOptimisticTaskPatch(current, input.taskId, input.body),
+        Array.isArray(current)
+          ? applyOptimisticTaskPatch(current, input.taskId, input.body)
+          : current,
       );
       return { previous };
     },
@@ -445,7 +447,9 @@ export function TasksProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: (task, input) => {
       queryClient.setQueriesData<Task[]>({ queryKey: ["tasks"] }, (current) =>
-        current?.map((item) => (item.id === task.id ? task : item)),
+        Array.isArray(current)
+          ? current.map((item) => (item.id === task.id ? task : item))
+          : current,
       );
       if (input.optimistic) return;
       toast.success("Task saved");
@@ -741,7 +745,7 @@ function taskPatch(body: TaskPatch): Partial<Task> {
   const { scheduleSlots, transitionId: _transitionId, ...rest } = body;
   return {
     ...rest,
-    ...(scheduleSlots
+    ...(scheduleSlots !== undefined
       ? {
           scheduleSlots: scheduleSlots.map((slot, index) => ({
             id: slot.id ?? `pending-${index}`,

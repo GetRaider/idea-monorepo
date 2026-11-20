@@ -29,6 +29,7 @@ import type {
 } from "@repo/api/todex";
 
 import { DRIZZLE_DB } from "../../db/tokens";
+import { recurrenceForGeneratedTask } from "./repeat-schedule";
 import {
   docs,
   docTasks,
@@ -43,7 +44,11 @@ import {
   type TaskRow,
 } from "../../db/schema";
 import { formatTaskKey } from "../../helpers/parent-cycle.helper";
-import { satisfiedPrefix, unsatisfiedDue, type DueCandidate } from "./series-cursor";
+import {
+  satisfiedPrefix,
+  unsatisfiedDue,
+  type DueCandidate,
+} from "./series-cursor";
 
 const INSERT_LIMIT = 30;
 const PREVIEW_DAYS = 30;
@@ -59,7 +64,9 @@ export class RecurrenceService {
       .where(
         and(
           isNull(recurringSeries.stoppedAt),
-          ...(workspaceId ? [eq(recurringSeries.workspaceId, workspaceId)] : []),
+          ...(workspaceId
+            ? [eq(recurringSeries.workspaceId, workspaceId)]
+            : []),
         ),
       );
     for (const series of rows) {
@@ -120,10 +127,12 @@ export class RecurrenceService {
           seriesId: series.id,
           occurrenceKey: key,
           title: template.summary,
-          slots: absoluteSlots(start, template, rule.timeZone).map((slot) => ({
-            startAt: slot.startAt.toISOString(),
-            endAt: slot.endAt.toISOString(),
-          })),
+          slots: absoluteSlots(start, template.slotOffsets, rule.timeZone).map(
+            (slot) => ({
+              startAt: slot.startAt.toISOString(),
+              endAt: slot.endAt.toISOString(),
+            }),
+          ),
         });
       }
     }
@@ -162,7 +171,12 @@ export class RecurrenceService {
         createdAt: now,
         updatedAt: now,
       });
-      const template = await this.templateFromTask(tx, task, anchor, rule.timeZone);
+      const template = await this.templateFromTask(
+        tx,
+        task,
+        anchor,
+        rule.timeZone,
+      );
       await tx.insert(seriesTemplateVersions).values({
         id: randomUUID(),
         seriesId,
@@ -173,6 +187,7 @@ export class RecurrenceService {
         .update(tasks)
         .set({
           seriesId,
+          recurrence: rule,
           occurrenceKey: occurrenceKey(1, anchor, rule.timeZone),
           occurrenceAnchor: anchor,
           originSeriesId: seriesId,
@@ -206,13 +221,62 @@ export class RecurrenceService {
       const current = templateAt(versions, task.occurrenceAnchor);
       if (!current) throw new ForbiddenException();
       const next = applyPatch(current, body.patch);
-      await tx.insert(seriesTemplateVersions).values({
-        id: randomUUID(),
-        seriesId: task.seriesId,
-        effectiveAt: task.occurrenceAnchor,
-        template: next,
-      });
+      const [currentVersion] = await tx
+        .select({ id: seriesTemplateVersions.id })
+        .from(seriesTemplateVersions)
+        .where(
+          and(
+            eq(seriesTemplateVersions.seriesId, task.seriesId),
+            eq(seriesTemplateVersions.effectiveAt, task.occurrenceAnchor),
+          ),
+        )
+        .limit(1);
+      if (currentVersion) {
+        await tx
+          .update(seriesTemplateVersions)
+          .set({ template: next })
+          .where(eq(seriesTemplateVersions.id, currentVersion.id));
+      } else {
+        await tx.insert(seriesTemplateVersions).values({
+          id: randomUUID(),
+          seriesId: task.seriesId,
+          effectiveAt: task.occurrenceAnchor,
+          template: next,
+        });
+      }
       await this.patchFutureInstances(tx, task, body.patch);
+    });
+  }
+
+  async rescheduleFuture(
+    workspaceId: string,
+    taskId: string,
+    slots: Array<{ startAt: string; endAt: string; retiredAt?: string | null }>,
+  ) {
+    const task = await this.requireTask(this.db, workspaceId, taskId);
+    if (!task.seriesId || !task.occurrenceAnchor) return;
+    const series = await this.requireSeries(
+      this.db,
+      workspaceId,
+      task.seriesId,
+    );
+    const rule = readTaskRecurrence(series.rule);
+    if (!rule) return;
+    const versions = await this.versions(task.seriesId);
+    if (!templateAt(versions, task.occurrenceAnchor)) return;
+    const slotOffsets = slots
+      .filter((slot) => slot.retiredAt == null)
+      .map((slot) =>
+        offsetFromSlot(
+          task.occurrenceAnchor!,
+          new Date(slot.startAt),
+          new Date(slot.endAt),
+          rule.timeZone,
+        ),
+      );
+    await this.updateSeries(workspaceId, taskId, {
+      scope: "future",
+      patch: { slotOffsets },
     });
   }
 
@@ -231,10 +295,7 @@ export class RecurrenceService {
         .select({ id: tasks.id })
         .from(tasks)
         .where(
-          and(
-            eq(tasks.seriesId, seriesId),
-            eq(tasks.occurrenceAnchor, anchor),
-          ),
+          and(eq(tasks.seriesId, seriesId), eq(tasks.occurrenceAnchor, anchor)),
         )
         .limit(1);
       if (existing) {
@@ -325,7 +386,8 @@ export class RecurrenceService {
     for (const series of rows) {
       const versions = await this.versions(series.id);
       const latest = [...versions].sort(
-        (left, right) => right.effectiveAt.getTime() - left.effectiveAt.getTime(),
+        (left, right) =>
+          right.effectiveAt.getTime() - left.effectiveAt.getTime(),
       )[0];
       if (latest?.template.spaceId === spaceId) count += 1;
     }
@@ -340,7 +402,8 @@ export class RecurrenceService {
     for (const row of rows) {
       const versions = await this.versions(row.id);
       const latest = [...versions].sort(
-        (left, right) => right.effectiveAt.getTime() - left.effectiveAt.getTime(),
+        (left, right) =>
+          right.effectiveAt.getTime() - left.effectiveAt.getTime(),
       )[0];
       if (latest?.template.spaceId === spaceId) {
         await this.deleteSeries(workspaceId, row.id);
@@ -390,7 +453,8 @@ export class RecurrenceService {
         rangeStart: series.anchor,
         rangeEnd: new Date(now.getTime() + 1),
       }).filter(
-        (start) => start >= series.ruleEffectiveAt && start.getTime() <= now.getTime(),
+        (start) =>
+          start >= series.ruleEffectiveAt && start.getTime() <= now.getTime(),
       );
       const candidates: DueCandidate[] = starts.map((anchor) => ({
         anchor,
@@ -439,9 +503,11 @@ export class RecurrenceService {
           anchors.add(candidate.anchor.getTime());
         }
       }
-      const through = satisfiedPrefix(candidates, (candidate) =>
-        keys.has(versionKey(candidate.localKey)) ||
-        anchors.has(candidate.anchor.getTime()),
+      const through = satisfiedPrefix(
+        candidates,
+        (candidate) =>
+          keys.has(versionKey(candidate.localKey)) ||
+          anchors.has(candidate.anchor.getTime()),
       );
       if (through === series.generatedThrough) return;
       const updated = await tx
@@ -509,6 +575,7 @@ export class RecurrenceService {
             input.template.dueOffset,
             input.rule.timeZone,
           ),
+          rule: input.rule,
           now,
         }),
       })
@@ -541,7 +608,12 @@ export class RecurrenceService {
           occurrenceKey: null,
           occurrenceAnchor: null,
           originSeriesId: null,
-          dueDate: dueFromOffset(input.anchor, subtask.dueOffset, input.rule.timeZone),
+          dueDate: dueFromOffset(
+            input.anchor,
+            subtask.dueOffset,
+            input.rule.timeZone,
+          ),
+          rule: null,
           now,
         }),
       });
@@ -568,7 +640,11 @@ export class RecurrenceService {
       now: Date;
     },
   ) {
-    const slots = absoluteSlots(input.anchor, input.template, input.timeZone);
+    const slots = absoluteSlots(
+      input.anchor,
+      input.template.slotOffsets,
+      input.timeZone,
+    );
     if (slots.length > 0) {
       await tx.insert(taskScheduleSlots).values(
         slots.map((slot) => ({
@@ -588,11 +664,13 @@ export class RecurrenceService {
       });
     }
     if (input.template.references.length > 0) {
-      await tx.insert(taskReferences).values(
-        input.template.references.map((reference) =>
-          referenceRow(input.workspaceId, input.taskId, reference, input.now),
-        ),
-      );
+      await tx
+        .insert(taskReferences)
+        .values(
+          input.template.references.map((reference) =>
+            referenceRow(input.workspaceId, input.taskId, reference, input.now),
+          ),
+        );
     }
   }
 
@@ -617,6 +695,7 @@ export class RecurrenceService {
       .update(recurringSeries)
       .set({
         rule,
+        ...(patch.rule ? { stoppedAt: null } : {}),
         anchor: patch.anchor ? new Date(patch.anchor) : series.anchor,
         ruleVersion: series.ruleVersion + 1,
         ruleEffectiveAt: now,
@@ -651,6 +730,12 @@ export class RecurrenceService {
     patch: SeriesPatch,
   ) {
     if (!task.seriesId || !task.occurrenceAnchor) return;
+    const [series] = await tx
+      .select()
+      .from(recurringSeries)
+      .where(eq(recurringSeries.id, task.seriesId))
+      .limit(1);
+    const rule = series ? readTaskRecurrence(series.rule) : null;
     const instances = await tx
       .select()
       .from(tasks)
@@ -681,17 +766,56 @@ export class RecurrenceService {
           ...scalars,
           ...(patch.acceptanceCriteria && !blocked.has("acceptanceCriteria")
             ? {
-                acceptanceCriteria: patch.acceptanceCriteria.map((criterion) => ({
-                  ...criterion,
-                  done: false,
-                })),
+                acceptanceCriteria: patch.acceptanceCriteria.map(
+                  (criterion) => ({
+                    ...criterion,
+                    done: false,
+                  }),
+                ),
               }
             : {}),
           version: sql`${tasks.version} + 1`,
           updatedAt: new Date(),
         })
         .where(eq(tasks.id, instance.id));
+      if (
+        patch.slotOffsets !== undefined &&
+        !blocked.has("slots") &&
+        instance.occurrenceAnchor &&
+        rule
+      ) {
+        await this.replaceInstanceSlots(
+          tx,
+          instance,
+          absoluteSlots(
+            instance.occurrenceAnchor,
+            patch.slotOffsets,
+            rule.timeZone,
+          ),
+        );
+      }
     }
+  }
+
+  private async replaceInstanceSlots(
+    tx: NodePgDatabase,
+    instance: TaskRow,
+    slots: Array<{ startAt: Date; endAt: Date }>,
+  ) {
+    await tx
+      .delete(taskScheduleSlots)
+      .where(eq(taskScheduleSlots.taskId, instance.id));
+    if (slots.length === 0) return;
+    await tx.insert(taskScheduleSlots).values(
+      slots.map((slot) => ({
+        id: randomUUID(),
+        workspaceId: instance.workspaceId,
+        taskId: instance.id,
+        startAt: slot.startAt,
+        endAt: slot.endAt,
+        retiredAt: null,
+      })),
+    );
   }
 
   private async templateFromTask(
@@ -722,10 +846,12 @@ export class RecurrenceService {
     const subtasks: SeriesTemplate[] = [];
     for (const child of children) {
       subtasks.push(
-        await this.templateFromTask(tx, child, anchor, timeZone).then((template) => ({
-          ...template,
-          subtasks: [],
-        })),
+        await this.templateFromTask(tx, child, anchor, timeZone).then(
+          (template) => ({
+            ...template,
+            subtasks: [],
+          }),
+        ),
       );
     }
     return {
@@ -790,7 +916,8 @@ export class RecurrenceService {
       .from(tasks)
       .where(eq(tasks.id, taskId))
       .limit(1);
-    if (!task || task.workspaceId !== workspaceId) throw new ForbiddenException();
+    if (!task || task.workspaceId !== workspaceId)
+      throw new ForbiddenException();
     return task;
   }
 }
@@ -808,11 +935,11 @@ function templateAt(
 
 function absoluteSlots(
   anchor: Date,
-  template: SeriesTemplate,
+  slotOffsets: SeriesTemplate["slotOffsets"],
   timeZone: string,
 ) {
   const anchorDate = formatOccurrenceLocalKey(anchor, timeZone).slice(0, 10);
-  return template.slotOffsets.map((offset) => {
+  return slotOffsets.map((offset) => {
     const day = addCalendarDays(
       zonedLocalDateTime(anchorDate, "00:00", timeZone),
       offset.dayOffset,
@@ -847,6 +974,7 @@ function taskValues(
     occurrenceAnchor: Date | null;
     originSeriesId: string | null;
     dueDate: Date | null;
+    rule: TaskRecurrence | null;
     now: Date;
   },
 ) {
@@ -867,7 +995,7 @@ function taskValues(
       ...criterion,
       done: false,
     })),
-    recurrence: null,
+    recurrence: recurrenceForGeneratedTask(input.parentTaskId, input.rule),
     sectionId: template.sectionId,
     progressStageId: template.progressStageId,
     epicId: template.epicId,
@@ -937,7 +1065,11 @@ function referenceInput(
   if (row.kind === "conversation" && row.conversationId) {
     return { kind: "conversation", conversationId: row.conversationId };
   }
-  return { kind: "url", url: row.url ?? "https://example.com", title: row.title };
+  return {
+    kind: "url",
+    url: row.url ?? "https://example.com",
+    title: row.title,
+  };
 }
 
 function offsetFromSlot(
@@ -961,12 +1093,17 @@ function dayOffset(anchor: Date, instant: Date, timeZone: string): number {
   return Math.round((endUtc - startUtc) / 86_400_000);
 }
 
-function applyPatch(template: SeriesTemplate, patch: SeriesPatch): SeriesTemplate {
+function applyPatch(
+  template: SeriesTemplate,
+  patch: SeriesPatch,
+): SeriesTemplate {
   return {
     ...template,
     ...(patch.summary !== undefined ? { summary: patch.summary } : {}),
     ...(patch.outcome !== undefined ? { outcome: patch.outcome } : {}),
-    ...(patch.description !== undefined ? { description: patch.description } : {}),
+    ...(patch.description !== undefined
+      ? { description: patch.description }
+      : {}),
     ...(patch.estimation !== undefined ? { estimation: patch.estimation } : {}),
     ...(patch.priority !== undefined ? { priority: patch.priority } : {}),
     ...(patch.complexity !== undefined ? { complexity: patch.complexity } : {}),
@@ -987,7 +1124,9 @@ function applyPatch(template: SeriesTemplate, patch: SeriesPatch): SeriesTemplat
       : {}),
     ...(patch.references !== undefined ? { references: patch.references } : {}),
     ...(patch.subtasks !== undefined ? { subtasks: patch.subtasks } : {}),
-    ...(patch.slotOffsets !== undefined ? { slotOffsets: patch.slotOffsets } : {}),
+    ...(patch.slotOffsets !== undefined
+      ? { slotOffsets: patch.slotOffsets }
+      : {}),
     ...(patch.dueDate !== undefined
       ? { dueOffset: patch.dueDate == null ? null : template.dueOffset }
       : {}),
@@ -1029,6 +1168,9 @@ function scalarPatch(patch: SeriesPatch, blocked?: Set<string>) {
       : {}),
     ...(patch.dueDate !== undefined && allow("dueDate")
       ? { dueDate: patch.dueDate ? new Date(patch.dueDate) : null }
+      : {}),
+    ...(patch.rule !== undefined && allow("recurrence")
+      ? { recurrence: patch.rule }
       : {}),
   };
 }

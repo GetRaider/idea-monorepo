@@ -28,7 +28,10 @@ export function DatePicker({
   const selected = dateInputToDate(value);
 
   return (
-    <Popover open={open} onOpenChange={(next) => setOpen(disabled ? false : next)}>
+    <Popover
+      open={open}
+      onOpenChange={(next) => setOpen(disabled ? false : next)}
+    >
       <PopoverTrigger asChild>
         <button
           type="button"
@@ -151,6 +154,31 @@ export function EstimatePicker({
   );
 }
 
+export function TimePicker({
+  value,
+  onChange,
+  onFocus,
+  onBlur,
+  disabled,
+  id,
+  label,
+}: TimePickerProps) {
+  return (
+    <Input
+      type="time"
+      id={id}
+      step="60"
+      aria-label={label}
+      value={value}
+      disabled={disabled}
+      className="h-8 w-[3.75rem] min-w-0 shrink-0 appearance-none bg-background px-1 text-center tabular-nums disabled:hidden [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none [&::-webkit-datetime-edit]:p-0 [&::-webkit-datetime-edit-fields-wrapper]:p-0"
+      onFocus={onFocus}
+      onBlur={onBlur}
+      onChange={(event) => onChange(event.target.value)}
+    />
+  );
+}
+
 function dateInputToDate(value: string): Date | undefined {
   if (!value) return undefined;
   const [yearText, monthText, dayText] = value.split("-");
@@ -180,6 +208,16 @@ interface DatePickerProps {
   label?: string;
   triggerClassName?: string;
   disabled?: boolean;
+}
+
+interface TimePickerProps {
+  value: string;
+  onChange: (value: string) => void;
+  onFocus?: () => void;
+  onBlur?: () => void;
+  disabled?: boolean;
+  id?: string;
+  label: string;
 }
 
 interface EstimatePickerProps {

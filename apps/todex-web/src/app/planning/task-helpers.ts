@@ -382,6 +382,7 @@ const NEW_SLOT_DURATION_MS = 60 * 60_000;
 export function nextScheduleSlots(
   slots: Task["scheduleSlots"],
   startAt: string | null,
+  endAt?: string,
 ): ScheduleSlotInput[] {
   const retired = slots.filter((slot) => slot.retiredAt != null);
   const active = slots
@@ -396,10 +397,14 @@ export function nextScheduleSlots(
     Number.isFinite(parsedDuration) && parsedDuration > 0
       ? parsedDuration
       : NEW_SLOT_DURATION_MS;
-  const endAt = new Date(Date.parse(startAt) + duration).toISOString();
+  const explicitEnd = endAt ? Date.parse(endAt) : Number.NaN;
+  const resolvedEnd =
+    Number.isFinite(explicitEnd) && explicitEnd > Date.parse(startAt)
+      ? new Date(explicitEnd).toISOString()
+      : new Date(Date.parse(startAt) + duration).toISOString();
   const updated = first
-    ? { id: first.id, startAt, endAt, retiredAt: null }
-    : { startAt, endAt };
+    ? { id: first.id, startAt, endAt: resolvedEnd, retiredAt: null }
+    : { startAt, endAt: resolvedEnd };
   return [
     updated,
     ...rest.map(scheduleSlotInput),

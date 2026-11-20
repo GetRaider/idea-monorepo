@@ -62,6 +62,7 @@ import {
   resolveTaskPlacement,
   TaskPlacementError,
 } from "./task-placement";
+import { repeatSchedule, type RepeatSchedule } from "./repeat-schedule";
 import { assertScheduleSlots } from "./task-slots";
 import {
   assertNoLiveLifecycleLock,
@@ -104,6 +105,15 @@ export class TasksService {
     if (body.recurrence && body.parentTaskId) {
       throw new BadRequestException("Only root tasks can repeat");
     }
+    const repeat =
+      body.recurrence && !body.parentTaskId
+        ? repeatSchedule({
+            recurrence: body.recurrence,
+            slots: body.scheduleSlots ?? [],
+            dueDate: body.dueDate ?? null,
+          })
+        : null;
+    const scheduleSlots = repeat?.slots ?? body.scheduleSlots;
     const placement = await this.placementFor(null, body.spaceId, body);
     const epicId = await this.epicLinkFor(
       workspaceId,
@@ -162,8 +172,8 @@ export class TasksService {
           updatedAt: now,
         })
         .returning();
-      if (row && body.scheduleSlots) {
-        await this.replaceSlots(tx, row, body.scheduleSlots);
+      if (row && scheduleSlots) {
+        await this.replaceSlots(tx, row, scheduleSlots);
       }
       return row;
     });
@@ -176,8 +186,16 @@ export class TasksService {
       created.id,
       collectHtmlMentions(created.description),
     );
+    if (repeat && this.recurrence) {
+      await this.recurrence.createSeries(
+        workspaceId,
+        created.id,
+        new Date(repeat.anchor),
+      );
+    }
     await this.scheduleIndex(workspaceId, created.id);
-    return mapTask(created);
+    if (!repeat) return mapTask(created);
+    return this.readTask(workspaceId, created.id);
   }
 
   async update(workspaceId: string, taskId: string, body: UpdateTaskBody) {
@@ -218,6 +236,15 @@ export class TasksService {
     if (body.recurrence && (existing.parentTaskId || body.parentTaskId)) {
       throw new BadRequestException("Only root tasks can repeat");
     }
+    const repeat = body.recurrence
+      ? repeatSchedule({
+          recurrence: body.recurrence,
+          slots: body.scheduleSlots ?? (await this.storedSlots(existing.id)),
+          dueDate:
+            body.dueDate !== undefined ? body.dueDate : toIso(existing.dueDate),
+        })
+      : null;
+    const scheduleSlots = repeat?.slots ?? body.scheduleSlots;
     const closing =
       (body.status === TaskStatus.DONE ||
         body.status === TaskStatus.CANCELLED) &&
@@ -345,8 +372,8 @@ export class TasksService {
           version: current?.version,
         });
       }
-      if (body.scheduleSlots) {
-        await this.replaceSlots(tx, row, body.scheduleSlots);
+      if (scheduleSlots !== undefined) {
+        await this.replaceSlots(tx, row, scheduleSlots);
       }
       if (spaceChanged && !existing.parentTaskId) {
         await this.moveChildrenWithRoot(tx, row);
@@ -372,7 +399,22 @@ export class TasksService {
     const [task] = await this.withGoalIds([updated]);
     if (!task) throw new ForbiddenException();
     await this.scheduleIndex(workspaceId, task.id);
-    return task;
+    await this.syncRepeat(workspaceId, existing, body.recurrence, repeat);
+    if (
+      scheduleSlots !== undefined &&
+      existing.seriesId &&
+      !existing.parentTaskId &&
+      this.recurrence
+    ) {
+      await this.recurrence.rescheduleFuture(
+        workspaceId,
+        task.id,
+        scheduleSlots,
+      );
+      return this.readTask(workspaceId, task.id);
+    }
+    if (body.recurrence === undefined || existing.parentTaskId) return task;
+    return this.readTask(workspaceId, task.id);
   }
 
   async move(workspaceId: string, taskId: string, body: MoveTaskBody) {
@@ -973,6 +1015,58 @@ export class TasksService {
           updatedAt: new Date(),
         })
         .where(eq(calendarEventTemplates.id, template.id));
+    }
+  }
+
+  private async readTask(workspaceId: string, taskId: string) {
+    const row = await this.requireTaskInWorkspace(workspaceId, taskId);
+    const [task] = await this.withGoalIds([row]);
+    if (!task) throw new ForbiddenException();
+    return task;
+  }
+
+  private async storedSlots(taskId: string) {
+    const rows = await this.db
+      .select()
+      .from(taskScheduleSlots)
+      .where(eq(taskScheduleSlots.taskId, taskId));
+    return rows.map((slot) => ({
+      id: slot.id,
+      startAt: slot.startAt.toISOString(),
+      endAt: slot.endAt.toISOString(),
+      retiredAt: toIso(slot.retiredAt),
+    }));
+  }
+
+  private async syncRepeat(
+    workspaceId: string,
+    existing: TaskRow,
+    recurrence: TaskRecurrence | null | undefined,
+    plan: RepeatSchedule | null,
+  ) {
+    if (!this.recurrence || recurrence === undefined || existing.parentTaskId) {
+      return;
+    }
+    if (recurrence && !existing.seriesId && plan) {
+      await this.recurrence.createSeries(
+        workspaceId,
+        existing.id,
+        new Date(plan.anchor),
+      );
+      return;
+    }
+    if (recurrence && existing.seriesId) {
+      await this.recurrence.updateSeries(workspaceId, existing.id, {
+        scope: "future",
+        patch: {
+          rule: recurrence,
+          ...(plan?.slotOffsets ? { slotOffsets: plan.slotOffsets } : {}),
+        },
+      });
+      return;
+    }
+    if (recurrence === null && existing.seriesId) {
+      await this.recurrence.stop(workspaceId, existing.seriesId, existing.id);
     }
   }
 

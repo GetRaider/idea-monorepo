@@ -49,11 +49,14 @@ import {
   StatusGlyph,
 } from "./task-board.ui";
 import { TaskRecurrenceEditor } from "./task-recurrence-picker";
+import { TimePicker } from "./task-pickers";
 import {
+  combineLocalDateAndTime,
   dateInputToLocalDayStartIso,
   dateInputToScheduleIso,
   earliestActiveSlotStart,
   isoToDateInput,
+  isoToLocalTimeInput,
   STATUS_LABEL,
   STATUS_ORDER,
 } from "./task-helpers";
@@ -305,14 +308,9 @@ function TaskContextMenuItems({
       key: "schedule",
       disabled: false,
       node: (
-        <DateSubmenu
-          icon={<CalendarIcon size={16} />}
-          label="Schedule"
-          value={sharedValue(targets, (task) => earliestActiveSlotStart(task))}
-          toIso={dateInputToScheduleIso}
-          onChange={(startAt) =>
-            patch({ scheduleSlots: slotsFromStart(startAt) })
-          }
+        <ScheduleSubmenu
+          tasks={targets}
+          onChange={(scheduleSlots) => patch({ scheduleSlots })}
         />
       ),
     },
@@ -330,10 +328,12 @@ function TaskContextMenuItems({
     },
     {
       key: "repeat",
-      disabled: !single,
+      disabled: !single || single.parentTaskId != null,
       node: (
         <ContextMenuSub>
-          <ContextMenuSubTrigger disabled={!single}>
+          <ContextMenuSubTrigger
+            disabled={!single || single.parentTaskId != null}
+          >
             <RepeatIcon size={16} />
             Repeat
           </ContextMenuSubTrigger>
@@ -770,14 +770,106 @@ function keepNestedPopup(event: {
   }
 }
 
-function slotsFromStart(startAt: string | null) {
-  if (!startAt) return [];
-  return [
-    {
-      startAt,
-      endAt: new Date(Date.parse(startAt) + 60 * 60_000).toISOString(),
-    },
-  ];
+function ScheduleSubmenu({
+  tasks,
+  onChange,
+}: {
+  tasks: Task[];
+  onChange: (slots: Array<{ startAt: string; endAt: string }>) => void;
+}) {
+  const startAt = sharedValue(tasks, (task) => earliestActiveSlotStart(task));
+  const slot =
+    tasks.length === 1
+      ? [...(tasks[0]?.scheduleSlots ?? [])]
+          .filter((item) => item.retiredAt == null)
+          .sort((left, right) => left.startAt.localeCompare(right.startAt))[0]
+      : null;
+  const [date, setDate] = useState(isoToDateInput(startAt));
+  const [startTime, setStartTime] = useState(
+    isoToLocalTimeInput(startAt) || "09:00",
+  );
+  const [endTime, setEndTime] = useState(
+    isoToLocalTimeInput(slot?.endAt ?? null),
+  );
+
+  function commit(nextDate: string, nextStart: string, nextEnd: string) {
+    if (!nextDate) {
+      onChange([]);
+      return;
+    }
+    if (!/^\d{2}:\d{2}$/.test(nextStart)) return;
+    const start = dateInputToScheduleIso(nextDate, nextStart);
+    if (!start) return;
+    const endOnSameDay = /^\d{2}:\d{2}$/.test(nextEnd)
+      ? combineLocalDateAndTime(nextDate, nextEnd)
+      : null;
+    const end =
+      endOnSameDay && Date.parse(endOnSameDay) <= Date.parse(start)
+        ? new Date(Date.parse(endOnSameDay) + 24 * 60 * 60_000).toISOString()
+        : endOnSameDay;
+    onChange([
+      {
+        startAt: start,
+        endAt:
+          end && Date.parse(end) > Date.parse(start)
+            ? end
+            : new Date(Date.parse(start) + 60 * 60_000).toISOString(),
+      },
+    ]);
+  }
+
+  return (
+    <ContextMenuSub>
+      <ContextMenuSubTrigger>
+        <CalendarIcon size={16} />
+        Schedule
+      </ContextMenuSubTrigger>
+      <ContextMenuSubContent className="w-auto p-0">
+        <Calendar
+          mode="single"
+          selected={dateFromInput(date)}
+          onSelect={(next) => {
+            const nextDate = next ? dateToInput(next) : "";
+            setDate(nextDate);
+            commit(nextDate, startTime, endTime);
+          }}
+        />
+        <div
+          className="flex items-center justify-center gap-2 border-t border-border px-2 py-2"
+          onKeyDown={(event) => event.stopPropagation()}
+          onPointerDown={(event) => event.stopPropagation()}
+        >
+          <TimePicker
+            label="Schedule time"
+            value={startTime}
+            onChange={(nextStart) => {
+              setStartTime(nextStart);
+              commit(date, nextStart, endTime);
+            }}
+          />
+          <span className="text-muted-foreground">–</span>
+          <TimePicker
+            label="Schedule end time"
+            value={endTime}
+            onChange={(nextEnd) => {
+              setEndTime(nextEnd);
+              commit(date, startTime, nextEnd);
+            }}
+          />
+        </div>
+        {date ? (
+          <ContextMenuItem
+            onSelect={() => {
+              setDate("");
+              onChange([]);
+            }}
+          >
+            Clear
+          </ContextMenuItem>
+        ) : null}
+      </ContextMenuSubContent>
+    </ContextMenuSub>
+  );
 }
 
 function dateFromInput(value: string): Date | undefined {

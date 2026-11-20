@@ -15,9 +15,10 @@ import {
 } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
   Select,
   SelectContent,
   SelectItem,
@@ -29,7 +30,7 @@ import {
   PROGRESS_STAGE_TEMPLATES,
   ProgressStageTemplate,
 } from "@repo/api/todex";
-import type { SpaceSection, SpaceProgressStage } from "@repo/api/todex";
+import type { SpaceProgressStage } from "@repo/api/todex";
 
 import { PlusIcon } from "@components/icons";
 import { todexClient } from "@lib/todex-client";
@@ -104,29 +105,15 @@ export function BoardAxes({
             onClose={() => setRenamingAreaId(null)}
           />
         ) : (
-          <span
+          <SectionChip
             key={area.id}
-            className={cn(
-              "group inline-flex items-center rounded-md",
-              sectionId === area.id
-                ? "bg-surface text-foreground"
-                : "text-muted-foreground hover:bg-surface hover:text-foreground",
-            )}
-          >
-            <AxisChip
-              active={sectionId === area.id}
-              onClick={() => onAreaId(area.id)}
-            >
-              {area.name}
-            </AxisChip>
-            {area.isDefault ? null : (
-              <AreaMenu
-                area={area}
-                onRename={() => setRenamingAreaId(area.id)}
-                onDelete={() => removeSection.mutate(area.id)}
-              />
-            )}
-          </span>
+            name={area.name}
+            active={sectionId === area.id}
+            menu={!area.isDefault}
+            onSelect={() => onAreaId(area.id)}
+            onRename={() => setRenamingAreaId(area.id)}
+            onDelete={() => removeSection.mutate(area.id)}
+          />
         ),
       )}
       <NameForm
@@ -300,47 +287,44 @@ function useStageNames(spaceIds: string[]) {
   return names;
 }
 
-function AreaMenu({
-  area,
+function SectionChip({
+  name,
+  active,
+  menu,
+  onSelect,
   onRename,
   onDelete,
 }: {
-  area: SpaceSection;
+  name: string;
+  active: boolean;
+  menu: boolean;
+  onSelect: () => void;
   onRename: () => void;
   onDelete: () => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const chip = (
+    <span
+      className={cn(
+        "inline-flex items-center rounded-md",
+        active
+          ? "bg-surface text-foreground"
+          : "text-muted-foreground hover:bg-surface hover:text-foreground",
+      )}
+    >
+      <AxisChip active={active} onClick={onSelect}>
+        {name}
+      </AxisChip>
+    </span>
+  );
+  if (!menu) return chip;
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger
-        aria-label={`Edit ${area.name}`}
-        className="pointer-events-none flex h-7 w-5 items-center justify-center text-xs text-muted-foreground opacity-0 hover:text-foreground group-hover:pointer-events-auto group-hover:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100 data-[state=open]:pointer-events-auto data-[state=open]:opacity-100"
-      >
-        ···
-      </PopoverTrigger>
-      <PopoverContent align="start" className="w-32 p-1">
-        <button
-          type="button"
-          className="flex h-8 w-full items-center rounded-md px-2 text-sm hover:bg-surface"
-          onClick={() => {
-            setOpen(false);
-            onRename();
-          }}
-        >
-          Rename
-        </button>
-        <button
-          type="button"
-          className="flex h-8 w-full items-center rounded-md px-2 text-sm hover:bg-surface"
-          onClick={() => {
-            setOpen(false);
-            onDelete();
-          }}
-        >
-          Delete
-        </button>
-      </PopoverContent>
-    </Popover>
+    <ContextMenu>
+      <ContextMenuTrigger asChild>{chip}</ContextMenuTrigger>
+      <ContextMenuContent>
+        <ContextMenuItem onSelect={onRename}>Rename</ContextMenuItem>
+        <ContextMenuItem onSelect={onDelete}>Delete</ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenu>
   );
 }
 

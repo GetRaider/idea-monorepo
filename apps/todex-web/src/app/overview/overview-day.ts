@@ -1,11 +1,7 @@
 import { TaskStatus } from "@repo/api/todex";
 import type { Task } from "@repo/api/todex";
 
-import {
-  INBOX_BOARD_NAME,
-  isClosedStatus,
-  isUnscheduledTask,
-} from "../planning/task-helpers";
+import { isClosedStatus, isUnscheduledTask } from "../planning/task-helpers";
 
 export function upcomingBounds(today: Date): DayRange {
   const start = startOfLocalDay(today);
@@ -40,20 +36,19 @@ export function overviewTasks(tasks: Task[]): Task[] {
 
 export function organizingTasks(
   tasks: Task[],
-  spaceNameById: Map<string, string>,
+  inboxSpaceId: string | null,
 ): OrganizingTasks {
   const inbox = tasks
     .filter(
       (task) =>
-        spaceNameById.get(task.spaceId) === INBOX_BOARD_NAME &&
+        inboxSpaceId !== null &&
+        task.spaceId === inboxSpaceId &&
         !isClosedStatus(task.status),
     )
     .sort((left, right) => createdTime(right) - createdTime(left));
   const unscheduled = tasks
     .filter(
-      (task) =>
-        isUnscheduledTask(task) &&
-        spaceNameById.get(task.spaceId) !== INBOX_BOARD_NAME,
+      (task) => isUnscheduledTask(task) && task.spaceId !== inboxSpaceId,
     )
     .sort((left, right) => createdTime(right) - createdTime(left));
   return { inbox, unscheduled };
@@ -69,9 +64,12 @@ function createdTime(task: Task): number {
 }
 
 function scheduleTime(task: Task): number {
-  if (!task.scheduleDate) return Number.POSITIVE_INFINITY;
-  const time = Date.parse(task.scheduleDate);
-  return Number.isNaN(time) ? Number.POSITIVE_INFINITY : time;
+  const start = task.scheduleSlots
+    .filter((slot) => slot.retiredAt == null)
+    .map((slot) => Date.parse(slot.startAt))
+    .sort((left, right) => left - right)[0];
+  if (start == null || Number.isNaN(start)) return Number.POSITIVE_INFINITY;
+  return start;
 }
 
 function startOfLocalDay(date: Date): Date {

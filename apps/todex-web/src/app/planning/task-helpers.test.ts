@@ -4,13 +4,16 @@ import { TaskPriority, TaskStatus } from "@repo/api/todex";
 import {
   acceptanceCriteriaAreMet,
   taskChecklistProgress,
+  taskProgressPercent,
   applyRootMove,
   compareTasksForListSort,
   dateInputToLocalDayStartIso,
+  nextScheduleSlots,
   filterStatusGroups,
   resolveCombinedOpenDrop,
   sameBoardDropIndex,
   isInboxTask,
+  openSpaceTaskCount,
   isOverdueTask,
   statusAfterDoneToggle,
   normalizeDescriptionHtml,
@@ -85,7 +88,7 @@ describe("quick access", () => {
   it("keeps a dated todo out of inbox and marks a past due date overdue", () => {
     const planned = task({
       id: "planned",
-      scheduleDate: "2026-09-10T00:00:00.000Z",
+      scheduleSlots: [slot("2026-09-10T00:00:00.000Z")],
       dueDate: "2026-09-09T00:00:00.000Z",
     });
     expect(isInboxTask(planned)).toBe(false);
@@ -102,6 +105,25 @@ describe("quick access", () => {
     expect(isInboxTask(done)).toBe(false);
     expect(isUnscheduledTask(done)).toBe(false);
     expect(isOverdueTask(done, now)).toBe(false);
+  });
+
+  it("counts open root tasks in that space only", () => {
+    const tasks = [
+      task({ id: "elsewhere", spaceId: "work" }),
+      task({ id: "inbox-open", spaceId: "inbox" }),
+      task({
+        id: "inbox-child",
+        spaceId: "inbox",
+        parentTaskId: "inbox-open",
+      }),
+      task({ id: "inbox-done", spaceId: "inbox", status: TaskStatus.DONE }),
+      task({
+        id: "inbox-cancelled",
+        spaceId: "inbox",
+        status: TaskStatus.CANCELLED,
+      }),
+    ];
+    expect(openSpaceTaskCount(tasks, "inbox")).toBe(1);
   });
 
   it("excludes cancelled tasks from inbox, unscheduled, and overdue", () => {
@@ -149,23 +171,23 @@ describe("quick access", () => {
 });
 
 describe("list sort", () => {
-  it("sorts by scheduleDate, not dueDate, and puts unscheduled last", () => {
+  it("sorts by the earliest slot, not dueDate, and puts unscheduled last", () => {
     const later = task({
       id: "later",
       summary: "Later",
-      scheduleDate: "2026-09-12T00:00:00.000Z",
+      scheduleSlots: [slot("2026-09-12T00:00:00.000Z")],
       dueDate: "2026-09-10T00:00:00.000Z",
     });
     const sooner = task({
       id: "sooner",
       summary: "Sooner",
-      scheduleDate: "2026-09-11T00:00:00.000Z",
+      scheduleSlots: [slot("2026-09-11T00:00:00.000Z")],
       dueDate: "2026-09-20T00:00:00.000Z",
     });
     const unscheduled = task({
       id: "none",
       summary: "None",
-      scheduleDate: null,
+      scheduleSlots: [],
       dueDate: "2026-09-01T00:00:00.000Z",
     });
     expect(compareTasksForListSort(sooner, later, "schedule")).toBeLessThan(0);
@@ -340,13 +362,12 @@ describe("projectCompletedTask", () => {
     end: { type: "never" as const },
   };
 
-  it("keeps the completed task done and adds the next occurrence", () => {
-    const [done, next] = projectCompletedTask(
+  it("marks the task done without spawning another row", () => {
+    const [done] = projectCompletedTask(
       [
         task({
           id: "repeat",
           status: TaskStatus.TODO,
-          scheduleDate: "2026-10-05T00:00:00.000Z",
           recurrence: weekly,
           acceptanceCriteria: [{ id: "a", text: "Reviewed", done: true }],
         }),
@@ -355,28 +376,13 @@ describe("projectCompletedTask", () => {
     );
     expect(done?.id).toBe("repeat");
     expect(done?.status).toBe(TaskStatus.DONE);
-    expect(done?.recurrence).toBeNull();
-    expect(done?.scheduleDate).toBe("2026-10-05T00:00:00.000Z");
-    expect(next?.status).toBe(TaskStatus.TODO);
-    expect(next?.scheduleDate).toBe("2026-10-12T00:00:00.000Z");
-    expect(next?.acceptanceCriteria[0]?.done).toBe(false);
-    expect(next?.recurrence).toEqual(weekly);
-  });
-
-  it("finishes the series on the last occurrence", () => {
-    const [next] = projectCompletedTask(
-      [
-        task({
-          id: "last",
-          status: TaskStatus.IN_PROGRESS,
-          scheduleDate: "2026-10-05T00:00:00.000Z",
-          recurrence: { ...weekly, end: { type: "count", count: 1 } },
-        }),
-      ],
-      "last",
-    );
-    expect(next?.status).toBe(TaskStatus.DONE);
-    expect(next?.recurrence).toBeNull();
+    expect(done?.recurrence).toEqual(weekly);
+    expect(
+      projectCompletedTask(
+        [task({ id: "repeat", status: TaskStatus.TODO, recurrence: weekly })],
+        "repeat",
+      ),
+    ).toHaveLength(1);
   });
 });
 
@@ -408,6 +414,118 @@ describe("filterStatusGroups", () => {
   });
 });
 
+describe("taskProgressPercent", () => {
+  it("splits subtasks and criteria evenly and ignores cancelled children", () => {
+    expect(
+      taskProgressPercent({
+        status: TaskStatus.TODO,
+        acceptanceCriteria: [{ done: true }, { done: false }],
+        subtasks: [
+          { status: TaskStatus.DONE },
+          { status: TaskStatus.TODO },
+          { status: TaskStatus.CANCELLED },
+        ],
+      }),
+    ).toBe(0.5);
+  });
+
+  it("is 100% for a done task with neither group and 0 otherwise", () => {
+    expect(
+      taskProgressPercent({
+        status: TaskStatus.DONE,
+        acceptanceCriteria: [],
+        subtasks: [],
+      }),
+    ).toBe(1);
+    expect(
+      taskProgressPercent({
+        status: TaskStatus.TODO,
+        acceptanceCriteria: [],
+        subtasks: [],
+      }),
+    ).toBe(0);
+  });
+});
+
+describe("nextScheduleSlots", () => {
+  it("keeps the other slots and the edited slot duration", () => {
+    const slots = [
+      {
+        id: "later",
+        startAt: "2026-09-11T07:00:00.000Z",
+        endAt: "2026-09-11T08:00:00.000Z",
+        retiredAt: null,
+      },
+      {
+        id: "earlier",
+        startAt: "2026-09-10T07:00:00.000Z",
+        endAt: "2026-09-10T09:30:00.000Z",
+        retiredAt: null,
+      },
+      {
+        id: "retired",
+        startAt: "2026-09-01T07:00:00.000Z",
+        endAt: "2026-09-01T08:00:00.000Z",
+        retiredAt: "2026-09-02T00:00:00.000Z",
+      },
+    ];
+
+    const next = nextScheduleSlots(slots, "2026-09-12T10:00:00.000Z");
+
+    expect(next[0]).toEqual({
+      id: "earlier",
+      startAt: "2026-09-12T10:00:00.000Z",
+      endAt: "2026-09-12T12:30:00.000Z",
+      retiredAt: null,
+    });
+    expect(next.map((item) => item.id)).toEqual([
+      "earlier",
+      "later",
+      "retired",
+    ]);
+  });
+
+  it("drops only the earliest active slot when the date is cleared", () => {
+    const next = nextScheduleSlots(
+      [slot("2026-09-10T07:00:00.000Z"), slot("2026-09-11T07:00:00.000Z")],
+      null,
+    );
+
+    expect(next.map((item) => item.id)).toEqual(["2026-09-11T07:00:00.000Z"]);
+  });
+
+  it("uses an explicit end instead of the previous duration", () => {
+    const next = nextScheduleSlots(
+      [slot("2026-09-10T07:00:00.000Z")],
+      "2026-09-12T10:00:00.000Z",
+      "2026-09-12T11:15:00.000Z",
+    );
+
+    expect(next[0]).toMatchObject({
+      startAt: "2026-09-12T10:00:00.000Z",
+      endAt: "2026-09-12T11:15:00.000Z",
+    });
+  });
+
+  it("adds a one hour slot when nothing is active", () => {
+    expect(nextScheduleSlots([], "2026-09-12T07:00:00.000Z")).toEqual([
+      {
+        startAt: "2026-09-12T07:00:00.000Z",
+        endAt: "2026-09-12T08:00:00.000Z",
+      },
+    ]);
+  });
+});
+
+function slot(startAt: string) {
+  return {
+    id: startAt,
+    startAt,
+    endAt: new Date(Date.parse(startAt) + 60 * 60_000).toISOString(),
+    retiredAt: null,
+  };
+}
+
 function task(overrides: Partial<NestedTask>): NestedTask {
   return {
     id: "id",
@@ -416,17 +534,26 @@ function task(overrides: Partial<NestedTask>): NestedTask {
     taskKey: "T-1",
     summary: "Task",
     description: "",
+    outcome: "",
     acceptanceCriteria: [],
     status: TaskStatus.TODO,
     priority: TaskPriority.MEDIUM,
+    complexity: null,
     dueDate: null,
-    scheduleDate: null,
+    scheduleSlots: [],
     recurrence: null,
+    ownerId: "owner",
+    seriesId: null,
+    occurrenceKey: null,
+    occurrenceAnchor: null,
+    originSeriesId: null,
+    overriddenFields: [],
+    version: 1,
+    conflicts: [],
     sectionId: "area",
     progressStageId: null,
     estimation: 30,
     actualTime: 0,
-    color: null,
     parentTaskId: null,
     epicId: null,
     goalId: null,

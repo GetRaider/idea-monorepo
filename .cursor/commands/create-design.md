@@ -11,7 +11,7 @@ If wishes are missing or too vague to compose a concrete mock, ask once — then
 
 1. Infer viewport and `aspect_ratio`: desktop/app chrome → `16:9`; mobile/phone → `9:16`; square icon/card → `1:1`; tall marketing/hero → `3:4`; default `16:9`.
 2. If a current design is attached or a path is given, pass it as `reference_image_paths`. Preserve information architecture, identifiable branding, and real copy when visible unless I asked to change them.
-3. Infer **SCOPE** (`GEN`, `TAD`, `TDX`, `DVN`, `PRT`, `TMP`) from the product/app in the wishes or the focused file — see `.cursor/rules/git-conventions.mdc`.
+3. Infer **SCOPE** (`GEN`, `TAD`, `TDX`, `DVN`, `PRT`, `TMP`, `ARV`) from the product/app in the wishes or the focused file — see `.cursor/rules/git-conventions.mdc`.
 4. Call `GenerateImage` (`cursor` namespace) once with a detailed `description`. Filename: `design-<kebab-slug>.png` (no directory — the tool writes to Cursor assets).
 5. **Copy into this repo.** `GenerateImage` does not write to the workspace. `cp` the returned absolute path to:
    - the folder I named or have focused, if obvious (e.g. `docs/prd/TDX/`)

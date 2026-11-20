@@ -19,45 +19,57 @@ export const tasksUrlHelper = {
       return taskKey ? `${base}/${encodeURIComponent(taskKey)}` : base;
     },
 
-    buildBoardUrl(spaceName: string, taskKey?: string): string {
-      const base = `${TASKS_ROOT_PATH}/space/${encodeURIComponent(spaceName)}`;
-      return taskKey ? `${base}/${encodeURIComponent(taskKey)}` : base;
+    buildBoardUrl(
+      spaceId: string,
+      taskKey?: string,
+      parentTaskKey?: string,
+    ): string {
+      const base = `${TASKS_ROOT_PATH}/space/${encodeURIComponent(spaceId)}`;
+      if (!taskKey) return base;
+      if (!parentTaskKey) return `${base}/${encodeURIComponent(taskKey)}`;
+      return `${base}/${encodeURIComponent(parentTaskKey)}/${encodeURIComponent(taskKey)}`;
     },
 
-    buildEpicUrl(spaceName: string, epicId: string): string {
-      return `${TASKS_ROOT_PATH}/space/${encodeURIComponent(spaceName)}/epics/${epicId}`;
+    buildEpicUrl(spaceId: string, epicId: string): string {
+      return `${TASKS_ROOT_PATH}/space/${encodeURIComponent(spaceId)}/epics/${epicId}`;
     },
 
     parseSpacePath(spacePath: string[]): SpacePath | null {
-      const spaceNameSegment = spacePath[0];
-      if (!spaceNameSegment) return null;
-      const spaceName = decodePathSegment(spaceNameSegment);
+      const spaceIdSegment = spacePath[0];
+      if (!spaceIdSegment) return null;
+      const spaceId = decodePathSegment(spaceIdSegment);
       if (spacePath[1] === "epics" && spacePath[2]) {
-        return { kind: "epic", spaceName, epicId: spacePath[2] };
+        return { kind: "epic", spaceId, epicId: spacePath[2] };
       }
+      const taskSegment = spacePath[spacePath.length - 1];
       return {
         kind: "space",
-        spaceName,
-        taskKey: spacePath[1] ? decodePathSegment(spacePath[1]) : undefined,
+        spaceId,
+        taskKey:
+          spacePath.length > 1 && taskSegment
+            ? decodePathSegment(taskSegment)
+            : undefined,
       };
     },
 
     parseBoardPath(boardPath: string[]): BoardPath | null {
       const parsed = tasksUrlHelper.routing.parseSpacePath(boardPath);
       if (!parsed || parsed.kind !== "space") return null;
-      return { spaceName: parsed.spaceName, taskKey: parsed.taskKey };
+      return { spaceId: parsed.spaceId, taskKey: parsed.taskKey };
     },
 
-    getBoardNameFromPathname(pathname: string): string | null {
+    getSpaceIdFromPathname(pathname: string): string | null {
       const match = pathname.match(/^\/planning\/space\/([^/]+)/);
       if (!match?.[1]) return null;
       return decodePathSegment(match[1]);
     },
 
     getTaskKeyFromPathname(pathname: string): string | undefined {
-      const boardMatch = pathname.match(/^\/planning\/space\/[^/]+\/([^/]+)/);
-      if (boardMatch?.[1] && boardMatch[1] !== "epics") {
-        return decodePathSegment(boardMatch[1]);
+      const boardMatch = pathname.match(/^\/planning\/space\/[^/]+\/(.+)/);
+      if (boardMatch?.[1] && !boardMatch[1].startsWith("epics/") && boardMatch[1] !== "epics") {
+        const segments = boardMatch[1].split("/").filter(Boolean);
+        const taskKey = segments[segments.length - 1];
+        return taskKey ? decodePathSegment(taskKey) : undefined;
       }
       const scheduleMatch = pathname.match(
         /^\/planning\/schedule\/(?:today|tomorrow)\/([^/]+)/,
@@ -79,7 +91,7 @@ export const tasksUrlHelper = {
       if (/^\/planning\/schedule\/tomorrow(?:\/|$)/.test(pathname)) {
         return "tomorrow";
       }
-      return tasksUrlHelper.routing.getBoardNameFromPathname(pathname) ?? "";
+      return tasksUrlHelper.routing.getSpaceIdFromPathname(pathname) ?? "";
     },
   },
 };
@@ -95,10 +107,10 @@ function decodePathSegment(value: string): string {
 export type ScheduleDate = (typeof VALID_SCHEDULE_DATES)[number];
 
 export interface BoardPath {
-  spaceName: string;
+  spaceId: string;
   taskKey?: string;
 }
 
 export type SpacePath =
-  | { kind: "space"; spaceName: string; taskKey?: string }
-  | { kind: "epic"; spaceName: string; epicId: string };
+  | { kind: "space"; spaceId: string; taskKey?: string }
+  | { kind: "epic"; spaceId: string; epicId: string };

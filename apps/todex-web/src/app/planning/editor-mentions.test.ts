@@ -77,6 +77,26 @@ describe("mentionMenuItems", () => {
     ).toEqual(["doc-1"]);
   });
 
+  it("omits events when calendar is off", () => {
+    const withEvent: MentionCandidate[] = [
+      ...candidates,
+      {
+        targetType: DocMentionTarget.EVENT,
+        id: "event-1",
+        label: "Standup",
+        href: "/planning/calendar/events/event-1",
+      },
+    ];
+    expect(
+      mentionMenuItems(withEvent, "", { includeEvents: false }).map((item) =>
+        item.kind === "scope" ? item.token : item.id,
+      ),
+    ).toEqual(["tasks", "docs"]);
+    expect(
+      mentionMenuItems(withEvent, "events standup", { includeEvents: false }),
+    ).toEqual([]);
+  });
+
   it("searches every kind when the query is not a scope", () => {
     expect(
       mentionMenuItems(candidates, "launch").map((item) =>
@@ -96,12 +116,12 @@ describe("mentionHref", () => {
         targetType: DocMentionTarget.TASK,
         targetId: "task-1",
         taskKey: "TDX-4",
-        spaceName: "Inbox",
+        spaceId: "space-1",
       }),
-    ).toBe("/planning/space/Inbox/TDX-4");
+    ).toBe("/planning/space/space-1/TDX-4");
     expect(
       mentionHref({ targetType: DocMentionTarget.EVENT, targetId: "event-1" }),
-    ).toBe("/calendar/events/event-1");
+    ).toBe("/planning/calendar/events/event-1");
   });
 });
 describe("mentionEmptyLabel", () => {

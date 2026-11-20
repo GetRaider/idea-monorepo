@@ -1,24 +1,23 @@
 "use client";
 
-import {
-  createContext,
-  use,
-  useEffect,
-  useState,
-  type ReactNode,
-} from "react";
+import { createContext, use, useEffect, useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   ExecutionCurrent,
   ExecutionQueueItem,
   ExecutionSession,
+  ExecutionState,
 } from "@repo/api/todex";
 import { toast } from "sonner";
 
 import { todexClient } from "@lib/todex-client";
 
-import { focusSeconds, type FocusMode } from "./execution-time";
+import {
+  focusSeconds,
+  sessionElapsedSeconds,
+  type FocusMode,
+} from "./execution-time";
 
 const ExecutionContext = createContext<ExecutionContextValue | null>(null);
 
@@ -39,12 +38,13 @@ export function ExecutionProvider({ children }: { children: ReactNode }) {
   const tasks = stateQuery.data?.tasks ?? [];
   const focusedTaskId = stateQuery.data?.focusedTaskId ?? null;
   const focused = tasks.find((task) => task.id === focusedTaskId) ?? null;
-  const tracking =
-    focused?.intervals.some((interval) => interval.endedAt == null) ?? false;
-  const [mode, setMode] = useState<FocusMode>("timer");
-  const [goalMinutes, setGoalMinutes] = useState<number | null>(
-    focused?.estimation ?? null,
-  );
+  const tracking = tasks.some((task) => task.intervals.some((interval) => interval.endedAt == null));
+  const [focus, setFocus] = useState<StoredFocus>({
+    mode: "timer",
+    goalMinutes: null,
+  });
+  const [storageReady, setStorageReady] = useState(false);
+  const { mode, goalMinutes } = focus;
   const [trackedTaskId, setTrackedTaskId] = useState(focused?.id ?? null);
   const [now, setNow] = useState(() => Date.now());
   const [syncedAt, setSyncedAt] = useState(() => Date.now());
@@ -53,14 +53,42 @@ export function ExecutionProvider({ children }: { children: ReactNode }) {
     focused?.intervals
       .map((interval) => `${interval.startedAt}:${interval.endedAt ?? ""}`)
       .join("|") ?? "";
-  if ((focused?.id ?? null) !== trackedTaskId || nextIntervalKey !== intervalKey) {
+  if (
+    (focused?.id ?? null) !== trackedTaskId ||
+    nextIntervalKey !== intervalKey
+  ) {
     setTrackedTaskId(focused?.id ?? null);
     setIntervalKey(nextIntervalKey);
     setSyncedAt(Date.now());
-    if ((focused?.id ?? null) !== trackedTaskId) {
-      setGoalMinutes(focused?.estimation ?? null);
-      setMode("timer");
+    setNow(Date.now());
+  }
+
+  useEffect(() => {
+    const stored = readStoredFocus();
+    if (stored) setFocus(stored);
+    setStorageReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!storageReady) return;
+    writeStoredFocus(focus);
+  }, [focus, storageReady]);
+
+  // Discard a stale goal from an earlier session when opening Preparation.
+  const [initialGoalChecked, setInitialGoalChecked] = useState(false);
+  useEffect(() => {
+    if (!storageReady || stateQuery.isLoading || initialGoalChecked) return;
+    setInitialGoalChecked(true);
+    if (!session) setFocus((current) => ({ ...current, goalMinutes: null }));
+  }, [storageReady, stateQuery.isLoading, initialGoalChecked, session]);
+
+  // The next session should derive its goal from the next selected scope.
+  const [previousSessionId, setPreviousSessionId] = useState<string | null>(null);
+  if (previousSessionId !== (session?.id ?? null)) {
+    if (previousSessionId !== null && session == null) {
+      setFocus((current) => ({ ...current, goalMinutes: null }));
     }
+    setPreviousSessionId(session?.id ?? null);
   }
 
   useEffect(() => {
@@ -77,7 +105,8 @@ export function ExecutionProvider({ children }: { children: ReactNode }) {
     mutationFn: (taskIds: string[]) =>
       todexClient.execution.execute({ taskIds }),
     onSuccess: invalidate,
-    onError: (error) => toast.error(readError(error, "Could not execute the task")),
+    onError: (error) =>
+      toast.error(readError(error, "Could not execute the task")),
   });
   const focusTask = useMutation({
     mutationFn: (taskId: string) => todexClient.execution.focus({ taskId }),
@@ -87,12 +116,14 @@ export function ExecutionProvider({ children }: { children: ReactNode }) {
   const pause = useMutation({
     mutationFn: () => todexClient.execution.pause(),
     onSuccess: invalidate,
-    onError: (error) => toast.error(readError(error, "Could not pause execution")),
+    onError: (error) =>
+      toast.error(readError(error, "Could not pause execution")),
   });
   const resume = useMutation({
     mutationFn: () => todexClient.execution.resume(),
     onSuccess: invalidate,
-    onError: (error) => toast.error(readError(error, "Could not resume execution")),
+    onError: (error) =>
+      toast.error(readError(error, "Could not resume execution")),
   });
   const updateSession = useMutation({
     mutationFn: (input: {
@@ -124,8 +155,33 @@ export function ExecutionProvider({ children }: { children: ReactNode }) {
   const reorder = useMutation({
     mutationFn: (taskIds: string[]) =>
       todexClient.execution.reorder({ taskIds }),
-    onSuccess: invalidate,
-    onError: (error) => toast.error(readError(error, "Could not reorder the queue")),
+    onMutate: async (taskIds) => {
+      await queryClient.cancelQueries({ queryKey: ["execution", "state"] });
+      const previous = queryClient.getQueryData<ExecutionState>([
+        "execution",
+        "state",
+      ]);
+      if (previous) {
+        const items = new Map(
+          previous.queue.map((item) => [item.taskId, item]),
+        );
+        queryClient.setQueryData<ExecutionState>(["execution", "state"], {
+          ...previous,
+          queue: taskIds.flatMap((taskId, index) => {
+            const item = items.get(taskId);
+            return item ? [{ ...item, position: index }] : [];
+          }),
+        });
+      }
+      return { previous };
+    },
+    onError: (error, _taskIds, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(["execution", "state"], context.previous);
+      }
+      toast.error(readError(error, "Could not reorder the queue"));
+    },
+    onSettled: invalidate,
   });
   const complete = useMutation({
     mutationFn: () => todexClient.execution.complete(),
@@ -133,18 +189,18 @@ export function ExecutionProvider({ children }: { children: ReactNode }) {
     onError: (error) =>
       toast.error(readError(error, "Could not complete execution")),
   });
-
   const elapsedSeconds = focused
     ? focused.actualTime +
       (tracking ? Math.max(0, Math.floor((now - syncedAt) / 1000)) : 0)
     : 0;
-  const estimateMinutes = focused?.estimation ?? null;
+  const sessionElapsed = sessionElapsedSeconds(tasks, new Date(now));
+  const estimateMinutes = tasks.reduce((sum, task) => sum + task.estimation, 0) || null;
   const shownSeconds =
     mode === "timer" && goalMinutes == null && estimateMinutes == null
       ? null
       : focusSeconds({
           mode,
-          elapsedSeconds,
+          elapsedSeconds: sessionElapsed,
           goalMinutes: goalMinutes ?? estimateMinutes ?? 0,
         });
 
@@ -172,8 +228,10 @@ export function ExecutionProvider({ children }: { children: ReactNode }) {
       deleteSession: (sessionId) => deleteSession.mutate(sessionId),
       reorder: (taskIds) => reorder.mutate(taskIds),
       complete: () => complete.mutate(),
-      setMode,
-      setGoalMinutes,
+      setMode: (next: FocusMode) =>
+        setFocus((current) => ({ ...current, mode: next })),
+      setGoalMinutes: (minutes: number | null) =>
+        setFocus((current) => ({ ...current, goalMinutes: minutes })),
     },
     meta: {
       isCompleting: complete.isPending,
@@ -182,6 +240,7 @@ export function ExecutionProvider({ children }: { children: ReactNode }) {
       mode,
       goalMinutes,
       elapsedSeconds,
+      sessionElapsedSeconds: sessionElapsed,
       shownSeconds,
     },
   };
@@ -195,12 +254,39 @@ export function ExecutionProvider({ children }: { children: ReactNode }) {
 
 export function useExecution() {
   const value = use(ExecutionContext);
-  if (!value) throw new Error("useExecution must be used within ExecutionProvider");
+  if (!value)
+    throw new Error("useExecution must be used within ExecutionProvider");
   return value;
 }
 
 function readError(error: unknown, fallback: string) {
   return error instanceof Error && error.message ? error.message : fallback;
+}
+
+function readStoredFocus(): StoredFocus | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.sessionStorage.getItem(FOCUS_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<StoredFocus>;
+    if (parsed.mode !== "timer" && parsed.mode !== "stopwatch") return null;
+    const goalMinutes =
+      typeof parsed.goalMinutes === "number" &&
+      Number.isFinite(parsed.goalMinutes)
+        ? Math.min(
+            MAX_STORED_GOAL_MINUTES,
+            Math.max(1, Math.floor(parsed.goalMinutes)),
+          )
+        : null;
+    return { mode: parsed.mode, goalMinutes };
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredFocus(focus: StoredFocus) {
+  if (typeof window === "undefined") return;
+  window.sessionStorage.setItem(FOCUS_STORAGE_KEY, JSON.stringify(focus));
 }
 
 interface ExecutionContextValue {
@@ -220,7 +306,11 @@ interface ExecutionContextValue {
     pause: () => void;
     resume: () => void;
     removeQueued: (taskId: string) => void;
-    updateSession: (sessionId: string, startedAt: string, endedAt: string) => void;
+    updateSession: (
+      sessionId: string,
+      startedAt: string,
+      endedAt: string,
+    ) => void;
     deleteSession: (sessionId: string) => void;
     reorder: (taskIds: string[]) => void;
     complete: () => void;
@@ -234,6 +324,15 @@ interface ExecutionContextValue {
     mode: FocusMode;
     goalMinutes: number | null;
     elapsedSeconds: number;
+    sessionElapsedSeconds: number;
     shownSeconds: number | null;
   };
+}
+
+const FOCUS_STORAGE_KEY = "todex.execution.focus";
+const MAX_STORED_GOAL_MINUTES = 24 * 60;
+
+interface StoredFocus {
+  mode: FocusMode;
+  goalMinutes: number | null;
 }

@@ -3,50 +3,33 @@
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  DndContext,
-  DragOverlay,
-  PointerSensor,
-  pointerWithin,
-  rectIntersection,
-  useDndContext,
-  useDraggable,
-  useDroppable,
-  useSensor,
-  useSensors,
-  type CollisionDetection,
-  type DragEndEvent,
-  type DraggableAttributes,
-  type DraggableSyntheticListeners,
-} from "@dnd-kit/core";
+import { useQuery } from "@tanstack/react-query";
 import {
   Button,
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
   Tooltip,
   TooltipContent,
   TooltipTrigger,
   cn,
 } from "@repo/ui";
-import type { Folder, Space } from "@repo/api/todex";
+import type { Space, SpaceFolder, Task } from "@repo/api/todex";
+import { TaskStatus } from "@repo/api/todex";
 
 import {
-  BoardIcon,
-  CalendarIcon,
-  ChevronIcon,
-  ClockIcon,
-  EllipsisIcon,
+  CalendarDaysIcon,
   FolderIcon,
   GoalIcon,
+  InboxIcon,
+  PlanningIcon,
   PlusIcon,
+  SunIcon,
+  SunriseIcon,
 } from "@components/icons";
 import { ResizeHandle } from "@components/resize-handle";
+import { SpaceSwatch } from "@components/space-swatch";
+import { SpacesSidebarList } from "@components/spaces-sidebar";
 import {
   TASKS_SIDEBAR_DEFAULT_WIDTH,
   TASKS_SIDEBAR_MAX_WIDTH,
@@ -57,46 +40,51 @@ import {
   writeTasksSidebarWidth,
 } from "@/helpers/tasks-sidebar-open";
 import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
+import { todexClient } from "@lib/todex-client";
+import { useCalendarEnabled } from "../settings/use-calendar-enabled";
 
 import {
   ModuleSidebarFrame,
   useModuleSidebar,
 } from "@components/module-sidebar";
 
-import { INBOX_BOARD_NAME } from "./task-helpers";
 import { useTasks } from "./tasks-provider";
 import { useSpaceDialogs } from "./space-dialogs";
+import {
+  earliestActiveSlotStart,
+  localDayScheduleQuery,
+  openSpaceTaskCount,
+} from "./task-helpers";
 
 export function TasksModuleSidebar() {
   const {
     state: { folders, boards, view },
-    actions: { openCreateDialog, updateBoard },
+    actions: { openCreateDialog },
   } = useTasks();
   const { open: isOpen } = useModuleSidebar();
   const pathname = usePathname() ?? "";
+  const { enabled: calendarEnabled } = useCalendarEnabled();
   const [width, setWidth] = useState(TASKS_SIDEBAR_DEFAULT_WIDTH);
-  const sensors = useSensors(
-    useSensor(SpacePointerSensor, { activationConstraint: { distance: 8 } }),
-  );
 
   useEffect(() => {
     setWidth(readTasksSidebarWidth());
   }, []);
 
-  function handleSpaceDragEnd(event: DragEndEvent) {
-    const drag = event.active.data.current;
-    const drop = event.over?.data.current;
-    if (!isSpaceDrag(drag) || !isSpaceDrop(drop)) return;
-    const folderId = drop.kind === "folder" ? drop.folderId : null;
-    if (drag.folderId === folderId) return;
-    void updateBoard(drag.spaceId, { folderId });
-  }
-
   const activeBoardId = view.kind === "board" ? view.spaceId : null;
-  const inboxBoard = boards.find((board) => board.name === INBOX_BOARD_NAME);
-  const rootBoards = boards.filter(
-    (board) => !board.folderId && board.id !== inboxBoard?.id,
-  );
+  const inboxBoard = boards.find((board) => board.isInbox);
+  const taskQuery = useQuery({
+    queryKey: ["tasks", "root", boards.map((board) => board.id).join("\n")],
+    enabled: boards.length > 0,
+    queryFn: () =>
+      Promise.all(
+        boards.map((board) => todexClient.tasks.list({ spaceId: board.id })),
+      ).then((lists) => lists.flat()),
+  });
+  const countedTasks = taskQuery.data ?? [];
+  const todayCount = scheduledCount(countedTasks, 0);
+  const tomorrowCount = scheduledCount(countedTasks, 1);
+  const spaceCount = (spaceId: string) =>
+    openSpaceTaskCount(countedTasks, spaceId);
 
   return (
     <ModuleSidebarFrame open={isOpen} width={width}>
@@ -111,26 +99,35 @@ export function TasksModuleSidebar() {
       />
       <div className="flex min-h-0 flex-1 flex-col px-3 pb-3 pt-3">
         <section className="mb-4 w-full">
-          <h2 className="mb-2 px-2 text-sm text-muted-foreground">Lists</h2>
+          <h2 className="mb-2 px-2 text-sm text-muted-foreground">Views</h2>
+          <NavRow
+            href={tasksUrlHelper.routing.buildRootUrl()}
+            active={tasksUrlHelper.routing.isRootPathname(pathname)}
+            icon={<PlanningIcon size={16} />}
+            label="Home"
+          />
           {inboxBoard ? (
             <NavRow
-              href={tasksUrlHelper.routing.buildBoardUrl(inboxBoard.name)}
+              href={tasksUrlHelper.routing.buildBoardUrl(inboxBoard.id)}
               active={activeBoardId === inboxBoard.id}
-              icon={<BoardIcon size={16} />}
+              icon={<InboxIcon size={16} />}
               label="Inbox"
+              count={spaceCount(inboxBoard.id)}
             />
           ) : null}
           <NavRow
             href={tasksUrlHelper.routing.buildScheduleUrl("today")}
             active={view.kind === "schedule" && view.schedule === "today"}
-            icon={<ClockIcon size={16} />}
+            icon={<SunIcon size={16} />}
             label="Today"
+            count={todayCount}
           />
           <NavRow
             href={tasksUrlHelper.routing.buildScheduleUrl("tomorrow")}
             active={view.kind === "schedule" && view.schedule === "tomorrow"}
-            icon={<CalendarIcon size={16} />}
+            icon={<SunriseIcon size={16} />}
             label="Tomorrow"
+            count={tomorrowCount}
           />
           <NavRow
             href="/planning/goals"
@@ -141,6 +138,17 @@ export function TasksModuleSidebar() {
             icon={<GoalIcon size={16} />}
             label="Goals"
           />
+          {calendarEnabled ? (
+            <NavRow
+              href="/planning/calendar"
+              active={
+                pathname === "/planning/calendar" ||
+                pathname.startsWith("/planning/calendar/")
+              }
+              icon={<CalendarDaysIcon size={16} />}
+              label="Calendar"
+            />
+          ) : null}
         </section>
         <section className="flex min-h-0 w-full flex-1 flex-col overflow-auto">
           <div className="mb-2 flex items-center justify-between px-2">
@@ -163,170 +171,36 @@ export function TasksModuleSidebar() {
               </TooltipContent>
             </Tooltip>
           </div>
-          <DndContext
-            sensors={sensors}
-            collisionDetection={spaceCollisionDetection}
-            onDragEnd={handleSpaceDragEnd}
-          >
-            <RootSpaceList
-              boards={rootBoards.map((board) => (
-                <SpaceBoardRow
-                  key={board.id}
-                  spaceId={board.id}
-                  folderId={board.folderId}
-                  href={tasksUrlHelper.routing.buildBoardUrl(board.name)}
+          <SpacesSidebarList
+            spaces={boards}
+            folders={folders}
+            renderSpace={(board, nested) => ({
+              menu: <BoardMenu board={board} />,
+              content: (
+                <NavRow
+                  href={tasksUrlHelper.routing.buildBoardUrl(board.id)}
                   active={activeBoardId === board.id}
-                  icon={<BoardIcon size={16} />}
+                  icon={<SpaceSwatch color={board.color} />}
                   label={board.name}
-                  menu={<BoardMenu board={board} />}
+                  count={spaceCount(board.id)}
+                  nested={nested}
                 />
-              ))}
-            >
-              {folders.map((folder) => (
-                <FolderGroup
-                  key={folder.id}
-                  folder={folder}
-                  boards={boards.filter(
-                    (board) => board.folderId === folder.id,
-                  )}
-                  activeBoardId={activeBoardId}
-                />
-              ))}
-            </RootSpaceList>
-            <SpaceDragOverlay />
-          </DndContext>
+              ),
+            })}
+            renderFolder={(folder) => ({
+              menu: <FolderMenu folder={folder} />,
+              content: (
+                <>
+                  <FolderIcon size={16} />
+                  <span className="min-w-0 flex-1 truncate">{folder.name}</span>
+                  <span className="w-8 shrink-0" />
+                </>
+              ),
+            })}
+          />
         </section>
       </div>
     </ModuleSidebarFrame>
-  );
-}
-
-function FolderGroup({ folder, boards, activeBoardId }: FolderGroupProps) {
-  const [isExpanded, setIsExpanded] = useState(true);
-  const { setNodeRef, isOver } = useDroppable({
-    id: `space-folder:${folder.id}`,
-    data: { kind: "folder", folderId: folder.id } satisfies SpaceDropData,
-  });
-  const { active } = useDndContext();
-  const drag = active?.data.current;
-  const showDrop = isOver && isSpaceDrag(drag) && drag.folderId !== folder.id;
-
-  return (
-    <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
-      <div ref={setNodeRef} className="relative rounded-lg">
-        {showDrop ? <DropSlot /> : null}
-        <div className="group relative my-1 flex items-center rounded-lg text-muted-foreground hover:bg-surface hover:text-foreground">
-          <CollapsibleTrigger asChild>
-            <button
-              type="button"
-              className="flex min-w-0 flex-1 items-center gap-2 rounded-lg py-1.5 pl-2 pr-8 text-left text-sm"
-            >
-              <ChevronIcon
-                size={12}
-                className={cn(
-                  "shrink-0 transition-transform",
-                  isExpanded && "rotate-90",
-                )}
-              />
-              <FolderIcon size={16} />
-              <span className="min-w-0 truncate">{folder.name}</span>
-            </button>
-          </CollapsibleTrigger>
-          <div className="absolute right-0.5 top-1/2 -translate-y-1/2">
-            <FolderMenu folder={folder} />
-          </div>
-        </div>
-        <CollapsibleContent>
-          {boards.map((board) => (
-            <SpaceBoardRow
-              key={board.id}
-              spaceId={board.id}
-              folderId={board.folderId}
-              href={tasksUrlHelper.routing.buildBoardUrl(board.name)}
-              active={activeBoardId === board.id}
-              icon={<BoardIcon size={16} />}
-              label={board.name}
-              nested
-              menu={<BoardMenu board={board} />}
-            />
-          ))}
-        </CollapsibleContent>
-      </div>
-    </Collapsible>
-  );
-}
-
-function RootSpaceList({
-  children,
-  boards,
-}: {
-  children: ReactNode;
-  boards: ReactNode;
-}) {
-  const { setNodeRef, isOver } = useDroppable({
-    id: "space-root",
-    data: { kind: "root" } satisfies SpaceDropData,
-  });
-  const { active } = useDndContext();
-  const drag = active?.data.current;
-  const draggingFromFolder = isSpaceDrag(drag) && drag.folderId != null;
-
-  return (
-    <div ref={setNodeRef} className="relative flex min-h-0 flex-1 flex-col">
-      {children}
-      {draggingFromFolder ? (
-        <div
-          className={cn(
-            "relative my-1 h-10 shrink-0 rounded-lg",
-            isOver && "bg-surface/40",
-          )}
-        >
-          <DropSlot />
-        </div>
-      ) : null}
-      {boards}
-    </div>
-  );
-}
-
-function DropSlot() {
-  return (
-    <span className="pointer-events-none absolute inset-x-1 inset-y-1 z-10 rounded-lg border border-dotted border-muted-foreground/80" />
-  );
-}
-
-function SpaceDragOverlay() {
-  const { active } = useDndContext();
-  const drag = active?.data.current;
-  if (!isSpaceDrag(drag)) return null;
-  return (
-    <DragOverlay dropAnimation={null}>
-      <div className="cursor-grabbing rounded-md border border-border bg-panel px-3 py-2 text-sm shadow-lg">
-        {drag.label}
-      </div>
-    </DragOverlay>
-  );
-}
-
-function SpaceBoardRow({
-  spaceId,
-  folderId,
-  ...row
-}: NavRowProps & { spaceId: string; folderId: string | null }) {
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-    id: `space-board:${spaceId}`,
-    data: {
-      kind: "board",
-      spaceId,
-      folderId,
-      label: row.label,
-    } satisfies SpaceDragData,
-  });
-
-  return (
-    <div ref={setNodeRef} className={cn(isDragging && "opacity-0")}>
-      <NavRow {...row} drag={{ attributes, listeners }} />
-    </div>
   );
 }
 
@@ -335,44 +209,33 @@ function NavRow({
   active,
   icon,
   label,
+  count = 0,
   nested = false,
-  menu,
-  drag,
 }: NavRowProps) {
-  const row = (
-    <Link
-      href={href}
-      aria-label={label}
-      className={cn(
-        "flex min-w-0 flex-1 items-center gap-3 rounded-lg px-3 py-1.5 text-left text-sm",
-        nested && "pl-8",
-        menu && "pr-8",
-        drag && "cursor-grab active:cursor-grabbing",
-      )}
-      draggable={drag ? false : undefined}
-      {...drag?.listeners}
-      {...drag?.attributes}
-    >
-      {icon}
-      <span className="min-w-0 truncate">{label}</span>
-    </Link>
-  );
-
   return (
     <div
       className={cn(
-        "group relative my-1 flex items-center rounded-lg",
+        "my-1 flex items-center rounded-lg",
         active
           ? "bg-surface text-foreground"
           : "text-muted-foreground hover:bg-surface hover:text-foreground",
       )}
     >
-      {row}
-      {menu ? (
-        <div className="absolute right-0.5 top-1/2 -translate-y-1/2">
-          {menu}
-        </div>
-      ) : null}
+      <Link
+        href={href}
+        aria-label={label}
+        draggable={false}
+        className={cn(
+          "flex min-w-0 flex-1 items-center gap-3 rounded-lg px-3 py-1.5 text-left text-sm",
+          nested && "pl-8",
+        )}
+      >
+        {icon}
+        <span className="min-w-0 flex-1 truncate">{label}</span>
+        <span className="w-8 shrink-0 text-right text-xs tabular-nums text-muted-foreground">
+          {count > 0 ? count : null}
+        </span>
+      </Link>
     </div>
   );
 }
@@ -380,115 +243,44 @@ function NavRow({
 function BoardMenu({ board }: { board: Space }) {
   const actions = useSpaceDialogs();
   return (
-    <RowMenu>
-      <DropdownMenuItem onSelect={() => actions.openRenameBoard(board)}>
+    <ContextMenuContent>
+      <ContextMenuItem onSelect={() => actions.openRenameBoard(board)}>
         Rename
-      </DropdownMenuItem>
-      <DropdownMenuItem onSelect={() => actions.openMoveBoard(board)}>
-        Move to folder
-      </DropdownMenuItem>
-      <DropdownMenuSeparator />
-      <DropdownMenuItem
-        className="text-destructive"
-        onSelect={() => actions.openDeleteBoard(board)}
-      >
-        Delete
-      </DropdownMenuItem>
-    </RowMenu>
+      </ContextMenuItem>
+      {board.isInbox ? null : (
+        <ContextMenuItem onSelect={() => actions.openMoveBoard(board)}>
+          Move to folder
+        </ContextMenuItem>
+      )}
+      {board.isInbox ? null : <ContextMenuSeparator />}
+      {board.isInbox ? null : (
+        <ContextMenuItem
+          className="text-destructive"
+          onSelect={() => actions.openDeleteBoard(board)}
+        >
+          Delete
+        </ContextMenuItem>
+      )}
+    </ContextMenuContent>
   );
 }
 
-function FolderMenu({ folder }: { folder: Folder }) {
+function FolderMenu({ folder }: { folder: SpaceFolder }) {
   const actions = useSpaceDialogs();
   return (
-    <RowMenu>
-      <DropdownMenuItem onSelect={() => actions.openRenameFolder(folder)}>
+    <ContextMenuContent>
+      <ContextMenuItem onSelect={() => actions.openRenameSpaceFolder(folder)}>
         Rename
-      </DropdownMenuItem>
-      <DropdownMenuSeparator />
-      <DropdownMenuItem
+      </ContextMenuItem>
+      <ContextMenuSeparator />
+      <ContextMenuItem
         className="text-destructive"
-        onSelect={() => actions.openDeleteFolder(folder)}
+        onSelect={() => actions.openDeleteSpaceFolder(folder)}
       >
         Delete
-      </DropdownMenuItem>
-    </RowMenu>
+      </ContextMenuItem>
+    </ContextMenuContent>
   );
-}
-
-function RowMenu({ children }: { children: ReactNode }) {
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          type="button"
-          size="icon"
-          variant="ghost"
-          className="pointer-events-none h-7 w-7 shrink-0 text-muted-foreground opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100 data-[state=open]:pointer-events-auto data-[state=open]:opacity-100"
-          aria-label="Space actions"
-        >
-          <EllipsisIcon size={14} />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">{children}</DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
-
-function isSpaceDrag(value: unknown): value is SpaceDragData {
-  if (typeof value !== "object" || value === null) return false;
-  if (!("kind" in value) || value.kind !== "board") return false;
-  if (!("spaceId" in value) || typeof value.spaceId !== "string") return false;
-  if (!("folderId" in value)) return false;
-  if (!("label" in value) || typeof value.label !== "string") return false;
-  return value.folderId === null || typeof value.folderId === "string";
-}
-
-const spaceCollisionDetection: CollisionDetection = (args) => {
-  const pointerHits = pointerWithin(args);
-  const hits = pointerHits.length > 0 ? pointerHits : rectIntersection(args);
-  const folder = hits.find((hit) => String(hit.id).startsWith("space-folder:"));
-  if (folder) return [folder];
-  const root = hits.find((hit) => hit.id === "space-root");
-  if (root) return [root];
-  return hits[0] ? [hits[0]] : [];
-};
-
-function isSpaceDrop(value: unknown): value is SpaceDropData {
-  if (typeof value !== "object" || value === null || !("kind" in value)) {
-    return false;
-  }
-  if (value.kind === "root") return true;
-  return (
-    value.kind === "folder" &&
-    "folderId" in value &&
-    typeof value.folderId === "string"
-  );
-}
-
-class SpacePointerSensor extends PointerSensor {
-  static activators = [
-    {
-      eventName: "onPointerDown" as const,
-      handler: ({ nativeEvent }: { nativeEvent: PointerEvent }) => {
-        if (!nativeEvent.isPrimary || nativeEvent.button !== 0) return false;
-        const target = nativeEvent.target;
-        if (
-          target instanceof Element &&
-          target.closest("button, input, textarea, select, [data-no-dnd]")
-        ) {
-          return false;
-        }
-        return true;
-      },
-    },
-  ];
-}
-
-interface FolderGroupProps {
-  folder: Folder;
-  boards: Space[];
-  activeBoardId: string | null;
 }
 
 interface NavRowProps {
@@ -496,19 +288,24 @@ interface NavRowProps {
   active: boolean;
   icon: ReactNode;
   label: string;
+  count?: number;
   nested?: boolean;
-  menu?: ReactNode;
-  drag?: {
-    attributes: DraggableAttributes;
-    listeners: DraggableSyntheticListeners;
-  };
 }
 
-interface SpaceDragData {
-  kind: "board";
-  spaceId: string;
-  folderId: string | null;
-  label: string;
+function scheduledCount(tasks: Task[], offsetDays: number) {
+  const range = localDayScheduleQuery(offsetDays);
+  const from = Date.parse(range.scheduleFrom);
+  const to = Date.parse(range.scheduleTo);
+  return tasks.filter((task) => {
+    const start = earliestActiveSlotStart(task);
+    if (!start || task.parentTaskId != null) return false;
+    if (
+      task.status === TaskStatus.DONE ||
+      task.status === TaskStatus.CANCELLED
+    ) {
+      return false;
+    }
+    const scheduled = Date.parse(start);
+    return scheduled >= from && scheduled < to;
+  }).length;
 }
-
-type SpaceDropData = { kind: "folder"; folderId: string } | { kind: "root" };

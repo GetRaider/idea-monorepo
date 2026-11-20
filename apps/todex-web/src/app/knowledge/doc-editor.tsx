@@ -12,7 +12,7 @@ import { todexClient } from "@lib/todex-client";
 import { docsSectionClassName } from "./doc-collection";
 import { DocsCanvasHeader, type DocsCrumb } from "./docs-header";
 import { useDocs } from "./docs-provider";
-import { TaskDescriptionEditor } from "../planning/task-description-editor";
+import { KnowledgeContentEditor } from "./knowledge-content-editor";
 
 export function DocEditor({ docId }: { docId: string }) {
   const router = useRouter();
@@ -29,6 +29,7 @@ export function DocEditor({ docId }: { docId: string }) {
   const skipSaveRef = useRef(true);
   const loadedDocIdRef = useRef<string | null>(null);
   const saveDraftRef = useRef<(next: DocDraft) => void>(() => undefined);
+  const saveQueueRef = useRef<Promise<unknown>>(Promise.resolve());
   const doc = docQuery.data;
 
   useEffect(() => {
@@ -60,7 +61,12 @@ export function DocEditor({ docId }: { docId: string }) {
     },
     onError: () => toast.error("Could not save the doc"),
   });
-  saveDraftRef.current = save.mutate;
+  // Serialize autosaves: a slower prior request must never overwrite a newer one.
+  saveDraftRef.current = (next) => {
+    saveQueueRef.current = saveQueueRef.current
+      .catch(() => undefined)
+      .then(() => save.mutateAsync(next));
+  };
 
   useEffect(() => {
     if (!draft || !draft.title.trim()) return;
@@ -107,35 +113,43 @@ export function DocEditor({ docId }: { docId: string }) {
         crumbs={crumbsForDoc(doc, folders)}
         showNew={false}
         trailing={
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => setConfirmDelete(true)}
-          >
-            Delete
-          </Button>
+          <div className="flex items-center gap-3">
+            {save.isPending ? (
+              <span className="text-xs text-muted-foreground" role="status">
+                Saving…
+              </span>
+            ) : null}
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setConfirmDelete(true)}
+            >
+              Delete
+            </Button>
+          </div>
         }
       />
-      <textarea
-        aria-label="Title"
-        value={draft.title}
-        rows={2}
-        className="w-full resize-none bg-transparent text-2xl font-semibold leading-tight text-foreground outline-none"
-        onChange={(event) =>
-          setDraft((current) =>
-            current ? { ...current, title: event.target.value } : current,
-          )
-        }
-      />
-      <ProseSection
-        label="Description"
-        editorKey={`${doc.id}:content`}
-        excludeDocId={doc.id}
-        document={draft.content}
-        onChange={(content) =>
-          setDraft((current) => (current ? { ...current, content } : current))
-        }
-      />
+      <div className="mx-auto w-full max-w-[820px] pb-20 pt-8">
+        <textarea
+          aria-label="Title"
+          value={draft.title}
+          placeholder="Untitled document"
+          rows={2}
+          className="mb-4 w-full resize-none bg-transparent text-4xl font-bold leading-tight tracking-tight text-foreground outline-none placeholder:text-muted-foreground"
+          onChange={(event) =>
+            setDraft((current) =>
+              current ? { ...current, title: event.target.value } : current,
+            )
+          }
+        />
+        <KnowledgeContentEditor
+          docId={doc.id}
+          document={draft.content}
+          onChange={(content) =>
+            setDraft((current) => current ? { ...current, content } : current)
+          }
+        />
+      </div>
       {confirmDelete ? (
         <ConfirmDialog
           title="Delete doc"
@@ -149,39 +163,6 @@ export function DocEditor({ docId }: { docId: string }) {
       ) : null}
     </section>
   );
-}
-
-function ProseSection({
-  label,
-  editorKey,
-  excludeDocId,
-  document,
-  onChange,
-}: {
-  label: string;
-  editorKey: string;
-  excludeDocId: string;
-  document: ProseDoc;
-  onChange: (document: ProseDoc) => void;
-}) {
-  return (
-    <div className="mt-1">
-      <p className="mb-3 text-lg font-medium text-muted-foreground">{label}</p>
-      <TaskDescriptionEditor
-        key={editorKey}
-        appearance="plain"
-        content=""
-        excludeDocId={excludeDocId}
-        document={withParagraph(document)}
-        onDocumentChange={onChange}
-      />
-    </div>
-  );
-}
-
-function withParagraph(document: ProseDoc): ProseDoc {
-  if ((document.content ?? []).length > 0) return document;
-  return { type: "doc", content: [{ type: "paragraph" }] };
 }
 
 function draftFromDoc(
@@ -211,10 +192,8 @@ function crumbsForDoc(
   if (folder) {
     crumbs.push({
       label: folder.name,
-      href: `/knowledge/folder/${folder.id}`,
+      href: `/knowledge/space/${doc.spaceId}/folder/${folder.id}`,
     });
-  } else {
-    crumbs.push({ label: "General", href: "/knowledge/general" });
   }
   crumbs.push({ label: doc.docKey });
   return crumbs;

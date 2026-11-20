@@ -1,0 +1,45 @@
+{
+  "name": "airove",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Airove — Spaces and native AI chat management",
+  "type": "module",
+  "main": "./out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "lint": "eslint . --max-warnings=0",
+    "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
+    "codeCheck": "pnpm typecheck && pnpm lint",
+    "test": "vitest run",
+    "clean": "rm -rf out .turbo release",
+    "clean:hard": "pnpm run clean && rm -rf node_modules"
+  },
+  "dependencies": {
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "sql.js": "^1.13.0",
+    "@huggingface/transformers": "^4.2.0",
+    "onnxruntime-web": "1.26.0-dev.20260416-b7804b056c"
+  },
+  "devDependencies": {
+    "@repo/eslint-config": "workspace:*",
+    "@repo/typescript-config": "workspace:*",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
+    "autoprefixer": "^10.4.27",
+    "electron": "^37.3.1",
+    "electron-vite": "^4.0.1",
+    "eslint": "catalog:",
+    "globals": "catalog:",
+    "postcss": "^8.5.8",
+    "tailwindcss": "^3.4.17",
+    "typescript": "catalog:",
+    "vite": "^6.3.5",
+    "vitest": "catalog:",
+    "@types/sql.js": "^1.4.9",
+    "jsdom": "catalog:"
+  }
+}

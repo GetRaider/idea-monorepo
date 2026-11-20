@@ -459,23 +459,28 @@ export function TaskFacts({
 }: {
   task: Pick<
     Task,
-    | "scheduleDate"
+    | "scheduleSlots"
     | "dueDate"
     | "estimation"
     | "actualTime"
     | "recurrence"
     | "progressStageId"
+    | "status"
   >;
   className?: string;
 }) {
-  const schedule = formatTaskDay(task.scheduleDate);
+  const schedule = formatTaskDay(
+    task.scheduleSlots.find((slot) => slot.retiredAt == null)?.startAt ?? null,
+  );
   const due = formatTaskDay(task.dueDate);
   const estimate = formatEstimation(task.estimation);
   const executed = task.actualTime > 0 ? formatDuration(task.actualTime) : null;
   const recurrence = task.recurrence
     ? formatTaskRecurrence(task.recurrence)
     : null;
-  const stageName = useStageName(task.progressStageId);
+  const resolvedStageName = useStageName(task.progressStageId);
+  const stageName =
+    task.status === TaskStatus.IN_PROGRESS ? resolvedStageName : null;
   if (
     !schedule &&
     !due &&
@@ -497,25 +502,25 @@ export function TaskFacts({
       {schedule ? (
         <span className="inline-flex items-center gap-1">
           <CalendarIcon size={12} />
-          Schedule {schedule}
+          {schedule}
         </span>
       ) : null}
       {due ? (
         <span className="inline-flex items-center gap-1">
           <CalendarIcon size={12} />
-          Due {due}
+          {due}
         </span>
       ) : null}
       {estimate ? (
         <span className="inline-flex items-center gap-1">
           <ClockIcon size={12} />
-          Estimate {estimate}
+          {estimate}
         </span>
       ) : null}
       {executed ? (
         <span className="inline-flex items-center gap-1">
           <ClockIcon size={12} />
-          Executed {executed}
+          {executed}
         </span>
       ) : null}
       {recurrence ? (
@@ -532,6 +537,8 @@ export function TasksBreadcrumb({
   spaceName,
   boardHref,
   taskKey,
+  parentTaskKey,
+  onOpenParent,
   epicName,
   trailing,
   className,
@@ -539,6 +546,8 @@ export function TasksBreadcrumb({
   spaceName?: string;
   boardHref?: string;
   taskKey?: string;
+  parentTaskKey?: string;
+  onOpenParent?: () => void;
   epicName?: string;
   trailing?: ReactNode;
   className?: string;
@@ -582,6 +591,18 @@ export function TasksBreadcrumb({
           <span className="truncate">{epicName}</span>
         </>
       ) : null}
+      {parentTaskKey ? (
+        <>
+          <span className="shrink-0 text-muted-foreground">›</span>
+          <button
+            type="button"
+            className="truncate text-muted-foreground hover:text-foreground"
+            onClick={onOpenParent}
+          >
+            {parentTaskKey}
+          </button>
+        </>
+      ) : null}
       {taskKey ? (
         <>
           <span className="shrink-0 text-muted-foreground">›</span>
@@ -592,13 +613,20 @@ export function TasksBreadcrumb({
   );
 }
 
-export function StatusGlyph({ status }: { status: Task["status"] }) {
+export function StatusGlyph({
+  status,
+  large = false,
+}: {
+  status: Task["status"];
+  large?: boolean;
+}) {
   const glyph = STATUS_GLYPH[status];
   return (
     <span
       aria-hidden
       className={cn(
-        "inline-flex h-3.5 w-3.5 items-center justify-center text-sm leading-none",
+        "inline-flex items-center justify-center leading-none",
+        large ? "h-6 w-6 text-xl" : "h-3.5 w-3.5 text-sm",
         glyph.className,
       )}
     >
@@ -636,15 +664,17 @@ export function PriorityMenu({
 export function StatusMenu({
   status,
   onSelect,
+  large = false,
 }: {
   status: Task["status"];
   onSelect: (status: Task["status"]) => void;
+  large?: boolean;
 }) {
   return (
     <TextMenu
       ariaLabel="Status"
-      className="px-0.5"
-      trigger={<StatusGlyph status={status} />}
+      className={large ? "px-1.5 py-1" : "px-0.5"}
+      trigger={<StatusGlyph status={status} large={large} />}
       options={STATUS_MENU_OPTIONS}
       onSelect={(value) => onSelect(value as Task["status"])}
     />

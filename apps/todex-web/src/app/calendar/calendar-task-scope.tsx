@@ -18,6 +18,7 @@ export function TaskScopePicker({
   tasks,
   value,
   selection,
+  spaceId: controlledSpaceId,
   disabled,
   onChange,
 }: {
@@ -25,15 +26,19 @@ export function TaskScopePicker({
   tasks: Task[];
   value: string[];
   selection: "single" | "multiple";
+  spaceId?: string | null;
   disabled?: boolean;
   onChange: (taskIds: string[]) => void;
 }) {
+  const controlled = controlledSpaceId !== undefined;
   const [spaceId, setBoardId] = useState(
     () =>
       boards.find((board) => board.name === "Inbox")?.id ?? boards[0]?.id ?? "",
   );
   const [query, setQuery] = useState("");
-  const activeBoardId = spaceId || boards[0]?.id || "";
+  const activeBoardId = controlled
+    ? (controlledSpaceId ?? "")
+    : spaceId || boards[0]?.id || "";
   const spaceName = useMemo(() => {
     const names = new Map(boards.map((board) => [board.id, board.name]));
     return (spaceId: string) => names.get(spaceId) ?? "Space";
@@ -66,6 +71,10 @@ export function TaskScopePicker({
 
   return (
     <div className="flex flex-col gap-2">
+      {controlled && !activeBoardId ? (
+        <p className="text-sm text-muted-foreground">Select a Space to add tasks.</p>
+      ) : (
+      <>
       {selection === "multiple" && selected.length > 0 ? (
         <ul className="flex flex-col gap-1">
           {selected.map((task) => (
@@ -93,6 +102,7 @@ export function TaskScopePicker({
           ))}
         </ul>
       ) : null}
+      {controlled ? null : (
       <Select
         value={activeBoardId || undefined}
         disabled={disabled || boards.length === 0}
@@ -112,6 +122,7 @@ export function TaskScopePicker({
           ))}
         </SelectContent>
       </Select>
+      )}
       <Input
         value={query}
         disabled={disabled}
@@ -170,6 +181,8 @@ export function TaskScopePicker({
           Clear {selected[0].taskKey}
         </Button>
       ) : null}
+      </>
+      )}
     </div>
   );
 }

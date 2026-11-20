@@ -18,15 +18,20 @@ import {
 } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { randomUUID } from "crypto";
-import { DocType } from "@repo/api/todex";
 import {
   closeOpenIntervals,
+  DocType,
   hasOpenInterval,
   sumIntervalSeconds,
+  TaskStatus,
 } from "@repo/api/todex";
+
+import { assertNoLiveLifecycleLock } from "../tasks/task-lifecycle";
 import type {
   ExecutionActivityQuery,
+  ExecutionCalendarQuery,
   ExecutionCurrent,
+  ExecutionInterval,
   ExecutionQueueTask,
   ExecutionTaskRef,
   UpdateExecutionSessionBody,
@@ -54,6 +59,7 @@ import type {
   TaskRow,
 } from "../../db/schema";
 import { DRIZZLE_DB } from "../../db/tokens";
+import { assertOneSpace, lockWorkspaceTasks } from "../calendar/calendar-scope";
 import {
   allocateSessionSpans,
   buildExecutionActivity,
@@ -141,7 +147,22 @@ export class ExecutionService {
     }
     const now = new Date();
     await this.db.transaction(async (tx) => {
-      const open = await this.openRow(tx, workspaceId);
+      const locked = await lockWorkspaceTasks(tx, workspaceId, taskIds);
+      if (locked.length !== taskIds.length) {
+        throw new NotFoundException("Task");
+      }
+      const spaceId = assertOneSpace(locked);
+      await assertNoLiveLifecycleLock(tx, uniqueIds);
+      const [open] = await tx
+        .select({ id: executionSessions.id })
+        .from(executionSessions)
+        .where(
+          and(
+            eq(executionSessions.workspaceId, workspaceId),
+            isNull(executionSessions.endedAt),
+          ),
+        )
+        .for("update");
       if (open) {
         throw new BadRequestException("An execution is already running");
       }
@@ -149,22 +170,20 @@ export class ExecutionService {
       await tx.insert(executionSessions).values({
         id: sessionId,
         workspaceId,
+        spaceId,
+        title: null,
         startedAt: now,
         executorType: "human",
         createdAt: now,
         updatedAt: now,
       });
-      await this.requireSameBoard(tx, workspaceId, taskIds);
       await tx.insert(executionSessionTasks).values(
         taskIds.map((taskId, index) => ({
           id: randomUUID(),
           sessionId,
           taskId,
           position: index,
-          intervals:
-            index === 0
-              ? [{ startedAt: now.toISOString(), endedAt: null }]
-              : [],
+          intervals: [{ startedAt: now.toISOString(), endedAt: null }],
         })),
       );
       await tx
@@ -182,6 +201,7 @@ export class ExecutionService {
   async focus(workspaceId: string, taskId: string) {
     const now = new Date();
     await this.db.transaction(async (tx) => {
+      await assertNoLiveLifecycleLock(tx, [taskId]);
       const open = await this.openRow(tx, workspaceId);
       if (!open) throw new BadRequestException("No active execution");
       const links = await this.sessionLinks(tx, open.id, true);
@@ -195,17 +215,34 @@ export class ExecutionService {
       ) {
         return;
       }
-      await this.closeTracking(tx, links, now);
-      const closed = closeOpenIntervals(target.intervals, now);
-      await tx
-        .update(executionSessionTasks)
-        .set({
-          intervals: [
-            ...closed,
-            { startedAt: now.toISOString(), endedAt: null },
-          ],
-        })
-        .where(eq(executionSessionTasks.id, target.id));
+      // Focus no longer transfers time to a single task.
+      if (links.some((link) => hasOpenInterval(link.intervals))) return;
+      const eligible = await this.openTasks(tx, links);
+      for (const link of eligible) {
+        await tx
+          .update(executionSessionTasks)
+          .set({
+            intervals: [
+              ...closeOpenIntervals(link.intervals ?? [], now),
+              { startedAt: now.toISOString(), endedAt: null },
+            ],
+          })
+          .where(eq(executionSessionTasks.id, link.id));
+      }
+    });
+    return this.state(workspaceId);
+  }
+
+  async release(workspaceId: string, taskId: string) {
+    const now = new Date();
+    await this.db.transaction(async (tx) => {
+      const open = await this.openRow(tx, workspaceId);
+      if (!open) return;
+      const links = await this.sessionLinks(tx, open.id, true);
+      const target = links.find((link) => link.taskId === taskId);
+      if (!target || !hasOpenInterval(target.intervals)) return;
+      await this.closeTracking(tx, [target], now);
+      // Remaining session tasks keep their open intervals.
     });
     return this.state(workspaceId);
   }
@@ -228,18 +265,16 @@ export class ExecutionService {
       if (!open) throw new BadRequestException("No active execution");
       const links = await this.sessionLinks(tx, open.id, true);
       if (links.some((link) => hasOpenInterval(link.intervals))) return;
-      const taskId = focusedTask(links);
-      const target = links.find((link) => link.taskId === taskId);
-      if (!target) throw new BadRequestException("No task to resume");
-      await tx
-        .update(executionSessionTasks)
-        .set({
-          intervals: [
-            ...target.intervals,
-            { startedAt: now.toISOString(), endedAt: null },
-          ],
-        })
-        .where(eq(executionSessionTasks.id, target.id));
+      const eligible = await this.openTasks(tx, links);
+      if (eligible.length === 0) throw new BadRequestException("No unfinished task to resume");
+      for (const link of eligible) {
+        await tx
+          .update(executionSessionTasks)
+          .set({
+            intervals: [...link.intervals, { startedAt: now.toISOString(), endedAt: null }],
+          })
+          .where(eq(executionSessionTasks.id, link.id));
+      }
     });
     return this.state(workspaceId);
   }
@@ -260,6 +295,7 @@ export class ExecutionService {
     }
     const now = new Date();
     await this.db.transaction(async (tx) => {
+      await assertNoLiveLifecycleLock(tx, [taskId]);
       const [highest] = await tx
         .select({ value: max(executionQueue.position) })
         .from(executionQueue)
@@ -337,7 +373,7 @@ export class ExecutionService {
       .select({
         sessionId: executionSessions.id,
         intervals: executionSessionTasks.intervals,
-        spaceId: tasks.spaceId,
+        spaceId: executionSessions.spaceId,
         spaceName: spaces.name,
         sectionId: tasks.sectionId,
         sectionName: spaceSections.name,
@@ -349,7 +385,7 @@ export class ExecutionService {
         eq(executionSessionTasks.sessionId, executionSessions.id),
       )
       .innerJoin(tasks, eq(tasks.id, executionSessionTasks.taskId))
-      .innerJoin(spaces, eq(spaces.id, tasks.spaceId))
+      .innerJoin(spaces, eq(spaces.id, executionSessions.spaceId))
       .innerJoin(spaceSections, eq(spaceSections.id, tasks.sectionId))
       .where(
         and(
@@ -375,11 +411,91 @@ export class ExecutionService {
     }
   }
 
+  async calendar(workspaceId: string, query: ExecutionCalendarQuery) {
+    const from = new Date(query.from);
+    const to = new Date(query.to);
+    const rows = await this.db
+      .select({
+        id: executionSessions.id,
+        spaceId: executionSessions.spaceId,
+        title: executionSessions.title,
+        spaceName: spaces.name,
+        color: spaces.color,
+      })
+      .from(executionSessions)
+      .innerJoin(spaces, eq(spaces.id, executionSessions.spaceId))
+      .where(
+        and(
+          eq(executionSessions.workspaceId, workspaceId),
+          lt(executionSessions.startedAt, to),
+          or(
+            isNull(executionSessions.endedAt),
+            gt(executionSessions.endedAt, from),
+          ),
+        ),
+      );
+    if (rows.length === 0) return { sessions: [] };
+    const links = await this.db
+      .select({
+        sessionId: executionSessionTasks.sessionId,
+        taskId: executionSessionTasks.taskId,
+        position: executionSessionTasks.position,
+        intervals: executionSessionTasks.intervals,
+        taskKey: tasks.taskKey,
+        summary: tasks.summary,
+      })
+      .from(executionSessionTasks)
+      .innerJoin(tasks, eq(tasks.id, executionSessionTasks.taskId))
+      .where(
+        inArray(
+          executionSessionTasks.sessionId,
+          rows.map((row) => row.id),
+        ),
+      )
+      .orderBy(asc(executionSessionTasks.position));
+    const sessions = rows.flatMap((row) => {
+      const sessionLinks = links.filter((link) => link.sessionId === row.id);
+      const slices = mergeIntervals(sessionLinks.flatMap((link) => link.intervals ?? []));
+      if (!intervalsOverlapRange(slices, from, to)) return [];
+      return [
+        {
+          id: row.id,
+          spaceId: row.spaceId,
+          spaceName: row.spaceName,
+          color: row.color,
+          title: row.title,
+          tasks: sessionLinks.map((link) => ({
+            id: link.taskId,
+            taskKey: link.taskKey,
+            summary: link.summary,
+            position: link.position,
+          })),
+          slices,
+        },
+      ];
+    });
+    return { sessions };
+  }
+
   async updateSession(
     workspaceId: string,
     sessionId: string,
     body: UpdateExecutionSessionBody,
   ) {
+    if (isTitleOnlySessionUpdate(body) && body.title !== undefined) {
+      const title = normalizeSessionTitle(body.title);
+      await this.db.transaction(async (tx) => {
+        const row = await this.sessionRow(tx, workspaceId, sessionId);
+        await tx
+          .update(executionSessions)
+          .set({ title, updatedAt: new Date() })
+          .where(eq(executionSessions.id, row.id));
+      });
+      return this.sessions(workspaceId);
+    }
+    if (!body.startedAt || !body.endedAt) {
+      throw new BadRequestException("startedAt and endedAt are both required");
+    }
     const started = new Date(body.startedAt);
     const ended = new Date(body.endedAt);
     const duration = Math.floor((ended.getTime() - started.getTime()) / 1000);
@@ -392,27 +508,59 @@ export class ExecutionService {
         throw new BadRequestException("Stop the session before editing it");
       }
       const links = await this.sessionLinks(tx, row.id);
-      const spans = allocateSessionSpans(
-        links.map((link) => sumIntervalSeconds(link.intervals ?? [], ended)),
-        duration,
+      const originalEndedAt = row.endedAt;
+      const totalTaskSeconds = links.reduce(
+        (sum, link) => sum + sumIntervalSeconds(link.intervals ?? [], originalEndedAt),
+        0,
       );
-      let cursor = started.getTime();
-      for (const [index, link] of links.entries()) {
-        const span = spans[index] ?? 0;
-        const intervals =
-          span === 0
-            ? []
-            : [
-                {
-                  startedAt: new Date(cursor).toISOString(),
-                  endedAt: new Date(cursor + span * 1000).toISOString(),
-                },
-              ];
-        cursor += span * 1000;
-        await tx
-          .update(executionSessionTasks)
-          .set({ intervals })
-          .where(eq(executionSessionTasks.id, link.id));
+      const uniqueSeconds = uniqueIntervalSeconds(
+        links.flatMap((link) => link.intervals ?? []),
+        originalEndedAt,
+      );
+      if (totalTaskSeconds > uniqueSeconds && originalEndedAt.getTime() > row.startedAt.getTime()) {
+        // Preserve parallel task-time overlap when adjusting a historical session.
+        const oldStart = row.startedAt.getTime();
+        const oldSpan = originalEndedAt.getTime() - oldStart;
+        const newStart = started.getTime();
+        const newSpan = ended.getTime() - newStart;
+        const remap = (iso: string) => {
+          const ratio = Math.max(0, Math.min(1, (Date.parse(iso) - oldStart) / oldSpan));
+          return newStart + Math.round(ratio * newSpan);
+        };
+        for (const link of links) {
+          const intervals = (link.intervals ?? []).flatMap((interval) => {
+            const from = remap(interval.startedAt);
+            const to = remap(interval.endedAt ?? originalEndedAt.toISOString());
+            return to > from
+              ? [{ startedAt: new Date(from).toISOString(), endedAt: new Date(to).toISOString() }]
+              : [];
+          });
+          await tx.update(executionSessionTasks).set({ intervals })
+            .where(eq(executionSessionTasks.id, link.id));
+        }
+      } else {
+        const spans = allocateSessionSpans(
+          links.map((link) => sumIntervalSeconds(link.intervals ?? [], ended)),
+          duration,
+        );
+        let cursor = started.getTime();
+        for (const [index, link] of links.entries()) {
+          const span = spans[index] ?? 0;
+          const intervals =
+            span === 0
+              ? []
+              : [
+                  {
+                    startedAt: new Date(cursor).toISOString(),
+                    endedAt: new Date(cursor + span * 1000).toISOString(),
+                  },
+                ];
+          cursor += span * 1000;
+          await tx
+            .update(executionSessionTasks)
+            .set({ intervals })
+            .where(eq(executionSessionTasks.id, link.id));
+        }
       }
       await tx
         .update(executionSessions)
@@ -420,6 +568,9 @@ export class ExecutionService {
           startedAt: started,
           endedAt: ended,
           duration,
+          ...(body.title !== undefined
+            ? { title: normalizeSessionTitle(body.title) }
+            : {}),
           updatedAt: new Date(),
         })
         .where(eq(executionSessions.id, row.id));
@@ -436,24 +587,6 @@ export class ExecutionService {
       .delete(executionSessions)
       .where(eq(executionSessions.id, row.id));
     return { ok: true as const };
-  }
-
-  private async requireSameBoard(
-    tx: ExecutionDb,
-    workspaceId: string,
-    taskIds: string[],
-  ) {
-    const selected = await tx
-      .select({ id: tasks.id, spaceId: tasks.spaceId })
-      .from(tasks)
-      .where(
-        and(eq(tasks.workspaceId, workspaceId), inArray(tasks.id, taskIds)),
-      );
-    if (selected.length !== taskIds.length) throw new NotFoundException("Task");
-    const boards = new Set(selected.map((task) => task.spaceId));
-    if (boards.size > 1) {
-      throw new BadRequestException("Tasks must belong to the same board");
-    }
   }
 
   private async sessionRow(
@@ -550,6 +683,16 @@ export class ExecutionService {
     return activeOnly ? links.filter((link) => link.active) : links;
   }
 
+  private async openTasks(db: ExecutionDb, links: ExecutionSessionTaskRow[]) {
+    if (links.length === 0) return [];
+    const rows = await db
+      .select({ id: tasks.id, status: tasks.status })
+      .from(tasks)
+      .where(inArray(tasks.id, links.map((link) => link.taskId)));
+    const live = new Set(rows.filter((row) => row.status !== TaskStatus.DONE && row.status !== TaskStatus.CANCELLED).map((row) => row.id));
+    return links.filter((link) => live.has(link.taskId));
+  }
+
   private async closeTracking(
     db: ExecutionDb,
     links: ExecutionSessionTaskRow[],
@@ -575,10 +718,7 @@ export class ExecutionService {
       ...link,
       intervals: closeOpenIntervals(link.intervals ?? [], endedAt),
     }));
-    const duration = closed.reduce(
-      (total, link) => total + sumIntervalSeconds(link.intervals, endedAt),
-      0,
-    );
+    const duration = uniqueIntervalSeconds(closed.flatMap((link) => link.intervals), endedAt);
     await db
       .update(executionSessions)
       .set({ endedAt, duration, updatedAt: endedAt })
@@ -649,6 +789,13 @@ export class ExecutionService {
     if (uniqueIds.length !== taskIds.length) {
       throw new BadRequestException("Duplicate task");
     }
+    await this.db.transaction(async (tx) => {
+      const locked = await lockWorkspaceTasks(tx, workspaceId, taskIds);
+      if (locked.length !== taskIds.length) {
+        throw new NotFoundException("Task");
+      }
+      assertOneSpace(locked);
+    });
     const details: ExecutionCurrent[] = [];
     for (const taskId of taskIds) {
       const detail = await this.taskDetail(this.db, workspaceId, taskId, []);
@@ -658,7 +805,7 @@ export class ExecutionService {
     return details;
   }
 
-  async suggestions(workspaceId: string) {
+  async suggestions(workspaceId: string, includeDone = false) {
     const [queued, open] = await Promise.all([
       this.db
         .select({ taskId: executionQueue.taskId })
@@ -676,9 +823,9 @@ export class ExecutionService {
         id: tasks.id,
         taskKey: tasks.taskKey,
         summary: tasks.summary,
+        status: tasks.status,
         priority: tasks.priority,
         estimation: tasks.estimation,
-        scheduleDate: tasks.scheduleDate,
         dueDate: tasks.dueDate,
         spaceId: spaces.id,
         spaceName: spaces.name,
@@ -697,7 +844,7 @@ export class ExecutionService {
         and(
           eq(tasks.workspaceId, workspaceId),
           isNull(tasks.parentTaskId),
-          inArray(tasks.status, ["todo", "in_progress"]),
+          inArray(tasks.status, includeDone ? ["todo", "in_progress", "done"] : ["todo", "in_progress"]),
         ),
       )
       .orderBy(desc(tasks.updatedAt))
@@ -709,9 +856,11 @@ export class ExecutionService {
           id: row.id,
           taskKey: row.taskKey,
           summary: row.summary,
+          status: row.status,
           priority: row.priority,
           estimation: row.estimation,
-          scheduleDate: toIso(row.scheduleDate),
+          scheduleDate: null,
+          scheduleSlots: [],
           dueDate: toIso(row.dueDate),
           spaceId: row.spaceId,
           spaceName: row.spaceName,
@@ -754,6 +903,8 @@ export class ExecutionService {
           taskKey: tasks.taskKey,
           summary: tasks.summary,
           status: tasks.status,
+          priority: tasks.priority,
+          estimation: tasks.estimation,
         })
         .from(tasks)
         .where(
@@ -811,6 +962,27 @@ export class ExecutionService {
   }
 }
 
+function mergeIntervals(intervals: ExecutionInterval[]): ExecutionInterval[] {
+  const sorted = intervals
+    .map((interval) => ({ start: Date.parse(interval.startedAt), end: interval.endedAt == null ? Infinity : Date.parse(interval.endedAt) }))
+    .filter((interval) => Number.isFinite(interval.start) && !Number.isNaN(interval.end) && interval.end > interval.start)
+    .sort((left, right) => left.start - right.start);
+  const merged: Array<{ start: number; end: number }> = [];
+  for (const interval of sorted) {
+    const last = merged[merged.length - 1];
+    if (last && interval.start <= last.end) last.end = Math.max(last.end, interval.end);
+    else merged.push({ ...interval });
+  }
+  return merged.map((interval) => ({
+    startedAt: new Date(interval.start).toISOString(),
+    endedAt: interval.end === Infinity ? null : new Date(interval.end).toISOString(),
+  }));
+}
+
+function uniqueIntervalSeconds(intervals: ExecutionInterval[], now: Date) {
+  return sumIntervalSeconds(mergeIntervals(intervals), now);
+}
+
 function queueTask(
   task: TaskRow,
   spaceId: string,
@@ -828,7 +1000,8 @@ function queueTask(
     priority: task.priority,
     estimation: task.estimation,
     actualTime,
-    scheduleDate: toIso(task.scheduleDate),
+    scheduleDate: null,
+    scheduleSlots: [],
     dueDate: toIso(task.dueDate),
     spaceId,
     spaceName,
@@ -873,3 +1046,30 @@ type ExecutionDb = Pick<
   NodePgDatabase,
   "select" | "insert" | "update" | "delete"
 >;
+
+export function isTitleOnlySessionUpdate(body: UpdateExecutionSessionBody) {
+  return (
+    body.title !== undefined && body.startedAt == null && body.endedAt == null
+  );
+}
+
+export function normalizeSessionTitle(title: string) {
+  const trimmed = title.trim();
+  return trimmed.length === 0 ? null : trimmed;
+}
+
+export function intervalsOverlapRange(
+  intervals: ExecutionInterval[],
+  from: Date,
+  to: Date,
+) {
+  const fromMs = from.getTime();
+  const toMs = to.getTime();
+  return intervals.some((interval) => {
+    const started = Date.parse(interval.startedAt);
+    if (!Number.isFinite(started) || started >= toMs) return false;
+    if (interval.endedAt == null) return true;
+    const ended = Date.parse(interval.endedAt);
+    return Number.isFinite(ended) && ended > fromMs;
+  });
+}

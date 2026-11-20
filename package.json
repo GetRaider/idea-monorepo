@@ -26,11 +26,15 @@
     "dev:todex": "turbo run dev --filter=todex-api --filter=todex-web --filter=@repo/api --filter=@repo/ui",
     "dev:todex-landing": "turbo run dev --filter=todex-landing --filter=@repo/ui",
     "dev:tempo": "turbo run dev --filter=tempo",
+    "dev:evolin": "turbo run dev --filter=evolin --filter=evolin-api --filter=@repo/evolin-shared",
     "docker:take-and-do": "pnpm --filter take-and-do docker:up",
     "docker:take-and-do:down": "pnpm --filter take-and-do docker:down",
-    "docker:todex": "pnpm --filter todex-api docker:up",
+    "docker:todex": "pnpm --filter todex-api docker:up && pnpm --filter todex-api db:migrate",
     "docker:todex:down": "pnpm --filter todex-api docker:down",
     "docker:todex:clean": "pnpm --filter todex-api docker:clean",
+    "docker:evolin": "pnpm --filter evolin-api docker:up && pnpm --filter evolin-api db:migrate",
+    "docker:evolin:down": "pnpm --filter evolin-api docker:down",
+    "docker:evolin:clean": "pnpm --filter evolin-api docker:clean",
     "docker:devinity": "pnpm --filter devinity-api docker:up",
     "docker:devinity:down": "pnpm --filter devinity-api docker:down",
     "prod:take-and-do": "turbo run prod --filter=take-and-do --filter=@repo/ui --filter=@repo/api --filter=@repo/shared",
@@ -40,7 +44,9 @@
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "codeCheck": "npx tsc && pnpm lint",
-    "prepare": "husky"
+    "prepare": "husky",
+    "dev:airove": "turbo run dev --filter=airove",
+    "verify:affected": "node .cursor/scripts/verify-affected.mjs"
   },
   "devDependencies": {
     "@better-auth/cli": "1.3.8",
@@ -60,6 +66,9 @@
     "drizzle-orm": "catalog:"
   },
   "pnpm": {
+    "overrides": {
+      "fast-xml-parser": ">=5.7.0"
+    },
     "onlyBuiltDependencies": [
       "@nestjs/core",
       "@prisma/client",

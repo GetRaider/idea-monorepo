@@ -12,11 +12,6 @@ export const TaskPriority = {
   CRITICAL: "critical",
 } as const;
 
-export const FolderKind = {
-  TASKS: "tasks",
-  DOCS: "docs",
-} as const;
-
 export const DocType = {
   COMMON: "common",
   GOAL: "goal",
@@ -31,7 +26,28 @@ export const GoalStatus = {
 export const DocMentionTarget = {
   TASK: "task",
   DOC: "doc",
+  EPIC: "epic",
   EVENT: "event",
+} as const;
+
+export const RelationKind = {
+  REFERENCES: "references",
+  RELATED_TO: "related_to",
+  DEPENDS_ON: "depends_on",
+} as const;
+
+export const RelationOrigin = {
+  MENTION: "mention",
+  EXPLICIT: "explicit",
+} as const;
+
+export const RelationEntityType = {
+  TASK: "task",
+  DOC: "doc",
+  EPIC: "epic",
+  EVENT: "event",
+  SPACE: "space",
+  DOC_FOLDER: "doc_folder",
 } as const;
 
 export const WorkspaceMemberRole = {
@@ -54,11 +70,14 @@ export const PROGRESS_STAGE_TEMPLATES = {
 
 export type TaskStatus = (typeof TaskStatus)[keyof typeof TaskStatus];
 export type TaskPriority = (typeof TaskPriority)[keyof typeof TaskPriority];
-export type FolderKind = (typeof FolderKind)[keyof typeof FolderKind];
 export type DocType = (typeof DocType)[keyof typeof DocType];
 export type GoalStatus = (typeof GoalStatus)[keyof typeof GoalStatus];
 export type DocMentionTarget =
   (typeof DocMentionTarget)[keyof typeof DocMentionTarget];
+export type RelationKind = (typeof RelationKind)[keyof typeof RelationKind];
+export type RelationOrigin = (typeof RelationOrigin)[keyof typeof RelationOrigin];
+export type RelationEntityType =
+  (typeof RelationEntityType)[keyof typeof RelationEntityType];
 export type WorkspaceMemberRole =
   (typeof WorkspaceMemberRole)[keyof typeof WorkspaceMemberRole];
 export type ProgressStageTemplate =

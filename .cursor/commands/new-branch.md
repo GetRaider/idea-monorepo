@@ -1,30 +1,5 @@
-Generate a **compliant git branch name** from my one-line description.
+Generate a Git branch name for the user's task.
 
-## Input
+Read `.husky/pre-commit`, `.husky/pre-push`, and `.cursor/rules/git-conventions.mdc` for current branch constraints and scopes. Use the relevant type and scope, and a short descriptive slug.
 
-I will provide a short description of the work (e.g. "fix kanban drag bug in take-and-do").
-
-## Output
-
-Return **only** the branch name — no explanation unless I ask.
-
-## Rules (from commitlint + Husky)
-
-Format: `<type>/<SCOPE>-<slug>`
-
-**Types:** `feat`, `fix`, `test`, `chore`, `docs`, `refactor`, `style`, `release`
-
-**Scopes:** `GEN` (repo-wide), `TAD` (take-and-do), `DVN` (devinity-api/web), `PRT` (personal-website), `TMP` (Tempo), `TDX` (todex-api/web)
-
-**Slug:** lowercase, hyphens between words; may include version like `1.2.0` or `v1`
-
-**Max length:** 50 characters total
-
-## Examples
-
-- `feat/TAD-focus-session-persistence`
-- `fix/DVN-user-hook-race`
-- `feat/TMP-tempo-sidebar`
-- `release/TAD-1.2.0`
-
-Pick the most accurate `type` and `SCOPE` from the description. Abbreviate slug if needed to stay under 50 chars.
+Return **only** a valid branch name. Do not create or check out a branch.

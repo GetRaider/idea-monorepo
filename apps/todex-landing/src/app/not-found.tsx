@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { LandingFrame } from "@/components/landing-frame";
-import { WaitlistButton } from "@/components/waitlist-button";
+import { OpenTodexLink } from "@/components/open-todex-link";
 
 export default function NotFound() {
   return (
@@ -16,7 +16,7 @@ export default function NotFound() {
         >
           Home
         </Link>
-        <WaitlistButton />
+        <OpenTodexLink />
       </div>
     </LandingFrame>
   );

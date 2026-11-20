@@ -9,11 +9,13 @@ import { useDocs } from "./docs-provider";
 
 export function DocListPage({
   crumbs,
+  spaceId = null,
   folderId = null,
   emptyLabel,
   match,
 }: {
   crumbs: DocsCrumb[];
+  spaceId?: string | null;
   folderId?: string | null;
   emptyLabel: string;
   match: (doc: DocSummary) => boolean;
@@ -25,7 +27,11 @@ export function DocListPage({
 
   return (
     <section className={docsSectionClassName()}>
-      <DocsCanvasHeader crumbs={crumbs} folderId={folderId} />
+      <DocsCanvasHeader
+        crumbs={crumbs}
+        spaceId={spaceId}
+        folderId={folderId}
+      />
       {isLoading ? (
         <Spinner className="flex-1" />
       ) : (

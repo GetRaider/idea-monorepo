@@ -87,3 +87,222 @@
     mix-blend-mode: multiply;
   }
 }
+
+
+/* Knowledge Docs: Tiptap does not ship presentational table CSS.
+   Scope rules to the full document editor, not Planning task descriptions. */
+@layer components {
+  .knowledge-doc-editor .tableWrapper {
+    width: 100%;
+    overflow-x: auto;
+    margin: 1.25rem 0;
+    border: 1px solid var(--border);
+    border-radius: 0.625rem;
+  }
+
+  .knowledge-doc-editor .tiptap table {
+    table-layout: fixed;
+    border-collapse: collapse;
+    border-spacing: 0;
+    min-width: 100%;
+    width: 100%;
+    margin: 0;
+  }
+
+  .knowledge-doc-editor .tiptap table th,
+  .knowledge-doc-editor .tiptap table td {
+    min-width: 96px;
+    position: relative;
+    vertical-align: top;
+    text-align: left;
+    border-right: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    padding: 0.625rem 0.75rem;
+    font-weight: 400;
+    line-height: 1.5;
+    background: transparent;
+  }
+
+  .knowledge-doc-editor .tiptap table th {
+    background: var(--panel);
+    font-weight: 600;
+  }
+
+  .knowledge-doc-editor .tiptap table tr:last-child > td {
+    border-bottom: none;
+  }
+
+  .knowledge-doc-editor .tiptap table th:last-child,
+  .knowledge-doc-editor .tiptap table td:last-child {
+    border-right: none;
+  }
+
+  .knowledge-doc-editor .tiptap table p {
+    margin: 0;
+  }
+
+  .knowledge-doc-editor .tiptap table .selectedCell::after {
+    z-index: 1;
+    position: absolute;
+    inset: 0;
+    background-color: rgba(130, 130, 130, 0.16);
+    pointer-events: none;
+    content: "";
+  }
+
+  .knowledge-doc-editor .tiptap .column-resize-handle {
+    position: absolute;
+    right: -2px;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: var(--muted-foreground);
+    pointer-events: none;
+  }
+
+  .knowledge-doc-editor .tiptap.resize-cursor {
+    cursor: col-resize;
+  }
+
+  .knowledge-doc-editor .tiptap .todex-callout {
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--muted-foreground);
+    background: var(--panel);
+    border-radius: 0.5rem;
+    padding: 0.75rem 1rem;
+    margin: 1rem 0;
+  }
+
+  .knowledge-doc-editor .tiptap .todex-details {
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    margin: 1rem 0;
+    padding: 0.5rem 0.75rem;
+  }
+
+  .knowledge-doc-editor .tiptap .todex-details > button {
+    margin-right: 0.5rem;
+    cursor: pointer;
+  }
+}
+
+
+/* Explicit block UI styles for Tiptap 3's generated node views. */
+@layer components {
+  .knowledge-doc-editor .tiptap ul[data-type="taskList"] {
+    list-style: none !important;
+    margin: 0.625rem 0;
+    padding-left: 0 !important;
+  }
+
+  .knowledge-doc-editor .tiptap ul[data-type="taskList"] > li[data-type="taskItem"] {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.625rem;
+    list-style: none !important;
+    margin: 0.375rem 0;
+    padding: 0;
+  }
+
+  .knowledge-doc-editor .tiptap li[data-type="taskItem"] > label {
+    display: flex;
+    align-items: center;
+    flex: 0 0 17px;
+    margin-top: 0.32rem;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .knowledge-doc-editor .tiptap li[data-type="taskItem"] > label input {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    border: 1px solid var(--muted-foreground);
+    border-radius: 4px;
+    accent-color: #eeeeee;
+    cursor: pointer;
+  }
+
+  .knowledge-doc-editor .tiptap li[data-type="taskItem"] > label span {
+    display: none;
+  }
+
+  .knowledge-doc-editor .tiptap li[data-type="taskItem"] > div {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .knowledge-doc-editor .tiptap li[data-type="taskItem"] > div > p {
+    margin: 0;
+  }
+
+  .knowledge-doc-editor .tiptap li[data-type="taskItem"][data-checked="true"] > div > p {
+    color: var(--muted-foreground);
+    text-decoration: line-through;
+  }
+
+  .knowledge-doc-editor .tiptap .todex-details {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 0.375rem;
+  }
+
+  .knowledge-doc-editor .tiptap .todex-details > button {
+    flex: 0 0 20px;
+    width: 20px;
+    height: 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    background: transparent;
+    color: var(--muted-foreground);
+    border: 0;
+    border-radius: 4px;
+  }
+
+  .knowledge-doc-editor .tiptap .todex-details > button::before {
+    content: "▸";
+    display: block;
+    font-size: 17px;
+    line-height: 1;
+    transition: transform 120ms ease;
+  }
+
+  .knowledge-doc-editor .tiptap .todex-details.is-open > button::before {
+    transform: rotate(90deg);
+  }
+
+  .knowledge-doc-editor .tiptap .todex-details > button:hover {
+    background: var(--surface);
+    color: var(--foreground);
+  }
+
+  .knowledge-doc-editor .tiptap .todex-details > div {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .knowledge-doc-editor .tiptap .todex-details summary {
+    display: block;
+    font-weight: 500;
+    cursor: text;
+    list-style: none;
+  }
+
+  .knowledge-doc-editor .tiptap .todex-details summary::marker,
+  .knowledge-doc-editor .tiptap .todex-details summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .knowledge-doc-editor .tiptap .todex-details div[data-type="detailsContent"] {
+    padding-top: 0.5rem;
+    padding-left: 0.25rem;
+    color: var(--foreground);
+  }
+
+  .knowledge-doc-editor .tiptap .todex-details div[data-type="detailsContent"][hidden] {
+    display: none;
+  }
+}

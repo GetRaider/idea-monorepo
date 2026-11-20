@@ -1,7 +1,9 @@
 import {
+  DEFAULT_SPACE_COLOR,
   DocType,
   readGoalDocBody,
   readTaskRecurrence,
+  SpaceColorSchema,
   type SpaceSection,
   type CalendarEvent,
   type CalendarEventTemplate,
@@ -12,7 +14,8 @@ import {
   type ExecutionQueueItem,
   type ExecutionQueueTask,
   type ExecutionSession,
-  type Folder,
+  type DocFolder,
+  type SpaceFolder,
   type Task,
   type Space,
   type Workspace,
@@ -26,8 +29,9 @@ import type {
   CalendarEventTemplateRow,
   DocRow,
   ExecutionQueueRow,
+  DocFolderRow,
   ExecutionSessionRow,
-  FolderRow,
+  SpaceFolderRow,
   SpaceRow,
   TaskRow,
   WorkspaceMemberRow,
@@ -64,14 +68,24 @@ export function mapWorkspaceMember(row: WorkspaceMemberRow): WorkspaceMember {
   };
 }
 
-export function mapFolder(row: FolderRow): Folder {
+export function mapSpaceFolder(row: SpaceFolderRow): SpaceFolder {
   return {
     id: row.id,
     workspaceId: row.workspaceId,
-    parentId: row.parentId,
-    kind: row.kind,
     name: row.name,
     emoji: row.emoji,
+    position: row.position,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
+export function mapDocFolder(row: DocFolderRow): DocFolder {
+  return {
+    id: row.id,
+    workspaceId: row.workspaceId,
+    spaceId: row.spaceId,
+    name: row.name,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -81,9 +95,12 @@ export function mapSpace(row: SpaceRow): Space {
   return {
     id: row.id,
     workspaceId: row.workspaceId,
-    folderId: row.folderId,
+    folderId: row.spaceFolderId,
+    isInbox: row.isInbox,
     name: row.name,
     emoji: row.emoji,
+    color: SpaceColorSchema.catch(DEFAULT_SPACE_COLOR).parse(row.color),
+    position: row.position,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -121,6 +138,7 @@ export function mapDocSummary(
   const summary = {
     id: row.id,
     workspaceId: row.workspaceId,
+    spaceId: row.spaceId,
     folderId: row.folderId,
     type: row.type,
     docKey: row.docKey,
@@ -166,6 +184,13 @@ export function mapTask(
   row: TaskRow,
   goalId: string | null = null,
   actualTime = 0,
+  slots: Array<{
+    id: string;
+    startAt: Date;
+    endAt: Date;
+    retiredAt: Date | null;
+  }> = [],
+  conflicts: Task["conflicts"] = [],
 ): Task {
   return {
     id: row.id,
@@ -174,20 +199,34 @@ export function mapTask(
     taskKey: row.taskKey,
     summary: row.summary,
     description: row.description,
+    outcome: row.outcome,
     status: row.status,
     priority: row.priority,
+    complexity: row.complexity,
     dueDate: toIso(row.dueDate),
-    scheduleDate: toIso(row.scheduleDate),
     estimation: row.estimation,
     actualTime,
-    color: row.color,
     acceptanceCriteria: row.acceptanceCriteria ?? [],
     recurrence: readTaskRecurrence(row.recurrence),
+    scheduleSlots: slots.map((slot) => ({
+      id: slot.id,
+      startAt: slot.startAt.toISOString(),
+      endAt: slot.endAt.toISOString(),
+      retiredAt: toIso(slot.retiredAt),
+    })),
     sectionId: row.sectionId,
     progressStageId: row.progressStageId,
     parentTaskId: row.parentTaskId,
     epicId: row.epicId,
     goalId,
+    ownerId: row.ownerId,
+    seriesId: row.seriesId,
+    occurrenceKey: row.occurrenceKey,
+    occurrenceAnchor: toIso(row.occurrenceAnchor),
+    originSeriesId: row.originSeriesId,
+    overriddenFields: row.overriddenFields ?? [],
+    version: row.version,
+    conflicts,
     position: row.position,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
@@ -203,13 +242,13 @@ export function mapCalendarEvent(row: CalendarEventRow): CalendarEvent {
     start: row.start.toISOString(),
     end: row.end.toISOString(),
     allDay: row.allDay,
-    color: row.color,
     timeZone: row.timeZone,
     recurrence: readTaskRecurrence(row.recurrence),
     rawRrule: row.rawRrule,
     description: row.description,
     taskScope: row.taskScope ?? [],
     participants: row.participants ?? [],
+    spaceId: row.spaceId,
     rsvpStatus: row.rsvpStatus,
     googleEventId: row.googleEventId,
     googleEtag: row.googleEtag,
@@ -228,6 +267,8 @@ export function mapExecutionSession(
   return {
     id: row.id,
     workspaceId: row.workspaceId,
+    spaceId: row.spaceId,
+    title: row.title,
     tasks: sessionTasks,
     startedAt: row.startedAt.toISOString(),
     endedAt: toIso(row.endedAt),
@@ -256,9 +297,9 @@ export function mapCalendarEventTemplate(
   return {
     id: row.id,
     workspaceId: row.workspaceId,
+    spaceId: row.spaceId,
     title: row.title,
     durationMinutes: row.durationMinutes,
-    color: row.color,
     description: row.description,
     taskScope: row.taskScope ?? [],
     createdAt: row.createdAt.toISOString(),
@@ -269,6 +310,7 @@ export function mapCalendarEventTemplate(
 interface DocSummaryRow {
   id: string;
   workspaceId: string;
+  spaceId: string;
   folderId: string | null;
   type: DocRow["type"];
   docKey: string;

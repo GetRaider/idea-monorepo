@@ -1,37 +1,18 @@
-Generate a **PR description** from the current branch diff against `main`.
+Draft a PR description for the current branch against `main`.
 
-## Steps
+Inspect `git diff main...HEAD`, `git log main..HEAD`, and working-tree changes when relevant; do not invent results or verification.
 
-1. Run `git diff main...HEAD --stat` and `git log main..HEAD --oneline` to understand scope.
-2. Identify primary **SCOPE** (`GEN`, `TAD`, `DVN`, `PRT`, `TMP`, `TDX`) from changed paths.
-3. Write the PR description below.
-
-## Output format
-
-```markdown
+Output:
 ## Summary
+- 1–3 bullets describing what changed and why.
 
-- <bullet: what changed and why — 1-3 bullets>
+## Impact
+- Affected apps/packages, compatibility, migrations or rollout considerations when applicable.
 
-## Scope
+## Verification
+- Commands **actually run**, with results; otherwise explicitly label proposed test steps as **Not run**.
 
-**<SCOPE>** — <apps/packages touched>
+## Risks / follow-ups
+- Only meaningful remaining concerns.
 
-## Test plan
-
-- [ ] <specific check derived from changes>
-- [ ] `pnpm codeCheck` (or scoped filter if narrow)
-- [ ] <app-specific: e.g. manual test of feature X>
-```
-
-## Rules
-
-- Mention affected apps/packages by name
-- Test plan must be actionable — not generic "test everything"
-- If DB migrations included, note `db:migrate` / `db:push` step
-- If only `.cursor/` changes, note no app code impact
-- Do not invent changes not in the diff
-
-## Branch context
-
-If branch name follows `<type>/<SCOPE>-<slug>`, reference it in Summary when helpful.
+Do not create the PR unless the user explicitly requests it.

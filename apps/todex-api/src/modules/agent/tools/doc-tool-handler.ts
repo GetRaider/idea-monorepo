@@ -1,11 +1,11 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
-import { DocType, FolderKind, emptyGoalDocBody } from "@repo/api/todex";
+import { DocType, emptyGoalDocBody } from "@repo/api/todex";
 import { z } from "zod";
 
 import type { MessageCitation } from "../../../db/schema";
 import { proseFromText } from "../../docs/prose-from-text";
 import { DocsService } from "../../docs/docs.service";
-import { FoldersService } from "../../folders/folders.service";
+import { DocFoldersService } from "../../folders/doc-folders.service";
 import type { ToolHandler } from "./tool-handler";
 
 const docTypeSchema = z.enum([DocType.COMMON, DocType.GOAL]);
@@ -33,7 +33,7 @@ const linkedTaskIdsSchema = z
 export class DocToolHandler {
   constructor(
     private readonly docs: DocsService,
-    private readonly folders: FoldersService,
+    private readonly folders: DocFoldersService,
   ) {}
 
   handlers(): ToolHandler[] {
@@ -68,11 +68,12 @@ export class DocToolHandler {
         name: "create_doc",
         access: "write",
         description:
-          "Create a Knowledge doc (type common) or a Planning goal (type goal) in the current workspace. content is plain text. To file a doc, pass folderName of a docs folder or folderId from list_folders. Do not put the folder name in the title.",
+          "Create a Knowledge doc (type common) or a Planning goal (type goal) in the current workspace. spaceId is required. content is plain text. To file a doc, pass folderName or folderId of a document folder in that space.",
         parameters: z
           .object({
             type: docTypeSchema,
             title: z.string().trim().min(1).max(200),
+            spaceId: z.string().min(1),
             folderId: z.string().min(1).nullable().optional(),
             folderName: folderNameSchema.optional(),
             content: z.string().max(20_000).optional(),
@@ -93,6 +94,7 @@ export class DocToolHandler {
           const input = { sources };
           const folderId = await this.resolveDocsFolderId(
             workspaceId,
+            body.spaceId,
             body.folderId,
             body.folderName,
           );
@@ -100,6 +102,7 @@ export class DocToolHandler {
             return this.docs.create(workspaceId, {
               type: DocType.COMMON,
               title: body.title,
+              spaceId: body.spaceId,
               ...(folderId !== undefined ? { folderId } : {}),
               ...(body.content !== undefined || input.sources?.length
                 ? { body: { content: proseFromText(textWithSources(body.content, input.sources)) } }
@@ -109,6 +112,7 @@ export class DocToolHandler {
           return this.docs.create(workspaceId, {
             type: DocType.GOAL,
             title: body.title,
+            spaceId: body.spaceId,
             ...(folderId !== undefined ? { folderId } : {}),
             ...(body.linkedTaskIds !== undefined
               ? { linkedTaskIds: body.linkedTaskIds }
@@ -133,6 +137,7 @@ export class DocToolHandler {
           .object({
             docId: z.string().min(1),
             title: z.string().trim().min(1).max(200).optional(),
+            spaceId: z.string().min(1).optional(),
             folderId: z.string().min(1).nullable().optional(),
             folderName: folderNameSchema.optional(),
             content: z.string().max(20_000).optional(),
@@ -143,6 +148,7 @@ export class DocToolHandler {
           const body = args as UpdateDocArgs;
           if (
             body.title === undefined &&
+            body.spaceId === undefined &&
             body.folderId === undefined &&
             body.folderName === undefined &&
             body.content === undefined &&
@@ -150,17 +156,22 @@ export class DocToolHandler {
           ) {
             throw new BadRequestException("No changes");
           }
+          const existing =
+            body.content !== undefined ||
+            (body.spaceId === undefined &&
+              (body.folderId !== undefined || body.folderName !== undefined))
+              ? await this.docs.get(workspaceId, body.docId)
+              : null;
+          const spaceId = body.spaceId ?? existing?.spaceId;
           const folderId = await this.resolveDocsFolderId(
             workspaceId,
+            spaceId,
             body.folderId,
             body.folderName,
           );
-          const existing =
-            body.content !== undefined
-              ? await this.docs.get(workspaceId, body.docId)
-              : null;
           return this.docs.update(workspaceId, body.docId, {
             ...(body.title !== undefined ? { title: body.title } : {}),
+            ...(body.spaceId !== undefined ? { spaceId: body.spaceId } : {}),
             ...(folderId !== undefined ? { folderId } : {}),
             ...(body.linkedTaskIds !== undefined
               ? { linkedTaskIds: body.linkedTaskIds }
@@ -192,6 +203,7 @@ export class DocToolHandler {
 
   private async resolveDocsFolderId(
     workspaceId: string,
+    spaceId: string | undefined,
     folderId: string | null | undefined,
     folderName: string | undefined,
   ): Promise<string | null | undefined> {
@@ -200,8 +212,11 @@ export class DocToolHandler {
     }
     const requested = folderName ?? folderId;
     if (requested === undefined || requested === null) return requested;
+    if (!spaceId) {
+      throw new BadRequestException("spaceId is required to choose a folder");
+    }
 
-    const docsFolders = await this.folders.list(workspaceId, FolderKind.DOCS);
+    const docsFolders = await this.folders.list(workspaceId, spaceId);
     const byId = docsFolders.find((folder) => folder.id === requested);
     if (byId) return byId.id;
 
@@ -238,6 +253,7 @@ function sameFolderName(left: string, right: string): boolean {
 interface CreateDocArgs {
   type: DocType;
   title: string;
+  spaceId: string;
   folderId?: string | null;
   folderName?: string;
   content?: string;
@@ -247,6 +263,7 @@ interface CreateDocArgs {
 interface UpdateDocArgs {
   docId: string;
   title?: string;
+  spaceId?: string;
   folderId?: string | null;
   folderName?: string;
   content?: string;

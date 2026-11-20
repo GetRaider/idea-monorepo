@@ -1,9 +1,11 @@
 "use client";
 
-import type { ComponentProps, MouseEvent } from "react";
+import { useState, type ComponentProps, type MouseEvent } from "react";
 import { TaskStatus } from "@repo/api/todex";
 import type { Task } from "@repo/api/todex";
 import { Checkbox, cn } from "@repo/ui";
+
+import { ChevronIcon } from "@components/icons";
 
 import { EpicRows } from "./epic-row";
 import { TaskComposer, type TaskComposerValues } from "./task-composer";
@@ -58,6 +60,18 @@ export function TaskKanban({
     state: { selectedTaskIds },
     actions: { updateTaskStatus, clearTaskSelection },
   } = useTasks();
+  const [collapsedStatuses, setCollapsedStatuses] = useState<
+    ReadonlySet<Task["status"]>
+  >(() => new Set());
+
+  function toggleCollapsed(status: Task["status"]) {
+    setCollapsedStatuses((current) => {
+      const next = new Set(current);
+      if (next.has(status)) next.delete(status);
+      else next.add(status);
+      return next;
+    });
+  }
 
   return (
     <div
@@ -80,22 +94,44 @@ export function TaskKanban({
     >
       {STATUS_ORDER.map((status) => {
         const nodes = groups[status] ?? [];
+        const collapsed = collapsedStatuses.has(status);
+        const count =
+          nodes.length + (epicColumns?.[status].epics.length ?? 0);
         return (
           <section
             key={status}
             className={cn(
               "flex flex-col rounded-lg border border-border bg-panel p-2",
-              layout === "fill" && "min-h-0",
+              layout === "fill" && !collapsed && "min-h-0",
             )}
           >
-            <div className="mb-2 flex items-center gap-2 px-1 py-1 text-sm font-semibold">
+            <button
+              type="button"
+              className="mb-2 flex w-full items-center gap-2 px-1 py-1 text-left text-sm font-semibold"
+              aria-expanded={!collapsed}
+              onClick={() => toggleCollapsed(status)}
+            >
+              <ChevronIcon
+                size={14}
+                className={cn(
+                  "text-muted-foreground",
+                  !collapsed && "rotate-90",
+                )}
+              />
               <StatusGlyph status={status} />
               <span>{STATUS_LABEL[status]}</span>
-              <span className="text-muted-foreground">
-                {nodes.length + (epicColumns?.[status].epics.length ?? 0)}
-              </span>
-            </div>
-            {status === TaskStatus.TODO && fastCreate ? (
+              <span className="text-muted-foreground">{count}</span>
+            </button>
+            {collapsed ? (
+              <BoardDropZone
+                kind="column"
+                status={status}
+                index={null}
+                spaceId={spaceId}
+                className="min-h-8"
+              />
+            ) : null}
+            {!collapsed && status === TaskStatus.TODO && fastCreate ? (
               <div className="mb-2">
                 <TaskComposer
                   titleRef={fastCreate.titleRef}
@@ -109,6 +145,7 @@ export function TaskKanban({
                 />
               </div>
             ) : null}
+            {!collapsed ? (
             <div
               className={cn(
                 "flex min-h-24 flex-col",
@@ -196,6 +233,7 @@ export function TaskKanban({
                 </BoardDropZone>
               )}
             </div>
+            ) : null}
           </section>
         );
       })}

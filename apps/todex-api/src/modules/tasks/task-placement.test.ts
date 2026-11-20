@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
+import { TaskStatus } from "@repo/api/todex";
 
-import { resolveTaskPlacement, TaskPlacementError } from "./task-placement";
+import {
+  assertProgressStageForStatus,
+  resolveTaskPlacement,
+  TaskPlacementError,
+} from "./task-placement";
 
 const current = {
   currentSectionId: "general",
@@ -72,5 +77,31 @@ describe("resolveTaskPlacement", () => {
         stageOnDestination: false,
       }),
     ).toThrow(TaskPlacementError);
+  });
+});
+
+describe("assertProgressStageForStatus", () => {
+  it("allows a stage while the task is in progress", () => {
+    expect(() =>
+      assertProgressStageForStatus(TaskStatus.IN_PROGRESS, "design"),
+    ).not.toThrow();
+  });
+
+  it("allows clearing or omitting the stage on any status", () => {
+    expect(() =>
+      assertProgressStageForStatus(TaskStatus.TODO, null),
+    ).not.toThrow();
+    expect(() =>
+      assertProgressStageForStatus(TaskStatus.DONE, undefined),
+    ).not.toThrow();
+  });
+
+  it("rejects a stage unless the task is in progress", () => {
+    expect(() =>
+      assertProgressStageForStatus(TaskStatus.TODO, "design"),
+    ).toThrow(TaskPlacementError);
+    expect(() =>
+      assertProgressStageForStatus(TaskStatus.DONE, "design"),
+    ).toThrow(/In Progress/);
   });
 });

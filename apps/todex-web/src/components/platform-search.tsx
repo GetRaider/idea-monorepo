@@ -271,7 +271,7 @@ function searchHits({
           kind: "Task",
           title: task.summary,
           detail: task.taskKey,
-          href: tasksUrlHelper.routing.buildBoardUrl(spaceName, task.taskKey),
+          href: tasksUrlHelper.routing.buildBoardUrl(task.spaceId, task.taskKey),
         },
       ];
     }),
@@ -297,7 +297,7 @@ function searchHits({
           kind: "Epic",
           title: epic.name,
           detail: spaceName,
-          href: tasksUrlHelper.routing.buildEpicUrl(spaceName, epic.id),
+          href: tasksUrlHelper.routing.buildEpicUrl(epic.spaceId, epic.id),
         },
       ];
     }),
@@ -309,7 +309,7 @@ function searchHits({
           kind: "Event",
           title: event.title,
           detail: "",
-          href: `/calendar/events/${event.id}`,
+          href: `/planning/calendar/events/${event.id}`,
         },
       ];
     }),
@@ -321,7 +321,7 @@ function searchHits({
           kind: "Space",
           title: space.name,
           detail: "",
-          href: tasksUrlHelper.routing.buildBoardUrl(space.name),
+          href: tasksUrlHelper.routing.buildBoardUrl(space.id),
         },
       ];
     }),

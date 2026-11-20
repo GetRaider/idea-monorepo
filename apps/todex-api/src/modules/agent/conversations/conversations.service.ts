@@ -3,6 +3,7 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  Optional,
 } from "@nestjs/common";
 import { randomUUID } from "crypto";
 
@@ -14,6 +15,8 @@ import { AgentQueue } from "../queue/agent-queue";
 import { AgentRunsRepository } from "../runs/agent-runs.repository";
 import { JobsRepository } from "../jobs/jobs.repository";
 import type { PostConversationMessageBody } from "./conversations.schema";
+import { DocsService } from "../../docs/docs.service";
+import { TasksService } from "../../tasks/tasks.service";
 import { ConversationsRepository } from "./conversations.repository";
 
 @Injectable()
@@ -24,6 +27,8 @@ export class ConversationsService {
     private readonly runs: AgentRunsRepository,
     private readonly queue: AgentQueue,
     private readonly allows: ToolAllowsRepository,
+    @Optional() private readonly docs?: DocsService,
+    @Optional() private readonly tasks?: TasksService,
   ) {}
 
   async create(workspaceId: string, userId: string) {
@@ -93,6 +98,12 @@ export class ConversationsService {
           },
           tx,
         );
+        if (body.focalType === "doc") {
+          await this.docs?.get(conversation.workspaceId, body.focalId ?? "");
+        }
+        if (body.focalType === "task") {
+          await this.tasks?.get(conversation.workspaceId, body.focalId ?? "");
+        }
         const created = await this.jobs.insert(
           {
             conversationId: conversation.id,
@@ -102,6 +113,8 @@ export class ConversationsService {
             idempotencyKey,
             mode: body.mode ?? "execute",
             webResearch: body.webResearch ?? false,
+            focalType: body.focalType ?? null,
+            focalId: body.focalId ?? null,
             webSearchCapability: webSearchCapability({
               provider: env.ai.provider,
               webSearch: env.ai.webSearch,

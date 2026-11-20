@@ -39,6 +39,7 @@ function row(
   return {
     id: "doc-1",
     workspaceId: "workspace-1",
+    spaceId: "space-1",
     folderId: null,
     type,
     docKey: "D-1",

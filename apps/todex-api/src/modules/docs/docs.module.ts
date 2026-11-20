@@ -1,11 +1,12 @@
 import { Module } from "@nestjs/common";
 
+import { RelationsModule } from "../relations/relations.module";
 import { WorkspaceModule } from "../workspace/workspace.module";
 import { DocsController } from "./docs.controller";
 import { DocsService } from "./docs.service";
 
 @Module({
-  imports: [WorkspaceModule],
+  imports: [WorkspaceModule, RelationsModule],
   controllers: [DocsController],
   providers: [DocsService],
   exports: [DocsService],

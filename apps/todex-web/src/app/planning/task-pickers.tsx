@@ -20,13 +20,18 @@ export function DatePicker({
   value,
   onChange,
   appearance = "chip",
+  label,
+  triggerClassName,
   disabled,
 }: DatePickerProps) {
   const [open, setOpen] = useState(false);
   const selected = dateInputToDate(value);
 
   return (
-    <Popover open={open} onOpenChange={(next) => setOpen(disabled ? false : next)}>
+    <Popover
+      open={open}
+      onOpenChange={(next) => setOpen(disabled ? false : next)}
+    >
       <PopoverTrigger asChild>
         <button
           type="button"
@@ -35,12 +40,13 @@ export function DatePicker({
             appearance === "chip"
               ? "inline-flex items-center gap-1.5 rounded-full border border-border bg-transparent px-2.5 py-1 text-xs hover:text-foreground"
               : "inline-flex h-8 items-center gap-2 bg-transparent text-sm hover:text-foreground",
+            triggerClassName,
             value ? "text-foreground" : "text-muted-foreground",
             disabled && "opacity-40",
           )}
         >
           {appearance === "chip" ? <CalendarIcon size={12} /> : null}
-          {selected ? formatDay(selected) : emptyLabel}
+          {label ?? (selected ? formatDay(selected) : emptyLabel)}
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">
@@ -109,7 +115,7 @@ export function EstimatePicker({
           )}
         >
           {appearance === "chip" ? <ClockIcon size={12} /> : null}
-          {value.trim() || "Estimate"}
+          {value.trim() || "Estimation"}
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-56 p-3" align="start">
@@ -131,7 +137,7 @@ export function EstimatePicker({
           ))}
         </div>
         <Input
-          aria-label="Estimate"
+          aria-label="Estimation"
           value={value}
           placeholder="1h 30m"
           className="mt-2 h-8"
@@ -145,6 +151,31 @@ export function EstimatePicker({
         />
       </PopoverContent>
     </Popover>
+  );
+}
+
+export function TimePicker({
+  value,
+  onChange,
+  onFocus,
+  onBlur,
+  disabled,
+  id,
+  label,
+}: TimePickerProps) {
+  return (
+    <Input
+      type="time"
+      id={id}
+      step="60"
+      aria-label={label}
+      value={value}
+      disabled={disabled}
+      className="h-8 w-[3.75rem] min-w-0 shrink-0 appearance-none bg-background px-1 text-center tabular-nums disabled:hidden [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none [&::-webkit-datetime-edit]:p-0 [&::-webkit-datetime-edit-fields-wrapper]:p-0"
+      onFocus={onFocus}
+      onBlur={onBlur}
+      onChange={(event) => onChange(event.target.value)}
+    />
   );
 }
 
@@ -174,7 +205,19 @@ interface DatePickerProps {
   value: string;
   onChange: (value: string) => void;
   appearance?: "chip" | "plain";
+  label?: string;
+  triggerClassName?: string;
   disabled?: boolean;
+}
+
+interface TimePickerProps {
+  value: string;
+  onChange: (value: string) => void;
+  onFocus?: () => void;
+  onBlur?: () => void;
+  disabled?: boolean;
+  id?: string;
+  label: string;
 }
 
 interface EstimatePickerProps {

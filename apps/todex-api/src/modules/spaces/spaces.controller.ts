@@ -50,6 +50,19 @@ export class SpacesController {
     return this.spacesService.list(request.workspaceId, query.folderId);
   }
 
+  @Post("ensure-inbox")
+  async ensureInbox(@Req() request: WorkspaceRequest) {
+    return this.spacesService.ensureInbox(request.workspaceId);
+  }
+
+  @Get(":id/deletion-preview")
+  async deletionPreview(
+    @Req() request: WorkspaceRequest,
+    @Param("id") spaceId: string,
+  ) {
+    return this.spacesService.deletionPreview(request.workspaceId, spaceId);
+  }
+
   @Get(":id")
   async get(@Req() request: WorkspaceRequest, @Param("id") spaceId: string) {
     return this.spacesService.get(request.workspaceId, spaceId);

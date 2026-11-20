@@ -2,17 +2,17 @@ import Link from "next/link";
 
 import { getSignInHref } from "@/lib/app-url";
 
-import { WaitlistButton } from "./waitlist-button";
+import { OpenTodexLink } from "./open-todex-link";
 
 export function SiteHeader() {
   return (
-    <header className="fixed inset-x-0 top-0 z-20">
+    <header className="sticky top-0 z-20 -mb-20 border-b border-white/10 bg-black/75 backdrop-blur-md">
       <div className="mx-auto flex h-20 w-full max-w-[1200px] items-center gap-4 px-6 sm:px-8">
         <Link href="/" className="flex items-center gap-2.5">
           {/* eslint-disable-next-line @next/next/no-img-element -- static mark copied from the product */}
           <img
             src="/todex-mark.png"
-            alt="Todex"
+            alt=""
             width={36}
             height={36}
             className="size-9 rounded-lg"
@@ -28,7 +28,7 @@ export function SiteHeader() {
           >
             Sign in
           </a>
-          <WaitlistButton appearance="header" />
+          <OpenTodexLink />
         </div>
       </div>
     </header>

@@ -12,22 +12,32 @@ import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import FullCalendar from "@fullcalendar/react";
 import timeGridPlugin from "@fullcalendar/timegrid";
-import { cn } from "@repo/ui";
+import { CalendarIcon, TasksIcon } from "@components/icons";
 
-import { CalendarIcon, ChevronIcon, TasksIcon } from "@components/icons";
-import { NewButton } from "@components/new-button";
-
-import { blocksForRange, visibleBlocks, type CalendarBlock } from "./calendar-blocks";
-import { blockColor, fillIsLight } from "./calendar-colors";
+import { formatChipRange } from "./calendar-actual";
+import {
+  blocksForRange,
+  visibleBlocks,
+  type CalendarBlock,
+} from "./calendar-blocks";
 import { deviceTimeZone } from "./calendar-datetime";
 import {
   ensureTimegridOverlapLayoutObserver,
   overlapStamp,
   scheduleRepaintTimegridOverlapLayout,
+  stampHarnessEvent,
 } from "./calendar-overlap";
-import { CalendarDraft, type DraftSelection } from "./calendar-draft";
-import { CalendarQuickMenu, type QuickMenuState } from "./calendar-quick-menu";
+import {
+  CalendarDraft,
+  type DraftFields,
+  type DraftSelection,
+} from "./calendar-draft";
+import {
+  CalendarEventPreview,
+  type EventPreview,
+} from "./calendar-event-preview";
 import { useCalendar } from "./calendar-provider";
+import { CalendarToolbar } from "./calendar-toolbar";
 import "./calendar.css";
 
 export function CalendarGrid() {
@@ -36,12 +46,10 @@ export function CalendarGrid() {
   const gridRef = useRef<HTMLDivElement>(null);
   const draftFormRef = useRef<HTMLFormElement>(null);
   const draftOriginRef = useRef<SelectionOrigin | null>(null);
-  const clickTimer = useRef<number | null>(null);
-  const [viewId, setViewId] = useState("timeGridRollingWeek");
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [slotMinutes, setSlotMinutes] = useState<15 | 30>(30);
-  const [hour12, setHour12] = useState(false);
+  const keepDraftFields = useRef(false);
   const [draft, setDraft] = useState<DraftSelection | null>(null);
+  const [draftSession, setDraftSession] = useState(0);
+  const [preview, setPreview] = useState<EventPreview | null>(null);
   useLayoutEffect(() => {
     const form = draftFormRef.current;
     const frame = gridRef.current;
@@ -62,50 +70,130 @@ export function CalendarGrid() {
     }
     setDraft((current) => (current ? { ...current, ...anchor } : current));
   }, [draft]);
-  const [quickMenu, setQuickMenu] = useState<QuickMenuState | null>(null);
   const {
-    state: { events, tasks, boards, range, visibility, focusRequest },
-    actions: { setRange, openEvent, openTask, createEvent, updateEvent, removeEvent, updateTask },
+    state: {
+      events,
+      tasks,
+      sessions,
+      boards,
+      range,
+      visibility,
+      focusRequest,
+      mode,
+      dayCount,
+      preferencesReady,
+      previews,
+    },
+    actions: {
+      setRange,
+      openEvent,
+      openTask,
+      openComposer,
+      openSession,
+      createEvent,
+      updateEvent,
+      updateTask,
+    },
   } = useCalendar();
+  const timeZone = deviceTimeZone();
   const blocks = useMemo(
     () =>
       visibleBlocks(
-        blocksForRange(events, tasks, new Date(range.from), new Date(range.to)),
+        blocksForRange(
+          events,
+          tasks,
+          sessions,
+          boards,
+          new Date(range.from),
+          new Date(range.to),
+          new Date(),
+          timeZone,
+          previews,
+        ),
         visibility,
+        mode,
       ),
-    [events, tasks, range.from, range.to, visibility],
+    [
+      events,
+      tasks,
+      sessions,
+      boards,
+      range.from,
+      range.to,
+      visibility,
+      mode,
+      timeZone,
+      previews,
+    ],
   );
-  const timeZone = deviceTimeZone();
-  const meta = toolbarMeta(range.from, range.to);
 
   useEffect(() => {
     if (!focusRequest) return;
     calendarRef.current?.getApi().gotoDate(focusRequest.date);
   }, [focusRequest]);
 
+  const modeRef = useRef(mode);
+  modeRef.current = mode;
   const blocksRef = useRef(blocks);
   blocksRef.current = blocks;
 
   useEffect(() => {
-    ensureTimegridOverlapLayoutObserver(rootRef.current, () => blocksRef.current);
+    ensureTimegridOverlapLayoutObserver(
+      rootRef.current,
+      () => blocksRef.current,
+      () => modeRef.current,
+    );
   }, []);
 
-  useLayoutEffect(() => {
-    scheduleRepaintTimegridOverlapLayout(rootRef.current, blocks);
-  }, [blocks]);
-
-  const dayCount = DAY_COUNT[viewId] ?? 7;
-
-  function selectQuarterHourFromNow() {
+  useEffect(() => {
     const api = calendarRef.current?.getApi();
-    if (!api) return;
+    if (!api || !preferencesReady) return;
+    const view = CALENDAR_VIEW_BY_DAY_COUNT[dayCount];
+    if (!view || api.view.type === view) return;
+    api.changeView(view);
+  }, [dayCount, preferencesReady]);
+
+  useEffect(() => {
+    if (!preview) return;
+    function onPointerDown(event: PointerEvent) {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      if (target.closest(".calendar-event-preview, .fc-event")) return;
+      setPreview(null);
+    }
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [preview]);
+
+  useLayoutEffect(() => {
+    scheduleRepaintTimegridOverlapLayout(rootRef.current, blocks, mode);
+  }, [blocks, mode]);
+
+  const dayCountForGrid = dayCount;
+
+  function openFullEditor(fields: DraftFields) {
+    openComposer({
+      title: fields.title,
+      taskId: fields.taskId,
+      kind: fields.kind,
+      start: fields.start,
+      end: fields.end,
+      allDay: fields.allDay,
+    });
+    calendarRef.current?.getApi().unselect();
+  }
+
+  function openNewEvent() {
     const { start, end } = quarterHourSlot(new Date());
-    api.gotoDate(start);
-    const hour = Math.max(0, start.getHours() - 1);
-    api.scrollToTime(
-      `${String(hour).padStart(2, "0")}:${String(start.getMinutes()).padStart(2, "0")}:00`,
-    );
-    api.select(start, end);
+    calendarRef.current?.getApi().unselect();
+    openComposer({
+      title: "",
+      start: start.toISOString(),
+      end: end.toISOString(),
+      allDay: false,
+      kind: "event",
+      taskId: "",
+    });
   }
 
   return (
@@ -113,153 +201,44 @@ export function CalendarGrid() {
       ref={rootRef}
       className="todex-calendar flex min-h-0 flex-1 flex-col"
       data-draft-kind={draft?.kind}
-      data-time-grid-slot-min={slotMinutes}
-      style={{ ["--todex-day-count" as string]: String(dayCount) }}
+      data-calendar-mode={mode}
+      style={{ ["--todex-day-count" as string]: String(dayCountForGrid) }}
     >
-      <div className="flex flex-wrap items-end justify-between gap-3 border-b border-border px-3 py-3">
-        <div className="flex min-w-0 items-start gap-3">
-          <div className="flex w-14 shrink-0 flex-col items-center rounded-xl border border-border bg-surface px-2 py-2">
-            <span className="text-[10px] font-semibold tracking-wide text-muted-foreground">
-              {meta.badgeMonth}
-            </span>
-            <span className="text-xl font-semibold tabular-nums leading-none">
-              {meta.badgeDay}
-            </span>
-          </div>
-          <div className="min-w-0 pb-0.5">
-            <p className="text-lg font-semibold tracking-tight">{meta.headline}</p>
-            <p className="text-sm text-muted-foreground">{meta.rangeLabel}</p>
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative">
-            <button
-              type="button"
-              className="inline-flex h-9 items-center gap-2 rounded-xl border border-border bg-surface px-3 text-sm"
-              aria-expanded={menuOpen}
-              onClick={() => setMenuOpen((open) => !open)}
-            >
-              {VIEW_LABELS[viewId] ?? "Week"}
-              <ChevronIcon
-                size={14}
-                className={cn("text-muted-foreground transition-transform", menuOpen && "rotate-90")}
-              />
-            </button>
-            {menuOpen ? (
-              <div className="absolute right-0 top-[calc(100%+6px)] z-20 w-44 rounded-xl border border-border bg-popover p-1 shadow-lg">
-                {VIEW_OPTIONS.map((view) => (
-                  <button
-                    key={view.id}
-                    type="button"
-                    className="flex w-full rounded-lg px-2 py-1.5 text-left text-sm hover:bg-accent"
-                    onClick={() => {
-                      calendarRef.current?.getApi().changeView(view.id);
-                      setViewId(view.id);
-                      setMenuOpen(false);
-                    }}
-                  >
-                    {view.label}
-                  </button>
-                ))}
-              </div>
-            ) : null}
-          </div>
-          <div className="flex items-center rounded-xl border border-border bg-surface p-0.5">
-            <button
-              type="button"
-              className="rounded-lg px-3 py-1.5 text-sm hover:bg-accent"
-              onClick={() => calendarRef.current?.getApi().today()}
-            >
-              Today
-            </button>
-            <button
-              type="button"
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent"
-              aria-label="Previous"
-              onClick={() => calendarRef.current?.getApi().prev()}
-            >
-              <ChevronIcon size={16} className="rotate-180" />
-            </button>
-            <button
-              type="button"
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent"
-              aria-label="Next"
-              onClick={() => calendarRef.current?.getApi().next()}
-            >
-              <ChevronIcon size={16} />
-            </button>
-          </div>
-          <div className="flex items-center rounded-xl border border-border bg-surface p-0.5">
-            <button
-              type="button"
-              className="h-8 w-8 rounded-lg text-muted-foreground hover:bg-accent disabled:opacity-40"
-              aria-label="Zoom out"
-              disabled={slotMinutes === 30}
-              onClick={() => setSlotMinutes(30)}
-            >
-              −
-            </button>
-            <span className="px-1 text-xs text-muted-foreground">Zoom</span>
-            <button
-              type="button"
-              className="h-8 w-8 rounded-lg text-muted-foreground hover:bg-accent disabled:opacity-40"
-              aria-label="Zoom in"
-              disabled={slotMinutes === 15}
-              onClick={() => setSlotMinutes(15)}
-            >
-              +
-            </button>
-          </div>
-          <div className="flex items-center rounded-xl border border-border bg-surface p-0.5">
-            <button
-              type="button"
-              className={cn(
-                "rounded-lg px-2.5 py-1.5 text-xs font-medium",
-                hour12 ? "bg-accent text-foreground" : "text-muted-foreground",
-              )}
-              onClick={() => setHour12(true)}
-            >
-              12h
-            </button>
-            <button
-              type="button"
-              className={cn(
-                "rounded-lg px-2.5 py-1.5 text-xs font-medium",
-                !hour12 ? "bg-accent text-foreground" : "text-muted-foreground",
-              )}
-              onClick={() => setHour12(false)}
-            >
-              24h
-            </button>
-          </div>
-          <NewButton onClick={selectQuarterHourFromNow} />
-        </div>
-      </div>
+      <CalendarToolbar
+        rangeFrom={range.from}
+        rangeTo={range.to}
+        onPrevious={() => calendarRef.current?.getApi().prev()}
+        onNext={() => calendarRef.current?.getApi().next()}
+        onToday={() => calendarRef.current?.getApi().gotoDate(new Date())}
+        onNew={openNewEvent}
+      />
       <div ref={gridRef} className="relative min-h-0 flex-1 px-2 pb-2">
         <FullCalendar
           ref={calendarRef}
           plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
-          initialView="timeGridRollingWeek"
+          initialView={
+            CALENDAR_VIEW_BY_DAY_COUNT[dayCount] ?? "timeGridRollingWeek"
+          }
           headerToolbar={false}
           height="100%"
           nowIndicator
           selectable
           selectMirror={false}
-          selectMinDistance={5}
-          unselectCancel=".calendar-draft,.calendar-quick-menu,[data-radix-popper-content-wrapper]"
+          selectMinDistance={0}
+          unselectCancel=".calendar-draft,.calendar-event-preview,[data-radix-popper-content-wrapper]"
           droppable
           editable
           eventResizableFromStart
           eventDurationEditable
-          slotEventOverlap
+          slotEventOverlap={false}
           firstDay={1}
-          slotDuration={slotMinutes === 15 ? "00:15:00" : "00:30:00"}
+          slotDuration="00:30:00"
           snapDuration="00:15:00"
           slotLabelInterval="01:00:00"
           slotLabelFormat={{
             hour: "2-digit",
             minute: "2-digit",
-            hour12,
+            hour12: false,
             meridiem: "short",
           }}
           scrollTime={scrollTime()}
@@ -272,21 +251,25 @@ export function CalendarGrid() {
             start: block.start,
             end: block.end,
             allDay: block.allDay,
-            backgroundColor: blockColor(block.kind, block.color),
+            backgroundColor: "transparent",
             borderColor: "transparent",
+            textColor: "var(--foreground)",
             editable: !block.readOnly,
             classNames: chipClassNames(block),
             extendedProps: block,
           }))}
           dayHeaderContent={(arg) => (
-            <DayHeader date={arg.date} isToday={arg.isToday} />
+            <DayHeader date={arg.date} isToday={arg.isToday} mode={mode} />
           )}
           nowIndicatorContent={(arg) =>
-            arg.isAxis ? <span className="todex-now-pill">{formatClock(arg.date, hour12)}</span> : null
+            arg.isAxis ? (
+              <span className="todex-now-pill">
+                {formatClock(arg.date, false)}
+              </span>
+            ) : null
           }
-          eventContent={(arg) => <CalendarChip arg={arg} hour12={hour12} />}
+          eventContent={(arg) => <CalendarChip arg={arg} />}
           datesSet={(arg) => {
-            setViewId(arg.view.type);
             rememberRange(arg, setRange);
             const axis = rootRef.current?.querySelector(
               ".fc-col-header .fc-timegrid-axis",
@@ -296,60 +279,82 @@ export function CalendarGrid() {
           select={(selection) => {
             const frame = gridRef.current;
             if (!frame) return;
-            setQuickMenu(null);
+            const keep = keepDraftFields.current;
+            keepDraftFields.current = false;
+            if (!keep) {
+              setDraftSession((session) => session + 1);
+              setPreview(null);
+            }
             const point = selection.jsEvent;
             const openDraft = () => {
               const origin = selectionOrigin(frame, point);
               draftOriginRef.current = origin;
-              const anchor = menuAnchor(frame, origin, DRAFT_MENU_WIDTH, DRAFT_MENU_HEIGHT);
-              setDraft({
+              const anchor = menuAnchor(
+                frame,
+                origin,
+                DRAFT_MENU_WIDTH,
+                DRAFT_MENU_HEIGHT,
+              );
+              setDraft((current) => ({
                 start: selection.start,
                 end: selection.end,
                 allDay: selection.allDay,
-                kind: "event",
+                kind: keep && current ? current.kind : "event",
                 left: anchor.left,
                 top: anchor.top,
                 maxHeight: anchor.maxHeight,
-              });
+              }));
             };
             if (point) openDraft();
             else requestAnimationFrame(openDraft);
           }}
-          unselect={() => setDraft(null)}
+          unselect={() => {
+            if (keepDraftFields.current) return;
+            setDraft(null);
+          }}
           eventClick={(arg) => {
             const block = arg.event.extendedProps as CalendarBlock;
-            if (block.kind === "event" && arg.jsEvent.detail > 1) {
-              if (clickTimer.current) window.clearTimeout(clickTimer.current);
-              openQuickMenu(arg.jsEvent, block, gridRef.current, setQuickMenu);
+            calendarRef.current?.getApi().unselect();
+            if (block.kind === "session" && block.sessionId) {
+              setPreview(null);
+              openSession(block.sessionId);
               return;
             }
-            if (block.kind === "event") {
-              clickTimer.current = window.setTimeout(() => {
-                openBlock(arg, openEvent, openTask);
-              }, 220);
+            if (block.kind === "task") {
+              setPreview(null);
+              openBlock(arg, openEvent, openTask);
               return;
             }
-            openBlock(arg, openEvent, openTask);
+            const frame = gridRef.current;
+            if (!frame || !block.eventId) return;
+            const rect = arg.el.getBoundingClientRect();
+            const anchor = menuAnchor(
+              frame,
+              { x: rect.right, top: rect.top, bottom: rect.bottom },
+              DRAFT_MENU_WIDTH,
+              380,
+            );
+            setPreview({
+              block,
+              left: anchor.left,
+              top: anchor.top,
+              maxHeight: anchor.maxHeight,
+            });
           }}
           eventsSet={() => {
-            scheduleRepaintTimegridOverlapLayout(rootRef.current, blocksRef.current);
+            scheduleRepaintTimegridOverlapLayout(
+              rootRef.current,
+              blocksRef.current,
+              modeRef.current,
+            );
           }}
-          eventDidMount={(info) => {
-            scheduleRepaintTimegridOverlapLayout(rootRef.current, blocksRef.current);
-            info.el.addEventListener("contextmenu", (mouseEvent) => {
-              const block = info.event.extendedProps as CalendarBlock;
-              if (block.kind !== "event") return;
-              mouseEvent.preventDefault();
-              if (clickTimer.current) window.clearTimeout(clickTimer.current);
-              openQuickMenu(mouseEvent, block, gridRef.current, setQuickMenu);
-            });
-            info.el.addEventListener("dblclick", (mouseEvent) => {
-              const block = info.event.extendedProps as CalendarBlock;
-              if (block.kind !== "event") return;
-              mouseEvent.preventDefault();
-              if (clickTimer.current) window.clearTimeout(clickTimer.current);
-              openQuickMenu(mouseEvent, block, gridRef.current, setQuickMenu);
-            });
+          eventDidMount={(arg) => {
+            stampHarnessEvent(arg.el, arg.event.id);
+            scheduleRepaintTimegridOverlapLayout(
+              rootRef.current,
+              blocksRef.current,
+              modeRef.current,
+            );
           }}
           eventDrop={(arg) => {
             void moveBlock(arg, updateEvent, updateTask);
@@ -359,103 +364,118 @@ export function CalendarGrid() {
           }}
           eventReceive={(arg) => {
             const taskId = arg.event.extendedProps.taskId as string | undefined;
-            const templateId = arg.event.extendedProps.templateId as string | undefined;
+            const templateId = arg.event.extendedProps.templateId as
+              | string
+              | undefined;
             const title = arg.event.title;
             const start = arg.event.start;
             const end = arg.event.end;
             arg.event.remove();
             if (!start || !end) return;
             if (taskId) {
-              void updateTask(taskId, { scheduleDate: start.toISOString() });
+              void updateTask(taskId, {
+                startAt: start.toISOString(),
+                endAt: end.toISOString(),
+              });
               return;
             }
             if (!templateId) return;
+            const duration = end.getTime() - start.getTime();
+            if (!arg.event.allDay && duration < 15 * 60 * 1000) return;
             void createEvent({
               title,
               start: start.toISOString(),
               end: end.toISOString(),
               allDay: arg.event.allDay,
               timeZone,
-              color: (arg.event.extendedProps.color as string | null | undefined) ?? null,
+              spaceId:
+                (arg.event.extendedProps.spaceId as
+                  | string
+                  | null
+                  | undefined) ?? null,
               description:
-                (arg.event.extendedProps.description as string | undefined) ?? "",
+                (arg.event.extendedProps.description as string | undefined) ??
+                "",
               taskScope:
-                (arg.event.extendedProps.taskScope as string[] | undefined) ?? [],
+                (arg.event.extendedProps.taskScope as string[] | undefined) ??
+                [],
             });
           }}
         />
         {draft ? (
-        <CalendarDraft
-          ref={draftFormRef}
-          key={`${draft.start.toISOString()}-${draft.end.toISOString()}-${draft.allDay}`}
-          draft={draft}
-          tasks={tasks}
-          boards={boards}
-          onKind={(kind) =>
-            setDraft((current) => (current ? { ...current, kind } : current))
-          }
-          onCancel={() => calendarRef.current?.getApi().unselect()}
-          onCreate={async (body) => {
-            if (body.kind === "task") {
-              await updateTask(body.taskId, {
-                scheduleDate: body.scheduleDate,
-                ...(body.estimation != null
-                  ? { estimation: body.estimation }
-                  : {}),
-              });
-            } else {
-              await createEvent({
-                title: body.title,
-                start: body.start,
-                end: body.end,
-                allDay: body.allDay,
-                color: body.color,
-                timeZone,
-                recurrence: body.recurrence,
-                taskScope: body.taskScope,
-              });
+          <CalendarDraft
+            ref={draftFormRef}
+            key={draftSession}
+            draft={draft}
+            tasks={tasks}
+            boards={boards}
+            onKind={(kind) =>
+              setDraft((current) => (current ? { ...current, kind } : current))
             }
-            calendarRef.current?.getApi().unselect();
-          }}
-        />
-      ) : null}
-        {quickMenu ? (
-          <CalendarQuickMenu
-            menu={quickMenu}
-            event={events.find((event) => event.id === quickMenu.block.eventId) ?? null}
-            onClose={() => setQuickMenu(null)}
-            onRsvp={(status) => {
-              const source = events.find((event) => event.id === quickMenu.block.eventId);
-              if (!source) return;
-              void updateEvent(source.id, {
-                rsvpStatus: source.rsvpStatus === status ? null : status,
-                ...(quickMenu.block.series && quickMenu.block.originalStart
-                  ? { scope: "instance", originalStart: quickMenu.block.originalStart }
-                  : {}),
-              });
+            onRange={(start, end) => {
+              keepDraftFields.current = true;
+              calendarRef.current?.getApi().select(start, end);
+              keepDraftFields.current = false;
             }}
-            onDelete={() => {
-              const block = quickMenu.block;
-              if (!block.eventId) return;
-              if (block.series && block.originalStart) {
-                void removeEvent(block.eventId, "instance", block.originalStart);
-                return;
+            onCancel={() => calendarRef.current?.getApi().unselect()}
+            onMore={(fields) => openFullEditor(fields)}
+            onCreate={async (body) => {
+              if (body.kind === "task") {
+                await updateTask(body.taskId, {
+                  startAt: body.startAt,
+                  endAt: body.endAt,
+                });
+              } else {
+                await createEvent({
+                  title: body.title,
+                  start: body.start,
+                  end: body.end,
+                  allDay: body.allDay,
+                  timeZone,
+                });
               }
-              void removeEvent(block.eventId);
+              calendarRef.current?.getApi().unselect();
             }}
-            onDuplicate={() => {
-              const source = events.find((event) => event.id === quickMenu.block.eventId);
-              if (!source) return;
-              void createEvent({
-                title: source.title,
-                start: quickMenu.block.start.toISOString(),
-                end: quickMenu.block.end.toISOString(),
-                allDay: quickMenu.block.allDay,
-                color: source.color,
-                timeZone: source.timeZone || timeZone,
-                description: source.description,
-                taskScope: source.taskScope,
-                participants: source.participants,
+          />
+        ) : null}
+        {preview ? (
+          <CalendarEventPreview
+            key={preview.block.key}
+            preview={preview}
+            onClose={() => setPreview(null)}
+            onMore={() => {
+              const block = preview.block;
+              if (block.eventId) openEvent(block.eventId, block.originalStart);
+              setPreview(null);
+            }}
+            onSave={async (body) => {
+              const block = preview.block;
+              if (!block.eventId) return;
+              await updateEvent(block.eventId, {
+                ...body,
+                ...(block.series && block.originalStart
+                  ? { scope: "instance", originalStart: block.originalStart }
+                  : { scope: "series" }),
+              });
+              setPreview(null);
+            }}
+            onRsvp={(status) => {
+              const block = preview.block;
+              if (!block.eventId) return;
+              const next = block.rsvpStatus === status ? null : status;
+              setPreview((current) =>
+                current
+                  ? {
+                      ...current,
+                      block: { ...current.block, rsvpStatus: next },
+                    }
+                  : current,
+              );
+              void updateEvent(block.eventId, {
+                rsvpStatus: next,
+                ...(block.series && block.originalStart
+                  ? { scope: "instance", originalStart: block.originalStart }
+                  : {}),
               });
             }}
           />
@@ -465,49 +485,72 @@ export function CalendarGrid() {
   );
 }
 
-function DayHeader({ date, isToday }: { date: Date; isToday: boolean }) {
+function DayHeader({
+  date,
+  isToday,
+  mode,
+}: {
+  date: Date;
+  isToday: boolean;
+  mode: "planned" | "actual" | "both";
+}) {
   const weekday = date.toLocaleDateString(undefined, { weekday: "short" });
   return (
-    <span className="inline-flex items-center gap-1 text-[11px] font-semibold tabular-nums">
-      <span className={isToday ? "text-foreground" : undefined}>{date.getDate()}</span>
-      <span className="font-medium text-muted-foreground">{weekday}</span>
+    <span className="flex w-full flex-col items-stretch gap-1">
+      <span className="flex w-full justify-center">
+        <span
+          className={
+            isToday
+              ? "todex-day-pill inline-flex items-center gap-1 rounded-full px-2 py-0.5"
+              : "inline-flex items-center gap-1 text-muted-foreground"
+          }
+        >
+          <span className="font-medium">{weekday}</span>
+          <span>{date.getDate()}</span>
+        </span>
+      </span>
+      {mode === "both" ? (
+        <span className="relative grid w-full grid-cols-2 text-[10px] font-medium text-muted-foreground">
+          <span
+            aria-hidden
+            className="pointer-events-none absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-border"
+          />
+          <span className="text-center">Planned</span>
+          <span className="text-center">Actual</span>
+        </span>
+      ) : null}
     </span>
   );
 }
 
-function CalendarChip({ arg, hour12 }: { arg: EventContentArg; hour12: boolean }) {
+function CalendarChip({ arg }: { arg: EventContentArg }) {
   const block = arg.event.extendedProps as CalendarBlock;
   const start = arg.event.start;
   const end = arg.event.end;
   const time =
-    !arg.event.allDay && start && end ? formatRange(start, end, hour12) : null;
-  const Icon = block.kind === "task" ? TasksIcon : CalendarIcon;
-  const rsvp = rsvpLabel(block.rsvpStatus);
+    !arg.event.allDay && start && end ? formatChipRange(start, end) : null;
+  const Icon = block.kind === "event" ? CalendarIcon : TasksIcon;
   return (
     <div
       className="fc-event-main-frame todex-cal-event-inner"
+      style={{ ["--todex-block-color" as string]: block.color }}
       {...overlapStamp(block)}
     >
-      <Icon size={11} className="todex-cal-secondary mt-px shrink-0" />
-      <span className="todex-cal-title text-[10px] font-medium leading-tight">
-        {arg.event.title}
+      <span className="inline-flex h-3 w-3 shrink-0 items-center justify-center">
+        <Icon size={10} className="todex-cal-secondary" />
       </span>
-      {time ? (
-        <span className="todex-cal-secondary text-[9px] tabular-nums leading-tight">
-          {time}
+      <span className="flex min-w-0 flex-1 flex-col">
+        <span className="todex-cal-title text-[10px] font-medium leading-3">
+          {arg.event.title}
         </span>
-      ) : null}
-      {rsvp ? (
-        <span className="todex-cal-secondary text-[9px] font-semibold">{rsvp}</span>
-      ) : null}
+        {time ? (
+          <span className="todex-cal-time todex-cal-secondary text-[9px] tabular-nums leading-tight">
+            {time}
+          </span>
+        ) : null}
+      </span>
     </div>
   );
-}
-
-function rsvpLabel(status: CalendarBlock["rsvpStatus"]) {
-  if (status === "no") return "NO";
-  if (status === "maybe") return "MAYBE";
-  return null;
 }
 
 function openBlock(
@@ -522,13 +565,12 @@ function openBlock(
     originalStart?: string | null;
     seriesEventId?: string | null;
   };
+  if (block.kind === "preview") return;
   if (block.kind === "task" && block.taskId) {
     openTask(block.taskId);
     return;
   }
-  const eventId = block.originalStart
-    ? block.seriesEventId
-    : block.eventId;
+  const eventId = block.originalStart ? block.seriesEventId : block.eventId;
   if (eventId) openEvent(eventId, block.originalStart);
 }
 
@@ -537,22 +579,31 @@ async function moveBlock(
   updateEvent: (eventId: string, body: unknown) => Promise<unknown>,
   updateTask: (
     taskId: string,
-    patch: { scheduleDate?: string | null },
+    patch: { slotId?: string | null; startAt?: string; endAt?: string },
   ) => Promise<unknown>,
 ) {
   const block = arg.event.extendedProps as {
     kind?: string;
     eventId?: string | null;
     taskId?: string | null;
+    slotId?: string | null;
     originalStart?: string | null;
     series?: boolean;
   };
   const start = arg.event.start;
   const end = arg.event.end;
   if (!start || !end) return arg.revert();
+  if (!arg.event.allDay && end.getTime() - start.getTime() < 15 * 60 * 1000) {
+    arg.revert();
+    return;
+  }
   try {
     if (block.kind === "task" && block.taskId) {
-      await updateTask(block.taskId, { scheduleDate: start.toISOString() });
+      await updateTask(block.taskId, {
+        slotId: block.slotId,
+        startAt: start.toISOString(),
+        endAt: end.toISOString(),
+      });
       return;
     }
     if (!block.eventId) return arg.revert();
@@ -574,28 +625,30 @@ async function resizeBlock(
   updateEvent: (eventId: string, body: unknown) => Promise<unknown>,
   updateTask: (
     taskId: string,
-    patch: { scheduleDate?: string; estimation?: number },
+    patch: { slotId?: string | null; startAt?: string; endAt?: string },
   ) => Promise<unknown>,
 ) {
   const block = arg.event.extendedProps as {
     kind?: string;
     eventId?: string | null;
     taskId?: string | null;
+    slotId?: string | null;
     originalStart?: string | null;
     series?: boolean;
   };
   const start = arg.event.start;
   const end = arg.event.end;
   if (!start || !end) return arg.revert();
+  if (!arg.event.allDay && end.getTime() - start.getTime() < 15 * 60 * 1000) {
+    arg.revert();
+    return;
+  }
   try {
     if (block.kind === "task" && block.taskId) {
-      const minutes = Math.max(
-        15,
-        Math.round((end.getTime() - start.getTime()) / 60_000),
-      );
       await updateTask(block.taskId, {
-        scheduleDate: start.toISOString(),
-        estimation: minutes,
+        slotId: block.slotId,
+        startAt: start.toISOString(),
+        endAt: end.toISOString(),
       });
       return;
     }
@@ -620,45 +673,12 @@ function rememberRange(
   setRange({ from: arg.start.toISOString(), to: arg.end.toISOString() });
 }
 
-function toolbarMeta(from: string, to: string) {
-  const start = new Date(from);
-  const end = new Date(to);
-  end.setDate(end.getDate() - 1);
-  const month = start.toLocaleDateString(undefined, { month: "long" });
-  const endMonth = end.toLocaleDateString(undefined, { month: "long" });
-  const year = start.getFullYear();
-  const rangeLabel =
-    start.getMonth() === end.getMonth()
-      ? `${month} ${start.getDate()} – ${end.getDate()}, ${year}`
-      : `${month} ${start.getDate()} – ${endMonth} ${end.getDate()}, ${end.getFullYear()}`;
-  return {
-    badgeMonth: start.toLocaleDateString(undefined, { month: "short" }).toUpperCase(),
-    badgeDay: String(start.getDate()),
-    headline: `${month} (${isoWeekNumber(start)}) ${year}`,
-    rangeLabel,
-  };
-}
-
-function isoWeekNumber(anchor: Date) {
-  const date = new Date(
-    Date.UTC(anchor.getFullYear(), anchor.getMonth(), anchor.getDate()),
-  );
-  const day = date.getUTCDay() || 7;
-  date.setUTCDate(date.getUTCDate() + 4 - day);
-  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
-  return Math.ceil(((date.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
-}
-
 function formatClock(date: Date, hour12: boolean) {
   return new Intl.DateTimeFormat(undefined, {
     hour: "2-digit",
     minute: "2-digit",
     hour12,
   }).format(date);
-}
-
-function formatRange(start: Date, end: Date, hour12: boolean) {
-  return `${formatClock(start, hour12)}–${formatClock(end, hour12)}`;
 }
 
 function shortZoneName() {
@@ -703,7 +723,9 @@ function selectionOrigin(
   frame: HTMLElement,
   point: { clientX: number; clientY: number } | null,
 ): SelectionOrigin {
-  const highlight = frame.querySelector(".fc-highlight")?.getBoundingClientRect();
+  const highlight = frame
+    .querySelector(".fc-highlight")
+    ?.getBoundingClientRect();
   if (highlight && highlight.width > 0 && highlight.height > 0) {
     return { x: highlight.right, top: highlight.top, bottom: highlight.bottom };
   }
@@ -718,32 +740,16 @@ function selectionOrigin(
   };
 }
 
-function openQuickMenu(
-  mouseEvent: { clientX: number; clientY: number },
-  block: CalendarBlock,
-  frame: HTMLDivElement | null,
-  setQuickMenu: (menu: QuickMenuState | null) => void,
-) {
-  if (!frame) return;
-  const anchor = menuAnchor(
-    frame,
-    { x: mouseEvent.clientX, top: mouseEvent.clientY, bottom: mouseEvent.clientY },
-    160,
-    148,
-  );
-  setQuickMenu({ block, left: anchor.left, top: anchor.top });
-}
-
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
 }
 
 function chipClassNames(block: CalendarBlock) {
-  const fill = blockColor(block.kind, block.color);
   return [
     "todex-cal-chip",
-    block.kind === "task" ? "todex-cal-task" : "",
-    fillIsLight(fill) ? "todex-cal-light" : "",
+    block.kind === "task" || block.kind === "preview" ? "todex-cal-task" : "",
+    block.kind === "preview" ? "opacity-50" : "",
+    block.kind === "session" ? "todex-cal-session" : "",
     block.rsvpStatus === "no" ? "todex-cal-rsvp-no" : "",
     block.rsvpStatus === "maybe" ? "todex-cal-rsvp-maybe" : "",
   ].filter(Boolean);
@@ -762,33 +768,42 @@ function scrollTime(): string {
   return `${String(hour).padStart(2, "0")}:00:00`;
 }
 
-const DAY_COUNT: Record<string, number> = {
-  timeGridDay: 1,
-  timeGridTwoDay: 2,
-  timeGridThreeDay: 3,
-  timeGridFourDay: 4,
-  timeGridFiveDay: 5,
-  timeGridRollingWeek: 7,
+const CALENDAR_VIEW_BY_DAY_COUNT: Record<number, string> = {
+  1: "timeGridDay",
+  2: "timeGridTwoDay",
+  3: "timeGridThreeDay",
+  4: "timeGridFourDay",
+  5: "timeGridFiveDay",
+  6: "timeGridSixDay",
+  7: "timeGridRollingWeek",
 };
 
-const VIEW_OPTIONS = [
-  { id: "timeGridDay", label: "Day" },
-  { id: "timeGridTwoDay", label: "2 days" },
-  { id: "timeGridThreeDay", label: "3 days" },
-  { id: "timeGridFourDay", label: "4 days" },
-  { id: "timeGridFiveDay", label: "5 days" },
-  { id: "timeGridRollingWeek", label: "Week" },
-] as const;
-
-const VIEW_LABELS: Record<string, string> = Object.fromEntries(
-  VIEW_OPTIONS.map((view) => [view.id, view.label]),
-);
-
 const CALENDAR_VIEWS = {
-  timeGridTwoDay: { type: "timeGrid", duration: { days: 2 } },
-  timeGridThreeDay: { type: "timeGrid", duration: { days: 3 } },
-  timeGridFourDay: { type: "timeGrid", duration: { days: 4 } },
-  timeGridFiveDay: { type: "timeGrid", duration: { days: 5 } },
+  timeGridTwoDay: {
+    type: "timeGrid",
+    duration: { days: 2 },
+    dateAlignment: "day",
+  },
+  timeGridThreeDay: {
+    type: "timeGrid",
+    duration: { days: 3 },
+    dateAlignment: "day",
+  },
+  timeGridFourDay: {
+    type: "timeGrid",
+    duration: { days: 4 },
+    dateAlignment: "day",
+  },
+  timeGridFiveDay: {
+    type: "timeGrid",
+    duration: { days: 5 },
+    dateAlignment: "day",
+  },
+  timeGridSixDay: {
+    type: "timeGrid",
+    duration: { days: 6 },
+    dateAlignment: "day",
+  },
   timeGridRollingWeek: {
     type: "timeGrid",
     duration: { days: 7 },
@@ -797,8 +812,8 @@ const CALENDAR_VIEWS = {
 } as const;
 
 const MENU_GAP = 8;
-const DRAFT_MENU_WIDTH = 320;
-const DRAFT_MENU_HEIGHT = 440;
+const DRAFT_MENU_WIDTH = 352;
+const DRAFT_MENU_HEIGHT = 280;
 
 interface SelectionOrigin {
   x: number;

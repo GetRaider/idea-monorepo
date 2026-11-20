@@ -1,4 +1,4 @@
-import { Controller, Get, Req, UseGuards } from "@nestjs/common";
+import { Controller, Delete, Get, Param, Req, UseGuards } from "@nestjs/common";
 
 import {
   WorkspaceGuard,
@@ -22,5 +22,14 @@ export class WorkspaceController {
   @Get("members")
   async members(@Req() request: WorkspaceRequest) {
     return this.workspaceService.listMemberProfiles(request.workspaceId);
+  }
+
+  @Delete("members/:userId")
+  async removeMember(
+    @Req() request: WorkspaceRequest,
+    @Param("userId") userId: string,
+  ) {
+    await this.workspaceService.removeMember(request.workspaceId, userId);
+    return { ok: true };
   }
 }

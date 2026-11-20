@@ -1,15 +1,12 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { and, eq } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import {
-  DocMentionTarget,
   DocType,
   type Doc,
   type ProseDoc,
   type ProseNode,
 } from "@repo/api/todex";
 
-import { docMentions, docs } from "../../db/schema";
 import { DRIZZLE_DB } from "../../db/tokens";
 import { ChunksRepository } from "../agent/chunks/chunks.repository";
 import {
@@ -17,6 +14,7 @@ import {
   type EmbeddingClient,
 } from "../agent/llm/embedding-client";
 import { DocsService } from "../docs/docs.service";
+import { RelationsService } from "../relations/relations.service";
 import { EpicsService } from "../epics/epics.service";
 import { TasksService } from "../tasks/tasks.service";
 import {
@@ -35,6 +33,7 @@ export class TaskContextService {
     @Inject(DRIZZLE_DB) private readonly db: NodePgDatabase,
     private readonly tasks: TasksService,
     private readonly docsService: DocsService,
+    private readonly relations: RelationsService,
     private readonly epics: EpicsService,
     private readonly results: ExecutionResultsService,
     private readonly chunks: ChunksRepository,
@@ -107,23 +106,21 @@ export class TaskContextService {
     taskId: string,
     goalId: string | null,
   ): Promise<ContextDocument[]> {
-    const rows = await this.db
-      .select({ docId: docMentions.docId })
-      .from(docMentions)
-      .innerJoin(docs, eq(docs.id, docMentions.docId))
-      .where(
-        and(
-          eq(docMentions.targetType, DocMentionTarget.TASK),
-          eq(docMentions.targetId, taskId),
-          eq(docs.workspaceId, workspaceId),
-        ),
-      )
-      .limit(MENTION_LIMIT + 1);
+    const neighbors = await this.relations.hop(
+      workspaceId,
+      "task",
+      taskId,
+      MENTION_LIMIT + 1,
+    );
     const documents: ContextDocument[] = [];
-    for (const row of rows) {
-      if (row.docId === goalId) continue;
+    for (const neighbor of neighbors) {
+      if (neighbor.type !== "doc" || neighbor.id === goalId) continue;
       if (documents.length >= MENTION_LIMIT) break;
-      documents.push(await this.document(workspaceId, row.docId));
+      try {
+        documents.push(await this.document(workspaceId, neighbor.id));
+      } catch {
+        continue;
+      }
     }
     return documents;
   }

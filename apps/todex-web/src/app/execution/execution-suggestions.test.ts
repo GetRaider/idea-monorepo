@@ -5,6 +5,7 @@ import {
   EMPTY_SUGGESTION_FILTERS,
   applySuggestionFilters,
   suggestionAreas,
+  suggestionStages,
 } from "./execution-suggestions";
 
 describe("suggestion filters", () => {
@@ -116,6 +117,15 @@ describe("suggestion filters", () => {
       ).map((task) => task.id),
     ).toEqual(["overdue"]);
   });
+
+  it("keeps defined stages when no loaded task has one", () => {
+    expect(
+      suggestionStages(
+        [suggestion({ stageName: null }), suggestion({ stageName: "Build" })],
+        ["Design", "Build"],
+      ),
+    ).toEqual(["Build", "Design"]);
+  });
 });
 
 function suggestion(
@@ -128,6 +138,7 @@ function suggestion(
     priority: "medium",
     estimation: 60,
     scheduleDate: null,
+    scheduleSlots: [],
     dueDate: null,
     spaceId: "board",
     spaceName: "Software Growth",

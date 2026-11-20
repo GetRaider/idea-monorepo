@@ -1,137 +1,134 @@
 import Image from "next/image";
-import type { ReactNode } from "react";
 
-import { HOME_REGIONS } from "@/content/home";
+import { ONBOARDING_EXAMPLE } from "@/content/home";
 
-import { WaitlistButton } from "./waitlist-button";
+import { OpenTodexLink } from "./open-todex-link";
+
+const example = ONBOARDING_EXAMPLE;
 
 export function HomePage() {
   return (
     <div>
-      <section className="relative flex min-h-svh flex-col overflow-hidden">
-        <HeroAtmosphere />
-        <div className="relative z-10 mx-auto flex w-full max-w-5xl flex-1 flex-col items-center justify-center px-6 pb-28 pt-20 text-center">
-          <p className="text-[11px] font-medium uppercase tracking-[0.34em] text-zinc-500">
-            {HOME_REGIONS.hero.eyebrow}
-          </p>
-          <h1 className="mt-5 text-[clamp(3.25rem,6.6vw,5.75rem)] font-medium leading-[0.92] tracking-[-0.045em]">
-            <span className="block text-white">{HOME_REGIONS.hero.headlineLead}</span>
-            <span className="mt-1 block bg-gradient-to-b from-white from-15% via-zinc-300 to-zinc-500 bg-clip-text text-transparent">
-              {HOME_REGIONS.hero.headlineRest}
-            </span>
-          </h1>
-          <p className="mt-7 max-w-[34rem] text-[15px] leading-relaxed text-zinc-400 sm:text-base">
-            {HOME_REGIONS.hero.support}
-          </p>
-          <div className="mt-9">
-            <WaitlistButton />
+      <section className="relative isolate overflow-hidden px-5 pb-16 pt-32 sm:pb-20 sm:pt-40">
+        <Image
+          src="/hero.png"
+          alt=""
+          fill
+          priority
+          unoptimized
+          sizes="100vw"
+          className="pointer-events-none -z-20 object-cover object-center"
+        />
+        <div className="absolute inset-0 -z-10 bg-gradient-to-b from-black/30 via-black/40 to-black" />
+        <div className="mx-auto max-w-page">
+          <div className="mx-auto max-w-3xl text-center">
+            <h1 className="text-[clamp(2.75rem,7vw,6rem)] font-medium leading-[0.98] tracking-[-0.055em] text-white">
+              Keep the why <span className="block text-zinc-300">with the work.</span>
+            </h1>
+            <p className="mx-auto mt-6 max-w-xl text-base leading-relaxed text-zinc-300 sm:text-lg">
+              Todex connects your research, tasks, and execution. When you sit down to build, the decisions and evidence behind the task are already there.
+            </p>
+            <div className="mt-7 flex flex-wrap items-center justify-center gap-x-5 gap-y-3">
+              <OpenTodexLink />
+              <a href="#workflow" className="rounded text-sm text-white underline decoration-white/50 underline-offset-4 hover:decoration-white">
+                See how it works
+              </a>
+            </div>
           </div>
-        </div>
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex justify-center">
-          <div className="relative h-[108px] w-[min(1040px,88vw)] overflow-hidden rounded-t-[1.85rem] bg-[#070707] shadow-[0_-1px_0_rgba(255,255,255,0.95),0_-24px_70px_rgba(255,255,255,0.18)]">
-            <div className="absolute inset-x-6 -top-3 h-6 bg-white/70 blur-md" />
-            <div className="absolute inset-x-0 top-0 h-px bg-white" />
-            <div className="absolute inset-x-3 top-3.5 bottom-0 rounded-t-[1.25rem] bg-black ring-1 ring-inset ring-white/10" />
-          </div>
+          <figure className="mx-auto mt-12 max-w-3xl overflow-hidden rounded-2xl border border-white/20 bg-zinc-950 shadow-[0_-10px_60px_rgba(255,255,255,0.08)] sm:mt-16">
+            <figcaption className="border-b border-white/10 px-5 py-3 text-sm text-zinc-400 sm:px-8">
+              Planning <span aria-hidden="true">/</span> Onboarding
+            </figcaption>
+            <div className="p-5 sm:p-8">
+              <p className="text-2xl font-medium tracking-tight text-white sm:text-3xl">{example.task}</p>
+              <div className="mt-6 grid gap-6 sm:grid-cols-[1.4fr_1fr]">
+                <div>
+                  <p className="text-sm font-medium text-zinc-300">Acceptance criteria</p>
+                  <ul className="mt-3 list-disc space-y-2 pl-4 text-sm text-zinc-400">
+                    {example.criteria.map((criterion) => <li key={criterion}>{criterion}</li>)}
+                  </ul>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-zinc-300">References</p>
+                  <a href="#research-note" className="mt-3 inline-block text-sm text-white underline decoration-white/50 underline-offset-4 hover:decoration-white">
+                    {example.source}
+                  </a>
+                </div>
+              </div>
+            </div>
+          </figure>
         </div>
       </section>
 
-      <Section title={HOME_REGIONS.problem.title}>
-        <p className="max-w-2xl text-zinc-400">{HOME_REGIONS.problem.body}</p>
-      </Section>
-
-      <Section title={HOME_REGIONS.solution.title}>
-        <p className="max-w-2xl text-zinc-400">{HOME_REGIONS.solution.body}</p>
-      </Section>
-
-      <Section title={HOME_REGIONS.stepsTitle}>
-        <ol className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {HOME_REGIONS.steps.map((step) => (
-            <li
-              key={step}
-              className="rounded-2xl border border-white/10 bg-white/[0.03] p-5"
-            >
-              <p className="text-sm text-zinc-500">{step}</p>
-              <p className="mt-3 text-lg text-white">Step</p>
-            </li>
-          ))}
-        </ol>
-      </Section>
-
-      <Section title={HOME_REGIONS.highlightsTitle}>
-        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          {HOME_REGIONS.highlights.map((highlight) => (
-            <li
-              key={highlight}
-              className="rounded-2xl border border-white/10 bg-white/[0.03] p-5"
-            >
-              <p className="text-base text-white">{highlight}</p>
-              <p className="mt-2 text-sm text-zinc-400">Label</p>
-            </li>
-          ))}
-        </ul>
-      </Section>
-
-      <Section title={HOME_REGIONS.choice.title}>
-        <p className="max-w-2xl text-zinc-400">{HOME_REGIONS.choice.body}</p>
-      </Section>
-
-      <Section title={HOME_REGIONS.audiencesTitle}>
-        <ul className="grid gap-4 sm:grid-cols-2">
-          {HOME_REGIONS.audiences.map((audience, index) => (
-            <li
-              key={`${audience}-${index}`}
-              className="rounded-2xl border border-white/10 bg-white/[0.03] p-6"
-            >
-              <p className="text-xl text-white">{audience}</p>
-              <p className="mt-2 text-sm text-zinc-400">Label</p>
-            </li>
-          ))}
-        </ul>
-      </Section>
-
-      <section className="px-5 py-24">
-        <div className="mx-auto flex w-full max-w-page flex-col items-start gap-6 rounded-3xl border border-white/10 bg-white/[0.03] px-8 py-12">
-          <h2 className="text-4xl font-medium tracking-tight text-white">
-            {HOME_REGIONS.close.title}
+      <section className="border-y border-white/10 px-5 py-16 sm:py-24" aria-labelledby="problem-title">
+        <div className="mx-auto max-w-page">
+          <h2 id="problem-title" className="max-w-3xl text-3xl font-medium tracking-tight text-white sm:text-5xl">
+            By the time you’re ready to build, the context is scattered.
           </h2>
-          <p className="text-zinc-400">{HOME_REGIONS.close.body}</p>
-          <WaitlistButton />
+          <p className="mt-5 max-w-2xl leading-relaxed text-zinc-400">
+            You make sense of customer interviews in ChatGPT and put the next step on your task board. A week later, you open Cursor and have to reconstruct what you decided, why, and what counts as done.
+          </p>
+          <ol className="mt-8 grid gap-3 md:grid-cols-3">
+            {example.fragmentedWorkflow.map(({ tool, detail }) => (
+              <li key={tool} className="rounded-xl border border-dashed border-white/20 p-5">
+                <h3 className="text-sm font-medium text-zinc-400">{tool}</h3>
+                <p className="mt-3 text-zinc-200">“{detail}”</p>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+
+      <section id="workflow" className="scroll-mt-20 px-5 py-16 sm:py-24" aria-labelledby="workflow-title">
+        <div className="mx-auto max-w-page">
+          <h2 id="workflow-title" className="max-w-3xl text-3xl font-medium tracking-tight text-white sm:text-5xl">
+            Carry the decision all the way into execution.
+          </h2>
+          <ol className="mt-8 grid overflow-hidden rounded-2xl border border-white/15 bg-zinc-950 md:grid-cols-3">
+            <li id="research-note" className="scroll-mt-24 border-b border-white/10 p-6 target:bg-white/10 md:border-b-0 md:border-r">
+              <h3 className="text-sm text-zinc-400">Knowledge</h3>
+              <p className="mt-4 text-xl font-medium text-white">{example.source}</p>
+              <p className="mt-3 text-sm leading-relaxed text-zinc-300">
+                Save the interview findings and record the decision to offer a sample project.
+              </p>
+            </li>
+            <li className="border-b border-white/10 p-6 md:border-b-0 md:border-r">
+              <h3 className="text-sm text-zinc-400">Planning</h3>
+              <p className="mt-4 text-xl font-medium text-white">{example.task}</p>
+              <p className="mt-3 text-sm leading-relaxed text-zinc-300">
+                Define what counts as done and link the notes so the reasoning is easy to find.
+              </p>
+            </li>
+            <li className="p-6">
+              <h3 className="text-sm text-zinc-400">Execution</h3>
+              <p className="mt-4 text-xl font-medium text-white">Build the sample project</p>
+              <p className="mt-3 text-sm leading-relaxed text-zinc-300">
+                Start a Todex work session or pull the task and its context into Cursor through Todex MCP.
+              </p>
+            </li>
+          </ol>
+        </div>
+      </section>
+
+      <section className="border-t border-white/10 px-5 py-14 sm:py-20" aria-labelledby="integrations-title">
+        <div className="mx-auto max-w-page">
+          <h2 id="integrations-title" className="text-3xl font-medium tracking-tight text-white">
+            Keep using the AI tools you already work with.
+          </h2>
+          <p className="mt-4 max-w-2xl leading-relaxed text-zinc-400">
+            Save research from ChatGPT or Claude to Todex. When it’s time to build, Todex MCP gives Cursor access to the task, its acceptance criteria, and the context behind it.
+          </p>
+        </div>
+      </section>
+
+      <section className="px-5 pb-16 sm:pb-24" aria-labelledby="start-title">
+        <div className="mx-auto flex max-w-page flex-col items-start gap-6 rounded-2xl border border-white/15 bg-gradient-to-br from-zinc-900 to-zinc-950 p-6 sm:p-10">
+          <h2 id="start-title" className="max-w-xl text-3xl font-medium tracking-tight text-white sm:text-4xl">
+            Start with the project you’re already working on.
+          </h2>
+          <OpenTodexLink />
         </div>
       </section>
     </div>
-  );
-}
-
-function Section({
-  title,
-  children,
-}: {
-  title: string;
-  children: ReactNode;
-}) {
-  return (
-    <section className="px-5 py-20">
-      <div className="mx-auto w-full max-w-page">
-        <h2 className="text-3xl font-medium tracking-tight text-white sm:text-4xl">
-          {title}
-        </h2>
-        <div className="mt-8">{children}</div>
-      </div>
-    </section>
-  );
-}
-
-function HeroAtmosphere() {
-  return (
-    <Image
-      src="/hero.png"
-      alt=""
-      fill
-      priority
-      unoptimized
-      sizes="100vw"
-      className="pointer-events-none object-cover object-center"
-    />
   );
 }

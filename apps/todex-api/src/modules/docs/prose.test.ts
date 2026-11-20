@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   CreateDocBodySchema,
+  ProseDocSchema,
   DocMentionTarget,
   DocType,
   GoalDocBodySchema,
@@ -35,10 +36,71 @@ describe("projectProse", () => {
     ).toEqual(["task-1", "event-1"]);
   });
 
+  it("keeps document tables and callouts readable for indexing", () => {
+    const doc: ProseDoc = {
+      type: "doc",
+      content: [
+        {
+          type: "table",
+          content: [
+            {
+              type: "tableRow",
+              content: [
+                { type: "tableHeader", content: [{ type: "paragraph", content: [text("Mode")] }] },
+                { type: "tableHeader", content: [{ type: "paragraph", content: [text("Access")] }] },
+              ],
+            },
+            {
+              type: "tableRow",
+              content: [
+                { type: "tableCell", content: [{ type: "paragraph", content: [text("Ask")] }] },
+                { type: "tableCell", content: [{ type: "paragraph", content: [text("Read only")] }] },
+              ],
+            },
+          ],
+        },
+        {
+          type: "callout",
+          attrs: { variant: "info" },
+          content: [{ type: "paragraph", content: [text("Keep writes approved")] }],
+        },
+        {
+          type: "details",
+          content: [
+            { type: "detailsSummary", content: [text("Implementation")] },
+            {
+              type: "detailsContent",
+              content: [{ type: "paragraph", content: [text("Use MCP")] }],
+            },
+          ],
+        },
+      ],
+    };
+    const projected = projectProse(doc, () => true, () => "");
+    expect(projected.plainText).toContain("Mode\tAccess");
+    expect(projected.plainText).toContain("Ask\tRead only");
+    expect(projected.plainText).toContain("Keep writes approved");
+    expect(projected.plainText).toContain("Implementation\nUse MCP");
+    expect(projected.doc).toEqual(doc);
+  });
+
+  it("rejects unsafe image URLs in persisted Knowledge JSON", () => {
+    const valid = {
+      type: "doc",
+      content: [{ type: "image", attrs: { src: "https://example.com/diagram.png" } }],
+    };
+    expect(ProseDocSchema.safeParse(valid).success).toBe(true);
+    expect(ProseDocSchema.safeParse({
+      type: "doc",
+      content: [{ type: "image", attrs: { src: "javascript:alert(1)" } }],
+    }).success).toBe(false);
+  });
+
   it("rejects a mention without a target", () => {
     const parsed = CreateDocBodySchema.safeParse({
       type: DocType.COMMON,
       title: "Notes",
+      spaceId: "space-1",
       body: {
         content: paragraph([{ type: "mention" }]),
       },

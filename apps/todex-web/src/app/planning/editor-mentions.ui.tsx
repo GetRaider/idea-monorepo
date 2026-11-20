@@ -80,7 +80,7 @@ export function useMentionCandidates(
         targetType: DocMentionTarget.TASK,
         targetId: task.id,
         taskKey: task.taskKey,
-        spaceName,
+        spaceId: task.spaceId,
       }),
     };
   });

@@ -14,6 +14,7 @@ import {
   EnqueueExecutionBodySchema,
   ExecuteTaskBodySchema,
   ExecutionActivityQuerySchema,
+  ExecutionCalendarQuerySchema,
   FocusExecutionTaskBodySchema,
   ReorderExecutionQueueBodySchema,
   UpdateExecutionSessionBodySchema,
@@ -22,6 +23,7 @@ import type {
   EnqueueExecutionBody,
   ExecuteTaskBody,
   ExecutionActivityQuery,
+  ExecutionCalendarQuery,
   FocusExecutionTaskBody,
   ReorderExecutionQueueBody,
   UpdateExecutionSessionBody,
@@ -50,8 +52,11 @@ export class ExecutionController {
   }
 
   @Get("suggestions")
-  async suggestions(@Req() request: WorkspaceRequest) {
-    return this.executionService.suggestions(request.workspaceId);
+  async suggestions(
+    @Req() request: WorkspaceRequest,
+    @Query("includeDone") includeDone?: string,
+  ) {
+    return this.executionService.suggestions(request.workspaceId, includeDone === "true");
   }
 
   @Get("activity")
@@ -60,6 +65,14 @@ export class ExecutionController {
     @Query(zodPipe(ExecutionActivityQuerySchema)) query: ExecutionActivityQuery,
   ) {
     return this.executionService.activity(request.workspaceId, query);
+  }
+
+  @Get("calendar")
+  async calendar(
+    @Req() request: WorkspaceRequest,
+    @Query(zodPipe(ExecutionCalendarQuerySchema)) query: ExecutionCalendarQuery,
+  ) {
+    return this.executionService.calendar(request.workspaceId, query);
   }
 
   @Patch("sessions/:sessionId")
@@ -106,6 +119,14 @@ export class ExecutionController {
     @Body(zodPipe(FocusExecutionTaskBodySchema)) body: FocusExecutionTaskBody,
   ) {
     return this.executionService.focus(request.workspaceId, body.taskId);
+  }
+
+  @Post("release")
+  async release(
+    @Req() request: WorkspaceRequest,
+    @Body(zodPipe(FocusExecutionTaskBodySchema)) body: FocusExecutionTaskBody,
+  ) {
+    return this.executionService.release(request.workspaceId, body.taskId);
   }
 
   @Post("pause")

@@ -4,7 +4,7 @@ import { Spinner } from "@repo/ui";
 
 import { useExecution } from "../execution-provider";
 import { ExecutionSessionList } from "../execution-session-list";
-import { ExecutionCanvas } from "../execution-sidebar";
+import { ExecutionCanvas } from "../execution-canvas";
 
 export default function ExecutionHistoryPage() {
   const {

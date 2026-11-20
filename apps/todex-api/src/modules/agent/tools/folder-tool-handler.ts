@@ -1,15 +1,16 @@
 import { Injectable } from "@nestjs/common";
-import { FolderKind } from "@repo/api/todex";
 import { z } from "zod";
 
-import { FoldersService } from "../../folders/folders.service";
+import { DocFoldersService } from "../../folders/doc-folders.service";
+import { SpaceFoldersService } from "../../folders/space-folders.service";
 import type { ToolHandler } from "./tool-handler";
-
-const folderKindSchema = z.enum([FolderKind.DOCS, FolderKind.TASKS]);
 
 @Injectable()
 export class FolderToolHandler {
-  constructor(private readonly folders: FoldersService) {}
+  constructor(
+    private readonly spaceFolders: SpaceFoldersService,
+    private readonly docFolders: DocFoldersService,
+  ) {}
 
   handlers(): ToolHandler[] {
     return [
@@ -17,15 +18,16 @@ export class FolderToolHandler {
         name: "list_folders",
         access: "read",
         description:
-          "List folders in the current workspace. Pass kind docs before filing a doc, or kind tasks before filing a task. Use the returned id as folderId.",
+          "List space folders, or document folders inside one space. Pass spaceId to list document folders. Use a document folder id as folderId only with that same spaceId.",
         parameters: z
           .object({
-            kind: folderKindSchema.optional(),
+            spaceId: z.string().min(1).optional(),
           })
           .strict(),
         handle: async ({ workspaceId, args }) => {
-          const { kind } = args as { kind?: (typeof FolderKind)[keyof typeof FolderKind] };
-          return this.folders.list(workspaceId, kind);
+          const { spaceId } = args as { spaceId?: string };
+          if (spaceId) return this.docFolders.list(workspaceId, spaceId);
+          return this.spaceFolders.list(workspaceId);
         },
       },
     ];

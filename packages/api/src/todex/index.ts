@@ -2,8 +2,10 @@ export {
   DEFAULT_SECTION_NAME,
   DocMentionTarget,
   DocType,
-  FolderKind,
   GoalStatus,
+  RelationEntityType,
+  RelationKind,
+  RelationOrigin,
   PROGRESS_STAGE_TEMPLATES,
   ProgressStageTemplate,
   TaskPriority,
@@ -52,17 +54,42 @@ export type {
   UpdateGoalDocBody,
 } from "./doc.ts";
 export {
-  CreateFolderBodySchema,
-  FolderSchema,
-  ListFoldersQuerySchema,
-  UpdateFolderBodySchema,
-} from "./folder.ts";
+  CreateSpaceFolderBodySchema,
+  SpaceFolderSchema,
+  UpdateSpaceFolderBodySchema,
+} from "./space-folder.ts";
 export type {
-  CreateFolderBody,
-  Folder,
-  ListFoldersQuery,
-  UpdateFolderBody,
-} from "./folder.ts";
+  CreateSpaceFolderBody,
+  SpaceFolder,
+  UpdateSpaceFolderBody,
+} from "./space-folder.ts";
+export {
+  CreateDocFolderBodySchema,
+  DocFolderSchema,
+  ListDocFoldersQuerySchema,
+  UpdateDocFolderBodySchema,
+} from "./doc-folder.ts";
+export type {
+  CreateDocFolderBody,
+  DocFolder,
+  ListDocFoldersQuery,
+  UpdateDocFolderBody,
+} from "./doc-folder.ts";
+export {
+  CreateRelationBodySchema,
+  ListRelationsQuerySchema,
+  RelationEndpointSchema,
+  RelationNeighborSchema,
+  SpaceDeletionPreviewSchema,
+} from "./relation.ts";
+export type {
+  CreateRelationBody,
+  ListRelationsQuery,
+  RelationEndpoint,
+  RelationNeighbor,
+  SpaceDeletionPreview,
+} from "./relation.ts";
+export { collectHtmlMentions } from "./html-mentions.ts";
 export {
   CreateSpaceBodySchema,
   ListSpacesQuerySchema,
@@ -77,6 +104,17 @@ export type {
   SpaceDetail,
   UpdateSpaceBody,
 } from "./space.ts";
+export {
+  DEFAULT_SPACE_COLOR,
+  SPACE_COLORS,
+  SpaceColorSchema,
+} from "./space-colors.ts";
+export type { SpaceColor } from "./space-colors.ts";
+export {
+  SPACE_POSITION_GAP,
+  positionAfterHighest,
+  positionForDrop,
+} from "./space-order.ts";
 export {
   CreateEpicBodySchema,
   EpicDetailSchema,
@@ -111,14 +149,17 @@ export {
 } from "./prose.ts";
 export type { DocMentionRef, ProseDoc, ProseNode } from "./prose.ts";
 export {
-  completeRecurringTask,
+  addCalendarDays,
   defaultTaskRecurrence,
   expandRecurrenceStarts,
+  formatOccurrenceLocalKey,
   formatTaskRecurrence,
+  occurrenceKey,
   readTaskRecurrence,
   TASK_WEEKDAYS,
   TaskRecurrenceSchema,
   TaskWeekdaySchema,
+  zonedLocalDateTime,
 } from "./recurrence.ts";
 export type { TaskRecurrence, TaskWeekday } from "./recurrence.ts";
 export {
@@ -163,25 +204,65 @@ export {
   AcceptanceCriteriaSchema,
   AcceptanceCriterionSchema,
   CreateTaskBodySchema,
+  DeleteTaskBodySchema,
   ListTasksQuerySchema,
   MoveTaskBodySchema,
+  ScheduleSlotSchema,
+  TaskCalendarRangeSchema,
+  TaskComplexitySchema,
+  TaskConflictSchema,
   TaskSchema,
   UpdateTaskBodySchema,
 } from "./task.ts";
 export type {
   AcceptanceCriterion,
   CreateTaskBody,
+  DeleteTaskBody,
   ListTasksQuery,
   MoveTaskBody,
+  ScheduleSlot,
+  ScheduleSlotInput,
   Task,
+  TaskCalendarPreview,
+  TaskCalendarRange,
+  TaskComplexity,
+  TaskConflict,
   UpdateTaskBody,
 } from "./task.ts";
+export {
+  CreateSeriesBodySchema,
+  CreateSeriesExceptionBodySchema,
+  DeleteSeriesResultSchema,
+  SeriesPatchSchema,
+  SeriesTemplateSchema,
+  StopSeriesBodySchema,
+  UpdateSeriesBodySchema,
+} from "./series.ts";
+export type {
+  CreateSeriesBody,
+  CreateSeriesExceptionBody,
+  DeleteSeriesResult,
+  SeriesPatch,
+  SeriesTemplate,
+  StopSeriesBody,
+  UpdateSeriesBody,
+} from "./series.ts";
+export {
+  CreateTaskReferenceBodySchema,
+  TaskReferenceSchema,
+} from "./task-reference.ts";
+export type {
+  CreateTaskReferenceBody,
+  TaskReference,
+} from "./task-reference.ts";
 export {
   CompleteExecutionBodySchema,
   EnqueueExecutionBodySchema,
   ExecuteTaskBodySchema,
   ExecutionActivityQuerySchema,
   ExecutionActivitySchema,
+  ExecutionCalendarQuerySchema,
+  ExecutionCalendarSchema,
   ExecutionCurrentSchema,
   ExecutionExecutorTypeSchema,
   ExecutionIntervalSchema,
@@ -200,6 +281,8 @@ export type {
   ExecuteTaskBody,
   ExecutionActivity,
   ExecutionActivityQuery,
+  ExecutionCalendar,
+  ExecutionCalendarQuery,
   ExecutionCurrent,
   ExecutionExecutorType,
   ExecutionInterval,
@@ -219,6 +302,14 @@ export {
   hasOpenInterval,
   sumIntervalSeconds,
 } from "./intervals.ts";
+export {
+  UpdateUserPreferencesBodySchema,
+  UserPreferencesSchema,
+} from "./user-preferences.ts";
+export type {
+  UpdateUserPreferencesBody,
+  UserPreferences,
+} from "./user-preferences.ts";
 export {
   WorkspaceMemberProfileSchema,
   WorkspaceMemberSchema,

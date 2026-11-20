@@ -1,8 +1,8 @@
+export function getAppHref(): string {
+  return process.env.NEXT_PUBLIC_TODEX_APP_URL?.replace(/\/$/, "") ||
+    (process.env.NODE_ENV === "production" ? "https://todex.app" : "http://localhost:3002");
+}
+
 export function getSignInHref(): string {
-  const configured = process.env.NEXT_PUBLIC_TODEX_APP_URL?.replace(/\/$/, "");
-  const origin =
-    configured && configured.length > 0
-      ? configured
-      : "http://localhost:3002";
-  return `${origin}/sign-in`;
+  return `${getAppHref()}/sign-in`;
 }

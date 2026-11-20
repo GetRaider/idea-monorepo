@@ -1,33 +1,13 @@
-export const HOME_REGIONS = {
-  hero: {
-    eyebrow: "Plan · Knowledge · Execute",
-    headlineLead: "Your work,",
-    headlineRest: "actually done.",
-    support:
-      "Todex is the AI-native work OS where planning, knowledge, and execution live together.",
-  },
-  problem: {
-    title: "Problem",
-    body: "Body",
-  },
-  solution: {
-    title: "Solution",
-    body: "Body",
-  },
-  stepsTitle: "How it works",
-  steps: ["01", "02", "03", "04"],
-  highlightsTitle: "Highlights",
-  highlights: ["Planning", "Knowledge", "Calendar", "Execution", "AI & MCP"],
-  choice: {
-    title: "Human or AI",
-    body: "Body",
-  },
-  audiencesTitle: "Audiences",
-  audiences: ["Audience", "Audience"],
-  close: {
-    title: "Close",
-    body: "Body",
-  },
+export const ONBOARDING_EXAMPLE = {
+  task: "Add a sample project to onboarding",
+  source: "Onboarding interview notes",
+  criteria: [
+    "Offer a sample project before setup",
+    "Let users skip straight to their own project",
+  ],
+  fragmentedWorkflow: [
+    { tool: "ChatGPT", detail: "People wanted to see an example before setting up their own project." },
+    { tool: "Task board", detail: "Improve onboarding." },
+    { tool: "Cursor", detail: "What exactly are we changing, and why?" },
+  ],
 } as const;
-
-export const WAITLIST_LABEL = "Join the Waitlist";

@@ -11,7 +11,7 @@ import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import {
   DocMentionTarget,
   DocType,
-  FolderKind,
+  RelationEntityType,
   collectMentions,
   emptyCommonDocBody,
   emptyGoalDocBody,
@@ -36,10 +36,12 @@ import type {
 
 import { DRIZZLE_DB } from "../../db/tokens";
 import {
-  docMentions,
+  calendarEvents,
+  docFolders,
   docs,
   docTasks,
-  folders,
+  epics,
+  spaces,
   tasks,
   workspaces,
 } from "../../db/schema";
@@ -47,6 +49,7 @@ import type { DocRow } from "../../db/schema";
 import { mapDoc, mapDocSummary } from "../../db/mappers";
 import { planningProgress } from "../epics/progress";
 import { ContentIndexQueue } from "../content-index/content-index.queue";
+import { RelationsService } from "../relations/relations.service";
 import { WorkspaceService } from "../workspace/workspace.service";
 
 @Injectable()
@@ -54,18 +57,21 @@ export class DocsService {
   constructor(
     @Inject(DRIZZLE_DB) private readonly db: NodePgDatabase,
     private readonly workspaceService: WorkspaceService,
+    private readonly relations: RelationsService,
     @Optional() private readonly contentIndex?: ContentIndexQueue,
   ) {}
 
   async list(workspaceId: string, query: ListDocsQuery) {
     const filters = [eq(docs.workspaceId, workspaceId)];
     if (query.type) filters.push(eq(docs.type, query.type));
+    if (query.spaceId) filters.push(eq(docs.spaceId, query.spaceId));
     if (query.folderId) filters.push(eq(docs.folderId, query.folderId));
 
     const rows = await this.db
       .select({
         id: docs.id,
         workspaceId: docs.workspaceId,
+        spaceId: docs.spaceId,
         folderId: docs.folderId,
         type: docs.type,
         docKey: docs.docKey,
@@ -94,8 +100,11 @@ export class DocsService {
   }
 
   async create(workspaceId: string, body: CreateDocBody) {
+    await this.requireSpace(workspaceId, body.spaceId);
     const folderId = body.folderId ?? null;
-    if (folderId) await this.requireDocsFolder(workspaceId, folderId);
+    if (folderId) {
+      await this.requireDocsFolder(workspaceId, folderId, body.spaceId);
+    }
 
     const linkedTaskIds =
       body.type === DocType.GOAL ? (body.linkedTaskIds ?? []) : [];
@@ -125,6 +134,7 @@ export class DocsService {
       await tx.insert(docs).values({
         id: docId,
         workspaceId,
+        spaceId: body.spaceId,
         folderId,
         type: body.type,
         docKey: formatDocKey(workspace.docSeq),
@@ -151,7 +161,12 @@ export class DocsService {
       throw new BadRequestException("Common docs cannot link tasks");
     }
 
-    if (body.folderId) await this.requireDocsFolder(workspaceId, body.folderId);
+    const nextSpaceId = body.spaceId ?? existing.spaceId;
+    if (body.spaceId) await this.requireSpace(workspaceId, body.spaceId);
+    const folderId = await this.folderForMove(existing, body, nextSpaceId);
+    if (folderId) {
+      await this.requireDocsFolder(workspaceId, folderId, nextSpaceId);
+    }
     if (body.linkedTaskIds) {
       await this.requireTasks(workspaceId, body.linkedTaskIds);
     }
@@ -166,7 +181,10 @@ export class DocsService {
         .update(docs)
         .set({
           ...(body.title !== undefined ? { title: body.title } : {}),
-          ...(body.folderId !== undefined ? { folderId: body.folderId } : {}),
+          ...(body.spaceId !== undefined ? { spaceId: body.spaceId } : {}),
+          ...(folderId !== existing.folderId || body.folderId !== undefined
+            ? { folderId }
+            : {}),
           ...(stored ? { body: stored.body, plainText: stored.plainText } : {}),
           updatedAt: new Date(),
         })
@@ -184,7 +202,12 @@ export class DocsService {
 
   async remove(workspaceId: string, docId: string) {
     const existing = await this.requireInWorkspace(workspaceId, docId);
-    await this.db.delete(docs).where(eq(docs.id, existing.id));
+    await this.db.transaction(async (tx) => {
+      await this.relations.deleteTouching(tx, workspaceId, [
+        { type: RelationEntityType.DOC, ids: [existing.id] },
+      ]);
+      await tx.delete(docs).where(eq(docs.id, existing.id));
+    });
     await this.workspaceService.bumpUpdatedAt(workspaceId);
     await this.scheduleIndex(workspaceId, docId, true);
   }
@@ -296,8 +319,12 @@ export class DocsService {
   ): Promise<MentionTargets> {
     const taskIds = uniqueIds(mentions, DocMentionTarget.TASK);
     const docIds = uniqueIds(mentions, DocMentionTarget.DOC);
+    const epicIds = uniqueIds(mentions, DocMentionTarget.EPIC);
+    const eventIds = uniqueIds(mentions, DocMentionTarget.EVENT);
     const taskTitles = new Map<string, string>();
     const docTitles = new Map<string, string>();
+    const epicTitles = new Map<string, string>();
+    const eventTitles = new Map<string, string>();
 
     if (taskIds.length > 0) {
       const rows = await this.db
@@ -319,7 +346,31 @@ export class DocsService {
       for (const row of rows) docTitles.set(row.id, row.title);
     }
 
-    return { taskTitles, docTitles };
+    if (epicIds.length > 0) {
+      const rows = await this.db
+        .select({ id: epics.id, name: epics.name })
+        .from(epics)
+        .innerJoin(spaces, eq(spaces.id, epics.spaceId))
+        .where(
+          and(eq(spaces.workspaceId, workspaceId), inArray(epics.id, epicIds)),
+        );
+      for (const row of rows) epicTitles.set(row.id, row.name);
+    }
+
+    if (eventIds.length > 0) {
+      const rows = await this.db
+        .select({ id: calendarEvents.id, title: calendarEvents.title })
+        .from(calendarEvents)
+        .where(
+          and(
+            eq(calendarEvents.workspaceId, workspaceId),
+            inArray(calendarEvents.id, eventIds),
+          ),
+        );
+      for (const row of rows) eventTitles.set(row.id, row.title);
+    }
+
+    return { taskTitles, docTitles, epicTitles, eventTitles };
   }
 
   private async requireTasks(workspaceId: string, taskIds: string[]) {
@@ -337,18 +388,48 @@ export class DocsService {
     }
   }
 
-  private async requireDocsFolder(workspaceId: string, folderId: string) {
+  private async requireSpace(workspaceId: string, spaceId: string) {
+    const [space] = await this.db
+      .select({ id: spaces.id })
+      .from(spaces)
+      .where(and(eq(spaces.id, spaceId), eq(spaces.workspaceId, workspaceId)))
+      .limit(1);
+    if (!space) throw new ForbiddenException();
+  }
+
+  private async requireDocsFolder(
+    workspaceId: string,
+    folderId: string,
+    spaceId: string,
+  ) {
     const [folder] = await this.db
       .select()
-      .from(folders)
-      .where(eq(folders.id, folderId))
+      .from(docFolders)
+      .where(eq(docFolders.id, folderId))
       .limit(1);
     if (!folder || folder.workspaceId !== workspaceId) {
       throw new ForbiddenException();
     }
-    if (folder.kind !== FolderKind.DOCS) {
-      throw new BadRequestException("Folder is not a docs folder");
+    if (folder.spaceId !== spaceId) {
+      throw new BadRequestException("Document folder is not in this space");
     }
+  }
+
+  private async folderForMove(
+    existing: DocRow,
+    body: UpdateDocBody,
+    nextSpaceId: string,
+  ) {
+    if (body.folderId !== undefined) return body.folderId;
+    if (!existing.folderId || nextSpaceId === existing.spaceId) {
+      return existing.folderId;
+    }
+    const [folder] = await this.db
+      .select({ spaceId: docFolders.spaceId })
+      .from(docFolders)
+      .where(eq(docFolders.id, existing.folderId))
+      .limit(1);
+    return folder?.spaceId === nextSpaceId ? existing.folderId : null;
   }
 
   private async requireInWorkspace(workspaceId: string, docId: string) {
@@ -376,15 +457,23 @@ export class DocsService {
     docId: string,
     mentions: DocMentionRef[],
   ) {
-    await tx.delete(docMentions).where(eq(docMentions.docId, docId));
-    if (mentions.length === 0) return;
-    await tx.insert(docMentions).values(
-      mentions.map((mention) => ({
-        docId,
-        targetType: mention.targetType,
-        targetId: mention.targetId,
-      })),
+    await this.relations.replaceReferences(
+      tx,
+      await this.workspaceIdFor(tx, docId),
+      "doc",
+      docId,
+      mentions,
     );
+  }
+
+  private async workspaceIdFor(tx: DocsWriter, docId: string) {
+    const [row] = await tx
+      .select({ workspaceId: docs.workspaceId })
+      .from(docs)
+      .where(eq(docs.id, docId))
+      .limit(1);
+    if (!row) throw new ForbiddenException();
+    return row.workspaceId;
   }
 
   private async writeLinkedTasks(
@@ -473,7 +562,12 @@ function keepMention(
   docId: string,
   targets: MentionTargets,
 ) {
-  if (mention.targetType === DocMentionTarget.EVENT) return true;
+  if (mention.targetType === DocMentionTarget.EVENT) {
+    return targets.eventTitles.has(mention.targetId);
+  }
+  if (mention.targetType === DocMentionTarget.EPIC) {
+    return targets.epicTitles.has(mention.targetId);
+  }
   if (mention.targetType === DocMentionTarget.TASK) {
     return targets.taskTitles.has(mention.targetId);
   }
@@ -486,6 +580,12 @@ function mentionLabel(mention: DocMentionRef, targets: MentionTargets) {
   }
   if (mention.targetType === DocMentionTarget.DOC) {
     return targets.docTitles.get(mention.targetId) ?? "";
+  }
+  if (mention.targetType === DocMentionTarget.EPIC) {
+    return targets.epicTitles.get(mention.targetId) ?? "";
+  }
+  if (mention.targetType === DocMentionTarget.EVENT) {
+    return targets.eventTitles.get(mention.targetId) ?? "";
   }
   return mention.label ?? "";
 }
@@ -521,6 +621,8 @@ function uniqueMentions(mentions: DocMentionRef[]): DocMentionRef[] {
 interface MentionTargets {
   taskTitles: Map<string, string>;
   docTitles: Map<string, string>;
+  epicTitles: Map<string, string>;
+  eventTitles: Map<string, string>;
 }
 
 interface ProseField {
@@ -543,4 +645,4 @@ type ProseFieldKey = "content" | "why";
 function formatDocKey(sequence: number) {
   return `D-${sequence}`;
 }
-type DocsWriter = Pick<NodePgDatabase, "insert" | "delete">;
+type DocsWriter = NodePgDatabase;

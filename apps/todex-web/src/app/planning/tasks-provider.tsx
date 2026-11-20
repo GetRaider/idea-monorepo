@@ -11,16 +11,22 @@ import {
   type RefObject,
 } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+} from "@tanstack/react-query";
 import { toast } from "sonner";
 import { TaskStatus } from "@repo/api/todex";
 import type {
-  Folder,
   MoveTaskBody,
+  ScheduleSlotInput,
   Task,
   Space,
-  UpdateFolderBody,
+  SpaceFolder,
   UpdateSpaceBody,
+  UpdateSpaceFolderBody,
   UpdateTaskBody,
 } from "@repo/api/todex";
 
@@ -31,7 +37,6 @@ import {
   applyRootMove,
   groupRootsByStatus,
   projectCompletedTask,
-  INBOX_BOARD_NAME,
   localDayScheduleQuery,
   nestTasks,
   type NestedTask,
@@ -66,8 +71,8 @@ export function TasksProvider({ children }: { children: ReactNode }) {
   >(null);
 
   const foldersQuery = useQuery({
-    queryKey: ["folders"],
-    queryFn: () => todexClient.folders.list(),
+    queryKey: ["space-folders"],
+    queryFn: () => todexClient.spaceFolders.list(),
   });
   const boardsQuery = useQuery({
     queryKey: ["boards"],
@@ -85,8 +90,7 @@ export function TasksProvider({ children }: { children: ReactNode }) {
     view.kind === "schedule"
       ? localDayScheduleQuery(view.schedule === "today" ? 0 : 1)
       : null;
-  const inboxBoardId =
-    boards.find((board) => board.name === INBOX_BOARD_NAME)?.id ?? null;
+  const inboxBoardId = boards.find((board) => board.isInbox)?.id ?? null;
   const resolvedScheduleBoardId =
     (scheduleTargetBoardId &&
     boards.some((board) => board.id === scheduleTargetBoardId)
@@ -123,7 +127,8 @@ export function TasksProvider({ children }: { children: ReactNode }) {
       scheduleQuery?.scheduleFrom,
       scheduleQuery?.scheduleTo,
     ],
-    queryFn: () => todexClient.tasks.list(scheduleQuery!),
+    queryFn: () =>
+      todexClient.tasks.list(scheduleQuery!).then((range) => range.tasks),
     enabled: view.kind === "schedule" && !!scheduleQuery,
   });
 
@@ -170,11 +175,13 @@ export function TasksProvider({ children }: { children: ReactNode }) {
     setSelectedTaskIdState(taskId);
     anchorIdRef.current = taskId;
     setSelectedTaskIds(taskId ? new Set([taskId]) : new Set());
-    const taskKey =
-      taskId == null
-        ? undefined
-        : loadedTasks.find((task) => task.id === taskId)?.taskKey;
-    const href = hrefForTasksView(view, taskKey);
+    const selected = taskId
+      ? loadedTasks.find((task) => task.id === taskId)
+      : undefined;
+    const parentTaskKey = selected?.parentTaskId
+      ? loadedTasks.find((task) => task.id === selected.parentTaskId)?.taskKey
+      : undefined;
+    const href = hrefForTasksView(view, selected?.taskKey, parentTaskKey);
     if (href && href !== pathname) {
       router.replace(href);
     }
@@ -207,6 +214,17 @@ export function TasksProvider({ children }: { children: ReactNode }) {
           anchorIdRef.current = match.id;
           return new Set([match.id]);
         });
+        if (view.kind === "board" && match.parentTaskId) {
+          const parentTaskKey = loadedTasks.find(
+            (task) => task.id === match.parentTaskId,
+          )?.taskKey;
+          const nestedHref = hrefForTasksView(
+            view,
+            match.taskKey,
+            parentTaskKey,
+          );
+          if (nestedHref && nestedHref !== pathname) router.replace(nestedHref);
+        }
         return;
       }
       setSelectedTaskIdState(null);
@@ -221,22 +239,29 @@ export function TasksProvider({ children }: { children: ReactNode }) {
       dismissedTaskKeyRef.current = null;
       setSelectedTaskIdState(null);
     }
-  }, [isTasksLoading, loadedTasks, pathname, router, view.kind, viewHref]);
+  }, [
+    isTasksLoading,
+    loadedTasks,
+    pathname,
+    router,
+    view,
+    view.kind,
+    viewHref,
+  ]);
 
   const invalidateTasks = () => {
     void queryClient.invalidateQueries({ queryKey: ["tasks"] });
   };
 
   const invalidateSpaces = () => {
-    void queryClient.invalidateQueries({ queryKey: ["folders"] });
+    void queryClient.invalidateQueries({ queryKey: ["space-folders"] });
     void queryClient.invalidateQueries({ queryKey: ["boards"] });
   };
 
   const createFolder = useMutation({
-    mutationFn: (name: string) =>
-      todexClient.folders.create({ name, kind: "tasks" }),
+    mutationFn: (name: string) => todexClient.spaceFolders.create({ name }),
     onSuccess: (folder) => {
-      queryClient.setQueryData<Folder[]>(["folders"], (current) =>
+      queryClient.setQueryData<SpaceFolder[]>(["space-folders"], (current) =>
         current ? [...current, folder] : [folder],
       );
       toast.success(`Folder "${folder.name}" created`);
@@ -245,8 +270,8 @@ export function TasksProvider({ children }: { children: ReactNode }) {
   });
 
   const updateFolder = useMutation({
-    mutationFn: (input: { folderId: string; body: UpdateFolderBody }) =>
-      todexClient.folders.update(input.folderId, input.body),
+    mutationFn: (input: { folderId: string; body: UpdateSpaceFolderBody }) =>
+      todexClient.spaceFolders.update(input.folderId, input.body),
     onSuccess: (folder) => {
       invalidateSpaces();
       toast.success(`Folder "${folder.name}" saved`);
@@ -255,7 +280,7 @@ export function TasksProvider({ children }: { children: ReactNode }) {
   });
 
   const removeFolder = useMutation({
-    mutationFn: (folderId: string) => todexClient.folders.remove(folderId),
+    mutationFn: (folderId: string) => todexClient.spaceFolders.remove(folderId),
     onSuccess: () => {
       invalidateSpaces();
       toast.success("Folder deleted");
@@ -268,10 +293,12 @@ export function TasksProvider({ children }: { children: ReactNode }) {
       name: string;
       folderId: string | null;
       quiet?: boolean;
+      color?: string;
     }) =>
       todexClient.spaces.create({
         name: input.name,
         folderId: input.folderId,
+        ...(input.color ? { color: input.color as Space["color"] } : {}),
       }),
     onSuccess: (board, input) => {
       queryClient.setQueryData<Space[]>(["boards"], (current) =>
@@ -279,7 +306,7 @@ export function TasksProvider({ children }: { children: ReactNode }) {
       );
       if (input.quiet) return;
       toast.success(`Space "${board.name}" created`);
-      router.push(tasksUrlHelper.routing.buildBoardUrl(board.name));
+      router.push(tasksUrlHelper.routing.buildBoardUrl(board.id));
     },
     onError: (_error, input) => {
       if (input.quiet) didEnsureInboxRef.current = false;
@@ -290,14 +317,21 @@ export function TasksProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const currentBoards = boardsQuery.data ?? [];
     if (boardsQuery.isLoading || boardsQuery.isError) return;
-    if (currentBoards.some((board) => board.name === INBOX_BOARD_NAME)) return;
+    if (currentBoards.some((board) => board.isInbox)) return;
     if (didEnsureInboxRef.current) return;
     didEnsureInboxRef.current = true;
-    createBoard.mutate({
-      name: INBOX_BOARD_NAME,
-      folderId: null,
-      quiet: true,
-    });
+    void todexClient.spaces
+      .ensureInbox()
+      .then((board) => {
+        queryClient.setQueryData<Space[]>(["boards"], (current) => {
+          const boards = current ?? [];
+          if (boards.some((item) => item.id === board.id)) return boards;
+          return [...boards, board];
+        });
+      })
+      .catch(() => {
+        didEnsureInboxRef.current = false;
+      });
   }, [
     boardsQuery.data,
     boardsQuery.isError,
@@ -319,10 +353,7 @@ export function TasksProvider({ children }: { children: ReactNode }) {
       toast.success(`Space "${board.name}" saved`);
       if (selectedBoardId === board.id) {
         router.replace(
-          tasksUrlHelper.routing.buildBoardUrl(
-            board.name,
-            selectedTask?.taskKey,
-          ),
+          tasksUrlHelper.routing.buildBoardUrl(board.id, selectedTask?.taskKey),
         );
       }
     },
@@ -364,11 +395,7 @@ export function TasksProvider({ children }: { children: ReactNode }) {
           : {}),
         estimation: input.estimation,
         ...(input.dueDate !== undefined ? { dueDate: input.dueDate } : {}),
-        ...(input.scheduleDate !== undefined
-          ? { scheduleDate: input.scheduleDate }
-          : view.kind === "schedule" && scheduleQuery
-            ? { scheduleDate: scheduleQuery.scheduleFrom }
-            : {}),
+        ...draftScheduleSlots(input, view.kind, scheduleQuery),
         ...(input.epicId !== undefined ? { epicId: input.epicId } : {}),
       });
     },
@@ -382,9 +409,23 @@ export function TasksProvider({ children }: { children: ReactNode }) {
   const updateTask = useMutation({
     mutationFn: (input: {
       taskId: string;
-      body: UpdateTaskBody;
+      body: TaskPatch;
       optimistic?: boolean;
-    }) => todexClient.tasks.update(input.taskId, input.body),
+    }) => {
+      const current = cachedTask(queryClient, input.taskId);
+      const version = input.body.version ?? current?.version;
+      if (!version) throw new Error("Task version is missing");
+      const closing =
+        input.body.status === TaskStatus.DONE ||
+        input.body.status === TaskStatus.CANCELLED;
+      return todexClient.tasks.update(input.taskId, {
+        ...input.body,
+        version,
+        ...(closing && input.body.transitionId == null
+          ? { transitionId: crypto.randomUUID() }
+          : {}),
+      });
+    },
     onMutate: async (input) => {
       if (!input.optimistic) return;
       await queryClient.cancelQueries({ queryKey: ["tasks"] });
@@ -392,7 +433,9 @@ export function TasksProvider({ children }: { children: ReactNode }) {
         queryKey: ["tasks"],
       });
       queryClient.setQueriesData<Task[]>({ queryKey: ["tasks"] }, (current) =>
-        applyOptimisticTaskPatch(current, input.taskId, input.body),
+        Array.isArray(current)
+          ? applyOptimisticTaskPatch(current, input.taskId, input.body)
+          : current,
       );
       return { previous };
     },
@@ -402,7 +445,12 @@ export function TasksProvider({ children }: { children: ReactNode }) {
       });
       toast.error("Could not save task");
     },
-    onSuccess: (_task, input) => {
+    onSuccess: (task, input) => {
+      queryClient.setQueriesData<Task[]>({ queryKey: ["tasks"] }, (current) =>
+        Array.isArray(current)
+          ? current.map((item) => (item.id === task.id ? task : item))
+          : current,
+      );
       if (input.optimistic) return;
       toast.success("Task saved");
     },
@@ -419,8 +467,18 @@ export function TasksProvider({ children }: { children: ReactNode }) {
   });
 
   const moveTask = useMutation({
-    mutationFn: (input: { taskId: string; body: MoveTaskBody }) =>
-      todexClient.tasks.move(input.taskId, input.body),
+    mutationFn: (input: { taskId: string; body: TaskMove }) => {
+      const current = cachedTask(queryClient, input.taskId);
+      if (!current) throw new Error("Task version is missing");
+      const closing =
+        input.body.status === TaskStatus.DONE ||
+        input.body.status === TaskStatus.CANCELLED;
+      return todexClient.tasks.move(input.taskId, {
+        ...input.body,
+        version: current.version,
+        ...(closing ? { transitionId: crypto.randomUUID() } : {}),
+      });
+    },
     onMutate: async (input) => {
       await queryClient.cancelQueries({ queryKey: ["tasks"] });
       const previous = queryClient.getQueriesData<Task[]>({
@@ -467,7 +525,14 @@ export function TasksProvider({ children }: { children: ReactNode }) {
   });
 
   const removeTask = useMutation({
-    mutationFn: (taskId: string) => todexClient.tasks.remove(taskId),
+    mutationFn: (taskId: string) => {
+      const current = cachedTask(queryClient, taskId);
+      if (!current) throw new Error("Task version is missing");
+      return todexClient.tasks.remove(taskId, {
+        version: current.version,
+        transitionId: crypto.randomUUID(),
+      });
+    },
     onSuccess: () => {
       setSelectedTaskId(null);
       invalidateTasks();
@@ -524,7 +589,16 @@ export function TasksProvider({ children }: { children: ReactNode }) {
   }
 
   function removeTasks(taskIds: string[]) {
-    void Promise.all(taskIds.map((taskId) => todexClient.tasks.remove(taskId)))
+    void Promise.all(
+      taskIds.map((taskId) => {
+        const current = cachedTask(queryClient, taskId);
+        if (!current) throw new Error("Task version is missing");
+        return todexClient.tasks.remove(taskId, {
+          version: current.version,
+          transitionId: crypto.randomUUID(),
+        });
+      }),
+    )
       .then(() => {
         if (selectedTaskId && taskIds.includes(selectedTaskId)) {
           setSelectedTaskId(null);
@@ -575,8 +649,8 @@ export function TasksProvider({ children }: { children: ReactNode }) {
       removeFolder: async (folderId) => {
         await removeFolder.mutateAsync(folderId);
       },
-      createBoard: (name, folderId) =>
-        createBoard.mutateAsync({ name, folderId }),
+      createBoard: (name, folderId, color) =>
+        createBoard.mutateAsync({ name, folderId, color }),
       updateBoard: (spaceId, body) =>
         updateBoard.mutateAsync({ spaceId, body }),
       removeBoard: async (spaceId) => {
@@ -585,7 +659,7 @@ export function TasksProvider({ children }: { children: ReactNode }) {
       createTask: (summary, parentTaskId, draft) =>
         createTask.mutate({ summary, parentTaskId, ...draft }),
       updateTask: (taskId, body, options) =>
-        updateTask.mutate({ taskId, body, optimistic: options?.quiet }),
+        updateTask.mutateAsync({ taskId, body, optimistic: options?.quiet }),
       updateTaskStatus: (taskId, status) =>
         updateTask.mutate({ taskId, body: { status }, optimistic: true }),
       moveTask: (taskId, body) => moveTask.mutate({ taskId, body }),
@@ -613,14 +687,16 @@ export function useTasks() {
 function applyOptimisticTaskPatch(
   tasks: Task[] | undefined,
   taskId: string,
-  body: UpdateTaskBody,
+  body: TaskPatch,
 ): Task[] | undefined {
   if (!tasks) return tasks;
   if (body.status === TaskStatus.DONE) {
     const task = tasks.find((item) => item.id === taskId);
     if (task && task.status !== TaskStatus.DONE) {
       const seeded = tasks.map((item) =>
-        item.id === taskId ? { ...item, ...body, status: item.status } : item,
+        item.id === taskId
+          ? { ...item, ...taskPatch(body), status: item.status }
+          : item,
       );
       return projectCompletedTask(seeded, taskId);
     }
@@ -632,7 +708,7 @@ function applyOptimisticTaskPatch(
     body.description == null &&
     body.priority == null &&
     body.dueDate === undefined &&
-    body.scheduleDate === undefined &&
+    body.scheduleSlots === undefined &&
     body.estimation === undefined &&
     body.acceptanceCriteria === undefined &&
     body.recurrence === undefined &&
@@ -658,11 +734,28 @@ function applyOptimisticTaskPatch(
     }
   }
   const patched = tasks.map((task) =>
-    task.id === taskId ? { ...task, ...body } : task,
+    task.id === taskId ? { ...task, ...taskPatch(body) } : task,
   );
   return body.status
     ? clearRecurrenceOnCancel(patched, taskId, body.status)
     : patched;
+}
+
+function taskPatch(body: TaskPatch): Partial<Task> {
+  const { scheduleSlots, transitionId: _transitionId, ...rest } = body;
+  return {
+    ...rest,
+    ...(scheduleSlots !== undefined
+      ? {
+          scheduleSlots: scheduleSlots.map((slot, index) => ({
+            id: slot.id ?? `pending-${index}`,
+            startAt: slot.startAt,
+            endAt: slot.endAt,
+            retiredAt: slot.retiredAt ?? null,
+          })),
+        }
+      : {}),
+  };
 }
 
 function clearRecurrenceOnCancel(
@@ -676,9 +769,17 @@ function clearRecurrenceOnCancel(
   );
 }
 
-function hrefForTasksView(view: TasksView, taskKey?: string): string | null {
+function hrefForTasksView(
+  view: TasksView,
+  taskKey?: string,
+  parentTaskKey?: string,
+): string | null {
   if (view.kind === "board") {
-    return tasksUrlHelper.routing.buildBoardUrl(view.spaceName, taskKey);
+    return tasksUrlHelper.routing.buildBoardUrl(
+      view.spaceId,
+      taskKey,
+      parentTaskKey,
+    );
   }
   if (view.kind === "schedule") {
     return tasksUrlHelper.routing.buildScheduleUrl(view.schedule, taskKey);
@@ -694,18 +795,18 @@ function resolveTasksView(pathname: string, boards: Space[]): TasksView {
   if (activeView === TASKS_ROOT_VIEW_ID || activeView === "") {
     return { kind: "root" };
   }
-  const board = boards.find((item) => item.name === activeView);
-  return { kind: "board", spaceId: board?.id ?? null, spaceName: activeView };
+  const board = boards.find((item) => item.id === activeView);
+  return { kind: "board", spaceId: board?.id ?? activeView };
 }
 
 export type TasksView =
   | { kind: "root" }
-  | { kind: "board"; spaceId: string | null; spaceName: string }
+  | { kind: "board"; spaceId: string }
   | { kind: "schedule"; schedule: "today" | "tomorrow" };
 
 interface TasksContextValue {
   state: {
-    folders: Folder[];
+    folders: SpaceFolder[];
     boards: Space[];
     tasks: Task[];
     groups: Record<Task["status"], NestedTask[]>;
@@ -731,10 +832,17 @@ interface TasksContextValue {
     setScheduleTargetBoardId: (spaceId: string) => void;
     openCreateDialog: () => void;
     closeCreateDialog: () => void;
-    createFolder: (name: string) => Promise<Folder>;
-    updateFolder: (folderId: string, body: UpdateFolderBody) => Promise<Folder>;
+    createFolder: (name: string) => Promise<SpaceFolder>;
+    updateFolder: (
+      folderId: string,
+      body: UpdateSpaceFolderBody,
+    ) => Promise<SpaceFolder>;
     removeFolder: (folderId: string) => Promise<void>;
-    createBoard: (name: string, folderId: string | null) => Promise<Space>;
+    createBoard: (
+      name: string,
+      folderId: string | null,
+      color?: string,
+    ) => Promise<Space>;
     updateBoard: (spaceId: string, body: UpdateSpaceBody) => Promise<Space>;
     removeBoard: (spaceId: string) => Promise<void>;
     createTask: (
@@ -744,11 +852,11 @@ interface TasksContextValue {
     ) => void;
     updateTask: (
       taskId: string,
-      body: UpdateTaskBody,
+      body: TaskPatch,
       options?: { quiet?: boolean },
-    ) => void;
+    ) => Promise<Task>;
     updateTaskStatus: (taskId: string, status: Task["status"]) => void;
-    moveTask: (taskId: string, body: MoveTaskBody) => void;
+    moveTask: (taskId: string, body: TaskMove) => void;
     removeTask: (taskId: string) => void;
     removeTasks: (taskIds: string[]) => void;
   };
@@ -758,3 +866,42 @@ interface TasksContextValue {
     isTasksLoading: boolean;
   };
 }
+
+function draftScheduleSlots(
+  draft: TaskCreateDraft,
+  viewKind: string,
+  scheduleQuery: { scheduleFrom: string } | null,
+): { scheduleSlots: ScheduleSlotInput[] } | Record<string, never> {
+  const startAt =
+    draft.scheduleDate !== undefined
+      ? draft.scheduleDate
+      : viewKind === "schedule" && scheduleQuery
+        ? scheduleQuery.scheduleFrom
+        : undefined;
+  if (!startAt) return {};
+  return {
+    scheduleSlots: [
+      {
+        startAt,
+        endAt: new Date(
+          Date.parse(startAt) + draft.estimation * 60_000,
+        ).toISOString(),
+      },
+    ],
+  };
+}
+
+function cachedTask(
+  queryClient: QueryClient,
+  taskId: string,
+): Task | undefined {
+  const lists = queryClient.getQueriesData<Task[]>({ queryKey: ["tasks"] });
+  for (const [, data] of lists) {
+    const found = data?.find((task) => task.id === taskId);
+    if (found) return found;
+  }
+  return undefined;
+}
+
+type TaskPatch = Omit<UpdateTaskBody, "version"> & { version?: number };
+type TaskMove = Omit<MoveTaskBody, "version" | "transitionId">;

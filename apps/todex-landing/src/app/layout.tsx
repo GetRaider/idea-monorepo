@@ -10,7 +10,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Todex",
+  title: "Todex | Keep the why with the work",
+  description: "Connect your research, tasks, and execution in Todex so the decisions and evidence behind each task are there when you build.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

@@ -1,7 +1,7 @@
 "use client";
 
 import { ExecutionActivity } from "../execution-activity";
-import { ExecutionCanvas } from "../execution-sidebar";
+import { ExecutionCanvas } from "../execution-canvas";
 
 export default function ExecutionActivityPage() {
   return (

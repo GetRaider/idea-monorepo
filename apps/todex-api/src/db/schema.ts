@@ -1,10 +1,13 @@
 import {
-  DocMentionTarget,
   DocType,
+  RelationEntityType,
+  RelationKind,
+  RelationOrigin,
   type CalendarRsvpStatus,
   type DocBody,
   type DocPlainText,
   type ExecutionInterval,
+  type SeriesTemplate,
   type TaskRecurrence,
 } from "@repo/api/todex";
 import { sql } from "drizzle-orm";
@@ -13,6 +16,7 @@ import {
   check,
   foreignKey,
   index,
+  doublePrecision,
   integer,
   jsonb,
   pgEnum,
@@ -40,19 +44,48 @@ export const taskPriorityEnum = pgEnum("task_priority", [
   "critical",
 ]);
 
-export const folderKindEnum = pgEnum("folder_kind", ["tasks", "docs"]);
-
 export const docTypeEnum = pgEnum("doc_type", [DocType.COMMON, DocType.GOAL]);
 
-export const docMentionTargetEnum = pgEnum("doc_mention_target", [
-  DocMentionTarget.TASK,
-  DocMentionTarget.DOC,
-  DocMentionTarget.EVENT,
+export const relationEntityTypeEnum = pgEnum("relation_entity_type", [
+  RelationEntityType.TASK,
+  RelationEntityType.DOC,
+  RelationEntityType.EPIC,
+  RelationEntityType.EVENT,
+  RelationEntityType.SPACE,
+  RelationEntityType.DOC_FOLDER,
+]);
+
+export const relationKindEnum = pgEnum("relation_kind", [
+  RelationKind.REFERENCES,
+  RelationKind.RELATED_TO,
+  RelationKind.DEPENDS_ON,
+]);
+
+export const relationOriginEnum = pgEnum("relation_origin", [
+  RelationOrigin.MENTION,
+  RelationOrigin.EXPLICIT,
 ]);
 
 export const workspaceMemberRoleEnum = pgEnum("workspace_member_role", [
   "owner",
   "member",
+]);
+
+export const taskComplexityEnum = pgEnum("task_complexity", [
+  "low",
+  "medium",
+  "high",
+]);
+
+export const lifecycleActionEnum = pgEnum("task_lifecycle_action", [
+  "done",
+  "cancelled",
+  "delete",
+]);
+
+export const seriesExceptionKindEnum = pgEnum("series_exception_kind", [
+  "skipped",
+  "deleted",
 ]);
 
 export const workspaces = pgTable("workspaces", {
@@ -92,40 +125,86 @@ export const workspaceMembers = pgTable(
   ],
 );
 
-export const folders = pgTable("folders", {
-  id: text("id").primaryKey(),
-  workspaceId: text("workspace_id")
-    .notNull()
-    .references(() => workspaces.id, { onDelete: "cascade" }),
-  parentId: text("parent_id"),
-  kind: folderKindEnum("kind").notNull(),
-  name: text("name").notNull(),
-  emoji: text("emoji"),
-  createdAt: timestamp("created_at")
-    .$defaultFn(() => new Date())
-    .notNull(),
-  updatedAt: timestamp("updated_at")
-    .$defaultFn(() => new Date())
-    .notNull(),
+export const userPreferences = pgTable("user_preferences", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  calendarEnabled: boolean("calendar_enabled").notNull().default(false),
 });
 
-export const spaces = pgTable("spaces", {
-  id: text("id").primaryKey(),
-  workspaceId: text("workspace_id")
-    .notNull()
-    .references(() => workspaces.id, { onDelete: "cascade" }),
-  folderId: text("folder_id").references(() => folders.id, {
-    onDelete: "set null",
-  }),
-  name: text("name").notNull(),
-  emoji: text("emoji"),
-  createdAt: timestamp("created_at")
-    .$defaultFn(() => new Date())
-    .notNull(),
-  updatedAt: timestamp("updated_at")
-    .$defaultFn(() => new Date())
-    .notNull(),
-});
+export const spaceFolders = pgTable(
+  "space_folders",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    emoji: text("emoji"),
+    position: doublePrecision("position").notNull().default(0),
+    createdAt: timestamp("created_at")
+      .$defaultFn(() => new Date())
+      .notNull(),
+    updatedAt: timestamp("updated_at")
+      .$defaultFn(() => new Date())
+      .notNull(),
+  },
+  (table) => [index("space_folders_workspace_id_idx").on(table.workspaceId)],
+);
+
+export const spaces = pgTable(
+  "spaces",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    spaceFolderId: text("space_folder_id").references(() => spaceFolders.id, {
+      onDelete: "set null",
+    }),
+    isInbox: boolean("is_inbox").notNull().default(false),
+    name: text("name").notNull(),
+    emoji: text("emoji"),
+    color: text("color").notNull().default("#B8A4D1"),
+    position: doublePrecision("position").notNull().default(0),
+    createdAt: timestamp("created_at")
+      .$defaultFn(() => new Date())
+      .notNull(),
+    updatedAt: timestamp("updated_at")
+      .$defaultFn(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("spaces_workspace_folder_idx").on(
+      table.workspaceId,
+      table.spaceFolderId,
+    ),
+    uniqueIndex("spaces_workspace_inbox_unique")
+      .on(table.workspaceId)
+      .where(sql`${table.isInbox} = true`),
+  ],
+);
+
+export const docFolders = pgTable(
+  "doc_folders",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    spaceId: text("space_id")
+      .notNull()
+      .references(() => spaces.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    createdAt: timestamp("created_at")
+      .$defaultFn(() => new Date())
+      .notNull(),
+    updatedAt: timestamp("updated_at")
+      .$defaultFn(() => new Date())
+      .notNull(),
+  },
+  (table) => [index("doc_folders_space_id_idx").on(table.spaceId)],
+);
 
 export const spaceSections = pgTable(
   "space_sections",
@@ -218,6 +297,35 @@ export const epics = pgTable(
   ],
 );
 
+export const recurringSeries = pgTable(
+  "recurring_series",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    anchor: timestamp("anchor").notNull(),
+    rule: jsonb("rule").$type<TaskRecurrence>().notNull(),
+    ruleVersion: integer("rule_version").notNull(),
+    stoppedAt: timestamp("stopped_at"),
+    ruleEffectiveAt: timestamp("rule_effective_at").notNull(),
+    cursorRuleVersion: integer("cursor_rule_version").notNull(),
+    generatedThrough: text("generated_through"),
+    createdAt: timestamp("created_at")
+      .$defaultFn(() => new Date())
+      .notNull(),
+    updatedAt: timestamp("updated_at")
+      .$defaultFn(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("recurring_series_workspace_stopped_idx").on(
+      table.workspaceId,
+      table.stoppedAt,
+    ),
+  ],
+);
+
 export const tasks = pgTable(
   "tasks",
   {
@@ -231,12 +339,26 @@ export const tasks = pgTable(
     taskKey: text("task_key").notNull(),
     summary: text("summary").notNull(),
     description: text("description").notNull().default(""),
+    outcome: text("outcome").notNull().default(""),
     status: taskStatusEnum("status").notNull().default("todo"),
     priority: taskPriorityEnum("priority").notNull().default("medium"),
+    complexity: taskComplexityEnum("complexity"),
     dueDate: timestamp("due_date"),
-    scheduleDate: timestamp("schedule_date"),
     estimation: integer("estimation").notNull(),
-    color: text("color"),
+    ownerId: text("owner_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    seriesId: text("series_id").references(() => recurringSeries.id, {
+      onDelete: "restrict",
+    }),
+    occurrenceKey: text("occurrence_key"),
+    occurrenceAnchor: timestamp("occurrence_anchor"),
+    originSeriesId: text("origin_series_id"),
+    overriddenFields: jsonb("overridden_fields")
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    version: integer("version").notNull().default(1),
     acceptanceCriteria: jsonb("acceptance_criteria")
       .$type<TaskAcceptanceCriterion[]>()
       .notNull()
@@ -274,6 +396,85 @@ export const tasks = pgTable(
       foreignColumns: [table.id],
     }).onDelete("cascade"),
     check("tasks_estimation_positive", sql`${table.estimation} > 0`),
+    uniqueIndex("tasks_series_occurrence_key_unique")
+      .on(table.seriesId, table.occurrenceKey)
+      .where(sql`${table.seriesId} is not null`),
+    uniqueIndex("tasks_series_occurrence_anchor_unique")
+      .on(table.seriesId, table.occurrenceAnchor)
+      .where(sql`${table.seriesId} is not null`),
+  ],
+);
+
+export const taskScheduleSlots = pgTable(
+  "task_schedule_slots",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    taskId: text("task_id")
+      .notNull()
+      .references(() => tasks.id, { onDelete: "cascade" }),
+    startAt: timestamp("start_at").notNull(),
+    endAt: timestamp("end_at").notNull(),
+    retiredAt: timestamp("retired_at"),
+  },
+  (table) => [
+    index("task_schedule_slots_task_id_idx").on(table.taskId),
+    index("task_schedule_slots_range_idx").on(
+      table.workspaceId,
+      table.startAt,
+      table.endAt,
+    ),
+    check(
+      "task_schedule_slots_end_after_start",
+      sql`${table.endAt} > ${table.startAt}`,
+    ),
+  ],
+);
+
+export const taskLifecycleLocks = pgTable("task_lifecycle_locks", {
+  taskId: text("task_id")
+    .primaryKey()
+    .references(() => tasks.id, { onDelete: "cascade" }),
+  transitionId: text("transition_id").notNull(),
+  action: lifecycleActionEnum("action").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+});
+
+export const seriesTemplateVersions = pgTable(
+  "series_template_versions",
+  {
+    id: text("id").primaryKey(),
+    seriesId: text("series_id")
+      .notNull()
+      .references(() => recurringSeries.id, { onDelete: "cascade" }),
+    effectiveAt: timestamp("effective_at").notNull(),
+    template: jsonb("template").$type<SeriesTemplate>().notNull(),
+  },
+  (table) => [
+    uniqueIndex("series_template_versions_effective_unique").on(
+      table.seriesId,
+      table.effectiveAt,
+    ),
+  ],
+);
+
+export const seriesExceptions = pgTable(
+  "series_exceptions",
+  {
+    id: text("id").primaryKey(),
+    seriesId: text("series_id")
+      .notNull()
+      .references(() => recurringSeries.id, { onDelete: "cascade" }),
+    occurrenceKey: text("occurrence_key").notNull(),
+    kind: seriesExceptionKindEnum("kind").notNull(),
+  },
+  (table) => [
+    uniqueIndex("series_exceptions_key_unique").on(
+      table.seriesId,
+      table.occurrenceKey,
+    ),
   ],
 );
 
@@ -284,7 +485,10 @@ export const docs = pgTable(
     workspaceId: text("workspace_id")
       .notNull()
       .references(() => workspaces.id, { onDelete: "cascade" }),
-    folderId: text("folder_id").references(() => folders.id, {
+    spaceId: text("space_id")
+      .notNull()
+      .references(() => spaces.id, { onDelete: "cascade" }),
+    folderId: text("folder_id").references(() => docFolders.id, {
       onDelete: "set null",
     }),
     type: docTypeEnum("type").notNull(),
@@ -305,6 +509,7 @@ export const docs = pgTable(
       table.docKey,
     ),
     index("docs_workspace_id_idx").on(table.workspaceId),
+    index("docs_space_id_idx").on(table.spaceId),
     index("docs_folder_id_idx").on(table.folderId),
   ],
 );
@@ -325,27 +530,63 @@ export const docTasks = pgTable(
   ],
 );
 
-export const docMentions = pgTable(
-  "doc_mentions",
+export const entityRelations = pgTable(
+  "entity_relations",
   {
-    docId: text("doc_id")
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id")
       .notNull()
-      .references(() => docs.id, { onDelete: "cascade" }),
-    targetType: docMentionTargetEnum("target_type").notNull(),
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    sourceType: relationEntityTypeEnum("source_type").notNull(),
+    sourceId: text("source_id").notNull(),
+    targetType: relationEntityTypeEnum("target_type").notNull(),
     targetId: text("target_id").notNull(),
+    kind: relationKindEnum("kind").notNull(),
+    origin: relationOriginEnum("origin").notNull(),
+    createdAt: timestamp("created_at")
+      .$defaultFn(() => new Date())
+      .notNull(),
   },
   (table) => [
-    primaryKey({
-      columns: [table.docId, table.targetType, table.targetId],
-    }),
-    index("doc_mentions_target_idx").on(table.targetType, table.targetId),
+    uniqueIndex("entity_relations_edge_unique").on(
+      table.workspaceId,
+      table.sourceType,
+      table.sourceId,
+      table.targetType,
+      table.targetId,
+      table.kind,
+    ),
+    index("entity_relations_target_idx").on(
+      table.workspaceId,
+      table.targetType,
+      table.targetId,
+    ),
+    index("entity_relations_source_idx").on(
+      table.workspaceId,
+      table.sourceType,
+      table.sourceId,
+    ),
+    check(
+      "entity_relations_references_origin",
+      sql`(${table.kind} = 'references') = (${table.origin} = 'mention')`,
+    ),
+    check(
+      "entity_relations_explicit_origin",
+      sql`(${table.kind} in ('related_to', 'depends_on')) = (${table.origin} = 'explicit')`,
+    ),
+    check(
+      "entity_relations_related_order",
+      sql`${table.kind} <> 'related_to' OR (${table.sourceType}, ${table.sourceId}) < (${table.targetType}, ${table.targetId})`,
+    ),
   ],
 );
 
 export type WorkspaceRow = typeof workspaces.$inferSelect;
 export type WorkspaceMemberRow = typeof workspaceMembers.$inferSelect;
-export type FolderRow = typeof folders.$inferSelect;
+export type SpaceFolderRow = typeof spaceFolders.$inferSelect;
+export type DocFolderRow = typeof docFolders.$inferSelect;
 export type SpaceRow = typeof spaces.$inferSelect;
+export type EntityRelationRow = typeof entityRelations.$inferSelect;
 export type SpaceSectionRow = typeof spaceSections.$inferSelect;
 export type SpaceProgressStageRow = typeof spaceProgressStages.$inferSelect;
 export type EpicRow = typeof epics.$inferSelect;
@@ -363,12 +604,14 @@ export const calendarEvents = pgTable(
     workspaceId: text("workspace_id")
       .notNull()
       .references(() => workspaces.id, { onDelete: "cascade" }),
+    spaceId: text("space_id").references(() => spaces.id, {
+      onDelete: "set null",
+    }),
     seriesEventId: text("series_event_id"),
     title: text("title").notNull(),
     start: timestamp("start").notNull(),
     end: timestamp("end").notNull(),
     allDay: boolean("all_day").notNull().default(false),
-    color: text("color"),
     timeZone: text("time_zone").notNull(),
     recurrence: jsonb("recurrence").$type<TaskRecurrence | null>(),
     rawRrule: text("raw_rrule"),
@@ -396,8 +639,9 @@ export const calendarEvents = pgTable(
       .notNull(),
   },
   (table) => [
-    index("calendar_events_workspace_start_idx").on(
+    index("calendar_events_workspace_space_start_idx").on(
       table.workspaceId,
+      table.spaceId,
       table.start,
     ),
     index("calendar_events_series_event_id_idx").on(table.seriesEventId),
@@ -416,9 +660,11 @@ export const calendarEventTemplates = pgTable("calendar_event_templates", {
   workspaceId: text("workspace_id")
     .notNull()
     .references(() => workspaces.id, { onDelete: "cascade" }),
+  spaceId: text("space_id").references(() => spaces.id, {
+    onDelete: "set null",
+  }),
   title: text("title").notNull(),
   durationMinutes: integer("duration_minutes").notNull(),
-  color: text("color"),
   description: text("description").notNull().default(""),
   taskScope: jsonb("task_scope")
     .$type<string[]>()
@@ -470,6 +716,10 @@ export const executionSessions = pgTable(
     workspaceId: text("workspace_id")
       .notNull()
       .references(() => workspaces.id, { onDelete: "cascade" }),
+    spaceId: text("space_id")
+      .notNull()
+      .references(() => spaces.id, { onDelete: "restrict" }),
+    title: text("title"),
     startedAt: timestamp("started_at").notNull(),
     endedAt: timestamp("ended_at"),
     duration: integer("duration"),
@@ -489,6 +739,11 @@ export const executionSessions = pgTable(
       .where(sql`${table.endedAt} is null`),
     index("execution_sessions_workspace_started_idx").on(
       table.workspaceId,
+      table.startedAt,
+    ),
+    index("execution_sessions_workspace_space_started_idx").on(
+      table.workspaceId,
+      table.spaceId,
       table.startedAt,
     ),
   ],
@@ -623,6 +878,44 @@ export const conversations = pgTable("conversations", {
     .notNull(),
 });
 
+export const taskReferences = pgTable(
+  "task_references",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    taskId: text("task_id")
+      .notNull()
+      .references(() => tasks.id, { onDelete: "cascade" }),
+    kind: text("kind").notNull(),
+    docId: text("doc_id").references(() => docs.id, { onDelete: "cascade" }),
+    conversationId: text("conversation_id").references(() => conversations.id, {
+      onDelete: "cascade",
+    }),
+    url: text("url"),
+    title: text("title").notNull(),
+    createdAt: timestamp("created_at")
+      .$defaultFn(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("task_references_task_id_idx").on(table.taskId),
+    check(
+      "task_references_kind",
+      sql`${table.kind} in ('doc', 'conversation', 'url')`,
+    ),
+    check(
+      "task_references_target",
+      sql`(
+        (${table.kind} = 'doc' and ${table.docId} is not null and ${table.conversationId} is null and ${table.url} is null)
+        or (${table.kind} = 'conversation' and ${table.conversationId} is not null and ${table.docId} is null and ${table.url} is null)
+        or (${table.kind} = 'url' and ${table.url} is not null and ${table.docId} is null and ${table.conversationId} is null)
+      )`,
+    ),
+  ],
+);
+
 export const jobs = pgTable(
   "jobs",
   {
@@ -639,6 +932,8 @@ export const jobs = pgTable(
     userMessageId: text("user_message_id").notNull(),
     status: agentJobStatusEnum("status").notNull(),
     mode: text("mode").$type<AgentMode>().notNull().default("execute"),
+    focalType: text("focal_type").$type<"task" | "doc" | null>(),
+    focalId: text("focal_id"),
     webResearch: boolean("web_research").notNull().default(false),
     webSearchCapability: text("web_search_capability")
       .$type<WebSearchCapability>()
@@ -666,6 +961,14 @@ export const jobs = pgTable(
     uniqueIndex("jobs_conversation_idempotency_unique").on(
       table.conversationId,
       table.idempotencyKey,
+    ),
+    check(
+      "jobs_focal_pair",
+      sql`(${table.focalType} is null) = (${table.focalId} is null)`,
+    ),
+    check(
+      "jobs_focal_type",
+      sql`${table.focalType} is null OR ${table.focalType} in ('task', 'doc')`,
     ),
   ],
 );

@@ -3,13 +3,17 @@ import { z } from "zod";
 import { SpaceSectionSchema } from "./section.ts";
 import { IsoDateTimeSchema } from "./iso.ts";
 import { SpaceProgressStageSchema } from "./progress-stage.ts";
+import { SpaceColorSchema } from "./space-colors.ts";
 
 export const SpaceSchema = z.object({
   id: z.string(),
   workspaceId: z.string(),
   folderId: z.string().nullable(),
+  isInbox: z.boolean(),
   name: z.string(),
   emoji: z.string().nullable(),
+  color: SpaceColorSchema,
+  position: z.number().finite(),
   createdAt: IsoDateTimeSchema,
   updatedAt: IsoDateTimeSchema,
 });
@@ -22,12 +26,15 @@ export const CreateSpaceBodySchema = z.object({
   name: z.string().min(1),
   folderId: z.string().nullable().optional(),
   emoji: z.string().nullable().optional(),
+  color: SpaceColorSchema.optional(),
 });
 
 export const UpdateSpaceBodySchema = z.object({
   name: z.string().min(1).optional(),
   folderId: z.string().nullable().optional(),
   emoji: z.string().nullable().optional(),
+  color: SpaceColorSchema.optional(),
+  position: z.number().finite().optional(),
 });
 
 export const SpaceDetailSchema = SpaceSchema.extend({

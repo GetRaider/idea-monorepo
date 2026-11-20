@@ -61,17 +61,36 @@ export default function TasksRootPage() {
   });
   const goals = recentGoals(goalsQuery.data ?? [], query);
   const inboxBoardId =
-    boards.find((board) => board.name === INBOX_BOARD_NAME)?.id ??
-    boards[0]?.id;
+    boards.find((board) => board.isInbox)?.id ?? boards[0]?.id;
 
   const createGoal = useMutation({
-    mutationFn: () =>
-      todexClient.docs.create({ type: DocType.GOAL, title: "Untitled" }),
+    mutationFn: () => {
+      if (!inboxBoardId) throw new Error("Choose a space");
+      return todexClient.docs.create({
+        type: DocType.GOAL,
+        title: "Untitled",
+        spaceId: inboxBoardId,
+      });
+    },
     onSuccess: async (goal) => {
       await queryClient.invalidateQueries({ queryKey: ["docs"] });
       router.push(`/planning/goals/${goal.id}`);
     },
     onError: () => toast.error("Could not create the goal"),
+  });
+  const createEpic = useMutation({
+    mutationFn: () => {
+      if (!inboxBoardId) throw new Error("Choose a space");
+      return todexClient.epics.create(inboxBoardId, { name: "Untitled" });
+    },
+    onSuccess: async (epic) => {
+      await queryClient.invalidateQueries({
+        queryKey: ["epics", inboxBoardId],
+      });
+      if (!inboxBoardId) return;
+      router.push(tasksUrlHelper.routing.buildEpicUrl(inboxBoardId, epic.id));
+    },
+    onError: () => toast.error("Could not create the epic"),
   });
 
   function openComposer() {
@@ -88,12 +107,20 @@ export default function TasksRootPage() {
         <h1 className="text-2xl font-semibold tracking-tight">Planning</h1>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <NewButton disabled={createGoal.isPending} />
+            <NewButton
+              disabled={createGoal.isPending || createEpic.isPending}
+            />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem onSelect={openComposer}>Task</DropdownMenuItem>
             <DropdownMenuItem
-              disabled={createGoal.isPending}
+              disabled={!inboxBoardId || createEpic.isPending}
+              onSelect={() => createEpic.mutate()}
+            >
+              Epic
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              disabled={!inboxBoardId || createGoal.isPending}
               onSelect={() => createGoal.mutate()}
             >
               Goal
@@ -136,7 +163,9 @@ export default function TasksRootPage() {
           />
           <section className="flex flex-col gap-8">
             <div>
-              <h2 className="mb-3 text-lg font-semibold tracking-tight">Tasks</h2>
+              <h2 className="mb-3 text-lg font-semibold tracking-tight">
+                Tasks
+              </h2>
               <h3 className="mb-3 text-sm font-medium text-muted-foreground">
                 Quick Access
               </h3>
@@ -290,7 +319,7 @@ function HubTaskSection({
               <li key={task.id}>
                 <Link
                   href={tasksUrlHelper.routing.buildBoardUrl(
-                    spaceName,
+                    task.spaceId,
                     task.taskKey,
                   )}
                   className="flex items-center gap-3 rounded-md px-2 py-2 text-sm hover:bg-surface"

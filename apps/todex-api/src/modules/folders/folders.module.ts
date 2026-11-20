@@ -1,13 +1,15 @@
 import { Module } from "@nestjs/common";
 
 import { WorkspaceModule } from "../workspace/workspace.module";
-import { FoldersController } from "./folders.controller";
-import { FoldersService } from "./folders.service";
+import { DocFoldersController } from "./doc-folders.controller";
+import { DocFoldersService } from "./doc-folders.service";
+import { SpaceFoldersController } from "./space-folders.controller";
+import { SpaceFoldersService } from "./space-folders.service";
 
 @Module({
   imports: [WorkspaceModule],
-  controllers: [FoldersController],
-  providers: [FoldersService],
-  exports: [FoldersService],
+  controllers: [SpaceFoldersController, DocFoldersController],
+  providers: [SpaceFoldersService, DocFoldersService],
+  exports: [SpaceFoldersService, DocFoldersService],
 })
 export class FoldersModule {}

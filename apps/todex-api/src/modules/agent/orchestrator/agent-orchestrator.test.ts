@@ -274,6 +274,8 @@ function job(overrides?: Partial<JobRow>): JobRow {
     errorMessage: null,
     startedAt: new Date(),
     finishedAt: null,
+    focalType: null,
+    focalId: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     ...overrides,

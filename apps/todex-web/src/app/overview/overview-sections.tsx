@@ -49,7 +49,7 @@ function TodaySection() {
   const to = new Date(range.scheduleTo);
   const tasksQuery = useQuery({
     queryKey: ["tasks", "schedule", range.scheduleFrom, range.scheduleTo],
-    queryFn: () => todexClient.tasks.list(range),
+    queryFn: () => todexClient.tasks.list(range).then((range) => range.tasks),
   });
   const eventsQuery = useQuery({
     queryKey: ["calendar-events", range.scheduleFrom, range.scheduleTo],
@@ -59,9 +59,15 @@ function TodaySection() {
         to: range.scheduleTo,
       }),
   });
+  const boardsQuery = useQuery({
+    queryKey: ["boards"],
+    queryFn: () => todexClient.spaces.list(),
+  });
   const toggleDone = useToggleTaskDone();
   const tasks = overviewTasks(tasksQuery.data ?? []);
-  const events = sortEvents(eventBlocks(eventsQuery.data ?? [], from, to));
+  const events = sortEvents(
+    eventBlocks(eventsQuery.data ?? [], boardsQuery.data ?? [], from, to),
+  );
 
   return (
     <Section id={OVERVIEW_CHAPTERS[0].id} title="Today">
@@ -77,12 +83,12 @@ function TodaySection() {
         >
           <TaskRows
             tasks={tasks}
-            hrefFor={(task) => taskHref(task, "today", EMPTY_BOARDS)}
+            hrefFor={(task) => taskHref(task, "today")}
             onToggleDone={(task) => toggleDone.mutate(task)}
           />
         </QueryState>
       </Panel>
-      <Panel title="Events" href="/calendar">
+      <Panel title="Events" href="/planning/calendar">
         <QueryState
           isLoading={eventsQuery.isPending}
           isError={eventsQuery.isError}
@@ -119,7 +125,7 @@ function ContinueWorkSection() {
       action={
         hasWork ? (
           <Link
-            href="/execution/current"
+            href="/execution"
             className={buttonVariants({ size: "sm" })}
           >
             Continue
@@ -172,7 +178,9 @@ function UpcomingSection() {
   const tasksQuery = useQuery({
     queryKey: ["tasks", "schedule", from, to],
     queryFn: () =>
-      todexClient.tasks.list({ scheduleFrom: from, scheduleTo: to }),
+      todexClient.tasks
+        .list({ scheduleFrom: from, scheduleTo: to })
+        .then((range) => range.tasks),
   });
   const eventsQuery = useQuery({
     queryKey: ["calendar-events", from, to],
@@ -185,7 +193,7 @@ function UpcomingSection() {
   const toggleDone = useToggleTaskDone();
   const tasks = overviewTasks(tasksQuery.data ?? []);
   const events = sortEvents(
-    eventBlocks(eventsQuery.data ?? [], bounds.from, bounds.to),
+    eventBlocks(eventsQuery.data ?? [], boardsQuery.data ?? [], bounds.from, bounds.to),
   );
   const spaceNameById = new Map(
     (boardsQuery.data ?? []).map((board) => [board.id, board.name]),
@@ -213,7 +221,7 @@ function UpcomingSection() {
           />
         </QueryState>
       </Panel>
-      <Panel title="Events" href="/calendar">
+      <Panel title="Events" href="/planning/calendar">
         <QueryState
           isLoading={eventsQuery.isPending}
           isError={eventsQuery.isError}
@@ -249,7 +257,8 @@ function NeedsOrganizingSection() {
   });
   const toggleDone = useToggleTaskDone();
   const spaceNameById = new Map(boards.map((board) => [board.id, board.name]));
-  const organized = organizingTasks(tasksQuery.data ?? [], spaceNameById);
+  const inboxSpaceId = boards.find((board) => board.isInbox)?.id ?? null;
+  const organized = organizingTasks(tasksQuery.data ?? [], inboxSpaceId);
   const waiting =
     boardsQuery.isPending || (boardsQuery.isSuccess && tasksQuery.isPending);
   const failed = boardsQuery.isError || tasksQuery.isError;
@@ -265,7 +274,7 @@ function NeedsOrganizingSection() {
         >
           <TaskRows
             tasks={organized.inbox.slice(0, ORGANIZING_PREVIEW_LIMIT)}
-            hrefFor={(task) => taskHref(task, "later", spaceNameById)}
+            hrefFor={(task) => taskHref(task, "later")}
             onToggleDone={(task) => toggleDone.mutate(task)}
           />
           <HiddenCount
@@ -285,7 +294,7 @@ function NeedsOrganizingSection() {
         >
           <TaskRows
             tasks={organized.unscheduled.slice(0, ORGANIZING_PREVIEW_LIMIT)}
-            hrefFor={(task) => taskHref(task, "later", spaceNameById)}
+            hrefFor={(task) => taskHref(task, "later")}
             spaceNameById={spaceNameById}
             onToggleDone={(task) => toggleDone.mutate(task)}
           />
@@ -455,7 +464,10 @@ function TaskRows({
   return (
     <ul>
       {tasks.map((task) => {
-        const time = isoToLocalTimeInput(task.scheduleDate);
+        const time = isoToLocalTimeInput(
+          task.scheduleSlots.find((slot) => slot.retiredAt == null)?.startAt ??
+            null,
+        );
         const done = task.status === TaskStatus.DONE;
         const spaceName = spaceNameById?.get(task.spaceId);
         return (
@@ -548,7 +560,6 @@ function DayList({
                 localDayKey(group.day) === localDayKey(tomorrow)
                   ? "tomorrow"
                   : "later",
-                spaceNameById,
               )
             }
             onToggleDone={onToggleDone}
@@ -582,20 +593,14 @@ function dayGroups(
   });
 }
 
-function taskHref(
-  task: Task,
-  when: "today" | "tomorrow" | "later",
-  spaceNameById: Map<string, string>,
-): string {
+function taskHref(task: Task, when: "today" | "tomorrow" | "later"): string {
   if (when === "today") {
     return tasksUrlHelper.routing.buildScheduleUrl("today", task.taskKey);
   }
   if (when === "tomorrow") {
     return tasksUrlHelper.routing.buildScheduleUrl("tomorrow", task.taskKey);
   }
-  const spaceName = spaceNameById.get(task.spaceId);
-  if (!spaceName) return tasksUrlHelper.routing.buildRootUrl();
-  return tasksUrlHelper.routing.buildBoardUrl(spaceName, task.taskKey);
+  return tasksUrlHelper.routing.buildBoardUrl(task.spaceId, task.taskKey);
 }
 
 function sortEvents(events: CalendarBlock[]): CalendarBlock[] {
@@ -607,16 +612,22 @@ function sortEvents(events: CalendarBlock[]): CalendarBlock[] {
 function tasksOnDay(tasks: Task[], day: Date): Task[] {
   const key = localDayKey(day);
   return tasks.filter((task) => {
-    if (!task.scheduleDate) return false;
-    const scheduled = new Date(task.scheduleDate);
-    return !Number.isNaN(scheduled.getTime()) && localDayKey(scheduled) === key;
+    return task.scheduleSlots.some((slot) => {
+      if (slot.retiredAt) return false;
+      const scheduled = new Date(slot.startAt);
+      return (
+        !Number.isNaN(scheduled.getTime()) && localDayKey(scheduled) === key
+      );
+    });
   });
 }
 
 function eventHref(event: CalendarBlock): string {
-  if (!event.eventId) return "/calendar";
-  if (!event.originalStart) return `/calendar/events/${event.eventId}`;
-  return `/calendar/events/${event.eventId}?occurrence=${encodeURIComponent(event.originalStart)}`;
+  if (!event.eventId) return "/planning/calendar";
+  if (!event.originalStart) {
+    return `/planning/calendar/events/${event.eventId}`;
+  }
+  return `/planning/calendar/events/${event.eventId}?occurrence=${encodeURIComponent(event.originalStart)}`;
 }
 
 function formatBlockWhen(event: CalendarBlock): string {

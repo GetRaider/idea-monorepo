@@ -216,25 +216,28 @@ export function KnowledgeDatabaseTable({ databaseId }: { databaseId: string }) {
               <tr key={row.id} className="group/row hover:bg-[#202020]">
                 {data.properties.map((property) => (
                   <td key={property.id} className="h-10 border-b border-r border-border p-0 last:border-r-0">
-                    <div className={property.type === "title" ? "flex items-center gap-0" : ""}>
-                      <div className="min-w-0 flex-1">
-                    <KnowledgeCellEditor
-                      value={row.cells[property.id] ?? null}
-                      property={property}
-                      disabled={busy}
-                      onSave={(value) => run(() => todexClient.knowledgeDatabases.patchCell(databaseId, row.id, {
-                        propertyId: property.id, value,
-                      }))}
-                    />
-                      </div>
-                      {property.type === "title" ? (
-                        <button type="button" title="Open page" aria-label="Open record page"
-                          onClick={() => setOpenedRowId(row.id)}
-                          className="mr-2 shrink-0 rounded px-1.5 py-1 text-xs text-muted-foreground opacity-0 transition-opacity hover:bg-surface hover:text-foreground focus:opacity-100 group-hover/row:opacity-100">
-                          ↗
-                        </button>
-                      ) : null}
-                    </div>
+                    {property.type === "title" ? (
+                      <KnowledgeTitleCell
+                        value={typeof row.cells[property.id] === "string"
+                          ? row.cells[property.id] as string : ""}
+                        disabled={busy}
+                        onOpen={() => setOpenedRowId(row.id)}
+                        onSave={(value) => run(() =>
+                          todexClient.knowledgeDatabases.patchCell(databaseId, row.id, {
+                            propertyId: property.id, value,
+                          }))}
+                      />
+                    ) : (
+                      <KnowledgeCellEditor
+                        value={row.cells[property.id] ?? null}
+                        property={property}
+                        disabled={busy}
+                        onSave={(value) => run(() =>
+                          todexClient.knowledgeDatabases.patchCell(databaseId, row.id, {
+                            propertyId: property.id, value,
+                          }))}
+                      />
+                    )}
                   </td>
                 ))}
                 <td className="border-b border-border text-center">
@@ -289,6 +292,54 @@ export function KnowledgeDatabaseTable({ databaseId }: { databaseId: string }) {
           ) : null}
         </SheetContent>
       </Sheet>
+    </div>
+  );
+}
+
+function KnowledgeTitleCell({
+  value, disabled, onOpen, onSave,
+}: {
+  value: string;
+  disabled: boolean;
+  onOpen: () => void;
+  onSave: (value: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value);
+  useEffect(() => { if (!editing) setDraft(value); }, [value, editing]);
+
+  function commit() {
+    setEditing(false);
+    if (draft !== value) onSave(draft.trim());
+  }
+
+  if (editing) {
+    return (
+      <input autoFocus value={draft} aria-label="Rename database page"
+        className="knowledge-db-cell" disabled={disabled}
+        onChange={(event) => setDraft(event.target.value)}
+        onBlur={commit}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") event.currentTarget.blur();
+          if (event.key === "Escape") { setDraft(value); setEditing(false); }
+        }}
+      />
+    );
+  }
+
+  return (
+    <div className="flex min-w-0 items-center justify-between gap-1">
+      <button type="button" onClick={onOpen} disabled={disabled}
+        className="flex min-w-0 flex-1 items-center gap-2 px-3 py-2 text-left text-sm hover:text-white"
+        title="Open database page">
+        <span className="shrink-0 text-muted-foreground">📄</span>
+        <span className="truncate">{value || "Untitled"}</span>
+      </button>
+      <button type="button" aria-label="Rename record" title="Rename" disabled={disabled}
+        onClick={() => setEditing(true)}
+        className="mr-2 shrink-0 rounded px-1 text-xs text-muted-foreground opacity-50 hover:bg-surface hover:opacity-100">
+        ✎
+      </button>
     </div>
   );
 }

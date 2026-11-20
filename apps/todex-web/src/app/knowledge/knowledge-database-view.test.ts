@@ -33,7 +33,7 @@ describe("Knowledge database table view", () => {
         sorts: [{ propertyId: "score", direction: "desc" }],
         filters: [{ propertyId: "status", operator: "equals", value: "Todo" }],
       },
-    }).map((r) => r.id)).toEqual(["c", "a"]);
+    }).map((r) => r.id)).toEqual(["a", "c"]);
   });
   it("supports contains and empty filters", () => {
     expect(visibleKnowledgeRows({

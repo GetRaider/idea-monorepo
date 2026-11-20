@@ -325,6 +325,12 @@ function SubtaskRow({
 
   return (
     <li className="flex flex-wrap items-center gap-x-2 gap-y-1.5 py-2 text-sm">
+      <Checkbox
+        checked={subtask.status === TaskStatus.DONE}
+        disabled={update.isPending}
+        aria-label={`Mark ${subtask.summary} done`}
+        onCheckedChange={() => update.mutate({ status: statusAfterDoneToggle(subtask.status) })}
+      />
       <StatusMenu
         status={subtask.status}
         onSelect={(status) => {

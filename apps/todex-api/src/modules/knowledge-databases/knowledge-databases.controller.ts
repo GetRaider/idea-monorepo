@@ -8,6 +8,7 @@ import {
   PatchKnowledgeCellSchema,
   UpdateKnowledgePropertySchema,
   UpdateKnowledgeViewSchema,
+  UpdateKnowledgeDatabasePageSchema,
 } from "@repo/api/todex";
 import type {
   CreateKnowledgeDatabase,
@@ -16,6 +17,7 @@ import type {
   PatchKnowledgeCell,
   UpdateKnowledgeProperty,
   UpdateKnowledgeView,
+  UpdateKnowledgeDatabasePage,
 } from "@repo/api/todex";
 import {
   WorkspaceGuard,
@@ -68,6 +70,19 @@ export class KnowledgeDatabasesController {
   @Post(":id/rows")
   addRow(@Req() request: WorkspaceRequest, @Param("id") id: string) {
     return this.service.addRow(request.workspaceId, id);
+  }
+
+  @Get(":id/rows/:rowId")
+  getRowPage(@Req() request: WorkspaceRequest,
+    @Param("id") id: string, @Param("rowId") rowId: string) {
+    return this.service.getRowPage(request.workspaceId, id, rowId);
+  }
+
+  @Patch(":id/rows/:rowId/page")
+  updateRowPage(@Req() request: WorkspaceRequest,
+    @Param("id") id: string, @Param("rowId") rowId: string,
+    @Body(zodPipe(UpdateKnowledgeDatabasePageSchema)) body: UpdateKnowledgeDatabasePage) {
+    return this.service.updateRowPage(request.workspaceId, id, rowId, body);
   }
 
   @Patch(":id/rows/:rowId")

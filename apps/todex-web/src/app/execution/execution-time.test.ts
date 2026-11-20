@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  executionSessionTitle,
   executionWorkPhase,
   extendGoalMinutes,
   focusSeconds,
@@ -17,6 +18,14 @@ import {
 } from "./execution-time";
 
 describe("execution time", () => {
+  it("prefers a saved execution title and falls back to Space and start time", () => {
+    const startedAt = "2026-11-20T19:02:00.000Z";
+    expect(executionSessionTitle({ startedAt, spaceName: "Side Product", title: "Website Polish" })).toBe("Website Polish");
+    const fallback = executionSessionTitle({ startedAt, spaceName: "Side Product", title: "   " });
+    expect(fallback).toContain("Side Product");
+    expect(fallback).not.toContain("Website Polish");
+  });
+
   it("formats clocks and durations", () => {
     expect(formatClock(65)).toBe("01:05");
     expect(formatClock(3661)).toBe("1:01:01");

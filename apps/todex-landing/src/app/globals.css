@@ -48,6 +48,55 @@
   }
 }
 
+@layer utilities {
+  /*
+   * Brushed-silver headings: light at the top of each line, darker toward the baseline.
+   * `1lh` repeats the gradient per line, so multi-line titles keep the same shading on every
+   * line; browsers without `lh` drop that declaration and fall back to one gradient per block.
+   * The extra bottom padding keeps descenders inside the painted background.
+   */
+  .text-silver,
+  .text-silver-dim {
+    color: #d4d4d8;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    -webkit-background-clip: text;
+    background-repeat: repeat-y;
+    background-size: 100% 1lh;
+    padding-bottom: 0.3em;
+    margin-bottom: -0.3em;
+  }
+
+  /*
+   * Each line's tile starts with the same dark tone it ends with: with tight leading, the
+   * previous line's descenders (g, p, y) spill into the top ~10% of the next tile, so this
+   * keeps them seamless. The light band begins above cap height.
+   */
+  .text-silver {
+    background-image: linear-gradient(
+      180deg,
+      #8a8a90 0%,
+      #8a8a90 9%,
+      #fafafa 13%,
+      #e4e4e7 38%,
+      #b4b4b9 66%,
+      #8a8a90 100%
+    );
+  }
+
+  .text-silver-dim {
+    background-image: linear-gradient(
+      180deg,
+      #6b6b71 0%,
+      #6b6b71 9%,
+      #d4d4d8 13%,
+      #b8b8bd 40%,
+      #8e8e94 70%,
+      #6b6b71 100%
+    );
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

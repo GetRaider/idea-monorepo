@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { LandingFrame } from "@/components/landing-frame";
-import { OpenTodexLink } from "@/components/open-todex-link";
+import { ClosingCta } from "@/components/closing-cta";
+import { ParticleField } from "@/components/particle-field";
+import { Eyebrow, card, textLink } from "@/components/ui";
 
 export const metadata: Metadata = {
   title: "Use Cases | Todex for Founders, Teams & AI Builders",
@@ -18,19 +20,20 @@ const useCases = [
     description:
       "Your product roadmap, customer insights, engineering tasks, and personal priorities compete for attention. Use spaces to organize work, Knowledge to preserve decisions, and Execution to focus on the next meaningful outcome.",
     steps: [
-      "Capture a customer insight",
-      "Draft requirements",
-      "Create estimated tasks",
-      "Execute with Cursor using relevant Todex context",
-      "Review results",
+      "Research competitors in ChatGPT",
+      "Save the findings to Knowledge through Todex MCP",
+      "Define the MVP scope, tasks, and criteria for done",
+      "Let Cursor or Claude Code pull a task with its requirements and decisions",
+      "Do the rest yourself in Focus Mode, with time tracked",
+      "Record results and new decisions in Todex",
     ],
   },
   {
     id: "small-teams",
-    audience: "Small product teams",
+    audience: "Small AI-native teams",
     title: "Keep the plan and the work in sync.",
     description:
-      "Make goals, task definitions, decisions, and deliverables visible in one connected workspace. Let team members execute work while compatible agents retrieve the relevant context.",
+      "Make goals, task definitions, decisions, and deliverables visible in one connected workspace. See what people and agents are working on, why, and what’s done, while compatible agents retrieve the relevant context.",
     steps: [
       "Agree on an objective",
       "Organize tasks and requirements",
@@ -50,68 +53,77 @@ const useCases = [
       "Implement externally",
       "Review and record the outcome",
     ],
-    link: { href: "/#execution-title", label: "See how Todex MCP fits" },
+    link: { href: "/#workflow", label: "See how a handoff works" },
   },
 ];
 
 export default function UseCasesPage() {
   return (
     <LandingFrame>
-      <div className="px-5 pb-16 pt-32 sm:pb-24 sm:pt-40">
-        <div className="mx-auto max-w-page">
-          <h1 className="max-w-4xl text-[clamp(2.75rem,6.4vw,5.75rem)] font-medium leading-[0.99] tracking-[-0.055em] text-white">
-            Built for people with work to get done.
+      <section className="relative isolate overflow-hidden px-5 pb-12 pt-32 sm:pb-16 sm:pt-40">
+        <ParticleField variant="arc" className="-z-20 opacity-60 [mask-image:linear-gradient(to_bottom,#000_50%,transparent)]" />
+        <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_60%_50%_at_50%_40%,rgba(0,0,0,0.6),transparent_70%)]" />
+        <div className="mx-auto flex max-w-4xl flex-col items-center text-center">
+          <Eyebrow>Use cases</Eyebrow>
+          <h1 className="mt-6 text-[clamp(2.5rem,6vw,5.25rem)] font-medium leading-[0.99] tracking-[-0.055em] text-silver">
+            Go from idea to finished work, your way.
           </h1>
-          <p className="mt-6 max-w-xl text-base leading-relaxed text-zinc-400 sm:text-lg">
-            From your first product idea to your next launch, Todex connects
-            priorities, knowledge, and execution.
+          <p className="mt-6 max-w-xl text-base leading-relaxed text-zinc-300 sm:text-lg">
+            From your first product idea to your next launch, Todex connects priorities, knowledge, and execution.
           </p>
-          <nav aria-label="Jump to a use case" className="mt-8 flex flex-wrap gap-x-6 gap-y-3">
+          <nav aria-label="Jump to a use case" className="mt-8 flex flex-wrap justify-center gap-2">
             {useCases.map(({ id, audience }) => (
-              <a key={id} href={`#${id}`} className="text-sm text-zinc-200 underline decoration-white/40 underline-offset-4 hover:decoration-white">
+              <a
+                key={id}
+                href={`#${id}`}
+                className="rounded-[10px] border border-white/10 bg-white/[0.03] px-4 py-1.5 text-sm text-zinc-200 hover:border-white/25 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+              >
                 {audience}
               </a>
             ))}
           </nav>
         </div>
+      </section>
 
-        <div className="mx-auto mt-12 max-w-page sm:mt-16">
-          {useCases.map(({ id, audience, title, description, steps, link }) => (
-            <section
-              key={id}
-              id={id}
-              aria-labelledby={`${id}-title`}
-              className="grid scroll-mt-24 gap-7 border-t border-white/15 py-10 md:grid-cols-2 md:gap-12 sm:py-14"
-            >
-              <div>
-                <p className="text-sm text-zinc-400">{audience}</p>
-                <h2 id={`${id}-title`} className="mt-3 text-3xl font-medium tracking-tight text-white sm:text-4xl">
-                  {title}
-                </h2>
-                <p className="mt-4 max-w-xl leading-relaxed text-zinc-400">{description}</p>
-                {link && (
-                  <Link href={link.href} className="mt-4 inline-block text-sm text-zinc-200 underline decoration-white/40 underline-offset-4 hover:decoration-white">
-                    {link.label}
-                  </Link>
-                )}
-              </div>
-              <div className="rounded-2xl border border-white/15 bg-zinc-950 p-6">
-                <h3 className="text-sm font-medium text-zinc-400">Example workflow</h3>
-                <ol className="mt-4 list-decimal space-y-3 pl-5 text-zinc-200 marker:text-zinc-400">
-                  {steps.map((step) => <li key={step} className="pl-1">{step}</li>)}
-                </ol>
-              </div>
-            </section>
-          ))}
-        </div>
-
-        <section aria-labelledby="use-cases-close" className="mx-auto mt-6 flex max-w-page flex-col items-start gap-6 rounded-2xl border border-white/15 bg-gradient-to-br from-zinc-900 to-zinc-950 p-6 sm:p-10">
-          <h2 id="use-cases-close" className="text-3xl font-medium tracking-tight text-white sm:text-4xl">
-            Whatever you’re building, keep moving.
-          </h2>
-          <OpenTodexLink />
-        </section>
+      <div className="mx-auto max-w-page space-y-4 px-5 pb-8">
+        {useCases.map(({ id, audience, title, description, steps, link }) => (
+          <section
+            key={id}
+            id={id}
+            aria-labelledby={`${id}-title`}
+            className={`${card} grid scroll-mt-24 gap-8 p-6 sm:p-10 md:grid-cols-2 md:gap-12`}
+          >
+            <div>
+              <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-zinc-400">{audience}</p>
+              <h2 id={`${id}-title`} className="mt-4 text-3xl font-medium tracking-tight text-silver sm:text-4xl">
+                {title}
+              </h2>
+              <p className="mt-4 max-w-xl leading-relaxed text-zinc-400">{description}</p>
+              {link && (
+                <Link href={link.href} className={`mt-5 inline-block ${textLink}`}>
+                  {link.label}
+                </Link>
+              )}
+            </div>
+            <div className="rounded-xl border border-white/[0.08] bg-black/50 p-5">
+              <h3 className="font-mono text-[11px] uppercase tracking-[0.16em] text-zinc-400">Example workflow</h3>
+              <ol className="mt-4 space-y-1">
+                {steps.map((step, index) => (
+                  <li
+                    key={step}
+                    className={`flex gap-3 rounded-lg px-3 py-2.5 text-sm ${index === 0 ? "bg-white/[0.08] text-white" : "text-zinc-300"}`}
+                  >
+                    <span className="font-mono text-xs leading-5 text-zinc-500">{String(index + 1).padStart(2, "0")}</span>
+                    {step}
+                  </li>
+                ))}
+              </ol>
+            </div>
+          </section>
+        ))}
       </div>
+
+      <ClosingCta lead="Whatever you’re building," highlight="plan the first task" rest="today." />
     </LandingFrame>
   );
 }

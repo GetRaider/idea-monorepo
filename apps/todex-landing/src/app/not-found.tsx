@@ -1,13 +1,13 @@
 import Link from "next/link";
 
 import { LandingFrame } from "@/components/landing-frame";
-import { OpenTodexLink } from "@/components/open-todex-link";
+import { JoinWaitlistButton } from "@/components/waitlist";
 
 export default function NotFound() {
   return (
     <LandingFrame>
       <div className="mx-auto flex w-full max-w-page flex-col items-start gap-6 px-5 py-24">
-        <h1 className="text-4xl font-medium tracking-tight text-white">
+        <h1 className="text-4xl font-medium tracking-tight text-silver">
           Page not found
         </h1>
         <Link
@@ -16,7 +16,7 @@ export default function NotFound() {
         >
           Home
         </Link>
-        <OpenTodexLink />
+        <JoinWaitlistButton />
       </div>
     </LandingFrame>
   );

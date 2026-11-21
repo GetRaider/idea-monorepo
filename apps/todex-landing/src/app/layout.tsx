@@ -14,7 +14,7 @@ const inter = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Todex | From idea to execution",
+  title: HOME_COPY.metaTitle,
   description: HOME_COPY.description,
 };
 

@@ -5,7 +5,7 @@ export async function postFormSubmitAjax<
   T extends { message?: string } = { message?: string },
 >(recipientEmail: string, body: FormSubmitBody): Promise<IHttpResponse<T>> {
   return httpClient.post<T>({
-    url: `$https://formsubmit.co/ajax/${encodeURIComponent(recipientEmail)}`,
+    url: `https://formsubmit.co/ajax/${encodeURIComponent(recipientEmail)}`,
     headers: {
       "Content-Type": "application/json",
       Accept: "application/json",

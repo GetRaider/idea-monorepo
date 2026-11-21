@@ -18,7 +18,7 @@ This package contains shared TypeScript types, models, DTOs, and utilities used 
 - `src/helpers/` - Utility functions and filters
 
 ## Model Pattern
-- Define interface first (`I` prefix)
+- Existing models use an `I`-prefixed interface + class; keep that for existing models only. New types: no `I` prefix
 - Implement class with class-validator decorators
 - Use `readonly` for immutable properties
 

@@ -12,7 +12,7 @@ Derived from `@repo/typescript-config` (`strict: true`, `noUncheckedIndexedAcces
 
 ## Compiler / strictness
 
-- `strict: true` everywhere — no disabling without explicit reason.
+- `strict: true` in `base.json`; `nestjs.json` intentionally relaxes `strictNullChecks`/`noImplicitAny` (see `typescript-config.mdc`). No other disabling without explicit reason.
 - Prefer inferred return types; `@typescript-eslint/explicit-function-return-type` is off.
 - `noImplicitAny` is enforced via `strict`.
 - NestJS apps: `module: CommonJS`, `moduleResolution: Node`, decorators enabled.
@@ -51,7 +51,7 @@ Do not mix class-validator and Zod for the same DTO in one app layer — follow 
 
 ## Prettier
 
-- `singleQuote: true` (from `@repo/eslint-config/prettier-base`).
+- Double quotes (prettier default). `prettier-base.js` sets `singleQuote` but is not actually applied (ESM `export default` loaded via `require`), so don't switch quotes.
 - Root format: `pnpm format` → `prettier --write "**/*.{ts,tsx,md}"`.
 
 ## Control flow

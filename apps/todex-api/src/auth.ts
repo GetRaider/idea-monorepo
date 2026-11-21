@@ -69,7 +69,8 @@ export const auth = betterAuth({
       },
     },
   },
-  emailAndPassword: { enabled: false },
+  // Local-only email login for seeded test users (see dev-users.ts). Sign-up stays disabled.
+  emailAndPassword: { enabled: env.auth.devLogin, disableSignUp: true },
   plugins: [
     oidcProvider({
       loginPage: `${env.web.baseUrl}/sign-in`,

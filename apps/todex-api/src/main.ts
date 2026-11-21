@@ -5,6 +5,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { AppModule } from "./modules/app.module";
 import { promotePkceClients } from "./auth";
 import { env } from "./env/env";
+import { seedDevUsers } from "./dev-users";
 import {
   authorizationServerMetadata,
   McpHttp,
@@ -66,6 +67,7 @@ async function bootstrap() {
 
   const port = Number(env.port);
   await promotePkceClients();
+  if (env.auth.devLogin) await seedDevUsers();
   await app.listen(port);
 }
 

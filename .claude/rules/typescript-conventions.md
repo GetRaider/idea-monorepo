@@ -1,0 +1,62 @@
+---
+paths:
+  - "**/*.ts"
+  - "**/*.tsx"
+---
+
+# TypeScript Conventions
+
+Derived from `@repo/typescript-config` (`strict: true`, `noUncheckedIndexedAccess: true`) and `@repo/eslint-config`.
+
+## Compiler / strictness
+
+- `strict: true` in `base.json`; `nestjs.json` intentionally relaxes `strictNullChecks`/`noImplicitAny` (see `typescript-config.mdc`). No other disabling without explicit reason.
+- Prefer inferred return types; `@typescript-eslint/explicit-function-return-type` is off.
+- `noImplicitAny` is enforced via `strict`.
+- NestJS apps: `module: CommonJS`, `moduleResolution: Node`, decorators enabled.
+- Next.js apps: `module: ESNext`, `moduleResolution: Bundler`, `noEmit: true`.
+- Library packages: extend `react-library.json` or `base.json` as appropriate.
+
+## ESLint (all TS projects)
+
+- `@typescript-eslint/no-explicit-any`: warn (off in NestJS config only).
+- `@typescript-eslint/no-unused-vars`: error; prefix unused args with `_`.
+- `no-console`: warn.
+- `prefer-const`: error.
+- Next.js: `react-hooks/rules-of-hooks` error, `exhaustive-deps` warn.
+- Turbo: `turbo/no-undeclared-env-vars` warn — declare env vars in `turbo.json` `globalEnv`.
+
+## Types in source files
+
+- No `I` prefix on interfaces (repo convention).
+- Place interfaces, types, and enums at the **end** of each file.
+- Blank line between external imports and internal imports.
+- Barrel `index.ts` in folders that export multiple symbols.
+
+## Zod at boundaries
+
+Use Zod schemas for validation at system edges:
+
+| Layer | Pattern |
+|-------|---------|
+| take-and-do API | `db/dtos/*.dto.ts` Zod schemas → `BaseController.initRoute({ bodyDto, responseDto })` |
+| take-and-do env | `env/server.ts`, `env/client.ts` — `z.object(...).parse(process.env)` |
+| devinity-api env | `src/env/env.ts` — Zod parse at startup |
+| AI outputs | `server/services/ai/schemas/` — Zod output schemas |
+| @repo/api (Nest) | class-validator DTOs for Nest controllers; Zod where app uses it for env |
+
+Do not mix class-validator and Zod for the same DTO in one app layer — follow the app's existing pattern.
+
+## Prettier
+
+- Double quotes (prettier default). `prettier-base.js` sets `singleQuote` but is not actually applied (ESM `export default` loaded via `require`), so don't switch quotes.
+- Root format: `pnpm format` → `prettier --write "**/*.{ts,tsx,md}"`.
+
+## Control flow
+
+Do not chain ternaries (`a ? b : c ? d : e`). Prefer:
+
+1. A named resolver (`resolveXView`, `getXLabel`) that returns a discriminant or value
+2. Early returns or `if`/`switch` on that result
+
+Simple binary `condition ? a : b` is fine when there is no nesting.

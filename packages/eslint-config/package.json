@@ -9,7 +9,7 @@
     "./next": "./next.js",
     "./next-js": "./next.js",
     "./nest-js": "./nest.js",
-    "./prettier-base": "./prettier-base.js",
+    "./prettier-base": "./prettier-base.cjs",
     "./react-internal": "./react-internal.js"
   },
   "devDependencies": {

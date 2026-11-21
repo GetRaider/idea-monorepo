@@ -13,7 +13,8 @@ process.stdin.setEncoding("utf8");
 process.stdin.on("data", (chunk) => { data += chunk; });
 process.stdin.on("end", () => {
   try {
-    const filePath = JSON.parse(data).file_path;
+    const payload = JSON.parse(data);
+    const filePath = payload.tool_input?.file_path ?? payload.file_path;
     if (typeof filePath !== "string" || !path.isAbsolute(filePath)) return;
     const relative = path.relative(root, filePath);
     if (!relative || relative.startsWith("..") || path.isAbsolute(relative)) return;

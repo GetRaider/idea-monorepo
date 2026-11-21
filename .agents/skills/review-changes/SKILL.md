@@ -1,6 +1,6 @@
 ---
 name: review-changes
-description: Independently review a Git diff or PR against requirements for correctness, regressions, security and maintainability. Use in a separate Cursor Agent conversation for significant changes or when the user asks for a review.
+description: Independently review a Git diff or PR against requirements for correctness, regressions, security and maintainability. Use for significant changes, ideally from a separate session or subagent, or when the user asks for a review.
 disable-model-invocation: true
 ---
 # Independent review (read-only)

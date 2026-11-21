@@ -26,7 +26,7 @@ Act as a pragmatic Staff Product Engineer. Implement the requested outcome end-t
 1. Reproduce a bug when practical; confirm the affected scenario after a fix.
 2. Test changed behavior and edge cases. Run focused tests during development. Verify meaningful user flows, contracts, permissions, error states, and regression risks where relevant.
 3. Before finishing, run `pnpm verify:affected` from the repo root (add `--build` for substantial/integration changes; `--e2e` for relevant UI/API flows). Fix failures you introduced.
-4. Review the final diff for mistakes and unintended changes. For auth, money, migrations, concurrency, or substantial cross-module changes, recommend an **independent** review in a separate Cursor Agent conversation using `/review-changes`.
+4. Review the final diff for mistakes and unintended changes. For auth, money, migrations, concurrency, or substantial cross-module changes, recommend an **independent** review (a separate session or subagent) using the `review-changes` skill.
 5. If verification is blocked or there are baseline failures, state exactly which commands did and did not pass; never invent results.
 
 ## Final response

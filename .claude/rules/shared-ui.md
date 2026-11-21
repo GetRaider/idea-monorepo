@@ -1,0 +1,79 @@
+---
+paths:
+  - "packages/ui/**"
+---
+
+# Shared UI Package Development Rules
+
+## Purpose
+
+Shared React primitives used across frontend apps. New components follow **shadcn**: Radix primitive + Tailwind + `cn()` + `cva`.
+
+## File Structure
+
+- `src/components/ComponentName/ComponentName.tsx` — component
+- `src/components/ComponentName/index.ts` — re-export
+- `src/lib/cn.ts` — `clsx` + `tailwind-merge`
+- `src/index.ts` — barrel
+
+Do not add `*.styles.tsx` or `styled-components`.
+
+Existing `*.component.tsx` / Header styled wrappers are legacy — migrate when touched.
+
+## Component Pattern
+
+Named exports, `"use client"` for interactive components, props interface at end of file.
+
+```typescript
+"use client";
+
+import { cva, type VariantProps } from "class-variance-authority";
+
+import { cn } from "../../lib/cn";
+
+const buttonVariants = cva(
+  "inline-flex items-center justify-center rounded-md text-sm font-medium",
+  {
+    variants: {
+      variant: {
+        solid: "bg-primary text-primary-foreground",
+        outline: "border border-border bg-transparent",
+        ghost: "hover:bg-muted",
+      },
+    },
+    defaultVariants: { variant: "solid" },
+  },
+);
+
+export function Button({ className, variant, ...props }: ButtonProps) {
+  return (
+    <button className={cn(buttonVariants({ variant }), className)} {...props} />
+  );
+}
+
+interface ButtonProps
+  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
+    VariantProps<typeof buttonVariants> {}
+```
+
+Wrap `@radix-ui/react-*` primitives (not `@radix-ui/themes`) for dialogs, dropdowns, etc.
+
+## Props
+
+- Union types for variants/sizes; sensible defaults
+- Forward `className` and remaining HTML attributes
+- `ReactNode` for children
+- Explicit interfaces (no inline prop types); JSDoc only when non-obvious
+
+## Naming / exports
+
+- Files and exports: PascalCase, name matches component
+- `packages/ui/src/index.ts` + folder `index.ts`
+- Consume: `import { Button } from "@repo/ui"` or `@repo/ui/components/Button`
+
+## Constraints
+
+- No business logic or app domain types
+- No inline `style={{}}` except runtime CSS variables
+- Accessible by default (semantic HTML, keyboard, ARIA on custom widgets)
+- Keep components small and composable

@@ -57,7 +57,7 @@ Format: `<type>(<SCOPE>): <subject>`
 
 - `GEN` — monorepo tooling, shared packages used across apps, CI, eslint/tsconfig
 - `TAD` — `apps/take-and-do`
-- `TDX` — `apps/todex-api`, `apps/todex-web`, `@repo/api/todex`
+- `TDX` — `apps/todex-api`, `apps/todex-web`, `apps/todex-landing`, `@repo/api/todex`
 - `DVN` — `apps/devinity-api`, `apps/devinity-web`
 - `PRT` — `apps/personal-website`
 - `TMP` — `apps/tempo` (Tempo)

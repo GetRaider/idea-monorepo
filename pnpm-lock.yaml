@@ -1294,6 +1294,58 @@ importers:
         specifier: 'catalog:'
         version: 3.2.4(@types/debug@4.1.12)(@types/node@20.19.20)(happy-dom@20.0.10)(jiti@2.6.1)(jsdom@25.0.1)(lightningcss@1.33.0)(terser@5.44.0)(tsx@4.21.0)(yaml@2.8.3)
 
+  apps/todex-landing:
+    dependencies:
+      '@repo/api':
+        specifier: workspace:*
+        version: link:../../packages/api
+      '@repo/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
+      next:
+        specifier: 'catalog:'
+        version: 15.5.9(@babel/core@7.28.4)(@opentelemetry/api@1.9.0)(@playwright/test@1.56.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      react:
+        specifier: 'catalog:'
+        version: 19.1.0
+      react-dom:
+        specifier: 'catalog:'
+        version: 19.1.0(react@19.1.0)
+    devDependencies:
+      '@eslint/eslintrc':
+        specifier: 'catalog:'
+        version: 3.3.1
+      '@repo/typescript-config':
+        specifier: workspace:*
+        version: link:../../packages/typescript-config
+      '@types/node':
+        specifier: 'catalog:'
+        version: 20.19.20
+      '@types/react':
+        specifier: 'catalog:'
+        version: 18.3.26
+      '@types/react-dom':
+        specifier: 'catalog:'
+        version: 18.3.7(@types/react@18.3.26)
+      autoprefixer:
+        specifier: ^10.4.27
+        version: 10.4.27(postcss@8.5.8)
+      eslint:
+        specifier: 'catalog:'
+        version: 9.37.0(jiti@2.6.1)
+      eslint-config-next:
+        specifier: 'catalog:'
+        version: 15.5.6(eslint@9.37.0(jiti@2.6.1))(typescript@5.9.3)
+      postcss:
+        specifier: ^8.5.8
+        version: 8.5.8
+      tailwindcss:
+        specifier: ^3.4.17
+        version: 3.4.17(ts-node@10.9.2(@types/node@20.19.20)(typescript@5.9.3))
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+
   apps/todex-web:
     dependencies:
       '@dnd-kit/core':
@@ -21023,22 +21075,22 @@ snapshots:
 
   '@tiptap/extension-details@3.22.4(@tiptap/core@3.22.4(@tiptap/pm@3.22.4))(@tiptap/extension-text-style@3.22.4(@tiptap/core@3.22.4(@tiptap/pm@3.22.4)))(@tiptap/pm@3.22.4)':
     dependencies:
-      '@tiptap/core': @tiptap/core@3.22.4(@tiptap/pm@3.22.4)
-      '@tiptap/extension-text-style': @tiptap/extension-text-style@3.22.4(@tiptap/core@3.22.4(@tiptap/pm@3.22.4))
+      '@tiptap/core': '@tiptap/core@3.22.4(@tiptap/pm@3.22.4)'
+      '@tiptap/extension-text-style': '@tiptap/extension-text-style@3.22.4(@tiptap/core@3.22.4(@tiptap/pm@3.22.4))'
       '@tiptap/pm': 3.22.4
 
   '@tiptap/extension-image@3.22.4(@tiptap/core@3.22.4(@tiptap/pm@3.22.4))':
     dependencies:
-      '@tiptap/core': @tiptap/core@3.22.4(@tiptap/pm@3.22.4)
+      '@tiptap/core': '@tiptap/core@3.22.4(@tiptap/pm@3.22.4)'
 
   '@tiptap/extension-table@3.22.4(@tiptap/core@3.22.4(@tiptap/pm@3.22.4))(@tiptap/pm@3.22.4)':
     dependencies:
-      '@tiptap/core': @tiptap/core@3.22.4(@tiptap/pm@3.22.4)
+      '@tiptap/core': '@tiptap/core@3.22.4(@tiptap/pm@3.22.4)'
       '@tiptap/pm': 3.22.4
 
   '@tiptap/extension-text-style@3.22.4(@tiptap/core@3.22.4(@tiptap/pm@3.22.4))':
     dependencies:
-      '@tiptap/core': @tiptap/core@3.22.4(@tiptap/pm@3.22.4)
+      '@tiptap/core': '@tiptap/core@3.22.4(@tiptap/pm@3.22.4)'
 
   '@tiptap/extension-list@3.22.4(@tiptap/core@3.22.4(@tiptap/pm@3.22.4))(@tiptap/pm@3.22.4)':
     dependencies:
@@ -22186,6 +22238,15 @@ snapshots:
   at-least-node@1.0.0: {}
 
   atomic-sleep@1.0.0: {}
+
+  autoprefixer@10.4.27(postcss@8.5.8):
+    dependencies:
+      browserslist: 4.28.1
+      caniuse-lite: 1.0.30001780
+      fraction.js: 5.3.4
+      picocolors: 1.1.1
+      postcss: 8.5.8
+      postcss-value-parser: 4.2.0
 
   autoprefixer@10.4.27(postcss@8.5.32):
     dependencies:
@@ -26863,6 +26924,31 @@ snapshots:
   neo-async@2.6.2: {}
 
   netmask@2.0.2: {}
+
+  next@15.5.9(@babel/core@7.28.4)(@opentelemetry/api@1.9.0)(@playwright/test@1.56.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0):
+    dependencies:
+      '@next/env': 15.5.9
+      '@swc/helpers': 0.5.15
+      caniuse-lite: 1.0.30001780
+      postcss: 8.4.31
+      react: 19.1.0
+      react-dom: 19.1.0(react@19.1.0)
+      styled-jsx: 5.1.6(@babel/core@7.28.4)(react@19.1.0)
+    optionalDependencies:
+      '@next/swc-darwin-arm64': 15.5.7
+      '@next/swc-darwin-x64': 15.5.7
+      '@next/swc-linux-arm64-gnu': 15.5.7
+      '@next/swc-linux-arm64-musl': 15.5.7
+      '@next/swc-linux-x64-gnu': 15.5.7
+      '@next/swc-linux-x64-musl': 15.5.7
+      '@next/swc-win32-arm64-msvc': 15.5.7
+      '@next/swc-win32-x64-msvc': 15.5.7
+      '@opentelemetry/api': 1.9.0
+      '@playwright/test': 1.56.0
+      sharp: 0.34.5
+    transitivePeerDependencies:
+      - '@babel/core'
+      - babel-plugin-macros
 
   next@15.5.9(@babel/core@7.28.4)(@opentelemetry/api@1.9.0)(@playwright/test@1.56.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0):
     dependencies:

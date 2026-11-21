@@ -67,6 +67,7 @@
   },
   "pnpm": {
     "overrides": {
+      "better-sqlite3": "12.11.1",
       "fast-xml-parser": ">=5.7.0"
     },
     "onlyBuiltDependencies": [

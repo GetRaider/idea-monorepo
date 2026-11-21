@@ -144,6 +144,7 @@ export function DocEditor({ docId }: { docId: string }) {
         />
         <KnowledgeContentEditor
           docId={doc.id}
+          spaceId={doc.spaceId}
           document={draft.content}
           onChange={(content) =>
             setDraft((current) => current ? { ...current, content } : current)

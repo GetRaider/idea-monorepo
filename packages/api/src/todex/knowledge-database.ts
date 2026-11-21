@@ -1,0 +1,139 @@
+import { z } from "zod";
+import { ProseDocSchema } from "./prose.ts";
+
+export const KnowledgePropertyTypeSchema = z.enum([
+  "title",
+  "text",
+  "number",
+  "select",
+  "multi_select",
+  "date",
+  "checkbox",
+]);
+
+export const KnowledgeCellValueSchema = z.union([
+  z.string().max(10000),
+  z.number().finite(),
+  z.boolean(),
+  z.array(z.string().max(200)).max(100),
+  z.null(),
+]);
+
+export const KnowledgePropertySchema = z.object({
+  id: z.string(),
+  databaseId: z.string(),
+  name: z.string(),
+  type: KnowledgePropertyTypeSchema,
+  options: z.array(z.string()),
+  position: z.number().int(),
+});
+
+export const KnowledgeRowSchema = z.object({
+  id: z.string(),
+  databaseId: z.string(),
+  cells: z.record(z.string(), KnowledgeCellValueSchema),
+  position: z.number().int(),
+  updatedAt: z.string(),
+});
+
+export const KnowledgeSortSchema = z.object({
+  propertyId: z.string(),
+  direction: z.enum(["asc", "desc"]),
+});
+
+export const KnowledgeFilterSchema = z.object({
+  propertyId: z.string(),
+  operator: z.enum([
+    "contains", "equals", "not_equals", "is_empty", "not_empty",
+    "greater_than", "less_than",
+  ]),
+  value: KnowledgeCellValueSchema.optional(),
+});
+
+export const KnowledgeViewSchema = z.object({
+  id: z.string(),
+  databaseId: z.string(),
+  name: z.string(),
+  kind: z.literal("table"),
+  sorts: z.array(KnowledgeSortSchema),
+  filters: z.array(KnowledgeFilterSchema),
+});
+
+export const KnowledgeDatabaseSchema = z.object({
+  id: z.string(),
+  workspaceId: z.string(),
+  spaceId: z.string(),
+  name: z.string(),
+  properties: z.array(KnowledgePropertySchema),
+  rows: z.array(KnowledgeRowSchema),
+  view: KnowledgeViewSchema,
+});
+
+// A database row is also a page. Its rich body is fetched independently of the grid.
+export const KnowledgeDatabasePageSchema = z.object({
+  databaseId: z.string(),
+  spaceId: z.string(),
+  row: KnowledgeRowSchema,
+  properties: z.array(KnowledgePropertySchema),
+  content: ProseDocSchema,
+  icon: z.string().max(16).nullable(),
+  cover: z.string().max(2048).nullable(),
+  version: z.number().int().min(0),
+});
+
+export const UpdateKnowledgeDatabasePageSchema = z.object({
+  expectedVersion: z.number().int().min(0),
+  content: ProseDocSchema.optional(),
+  icon: z.string().max(16).nullable().optional(),
+  cover: z.string().url().max(2048).startsWith("https://").nullable().optional(),
+}).strict().refine((input) =>
+  input.content !== undefined || input.icon !== undefined || input.cover !== undefined,
+  "Provide a page field to update",
+);
+
+export const CreateKnowledgeDatabaseSchema = z.object({
+  spaceId: z.string().min(1),
+  name: z.string().trim().min(1).max(200).default("Untitled database"),
+}).strict();
+
+export const RenameKnowledgeDatabaseSchema = z.object({
+  name: z.string().trim().min(1).max(200),
+}).strict();
+
+export const CreateKnowledgePropertySchema = z.object({
+  name: z.string().trim().min(1).max(80),
+  type: KnowledgePropertyTypeSchema.exclude(["title"]),
+  options: z.array(z.string().trim().min(1).max(80)).max(100).default([]),
+}).strict();
+
+export const UpdateKnowledgePropertySchema = z.object({
+  name: z.string().trim().min(1).max(80).optional(),
+  type: KnowledgePropertyTypeSchema.exclude(["title"]).optional(),
+  options: z.array(z.string().trim().min(1).max(80)).max(100).optional(),
+}).strict().refine((value) => Object.keys(value).length > 0);
+
+export const PatchKnowledgeCellSchema = z.object({
+  propertyId: z.string().min(1),
+  value: KnowledgeCellValueSchema,
+}).strict();
+
+export const UpdateKnowledgeViewSchema = z.object({
+  sorts: z.array(KnowledgeSortSchema).max(8).optional(),
+  filters: z.array(KnowledgeFilterSchema).max(20).optional(),
+}).strict();
+
+export type KnowledgePropertyType = z.infer<typeof KnowledgePropertyTypeSchema>;
+export type KnowledgeCellValue = z.infer<typeof KnowledgeCellValueSchema>;
+export type KnowledgeProperty = z.infer<typeof KnowledgePropertySchema>;
+export type KnowledgeRow = z.infer<typeof KnowledgeRowSchema>;
+export type KnowledgeView = z.infer<typeof KnowledgeViewSchema>;
+export type KnowledgeDatabase = z.infer<typeof KnowledgeDatabaseSchema>;
+export type CreateKnowledgeDatabase = z.infer<typeof CreateKnowledgeDatabaseSchema>;
+export type RenameKnowledgeDatabase = z.infer<typeof RenameKnowledgeDatabaseSchema>;
+export type CreateKnowledgeProperty = z.infer<typeof CreateKnowledgePropertySchema>;
+export type UpdateKnowledgeProperty = z.infer<typeof UpdateKnowledgePropertySchema>;
+export type PatchKnowledgeCell = z.infer<typeof PatchKnowledgeCellSchema>;
+export type UpdateKnowledgeView = z.infer<typeof UpdateKnowledgeViewSchema>;
+
+export type KnowledgeDatabasePage = z.infer<typeof KnowledgeDatabasePageSchema>;
+export type UpdateKnowledgeDatabasePage = z.infer<typeof UpdateKnowledgeDatabasePageSchema>;

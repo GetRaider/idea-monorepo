@@ -14,6 +14,7 @@ import { ContentIndexModule } from "./content-index/content-index.module";
 import { SpacesModule } from "./spaces/spaces.module";
 import { CalendarModule } from "./calendar/calendar.module";
 import { DocsModule } from "./docs/docs.module";
+import { KnowledgeDatabasesModule } from "./knowledge-databases/knowledge-databases.module";
 import { ExecutionModule } from "./execution/execution.module";
 import { FoldersModule } from "./folders/folders.module";
 import { RelationsModule } from "./relations/relations.module";
@@ -37,6 +38,7 @@ import { WorkspaceModule } from "./workspace/workspace.module";
     FoldersModule,
     RelationsModule,
     DocsModule,
+    KnowledgeDatabasesModule,
     ExecutionModule,
     CalendarModule,
     SpacesModule,

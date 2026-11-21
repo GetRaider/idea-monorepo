@@ -58,19 +58,13 @@ Title is the required first column. Other property types are validated on writes
 **Note:** This is an implementation draft. The integration in this environment cannot run the full application, and handwritten migration files should be reconciled with Drizzle-generated snapshots before production merge.
 
 
-## Knowledge Editor V3: block movement + database pages (same PR)
+## Knowledge Editor V3: database pages (same PR)
 
-This PR also implements the user-requested foundational Notion-style interactions instead of splitting the work across additional PRs:
+Goal: Notion-like docs inside Knowledge folders that both humans and the AI agent can read and write, so their content can feed Planning and Execution.
 
-### Movable document blocks
+### Removed from scope
 
-- Hover a block to reveal `+` and `⋮⋮` handles.
-- `+` inserts a paragraph immediately after the block.
-- Drag `⋮⋮` to reorder blocks vertically, including nested content within visible toggle panels and columns.
-- Drop a block to the left or right edge of another block to form a two-column layout. Alternatively use `/Two columns` or `⋮⋮ → Make two columns`.
-- Block menu supports duplicate, delete, move up/down, convert basic text/headings/quote, and background colors. A trailing paragraph is preserved when moving the only block out of a column or toggle.
-- Layout is represented by real ProseMirror `columns` and `column` nodes inside the existing Knowledge document JSON, with a responsive stacked layout on narrow screens.
-- No additional drag/drop dependencies were introduced; block relocation is performed using one ProseMirror transaction for undo.
+The custom hover handles, drag-and-drop reordering, side-drop columns, `/Two columns`, `columns`/`column` nodes and block background colors were removed. They were the least stable part of the editor and add nothing an agent can use. If vertical block reordering is needed later, use Tiptap's DragHandle extension instead of a hand-rolled overlay.
 
 ### Database records are pages
 
@@ -84,11 +78,6 @@ This PR also implements the user-requested foundational Notion-style interaction
 
 ### New browser acceptance checklist
 
-- [ ] Hover several block types; handles follow blocks while scrolling, without obstructing inline text editing.
-- [ ] Drag top-level blocks both up and down; confirm reload and undo restore the correct structure.
-- [ ] Drag a block into a column and into an expanded toggle. Move the only block out of a column without invalid document JSON.
-- [ ] Drop a block horizontally to create two editable columns; verify text inside both columns and narrow-viewport stacking.
-- [ ] Verify duplicate, delete, move, type conversion, color, and `/Two columns` operations persist.
 - [ ] Open a database record by clicking its Name; edit its properties and rich page body in Side Peek.
 - [ ] Expand the same record into Full Page and confirm content, icon, cover, and properties are shared across both modes.
 - [ ] Reload record pages, including rows created before migration 0038, and verify content persists.
@@ -97,4 +86,4 @@ This PR also implements the user-requested foundational Notion-style interaction
 
 ### Limitations
 
-This is a **functional Notion-style foundation**, not full Notion parity. Multi-block drag selection, row-as-page nesting in the sidebar, collaborative cursors, custom database views, inline row comments, formulas, rollups, and complete property relations remain outside scope. Side Peek closing while the network fails still requires user attention to unsaved status. The PR must remain draft until migration and browser QA pass.
+This is a **functional Notion-style foundation**, not full Notion parity. Block drag-and-drop, columns, row-as-page nesting in the sidebar, collaborative cursors, custom database views, inline row comments, formulas, rollups, and complete property relations remain outside scope. Side Peek closing while the network fails still requires user attention to unsaved status. The PR must remain draft until migration and browser QA pass.

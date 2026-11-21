@@ -15,9 +15,6 @@ import { cn } from "@repo/ui";
 import { toast } from "sonner";
 import { todexClient } from "@lib/todex-client";
 import { KnowledgeDatabaseNode } from "../knowledge/knowledge-database-node";
-import { KnowledgeColumn, KnowledgeColumns, emptyKnowledgeColumns } from "../knowledge/knowledge-columns";
-import { KnowledgeBlockControls } from "../knowledge/knowledge-block-controls";
-import { KnowledgeBlockAppearance } from "../knowledge/knowledge-block-appearance";
 
 import {
   applyMentionEntry,
@@ -159,13 +156,6 @@ const DOCUMENT_SLASH_COMMANDS: SlashCommandItem[] = [
       }).run(),
   },
   {
-    title: "Two columns",
-    shortcut: "2 columns",
-    aliases: ["columns", "layout", "side by side", "split"],
-    command: (editor, range) =>
-      editor.chain().focus().deleteRange(range).insertContent(emptyKnowledgeColumns()).run(),
-  },
-  {
     title: "Divider",
     aliases: ["divider", "separator", "horizontal rule"],
     command: (editor, range) =>
@@ -236,9 +226,6 @@ export function TaskDescriptionEditor({
         Image,
         Callout,
         KnowledgeDatabaseNode,
-        KnowledgeColumns,
-        KnowledgeColumn,
-        KnowledgeBlockAppearance,
       ] : []),
       Placeholder.configure({
         placeholder: knowledgeMode ? "Type / for blocks, @ to mention…" : DESCRIPTION_PLACEHOLDER,
@@ -538,7 +525,6 @@ export function TaskDescriptionEditor({
     >
       {knowledgeMode ? <DocumentTableToolbar editor={editor} /> : null}
       <EditorContent editor={editor} />
-      {knowledgeMode ? <KnowledgeBlockControls editor={editor} rootRef={rootRef} /> : null}
       <DescriptionBubbleMenu editor={editor} />
       {slashMenu && visibleSlashItems.length > 0 ? (
         <SlashCommandMenu

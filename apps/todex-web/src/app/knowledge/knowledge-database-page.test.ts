@@ -1,31 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
-  ProseDocSchema,
   KnowledgeDatabasePageSchema,
   UpdateKnowledgeDatabasePageSchema,
 } from "@repo/api/todex";
-import { emptyKnowledgeColumns } from "./knowledge-columns";
 
-describe("Knowledge block document structure", () => {
-  it("supports nested two-column layouts with editable paragraphs", () => {
-    const content = {
-      type: "doc",
-      content: [
-        { type: "paragraph", content: [{ type: "text", text: "Before" }] },
-        emptyKnowledgeColumns(),
-        { type: "paragraph", content: [{ type: "text", text: "After" }] },
-      ],
-    };
-    expect(ProseDocSchema.safeParse(content).success).toBe(true);
-    expect(content.content[1]).toEqual({
-      type: "columns",
-      content: [
-        { type: "column", content: [{ type: "paragraph" }] },
-        { type: "column", content: [{ type: "paragraph" }] },
-      ],
-    });
-  });
-
+describe("Knowledge database record pages", () => {
   it("accepts a database record page with independent rich content", () => {
     const page = {
       databaseId: "db1",

@@ -73,8 +73,9 @@ export function KnowledgeDatabaseTable({ databaseId }: { databaseId: string }) {
     );
   }
 
-  const selectProperty = data.properties.find((p) => p.id === filterPropertyId) ??
-    data.properties[0];
+  const loaded = data;
+  const selectProperty = loaded.properties.find((p) => p.id === filterPropertyId) ??
+    loaded.properties[0];
 
   function addProperty() {
     const name = newName.trim();
@@ -104,7 +105,7 @@ export function KnowledgeDatabaseTable({ databaseId }: { databaseId: string }) {
         ? {} : { value }),
     };
     run(() => todexClient.knowledgeDatabases.updateView(databaseId, {
-      filters: [...data.view.filters, filter],
+      filters: [...loaded.view.filters, filter],
     }));
     setFilterOpen(false);
     setFilterValue("");

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { BadRequestException } from "@nestjs/common";
-import { validateKnowledgeCell } from "./knowledge-databases.service";
+import { PgDialect } from "drizzle-orm/pg-core";
+import { docReferencesDatabase, validateKnowledgeCell } from "./knowledge-databases.service";
 
 describe("Knowledge cell validation", () => {
   it("validates text, numbers and checkboxes", () => {
@@ -18,5 +19,13 @@ describe("Knowledge cell validation", () => {
   it("only accepts genuine ISO calendar dates", () => {
     expect(validateKnowledgeCell({ type: "date", options: [] }, "2026-11-20")).toBe("2026-11-20");
     expect(() => validateKnowledgeCell({ type: "date", options: [] }, "2026-02-30")).toThrow(BadRequestException);
+  });
+});
+
+describe("docReferencesDatabase", () => {
+  it("casts the database id so Postgres can type the jsonpath variable", () => {
+    const query = new PgDialect().sqlToQuery(docReferencesDatabase("db-1"));
+    expect(query.sql).toMatch(/jsonb_build_object\('databaseId', \$1::text\)/);
+    expect(query.params).toEqual(["db-1"]);
   });
 });

@@ -401,10 +401,7 @@ export class KnowledgeDatabasesService {
     if (!this.contentIndex) return;
     // A database block may be nested inside columns or toggles; search recursively.
     const referencing = await this.db.select({ id: docs.id }).from(docs)
-      .where(and(eq(docs.workspaceId, workspaceId),
-        sql`jsonb_path_exists(${docs.body},
-          '$.** ? (@.type == "databaseView" && @.attrs.databaseId == $databaseId)'::jsonpath,
-          jsonb_build_object('databaseId', ${databaseId}))`));
+      .where(and(eq(docs.workspaceId, workspaceId), docReferencesDatabase(databaseId)));
     for (const doc of referencing) {
       await this.contentIndex.enqueue({
         workspaceId, sourceType: "doc", sourceId: doc.id,
@@ -412,4 +409,14 @@ export class KnowledgeDatabasesService {
     }
   }
 
+}
+
+/**
+ * Matches docs whose body embeds the database at any depth. The id must be cast:
+ * Postgres cannot infer the type of an untyped parameter inside jsonb_build_object.
+ */
+export function docReferencesDatabase(databaseId: string) {
+  return sql`jsonb_path_exists(${docs.body},
+    '$.** ? (@.type == "databaseView" && @.attrs.databaseId == $databaseId)'::jsonpath,
+    jsonb_build_object('databaseId', ${databaseId}::text))`;
 }

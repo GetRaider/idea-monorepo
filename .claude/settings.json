@@ -1,0 +1,11 @@
+{
+  "attribution": { "commit": "", "pr": "" },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [{ "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.cursor/hooks/format-after-edit.cjs\"", "timeout": 15 }]
+      }
+    ]
+  }
+}

@@ -306,3 +306,133 @@
     display: none;
   }
 }
+
+
+
+/* Database grid is an interactive React node view, not a Tiptap simple table. */
+@layer components {
+  .knowledge-doc-editor .knowledge-db-shell {
+    user-select: text;
+    position: relative;
+    font-size: 0.875rem;
+    line-height: 1.4;
+    color: var(--foreground);
+    overflow: visible;
+  }
+
+  .knowledge-doc-editor .knowledge-db-shell .knowledge-db-grid {
+    width: 100%;
+    min-width: 480px;
+    table-layout: auto;
+    border-collapse: collapse;
+    border-spacing: 0;
+    margin: 0;
+  }
+
+  .knowledge-doc-editor .knowledge-db-shell .knowledge-db-grid th,
+  .knowledge-doc-editor .knowledge-db-shell .knowledge-db-grid td {
+    min-width: 145px;
+    border-bottom: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    padding: 0;
+    vertical-align: middle;
+    background: transparent;
+  }
+
+  .knowledge-doc-editor .knowledge-db-shell .knowledge-db-grid th {
+    background: #1c1c1c;
+  }
+
+  .knowledge-doc-editor .knowledge-db-shell .knowledge-db-grid th:last-child,
+  .knowledge-doc-editor .knowledge-db-shell .knowledge-db-grid td:last-child {
+    min-width: 45px;
+    width: 45px;
+    border-right: 0;
+  }
+
+  .knowledge-doc-editor .knowledge-db-shell .knowledge-db-grid tr:last-child td {
+    border-bottom: 0;
+  }
+
+  .knowledge-db-action,
+  .knowledge-db-menu-action {
+    display: inline-flex;
+    align-items: center;
+    border: none;
+    border-radius: 0.375rem;
+    padding: 0.375rem 0.625rem;
+    background: transparent;
+    color: #d1d1d1;
+    cursor: pointer;
+    font-size: 0.75rem;
+    white-space: nowrap;
+  }
+
+  .knowledge-db-action:hover,
+  .knowledge-db-menu-action:hover {
+    background: #303030;
+    color: #ffffff;
+  }
+
+  .knowledge-db-menu-action {
+    display: flex;
+    width: 100%;
+    text-align: left;
+  }
+
+  .knowledge-db-action:disabled,
+  .knowledge-db-menu-action:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .knowledge-db-pill {
+    border: 1px solid var(--border);
+    border-radius: 0.375rem;
+    background: #292929;
+    color: #d4d4d4;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+  }
+
+  .knowledge-db-input {
+    border: 1px solid var(--border);
+    border-radius: 0.375rem;
+    background: #202020;
+    color: #f5f5f5;
+    padding: 0.375rem 0.5rem;
+    min-height: 30px;
+    min-width: 110px;
+    font-size: 0.75rem;
+    outline: none;
+  }
+
+  .knowledge-db-input:focus,
+  .knowledge-db-cell:focus {
+    border-color: #777;
+    outline: 1px solid #777;
+    outline-offset: -1px;
+  }
+
+  .knowledge-db-cell {
+    display: block;
+    width: 100%;
+    min-width: 100px;
+    height: 39px;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--foreground);
+    font-size: 0.8125rem;
+    outline: none;
+  }
+
+  .knowledge-db-cell::placeholder {
+    color: #717171;
+  }
+
+  .knowledge-db-shell input[type="checkbox"] {
+    cursor: pointer;
+    accent-color: #f5f5f5;
+  }
+}

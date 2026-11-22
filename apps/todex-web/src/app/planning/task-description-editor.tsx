@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useEditor, EditorContent, type Editor } from "@tiptap/react";
 import { Node, mergeAttributes } from "@tiptap/core";
 import { TableKit } from "@tiptap/extension-table";
-import { Details, DetailsSummary, DetailsContent } from "@tiptap/extension-details";
+import { DetailsSummary, DetailsContent } from "@tiptap/extension-details";
 import Image from "@tiptap/extension-image";
 import { BubbleMenu } from "@tiptap/react/menus";
 import StarterKit from "@tiptap/starter-kit";
@@ -12,6 +12,11 @@ import Placeholder from "@tiptap/extension-placeholder";
 import { TaskList, TaskItem } from "@tiptap/extension-list";
 import { ProseDocSchema, type ProseDoc } from "@repo/api/todex";
 import { cn } from "@repo/ui";
+import { toast } from "sonner";
+import { todexClient } from "@lib/todex-client";
+import { KnowledgeDatabaseNode } from "../knowledge/knowledge-database-node";
+import { MarkdownHeadingShortcuts } from "./markdown-heading-shortcuts";
+import { Details, ToggleSummaryEnter } from "./details-open-sync";
 
 import {
   applyMentionEntry,
@@ -147,9 +152,18 @@ const DOCUMENT_SLASH_COMMANDS: SlashCommandItem[] = [
         type: "details",
         attrs: { open: true },
         content: [
-          { type: "detailsSummary", content: [{ type: "text", text: "Toggle heading" }] },
+          { type: "detailsSummary" },
           { type: "detailsContent", content: [{ type: "paragraph" }] },
         ],
+      }).command(({ tr, commands }) => {
+        // insertContent leaves the cursor in the body; start in the empty summary instead.
+        const { $from } = tr.selection;
+        for (let depth = $from.depth; depth > 0; depth -= 1) {
+          if ($from.node(depth).type.name === "details") {
+            return commands.setTextSelection($from.before(depth) + 2);
+          }
+        }
+        return true;
       }).run(),
   },
   {
@@ -185,6 +199,7 @@ export function TaskDescriptionEditor({
   appearance = "field",
   contentClassName,
   knowledgeMode = false,
+  knowledgeSpaceId,
 }: TaskDescriptionEditorProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const onChangeRef = useRef(onChange);
@@ -211,6 +226,7 @@ export function TaskDescriptionEditor({
       StarterKit.configure({
         heading: { levels: [2, 3, 4] },
       }),
+      MarkdownHeadingShortcuts,
       TaskList,
       TaskItem.configure({ nested: true }),
       MentionNode,
@@ -219,11 +235,17 @@ export function TaskDescriptionEditor({
         Details.configure({ persist: true, HTMLAttributes: { class: "todex-details" } }),
         DetailsSummary,
         DetailsContent,
+        ToggleSummaryEnter,
         Image,
         Callout,
+        KnowledgeDatabaseNode,
       ] : []),
       Placeholder.configure({
-        placeholder: knowledgeMode ? "Type / for blocks, @ to mention…" : DESCRIPTION_PLACEHOLDER,
+        includeChildren: true,
+        placeholder: ({ node }) => {
+          if (node.type.name === "detailsSummary") return "Toggle";
+          return knowledgeMode ? "Type / for blocks, @ to mention…" : DESCRIPTION_PLACEHOLDER;
+        },
       }),
     ],
     content: document ?? content,
@@ -260,10 +282,30 @@ export function TaskDescriptionEditor({
     [calendarEnabled, mentionCandidates, mentionMenu],
   );
 
-  const slashCommands = useMemo(
-    () => knowledgeMode ? [...SLASH_COMMANDS, ...DOCUMENT_SLASH_COMMANDS] : SLASH_COMMANDS,
-    [knowledgeMode],
-  );
+  const slashCommands = useMemo(() => {
+    if (!knowledgeMode) return SLASH_COMMANDS;
+    const commands = [...SLASH_COMMANDS, ...DOCUMENT_SLASH_COMMANDS];
+    if (knowledgeSpaceId) commands.push({
+      title: "Database table",
+      shortcut: "Properties",
+      aliases: ["database", "database table", "data table", "notion", "properties"],
+      command: (currentEditor, range) => {
+        void todexClient.knowledgeDatabases.create({
+          spaceId: knowledgeSpaceId, name: "Untitled database",
+        }).then((database) => {
+          if (!currentEditor.isDestroyed) {
+            currentEditor.chain().focus().deleteRange(range).insertContent({
+              type: "databaseView",
+              attrs: { databaseId: database.id, viewId: database.view.id },
+            }).run();
+          }
+        }).catch((error: unknown) => {
+          toast.error(error instanceof Error ? error.message : "Could not create database");
+        });
+      },
+    });
+    return commands;
+  }, [knowledgeMode, knowledgeSpaceId]);
   const visibleSlashItems = useMemo(() => {
     if (!slashMenu) return [];
     return slashCommands.filter((item) =>
@@ -495,6 +537,10 @@ export function TaskDescriptionEditor({
           "[&_.todex-details]:my-3 [&_.todex-details]:rounded-lg [&_.todex-details]:border",
           "[&_.todex-details]:border-border [&_.todex-details]:px-3 [&_.todex-details]:py-2",
           "[&_.tiptap_img]:my-4 [&_.tiptap_img]:h-auto [&_.tiptap_img]:max-w-full [&_.tiptap_img]:rounded-lg",
+          "[&_.tiptap_a:not([data-target-type])]:text-primary [&_.tiptap_a:not([data-target-type])]:underline [&_.tiptap_a:not([data-target-type])]:underline-offset-2",
+          "[&_.tiptap_:not(pre)>code]:rounded [&_.tiptap_:not(pre)>code]:bg-surface [&_.tiptap_:not(pre)>code]:px-1 [&_.tiptap_:not(pre)>code]:py-0.5 [&_.tiptap_:not(pre)>code]:font-mono [&_.tiptap_:not(pre)>code]:text-[0.875em]",
+          "[&_summary.is-empty::before]:pointer-events-none [&_summary.is-empty::before]:float-left [&_summary.is-empty::before]:h-0",
+          "[&_summary.is-empty::before]:text-muted-foreground [&_summary.is-empty::before]:content-[attr(data-placeholder)]",
         ],
       )}
     >
@@ -643,6 +689,13 @@ function DocumentTableToolbar({ editor }: { editor: Editor }) {
     <BubbleMenu
       editor={editor}
       shouldShow={({ editor: current }) => current.isEditable && current.isActive("table")}
+      // Anchor above the whole table so the toolbar never covers the rows being edited.
+      getReferencedVirtualElement={() => {
+        const { node } = editor.view.domAtPos(editor.state.selection.from);
+        const element = node instanceof Element ? node : node.parentElement;
+        const table = element?.closest(".tableWrapper") ?? element?.closest("table");
+        return table ? { getBoundingClientRect: () => table.getBoundingClientRect() } : null;
+      }}
       options={{ placement: "top-start", offset: 6 }}
     >
       <div
@@ -787,6 +840,7 @@ interface TaskDescriptionEditorProps {
   appearance?: "field" | "plain";
   contentClassName?: string;
   knowledgeMode?: boolean;
+  knowledgeSpaceId?: string;
 }
 
 interface MentionMenuState {

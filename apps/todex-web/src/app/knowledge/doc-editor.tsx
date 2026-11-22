@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { DocType } from "@repo/api/todex";
@@ -12,6 +12,12 @@ import { todexClient } from "@lib/todex-client";
 import { docsSectionClassName } from "./doc-collection";
 import { DocsCanvasHeader, type DocsCrumb } from "./docs-header";
 import { useDocs } from "./docs-provider";
+import {
+  UNTITLED,
+  singleLineTitle,
+  titleForEditing,
+  titleForSaving,
+} from "./doc-title";
 import { KnowledgeContentEditor } from "./knowledge-content-editor";
 
 export function DocEditor({ docId }: { docId: string }) {
@@ -30,7 +36,17 @@ export function DocEditor({ docId }: { docId: string }) {
   const loadedDocIdRef = useRef<string | null>(null);
   const saveDraftRef = useRef<(next: DocDraft) => void>(() => undefined);
   const saveQueueRef = useRef<Promise<unknown>>(Promise.resolve());
+  const titleRef = useRef<HTMLTextAreaElement>(null);
+  const bodyRef = useRef<HTMLDivElement>(null);
   const doc = docQuery.data;
+
+  // Grow the title with its content so long titles wrap instead of scrolling.
+  useLayoutEffect(() => {
+    const title = titleRef.current;
+    if (!title) return;
+    title.style.height = "auto";
+    title.style.height = `${title.scrollHeight}px`;
+  }, [draft?.title]);
 
   useEffect(() => {
     if (doc?.type === DocType.GOAL) {
@@ -69,7 +85,7 @@ export function DocEditor({ docId }: { docId: string }) {
   };
 
   useEffect(() => {
-    if (!draft || !draft.title.trim()) return;
+    if (!draft) return;
     if (skipSaveRef.current) {
       skipSaveRef.current = false;
       return;
@@ -131,24 +147,37 @@ export function DocEditor({ docId }: { docId: string }) {
       />
       <div className="mx-auto w-full max-w-[820px] pb-20 pt-8">
         <textarea
+          ref={titleRef}
           aria-label="Title"
           value={draft.title}
-          placeholder="Untitled document"
-          rows={2}
-          className="mb-4 w-full resize-none bg-transparent text-4xl font-bold leading-tight tracking-tight text-foreground outline-none placeholder:text-muted-foreground"
-          onChange={(event) =>
-            setDraft((current) =>
-              current ? { ...current, title: event.target.value } : current,
-            )
-          }
+          placeholder={UNTITLED}
+          rows={1}
+          className="mb-4 w-full resize-none overflow-hidden bg-transparent text-4xl font-bold leading-tight tracking-tight text-foreground outline-none placeholder:text-muted-foreground"
+          onKeyDown={(event) => {
+            // Titles are one line: Enter moves into the body like in Notion.
+            if (event.key !== "Enter" || event.nativeEvent.isComposing) return;
+            event.preventDefault();
+            bodyRef.current
+              ?.querySelector<HTMLElement>(".ProseMirror")
+              ?.focus();
+          }}
+          onChange={(event) => {
+            const title = singleLineTitle(event.target.value);
+            setDraft((current) => (current ? { ...current, title } : current));
+          }}
         />
-        <KnowledgeContentEditor
-          docId={doc.id}
-          document={draft.content}
-          onChange={(content) =>
-            setDraft((current) => current ? { ...current, content } : current)
-          }
-        />
+        <div ref={bodyRef}>
+          <KnowledgeContentEditor
+            docId={doc.id}
+            spaceId={doc.spaceId}
+            document={draft.content}
+            onChange={(content) =>
+              setDraft((current) =>
+                current ? { ...current, content } : current,
+              )
+            }
+          />
+        </div>
       </div>
       {confirmDelete ? (
         <ConfirmDialog
@@ -169,14 +198,14 @@ function draftFromDoc(
   doc: Extract<Doc, { type: typeof DocType.COMMON }>,
 ): DocDraft {
   return {
-    title: doc.title,
+    title: titleForEditing(doc.title),
     content: doc.body.content,
   };
 }
 
 function patchFromDraft(draft: DocDraft) {
   return {
-    title: draft.title.trim(),
+    title: titleForSaving(draft.title),
     body: { content: draft.content },
   };
 }

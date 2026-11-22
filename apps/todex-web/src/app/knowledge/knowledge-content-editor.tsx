@@ -6,10 +6,12 @@ import { TaskDescriptionEditor } from "../planning/task-description-editor";
 
 export function KnowledgeContentEditor({
   docId,
+  spaceId,
   document,
   onChange,
 }: {
   docId: string;
+  spaceId: string;
   document: ProseDoc;
   onChange: (next: ProseDoc) => void;
 }) {
@@ -19,6 +21,7 @@ export function KnowledgeContentEditor({
       content=""
       appearance="plain"
       knowledgeMode
+      knowledgeSpaceId={spaceId}
       excludeDocId={docId}
       document={
         (document.content ?? []).length > 0

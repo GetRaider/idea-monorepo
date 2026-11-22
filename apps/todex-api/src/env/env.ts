@@ -42,10 +42,16 @@ const envSchema = z.object({
     .enum(["development", "production", "test"])
     .optional()
     .default("development"),
+  TODEX_DEV_LOGIN: z
+    .string()
+    .optional()
+    .transform((value) => value?.toLowerCase() === "true"),
+  TODEX_DEV_PASSWORD: z.string().optional(),
 });
 
 const parsedEnv = envSchema.parse(process.env);
 assertTodexAiConfig(parsedEnv);
+assertDevLoginConfig(parsedEnv);
 
 export const env = {
   nodeEnv: parsedEnv.NODE_ENV,
@@ -62,6 +68,8 @@ export const env = {
   },
   auth: {
     secret: parsedEnv.BETTER_AUTH_SECRET,
+    devLogin: parsedEnv.TODEX_DEV_LOGIN === true,
+    devPassword: parsedEnv.TODEX_DEV_PASSWORD ?? "",
   },
   db: {
     connectionString: parsedEnv.DATABASE_URL,
@@ -116,6 +124,20 @@ export function assertTodexAiConfig(parsed: {
   }
   if (parsed.AI_WEB_SEARCH === "tool" && !parsed.SEARXNG_BASE_URL) {
     throw new Error("SEARXNG_BASE_URL is required when AI_WEB_SEARCH=tool");
+  }
+}
+
+export function assertDevLoginConfig(parsed: {
+  NODE_ENV: "development" | "production" | "test";
+  TODEX_DEV_LOGIN?: boolean;
+  TODEX_DEV_PASSWORD?: string;
+}): void {
+  if (!parsed.TODEX_DEV_LOGIN) return;
+  if (parsed.NODE_ENV === "production") {
+    throw new Error("TODEX_DEV_LOGIN must not be enabled in production");
+  }
+  if ((parsed.TODEX_DEV_PASSWORD ?? "").length < 8) {
+    throw new Error("TODEX_DEV_PASSWORD (8+ chars) is required when TODEX_DEV_LOGIN=true");
   }
 }
 

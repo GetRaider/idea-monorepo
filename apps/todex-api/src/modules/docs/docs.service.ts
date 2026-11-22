@@ -5,7 +5,7 @@ import {
   Injectable,
   Optional,
 } from "@nestjs/common";
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import {
@@ -39,6 +39,9 @@ import {
   calendarEvents,
   docFolders,
   docs,
+  knowledgeDatabases,
+  knowledgeDatabaseProperties,
+  knowledgeDatabaseRows,
   docTasks,
   epics,
   spaces,
@@ -225,6 +228,48 @@ export class DocsService {
     const parts = [row.plainText.content, row.plainText.why].filter(
       (part): part is string => Boolean(part),
     );
+    if (row.type === DocType.COMMON) {
+      const body = row.body as CommonDocBody;
+      const ids = new Set<string>();
+      const walk = (nodes: ProseDoc["content"]): void => {
+        for (const node of nodes ?? []) {
+          const id = node.type === "databaseView" ? node.attrs?.databaseId : null;
+          if (typeof id === "string" && ids.size < 5) ids.add(id);
+          walk(node.content);
+        }
+      };
+      walk(body.content.content);
+      for (const databaseId of ids) {
+        const [database] = await this.db.select().from(knowledgeDatabases)
+          .where(and(eq(knowledgeDatabases.id, databaseId),
+            eq(knowledgeDatabases.workspaceId, workspaceId))).limit(1);
+        if (!database) continue;
+        const [properties, records] = await Promise.all([
+          this.db.select().from(knowledgeDatabaseProperties)
+            .where(eq(knowledgeDatabaseProperties.databaseId, databaseId))
+            .orderBy(asc(knowledgeDatabaseProperties.position)),
+          this.db.select().from(knowledgeDatabaseRows)
+            .where(eq(knowledgeDatabaseRows.databaseId, databaseId))
+            .orderBy(asc(knowledgeDatabaseRows.position)).limit(30),
+        ]);
+        const fields = properties.slice(0, 20);
+        const lines = [
+          `Database: ${database.name}`,
+          fields.map((p) => `${p.name} (${p.type})`).join(" | "),
+          ...records.map((record) => {
+            const propertyText = fields.map((p) => {
+              const cell = record.cells[p.id];
+              return (Array.isArray(cell) ? cell.join(", ") : String(cell ?? ""))
+                .replace(/[\r\n|]/g, " ").slice(0, 120);
+            }).join(" | ");
+            const pageText = projectProse(record.content, () => true, () => "")
+              .plainText.slice(0, 350);
+            return pageText ? `${propertyText}\n${pageText}` : propertyText;
+          }),
+        ];
+        parts.push(lines.join("\n").slice(0, 4000));
+      }
+    }
     if (row.type === DocType.GOAL) {
       const body = readGoalDocBody(row.body);
       for (const criterion of [

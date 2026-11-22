@@ -29,7 +29,7 @@ Database rows are **not** stored inside ProseMirror JSON; the document contains 
 - `knowledge_database_rows` (database, cells JSONB keyed by stable property ID, position)
 - `knowledge_database_views` (database, kind, filters, sorts)
 
-All nested records are cascaded by database deletion. Removing a database *block* from a document intentionally **does not delete the database**. This avoids accidental data loss if users remove or rearrange an embed. An explicit database management/deletion UX and orphan cleanup must be added separately. Documents can be moved across Spaces within the same workspace without invalidating references.
+All nested records are cascaded by database deletion. Removing a database _block_ from a document intentionally **does not delete the database**. This avoids accidental data loss if users remove or rearrange an embed. An explicit database management/deletion UX and orphan cleanup must be added separately. Documents can be moved across Spaces within the same workspace without invalidating references.
 
 Title is the required first column. Other property types are validated on writes and cannot be changed while populated, avoiding silent conversion/data corruption.
 
@@ -55,8 +55,70 @@ Title is the required first column. Other property types are validated on writes
 9. Test the prior Toggle and Checklist blocks and simple tables independently (in PR #54).
 10. Confirm the agent index includes a bounded database preview after an embed exists and after row edits.
 
-**Note:** This is an implementation draft. The integration in this environment cannot run the full application, and handwritten migration files should be reconciled with Drizzle-generated snapshots before production merge.
+**Note:** This is an implementation draft. Handwritten migration files should be reconciled with Drizzle-generated snapshots before production merge.
 
+### Local verification (2026-11-21)
+
+- `pnpm install --frozen-lockfile` succeeds with the regenerated lockfile.
+- `pnpm --filter todex-api db:migrate` applies `0037` and `0038` cleanly to a copy of the local dev database.
+- `todex-web` tests: 119/119 pass. `todex-api` tests: 163/166 pass; the 3 failures (`mcp-tools.test.ts`, `task-tool-handler.test.ts`) are in files this branch does not touch and also fail on `main`.
+- `todex-web` production build fails on 26 type errors, all in files this branch does not touch: React 19 code is checked against the `@types/react` 18 catalog version. This also affects `main` and should be fixed separately.
+- API and web dev servers start.
+
+### Browser QA (2026-11-22, local test users)
+
+Run with the local test login (`TODEX_DEV_LOGIN`), as `dev@todex.test`, with `dev2@todex.test` for cross-workspace checks.
+
+Fixed during QA: every property/row/view write returned 500 after committing, so the grid did not refresh. The reindex lookup passed the database id to `jsonb_build_object` as an untyped parameter (`could not determine data type of parameter`). It is now cast to `text` and covered by a unit test.
+
+Passed:
+
+- `/database` inserts a Database table; the embed persists across reload.
+- Add Number and Checkbox properties; add rows; edit number, checkbox and record name; values persist across reload.
+- Changing the type of a populated property is rejected (400).
+- Sort by number ascending (2, 10, empty) and descending (10, 2, empty); empty stays last; saved sort survives reload.
+- Number filter (`greater than 5`) applies and is saved.
+- Deleting a property removes its values and the sort/filter that used it; other cells remain. Deleting a row works.
+- Cross-workspace: as `dev2@todex.test`, every database, property, row, page and view endpoint returns 404; no session returns 401.
+- Clicking a record opens Side Peek with properties and a rich page body; edits save. **Open full page** shows the same content, properties and edits, and survives reload.
+- Stale page version returns 409; the open editor shows "Conflict — reload required" instead of overwriting.
+- Checklist, toggle and a simple table nested in a toggle still insert and persist.
+
+Not covered:
+
+- Select, Multi-select and Date properties, and text/checkbox/date filters.
+- Rows created before migration `0038` (the QA database was created after it).
+- Moving the doc's Space, and the agent index preview (needs the Ollama embedding worker running).
+- Delete confirmations use `window.confirm`, which the test browser dismisses; the delete paths were exercised through the API instead.
+
+Issues seen:
+
+- The toggle "Toggle heading" text is fixed in the editor pass below.
+- The grid shifted down about 40px after the first cell edit in a new document. It did not reproduce in the editor pass below (the database was not the first block there).
+
+### Knowledge Doc Editor pass (2026-11-22)
+
+Every block in the slash menu, Markdown shortcuts, inline formatting, mentions and reload were checked in the browser.
+
+Working as expected: paragraph, bulleted list (`- `), numbered list, checklist, blockquote, code block, callout, divider, simple table (Tab between cells, typing below it), database table, image rendering, bold (bubble menu), italic (Cmd+I), URL autolink, `@` mentions of docs, and full persistence across reload.
+
+Fixed:
+
+- **Title.** Enter inserted a newline into the title (it is a textarea), so whatever you typed next went into the title. Enter now moves into the body, newlines (including pasted ones) are collapsed, and the title grows with its text instead of scrolling inside two fixed rows.
+- **"Untitled" was real text.** New docs showed "Untitled" as an editable value, so typing appended to it. It is now the placeholder; an empty title is saved as "Untitled". Body edits were also silently not saved while the title was empty; they are now.
+- **`# ` did nothing.** The slash menu's Heading 1–3 are h2–h4 (the page title is the h1), but Markdown shortcuts used StarterKit's levels, so `# ` was ignored and `## ` made Heading 1. `#`, `##` and `###` now match Heading 1–3.
+- **Toggle.** Inserted with a literal "Toggle heading" and the cursor in the body. It now starts empty with a "Toggle" placeholder and the cursor in the title. Enter in the title moves into the empty body (Tiptap inserted a stray paragraph, which broke double-Enter exit), and double Enter exits.
+- **Toggle shown collapsed while open.** A Tiptap race (the node view toggles, rather than sets, its open class in a timeout) could render a new toggle collapsed, sending Enter past it. The rendered state is now re-synced with the `open` attribute.
+- **Collapsing the first block did not persist.** Tiptap skips persisting when the toggle is at position 0. Collapse/expand of a first-block toggle is now saved.
+- **Links and inline code were unstyled.** Autolinked URLs looked like plain text. Links are now underlined in the primary color, and inline code has a mono font and background.
+- **Table toolbar covered the row above.** It is now anchored above the table.
+
+Not covered or limited:
+
+- "Image from URL" asks for the address with `window.prompt`, which the test browser dismisses; image rendering was checked by inserting an image node directly. A proper URL input is a follow-up.
+- Inline code via backticks and Cmd+E could not be typed in the test browser (the key is intercepted); the `code` mark exists and is now styled.
+- The bubble menu has bold, italic, strike and lists only: no link or inline-code buttons.
+- Mentions render as "@Doc <title>"; Notion shows the title only.
 
 ## Knowledge Editor V3: database pages (same PR)
 

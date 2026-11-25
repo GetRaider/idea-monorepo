@@ -2,12 +2,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ScrollView, View } from 'react-native';
 
+import type { CreateHabitInput } from '@repo/evolin-shared';
+
 import { Button, Text } from '@/components/ui';
-import {
-  HabitForm,
-  type HabitFormPayload,
-  type HabitFormValues,
-} from '@/features/habits';
+import { HabitForm, type HabitFormValues } from '@/features/habits';
 import { getHabit, updateHabit } from '@/lib/api/habits';
 
 export default function EditHabitScreen() {
@@ -19,7 +17,7 @@ export default function EditHabitScreen() {
     queryFn: () => getHabit(habitId),
   });
   const updateMutation = useMutation({
-    mutationFn: (values: HabitFormPayload) => updateHabit(habitId, values),
+    mutationFn: (values: CreateHabitInput) => updateHabit(habitId, values),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['habits'] });
       void queryClient.invalidateQueries({ queryKey: ['habit', habitId] });
@@ -39,22 +37,23 @@ export default function EditHabitScreen() {
     return (
       <View className="flex-1 items-center justify-center gap-3 bg-background">
         <Text>This habit is gone.</Text>
-        <Button onPress={() => router.replace('/')}>Back to habits</Button>
+        <Button onPress={() => router.replace('/board')}>
+          Back to the board
+        </Button>
       </View>
     );
   }
 
   const habit = habitQuery.data.habit;
   const initialValues: HabitFormValues = {
-    title: habit.title,
-    description: habit.description ?? '',
-    category: habit.category,
-    why: habit.why ?? '',
-    minimumAction: habit.minimumAction ?? '',
-    trigger: habit.trigger ?? '',
-    weekdays: habit.weekdays ?? [],
-    estimatedDurationMinutes:
-      habit.estimatedDurationMinutes?.toString() ?? '',
+    name: habit.name,
+    lifeAreaId: habit.lifeAreaId,
+    why: habit.why,
+    trigger: habit.trigger,
+    acceptanceCriteria: habit.acceptanceCriteria,
+    checkpointsPerDay: String(habit.checkpointsPerDay),
+    checkpointLabels: habit.checkpointLabels?.join(', ') ?? '',
+    weekdays: habit.weekdays,
   };
 
   return (
@@ -64,13 +63,13 @@ export default function EditHabitScreen() {
       keyboardShouldPersistTaps="handled"
     >
       <View className="w-full max-w-[720px] gap-5">
-        <Text className="text-2xl font-bold">Edit plan</Text>
+        <Text className="text-2xl font-bold">Edit habit</Text>
         <HabitForm
           key={habit.updatedAt}
           initialValues={initialValues}
-          mode="edit"
-          capacityFull={false}
           isPending={updateMutation.isPending}
+          lifeAreaLocked={habit.status !== 'backlog'}
+          mode="edit"
           serverError={updateMutation.error?.message}
           onSubmit={(values) => updateMutation.mutate(values)}
         />

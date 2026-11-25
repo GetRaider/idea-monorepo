@@ -6,7 +6,11 @@ import type { Pool } from 'pg';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
-import { isoWeekday } from '@repo/evolin-shared';
+import {
+  addDays,
+  isoWeekday,
+  type CreateHabitInput,
+} from '@repo/evolin-shared';
 
 import { AppModule } from '../src/app.module';
 import { DATABASE_POOL } from '../src/database/database.module';
@@ -27,157 +31,215 @@ describe('habits API', () => {
   });
 
   beforeEach(async () => {
-    await pool.query(
-      'truncate table habit_status_events, practice_records, habits cascade',
-    );
+    await pool.query('truncate table check_ins, habits cascade');
   });
 
   afterAll(async () => {
     await app.close();
   });
 
-  it('rejects a fourth establishing habit without changing it', async () => {
-    for (const title of ['One', 'Two', 'Three']) {
-      await createEstablishingHabit(server, title).expect(201);
-    }
+  it('blocks a third establishing habit in a full life area and allows another area', async () => {
+    const first = await createHabit(server, 'One');
+    const second = await createHabit(server, 'Two');
+    const third = await createHabit(server, 'Three');
+    const elsewhere = await createHabit(server, 'Elsewhere', 'mind');
 
-    const backlogResponse = await request(server)
-      .post('/v1/habits')
-      .send({
-        ...completeHabit('Four'),
-        ...requestContext(),
-        startEstablishing: false,
-      })
-      .expect(201);
+    await startHabit(server, first).expect(200);
+    await startHabit(server, second).expect(200);
 
-    const response = await request(server)
-      .post(`/v1/habits/${backlogResponse.body.habit.id}/activate`)
-      .send(requestContext())
-      .expect(409);
-
-    expect(response.body.code).toBe('CAPACITY_EXCEEDED');
+    const blocked = await startHabit(server, third).expect(409);
+    expect(blocked.body.code).toBe('AREA_FULL');
+    expect(blocked.body.message).toContain('Health is full');
 
     const detail = await request(server)
-      .get(`/v1/habits/${backlogResponse.body.habit.id}`)
+      .get(`/v1/habits/${third}`)
       .query(requestContext())
       .expect(200);
     expect(detail.body.habit.status).toBe('backlog');
+
+    const started = await startHabit(server, elsewhere).expect(200);
+    expect(started.body.habit.status).toBe('establishing');
+    const health = started.body.lifeAreas.find(
+      (lifeArea: { id: string }) => lifeArea.id === 'health',
+    );
+    expect(health.slotsUsed).toBe(2);
   });
 
-  it('upserts one practice row and preserves it after a schedule edit', async () => {
-    const createResponse = await createEstablishingHabit(server, 'Walk').expect(
-      201,
-    );
-    const habitId = createResponse.body.habit.id as string;
+  it('stores a skip reason and rejects a skip without one', async () => {
+    const habitId = await createHabit(server, 'Walk');
+    await startHabit(server, habitId).expect(200);
     const context = requestContext();
 
-    await request(server)
-      .put(`/v1/habits/${habitId}/practices/${context.date}`)
-      .send({ outcome: 'completed', timeZone: context.timeZone })
-      .expect(200);
+    const rejected = await request(server)
+      .put(`/v1/habits/${habitId}/check-ins/${context.date}/0`)
+      .send({ status: 'skipped', timeZone: context.timeZone })
+      .expect(400);
+    expect(rejected.body.code).toBe('VALIDATION_ERROR');
 
     await request(server)
-      .patch(`/v1/habits/${habitId}`)
+      .put(`/v1/habits/${habitId}/check-ins/${context.date}/0`)
       .send({
-        weekdays: [isoWeekday(context.date, context.timeZone) === 1 ? 2 : 1],
-        ...context,
+        status: 'skipped',
+        skipReason: 'travel',
+        timeZone: context.timeZone,
       })
       .expect(200);
 
-    await request(server)
-      .put(`/v1/habits/${habitId}/practices/${context.date}`)
-      .send({ outcome: 'skipped', timeZone: context.timeZone })
+    const detail = await request(server)
+      .get(`/v1/habits/${habitId}`)
+      .query(context)
       .expect(200);
+    expect(detail.body.habit.todayCheckpoints[0]).toMatchObject({
+      status: 'skipped',
+      skipReason: 'travel',
+    });
+    expect(detail.body.checkIns).toHaveLength(1);
+  });
+
+  it('records checkpoints independently', async () => {
+    const habitId = await createHabit(server, 'Water', 'health', {
+      checkpointsPerDay: 3,
+    });
+    await startHabit(server, habitId).expect(200);
+    const context = requestContext();
+
+    await request(server)
+      .put(`/v1/habits/${habitId}/check-ins/${context.date}/0`)
+      .send({ status: 'completed', timeZone: context.timeZone })
+      .expect(200);
+    await request(server)
+      .put(`/v1/habits/${habitId}/check-ins/${context.date}/1`)
+      .send({ status: 'failed', timeZone: context.timeZone })
+      .expect(200);
+
+    const detail = await request(server)
+      .get(`/v1/habits/${habitId}`)
+      .query(context)
+      .expect(200);
+    expect(
+      detail.body.habit.todayCheckpoints.map(
+        (checkpoint: { status: string }) => checkpoint.status,
+      ),
+    ).toEqual(['completed', 'failed', 'open']);
+  });
+
+  it('establishes on the rule and keeps check-in history', async () => {
+    const habitId = await createHabit(server, 'Wake up');
+    await startHabit(server, habitId).expect(200);
+    const context = requestContext();
+    const startedOn = addDays(context.date, -29);
+
+    await pool.query(
+      `update habits set establishing_started_at = $2 where id = $1`,
+      [habitId, new Date(`${startedOn}T12:00:00.000Z`)],
+    );
+    for (let offset = 1; offset <= 8; offset += 1) {
+      await pool.query(
+        `insert into check_ins (
+          id, habit_id, check_in_date, checkpoint_index, status, created_at, updated_at
+        ) values ($1, $2, $3, 0, 'completed', now(), now())`,
+        [crypto.randomUUID(), habitId, addDays(context.date, -offset)],
+      );
+    }
+    await pool.query(
+      `insert into check_ins (
+        id, habit_id, check_in_date, checkpoint_index, status, created_at, updated_at
+      ) values ($1, $2, $3, 0, 'failed', now(), now())`,
+      [crypto.randomUUID(), habitId, addDays(context.date, -9)],
+    );
+
+    const stillEstablishing = await request(server)
+      .get(`/v1/habits/${habitId}`)
+      .query(context)
+      .expect(200);
+    expect(stillEstablishing.body.habit.status).toBe('establishing');
+    expect(stillEstablishing.body.habit.completionRate).toBeCloseTo(8 / 9);
+
+    const established = await request(server)
+      .put(`/v1/habits/${habitId}/check-ins/${context.date}/0`)
+      .send({ status: 'completed', timeZone: context.timeZone })
+      .expect(200);
+    expect(established.body.habit.status).toBe('established');
+    expect(established.body.habit.establishedAt).toEqual(expect.any(String));
+    const health = established.body.lifeAreas.find(
+      (lifeArea: { id: string }) => lifeArea.id === 'health',
+    );
+    expect(health.slotsUsed).toBe(0);
 
     const history = await request(server)
-      .get(`/v1/habits/${habitId}/practices`)
-      .query({
-        timeZone: context.timeZone,
-        from: context.date,
-        to: context.date,
-      })
+      .get(`/v1/habits/${habitId}`)
+      .query(context)
       .expect(200);
-
-    expect(history.body.practices).toHaveLength(1);
-    expect(history.body.practices[0].outcome).toBe('skipped');
+    expect(history.body.checkIns).toHaveLength(10);
+    expect(history.body.habit.scheduledToday).toBe(false);
   });
 
-  it('rejects a new practice row whose weekday is off-schedule', async () => {
+  it('keeps a streak across a skip and drops it on a failure', async () => {
+    const habitId = await createHabit(server, 'Read', 'health', {
+      weekdays: [1, 2, 3, 4, 5, 6, 7],
+    });
+    await startHabit(server, habitId).expect(200);
     const context = requestContext();
-    const todayWeekday = isoWeekday(context.date, context.timeZone);
-    const createResponse = await request(server)
-      .post('/v1/habits')
-      .send({
-        ...completeHabit('Off schedule'),
-        weekdays: [todayWeekday === 1 ? 2 : 1],
-        ...context,
-        startEstablishing: true,
-      })
-      .expect(201);
-
-    const response = await request(server)
-      .put(
-        `/v1/habits/${createResponse.body.habit.id}/practices/${context.date}`,
-      )
-      .send({ outcome: 'completed', timeZone: context.timeZone })
-      .expect(409);
-
-    expect(response.body.code).toBe('PRACTICE_NOT_SCHEDULED');
-  });
-
-  it('graduates without deleting practice history', async () => {
-    const createResponse = await createEstablishingHabit(server, 'Read').expect(
-      201,
+    await pool.query(
+      `update habits set establishing_started_at = $2 where id = $1`,
+      [habitId, new Date(`${addDays(context.date, -10)}T12:00:00.000Z`)],
     );
-    const habitId = createResponse.body.habit.id as string;
-    const context = requestContext();
+    for (let offset = 1; offset <= 6; offset += 1) {
+      await pool.query(
+        `insert into check_ins (
+          id, habit_id, check_in_date, checkpoint_index, status, created_at, updated_at
+        ) values ($1, $2, $3, 0, 'completed', now(), now())`,
+        [crypto.randomUUID(), habitId, addDays(context.date, -offset)],
+      );
+    }
 
-    await request(server)
-      .put(`/v1/habits/${habitId}/practices/${context.date}`)
-      .send({ outcome: 'completed', timeZone: context.timeZone })
-      .expect(200);
-
-    const graduate = await request(server)
-      .post(`/v1/habits/${habitId}/graduate`)
-      .send(context)
-      .expect(200);
-
-    expect(graduate.body.habit.status).toBe('established');
-    expect(graduate.body.capacity.used).toBe(0);
-
-    const history = await request(server)
-      .get(`/v1/habits/${habitId}/practices`)
-      .query({
+    const skipped = await request(server)
+      .put(`/v1/habits/${habitId}/check-ins/${context.date}/0`)
+      .send({
+        status: 'skipped',
+        skipReason: 'day_off',
         timeZone: context.timeZone,
-        from: context.date,
-        to: context.date,
       })
       .expect(200);
-    expect(history.body.practices).toHaveLength(1);
+    expect(skipped.body.habit.streak).toBe(6);
+
+    const failed = await request(server)
+      .put(`/v1/habits/${habitId}/check-ins/${context.date}/0`)
+      .send({ status: 'failed', timeZone: context.timeZone })
+      .expect(200);
+    expect(failed.body.habit.streak).toBe(0);
   });
 });
 
-function createEstablishingHabit(server: Server, title: string) {
-  return request(server)
+async function createHabit(
+  server: Server,
+  name: string,
+  lifeAreaId: CreateHabitInput['lifeAreaId'] = 'health',
+  overrides: Partial<CreateHabitInput> = {},
+): Promise<string> {
+  const context = requestContext();
+  const response = await request(server)
     .post('/v1/habits')
     .send({
-      ...completeHabit(title),
-      ...requestContext(),
-      startEstablishing: true,
-    });
+      lifeAreaId,
+      name,
+      why: 'It matters',
+      trigger: 'After breakfast',
+      acceptanceCriteria: 'Do the action once',
+      checkpointsPerDay: 1,
+      checkpointLabels: null,
+      weekdays: [isoWeekday(context.date, context.timeZone)],
+      ...overrides,
+    })
+    .expect(201);
+
+  return response.body.habit.id as string;
 }
 
-function completeHabit(title: string) {
-  const context = requestContext();
-  return {
-    title,
-    category: 'health',
-    why: 'It matters',
-    minimumAction: 'Do one minute',
-    trigger: 'After breakfast',
-    weekdays: [isoWeekday(context.date, context.timeZone)],
-    estimatedDurationMinutes: 1,
-  };
+function startHabit(server: Server, habitId: string) {
+  return request(server)
+    .post(`/v1/habits/${habitId}/start`)
+    .send(requestContext());
 }
 
 function requestContext() {

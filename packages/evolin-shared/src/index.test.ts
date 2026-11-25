@@ -1,14 +1,7 @@
 import { createRequire } from 'node:module';
 import { describe, expect, it } from 'vitest';
 
-import {
-  IncompletePlanError,
-  assertCompletePlan,
-  getIncompletePlanFields,
-  isoWeekday,
-  isPlanComplete,
-  isScheduledWeekday,
-} from './index';
+import { isoWeekday, isScheduledWeekday } from './index';
 
 describe('isoWeekday', () => {
   it('returns ISO weekdays without timezone drift', () => {
@@ -26,40 +19,12 @@ describe('schedule membership', () => {
   });
 });
 
-describe('plan completeness', () => {
-  const completePlan = {
-    why: 'Feel stronger',
-    minimumAction: 'Do one push-up',
-    trigger: 'After brushing my teeth',
-    weekdays: [1, 3, 5],
-    estimatedDurationMinutes: 2,
-  };
-
-  it('accepts a complete plan', () => {
-    expect(isPlanComplete(completePlan)).toBe(true);
-    expect(() => assertCompletePlan(completePlan)).not.toThrow();
-  });
-
+describe('package dist', () => {
   it('loads the CommonJS dist from require', () => {
     const requireDist = createRequire(__filename);
     const dist = requireDist('../dist/index.js') as typeof import('./index');
-    expect(dist.ACTIVE_HABIT_MAXIMUM).toBe(3);
-    expect(dist.ACTIVE_HABIT_RECOMMENDED).toBe(2);
-  });
-
-  it('lists every missing field', () => {
-    const incompletePlan = {
-      ...completePlan,
-      why: ' ',
-      weekdays: null,
-      estimatedDurationMinutes: null,
-    };
-
-    expect(getIncompletePlanFields(incompletePlan)).toEqual([
-      'why',
-      'weekdays',
-      'estimatedDurationMinutes',
-    ]);
-    expect(() => assertCompletePlan(incompletePlan)).toThrow(IncompletePlanError);
+    expect(dist.DEFAULT_SLOT_LIMIT).toBe(2);
+    expect(dist.ESTABLISHMENT_WINDOW_DAYS).toBe(30);
+    expect(dist.ESTABLISHMENT_COMPLETION_THRESHOLD).toBe(0.9);
   });
 });

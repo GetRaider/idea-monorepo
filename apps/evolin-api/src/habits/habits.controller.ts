@@ -10,154 +10,95 @@ import {
   Post,
   Put,
   Query,
-} from '@nestjs/common';
-import { z } from 'zod';
+} from "@nestjs/common";
 
 import {
   createHabitSchema,
-  practiceHistoryQuerySchema,
-  putPracticeSchema,
+  isoDateSchema,
+  putCheckInSchema,
   requestContextSchema,
-  timeZoneSchema,
-  transitionHabitSchema,
+  startEstablishingSchema,
   updateHabitSchema,
   type CreateHabitInput,
-  type PracticeHistoryQuery,
-  type PutPracticeInput,
-  type TransitionHabitInput,
+  type PutCheckInInput,
+  type RequestContext,
   type UpdateHabitInput,
-} from '@repo/evolin-shared';
+} from "@repo/evolin-shared";
 
-import { ZodPipe } from '../http/zod.pipe';
-import { type HabitAction } from './habit-transitions';
-import { HabitsService } from './habits.service';
+import { ApiError } from "../http/api-error";
+import { ZodPipe } from "../http/zod.pipe";
+import { HabitsService } from "./habits.service";
 
-const deletePracticeQuerySchema = z
-  .object({ timeZone: timeZoneSchema })
-  .strict();
-
-@Controller('habits')
+@Controller("habits")
 export class HabitsController {
   constructor(
     @Inject(HabitsService) private readonly habitsService: HabitsService,
   ) {}
 
   @Get()
-  list(
-    @Query(new ZodPipe(requestContextSchema)) query: TransitionHabitInput,
-  ) {
+  list(@Query(new ZodPipe(requestContextSchema)) query: RequestContext) {
     return this.habitsService.list(query);
   }
 
   @Post()
   @HttpCode(201)
-  create(
-    @Body(new ZodPipe(createHabitSchema)) body: CreateHabitInput,
-  ) {
+  create(@Body(new ZodPipe(createHabitSchema)) body: CreateHabitInput) {
     return this.habitsService.create(body);
   }
 
-  @Get(':id')
+  @Get("week")
+  week(@Query(new ZodPipe(requestContextSchema)) query: RequestContext) {
+    return this.habitsService.week(query);
+  }
+
+  @Get(":id")
   detail(
-    @Param('id') habitId: string,
-    @Query(new ZodPipe(requestContextSchema)) query: TransitionHabitInput,
+    @Param("id") habitId: string,
+    @Query(new ZodPipe(requestContextSchema)) query: RequestContext,
   ) {
     return this.habitsService.detail(habitId, query);
   }
 
-  @Patch(':id')
+  @Patch(":id")
   update(
-    @Param('id') habitId: string,
+    @Param("id") habitId: string,
     @Body(new ZodPipe(updateHabitSchema)) body: UpdateHabitInput,
   ) {
     return this.habitsService.update(habitId, body);
   }
 
-  @Delete(':id')
+  @Delete(":id")
   @HttpCode(204)
-  async delete(@Param('id') habitId: string): Promise<void> {
+  async delete(@Param("id") habitId: string): Promise<void> {
     await this.habitsService.delete(habitId);
   }
 
-  @Post(':id/activate')
+  @Post(":id/start")
   @HttpCode(200)
-  activate(
-    @Param('id') habitId: string,
-    @Body(new ZodPipe(transitionHabitSchema)) body: TransitionHabitInput,
+  start(
+    @Param("id") habitId: string,
+    @Body(new ZodPipe(startEstablishingSchema)) body: RequestContext,
   ) {
-    return this.transition(habitId, 'activate', body);
+    return this.habitsService.startEstablishing(habitId, body);
   }
 
-  @Post(':id/pause')
-  @HttpCode(200)
-  pause(
-    @Param('id') habitId: string,
-    @Body(new ZodPipe(transitionHabitSchema)) body: TransitionHabitInput,
+  @Put(":id/check-ins/:date/:checkpointIndex")
+  putCheckIn(
+    @Param("id") habitId: string,
+    @Param("date") date: string,
+    @Param("checkpointIndex") checkpointIndex: string,
+    @Body(new ZodPipe(putCheckInSchema)) body: PutCheckInInput,
   ) {
-    return this.transition(habitId, 'pause', body);
-  }
+    isoDateSchema.parse(date);
+    const parsedIndex = Number(checkpointIndex);
+    if (!Number.isInteger(parsedIndex) || parsedIndex < 0) {
+      throw new ApiError(
+        400,
+        "VALIDATION_ERROR",
+        "Checkpoint index must be a whole number.",
+      );
+    }
 
-  @Post(':id/resume')
-  @HttpCode(200)
-  resume(
-    @Param('id') habitId: string,
-    @Body(new ZodPipe(transitionHabitSchema)) body: TransitionHabitInput,
-  ) {
-    return this.transition(habitId, 'resume', body);
-  }
-
-  @Post(':id/backlog')
-  @HttpCode(200)
-  moveToBacklog(
-    @Param('id') habitId: string,
-    @Body(new ZodPipe(transitionHabitSchema)) body: TransitionHabitInput,
-  ) {
-    return this.transition(habitId, 'backlog', body);
-  }
-
-  @Post(':id/graduate')
-  @HttpCode(200)
-  graduate(
-    @Param('id') habitId: string,
-    @Body(new ZodPipe(transitionHabitSchema)) body: TransitionHabitInput,
-  ) {
-    return this.transition(habitId, 'graduate', body);
-  }
-
-  @Put(':id/practices/:date')
-  putPractice(
-    @Param('id') habitId: string,
-    @Param('date') date: string,
-    @Body(new ZodPipe(putPracticeSchema)) body: PutPracticeInput,
-  ) {
-    return this.habitsService.putPractice(habitId, date, body);
-  }
-
-  @Delete(':id/practices/:date')
-  @HttpCode(204)
-  async deletePractice(
-    @Param('id') habitId: string,
-    @Param('date') date: string,
-    @Query(new ZodPipe(deletePracticeQuerySchema))
-    query: z.infer<typeof deletePracticeQuerySchema>,
-  ): Promise<void> {
-    await this.habitsService.deletePractice(habitId, date, query.timeZone);
-  }
-
-  @Get(':id/practices')
-  listPractices(
-    @Param('id') habitId: string,
-    @Query(new ZodPipe(practiceHistoryQuerySchema))
-    query: PracticeHistoryQuery,
-  ) {
-    return this.habitsService.listPractices(habitId, query);
-  }
-
-  private transition(
-    habitId: string,
-    action: HabitAction,
-    body: TransitionHabitInput,
-  ) {
-    return this.habitsService.transition(habitId, action, body);
+    return this.habitsService.putCheckIn(habitId, date, parsedIndex, body);
   }
 }

@@ -1,15 +1,18 @@
-import * as LabelPrimitive from '@rn-primitives/label';
+import * as LabelPrimitive from "@rn-primitives/label";
 
-import { cn } from '@/lib/utils';
+import { Text } from "@/components/ui/text";
+import { cn } from "@/lib/utils";
 
 export function Label({
   className,
+  children,
   ...props
 }: React.ComponentProps<typeof LabelPrimitive.Root> & { className?: string }) {
   return (
-    <LabelPrimitive.Root
-      className={cn('text-sm font-semibold text-foreground', className)}
-      {...props}
-    />
+    <LabelPrimitive.Root {...props}>
+      <Text className={cn("text-sm font-semibold text-foreground", className)}>
+        {children}
+      </Text>
+    </LabelPrimitive.Root>
   );
 }

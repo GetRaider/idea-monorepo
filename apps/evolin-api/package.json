@@ -8,6 +8,7 @@
     "dev": "NODE_ENV=development nest start --watch",
     "prod": "NODE_ENV=production node dist/main",
     "lint": "eslint \"{src,test}/**/*.ts\"",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "vitest run --config vitest.e2e.config.ts",

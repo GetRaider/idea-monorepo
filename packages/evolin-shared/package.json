@@ -17,6 +17,7 @@
     "clean": "rm -rf dist coverage .turbo",
     "dev": "tsc -p tsconfig.json --watch",
     "lint": "eslint src",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "test:watch": "vitest"
   },

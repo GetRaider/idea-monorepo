@@ -1,215 +1,185 @@
-import { Inject, Injectable } from '@nestjs/common';
-import {
-  and,
-  asc,
-  count,
-  desc,
-  eq,
-  gte,
-  lte,
-  sql,
-} from 'drizzle-orm';
+import { Inject, Injectable, type OnModuleInit } from "@nestjs/common";
+import { and, asc, count, desc, eq, gte, sql } from "drizzle-orm";
 
 import {
-  ACTIVE_HABIT_MAXIMUM,
-  ACTIVE_HABIT_RECOMMENDED,
-  IncompletePlanError,
-  assertCompletePlan,
+  LIFE_AREAS,
+  addDays,
+  currentStreak,
+  isoDateSchema,
   isoWeekday,
   isScheduledWeekday,
   localDateInTimeZone,
-  type Capacity,
+  summarizeEstablishment,
+  weekCellState,
+  type CheckIn,
   type CreateHabitInput,
   type Habit,
   type HabitDetailResponse,
   type HabitListResponse,
   type HabitMutationResponse,
-  type HabitStatus,
-  type Practice,
-  type PracticeHistoryQuery,
-  type PutPracticeInput,
-  type TransitionHabitInput,
+  type LifeArea,
+  type PutCheckInInput,
+  type RequestContext,
+  type TodayCheckpoint,
   type UpdateHabitInput,
-} from '@repo/evolin-shared';
+  type WeekResponse,
+} from "@repo/evolin-shared";
 
-import { DATABASE, type Database } from '../database/database.module';
+import { DATABASE, type Database } from "../database/database.module";
 import {
-  habitStatusEvents,
+  checkIns,
   habits,
-  practiceRecords,
+  lifeAreas,
+  type CheckInRow,
   type HabitRow,
-  type HabitStatusEventRow,
-  type PracticeRecordRow,
-} from '../database/schema';
-import { ApiError } from '../http/api-error';
-import {
-  InvalidTransitionError,
-  resolveHabitTransition,
-  type HabitAction,
-} from './habit-transitions';
-import {
-  PracticeDateInFutureError,
-  PracticeNotAllowedError,
-  PracticeNotScheduledError,
-  assertPracticeInsertIsScheduled,
-  isDateDuringEstablishing,
-  recentDates,
-  validatePracticeDate,
-} from './practice-rules';
+  type LifeAreaRow,
+} from "../database/schema";
+import { ApiError } from "../http/api-error";
 
 @Injectable()
-export class HabitsService {
+export class HabitsService implements OnModuleInit {
   constructor(@Inject(DATABASE) private readonly database: Database) {}
 
-  async list(input: TransitionHabitInput): Promise<HabitListResponse> {
-    this.assertCurrentLocalDate(input);
+  async onModuleInit(): Promise<void> {
+    await this.database
+      .insert(lifeAreas)
+      .values(
+        LIFE_AREAS.map((lifeArea) => ({
+          id: lifeArea.id,
+          name: lifeArea.name,
+          slotLimit: lifeArea.slotLimit,
+        })),
+      )
+      .onConflictDoNothing();
+  }
 
-    const [rows, capacity] = await Promise.all([
+  async list(input: RequestContext): Promise<HabitListResponse> {
+    this.assertCurrentLocalDate(input);
+    const [lifeAreaViews, habitRows, checkInRows] = await Promise.all([
+      this.listLifeAreas(),
       this.database
-        .select({ habit: habits, practice: practiceRecords })
+        .select()
         .from(habits)
-        .leftJoin(
-          practiceRecords,
-          and(
-            eq(practiceRecords.habitId, habits.id),
-            eq(practiceRecords.practiceDate, input.date),
-          ),
-        )
         .orderBy(
           sql`case ${habits.status}
             when 'establishing' then 1
-            when 'paused' then 2
-            when 'backlog' then 3
-            else 4
+            when 'backlog' then 2
+            else 3
           end`,
-          desc(habits.updatedAt),
+          asc(habits.name),
         ),
-      this.getCapacity(),
+      this.database.select().from(checkIns),
     ]);
+    const checkInsByHabit = groupCheckIns(checkInRows);
 
     return {
-      capacity,
-      habits: rows.map(({ habit, practice }) =>
-        this.toHabit(habit, input, practice),
+      lifeAreas: lifeAreaViews,
+      habits: habitRows.map((habit) =>
+        this.toHabit(habit, checkInsByHabit.get(habit.id) ?? [], input),
       ),
     };
   }
 
+  async week(input: RequestContext): Promise<WeekResponse> {
+    const today = localDateInTimeZone(new Date(), input.timeZone);
+    if (input.date > today) {
+      throw new ApiError(
+        400,
+        "DATE_IN_FUTURE",
+        "That week has not happened yet.",
+      );
+    }
+
+    const dates = Array.from({ length: 7 }, (_, index) =>
+      addDays(input.date, index - 6),
+    );
+    const [habitRows, checkInRows] = await Promise.all([
+      this.database.select().from(habits).orderBy(asc(habits.name)),
+      this.database.select().from(checkIns),
+    ]);
+    const checkInsByHabit = groupCheckIns(checkInRows);
+    const streakContext = { timeZone: input.timeZone, date: today };
+
+    return {
+      anchorDate: input.date,
+      days: dates.map((date) => ({ date })),
+      habits: habitRows
+        .filter((habit) => habit.status !== "backlog")
+        .map((habit) => {
+          const habitCheckIns = checkInsByHabit.get(habit.id) ?? [];
+          const view = this.toHabit(habit, habitCheckIns, streakContext);
+          return {
+            id: habit.id,
+            name: habit.name,
+            lifeAreaId: view.lifeAreaId,
+            status: habit.status,
+            streak: view.streak,
+            checkpointsPerDay: habit.checkpointsPerDay,
+            days: dates.map((date) => ({
+              date,
+              state: weekCellState({
+                scheduled: isTrackedOnDate(habit, date, input.timeZone),
+                checkpointsPerDay: habit.checkpointsPerDay,
+                checkIns: habitCheckIns
+                  .filter((checkIn) => checkIn.checkInDate === date)
+                  .map((checkIn) => ({ status: checkIn.status })),
+              }),
+            })),
+          };
+        }),
+    };
+  }
+
   async create(input: CreateHabitInput): Promise<HabitMutationResponse> {
-    this.assertCurrentLocalDate(input);
+    await this.requireLifeArea(input.lifeAreaId);
     const now = new Date();
-    const status: HabitStatus = input.startEstablishing
-      ? 'establishing'
-      : 'backlog';
-
-    const habit = await this.database.transaction(async (transaction) => {
-      if (status === 'establishing') {
-        this.assertPlanIsComplete(input);
-        await transaction.execute(sql`select pg_advisory_xact_lock(841001)`);
-        await this.assertCapacityAvailable(transaction);
-      }
-
-      const insertedRows = await transaction
-        .insert(habits)
-        .values({
-          id: crypto.randomUUID(),
-          title: input.title,
-          description: input.description,
-          category: input.category,
-          why: input.why,
-          minimumAction: input.minimumAction,
-          trigger: input.trigger,
-          weekdays: input.weekdays,
-          estimatedDurationMinutes: input.estimatedDurationMinutes,
-          status,
-          createdAt: now,
-          updatedAt: now,
-          activatedAt: status === 'establishing' ? now : null,
-        })
-        .returning();
-      const insertedHabit = insertedRows[0];
-      if (!insertedHabit) throw new Error('Habit insert returned no row');
-
-      await transaction.insert(habitStatusEvents).values({
+    const insertedRows = await this.database
+      .insert(habits)
+      .values({
         id: crypto.randomUUID(),
-        habitId: insertedHabit.id,
-        fromStatus: null,
-        toStatus: status,
-        occurredAt: now,
-      });
+        lifeAreaId: input.lifeAreaId,
+        name: input.name,
+        why: input.why,
+        trigger: input.trigger,
+        acceptanceCriteria: input.acceptanceCriteria,
+        checkpointsPerDay: input.checkpointsPerDay,
+        checkpointLabels: input.checkpointLabels,
+        weekdays: input.weekdays,
+        status: "backlog",
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returning();
+    const insertedHabit = insertedRows[0];
+    if (!insertedHabit) throw new Error("Habit insert returned no row");
 
-      return insertedHabit;
+    return this.presentHabit(insertedHabit.id, {
+      timeZone: "UTC",
+      date: localDateInTimeZone(new Date(), "UTC"),
     });
-
-    return this.getMutationResponse(habit, input);
   }
 
   async detail(
     habitId: string,
-    input: TransitionHabitInput,
+    input: RequestContext,
   ): Promise<HabitDetailResponse> {
     this.assertCurrentLocalDate(input);
-
-    const [habit, capacity, practices, events] = await Promise.all([
-      this.getHabitRow(habitId),
-      this.getCapacity(),
+    const habit = await this.getHabitRow(habitId);
+    const [checkInRows, lifeAreaViews] = await Promise.all([
       this.database
         .select()
-        .from(practiceRecords)
-        .where(eq(practiceRecords.habitId, habitId))
-        .orderBy(asc(practiceRecords.practiceDate)),
-      this.getStatusEvents(habitId),
+        .from(checkIns)
+        .where(eq(checkIns.habitId, habitId))
+        .orderBy(desc(checkIns.checkInDate), asc(checkIns.checkpointIndex)),
+      this.listLifeAreas(),
     ]);
-
-    const practicesByDate = new Map(
-      practices.map((practice) => [practice.practiceDate, practice]),
-    );
-    const recent = recentDates(input.date, 14).map((date) => ({
-      date,
-      weekday: isoWeekday(date, input.timeZone),
-      inSchedule: isScheduledWeekday(
-        habit.weekdays,
-        isoWeekday(date, input.timeZone),
-      ),
-      duringEstablishing: isDateDuringEstablishing(
-        date,
-        input.timeZone,
-        events,
-      ),
-      outcome: practicesByDate.get(date)?.outcome ?? null,
-    }));
-    const firstEstablishingEvent = events.find(
-      (event) => event.toStatus === 'establishing',
-    );
-    const establishingDayCount = firstEstablishingEvent
-      ? recentDates(
-          input.date,
-          daysBetween(
-            localDateInTimeZone(
-              firstEstablishingEvent.occurredAt,
-              input.timeZone,
-            ),
-            input.date,
-          ) + 1,
-        ).filter((date) =>
-          isDateDuringEstablishing(date, input.timeZone, events),
-        ).length
-      : 0;
-    const todayPractice = practicesByDate.get(input.date) ?? null;
+    const lifeArea = lifeAreaViews.find((area) => area.id === habit.lifeAreaId);
+    if (!lifeArea) throw new Error("Life area missing for habit");
 
     return {
-      habit: this.toHabit(habit, input, todayPractice),
-      capacity,
-      progress: {
-        completedCount: practices.filter(
-          (practice) => practice.outcome === 'completed',
-        ).length,
-        skippedCount: practices.filter(
-          (practice) => practice.outcome === 'skipped',
-        ).length,
-        establishingDayCount,
-        recent,
-      },
+      habit: this.toHabit(habit, checkInRows, input),
+      lifeArea,
+      checkIns: checkInRows.map(toCheckIn),
     };
   }
 
@@ -218,32 +188,81 @@ export class HabitsService {
     input: UpdateHabitInput,
   ): Promise<HabitMutationResponse> {
     this.assertCurrentLocalDate(input);
-    const { timeZone, date, ...updates } = input;
+    const updates = {
+      lifeAreaId: input.lifeAreaId,
+      name: input.name,
+      why: input.why,
+      trigger: input.trigger,
+      acceptanceCriteria: input.acceptanceCriteria,
+      checkpointsPerDay: input.checkpointsPerDay,
+      checkpointLabels: input.checkpointLabels,
+      weekdays: input.weekdays,
+    };
 
-    const habit = await this.database.transaction(async (transaction) => {
-      const currentRows = await transaction
-        .select()
-        .from(habits)
-        .where(eq(habits.id, habitId))
-        .limit(1);
-      const currentHabit = currentRows[0];
-      if (!currentHabit) this.throwHabitNotFound();
+    await this.database.transaction(async (transaction) => {
+      const currentHabit = await this.getHabitRow(habitId, transaction);
+      if (
+        updates.lifeAreaId &&
+        updates.lifeAreaId !== currentHabit.lifeAreaId &&
+        currentHabit.status !== "backlog"
+      ) {
+        throw new ApiError(
+          409,
+          "LIFE_AREA_LOCKED",
+          "Life area can change only while the habit is in the backlog.",
+        );
+      }
+      if (updates.lifeAreaId)
+        await this.requireLifeArea(updates.lifeAreaId, transaction);
 
-      const nextHabit = { ...currentHabit, ...updates };
-      if (currentHabit.status !== 'backlog') {
-        this.assertPlanIsComplete(nextHabit);
+      const checkpointsPerDay =
+        updates.checkpointsPerDay ?? currentHabit.checkpointsPerDay;
+      const checkpointLabels =
+        updates.checkpointLabels === undefined
+          ? currentHabit.checkpointLabels
+          : updates.checkpointLabels;
+      if (checkpointLabels && checkpointLabels.length !== checkpointsPerDay) {
+        throw new ApiError(
+          400,
+          "VALIDATION_ERROR",
+          "Provide one label per checkpoint, or none.",
+        );
+      }
+      if (checkpointsPerDay < currentHabit.checkpointsPerDay) {
+        const keptRows = await transaction
+          .select({ id: checkIns.id })
+          .from(checkIns)
+          .where(
+            and(
+              eq(checkIns.habitId, habitId),
+              gte(checkIns.checkpointIndex, checkpointsPerDay),
+            ),
+          )
+          .limit(1);
+        if (keptRows[0]) {
+          throw new ApiError(
+            409,
+            "HISTORY_CONFLICT",
+            "Checkpoints that already have history cannot be removed.",
+          );
+        }
       }
 
-      const updatedRows = await transaction
+      await transaction
         .update(habits)
-        .set({ ...updates, updatedAt: new Date() })
-        .where(eq(habits.id, habitId))
-        .returning();
-
-      return updatedRows[0] as HabitRow;
+        .set({
+          ...updates,
+          checkpointsPerDay,
+          checkpointLabels,
+          updatedAt: new Date(),
+        })
+        .where(eq(habits.id, habitId));
     });
 
-    return this.getMutationResponse(habit, { timeZone, date });
+    return this.presentHabit(habitId, {
+      timeZone: input.timeZone,
+      date: input.date,
+    });
   }
 
   async delete(habitId: string): Promise<void> {
@@ -251,256 +270,331 @@ export class HabitsService {
       .delete(habits)
       .where(eq(habits.id, habitId))
       .returning({ id: habits.id });
-
     if (deletedRows.length === 0) this.throwHabitNotFound();
   }
 
-  async transition(
+  async startEstablishing(
     habitId: string,
-    action: HabitAction,
-    input: TransitionHabitInput,
+    input: RequestContext,
   ): Promise<HabitMutationResponse> {
     this.assertCurrentLocalDate(input);
 
-    const habit = await this.database.transaction(async (transaction) => {
-      const currentRows = await transaction
-        .select()
-        .from(habits)
-        .where(eq(habits.id, habitId))
-        .limit(1);
-      const currentHabit = currentRows[0];
-      if (!currentHabit) this.throwHabitNotFound();
-
-      let nextStatus: HabitStatus;
-      try {
-        nextStatus = resolveHabitTransition(currentHabit.status, action);
-      } catch (error) {
-        if (error instanceof InvalidTransitionError) {
-          throw new ApiError(409, 'INVALID_TRANSITION', error.message);
-        }
-        throw error;
+    await this.database.transaction(async (transaction) => {
+      const currentHabit = await this.getHabitRow(habitId, transaction);
+      if (currentHabit.status !== "backlog") {
+        throw new ApiError(
+          409,
+          "INVALID_TRANSITION",
+          "Only a backlog habit can start establishing.",
+        );
       }
 
-      if (nextStatus === currentHabit.status) return currentHabit;
-
-      if (nextStatus === 'establishing') {
-        this.assertPlanIsComplete(currentHabit);
-        await transaction.execute(sql`select pg_advisory_xact_lock(841001)`);
-        await this.assertCapacityAvailable(transaction);
+      const lifeArea = await this.requireLifeArea(
+        currentHabit.lifeAreaId,
+        transaction,
+      );
+      await transaction.execute(
+        sql`select pg_advisory_xact_lock(hashtext(${lifeArea.id}))`,
+      );
+      const used = await this.countEstablishing(lifeArea.id, transaction);
+      if (used >= lifeArea.slotLimit) {
+        throw new ApiError(
+          409,
+          "AREA_FULL",
+          `${lifeArea.name} is full. ${used} of ${lifeArea.slotLimit} slots are used.`,
+          {
+            lifeAreaId: lifeArea.id,
+            lifeAreaName: lifeArea.name,
+            slotLimit: lifeArea.slotLimit,
+            slotsUsed: used,
+          },
+        );
       }
 
       const now = new Date();
-      const timestampUpdates = this.getTransitionTimestamps(
-        currentHabit.status,
-        nextStatus,
-        now,
-      );
-      const updatedRows = await transaction
+      await transaction
         .update(habits)
         .set({
-          status: nextStatus,
+          status: "establishing",
+          establishingStartedAt: now,
           updatedAt: now,
-          ...timestampUpdates,
         })
-        .where(eq(habits.id, habitId))
-        .returning();
-      const updatedHabit = updatedRows[0];
-      if (!updatedHabit) throw new Error('Habit transition returned no row');
-
-      await transaction.insert(habitStatusEvents).values({
-        id: crypto.randomUUID(),
-        habitId,
-        fromStatus: currentHabit.status,
-        toStatus: nextStatus,
-        occurredAt: now,
-      });
-
-      return updatedHabit;
+        .where(eq(habits.id, habitId));
     });
 
-    return this.getMutationResponse(habit, input);
+    return this.presentHabit(habitId, input);
   }
 
-  async putPractice(
+  async putCheckIn(
     habitId: string,
     date: string,
-    input: PutPracticeInput,
-  ): Promise<Practice> {
-    return this.database.transaction(async (transaction) => {
-      const currentRows = await transaction
-        .select()
-        .from(habits)
-        .where(eq(habits.id, habitId))
-        .limit(1);
-      const habit = currentRows[0];
-      if (!habit) this.throwHabitNotFound();
-      this.assertPracticeStatus(habit.status);
+    checkpointIndex: number,
+    input: PutCheckInInput,
+  ): Promise<HabitMutationResponse> {
+    const checkInDate = isoDateSchema.parse(date);
+    const today = localDateInTimeZone(new Date(), input.timeZone);
+    if (checkInDate !== today) {
+      throw new ApiError(
+        409,
+        "CHECK_IN_DATE_LOCKED",
+        "Only today can be checked in.",
+      );
+    }
 
-      const [existingRows, events] = await Promise.all([
-        transaction
-          .select()
-          .from(practiceRecords)
-          .where(
-            and(
-              eq(practiceRecords.habitId, habitId),
-              eq(practiceRecords.practiceDate, date),
-            ),
-          )
-          .limit(1),
-        transaction
-          .select()
-          .from(habitStatusEvents)
-          .where(eq(habitStatusEvents.habitId, habitId))
-          .orderBy(asc(habitStatusEvents.occurredAt)),
-      ]);
-      const existingPractice = existingRows[0];
-
-      this.runPracticeDateValidation({
-        date,
-        timeZone: input.timeZone,
-        createdAt: habit.createdAt,
-        events,
-      });
-      if (!existingPractice) {
-        try {
-          assertPracticeInsertIsScheduled(
-            date,
-            input.timeZone,
-            habit.weekdays,
-          );
-        } catch (error) {
-          if (error instanceof PracticeNotScheduledError) {
-            throw new ApiError(409, 'PRACTICE_NOT_SCHEDULED', error.message);
-          }
-          throw error;
-        }
+    await this.database.transaction(async (transaction) => {
+      const habit = await this.getHabitRow(habitId, transaction);
+      if (habit.status !== "establishing") {
+        throw new ApiError(
+          409,
+          "CHECK_IN_NOT_ALLOWED",
+          "Check-ins are recorded while a habit is establishing.",
+        );
       }
-
-      if (existingPractice?.outcome === input.outcome) {
-        return this.toPractice(existingPractice);
+      if (
+        !isScheduledWeekday(
+          habit.weekdays,
+          isoWeekday(checkInDate, input.timeZone),
+        )
+      ) {
+        throw new ApiError(
+          409,
+          "NOT_SCHEDULED",
+          "This habit is not scheduled today.",
+        );
+      }
+      if (checkpointIndex >= habit.checkpointsPerDay) {
+        throw new ApiError(
+          400,
+          "VALIDATION_ERROR",
+          "That checkpoint does not exist on this habit.",
+        );
       }
 
       const now = new Date();
-      const practiceRows = await transaction
-        .insert(practiceRecords)
+      await transaction
+        .insert(checkIns)
         .values({
+          id: crypto.randomUUID(),
           habitId,
-          practiceDate: date,
-          outcome: input.outcome,
+          checkInDate,
+          checkpointIndex,
+          status: input.status,
+          skipReason: input.skipReason,
+          note: input.note,
           createdAt: now,
           updatedAt: now,
         })
         .onConflictDoUpdate({
-          target: [practiceRecords.habitId, practiceRecords.practiceDate],
-          set: { outcome: input.outcome, updatedAt: now },
-        })
-        .returning();
-      await transaction
-        .update(habits)
-        .set({ updatedAt: now })
-        .where(eq(habits.id, habitId));
+          target: [
+            checkIns.habitId,
+            checkIns.checkInDate,
+            checkIns.checkpointIndex,
+          ],
+          set: {
+            status: input.status,
+            skipReason: input.skipReason,
+            note: input.note,
+            updatedAt: now,
+          },
+        });
 
-      const practice = practiceRows[0];
-      if (!practice) throw new Error('Practice upsert returned no row');
-      return this.toPractice(practice);
-    });
-  }
-
-  async deletePractice(
-    habitId: string,
-    date: string,
-    timeZone: string,
-  ): Promise<void> {
-    await this.database.transaction(async (transaction) => {
-      const currentRows = await transaction
+      const habitCheckIns = await transaction
         .select()
-        .from(habits)
-        .where(eq(habits.id, habitId))
-        .limit(1);
-      const habit = currentRows[0];
-      if (!habit) this.throwHabitNotFound();
+        .from(checkIns)
+        .where(eq(checkIns.habitId, habitId));
+      const startedOn = habit.establishingStartedAt
+        ? localDateInTimeZone(habit.establishingStartedAt, input.timeZone)
+        : null;
+      if (!startedOn)
+        throw new Error("Establishing habit is missing a start date");
 
-      const existingRows = await transaction
-        .select()
-        .from(practiceRecords)
-        .where(
-          and(
-            eq(practiceRecords.habitId, habitId),
-            eq(practiceRecords.practiceDate, date),
-          ),
-        )
-        .limit(1);
-      if (!existingRows[0]) return;
-
-      this.assertPracticeStatus(habit.status);
-      const events = await transaction
-        .select()
-        .from(habitStatusEvents)
-        .where(eq(habitStatusEvents.habitId, habitId))
-        .orderBy(asc(habitStatusEvents.occurredAt));
-      this.runPracticeDateValidation({
-        date,
-        timeZone,
-        createdAt: habit.createdAt,
-        events,
+      const summary = summarizeEstablishment({
+        establishingStartedOn: startedOn,
+        asOfDate: today,
+        checkIns: habitCheckIns.map(toDatedCheckIn),
       });
+      if (summary.established) {
+        await transaction
+          .update(habits)
+          .set({
+            status: "established",
+            establishedAt: now,
+            updatedAt: now,
+          })
+          .where(eq(habits.id, habitId));
+      } else {
+        await transaction
+          .update(habits)
+          .set({ updatedAt: now })
+          .where(eq(habits.id, habitId));
+      }
+    });
 
-      await transaction
-        .delete(practiceRecords)
-        .where(
-          and(
-            eq(practiceRecords.habitId, habitId),
-            eq(practiceRecords.practiceDate, date),
-          ),
-        );
-      await transaction
-        .update(habits)
-        .set({ updatedAt: new Date() })
-        .where(eq(habits.id, habitId));
+    return this.presentHabit(habitId, {
+      timeZone: input.timeZone,
+      date: today,
     });
   }
 
-  async listPractices(
+  private async presentHabit(
     habitId: string,
-    input: PracticeHistoryQuery,
-  ): Promise<{ practices: Practice[] }> {
-    await this.getHabitRow(habitId);
-    const today = localDateInTimeZone(new Date(), input.timeZone);
-    const to = input.to ?? today;
-    const from = input.from ?? recentDates(to, 28)[0];
-    if (!from) throw new Error('Could not resolve practice range');
-    if (from > to) {
-      throw new ApiError(
-        400,
-        'VALIDATION_ERROR',
-        'The practice range is invalid.',
-      );
-    }
-    if (daysBetween(from, to) + 1 > 366) {
-      throw new ApiError(
-        400,
-        'VALIDATION_ERROR',
-        'The practice range cannot exceed 366 days.',
-      );
-    }
+    input: RequestContext,
+  ): Promise<HabitMutationResponse> {
+    const habit = await this.getHabitRow(habitId);
+    const [checkInRows, lifeAreaViews] = await Promise.all([
+      this.database
+        .select()
+        .from(checkIns)
+        .where(eq(checkIns.habitId, habitId)),
+      this.listLifeAreas(),
+    ]);
 
-    const practices = await this.database
-      .select()
-      .from(practiceRecords)
+    return {
+      habit: this.toHabit(habit, checkInRows, input),
+      lifeAreas: lifeAreaViews,
+    };
+  }
+
+  private toHabit(
+    habit: HabitRow,
+    habitCheckIns: readonly CheckInRow[],
+    input: RequestContext,
+  ): Habit {
+    const startedOn = habit.establishingStartedAt
+      ? localDateInTimeZone(habit.establishingStartedAt, input.timeZone)
+      : null;
+    const asOfDate =
+      habit.status === "established" && habit.establishedAt
+        ? localDateInTimeZone(habit.establishedAt, input.timeZone)
+        : input.date;
+    const datedCheckIns = habitCheckIns.map(toDatedCheckIn);
+    const summary = startedOn
+      ? summarizeEstablishment({
+          establishingStartedOn: startedOn,
+          asOfDate,
+          checkIns: datedCheckIns,
+        })
+      : null;
+    const weekday = isoWeekday(input.date, input.timeZone);
+    const todayByIndex = new Map(
+      habitCheckIns
+        .filter((checkIn) => checkIn.checkInDate === input.date)
+        .map((checkIn) => [checkIn.checkpointIndex, checkIn]),
+    );
+    const todayCheckpoints: TodayCheckpoint[] = Array.from(
+      { length: habit.checkpointsPerDay },
+      (_, checkpointIndex) => {
+        const checkIn = todayByIndex.get(checkpointIndex);
+        return {
+          index: checkpointIndex,
+          label: habit.checkpointLabels?.[checkpointIndex] ?? null,
+          status: checkIn?.status ?? "open",
+          skipReason: checkIn?.skipReason ?? null,
+          note: checkIn?.note ?? null,
+        };
+      },
+    );
+
+    return {
+      id: habit.id,
+      lifeAreaId: habit.lifeAreaId as Habit["lifeAreaId"],
+      name: habit.name,
+      why: habit.why,
+      trigger: habit.trigger,
+      acceptanceCriteria: habit.acceptanceCriteria,
+      checkpointsPerDay: habit.checkpointsPerDay,
+      checkpointLabels: habit.checkpointLabels,
+      weekdays: habit.weekdays ?? [],
+      status: habit.status,
+      establishingStartedAt: habit.establishingStartedAt?.toISOString() ?? null,
+      establishedAt: habit.establishedAt?.toISOString() ?? null,
+      createdAt: habit.createdAt.toISOString(),
+      updatedAt: habit.updatedAt.toISOString(),
+      scheduledToday:
+        habit.status === "establishing" &&
+        isScheduledWeekday(habit.weekdays, weekday),
+      establishingDay:
+        habit.status === "establishing"
+          ? (summary?.establishingDay ?? null)
+          : null,
+      completionRate: summary?.completionRate ?? null,
+      windowCounts: summary?.counts ?? { completed: 0, failed: 0, skipped: 0 },
+      streak:
+        habit.status === "establishing" && startedOn
+          ? currentStreak({
+              today: input.date,
+              weekdays: habit.weekdays ?? [],
+              timeZone: input.timeZone,
+              checkpointsPerDay: habit.checkpointsPerDay,
+              checkIns: datedCheckIns,
+              activeFrom: startedOn,
+            })
+          : 0,
+      todayCheckpoints,
+    };
+  }
+
+  private async listLifeAreas(): Promise<LifeArea[]> {
+    const [areaRows, usedRows] = await Promise.all([
+      this.database.select().from(lifeAreas).orderBy(asc(lifeAreas.name)),
+      this.database
+        .select({
+          lifeAreaId: habits.lifeAreaId,
+          value: count(),
+        })
+        .from(habits)
+        .where(eq(habits.status, "establishing"))
+        .groupBy(habits.lifeAreaId),
+    ]);
+    const usedByArea = new Map(
+      usedRows.map((row) => [row.lifeAreaId, row.value]),
+    );
+
+    return areaRows.map((area) => ({
+      id: area.id as LifeArea["id"],
+      name: area.name,
+      slotLimit: area.slotLimit,
+      slotsUsed: usedByArea.get(area.id) ?? 0,
+    }));
+  }
+
+  private async countEstablishing(
+    lifeAreaId: string,
+    transaction: DatabaseExecutor,
+  ): Promise<number> {
+    const rows = await transaction
+      .select({ value: count() })
+      .from(habits)
       .where(
         and(
-          eq(practiceRecords.habitId, habitId),
-          gte(practiceRecords.practiceDate, from),
-          lte(practiceRecords.practiceDate, to),
+          eq(habits.status, "establishing"),
+          eq(habits.lifeAreaId, lifeAreaId),
         ),
-      )
-      .orderBy(asc(practiceRecords.practiceDate));
-
-    return { practices: practices.map((practice) => this.toPractice(practice)) };
+      );
+    return rows[0]?.value ?? 0;
   }
 
-  private async getHabitRow(habitId: string): Promise<HabitRow> {
-    const rows = await this.database
+  private async requireLifeArea(
+    lifeAreaId: string,
+    transaction: DatabaseExecutor = this.database,
+  ): Promise<LifeAreaRow> {
+    const rows = await transaction
+      .select()
+      .from(lifeAreas)
+      .where(eq(lifeAreas.id, lifeAreaId))
+      .limit(1);
+    const lifeArea = rows[0];
+    if (!lifeArea) {
+      throw new ApiError(400, "UNKNOWN_LIFE_AREA", "Choose a life area.");
+    }
+    return lifeArea;
+  }
+
+  private async getHabitRow(
+    habitId: string,
+    transaction: DatabaseExecutor = this.database,
+  ): Promise<HabitRow> {
+    const rows = await transaction
       .select()
       .from(habits)
       .where(eq(habits.id, habitId))
@@ -510,211 +604,70 @@ export class HabitsService {
     return habit;
   }
 
-  private async getStatusEvents(
-    habitId: string,
-  ): Promise<HabitStatusEventRow[]> {
-    return this.database
-      .select()
-      .from(habitStatusEvents)
-      .where(eq(habitStatusEvents.habitId, habitId))
-      .orderBy(asc(habitStatusEvents.occurredAt));
-  }
-
-  private async getCapacity(): Promise<Capacity> {
-    const rows = await this.database
-      .select({ value: count() })
-      .from(habits)
-      .where(eq(habits.status, 'establishing'));
-
-    return {
-      used: rows[0]?.value ?? 0,
-      recommended: ACTIVE_HABIT_RECOMMENDED,
-      maximum: ACTIVE_HABIT_MAXIMUM,
-    };
-  }
-
-  private async assertCapacityAvailable(
-    transaction: Parameters<
-      Parameters<Database['transaction']>[0]
-    >[0],
-  ): Promise<void> {
-    const rows = await transaction
-      .select({ value: count() })
-      .from(habits)
-      .where(eq(habits.status, 'establishing'));
-    const used = rows[0]?.value ?? 0;
-
-    if (used >= ACTIVE_HABIT_MAXIMUM) {
-      throw new ApiError(
-        409,
-        'CAPACITY_EXCEEDED',
-        'You can establish at most 3 habits at once.',
-        { used, maximum: ACTIVE_HABIT_MAXIMUM },
-      );
-    }
-  }
-
-  private async getMutationResponse(
-    habit: HabitRow,
-    input: TransitionHabitInput,
-  ): Promise<HabitMutationResponse> {
-    const [capacity, practices] = await Promise.all([
-      this.getCapacity(),
-      this.database
-        .select()
-        .from(practiceRecords)
-        .where(
-          and(
-            eq(practiceRecords.habitId, habit.id),
-            eq(practiceRecords.practiceDate, input.date),
-          ),
-        )
-        .limit(1),
-    ]);
-
-    return {
-      habit: this.toHabit(habit, input, practices[0] ?? null),
-      capacity,
-    };
-  }
-
-  private toHabit(
-    habit: HabitRow,
-    input: TransitionHabitInput,
-    todayPractice: PracticeRecordRow | null,
-  ): Habit {
-    return {
-      id: habit.id,
-      title: habit.title,
-      description: habit.description,
-      category: habit.category,
-      why: habit.why,
-      minimumAction: habit.minimumAction,
-      trigger: habit.trigger,
-      weekdays: habit.weekdays,
-      estimatedDurationMinutes: habit.estimatedDurationMinutes,
-      status: habit.status,
-      createdAt: habit.createdAt.toISOString(),
-      updatedAt: habit.updatedAt.toISOString(),
-      activatedAt: habit.activatedAt?.toISOString() ?? null,
-      pausedAt: habit.pausedAt?.toISOString() ?? null,
-      establishedAt: habit.establishedAt?.toISOString() ?? null,
-      scheduledToday:
-        habit.status === 'establishing' &&
-        isScheduledWeekday(
-          habit.weekdays,
-          isoWeekday(input.date, input.timeZone),
-        ),
-      todayPractice: todayPractice
-        ? {
-            date: todayPractice.practiceDate,
-            outcome: todayPractice.outcome,
-          }
-        : null,
-    };
-  }
-
-  private toPractice(practice: PracticeRecordRow): Practice {
-    return {
-      habitId: practice.habitId,
-      practiceDate: practice.practiceDate,
-      outcome: practice.outcome,
-      createdAt: practice.createdAt.toISOString(),
-      updatedAt: practice.updatedAt.toISOString(),
-    };
-  }
-
-  private assertCurrentLocalDate(input: TransitionHabitInput): void {
+  private assertCurrentLocalDate(input: RequestContext): void {
     const today = localDateInTimeZone(new Date(), input.timeZone);
     if (input.date !== today) {
       throw new ApiError(
         400,
-        'DATE_TIMEZONE_MISMATCH',
-        'The date must be today in the supplied timezone.',
+        "DATE_TIMEZONE_MISMATCH",
+        "The date must be today in the supplied timezone.",
       );
     }
-  }
-
-  private assertPlanIsComplete(plan: {
-    why: string | null;
-    minimumAction: string | null;
-    trigger: string | null;
-    weekdays: number[] | null;
-    estimatedDurationMinutes: number | null;
-  }): void {
-    try {
-      assertCompletePlan(plan);
-    } catch (error) {
-      if (error instanceof IncompletePlanError) {
-        throw new ApiError(
-          409,
-          'PLAN_INCOMPLETE',
-          error.message,
-          { fields: error.fields },
-        );
-      }
-      throw error;
-    }
-  }
-
-  private assertPracticeStatus(status: HabitStatus): void {
-    if (status !== 'establishing' && status !== 'paused') {
-      throw new ApiError(
-        409,
-        'PRACTICE_NOT_ALLOWED',
-        'Practice cannot be changed for this habit.',
-      );
-    }
-  }
-
-  private runPracticeDateValidation(input: {
-    date: string;
-    timeZone: string;
-    createdAt: Date;
-    events: HabitStatusEventRow[];
-  }): void {
-    try {
-      validatePracticeDate({
-        ...input,
-        now: new Date(),
-      });
-    } catch (error) {
-      if (error instanceof PracticeDateInFutureError) {
-        throw new ApiError(409, 'PRACTICE_DATE_IN_FUTURE', error.message);
-      }
-      if (error instanceof PracticeNotAllowedError) {
-        throw new ApiError(409, 'PRACTICE_NOT_ALLOWED', error.message);
-      }
-      throw error;
-    }
-  }
-
-  private getTransitionTimestamps(
-    currentStatus: HabitStatus,
-    nextStatus: HabitStatus,
-    now: Date,
-  ): Partial<HabitRow> {
-    if (nextStatus === 'establishing') {
-      return { activatedAt: now, pausedAt: null };
-    }
-    if (nextStatus === 'paused') return { pausedAt: now };
-    if (nextStatus === 'established') {
-      return { establishedAt: now, pausedAt: null };
-    }
-    if (nextStatus === 'backlog') {
-      return { activatedAt: null, pausedAt: null };
-    }
-
-    return {};
   }
 
   private throwHabitNotFound(): never {
-    throw new ApiError(404, 'HABIT_NOT_FOUND', 'Habit not found.');
+    throw new ApiError(404, "HABIT_NOT_FOUND", "Habit not found.");
   }
 }
 
-function daysBetween(from: string, to: string): number {
-  const start = new Date(`${from}T00:00:00.000Z`).getTime();
-  const end = new Date(`${to}T00:00:00.000Z`).getTime();
-  return Math.floor((end - start) / 86_400_000);
+function groupCheckIns(rows: readonly CheckInRow[]): Map<string, CheckInRow[]> {
+  const grouped = new Map<string, CheckInRow[]>();
+  for (const row of rows) {
+    const habitCheckIns = grouped.get(row.habitId) ?? [];
+    habitCheckIns.push(row);
+    grouped.set(row.habitId, habitCheckIns);
+  }
+  return grouped;
 }
+
+function toDatedCheckIn(checkIn: CheckInRow) {
+  return {
+    date: checkIn.checkInDate,
+    checkpointIndex: checkIn.checkpointIndex,
+    status: checkIn.status,
+  };
+}
+
+function toCheckIn(checkIn: CheckInRow): CheckIn {
+  return {
+    id: checkIn.id,
+    habitId: checkIn.habitId,
+    date: checkIn.checkInDate,
+    checkpointIndex: checkIn.checkpointIndex,
+    status: checkIn.status,
+    skipReason: checkIn.skipReason,
+    note: checkIn.note,
+    createdAt: checkIn.createdAt.toISOString(),
+    updatedAt: checkIn.updatedAt.toISOString(),
+  };
+}
+
+function isTrackedOnDate(
+  habit: HabitRow,
+  date: string,
+  timeZone: string,
+): boolean {
+  if (habit.status === "backlog" || !habit.establishingStartedAt) return false;
+  const startedOn = localDateInTimeZone(habit.establishingStartedAt, timeZone);
+  if (date < startedOn) return false;
+  if (habit.status === "established" && habit.establishedAt) {
+    const establishedOn = localDateInTimeZone(habit.establishedAt, timeZone);
+    if (date > establishedOn) return false;
+  }
+  return isScheduledWeekday(habit.weekdays, isoWeekday(date, timeZone));
+}
+
+type DatabaseExecutor = Pick<
+  Database,
+  "select" | "execute" | "insert" | "update" | "delete"
+>;

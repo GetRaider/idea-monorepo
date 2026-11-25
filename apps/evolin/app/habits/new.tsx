@@ -1,26 +1,18 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { ScrollView, View } from 'react-native';
 
+import type { CreateHabitInput } from '@repo/evolin-shared';
+
 import { Text } from '@/components/ui';
-import { HabitForm, type HabitFormPayload } from '@/features/habits';
-import { createHabit, listHabits } from '@/lib/api/habits';
+import { HabitForm } from '@/features/habits';
+import { createHabit } from '@/lib/api/habits';
 
 export default function NewHabitScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const habitsQuery = useQuery({
-    queryKey: ['habits'],
-    queryFn: listHabits,
-  });
   const createMutation = useMutation({
-    mutationFn: ({
-      values,
-      startEstablishing,
-    }: {
-      values: HabitFormPayload;
-      startEstablishing: boolean;
-    }) => createHabit({ ...values, startEstablishing }),
+    mutationFn: (values: CreateHabitInput) => createHabit(values),
     onSuccess: ({ habit }) => {
       void queryClient.invalidateQueries({ queryKey: ['habits'] });
       router.replace(`/habits/${habit.id}`);
@@ -35,14 +27,16 @@ export default function NewHabitScreen() {
     >
       <View className="w-full max-w-[720px] gap-5">
         <Text className="text-2xl font-bold">Plan a habit</Text>
+        <Text className="text-muted">
+          It starts in the backlog. Establishing begins from the board when the
+          life area has a free slot.
+        </Text>
         <HabitForm
-          mode="create"
-          capacityFull={(habitsQuery.data?.capacity.used ?? 0) >= 3}
           isPending={createMutation.isPending}
+          lifeAreaLocked={false}
+          mode="create"
           serverError={createMutation.error?.message}
-          onSubmit={(values, startEstablishing) =>
-            createMutation.mutate({ values, startEstablishing })
-          }
+          onSubmit={(values) => createMutation.mutate(values)}
         />
       </View>
     </ScrollView>

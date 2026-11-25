@@ -5,108 +5,52 @@ import {
   index,
   pgEnum,
   pgTable,
-  primaryKey,
   smallint,
   text,
   timestamp,
+  unique,
 } from 'drizzle-orm/pg-core';
 
 import {
-  HABIT_CATEGORIES,
+  CHECK_IN_STATUSES,
+  DEFAULT_SLOT_LIMIT,
   HABIT_STATUSES,
-  PRACTICE_OUTCOMES,
+  SKIP_REASONS,
 } from '@repo/evolin-shared';
 
 export const habitStatusEnum = pgEnum('habit_status', HABIT_STATUSES);
-export const habitCategoryEnum = pgEnum('habit_category', HABIT_CATEGORIES);
-export const practiceOutcomeEnum = pgEnum(
-  'practice_outcome',
-  PRACTICE_OUTCOMES,
-);
+export const checkInStatusEnum = pgEnum('check_in_status', CHECK_IN_STATUSES);
+export const skipReasonEnum = pgEnum('skip_reason', SKIP_REASONS);
+
+export const lifeAreas = pgTable('life_areas', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  slotLimit: smallint('slot_limit').notNull().default(DEFAULT_SLOT_LIMIT),
+});
 
 export const habits = pgTable(
   'habits',
   {
     id: text('id').primaryKey(),
-    title: text('title').notNull(),
-    description: text('description'),
-    category: habitCategoryEnum('category').notNull(),
-    why: text('why'),
-    minimumAction: text('minimum_action'),
-    trigger: text('trigger'),
-    weekdays: smallint('weekdays').array(),
-    estimatedDurationMinutes: smallint('estimated_duration_minutes'),
+    lifeAreaId: text('life_area_id')
+      .notNull()
+      .references(() => lifeAreas.id),
+    name: text('name').notNull(),
+    why: text('why').notNull(),
+    trigger: text('trigger').notNull(),
+    acceptanceCriteria: text('acceptance_criteria').notNull(),
+    checkpointsPerDay: smallint('checkpoints_per_day').notNull(),
+    checkpointLabels: text('checkpoint_labels').array(),
+    weekdays: smallint('weekdays').array().notNull(),
     status: habitStatusEnum('status').notNull().default('backlog'),
-    createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' })
-      .notNull()
-      .defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' })
-      .notNull()
-      .defaultNow(),
-    activatedAt: timestamp('activated_at', {
+    establishingStartedAt: timestamp('establishing_started_at', {
       withTimezone: true,
       mode: 'date',
     }),
-    pausedAt: timestamp('paused_at', { withTimezone: true, mode: 'date' }),
     establishedAt: timestamp('established_at', {
       withTimezone: true,
       mode: 'date',
     }),
-  },
-  (table) => [
-    check(
-      'habits_title_length_check',
-      sql`char_length(${table.title}) between 1 and 80`,
-    ),
-    check(
-      'habits_description_length_check',
-      sql`${table.description} is null or char_length(${table.description}) <= 500`,
-    ),
-    check(
-      'habits_why_length_check',
-      sql`${table.why} is null or char_length(${table.why}) between 1 and 500`,
-    ),
-    check(
-      'habits_minimum_action_length_check',
-      sql`${table.minimumAction} is null or char_length(${table.minimumAction}) between 1 and 200`,
-    ),
-    check(
-      'habits_trigger_length_check',
-      sql`${table.trigger} is null or char_length(${table.trigger}) between 1 and 200`,
-    ),
-    check(
-      'habits_duration_check',
-      sql`${table.estimatedDurationMinutes} is null or ${table.estimatedDurationMinutes} between 1 and 180`,
-    ),
-    check(
-      'habits_weekdays_check',
-      sql`${table.weekdays} is null or (
-        cardinality(${table.weekdays}) between 1 and 7
-        and ${table.weekdays} <@ array[1,2,3,4,5,6,7]::smallint[]
-      )`,
-    ),
-    check(
-      'habits_complete_plan_check',
-      sql`${table.status} = 'backlog' or (
-        ${table.why} is not null
-        and ${table.minimumAction} is not null
-        and ${table.trigger} is not null
-        and ${table.weekdays} is not null
-        and ${table.estimatedDurationMinutes} is not null
-      )`,
-    ),
-    index('habits_status_updated_idx').on(table.status, table.updatedAt),
-  ],
-);
-
-export const practiceRecords = pgTable(
-  'practice_records',
-  {
-    habitId: text('habit_id')
-      .notNull()
-      .references(() => habits.id, { onDelete: 'cascade' }),
-    practiceDate: date('practice_date', { mode: 'string' }).notNull(),
-    outcome: practiceOutcomeEnum('outcome').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' })
       .notNull()
       .defaultNow(),
@@ -115,34 +59,79 @@ export const practiceRecords = pgTable(
       .defaultNow(),
   },
   (table) => [
-    primaryKey({ columns: [table.habitId, table.practiceDate] }),
+    check(
+      'habits_name_length_check',
+      sql`char_length(${table.name}) between 1 and 80`,
+    ),
+    check(
+      'habits_why_length_check',
+      sql`char_length(${table.why}) between 1 and 500`,
+    ),
+    check(
+      'habits_trigger_length_check',
+      sql`char_length(${table.trigger}) between 1 and 200`,
+    ),
+    check(
+      'habits_acceptance_criteria_length_check',
+      sql`char_length(${table.acceptanceCriteria}) between 1 and 500`,
+    ),
+    check(
+      'habits_checkpoints_per_day_check',
+      sql`${table.checkpointsPerDay} between 1 and 12`,
+    ),
+    check(
+      'habits_weekdays_check',
+      sql`cardinality(${table.weekdays}) between 1 and 7 and ${table.weekdays} <@ array[1,2,3,4,5,6,7]::smallint[]`,
+    ),
+    check(
+      'habits_checkpoint_labels_check',
+      sql`${table.checkpointLabels} is null or cardinality(${table.checkpointLabels}) = ${table.checkpointsPerDay}`,
+    ),
+    index('habits_status_life_area_idx').on(table.status, table.lifeAreaId),
   ],
 );
 
-export const habitStatusEvents = pgTable(
-  'habit_status_events',
+export const checkIns = pgTable(
+  'check_ins',
   {
     id: text('id').primaryKey(),
     habitId: text('habit_id')
       .notNull()
       .references(() => habits.id, { onDelete: 'cascade' }),
-    fromStatus: habitStatusEnum('from_status'),
-    toStatus: habitStatusEnum('to_status').notNull(),
-    occurredAt: timestamp('occurred_at', {
-      withTimezone: true,
-      mode: 'date',
-    })
+    checkInDate: date('check_in_date', { mode: 'string' }).notNull(),
+    checkpointIndex: smallint('checkpoint_index').notNull(),
+    status: checkInStatusEnum('status').notNull(),
+    skipReason: skipReasonEnum('skip_reason'),
+    note: text('note'),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' })
       .notNull()
       .defaultNow(),
   },
   (table) => [
-    index('habit_status_events_habit_occurred_idx').on(
+    unique('check_ins_habit_date_index_key').on(
       table.habitId,
-      table.occurredAt,
+      table.checkInDate,
+      table.checkpointIndex,
     ),
+    check(
+      'check_ins_index_check',
+      sql`${table.checkpointIndex} between 0 and 11`,
+    ),
+    check(
+      'check_ins_skip_reason_check',
+      sql`(${table.status} = 'skipped' and ${table.skipReason} is not null) or (${table.status} <> 'skipped' and ${table.skipReason} is null)`,
+    ),
+    check(
+      'check_ins_note_length_check',
+      sql`${table.note} is null or char_length(${table.note}) between 1 and 500`,
+    ),
+    index('check_ins_habit_date_idx').on(table.habitId, table.checkInDate),
   ],
 );
 
+export type LifeAreaRow = typeof lifeAreas.$inferSelect;
 export type HabitRow = typeof habits.$inferSelect;
-export type PracticeRecordRow = typeof practiceRecords.$inferSelect;
-export type HabitStatusEventRow = typeof habitStatusEvents.$inferSelect;
+export type CheckInRow = typeof checkIns.$inferSelect;

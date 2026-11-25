@@ -1,0 +1,377 @@
+{
+  "id": "42e7cae0-79f5-4e81-a1f6-88596e9cf06d",
+  "prevId": "e94f3cca-80c8-408f-97b4-cba6a41a7536",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.check_ins": {
+      "name": "check_ins",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "habit_id": {
+          "name": "habit_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "check_in_date": {
+          "name": "check_in_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "checkpoint_index": {
+          "name": "checkpoint_index",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "check_in_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "skip_reason": {
+          "name": "skip_reason",
+          "type": "skip_reason",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "note": {
+          "name": "note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "check_ins_habit_date_idx": {
+          "name": "check_ins_habit_date_idx",
+          "columns": [
+            {
+              "expression": "habit_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "check_in_date",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "check_ins_habit_id_habits_id_fk": {
+          "name": "check_ins_habit_id_habits_id_fk",
+          "tableFrom": "check_ins",
+          "tableTo": "habits",
+          "columnsFrom": [
+            "habit_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "check_ins_habit_date_index_key": {
+          "name": "check_ins_habit_date_index_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "habit_id",
+            "check_in_date",
+            "checkpoint_index"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "check_ins_index_check": {
+          "name": "check_ins_index_check",
+          "value": "\"check_ins\".\"checkpoint_index\" between 0 and 11"
+        },
+        "check_ins_skip_reason_check": {
+          "name": "check_ins_skip_reason_check",
+          "value": "(\"check_ins\".\"status\" = 'skipped' and \"check_ins\".\"skip_reason\" is not null) or (\"check_ins\".\"status\" <> 'skipped' and \"check_ins\".\"skip_reason\" is null)"
+        },
+        "check_ins_note_length_check": {
+          "name": "check_ins_note_length_check",
+          "value": "\"check_ins\".\"note\" is null or char_length(\"check_ins\".\"note\") between 1 and 500"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.habits": {
+      "name": "habits",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "life_area_id": {
+          "name": "life_area_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "why": {
+          "name": "why",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "trigger": {
+          "name": "trigger",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "acceptance_criteria": {
+          "name": "acceptance_criteria",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "checkpoints_per_day": {
+          "name": "checkpoints_per_day",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "checkpoint_labels": {
+          "name": "checkpoint_labels",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "weekdays": {
+          "name": "weekdays",
+          "type": "smallint[]",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "habit_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'backlog'"
+        },
+        "establishing_started_at": {
+          "name": "establishing_started_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "established_at": {
+          "name": "established_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "habits_status_life_area_idx": {
+          "name": "habits_status_life_area_idx",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "life_area_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "habits_life_area_id_life_areas_id_fk": {
+          "name": "habits_life_area_id_life_areas_id_fk",
+          "tableFrom": "habits",
+          "tableTo": "life_areas",
+          "columnsFrom": [
+            "life_area_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "habits_name_length_check": {
+          "name": "habits_name_length_check",
+          "value": "char_length(\"habits\".\"name\") between 1 and 80"
+        },
+        "habits_why_length_check": {
+          "name": "habits_why_length_check",
+          "value": "char_length(\"habits\".\"why\") between 1 and 500"
+        },
+        "habits_trigger_length_check": {
+          "name": "habits_trigger_length_check",
+          "value": "char_length(\"habits\".\"trigger\") between 1 and 200"
+        },
+        "habits_acceptance_criteria_length_check": {
+          "name": "habits_acceptance_criteria_length_check",
+          "value": "char_length(\"habits\".\"acceptance_criteria\") between 1 and 500"
+        },
+        "habits_checkpoints_per_day_check": {
+          "name": "habits_checkpoints_per_day_check",
+          "value": "\"habits\".\"checkpoints_per_day\" between 1 and 12"
+        },
+        "habits_weekdays_check": {
+          "name": "habits_weekdays_check",
+          "value": "cardinality(\"habits\".\"weekdays\") between 1 and 7 and \"habits\".\"weekdays\" <@ array[1,2,3,4,5,6,7]::smallint[]"
+        },
+        "habits_checkpoint_labels_check": {
+          "name": "habits_checkpoint_labels_check",
+          "value": "\"habits\".\"checkpoint_labels\" is null or cardinality(\"habits\".\"checkpoint_labels\") = \"habits\".\"checkpoints_per_day\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.life_areas": {
+      "name": "life_areas",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "slot_limit": {
+          "name": "slot_limit",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 2
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {
+    "public.check_in_status": {
+      "name": "check_in_status",
+      "schema": "public",
+      "values": [
+        "completed",
+        "failed",
+        "skipped"
+      ]
+    },
+    "public.habit_status": {
+      "name": "habit_status",
+      "schema": "public",
+      "values": [
+        "backlog",
+        "establishing",
+        "established"
+      ]
+    },
+    "public.skip_reason": {
+      "name": "skip_reason",
+      "schema": "public",
+      "values": [
+        "sick",
+        "travel",
+        "day_off",
+        "too_busy",
+        "other"
+      ]
+    }
+  },
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

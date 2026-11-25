@@ -1,54 +1,62 @@
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Controller, useForm } from 'react-hook-form';
-import { Pressable, View } from 'react-native';
-import { z } from 'zod';
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Controller, useForm } from "react-hook-form";
+import { Pressable, View } from "react-native";
+import { z } from "zod";
 
 import {
-  HABIT_CATEGORIES,
-  isPlanComplete,
-  type HabitCategory,
-} from '@repo/evolin-shared';
+  LIFE_AREA_IDS,
+  MAX_CHECKPOINTS_PER_DAY,
+  type CreateHabitInput,
+} from "@repo/evolin-shared";
 
-import {
-  Button,
-  Input,
-  Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Text,
-  Textarea,
-} from '@/components/ui';
-import { cn } from '@/lib/utils';
+import { Button, Input, Label, Text, Textarea } from "@/components/ui";
+import { cn } from "@/lib/utils";
 
-import { CATEGORY_LABELS, WEEKDAYS } from './constants';
+import { LIFE_AREA_OPTIONS, WEEKDAYS } from "./constants";
 
-const formSchema = z.object({
-  title: z.string().trim().min(1, 'Title is required.').max(80),
-  description: z.string().trim().max(500),
-  category: z.enum(HABIT_CATEGORIES),
-  why: z.string().trim().max(500),
-  minimumAction: z.string().trim().max(200),
-  trigger: z.string().trim().max(200),
-  weekdays: z.array(z.number().int().min(1).max(7)),
-  estimatedDurationMinutes: z
-    .string()
-    .refine(
-      (value) =>
-        value === '' ||
-        (Number.isInteger(Number(value)) &&
+const formSchema = z
+  .object({
+    name: z.string().trim().min(1, "Name is required.").max(80),
+    lifeAreaId: z.enum(LIFE_AREA_IDS),
+    why: z.string().trim().min(1, "Why is required.").max(500),
+    trigger: z.string().trim().min(1, "Trigger is required.").max(200),
+    acceptanceCriteria: z
+      .string()
+      .trim()
+      .min(1, "Say what counts as done.")
+      .max(500),
+    checkpointsPerDay: z
+      .string()
+      .refine(
+        (value) =>
+          Number.isInteger(Number(value)) &&
           Number(value) >= 1 &&
-          Number(value) <= 180),
-      'Enter a whole number from 1 to 180.',
-    ),
-});
+          Number(value) <= MAX_CHECKPOINTS_PER_DAY,
+        `Enter a whole number from 1 to ${MAX_CHECKPOINTS_PER_DAY}.`,
+      ),
+    checkpointLabels: z.string().trim().max(400),
+    weekdays: z
+      .array(z.number().int().min(1).max(7))
+      .min(1, "Pick at least one day."),
+  })
+  .superRefine((value, context) => {
+    const labels = splitLabels(value.checkpointLabels);
+    if (
+      labels.length > 0 &&
+      labels.length !== Number(value.checkpointsPerDay)
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["checkpointLabels"],
+        message: "Use one label per checkpoint, or leave this blank.",
+      });
+    }
+  });
 
 export function HabitForm({
   initialValues,
   mode,
-  capacityFull,
+  lifeAreaLocked,
   serverError,
   isPending,
   onSubmit,
@@ -56,38 +64,21 @@ export function HabitForm({
   const {
     control,
     handleSubmit,
-    watch,
     formState: { errors },
   } = useForm<HabitFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: initialValues ?? EMPTY_FORM,
   });
-  const values = watch();
-  const planComplete = isPlanComplete({
-    why: emptyToNull(values.why),
-    minimumAction: emptyToNull(values.minimumAction),
-    trigger: emptyToNull(values.trigger),
-    weekdays: values.weekdays.length > 0 ? values.weekdays : null,
-    estimatedDurationMinutes: values.estimatedDurationMinutes
-      ? Number(values.estimatedDurationMinutes)
-      : null,
-  });
-
-  function submit(startEstablishing: boolean) {
-    void handleSubmit((formValues) =>
-      onSubmit(toPayload(formValues), startEstablishing),
-    )();
-  }
 
   return (
     <View className="gap-5">
-      <FormField label="Title" error={errors.title?.message}>
+      <FormField label="Name" error={errors.name?.message}>
         <Controller
           control={control}
-          name="title"
+          name="name"
           render={({ field }) => (
             <Input
-              autoFocus={mode === 'create'}
+              autoFocus={mode === "create"}
               maxLength={80}
               value={field.value}
               onBlur={field.onBlur}
@@ -97,54 +88,45 @@ export function HabitForm({
         />
       </FormField>
 
-      <FormField label="Description (optional)" error={errors.description?.message}>
+      <FormField label="Life area" error={errors.lifeAreaId?.message}>
         <Controller
           control={control}
-          name="description"
+          name="lifeAreaId"
           render={({ field }) => (
-            <Textarea
-              maxLength={500}
-              value={field.value}
-              onBlur={field.onBlur}
-              onChangeText={field.onChange}
-            />
+            <View className="flex-row flex-wrap gap-2">
+              {LIFE_AREA_OPTIONS.map((lifeArea) => {
+                const selected = field.value === lifeArea.value;
+                return (
+                  <Pressable
+                    key={lifeArea.value}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected, disabled: lifeAreaLocked }}
+                    className={cn(
+                      "min-h-11 items-center justify-center rounded-full border px-4",
+                      selected
+                        ? "border-[#1f6b45] bg-[#e7f2ea]"
+                        : "border-border bg-card",
+                      lifeAreaLocked && !selected ? "opacity-40" : "",
+                    )}
+                    disabled={lifeAreaLocked}
+                    onPress={() => field.onChange(lifeArea.value)}
+                  >
+                    <Text
+                      className={selected ? "font-semibold text-[#1f6b45]" : ""}
+                    >
+                      {lifeArea.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
           )}
         />
-      </FormField>
-
-      <FormField label="Category" error={errors.category?.message}>
-        <Controller
-          control={control}
-          name="category"
-          render={({ field }) => {
-            const selectedOption = {
-              value: field.value,
-              label: CATEGORY_LABELS[field.value],
-            };
-
-            return (
-              <Select
-                value={selectedOption}
-                onValueChange={(option) => {
-                  if (option?.value) field.onChange(option.value);
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {HABIT_CATEGORIES.map((category) => (
-                    <SelectItem
-                      key={category}
-                      label={CATEGORY_LABELS[category]}
-                      value={category}
-                    />
-                  ))}
-                </SelectContent>
-              </Select>
-            );
-          }}
-        />
+        {lifeAreaLocked ? (
+          <Text className="text-sm text-muted">
+            Life area stays put once establishing starts.
+          </Text>
+        ) : null}
       </FormField>
 
       <FormField label="Why" error={errors.why?.message}>
@@ -162,10 +144,14 @@ export function HabitForm({
         />
       </FormField>
 
-      <FormField label="Minimum action" error={errors.minimumAction?.message}>
+      <FormField
+        label="Trigger"
+        hint="A time or a routine you already have."
+        error={errors.trigger?.message}
+      >
         <Controller
           control={control}
-          name="minimumAction"
+          name="trigger"
           render={({ field }) => (
             <Input
               maxLength={200}
@@ -178,16 +164,53 @@ export function HabitForm({
       </FormField>
 
       <FormField
-        label="Trigger"
-        hint="Something you already do."
-        error={errors.trigger?.message}
+        label="Counts as done"
+        hint="What one checkpoint has to be."
+        error={errors.acceptanceCriteria?.message}
       >
         <Controller
           control={control}
-          name="trigger"
+          name="acceptanceCriteria"
+          render={({ field }) => (
+            <Textarea
+              maxLength={500}
+              value={field.value}
+              onBlur={field.onBlur}
+              onChangeText={field.onChange}
+            />
+          )}
+        />
+      </FormField>
+
+      <FormField
+        label="Checkpoints per day"
+        error={errors.checkpointsPerDay?.message}
+      >
+        <Controller
+          control={control}
+          name="checkpointsPerDay"
           render={({ field }) => (
             <Input
-              maxLength={200}
+              inputMode="numeric"
+              keyboardType="number-pad"
+              value={field.value}
+              onBlur={field.onBlur}
+              onChangeText={field.onChange}
+            />
+          )}
+        />
+      </FormField>
+
+      <FormField
+        label="Checkpoint labels (optional)"
+        hint="Comma-separated, one per checkpoint."
+        error={errors.checkpointLabels?.message}
+      >
+        <Controller
+          control={control}
+          name="checkpointLabels"
+          render={({ field }) => (
+            <Input
               value={field.value}
               onBlur={field.onBlur}
               onChangeText={field.onChange}
@@ -208,13 +231,13 @@ export function HabitForm({
                   <Pressable
                     key={weekday.value}
                     accessibilityLabel={weekday.label}
-                    accessibilityRole="button"
+                    accessibilityRole="checkbox"
                     accessibilityState={{ checked }}
                     className={cn(
-                      'min-h-11 min-w-14 items-center justify-center rounded-xl border px-3',
+                      "min-h-11 min-w-14 items-center justify-center rounded-xl border px-3",
                       checked
-                        ? 'border-accent bg-accent'
-                        : 'border-border bg-card',
+                        ? "border-accent bg-accent"
+                        : "border-border bg-card",
                     )}
                     onPress={() =>
                       field.onChange(
@@ -227,7 +250,7 @@ export function HabitForm({
                     }
                   >
                     <Text
-                      className={checked ? 'text-white' : 'text-foreground'}
+                      className={checked ? "text-white" : "text-foreground"}
                     >
                       {weekday.shortLabel}
                     </Text>
@@ -239,58 +262,18 @@ export function HabitForm({
         />
       </FormField>
 
-      <FormField
-        label="Estimated duration (minutes)"
-        error={errors.estimatedDurationMinutes?.message}
-      >
-        <Controller
-          control={control}
-          name="estimatedDurationMinutes"
-          render={({ field }) => (
-            <Input
-              inputMode="numeric"
-              keyboardType="number-pad"
-              value={field.value}
-              onBlur={field.onBlur}
-              onChangeText={field.onChange}
-            />
-          )}
-        />
-      </FormField>
-
       {serverError ? (
         <Text className="text-destructive">{serverError}</Text>
       ) : null}
 
-      {mode === 'create' ? (
-        <View className="gap-3 md:flex-row">
-          <Button
-            className="flex-1"
-            variant="outline"
-            disabled={isPending}
-            onPress={() => submit(false)}
-          >
-            {isPending ? 'Saving…' : 'Save to backlog'}
-          </Button>
-          <Button
-            className="flex-1"
-            disabled={isPending || !planComplete || capacityFull}
-            onPress={() => submit(true)}
-          >
-            {isPending ? 'Saving…' : 'Start establishing'}
-          </Button>
-          {capacityFull ? (
-            <Text className="text-sm text-muted">
-              All 3 slots are in use. Pause or graduate a habit before starting
-              another.
-            </Text>
-          ) : null}
-        </View>
-      ) : (
-        <Button disabled={isPending} onPress={() => submit(false)}>
-          {isPending ? 'Saving…' : 'Save'}
-        </Button>
-      )}
+      <Button
+        disabled={isPending}
+        onPress={() =>
+          void handleSubmit((values) => onSubmit(toPayload(values)))()
+        }
+      >
+        {isPending ? "Saving…" : mode === "create" ? "Save to backlog" : "Save"}
+      </Button>
     </View>
   );
 }
@@ -306,69 +289,56 @@ function FormField({ label, hint, error, children }: FormFieldProps) {
   );
 }
 
-function toPayload(values: HabitFormValues): HabitFormPayload {
+function toPayload(values: HabitFormValues): CreateHabitInput {
+  const labels = splitLabels(values.checkpointLabels);
   return {
-    title: values.title.trim(),
-    description: emptyToNull(values.description),
-    category: values.category,
-    why: emptyToNull(values.why),
-    minimumAction: emptyToNull(values.minimumAction),
-    trigger: emptyToNull(values.trigger),
-    weekdays: values.weekdays.length > 0 ? values.weekdays : null,
-    estimatedDurationMinutes: values.estimatedDurationMinutes
-      ? Number(values.estimatedDurationMinutes)
-      : null,
+    name: values.name.trim(),
+    lifeAreaId: values.lifeAreaId,
+    why: values.why.trim(),
+    trigger: values.trigger.trim(),
+    acceptanceCriteria: values.acceptanceCriteria.trim(),
+    checkpointsPerDay: Number(values.checkpointsPerDay),
+    checkpointLabels: labels.length > 0 ? labels : null,
+    weekdays: [...values.weekdays].sort(),
   };
 }
 
-function emptyToNull(value: string): string | null {
-  const trimmedValue = value.trim();
-  return trimmedValue ? trimmedValue : null;
+function splitLabels(value: string): string[] {
+  return value
+    .split(",")
+    .map((label) => label.trim())
+    .filter((label) => label.length > 0);
 }
 
 const EMPTY_FORM: HabitFormValues = {
-  title: '',
-  description: '',
-  category: 'health',
-  why: '',
-  minimumAction: '',
-  trigger: '',
+  name: "",
+  lifeAreaId: "health",
+  why: "",
+  trigger: "",
+  acceptanceCriteria: "",
+  checkpointsPerDay: "1",
+  checkpointLabels: "",
   weekdays: [],
-  estimatedDurationMinutes: '',
-};
-
-export type HabitFormPayload = {
-  title: string;
-  description: string | null;
-  category: HabitCategory;
-  why: string | null;
-  minimumAction: string | null;
-  trigger: string | null;
-  weekdays: number[] | null;
-  estimatedDurationMinutes: number | null;
 };
 
 export type HabitFormValues = {
-  title: string;
-  description: string;
-  category: HabitCategory;
+  name: string;
+  lifeAreaId: (typeof LIFE_AREA_IDS)[number];
   why: string;
-  minimumAction: string;
   trigger: string;
+  acceptanceCriteria: string;
+  checkpointsPerDay: string;
+  checkpointLabels: string;
   weekdays: number[];
-  estimatedDurationMinutes: string;
 };
 
 type HabitFormProps = {
   initialValues?: HabitFormValues;
-  mode: 'create' | 'edit';
-  capacityFull: boolean;
+  mode: "create" | "edit";
+  lifeAreaLocked: boolean;
   serverError?: string;
   isPending: boolean;
-  onSubmit: (
-    values: HabitFormPayload,
-    startEstablishing: boolean,
-  ) => void | Promise<void>;
+  onSubmit: (values: CreateHabitInput) => void | Promise<void>;
 };
 
 type FormFieldProps = {

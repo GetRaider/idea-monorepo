@@ -1,36 +1,24 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# personal-website
 
-## Getting Started
+getadev.xyz: Andrew Polovets, Product Engineer. Static Next.js site with three sections: `/`, `/experience`, `/products` (+ `/products/[slug]`).
 
-First, run the development server:
+## Content
+
+All copy lives in typed files under `src/data/`; pages only render it.
+
+- `experience.ts`: roles (newest first). Drives `/experience`, the "Worked at" marquee and Home metrics. A highlight with `verified: false` is never rendered.
+- `profile.ts`: hero, About, contact, and Home metrics (`experienceId` + `highlightIndex` refs into `experience.ts`).
+- `products.ts`: products by tier (`featured`, `secondary`, `compact`). An empty `links` array renders no link block.
+
+## Env
+
+- `NEXT_PUBLIC_PERSONAL_WEBSITE_CONTACT_EMAIL`: email for the contact block (row hidden when empty).
+- `NEXT_PUBLIC_SITE_URL`: canonical origin, default `https://getadev.xyz`.
+
+## Dev
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm dev:personal-website
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Old URLs `/home`, `/projects`, `/projects/[slug]` redirect (301) to `/`, `/products`, `/products/[slug]`.

@@ -1,7 +1,13 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  transpilePackages: ["@repo/ui"],
+  async redirects() {
+    return [
+      { source: "/home", destination: "/", statusCode: 301 },
+      { source: "/projects", destination: "/products", statusCode: 301 },
+      { source: "/projects/:slug", destination: "/products/:slug", statusCode: 301 },
+    ];
+  },
 };
 
 export default nextConfig;

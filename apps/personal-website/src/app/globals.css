@@ -2,69 +2,111 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Palette taken from the LinkedIn banner: graphite-blue ground, a burgundy → slate glow on top,
+ * a warm amber accent from the avatar sunset, warm off-white text. All text pairs ≥ 4.5:1 on --ink.
+ */
 :root {
-  --surface-glass: rgba(12, 12, 18, 0.72);
-  --border-subtle: rgba(255, 255, 255, 0.08);
+  --ink: #0b1119;
+  --ink-raised: #111a26;
+  --glow-left: #4a221c;
+  --glow-right: #2d4058;
+  --ember: #f2a25a;
+  --ember-strong: #ffbb7c;
+  --cream: #f4eee6;
+  --mist: #9ba7b9;
+  color-scheme: dark;
 }
 
-html {
-  scroll-behavior: smooth;
+@layer base {
+  html {
+    @apply bg-ink text-cream antialiased;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply min-h-screen bg-ink;
+  }
+
+  /* Banner glow: burgundy on the left fading into slate on the right. */
+  body::after {
+    content: "";
+    pointer-events: none;
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 52rem;
+    z-index: 0;
+    background:
+      radial-gradient(ellipse 55% 60% at 12% 0%, color-mix(in srgb, var(--glow-left) 85%, transparent), transparent 70%),
+      radial-gradient(ellipse 60% 65% at 88% 0%, color-mix(in srgb, var(--glow-right) 80%, transparent), transparent 72%);
+  }
+
+  /* Fine grain over the gradient, as on the banner. */
+  body::before {
+    content: "";
+    pointer-events: none;
+    position: fixed;
+    inset: 0;
+    z-index: 2;
+    opacity: 0.12;
+    background-image: url("/noise-surface.svg");
+    background-size: 180px 180px;
+    mix-blend-mode: overlay;
+  }
+
+  body > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--ember);
+    outline-offset: 2px;
+  }
 }
 
-body {
-  @apply min-h-screen bg-[#050505] text-zinc-100 antialiased;
+@layer utilities {
+  /* Warm-silver headings, light at the top of each line, darker toward the baseline. */
+  .text-silver {
+    color: var(--cream);
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    -webkit-background-clip: text;
+    background-repeat: repeat-y;
+    background-size: 100% 1lh;
+    padding-bottom: 0.3em;
+    margin-bottom: -0.3em;
+    background-image: linear-gradient(180deg, #a59c92 0%, #a59c92 9%, #fffaf3 13%, #efe7dc 38%, #cfc5b8 66%, #a59c92 100%);
+  }
 }
 
-/* Sonner: above dialogs; aligned with take-and-do dark toast styling */
-[data-sonner-toaster] {
-  z-index: 100000 !important;
+/* Scroll reveal. Hidden only once JS has marked the page, so content never stays invisible. */
+.js [data-reveal] {
+  opacity: 0;
+  transform: translateY(18px);
+  transition:
+    opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: var(--reveal-delay, 0ms);
 }
 
-[data-sonner-toaster][data-sonner-theme="dark"]
-  [data-sonner-toast][data-styled="true"] {
-  background: rgba(24, 24, 27, 0.96) !important;
-  border-color: rgba(255, 255, 255, 0.1) !important;
-  color: #f4f4f5 !important;
+.js [data-reveal][data-shown] {
+  opacity: 1;
+  transform: none;
 }
 
-[data-sonner-toaster][data-sonner-theme="dark"]
-  [data-sonner-toast]
-  [data-title],
-[data-sonner-toaster][data-sonner-theme="dark"]
-  [data-sonner-toast]
-  [data-description] {
-  color: #f4f4f5 !important;
-}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 
-[data-sonner-toaster][data-sonner-theme="dark"]
-  [data-sonner-toast][data-type="success"] {
-  background: #0f2a16 !important;
-  border-color: #14532d !important;
-  color: #86efac !important;
-}
-
-[data-sonner-toaster][data-sonner-theme="dark"]
-  [data-sonner-toast][data-type="error"] {
-  background: #2a0f0f !important;
-  border-color: #450a0a !important;
-  color: #fca5a5 !important;
-}
-
-[data-sonner-toast][data-styled="true"] [data-close-button] {
-  left: auto !important;
-  right: 8px !important;
-  top: 8px !important;
-  width: 24px !important;
-  height: 24px !important;
-  transform: none !important;
-  background: rgba(255, 255, 255, 0.08) !important;
-  border-color: rgba(255, 255, 255, 0.12) !important;
-  color: #e4e4e7 !important;
-  border-radius: 4px !important;
-}
-
-[data-sonner-toast][data-styled="true"] [data-close-button]:hover {
-  background: rgba(255, 255, 255, 0.14) !important;
-  border-color: rgba(255, 255, 255, 0.18) !important;
-  color: #fafafa !important;
+  .js [data-reveal] {
+    opacity: 1;
+    transform: none;
+  }
 }

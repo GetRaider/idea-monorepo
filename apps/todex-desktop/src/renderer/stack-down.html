@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Todex</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: #000;
+        color: #f5f5f5;
+        font:
+          15px/1.5 ui-sans-serif,
+          system-ui,
+          sans-serif;
+      }
+      main {
+        width: min(440px, calc(100% - 48px));
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 22px;
+        font-weight: 600;
+      }
+      p {
+        margin: 0;
+        color: #a3a3a3;
+      }
+      ul {
+        margin: 16px 0 0;
+        padding: 0;
+        list-style: none;
+      }
+      li {
+        margin-top: 8px;
+        word-break: break-all;
+      }
+      #retry {
+        display: none;
+        margin-top: 20px;
+        padding: 8px 14px;
+        border-radius: 8px;
+        background: #f5f5f5;
+        color: #000;
+        font-weight: 600;
+        text-decoration: none;
+      }
+      #retry.is-visible {
+        display: inline-block;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1 id="heading">Opening Todex…</h1>
+      <p id="detail">Waiting for the local web app and API.</p>
+      <ul id="failures"></ul>
+      <a id="retry" href="?retry=1">Retry</a>
+    </main>
+    <script>
+      const labels = { api: "API", web: "Web" };
+      const params = new URLSearchParams(window.location.search);
+      const failed = params.get("failed");
+      const pending = params.get("pending") === "1";
+      if (failed) {
+        const heading = document.getElementById("heading");
+        const detail = document.getElementById("detail");
+        const list = document.getElementById("failures");
+        const retry = document.getElementById("retry");
+        if (heading) {
+          heading.textContent = pending
+            ? "Waiting for Todex…"
+            : "Stack not running";
+        }
+        if (detail) {
+          detail.textContent = pending
+            ? "The window opens when every check below responds."
+            : "Start the Todex web app and API, then retry.";
+        }
+        if (list) {
+          for (const name of failed.split(",")) {
+            const url = params.get(name);
+            if (!url) continue;
+            const item = document.createElement("li");
+            item.textContent = (labels[name] || name) + " failed: " + url;
+            list.append(item);
+          }
+        }
+        if (retry && !pending) retry.classList.add("is-visible");
+      }
+    </script>
+  </body>
+</html>

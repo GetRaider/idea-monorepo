@@ -141,6 +141,9 @@ pnpm run dev:personal-website
 # Start only Todex (+ required packages)
 pnpm run dev:todex
 
+# Todex desktop shell. Requires the stack from dev:todex (and docker) already running.
+pnpm run dev:todex-desktop
+
 # Start Tempo Electron app
 pnpm run dev:tempo
 

@@ -24,6 +24,7 @@
     "dev:take-and-do": "turbo run dev --filter=take-and-do --filter=@repo/ui --filter=@repo/api --filter=@repo/shared",
     "dev:personal-website": "turbo run dev --filter=personal-website --filter=@repo/ui",
     "dev:todex": "turbo run dev --filter=todex-api --filter=todex-web --filter=@repo/api --filter=@repo/ui",
+    "dev:todex-desktop": "turbo run dev --filter=todex-desktop",
     "dev:todex-landing": "turbo run dev --filter=todex-landing --filter=@repo/ui --filter=@repo/api",
     "dev:tempo": "turbo run dev --filter=tempo",
     "dev:evolin": "turbo run dev --filter=evolin --filter=evolin-api --filter=@repo/evolin-shared",

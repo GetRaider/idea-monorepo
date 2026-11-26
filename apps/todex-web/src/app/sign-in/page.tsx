@@ -31,7 +31,7 @@ function SignInForm() {
           onClick={() =>
             signIn.social({
               provider: "google",
-              callbackURL: `${window.location.origin}${callbackPath}`,
+              callbackURL: `${window.location.origin}${googleCallbackPath(next)}`,
             })
           }
         >
@@ -43,6 +43,13 @@ function SignInForm() {
       </div>
     </main>
   );
+}
+
+function googleCallbackPath(next: string | null): string {
+  if (navigator.userAgent.includes("Electron")) {
+    return `/desktop-handoff?state=${crypto.randomUUID()}`;
+  }
+  return next?.startsWith("/") ? next : "/overview";
 }
 
 function DevLoginForm({ callbackPath }: { callbackPath: string }) {

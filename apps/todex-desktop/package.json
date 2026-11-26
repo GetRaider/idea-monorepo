@@ -1,0 +1,30 @@
+{
+  "name": "todex-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Todex desktop shell — a window onto the local web app",
+  "type": "module",
+  "main": "./out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "lint": "eslint . --max-warnings=0",
+    "typecheck": "tsc --noEmit -p tsconfig.node.json",
+    "codeCheck": "pnpm typecheck && pnpm lint",
+    "test": "vitest run",
+    "clean": "rm -rf out .turbo",
+    "clean:hard": "pnpm run clean && rm -rf node_modules"
+  },
+  "devDependencies": {
+    "@repo/eslint-config": "workspace:*",
+    "@repo/typescript-config": "workspace:*",
+    "@types/node": "catalog:",
+    "electron": "^37.3.1",
+    "electron-vite": "^4.0.1",
+    "eslint": "catalog:",
+    "globals": "catalog:",
+    "typescript": "catalog:",
+    "vite": "^6.3.5",
+    "vitest": "catalog:"
+  }
+}

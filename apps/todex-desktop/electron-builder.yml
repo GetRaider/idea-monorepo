@@ -1,0 +1,16 @@
+appId: com.polovec.todex
+productName: Todex
+directories:
+  output: release
+  buildResources: resources
+files:
+  - out/**/*
+  - package.json
+mac:
+  icon: icon.png
+  identity: "-"
+  hardenedRuntime: false
+  gatekeeperAssess: false
+  target:
+    - dir
+  category: public.app-category.productivity

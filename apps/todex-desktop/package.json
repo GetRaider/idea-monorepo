@@ -3,16 +3,19 @@
   "version": "0.1.0",
   "private": true,
   "description": "Todex desktop shell — a window onto the local web app",
+  "author": "Andrew Polovets",
   "type": "module",
   "main": "./out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
+    "package": "electron-vite build && electron-builder --dir --mac --config electron-builder.yml",
+    "install:mac": "pnpm package && rm -rf /Applications/Todex.app && cp -R release/mac-arm64/Todex.app /Applications/Todex.app && xattr -cr /Applications/Todex.app",
     "lint": "eslint . --max-warnings=0",
     "typecheck": "tsc --noEmit -p tsconfig.node.json",
     "codeCheck": "pnpm typecheck && pnpm lint",
     "test": "vitest run",
-    "clean": "rm -rf out .turbo",
+    "clean": "rm -rf out .turbo release",
     "clean:hard": "pnpm run clean && rm -rf node_modules"
   },
   "devDependencies": {
@@ -20,6 +23,7 @@
     "@repo/typescript-config": "workspace:*",
     "@types/node": "catalog:",
     "electron": "^37.3.1",
+    "electron-builder": "^26.0.12",
     "electron-vite": "^4.0.1",
     "eslint": "catalog:",
     "globals": "catalog:",

@@ -144,6 +144,9 @@ pnpm run dev:todex
 # Todex desktop shell. Requires the stack from dev:todex (and docker) already running.
 pnpm run dev:todex-desktop
 
+# Install that shell into /Applications. The local stack still has to be running.
+pnpm --filter todex-desktop install:mac
+
 # Start Tempo Electron app
 pnpm run dev:tempo
 

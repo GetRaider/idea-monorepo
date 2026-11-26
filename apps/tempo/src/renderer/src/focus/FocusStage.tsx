@@ -1,3 +1,5 @@
+import { shouldOfferSaveAsActivity } from "../../../helpers/session.helper";
+
 import { ClockDisplay } from "../components/ClockDisplay";
 import { DurationChips } from "../components/DurationChips";
 import { ModeToggle } from "../components/ModeToggle";
@@ -5,6 +7,7 @@ import { ProgressRail } from "../components/ProgressRail";
 import { ScopeComposer } from "../components/ScopeComposer";
 import { SessionCombobox } from "../components/SessionCombobox";
 import { Button } from "../components/ui/button";
+import { Checkbox } from "../components/ui/checkbox";
 import { cn } from "../lib/cn";
 
 import type { FocusViewState } from "../../../helpers/focus-view.helper";
@@ -58,6 +61,13 @@ export function FocusStage({
   const showResume =
     viewState === "focusPaused" || viewState === "focusPausedBreakRunning";
   const resumeBlocked = viewState === "focusPausedBreakRunning";
+  const offerSaveAsActivity =
+    isIdle &&
+    shouldOfferSaveAsActivity(
+      name,
+      selectedSessionId,
+      sessions.map((session) => session.name),
+    );
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -76,13 +86,11 @@ export function FocusStage({
           name={name}
           sessions={sessions}
           selectedSessionId={selectedSessionId}
-          saveToBacklog={saveToBacklog}
           disabled={!isIdle}
           breakDurationMinutes={breakDurationMinutes}
           errorMessage={activityErrorMessage}
           onNameChange={onNameChange}
           onSelectActivity={onSelectActivity}
-          onSaveToBacklogChange={onSaveToBacklogChange}
           onEdit={onEditActivity}
           onDelete={onDeleteActivity}
         />
@@ -131,7 +139,9 @@ export function FocusStage({
           </p>
         ) : null}
         {pausedFocusLabel ? (
-          <p className="z-[1] m-0 text-xs text-tempo-muted">{pausedFocusLabel}</p>
+          <p className="z-[1] m-0 text-xs text-tempo-muted">
+            {pausedFocusLabel}
+          </p>
         ) : null}
         {errorMessage ? (
           <p className="z-[1] m-0 text-xs text-tempo-danger">{errorMessage}</p>
@@ -146,6 +156,17 @@ export function FocusStage({
           disabled={!isIdle}
           onChange={onScopeChange}
         />
+        {offerSaveAsActivity ? (
+          <label className="z-[1] flex cursor-pointer items-center gap-2 text-sm text-tempo-muted">
+            <Checkbox
+              checked={saveToBacklog}
+              onCheckedChange={(checked) =>
+                onSaveToBacklogChange(checked === true)
+              }
+            />
+            Save “{name.trim()}” as activity
+          </label>
+        ) : null}
       </main>
     </div>
   );

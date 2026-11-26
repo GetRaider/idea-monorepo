@@ -1,15 +1,19 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 
 import { isDefaultBreakSessionName } from "../../../helpers/break.helper";
 import {
   clampSessionName,
   SESSION_NAME_MAX_LENGTH,
-  shouldOfferSaveAsActivity,
 } from "../../../helpers/session.helper";
 import { cn } from "../lib/cn";
 
 import { OverflowMenu } from "./OverflowMenu";
-import { Checkbox } from "./ui/checkbox";
 import {
   Command,
   CommandEmpty,
@@ -17,7 +21,6 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-  CommandSeparator,
 } from "./ui/command";
 import { Popover, PopoverAnchor, PopoverContent } from "./ui/popover";
 
@@ -27,13 +30,11 @@ export function SessionCombobox({
   name,
   sessions,
   selectedSessionId,
-  saveToBacklog,
   disabled,
   breakDurationMinutes,
   errorMessage,
   onNameChange,
   onSelectActivity,
-  onSaveToBacklogChange,
   onEdit,
   onDelete,
 }: SessionComboboxProps) {
@@ -52,11 +53,6 @@ export function SessionCombobox({
       session.name.toLowerCase().includes(normalizedQuery),
     );
   }, [name, sessions]);
-  const offerSaveAsActivity = shouldOfferSaveAsActivity(
-    name,
-    selectedSessionId,
-    sessions.map((session) => session.name),
-  );
 
   useEffect(() => {
     if (disabled) {
@@ -67,7 +63,10 @@ export function SessionCombobox({
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent): void {
-      if (event.key.toLowerCase() !== "k" || !(event.metaKey || event.ctrlKey)) {
+      if (
+        event.key.toLowerCase() !== "k" ||
+        !(event.metaKey || event.ctrlKey)
+      ) {
         return;
       }
       if (disabled) {
@@ -102,9 +101,6 @@ export function SessionCombobox({
         setIsOpen(nextOpen);
         if (!nextOpen) {
           setPendingDeleteId(null);
-          if (saveToBacklog) {
-            onSaveToBacklogChange(false);
-          }
         }
       }}
     >
@@ -205,12 +201,13 @@ export function SessionCombobox({
           }}
         >
           <CommandList>
-            {sessions.length === 0 && !offerSaveAsActivity ? (
+            {filteredSessions.length === 0 ? (
               <CommandEmpty>
-                No saved activities yet. Name one and optionally save it.
+                {sessions.length === 0
+                  ? "No saved activities yet. Name one and optionally save it."
+                  : "No matching activities"}
               </CommandEmpty>
-            ) : null}
-            {filteredSessions.length > 0 ? (
+            ) : (
               <CommandGroup heading="Activities">
                 {filteredSessions.map((session) => (
                   <SessionComboboxRow
@@ -241,31 +238,7 @@ export function SessionCombobox({
                   />
                 ))}
               </CommandGroup>
-            ) : sessions.length > 0 ? (
-              <p className="m-0 px-3 py-3 text-center text-xs text-tempo-faint">
-                No matching activities
-              </p>
-            ) : null}
-            {offerSaveAsActivity ? (
-              <>
-                {filteredSessions.length > 0 || sessions.length > 0 ? (
-                  <CommandSeparator />
-                ) : null}
-                <CommandGroup>
-                  <CommandItem
-                    value="save-as-activity"
-                    onSelect={() => onSaveToBacklogChange(!saveToBacklog)}
-                  >
-                    <Checkbox
-                      checked={saveToBacklog}
-                      className="pointer-events-none"
-                      tabIndex={-1}
-                    />
-                    Save “{name.trim()}” as activity
-                  </CommandItem>
-                </CommandGroup>
-              </>
-            ) : null}
+            )}
           </CommandList>
           {errorMessage !== null ? (
             <p className="mb-1 mt-1 px-2 text-xs text-tempo-danger">
@@ -364,7 +337,10 @@ function ChevronIcon({ open }: { open: boolean }) {
       viewBox="0 0 12 12"
       fill="none"
       aria-hidden
-      className={cn("transition-transform duration-500 ease-in-out", open ? "rotate-180" : null)}
+      className={cn(
+        "transition-transform duration-500 ease-in-out",
+        open ? "rotate-180" : null,
+      )}
     >
       <path
         d="M2.5 4.25 6 7.75l3.5-3.5"
@@ -381,13 +357,11 @@ interface SessionComboboxProps {
   name: string;
   sessions: SavedSession[];
   selectedSessionId: string | null;
-  saveToBacklog: boolean;
   disabled: boolean;
   breakDurationMinutes: number;
   errorMessage: string | null;
   onNameChange: (name: string) => void;
   onSelectActivity: (sessionId: string | null) => void;
-  onSaveToBacklogChange: (checked: boolean) => void;
   onEdit: (session: SavedSession) => void;
   onDelete: (sessionId: string) => Promise<void>;
 }

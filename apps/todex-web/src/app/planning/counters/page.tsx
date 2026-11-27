@@ -16,7 +16,7 @@ import {
   useCounterList,
   useCreateCounter,
 } from "./use-counters";
-import { CounterWeekHeader, WeekControls } from "./week-header";
+import { BackToToday, CounterWeekHeader, WeekArrow } from "./week-header";
 
 export default function CountersPage() {
   const router = useRouter();
@@ -62,9 +62,21 @@ export default function CountersPage() {
           days={days}
           today={today}
           ringShare={(column) => dayShare(data, column)}
-          controls={
-            <WeekControls weeksBack={weeksBack} onChange={setWeeksBack} />
+          before={
+            <WeekArrow
+              direction="earlier"
+              weeksBack={weeksBack}
+              onChange={setWeeksBack}
+            />
           }
+          after={
+            <WeekArrow
+              direction="later"
+              weeksBack={weeksBack}
+              onChange={setWeeksBack}
+            />
+          }
+          aside={<BackToToday weeksBack={weeksBack} onChange={setWeeksBack} />}
         />
         <CounterSections counters={data} />
       </div>

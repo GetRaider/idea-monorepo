@@ -9,7 +9,6 @@ import { randomUUID } from "crypto";
 import {
   and,
   asc,
-  between,
   desc,
   eq,
   getTableColumns,
@@ -31,9 +30,9 @@ import type {
 } from "@repo/api/todex";
 
 import {
+  counterDays,
   counterLinks,
   counterOccurrences,
-  counterPeriods,
   counters,
   spaces,
   tasks,
@@ -42,24 +41,19 @@ import {
 } from "../../db/schema";
 import { DRIZZLE_DB } from "../../db/tokens";
 import {
-  advanceCursor,
-  closeEndedPeriods,
-  hasEndedPeriod,
+  closeEndedDays,
+  hasEndedDay,
   lockCounter,
   saveCounter,
-  settleSnapshot,
+  saveDay,
 } from "./counter-closing";
+import { planDay } from "./counter-days";
+import { isSameSchedule, isScheduled, localDate } from "./counter-schedule";
 import {
-  isWithin,
-  localDate,
-  periodContaining,
-  planDay,
-} from "./counter-periods";
-import {
+  applyRule,
+  targetResolver,
   toCounter,
   toCounterOccurrence,
-  trackedPeriod,
-  trackedPeriods,
 } from "./counter-view";
 
 @Injectable()
@@ -80,15 +74,15 @@ export class CountersService {
         ),
       );
     for (const row of rows) {
-      if (!hasEndedPeriod(row, now)) continue;
+      if (!hasEndedDay(row, now)) continue;
       try {
         await this.db.transaction(async (tx) => {
           const counter = await lockCounter(tx, row.id);
-          if (counter) await closeEndedPeriods(tx, counter, now);
+          if (counter) await closeEndedDays(tx, counter, now);
         });
       } catch (error) {
         this.logger.error(
-          `Could not close periods of counter ${row.id}`,
+          `Could not close days of counter ${row.id}`,
           error instanceof Error ? error.stack : String(error),
         );
       }
@@ -134,12 +128,11 @@ export class CountersService {
       id,
       workspaceId,
       ...body,
+      // Zod infers optional keys without strict null checks.
+      schedule: body.schedule!,
       countsSpaceTasks: body.spaceId !== null && body.countsSpaceTasks,
       anchorDate: today,
-      closedThrough: addDaysToDate(
-        periodContaining(body, today, today).start,
-        -1,
-      ),
+      closedThrough: addDaysToDate(today, -1),
       status: "active",
       createdAt: now,
       updatedAt: now,
@@ -178,7 +171,26 @@ export class CountersService {
   ): Promise<CounterDetail> {
     await this.change(workspaceId, counterId, now, async (tx, counter) => {
       if (counter.status === "archived") return;
-      await saveCounter(tx, { ...counter, status: "archived" }, now);
+      const today = localDate(now, counter.timeZone);
+      const target = targetResolver(
+        counter,
+        await this.daysOf(tx, counter.id),
+        today,
+      )(today);
+      // Today stops being required, so whatever it holds is kept as it is.
+      if (target !== null) {
+        const day = { date: today, target, required: false };
+        await saveDay(tx, counter.id, day, now);
+      }
+      await saveCounter(
+        tx,
+        {
+          ...counter,
+          status: "archived",
+          closedThrough: laterDate(counter.closedThrough, today),
+        },
+        now,
+      );
     });
     return this.detail(workspaceId, counterId, now);
   }
@@ -191,17 +203,17 @@ export class CountersService {
     await this.change(workspaceId, counterId, now, async (tx, counter) => {
       if (counter.status === "active") return;
       const today = localDate(now, counter.timeZone);
-      const currentEnd = periodContaining(
-        counter,
-        counter.anchorDate,
-        today,
-      ).end;
-      // Tracking resumes with the next period and never reopens closed days.
-      const closedThrough =
-        currentEnd > counter.closedThrough ? currentEnd : counter.closedThrough;
+      const resumed = counter.pendingChange
+        ? applyRule(counter, counter.pendingChange, today)
+        : counter;
+      // Tracking resumes tomorrow; today may be marked but cannot fail.
       await saveCounter(
         tx,
-        { ...advanceCursor(counter, closedThrough), status: "active" },
+        {
+          ...resumed,
+          status: "active",
+          closedThrough: laterDate(counter.closedThrough, today),
+        },
         now,
       );
     });
@@ -217,31 +229,20 @@ export class CountersService {
     now = new Date(),
   ): Promise<Counter> {
     await this.change(workspaceId, counterId, now, async (tx, counter) => {
-      const { period, isOpen } = await this.markablePeriod(
-        tx,
-        counter,
-        date,
-        now,
-      );
-      const entries = (
+      const day = await this.markableDay(tx, counter, date, now);
+      const dayEntries = (
         await tx
           .select()
           .from(counterOccurrences)
           .where(
             and(
               eq(counterOccurrences.counterId, counter.id),
-              between(counterOccurrences.localDate, period.start, period.end),
+              eq(counterOccurrences.localDate, date),
               ne(counterOccurrences.source, "system"),
             ),
           )
       ).map((row) => ({ ...row, date: row.localDate }));
-      const dayEntries = entries.filter((entry) => entry.date === date);
-      const plan = planDay({
-        period,
-        dayEntries,
-        otherDays: entries.length - dayEntries.length,
-        change: body,
-      });
+      const plan = planDay({ target: day.target, dayEntries, change: body });
       if ("error" in plan) throw new BadRequestException(plan.error);
       if (plan.removeIds.length > 0) {
         await tx
@@ -261,7 +262,7 @@ export class CountersService {
           })),
         );
       }
-      if (!isOpen) await settleSnapshot(tx, counter.id, period, now);
+      if (day.isSaved) await saveDay(tx, counter.id, day, now);
     });
     return this.summary(workspaceId, counterId, now);
   }
@@ -288,7 +289,7 @@ export class CountersService {
           "A default fail cannot be removed; mark the day instead",
         );
       }
-      const { period, isOpen } = await this.markablePeriod(
+      const day = await this.markableDay(
         tx,
         counter,
         occurrence.localDate,
@@ -297,7 +298,7 @@ export class CountersService {
       await tx
         .delete(counterOccurrences)
         .where(eq(counterOccurrences.id, occurrence.id));
-      if (!isOpen) await settleSnapshot(tx, counter.id, period, now);
+      if (day.isSaved) await saveDay(tx, counter.id, day, now);
     });
     return this.summary(workspaceId, counterId, now);
   }
@@ -343,7 +344,7 @@ export class CountersService {
     return this.detail(workspaceId, counterId, now);
   }
 
-  /** Locks the Counter, closes ended periods, then applies one write. */
+  /** Locks the Counter, closes ended days, then applies one write. */
   private async change(
     workspaceId: string,
     counterId: string,
@@ -354,17 +355,17 @@ export class CountersService {
     // Committed on its own, so a rejected write never undoes a due closing.
     await this.db.transaction(async (tx) => {
       const counter = await lockCounter(tx, counterId);
-      if (counter) await closeEndedPeriods(tx, counter, now);
+      if (counter) await closeEndedDays(tx, counter, now);
     });
     await this.db.transaction(async (tx) => {
       const counter = await lockCounter(tx, counterId);
       if (!counter) throw new NotFoundException("Counter not found");
-      await write(tx, await closeEndedPeriods(tx, counter, now));
+      await write(tx, await closeEndedDays(tx, counter, now));
     });
   }
 
-  /** The tracked period that holds `date`, if the day may still be marked. */
-  private async markablePeriod(
+  /** The day behind `date`, if it may still be marked. */
+  private async markableDay(
     tx: NodePgDatabase,
     counter: CounterRow,
     date: string,
@@ -373,18 +374,29 @@ export class CountersService {
     if (counter.status !== "active") {
       throw new BadRequestException("Restore the Counter to mark it");
     }
-    const snapshots = await tx
-      .select()
-      .from(counterPeriods)
-      .where(eq(counterPeriods.counterId, counter.id));
-    const periods = trackedPeriods(counter, snapshots);
-    const period = periods.find((item) => isWithin(item, date));
-    if (!period || date > localDate(now, counter.timeZone)) {
+    const days = await this.daysOf(tx, counter.id);
+    const today = localDate(now, counter.timeZone);
+    const target = targetResolver(counter, days, today)(date);
+    if (target === null || date > today) {
       throw new BadRequestException(
-        "Only tracked days up to today can be marked",
+        "Only scheduled days up to today can be marked",
       );
     }
-    return { period, isOpen: period.start > counter.closedThrough };
+    const saved = days.find((day) => day.localDate === date);
+    return {
+      date,
+      target,
+      required: saved?.required ?? false,
+      // Open days are saved when they close; any other mark is saved now.
+      isSaved: saved !== undefined || date <= counter.closedThrough,
+    };
+  }
+
+  private daysOf(db: NodePgDatabase, counterId: string) {
+    return db
+      .select()
+      .from(counterDays)
+      .where(eq(counterDays.counterId, counterId));
   }
 
   private async requireSpace(workspaceId: string, spaceId: string) {
@@ -425,26 +437,24 @@ export class CountersService {
     if (rows.length === 0) return [];
     const ids = rows.map((row) => row.id);
     // Totals and streaks need the whole history.
-    const [occurrences, snapshots] = await Promise.all([
+    const [occurrences, days] = await Promise.all([
       this.occurrenceRows(inArray(counterOccurrences.counterId, ids)),
       this.db
         .select()
-        .from(counterPeriods)
-        .where(inArray(counterPeriods.counterId, ids)),
+        .from(counterDays)
+        .where(inArray(counterDays.counterId, ids)),
     ]);
-    return rows.map((row) => {
-      const own = snapshots.filter((snapshot) => snapshot.counterId === row.id);
-      const periods = trackedPeriods(row, own);
-      return toCounter({
+    return rows.map((row) =>
+      toCounter({
         counter: row,
         occurrences: occurrences
           .filter((occurrence) => occurrence.counterId === row.id)
-          .map((occurrence) => toCounterOccurrence(row, periods, occurrence)),
-        snapshots: own,
+          .map((occurrence) => toCounterOccurrence(row, occurrence)),
+        days: days.filter((day) => day.counterId === row.id),
         until,
         now,
-      });
-    });
+      }),
+    );
   }
 
   private async detail(
@@ -454,27 +464,23 @@ export class CountersService {
     until?: string,
   ): Promise<CounterDetail> {
     const row = await this.requireCounter(this.db, workspaceId, counterId);
-    const [occurrences, snapshots, links] = await Promise.all([
+    const [occurrences, days, links] = await Promise.all([
       this.occurrenceRows(eq(counterOccurrences.counterId, row.id)),
-      this.db
-        .select()
-        .from(counterPeriods)
-        .where(eq(counterPeriods.counterId, row.id)),
+      this.daysOf(this.db, row.id),
       this.db
         .select()
         .from(counterLinks)
         .where(eq(counterLinks.counterId, row.id))
         .orderBy(asc(counterLinks.createdAt), asc(counterLinks.id)),
     ]);
-    const periods = trackedPeriods(row, snapshots);
     const history = occurrences.map((occurrence) =>
-      toCounterOccurrence(row, periods, occurrence),
+      toCounterOccurrence(row, occurrence),
     );
     return {
       ...toCounter({
         counter: row,
         occurrences: history,
-        snapshots,
+        days,
         until,
         now,
       }),
@@ -546,30 +552,33 @@ export class CountersService {
 }
 
 /**
- * A new Recurrence or Target waits for the next period. It applies at once only
- * when the next period has not started yet.
+ * A new schedule or target waits until tomorrow while today is still open.
+ * Otherwise nothing is in progress and it applies at once.
  */
 function withRuleChange(
   counter: CounterRow,
   body: UpdateCounterBody,
   now: Date,
 ): CounterRow {
-  if (body.frequency === undefined && body.target === undefined) return counter;
+  if (body.schedule === undefined && body.target === undefined) return counter;
   const base = counter.pendingChange ?? counter;
   const requested = {
-    frequency: body.frequency ?? base.frequency,
-    interval: body.interval ?? base.interval,
+    schedule: body.schedule ?? base.schedule,
     target: body.target ?? base.target,
   };
   const unchanged =
-    requested.frequency === counter.frequency &&
-    requested.interval === counter.interval &&
+    isSameSchedule(requested.schedule, counter.schedule) &&
     requested.target === counter.target;
   if (unchanged) return { ...counter, pendingChange: null };
-  const pending = { ...counter, pendingChange: requested };
-  const period = trackedPeriod(counter);
-  if (period && period.start > localDate(now, counter.timeZone)) {
-    return advanceCursor(pending, counter.closedThrough);
-  }
-  return pending;
+  const today = localDate(now, counter.timeZone);
+  const isTodayOpen =
+    counter.status === "active" &&
+    counter.closedThrough < today &&
+    isScheduled(counter.schedule, counter.anchorDate, today);
+  if (isTodayOpen) return { ...counter, pendingChange: requested };
+  return applyRule(counter, requested, today);
+}
+
+function laterDate(left: string, right: string): string {
+  return left > right ? left : right;
 }

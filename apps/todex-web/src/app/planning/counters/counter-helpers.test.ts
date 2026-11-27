@@ -10,38 +10,85 @@ import {
   groupBySpace,
   linkCandidates,
   progressLabel,
-  streakLabel,
+  scheduleDraft,
+  scheduleFromDraft,
 } from "./counter-helpers";
 
 describe("progressLabel", () => {
-  it("names the period after the recurrence", () => {
-    expect(progressLabel(counter())).toBe("3 / 4 this week");
-    expect(progressLabel(counter({ frequency: "daily" }))).toBe("3 / 4 today");
-    expect(progressLabel(counter({ frequency: "daily", interval: 2 }))).toBe(
-      "3 / 4 these 2 days",
-    );
-    expect(progressLabel(counter({ interval: 2 }))).toBe("3 / 4 these 2 weeks");
-    expect(progressLabel(counter({ frequency: "monthly" }))).toBe(
-      "3 / 4 this month",
-    );
+  it("shows how far today has got", () => {
+    expect(progressLabel(counter())).toBe("1 / 3 today");
   });
 
-  it("says when a restored Counter resumes and when it is archived", () => {
-    const waiting = counter();
+  it("names the next day when today is off the schedule", () => {
+    const resting = counter({
+      progress: { today: null, nextDate: "2026-11-30" },
+    });
+    expect(progressLabel(resting, "en-US")).toBe("Next Mon, Nov 30");
+    expect(progressLabel(counter({ status: "archived" }))).toBe("Archived");
+  });
+});
+
+describe("scheduleDraft", () => {
+  // 2026-11-27 is a Friday.
+  const today = "2026-11-27";
+
+  it("keeps the values of the current schedule", () => {
     expect(
-      progressLabel(
-        {
-          ...waiting,
-          period: waiting.period && {
-            ...waiting.period,
-            start: "2026-11-30",
-            isOpen: false,
-          },
-        },
-        "en-US",
+      scheduleDraft(
+        { frequency: "weekly", interval: 2, weekdays: ["MO", "WE"] },
+        today,
       ),
-    ).toBe("Resumes Mon, Nov 30");
-    expect(progressLabel(counter({ period: null }))).toBe("Archived");
+    ).toMatchObject({
+      frequency: "weekly",
+      weekInterval: 2,
+      weekdays: ["MO", "WE"],
+    });
+    expect(
+      scheduleDraft({ frequency: "daily", interval: 3 }, today).dayInterval,
+    ).toBe("3");
+  });
+
+  it("prefills the other repeat kinds from today", () => {
+    expect(scheduleDraft({ frequency: "daily", interval: 1 }, today)).toEqual({
+      frequency: "daily",
+      dayInterval: "1",
+      weekInterval: 1,
+      weekdays: ["FR"],
+      monthDay: "27",
+    });
+  });
+});
+
+describe("scheduleFromDraft", () => {
+  const draft = scheduleDraft(
+    { frequency: "daily", interval: 1 },
+    "2026-11-27",
+  );
+
+  it("builds only the fields of the chosen repeat kind", () => {
+    expect(scheduleFromDraft(draft)).toEqual({
+      frequency: "daily",
+      interval: 1,
+    });
+    expect(scheduleFromDraft({ ...draft, frequency: "weekly" })).toEqual({
+      frequency: "weekly",
+      interval: 1,
+      weekdays: ["FR"],
+    });
+    expect(scheduleFromDraft({ ...draft, frequency: "monthly" })).toEqual({
+      frequency: "monthly",
+      monthDay: 27,
+    });
+  });
+
+  it("is null while a value is missing or out of range", () => {
+    expect(scheduleFromDraft({ ...draft, dayInterval: "" })).toBeNull();
+    expect(
+      scheduleFromDraft({ ...draft, frequency: "weekly", weekdays: [] }),
+    ).toBeNull();
+    expect(
+      scheduleFromDraft({ ...draft, frequency: "monthly", monthDay: "32" }),
+    ).toBeNull();
   });
 });
 
@@ -57,6 +104,9 @@ describe("dayLabel", () => {
       dayLabel(day({ completed: 1, skipped: 1, failed: 2 }), "en-US"),
     ).toBe("Fri, Nov 27: 1 completed, 1 skipped, 2 failed");
     expect(dayLabel(day(), "en-US")).toBe("Fri, Nov 27: nothing logged");
+    expect(dayLabel(day({ tracked: false }), "en-US")).toBe(
+      "Fri, Nov 27: not scheduled",
+    );
   });
 });
 
@@ -84,27 +134,14 @@ describe("dayClickChange", () => {
   });
 
   it("clears a day that is already full", () => {
-    expect(dayClickChange(day({ completed: 1, canMark: true }))).toEqual({
+    expect(dayClickChange(day({ completed: 1 }))).toEqual({
       status: "empty",
     });
   });
 
-  it("does nothing when the Target is covered or the day is inert", () => {
+  it("does nothing on an untouched or locked day", () => {
     expect(dayClickChange(day())).toBeNull();
     expect(dayClickChange(day({ loggable: false, completed: 1 }))).toBeNull();
-  });
-});
-
-describe("streakLabel", () => {
-  it("counts in the Counter's periods", () => {
-    const streak = (value: number, overrides: Partial<Counter> = {}) =>
-      streakLabel(
-        counter({ stats: { totalDays: 0, streak: value }, ...overrides }),
-      );
-    expect(streak(1, { frequency: "daily" })).toBe("1 day");
-    expect(streak(4)).toBe("4 weeks");
-    expect(streak(0, { frequency: "monthly" })).toBe("0 months");
-    expect(streak(2, { interval: 2 })).toBe("2 periods");
   });
 });
 
@@ -112,7 +149,7 @@ describe("dayShare", () => {
   const withDay = (overrides: Partial<CounterDay>) =>
     counter({ week: [day(overrides)] });
 
-  it("compares full days with the Counters tracked that day", () => {
+  it("compares full days with the Counters scheduled that day", () => {
     expect(
       dayShare(
         [
@@ -197,20 +234,15 @@ function counter(overrides: Partial<Counter> = {}): Counter {
     name: "Gym",
     spaceId: null,
     countsSpaceTasks: false,
-    frequency: "weekly",
-    interval: 1,
-    target: 4,
+    schedule: { frequency: "daily", interval: 1 },
+    target: 3,
     timeZone: "UTC",
     showInToday: true,
     status: "active",
     today: "2026-11-27",
-    period: {
-      start: "2026-11-23",
-      end: "2026-11-29",
-      completed: 3,
-      skipped: 0,
-      failed: 0,
-      isOpen: true,
+    progress: {
+      today: { completed: 1, target: 3 },
+      nextDate: "2026-11-28",
     },
     pendingChange: null,
     stats: { totalDays: 0, streak: 0 },
@@ -230,7 +262,6 @@ function day(overrides: Partial<CounterDay> = {}): CounterDay {
     skipped: 0,
     failed: 0,
     canComplete: false,
-    canMark: false,
     occurrences: [],
     ...overrides,
   };

@@ -5,6 +5,7 @@ import type { CounterDetail, CounterOccurrence } from "@repo/api/todex";
 
 import { CloseIcon } from "@components/icons";
 
+import { CollapsibleSection } from "./collapsible-section";
 import { formatLocalDate } from "./counter-helpers";
 import { useCounterActions } from "./use-counters";
 
@@ -12,10 +13,7 @@ export function CounterHistory({ counter }: { counter: CounterDetail }) {
   const { remove } = useCounterActions(counter.id);
 
   return (
-    <section aria-labelledby="counter-history-heading">
-      <h2 id="counter-history-heading" className="mb-2 text-sm font-medium">
-        History
-      </h2>
+    <CollapsibleSection title="History" count={counter.history.length}>
       {counter.history.length === 0 ? (
         <p className="text-sm text-muted-foreground">Nothing logged yet.</p>
       ) : (
@@ -50,7 +48,7 @@ export function CounterHistory({ counter }: { counter: CounterDetail }) {
           ))}
         </ul>
       )}
-    </section>
+    </CollapsibleSection>
   );
 }
 

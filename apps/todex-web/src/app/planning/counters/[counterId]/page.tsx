@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { Button, Spinner, Switch } from "@repo/ui";
+import { Button, Spinner, Switch, cn } from "@repo/ui";
 import { formatCounterRule } from "@repo/api/todex";
 import type { CounterDetail } from "@repo/api/todex";
 
@@ -11,11 +11,19 @@ import { CounterFormDialog } from "../counter-form-dialog";
 import { formatLocalDate } from "../counter-helpers";
 import { CounterHistory } from "../counter-history";
 import { CounterLinks } from "../counter-links";
-import { CounterStats } from "../counter-row";
+import { CounterStatTiles } from "../counter-stat-tiles";
 import { DayStrip } from "../day-strip";
 import { useWeekWindow } from "../use-week-window";
 import { useCounter, useCounterActions } from "../use-counters";
-import { CounterWeekHeader, WeekControls } from "../week-header";
+import {
+  BackToToday,
+  COUNTER_LINE,
+  CounterWeekHeader,
+  DAYS_AREA,
+  DETAILS_AREA,
+  DayTrack,
+  WeekArrow,
+} from "../week-header";
 
 export default function CounterPage() {
   const { counterId } = useParams<{ counterId: string }>();
@@ -61,7 +69,18 @@ function CounterCard({
             <span className="shrink-0 text-muted-foreground">›</span>
             <span className="truncate">{counter.name}</span>
           </h1>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="mr-2 flex items-center gap-2 text-sm">
+              <Switch
+                checked={counter.showInToday}
+                disabled={update.isPending}
+                onCheckedChange={(showInToday) =>
+                  update.mutate({ showInToday })
+                }
+                aria-label="Show in Today/Tomorrow"
+              />
+              Show in Today/Tomorrow
+            </label>
             <Button
               size="sm"
               variant="outline"
@@ -87,38 +106,46 @@ function CounterCard({
         </p>
         {counter.pendingChange ? (
           <p className="text-sm text-amber-400">
-            {counter.pendingChange.effectiveDate
-              ? `From ${formatLocalDate(counter.pendingChange.effectiveDate)}: `
-              : "After restore: "}
+            From {formatLocalDate(counter.pendingChange.effectiveDate)}:{" "}
             {formatCounterRule(counter.pendingChange)}
           </p>
         ) : null}
-        <label className="flex w-fit items-center gap-3 text-sm">
-          <Switch
-            checked={counter.showInToday}
-            disabled={update.isPending}
-            onCheckedChange={(showInToday) => update.mutate({ showInToday })}
-            aria-label="Show in Today"
-          />
-          Show in Today
-        </label>
       </header>
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2 rounded-2xl border border-border bg-white/[0.02] py-4">
         <CounterWeekHeader
           days={counter.week}
           today={week.today}
-          controls={
-            <WeekControls
+          aside={
+            <BackToToday
               weeksBack={week.weeksBack}
               onChange={week.setWeeksBack}
             />
           }
         />
-        <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-white/[0.02] px-4 py-3">
-          <div className="min-w-0 flex-1">
-            <CounterStats counter={counter} />
+        <div className={cn(COUNTER_LINE, "border-x border-transparent px-3")}>
+          <div className={DAYS_AREA}>
+            <DayTrack
+              before={
+                <WeekArrow
+                  direction="earlier"
+                  weeksBack={week.weeksBack}
+                  onChange={week.setWeeksBack}
+                />
+              }
+              after={
+                <WeekArrow
+                  direction="later"
+                  weeksBack={week.weeksBack}
+                  onChange={week.setWeeksBack}
+                />
+              }
+            >
+              <DayStrip counter={counter} />
+            </DayTrack>
           </div>
-          <DayStrip counter={counter} />
+          <div className={DETAILS_AREA}>
+            <CounterStatTiles counter={counter} />
+          </div>
         </div>
       </div>
       <CounterLinks counter={counter} />

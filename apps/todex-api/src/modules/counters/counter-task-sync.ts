@@ -1,21 +1,22 @@
 import { randomUUID } from "crypto";
-import { and, between, eq, gte, inArray, or } from "drizzle-orm";
+import { and, eq, gte, inArray, or } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 
 import {
+  counterDays,
   counterLinks,
   counterOccurrences,
   counters,
   type TaskRow,
 } from "../../db/schema";
-import { closeEndedPeriods, lockCounter } from "./counter-closing";
-import { dayCapacity, localDate } from "./counter-periods";
-import { trackedPeriod } from "./counter-view";
+import { closeEndedDays, lockCounter, saveDay } from "./counter-closing";
+import { localDate } from "./counter-schedule";
+import { targetResolver } from "./counter-view";
 
 /**
  * Call inside the transaction that moves a Task to Done. Each Counter linked to
  * the Task, or counting its space, gets one completion dated today in its time
- * zone, as long as the day and the Target still have room.
+ * zone, as long as today is scheduled and still has room.
  */
 export async function recordTaskCompletion(
   tx: NodePgDatabase,
@@ -25,11 +26,12 @@ export async function recordTaskCompletion(
   for (const counterId of await countersFor(tx, task)) {
     const locked = await lockCounter(tx, counterId);
     if (!locked) continue;
-    const counter = await closeEndedPeriods(tx, locked, now);
-    const period = trackedPeriod(counter);
+    const counter = await closeEndedDays(tx, locked, now);
+    if (counter.status !== "active") continue;
     const today = localDate(now, counter.timeZone);
-    // Archived, or restored and still waiting for the next period.
-    if (!period || today < period.start) continue;
+    const saved = await savedDay(tx, counterId, today);
+    const target = targetResolver(counter, saved ? [saved] : [], today)(today);
+    if (target === null) continue;
     const entries = await tx
       .select()
       .from(counterOccurrences)
@@ -38,7 +40,7 @@ export async function recordTaskCompletion(
           eq(counterOccurrences.counterId, counterId),
           or(
             eq(counterOccurrences.taskId, task.id),
-            between(counterOccurrences.localDate, period.start, period.end),
+            eq(counterOccurrences.localDate, today),
           ),
         ),
       );
@@ -48,10 +50,7 @@ export async function recordTaskCompletion(
     const replaced = todaysEntries.filter(
       (entry) => entry.status !== "completed",
     );
-    const doneToday = todaysEntries.length - replaced.length;
-    const capacity = dayCapacity(period, counter.target);
-    if (doneToday >= capacity) continue;
-    if (entries.length - replaced.length >= counter.target) continue;
+    if (todaysEntries.length - replaced.length >= target) continue;
     if (replaced.length > 0) {
       await tx.delete(counterOccurrences).where(
         inArray(
@@ -69,12 +68,16 @@ export async function recordTaskCompletion(
       taskId: task.id,
       createdAt: now,
     });
+    if (saved || today <= counter.closedThrough) {
+      const required = saved?.required ?? false;
+      await saveDay(tx, counterId, { date: today, target, required }, now);
+    }
   }
 }
 
 /**
- * Call inside the transaction that reopens or deletes Tasks. Completions in an
- * open period are removed. Closed history stays, detached from the Task so a
+ * Call inside the transaction that reopens or deletes Tasks. Today's
+ * completions are removed. Earlier history stays, detached from the Task so a
  * later completion can be recorded again.
  */
 export async function revertTaskCompletions(
@@ -90,17 +93,21 @@ export async function revertTaskCompletions(
   for (const counterId of orderedCounterIds(affected)) {
     const locked = await lockCounter(tx, counterId);
     if (!locked) continue;
-    const period = trackedPeriod(await closeEndedPeriods(tx, locked, now));
+    const counter = await closeEndedDays(tx, locked, now);
     const ownCompletions = and(
       eq(counterOccurrences.counterId, counterId),
       inArray(counterOccurrences.taskId, taskIds),
     );
-    if (period) {
+    if (counter.status === "active") {
+      const today = localDate(now, counter.timeZone);
       await tx
         .delete(counterOccurrences)
-        .where(
-          and(ownCompletions, gte(counterOccurrences.localDate, period.start)),
-        );
+        .where(and(ownCompletions, gte(counterOccurrences.localDate, today)));
+      const saved = await savedDay(tx, counterId, today);
+      if (saved) {
+        const day = { ...saved, date: today };
+        await saveDay(tx, counterId, day, now);
+      }
     }
     await tx
       .update(counterOccurrences)
@@ -155,6 +162,19 @@ async function countersFor(
       ),
     );
   return orderedCounterIds([...linked, ...watchingSpace]);
+}
+
+async function savedDay(tx: NodePgDatabase, counterId: string, date: string) {
+  const [day] = await tx
+    .select()
+    .from(counterDays)
+    .where(
+      and(
+        eq(counterDays.counterId, counterId),
+        eq(counterDays.localDate, date),
+      ),
+    );
+  return day;
 }
 
 /** A stable lock order keeps concurrent Task transitions from deadlocking. */

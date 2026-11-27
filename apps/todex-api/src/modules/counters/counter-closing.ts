@@ -1,20 +1,17 @@
 import { randomUUID } from "crypto";
-import { and, between, eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { addDaysToDate } from "@repo/api/todex";
 
 import {
+  counterDays,
   counterOccurrences,
-  counterPeriods,
   counters,
   type CounterRow,
 } from "../../db/schema";
-import {
-  localDate,
-  openPeriod,
-  settlePeriod,
-  type TrackedPeriod,
-} from "./counter-periods";
+import { settleDay } from "./counter-days";
+import { isScheduled, localDate } from "./counter-schedule";
+import { applyRule } from "./counter-view";
 
 /** Serializes every writer of one Counter. Must run inside a transaction. */
 export async function lockCounter(
@@ -30,112 +27,105 @@ export async function lockCounter(
 }
 
 /**
- * Closes every period that ended before today, oldest first. The caller holds
- * the Counter row lock, so reruns find the cursor already advanced.
+ * Closes every day before today, oldest first. The caller holds the Counter row
+ * lock, so reruns find the cursor already advanced.
  */
-export async function closeEndedPeriods(
+export async function closeEndedDays(
   tx: NodePgDatabase,
   counter: CounterRow,
   now: Date,
 ): Promise<CounterRow> {
-  if (!hasEndedPeriod(counter, now)) return counter;
+  if (!hasEndedDay(counter, now)) return counter;
+  const yesterday = addDaysToDate(localDate(now, counter.timeZone), -1);
   let current = counter;
-  while (hasEndedPeriod(current, now)) {
-    const period = openPeriod(
-      current,
-      current.anchorDate,
-      current.closedThrough,
-    );
-    await settleSnapshot(
-      tx,
-      current.id,
-      { ...period, target: current.target },
-      now,
-    );
-    current = { ...current, ...advanceCursor(current, period.end) };
+  for (
+    let date = addDaysToDate(counter.closedThrough, 1);
+    date <= yesterday;
+    date = addDaysToDate(date, 1)
+  ) {
+    if (!isScheduled(current.schedule, current.anchorDate, date)) continue;
+    const day = { date, target: current.target, required: true };
+    await saveDay(tx, current.id, day, now);
+    // A waiting change starts the day after the one it was made on.
+    if (current.pendingChange) {
+      current = applyRule(
+        current,
+        current.pendingChange,
+        addDaysToDate(date, 1),
+      );
+    }
   }
-  return saveCounter(tx, current, now);
+  return saveCounter(tx, { ...current, closedThrough: yesterday }, now);
 }
 
 /**
- * Writes the snapshot of a closed period from its hand and Task entries and
- * rebuilds its default fails. Rerun whenever such a period changes.
+ * Writes a day from its hand and Task entries and rebuilds its default fails.
+ * Rerun whenever a saved day changes. A day marked by choice is dropped once it
+ * holds nothing.
  */
-export async function settleSnapshot(
+export async function saveDay(
   tx: NodePgDatabase,
   counterId: string,
-  period: TrackedPeriod,
+  day: DayToSave,
   now: Date,
 ): Promise<void> {
-  const inPeriod = and(
+  const onDate = and(
     eq(counterOccurrences.counterId, counterId),
-    between(counterOccurrences.localDate, period.start, period.end),
+    eq(counterOccurrences.localDate, day.date),
   );
   await tx
     .delete(counterOccurrences)
-    .where(and(inPeriod, eq(counterOccurrences.source, "system")));
+    .where(and(onDate, eq(counterOccurrences.source, "system")));
   const entries = await tx
-    .select({
-      date: counterOccurrences.localDate,
-      status: counterOccurrences.status,
-    })
+    .select({ status: counterOccurrences.status })
     .from(counterOccurrences)
-    .where(inPeriod);
-  const settlement = settlePeriod(period, period.target, entries);
+    .where(onDate);
+  if (!day.required && entries.length === 0) {
+    await tx
+      .delete(counterDays)
+      .where(
+        and(
+          eq(counterDays.counterId, counterId),
+          eq(counterDays.localDate, day.date),
+        ),
+      );
+    return;
+  }
+  const { defaultFails, ...settlement } = settleDay(
+    day.target,
+    day.required,
+    entries,
+  );
   const totals = {
-    endDate: period.end,
-    target: period.target,
-    completed: settlement.completed,
-    skipped: settlement.skipped,
-    failed: settlement.failed,
-    outcome: settlement.outcome,
+    target: day.target,
+    required: day.required,
+    ...settlement,
   };
   await tx
-    .insert(counterPeriods)
+    .insert(counterDays)
     .values({
       id: randomUUID(),
       counterId,
-      startDate: period.start,
+      localDate: day.date,
       createdAt: now,
       ...totals,
     })
     .onConflictDoUpdate({
-      target: [counterPeriods.counterId, counterPeriods.startDate],
+      target: [counterDays.counterId, counterDays.localDate],
       set: totals,
     });
-  if (settlement.failedDates.length > 0) {
+  if (defaultFails > 0) {
     await tx.insert(counterOccurrences).values(
-      settlement.failedDates.map((date) => ({
+      Array.from({ length: defaultFails }, () => ({
         id: randomUUID(),
         counterId,
-        localDate: date,
+        localDate: day.date,
         status: "failed" as const,
         source: "system" as const,
         createdAt: now,
       })),
     );
   }
-}
-
-/** Moves the cursor and lets a pending change take effect on the next day. */
-export function advanceCursor(
-  counter: CounterRow,
-  closedThrough: string,
-): CounterRow {
-  const change = counter.pendingChange;
-  if (!change) return { ...counter, closedThrough };
-  const recurrenceChanged =
-    change.frequency !== counter.frequency ||
-    change.interval !== counter.interval;
-  return {
-    ...counter,
-    ...change,
-    closedThrough,
-    pendingChange: null,
-    anchorDate: recurrenceChanged
-      ? addDaysToDate(closedThrough, 1)
-      : counter.anchorDate,
-  };
 }
 
 export async function saveCounter(
@@ -148,8 +138,14 @@ export async function saveCounter(
   return saved;
 }
 
-export function hasEndedPeriod(counter: CounterRow, now: Date): boolean {
+export function hasEndedDay(counter: CounterRow, now: Date): boolean {
   if (counter.status !== "active") return false;
-  const period = openPeriod(counter, counter.anchorDate, counter.closedThrough);
-  return period.end < localDate(now, counter.timeZone);
+  const today = localDate(now, counter.timeZone);
+  return counter.closedThrough < addDaysToDate(today, -1);
+}
+
+export interface DayToSave {
+  date: string;
+  target: number;
+  required: boolean;
 }

@@ -1,10 +1,16 @@
-import { TaskStatus } from "@repo/api/todex";
+import {
+  CounterScheduleSchema,
+  TASK_WEEKDAYS,
+  TaskStatus,
+} from "@repo/api/todex";
 import type {
   Counter,
   CounterDay,
   CounterLink,
+  CounterSchedule,
   SetCounterDayBody,
   Task,
+  TaskWeekday,
 } from "@repo/api/todex";
 
 const LINK_CANDIDATE_LIMIT = 20;
@@ -12,17 +18,46 @@ const LINK_CANDIDATE_LIMIT = 20;
 const NO_SPACE_NAME = "No space";
 
 export function progressLabel(counter: Counter, locale?: string): string {
-  const { period } = counter;
-  if (!period) return "Archived";
-  if (!period.isOpen) {
-    return `Resumes ${formatLocalDate(period.start, locale)}`;
-  }
-  return `${period.completed} / ${counter.target} ${periodName(counter)}`;
+  if (counter.status === "archived") return "Archived";
+  const { today, nextDate } = counter.progress;
+  if (today) return `${today.completed} / ${today.target} today`;
+  return nextDate
+    ? `Next ${formatLocalDate(nextDate, locale)}`
+    : "Not scheduled";
 }
 
-export function streakLabel(counter: Counter): string {
-  const unit = counter.interval > 1 ? "period" : PERIOD_UNIT[counter.frequency];
-  return countLabel(counter.stats.streak, unit);
+/** The form keeps a value for every repeat kind, so switching loses nothing. */
+export function scheduleDraft(
+  schedule: CounterSchedule,
+  today: string,
+): ScheduleDraft {
+  const weekday = TASK_WEEKDAYS[new Date(`${today}T00:00:00Z`).getUTCDay()];
+  const draft: ScheduleDraft = {
+    frequency: schedule.frequency,
+    dayInterval: "1",
+    weekInterval: 1,
+    weekdays: weekday ? [weekday] : [],
+    monthDay: String(Number(today.slice(8))),
+  };
+  if (schedule.frequency === "daily") {
+    return { ...draft, dayInterval: String(schedule.interval) };
+  }
+  if (schedule.frequency === "monthly") {
+    return { ...draft, monthDay: String(schedule.monthDay) };
+  }
+  return {
+    ...draft,
+    weekInterval: schedule.interval,
+    weekdays: schedule.weekdays,
+  };
+}
+
+/** Null while the chosen repeat kind is incomplete or out of range. */
+export function scheduleFromDraft(
+  draft: ScheduleDraft,
+): CounterSchedule | null {
+  const parsed = CounterScheduleSchema.safeParse(draftSchedule(draft));
+  return parsed.success ? parsed.data : null;
 }
 
 export function countLabel(count: number, unit: string): string {
@@ -62,7 +97,8 @@ export function dayLabel(day: CounterDay, locale?: string): string {
       : null,
     day.failed ? `${day.failed} failed` : null,
   ].filter(Boolean);
-  const summary = marks.length > 0 ? marks.join(", ") : "nothing logged";
+  const nothing = day.tracked ? "nothing logged" : "not scheduled";
+  const summary = marks.length > 0 ? marks.join(", ") : nothing;
   return `${formatLocalDate(day.date, locale)}: ${summary}`;
 }
 
@@ -78,7 +114,7 @@ export function dayClickChange(day: CounterDay): SetCounterDayBody | null {
   return day.completed > 0 ? { status: "empty" } : null;
 }
 
-/** Share of the Counters tracked on one column that are done, or null. */
+/** Share of the Counters scheduled on one column that are done, or null. */
 export function dayShare(
   counters: readonly Counter[],
   column: number,
@@ -155,22 +191,31 @@ function formatDate(
   });
 }
 
-function periodName(counter: Counter): string {
-  const unit = PERIOD_UNIT[counter.frequency];
-  if (counter.interval > 1) return `these ${counter.interval} ${unit}s`;
-  if (counter.frequency === "daily") return "today";
-  return `this ${unit}`;
+function draftSchedule(draft: ScheduleDraft) {
+  if (draft.frequency === "daily") {
+    return { frequency: "daily", interval: Number(draft.dayInterval) };
+  }
+  if (draft.frequency === "monthly") {
+    return { frequency: "monthly", monthDay: Number(draft.monthDay) };
+  }
+  return {
+    frequency: "weekly",
+    interval: draft.weekInterval,
+    weekdays: draft.weekdays,
+  };
 }
-
-const PERIOD_UNIT: Record<Counter["frequency"], string> = {
-  daily: "day",
-  weekly: "week",
-  monthly: "month",
-};
 
 export interface CounterGroup {
   id: string;
   name: string;
   color: string | null;
   counters: Counter[];
+}
+
+export interface ScheduleDraft {
+  frequency: CounterSchedule["frequency"];
+  dayInterval: string;
+  weekInterval: number;
+  weekdays: TaskWeekday[];
+  monthDay: string;
 }

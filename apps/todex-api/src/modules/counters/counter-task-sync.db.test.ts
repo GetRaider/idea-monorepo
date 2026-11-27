@@ -8,6 +8,7 @@ import {
   addDaysToDate,
   CreateCounterBodySchema,
   CreateTaskBodySchema,
+  TASK_WEEKDAYS,
   TaskStatus,
 } from "@repo/api/todex";
 
@@ -22,7 +23,7 @@ import { SpacesService } from "../spaces/spaces.service";
 import { RecurrenceService } from "../tasks/recurrence.service";
 import { TasksService } from "../tasks/tasks.service";
 import { WorkspaceService } from "../workspace/workspace.service";
-import { localDate } from "./counter-periods";
+import { localDate } from "./counter-schedule";
 import { recordTaskCompletion } from "./counter-task-sync";
 import { CountersService } from "./counters.service";
 
@@ -86,8 +87,7 @@ describe.skipIf(!databaseUrl)("Counter task integration (database)", () => {
       workspaceId,
       CreateCounterBodySchema.parse({
         name: "Review",
-        frequency: "daily",
-        interval: 1,
+        schedule: { frequency: "daily", interval: 1 },
         target: 1,
         timeZone: "UTC",
         ...extra,
@@ -280,7 +280,7 @@ describe.skipIf(!databaseUrl)("Counter task integration (database)", () => {
     expect(kept).toMatchObject([{ date: pastDate }]);
   });
 
-  it("records a re-completion after the first period closed", async () => {
+  it("records a re-completion after the first day closed", async () => {
     const yesterday = new Date(Date.now() - 86_400_000);
     const counter = await createCounter(yesterday);
     const task = await createTask();
@@ -363,25 +363,29 @@ describe.skipIf(!databaseUrl)("Counter task integration (database)", () => {
     expect(await history(counter.id)).toHaveLength(2);
   });
 
-  it("never lets Task completions exceed the day or the Target", async () => {
-    const daily = await newSpace();
-    const twice = await createCounter(new Date(), {
+  it("never lets Task completions exceed the day's target", async () => {
+    const busy = await newSpace();
+    const counter = await createCounter(new Date(), {
       target: 2,
-      spaceId: daily,
-      countsSpaceTasks: true,
-    });
-    const weekly = await createCounter(new Date(), {
-      frequency: "weekly",
-      target: 4,
-      spaceId: daily,
+      spaceId: busy,
       countsSpaceTasks: true,
     });
     for (let index = 0; index < 3; index += 1) {
-      const task = await createTask({ spaceId: daily });
+      const task = await createTask({ spaceId: busy });
       await setStatus(task.id, TaskStatus.DONE);
     }
-    expect(await history(twice.id)).toHaveLength(2);
-    expect(await history(weekly.id)).toHaveLength(1);
+    expect(await history(counter.id)).toHaveLength(2);
+  });
+
+  it("ignores a Task completed on a day off the schedule", async () => {
+    const notToday = TASK_WEEKDAYS[(new Date().getUTCDay() + 1) % 7];
+    const counter = await createCounter(new Date(), {
+      schedule: { frequency: "weekly", interval: 1, weekdays: [notToday] },
+    });
+    const task = await createTask();
+    await counterService.addLink(workspaceId, counter.id, task.id);
+    await setStatus(task.id, TaskStatus.DONE);
+    expect(await history(counter.id)).toHaveLength(0);
   });
 
   it("replaces a hand-set skip with a Task completion", async () => {

@@ -64,6 +64,9 @@ function DayButton({ day, isPending, onChange, onSkip }: DayButtonProps) {
     (occurrence) => occurrence.source !== "system",
   );
   const action = click?.status === "empty" ? "Clear" : "Complete";
+  const hint = day.loggable
+    ? `Click to ${action.toLowerCase()} · Right-click to fail or skip`
+    : unavailableHint(day);
 
   // The skip dialog opens once the menu is gone, or the menu takes focus back.
   function openSkipAfterClose(event: Event) {
@@ -86,7 +89,7 @@ function DayButton({ day, isPending, onChange, onSkip }: DayButtonProps) {
                 }
                 aria-disabled={!click || isPending}
                 className={cn(
-                  "flex size-8 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  "group flex size-9 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:size-11",
                   click ? "hover:bg-surface" : "cursor-default",
                 )}
                 onClick={() => {
@@ -100,25 +103,18 @@ function DayButton({ day, isPending, onChange, onSkip }: DayButtonProps) {
         </ContextMenuTrigger>
         <TooltipContent>
           <p>{dayLabel(day)}</p>
-          {day.loggable ? (
-            <p className="text-neutral-400">
-              {click
-                ? `Click to ${action.toLowerCase()}`
-                : "Target already covered"}
-              {day.canMark ? " · Right-click to fail or skip" : null}
-            </p>
-          ) : null}
+          {hint ? <p className="text-neutral-400">{hint}</p> : null}
         </TooltipContent>
       </Tooltip>
       <ContextMenuContent onCloseAutoFocus={openSkipAfterClose}>
         <ContextMenuItem
-          disabled={isPending || !day.canMark}
+          disabled={isPending || !day.loggable}
           onSelect={() => onChange({ status: "failed" })}
         >
           Fail
         </ContextMenuItem>
         <ContextMenuItem
-          disabled={isPending || !day.canMark}
+          disabled={isPending || !day.loggable}
           onSelect={() => {
             skipAfterClose.current = true;
           }}
@@ -139,6 +135,11 @@ function DayButton({ day, isPending, onChange, onSkip }: DayButtonProps) {
       </ContextMenuContent>
     </ContextMenu>
   );
+}
+
+/** Why an untouched day cannot be marked, when that is worth saying. */
+function unavailableHint(day: CounterDay): string | null {
+  return day.tracked && day.occurrences.length === 0 ? "Not yet" : null;
 }
 
 interface DayButtonProps {

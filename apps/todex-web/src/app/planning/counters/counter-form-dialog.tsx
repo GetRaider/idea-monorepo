@@ -14,10 +14,16 @@ import {
   SelectValue,
   Switch,
 } from "@repo/ui";
-import { COUNTER_RECURRENCES, COUNTER_TARGET_MAX } from "@repo/api/todex";
+import { COUNTER_TARGET_MAX } from "@repo/api/todex";
 import type { Counter, CounterRule } from "@repo/api/todex";
 
 import { useTasks } from "../tasks-provider";
+import {
+  localToday,
+  scheduleDraft,
+  scheduleFromDraft,
+} from "./counter-helpers";
+import { ScheduleFields } from "./schedule-fields";
 
 export function CounterFormDialog({
   counter,
@@ -28,7 +34,9 @@ export function CounterFormDialog({
   // A pending change is what the user asked for last, so editing starts there.
   const initial = counter?.pendingChange ?? counter ?? DEFAULT_RULE;
   const [name, setName] = useState(counter?.name ?? "");
-  const [recurrence, setRecurrence] = useState(recurrenceValue(initial));
+  const [draft, setDraft] = useState(() =>
+    scheduleDraft(initial.schedule, localToday()),
+  );
   const [target, setTarget] = useState(String(initial.target));
   const [showInToday, setShowInToday] = useState(counter?.showInToday ?? true);
   const {
@@ -39,23 +47,21 @@ export function CounterFormDialog({
     counter?.countsSpaceTasks ?? false,
   );
   const hasSpace = spaceId !== NO_SPACE;
+  const schedule = scheduleFromDraft(draft);
   const targetNumber = Number(target);
   const isValid =
     name.trim() !== "" &&
+    schedule !== null &&
     Number.isInteger(targetNumber) &&
     targetNumber >= 1 &&
     targetNumber <= COUNTER_TARGET_MAX;
 
   function submit(event: FormEvent) {
     event.preventDefault();
-    const rule = COUNTER_RECURRENCES.find(
-      (item) => recurrenceValue(item) === recurrence,
-    );
-    if (!isValid || !rule) return;
+    if (!isValid || !schedule) return;
     onSubmit({
       name: name.trim(),
-      frequency: rule.frequency,
-      interval: rule.interval,
+      schedule,
       target: targetNumber,
       showInToday,
       spaceId: hasSpace ? spaceId : null,
@@ -68,7 +74,7 @@ export function CounterFormDialog({
       title={counter ? "Edit counter" : "New counter"}
       subtitle={
         counter
-          ? "Recurrence and Target changes apply from the next period."
+          ? "If today is scheduled, repeat and goal changes start tomorrow."
           : undefined
       }
       onClose={onClose}
@@ -87,38 +93,19 @@ export function CounterFormDialog({
             onChange={(event) => setName(event.target.value)}
           />
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-2">
-            <Label htmlFor="counter-recurrence">Recurrence</Label>
-            <Select value={recurrence} onValueChange={setRecurrence}>
-              <SelectTrigger id="counter-recurrence">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="z-[5000]">
-                {COUNTER_RECURRENCES.map((item) => (
-                  <SelectItem
-                    key={recurrenceValue(item)}
-                    value={recurrenceValue(item)}
-                  >
-                    {item.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="counter-target">Target per period</Label>
-            <Input
-              id="counter-target"
-              type="number"
-              inputMode="numeric"
-              min={1}
-              max={COUNTER_TARGET_MAX}
-              step={1}
-              value={target}
-              onChange={(event) => setTarget(event.target.value)}
-            />
-          </div>
+        <ScheduleFields draft={draft} onChange={setDraft} />
+        <div className="space-y-2">
+          <Label htmlFor="counter-target">Times per day</Label>
+          <Input
+            id="counter-target"
+            type="number"
+            inputMode="numeric"
+            min={1}
+            max={COUNTER_TARGET_MAX}
+            step={1}
+            value={target}
+            onChange={(event) => setTarget(event.target.value)}
+          />
         </div>
         <div className="space-y-2">
           <Label htmlFor="counter-space">Space</Label>
@@ -147,11 +134,11 @@ export function CounterFormDialog({
           </label>
         ) : null}
         <label className="flex items-center justify-between gap-3 text-sm">
-          Show in Today
+          Show in Today/Tomorrow
           <Switch
             checked={showInToday}
             onCheckedChange={setShowInToday}
-            aria-label="Show in Today"
+            aria-label="Show in Today/Tomorrow"
           />
         </label>
         <DialogActions>
@@ -167,15 +154,10 @@ export function CounterFormDialog({
   );
 }
 
-function recurrenceValue(rule: Pick<CounterRule, "frequency" | "interval">) {
-  return `${rule.frequency}-${rule.interval}`;
-}
-
 const NO_SPACE = "none";
 
 const DEFAULT_RULE: CounterRule = {
-  frequency: "weekly",
-  interval: 1,
+  schedule: { frequency: "daily", interval: 1 },
   target: 1,
 };
 

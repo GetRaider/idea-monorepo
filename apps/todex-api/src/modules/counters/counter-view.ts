@@ -1,46 +1,66 @@
 import { addDaysToDate } from "@repo/api/todex";
-import type { Counter, CounterOccurrence } from "@repo/api/todex";
+import type { Counter, CounterOccurrence, CounterRule } from "@repo/api/todex";
 
 import type {
+  CounterDayRow,
   CounterOccurrenceRow,
-  CounterPeriodRow,
   CounterRow,
 } from "../../db/schema";
 import {
   calendarDays,
   countStatus,
   currentStreak,
-  isWithin,
-  localDate,
-  openPeriod,
   totalDays,
-  type Period,
-  type TrackedPeriod,
-} from "./counter-periods";
+} from "./counter-days";
+import {
+  isSameSchedule,
+  isScheduled,
+  localDate,
+  nextScheduledDate,
+} from "./counter-schedule";
 
-/** The period currently being tracked; archived Counters have none. */
-export function trackedPeriod(counter: CounterRow): Period | null {
-  if (counter.status !== "active") return null;
-  return openPeriod(counter, counter.anchorDate, counter.closedThrough);
+/**
+ * Puts a rule in force from a date. A new schedule counts its interval from
+ * that date; a new target alone keeps the old rhythm.
+ */
+export function applyRule(
+  counter: CounterRow,
+  rule: CounterRule,
+  from: string,
+): CounterRow {
+  const isNewSchedule = !isSameSchedule(counter.schedule, rule.schedule);
+  return {
+    ...counter,
+    schedule: rule.schedule,
+    target: rule.target,
+    anchorDate: isNewSchedule ? from : counter.anchorDate,
+    pendingChange: null,
+  };
 }
 
-/** Closed snapshots plus the open period: every day that belongs to a Target. */
-export function trackedPeriods(
+/**
+ * The target of each date, or null when the Counter does not track it. A saved
+ * day keeps its own target; any other date follows the schedule.
+ */
+export function targetResolver(
   counter: CounterRow,
-  snapshots: readonly CounterPeriodRow[],
-): TrackedPeriod[] {
-  const closed = snapshots.map((snapshot) => ({
-    start: snapshot.startDate,
-    end: snapshot.endDate,
-    target: snapshot.target,
-  }));
-  const open = trackedPeriod(counter);
-  return open ? [...closed, { ...open, target: counter.target }] : closed;
+  days: readonly CounterDayRow[],
+  today: string,
+): (date: string) => number | null {
+  const saved = new Map(days.map((day) => [day.localDate, day.target]));
+  return (date) => {
+    const target = saved.get(date);
+    if (target !== undefined) return target;
+    if (counter.status !== "active") return null;
+    const rule = ruleOn(counter, date, today);
+    return isScheduled(rule.schedule, rule.anchorDate, date)
+      ? rule.target
+      : null;
+  };
 }
 
 export function toCounterOccurrence(
   counter: CounterRow,
-  periods: readonly TrackedPeriod[],
   row: OccurrenceWithTask,
 ): CounterOccurrence {
   return {
@@ -51,10 +71,7 @@ export function toCounterOccurrence(
     skipReason: row.skipReason,
     taskId: row.taskId,
     taskSummary: row.taskSummary,
-    deletable:
-      counter.status === "active" &&
-      row.source !== "system" &&
-      periods.some((period) => isWithin(period, row.localDate)),
+    deletable: counter.status === "active" && row.source !== "system",
     createdAt: row.createdAt.toISOString(),
   };
 }
@@ -62,69 +79,78 @@ export function toCounterOccurrence(
 export function toCounter(input: {
   counter: CounterRow;
   occurrences: readonly CounterOccurrence[];
-  snapshots: readonly CounterPeriodRow[];
+  days: readonly CounterDayRow[];
   until?: string;
   now: Date;
 }): Counter {
-  const { counter, occurrences, snapshots } = input;
+  const { counter, occurrences, days } = input;
   const today = localDate(input.now, counter.timeZone);
-  const period = trackedPeriod(counter);
-  const periods = trackedPeriods(counter, snapshots);
-  const inPeriod = period
-    ? occurrences.filter((occurrence) => isWithin(period, occurrence.date))
-    : [];
-  const completed = countStatus(inPeriod, "completed");
+  const isActive = counter.status === "active";
+  const targetOn = targetResolver(counter, days, today);
+  const todayTarget = isActive ? targetOn(today) : null;
+  const todaysEntries = occurrences.filter((entry) => entry.date === today);
+  const progress =
+    todayTarget === null
+      ? null
+      : {
+          completed: countStatus(todaysEntries, "completed"),
+          target: todayTarget,
+        };
+  const tomorrow = addDaysToDate(today, 1);
+  const upcoming = ruleOn(counter, tomorrow, today);
   return {
     id: counter.id,
     name: counter.name,
     spaceId: counter.spaceId,
     countsSpaceTasks: counter.spaceId !== null && counter.countsSpaceTasks,
-    frequency: counter.frequency,
-    interval: counter.interval,
+    schedule: counter.schedule,
     target: counter.target,
     timeZone: counter.timeZone,
     showInToday: counter.showInToday,
     status: counter.status,
     today,
-    period: period
-      ? {
-          ...period,
-          completed,
-          skipped: countStatus(inPeriod, "skipped"),
-          failed: countStatus(inPeriod, "failed"),
-          isOpen: period.start <= today,
-        }
-      : null,
+    progress: {
+      today: progress,
+      nextDate: isActive
+        ? nextScheduledDate(upcoming.schedule, upcoming.anchorDate, today)
+        : null,
+    },
     pendingChange: counter.pendingChange
-      ? {
-          ...counter.pendingChange,
-          effectiveDate: period ? addDaysToDate(period.end, 1) : null,
-        }
+      ? { ...counter.pendingChange, effectiveDate: tomorrow }
       : null,
     stats: {
-      totalDays: totalDays(occurrences, periods),
-      streak: currentStreak(
-        snapshots.map((snapshot) => ({
-          start: snapshot.startDate,
-          outcome: snapshot.outcome,
-        })),
-        period
-          ? {
-              completed,
-              target: counter.target,
-              hasFail: countStatus(inPeriod, "failed") > 0,
-            }
-          : null,
-      ),
+      totalDays: totalDays(occurrences, targetOn),
+      streak: currentStreak({
+        days: days
+          .filter((day) => day.localDate < today)
+          .map((day) => ({
+            date: day.localDate,
+            outcome: day.outcome,
+            skipped: day.skipped,
+          })),
+        today: progress && {
+          ...progress,
+          hasFail: countStatus(todaysEntries, "failed") > 0,
+        },
+        createdOn: localDate(counter.createdAt, counter.timeZone),
+        isScheduledOn: (date) =>
+          isScheduled(counter.schedule, counter.anchorDate, date),
+      }),
     },
     week: calendarDays({
       until: input.until ?? today,
       today,
-      isActive: counter.status === "active",
-      periods,
+      isActive,
+      targetOn,
       entries: occurrences,
     }),
   };
+}
+
+/** A waiting change already decides the days after today. */
+function ruleOn(counter: CounterRow, date: string, today: string): CounterRow {
+  if (!counter.pendingChange || date <= today) return counter;
+  return applyRule(counter, counter.pendingChange, addDaysToDate(today, 1));
 }
 
 export type OccurrenceWithTask = CounterOccurrenceRow & {

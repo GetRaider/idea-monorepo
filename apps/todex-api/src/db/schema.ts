@@ -10,6 +10,7 @@ import {
   type KnowledgePropertyType,
   type KnowledgeView,
   type CounterRule,
+  type CounterSchedule,
   type ProseDoc,
   type ExecutionInterval,
   type SeriesTemplate,
@@ -1240,12 +1241,6 @@ export const agentMemories = pgTable(
   ],
 );
 
-export const counterFrequencyEnum = pgEnum("counter_frequency", [
-  "daily",
-  "weekly",
-  "monthly",
-]);
-
 export const counterStatusEnum = pgEnum("counter_status", [
   "active",
   "archived",
@@ -1263,7 +1258,7 @@ export const counterOccurrenceSourceEnum = pgEnum("counter_occurrence_source", [
   "system",
 ]);
 
-export const counterPeriodOutcomeEnum = pgEnum("counter_period_outcome", [
+export const counterDayOutcomeEnum = pgEnum("counter_day_outcome", [
   "met",
   "excused",
   "failed",
@@ -1281,8 +1276,7 @@ export const counters = pgTable(
     }),
     countsSpaceTasks: boolean("counts_space_tasks").notNull().default(false),
     name: text("name").notNull(),
-    frequency: counterFrequencyEnum("frequency").notNull(),
-    interval: integer("interval").notNull(),
+    schedule: jsonb("schedule").$type<CounterSchedule>().notNull(),
     target: integer("target").notNull(),
     timeZone: text("time_zone").notNull(),
     anchorDate: date("anchor_date", { mode: "string" }).notNull(),
@@ -1301,7 +1295,6 @@ export const counters = pgTable(
     index("counters_workspace_status_idx").on(table.workspaceId, table.status),
     index("counters_space_id_idx").on(table.spaceId),
     check("counters_target_positive", sql`${table.target} > 0`),
-    check("counters_interval_positive", sql`${table.interval} > 0`),
   ],
 );
 
@@ -1371,28 +1364,29 @@ export const counterOccurrences = pgTable(
   ],
 );
 
-export const counterPeriods = pgTable(
-  "counter_periods",
+export const counterDays = pgTable(
+  "counter_days",
   {
     id: text("id").primaryKey(),
     counterId: text("counter_id")
       .notNull()
       .references(() => counters.id, { onDelete: "cascade" }),
-    startDate: date("start_date", { mode: "string" }).notNull(),
-    endDate: date("end_date", { mode: "string" }).notNull(),
+    localDate: date("local_date", { mode: "string" }).notNull(),
+    /** False for days marked by choice, which never get a default fail. */
+    required: boolean("required").notNull().default(true),
     target: integer("target").notNull(),
     completed: integer("completed").notNull(),
     skipped: integer("skipped").notNull(),
     failed: integer("failed").notNull(),
-    outcome: counterPeriodOutcomeEnum("outcome").notNull(),
+    outcome: counterDayOutcomeEnum("outcome").notNull(),
     createdAt: timestamp("created_at")
       .$defaultFn(() => new Date())
       .notNull(),
   },
   (table) => [
-    uniqueIndex("counter_periods_counter_start_unique").on(
+    uniqueIndex("counter_days_counter_date_unique").on(
       table.counterId,
-      table.startDate,
+      table.localDate,
     ),
   ],
 );
@@ -1431,7 +1425,7 @@ export type AgentChunkRow = typeof agentChunks.$inferSelect;
 export type CounterRow = typeof counters.$inferSelect;
 export type CounterLinkRow = typeof counterLinks.$inferSelect;
 export type CounterOccurrenceRow = typeof counterOccurrences.$inferSelect;
-export type CounterPeriodRow = typeof counterPeriods.$inferSelect;
+export type CounterDayRow = typeof counterDays.$inferSelect;
 export type DocRow = typeof docs.$inferSelect;
 export type CalendarEventRow = typeof calendarEvents.$inferSelect;
 export type CalendarEventTemplateRow =

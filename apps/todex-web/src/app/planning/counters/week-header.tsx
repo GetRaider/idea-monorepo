@@ -8,81 +8,119 @@ import { ChevronIcon } from "@components/icons";
 import { formatLocalDate, weekdayName } from "./counter-helpers";
 import { CheckMark, ProgressRing } from "./day-circle";
 
-/** Shared by the date header and every row so the columns line up. */
-export const DAY_COLUMNS =
-  "grid w-[15.75rem] shrink-0 grid-cols-7 xl:w-[19.25rem]";
+/**
+ * The date header and every Counter row share these, so the day columns line up:
+ * days take the wider left side, details the right.
+ */
+export const COUNTER_LINE = "flex flex-wrap items-center gap-x-4 gap-y-2";
+export const DAYS_AREA = "min-w-0 flex-[5_1_22rem]";
+export const DETAILS_AREA = "min-w-0 flex-[3_1_12rem]";
+export const DAY_COLUMNS = "grid min-w-0 flex-1 grid-cols-7";
+
+/** Seven day columns between two narrow slots for the week arrows. */
+export function DayTrack({
+  before,
+  after,
+  children,
+}: {
+  before?: ReactNode;
+  after?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <div className="flex items-center gap-1">
+      <div className="flex w-8 shrink-0 justify-center">{before}</div>
+      {children}
+      <div className="flex w-8 shrink-0 justify-center">{after}</div>
+    </div>
+  );
+}
 
 export function CounterWeekHeader({
   days,
   today,
   ringShare,
-  controls,
+  before,
+  after,
+  aside,
 }: {
   days: readonly { date: string }[];
   today: string;
   ringShare?: (column: number) => number | null;
-  controls?: ReactNode;
+  before?: ReactNode;
+  after?: ReactNode;
+  aside?: ReactNode;
 }) {
   return (
-    // The side border matches the rows' so the columns stay aligned.
-    <div className="flex items-end justify-between gap-3 border-x border-transparent px-4">
-      <div className="min-w-0 flex-1">{controls}</div>
-      <ol className={DAY_COLUMNS}>
-        {days.map((day, column) => (
-          <li
-            key={day.date}
-            aria-label={formatLocalDate(day.date)}
-            className={cn(
-              "flex flex-col items-center gap-1 text-xs",
-              day.date === today
-                ? "font-semibold text-foreground"
-                : "text-muted-foreground",
-            )}
-          >
-            <span>{weekdayName(day.date)}</span>
-            <span className="tabular-nums">{Number(day.date.slice(8))}</span>
-            {ringShare ? <DayRing share={ringShare(column)} /> : null}
-          </li>
-        ))}
-      </ol>
+    // The side border and padding match the rows', which keeps columns aligned.
+    <div className={cn(COUNTER_LINE, "border-x border-transparent px-3")}>
+      <div className={DAYS_AREA}>
+        <DayTrack before={before} after={after}>
+          <ol className={DAY_COLUMNS}>
+            {days.map((day, column) => (
+              <li
+                key={day.date}
+                aria-label={formatLocalDate(day.date)}
+                className="flex flex-col items-center gap-1 text-xs text-muted-foreground"
+              >
+                <span>{weekdayName(day.date)}</span>
+                <span
+                  className={cn(
+                    "flex size-6 items-center justify-center rounded-full tabular-nums",
+                    day.date === today &&
+                      "bg-foreground font-semibold text-background",
+                  )}
+                >
+                  {Number(day.date.slice(8))}
+                </span>
+                {ringShare ? <DayRing share={ringShare(column)} /> : null}
+              </li>
+            ))}
+          </ol>
+        </DayTrack>
+      </div>
+      <div className={cn(DETAILS_AREA, "flex justify-end")}>{aside}</div>
     </div>
   );
 }
 
-export function WeekControls({
+export function WeekArrow({
+  direction,
+  weeksBack,
+  onChange,
+}: {
+  direction: "earlier" | "later";
+  weeksBack: number;
+  onChange: (weeksBack: number) => void;
+}) {
+  const isEarlier = direction === "earlier";
+  return (
+    <Button
+      size="icon"
+      variant="ghost"
+      className="h-8 w-8 text-muted-foreground"
+      aria-label={isEarlier ? "Earlier days" : "Later days"}
+      disabled={!isEarlier && weeksBack === 0}
+      onClick={() => onChange(weeksBack + (isEarlier ? 1 : -1))}
+    >
+      <ChevronIcon size={16} className={cn(isEarlier && "rotate-180")} />
+    </Button>
+  );
+}
+
+/** Offered only while an earlier week is on screen. */
+export function BackToToday({
   weeksBack,
   onChange,
 }: {
   weeksBack: number;
   onChange: (weeksBack: number) => void;
 }) {
+  if (weeksBack === 0) return null;
   return (
-    <div className="flex items-center gap-1">
-      <Button
-        size="icon"
-        variant="ghost"
-        className="h-7 w-7 text-muted-foreground"
-        aria-label="Earlier days"
-        onClick={() => onChange(weeksBack + 1)}
-      >
-        <ChevronIcon size={14} className="rotate-180" />
-      </Button>
-      <Button
-        size="icon"
-        variant="ghost"
-        className="h-7 w-7 text-muted-foreground"
-        aria-label="Later days"
-        disabled={weeksBack === 0}
-        onClick={() => onChange(weeksBack - 1)}
-      >
-        <ChevronIcon size={14} />
-      </Button>
-      {weeksBack > 0 ? (
-        <Button size="sm" variant="ghost" onClick={() => onChange(0)}>
-          Today
-        </Button>
-      ) : null}
-    </div>
+    <Button size="sm" variant="ghost" onClick={() => onChange(0)}>
+      Back to today
+    </Button>
   );
 }
 
@@ -102,9 +140,11 @@ function DayRing({ share }: { share: number | null }) {
     <span
       role="img"
       aria-label={
-        share === null ? "Nothing tracked" : `${Math.round(share * 100)}% done`
+        share === null
+          ? "Nothing scheduled"
+          : `${Math.round(share * 100)}% done`
       }
-      className={cn(share === null && "opacity-40")}
+      className={cn("flex", share === null && "opacity-40")}
     >
       <ProgressRing share={share ?? 0} />
     </span>

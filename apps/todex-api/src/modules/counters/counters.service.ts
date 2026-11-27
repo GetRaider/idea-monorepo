@@ -9,11 +9,12 @@ import { randomUUID } from "crypto";
 import {
   and,
   asc,
+  between,
   desc,
   eq,
   getTableColumns,
-  gte,
   inArray,
+  ne,
   or,
   type SQL,
 } from "drizzle-orm";
@@ -25,8 +26,7 @@ import type {
   CounterLink,
   CounterStatus,
   CreateCounterBody,
-  LogCounterOccurrenceBody,
-  LogCounterOccurrenceResult,
+  SetCounterDayBody,
   UpdateCounterBody,
 } from "@repo/api/todex";
 
@@ -35,6 +35,7 @@ import {
   counterOccurrences,
   counterPeriods,
   counters,
+  spaces,
   tasks,
   type CounterLinkRow,
   type CounterRow,
@@ -46,15 +47,20 @@ import {
   hasEndedPeriod,
   lockCounter,
   saveCounter,
+  settleSnapshot,
 } from "./counter-closing";
 import {
-  countStatus,
   isWithin,
   localDate,
-  mondayOf,
   periodContaining,
+  planDay,
 } from "./counter-periods";
-import { toCounter, toCounterOccurrence, trackedPeriod } from "./counter-view";
+import {
+  toCounter,
+  toCounterOccurrence,
+  trackedPeriod,
+  trackedPeriods,
+} from "./counter-view";
 
 @Injectable()
 export class CountersService {
@@ -93,6 +99,7 @@ export class CountersService {
     workspaceId: string,
     status: CounterStatus,
     now = new Date(),
+    until?: string,
   ): Promise<Counter[]> {
     await this.closeDue(workspaceId, now);
     const rows = await this.db
@@ -102,16 +109,17 @@ export class CountersService {
         and(eq(counters.workspaceId, workspaceId), eq(counters.status, status)),
       )
       .orderBy(asc(counters.createdAt), asc(counters.id));
-    return this.summaries(rows, now);
+    return this.summaries(rows, now, until);
   }
 
   async get(
     workspaceId: string,
     counterId: string,
     now = new Date(),
+    until?: string,
   ): Promise<CounterDetail> {
     await this.change(workspaceId, counterId, now, async () => undefined);
-    return this.detail(workspaceId, counterId, now);
+    return this.detail(workspaceId, counterId, now, until);
   }
 
   async create(
@@ -119,12 +127,14 @@ export class CountersService {
     body: CreateCounterBody,
     now = new Date(),
   ): Promise<CounterDetail> {
+    if (body.spaceId) await this.requireSpace(workspaceId, body.spaceId);
     const today = localDate(now, body.timeZone);
     const id = randomUUID();
     await this.db.insert(counters).values({
       id,
       workspaceId,
       ...body,
+      countsSpaceTasks: body.spaceId !== null && body.countsSpaceTasks,
       anchorDate: today,
       closedThrough: addDaysToDate(
         periodContaining(body, today, today).start,
@@ -143,11 +153,18 @@ export class CountersService {
     body: UpdateCounterBody,
     now = new Date(),
   ): Promise<CounterDetail> {
+    if (body.spaceId) await this.requireSpace(workspaceId, body.spaceId);
     await this.change(workspaceId, counterId, now, async (tx, counter) => {
+      const spaceId =
+        body.spaceId === undefined ? counter.spaceId : body.spaceId;
       const renamed = {
         ...counter,
         name: body.name ?? counter.name,
         showInToday: body.showInToday ?? counter.showInToday,
+        spaceId,
+        countsSpaceTasks:
+          spaceId !== null &&
+          (body.countsSpaceTasks ?? counter.countsSpaceTasks),
       };
       await saveCounter(tx, withRuleChange(renamed, body, now), now);
     });
@@ -191,60 +208,62 @@ export class CountersService {
     return this.detail(workspaceId, counterId, now);
   }
 
-  async logOccurrence(
+  /** Sets one day as a whole; safe to repeat. */
+  async setDay(
     workspaceId: string,
     counterId: string,
-    body: LogCounterOccurrenceBody,
+    date: string,
+    body: SetCounterDayBody,
     now = new Date(),
-  ): Promise<LogCounterOccurrenceResult> {
-    const occurrenceId = randomUUID();
+  ): Promise<Counter> {
     await this.change(workspaceId, counterId, now, async (tx, counter) => {
-      const period = trackedPeriod(counter);
-      if (!period) {
-        throw new BadRequestException("Restore the Counter to log it");
-      }
-      const today = localDate(now, counter.timeZone);
-      const date = body.date ?? today;
-      if (!isWithin(period, date) || date > today) {
-        throw new BadRequestException(
-          "Only days of the open period up to today can be logged",
-        );
-      }
-      if (body.status === "skipped") {
-        const logged = await tx
-          .select({
-            date: counterOccurrences.localDate,
-            status: counterOccurrences.status,
-          })
+      const { period, isOpen } = await this.markablePeriod(
+        tx,
+        counter,
+        date,
+        now,
+      );
+      const entries = (
+        await tx
+          .select()
           .from(counterOccurrences)
           .where(
             and(
               eq(counterOccurrences.counterId, counter.id),
-              gte(counterOccurrences.localDate, period.start),
+              between(counterOccurrences.localDate, period.start, period.end),
+              ne(counterOccurrences.source, "system"),
             ),
-          );
-        const covered =
-          countStatus(logged, "completed") + countStatus(logged, "skipped");
-        if (covered >= counter.target) {
-          throw new BadRequestException(
-            "The Target is already covered, nothing to skip",
-          );
-        }
-      }
-      await tx.insert(counterOccurrences).values({
-        id: occurrenceId,
-        counterId: counter.id,
-        localDate: date,
-        status: body.status,
-        skipReason: body.status === "skipped" ? body.skipReason : null,
-        source: "manual",
-        createdAt: now,
+          )
+      ).map((row) => ({ ...row, date: row.localDate }));
+      const dayEntries = entries.filter((entry) => entry.date === date);
+      const plan = planDay({
+        period,
+        dayEntries,
+        otherDays: entries.length - dayEntries.length,
+        change: body,
       });
+      if ("error" in plan) throw new BadRequestException(plan.error);
+      if (plan.removeIds.length > 0) {
+        await tx
+          .delete(counterOccurrences)
+          .where(inArray(counterOccurrences.id, plan.removeIds));
+      }
+      if (plan.add.length > 0) {
+        await tx.insert(counterOccurrences).values(
+          plan.add.map((status) => ({
+            id: randomUUID(),
+            counterId: counter.id,
+            localDate: date,
+            status,
+            skipReason: body.status === "skipped" ? body.skipReason : null,
+            source: "manual" as const,
+            createdAt: now,
+          })),
+        );
+      }
+      if (!isOpen) await settleSnapshot(tx, counter.id, period, now);
     });
-    return {
-      counter: await this.summary(workspaceId, counterId, now),
-      occurrenceId,
-    };
+    return this.summary(workspaceId, counterId, now);
   }
 
   async deleteOccurrence(
@@ -264,18 +283,21 @@ export class CountersService {
           ),
         );
       if (!occurrence) throw new NotFoundException("Occurrence not found");
-      const view = toCounterOccurrence(counter, {
-        ...occurrence,
-        taskSummary: null,
-      });
-      if (!view.deletable) {
+      if (occurrence.source === "system") {
         throw new BadRequestException(
-          "Only manual entries of the open period can be removed",
+          "A default fail cannot be removed; mark the day instead",
         );
       }
+      const { period, isOpen } = await this.markablePeriod(
+        tx,
+        counter,
+        occurrence.localDate,
+        now,
+      );
       await tx
         .delete(counterOccurrences)
         .where(eq(counterOccurrences.id, occurrence.id));
+      if (!isOpen) await settleSnapshot(tx, counter.id, period, now);
     });
     return this.summary(workspaceId, counterId, now);
   }
@@ -341,6 +363,38 @@ export class CountersService {
     });
   }
 
+  /** The tracked period that holds `date`, if the day may still be marked. */
+  private async markablePeriod(
+    tx: NodePgDatabase,
+    counter: CounterRow,
+    date: string,
+    now: Date,
+  ) {
+    if (counter.status !== "active") {
+      throw new BadRequestException("Restore the Counter to mark it");
+    }
+    const snapshots = await tx
+      .select()
+      .from(counterPeriods)
+      .where(eq(counterPeriods.counterId, counter.id));
+    const periods = trackedPeriods(counter, snapshots);
+    const period = periods.find((item) => isWithin(item, date));
+    if (!period || date > localDate(now, counter.timeZone)) {
+      throw new BadRequestException(
+        "Only tracked days up to today can be marked",
+      );
+    }
+    return { period, isOpen: period.start > counter.closedThrough };
+  }
+
+  private async requireSpace(workspaceId: string, spaceId: string) {
+    const [space] = await this.db
+      .select({ id: spaces.id })
+      .from(spaces)
+      .where(and(eq(spaces.id, spaceId), eq(spaces.workspaceId, workspaceId)));
+    if (!space) throw new NotFoundException("Space not found");
+  }
+
   private async requireCounter(
     db: NodePgDatabase,
     workspaceId: string,
@@ -363,64 +417,44 @@ export class CountersService {
     return counter;
   }
 
-  /** Loads only what the current week and the open period need. */
-  private async summaries(rows: CounterRow[], now: Date): Promise<Counter[]> {
+  private async summaries(
+    rows: CounterRow[],
+    now: Date,
+    until?: string,
+  ): Promise<Counter[]> {
     if (rows.length === 0) return [];
-    const bounds = rows.map((row) => {
-      const monday = mondayOf(localDate(now, row.timeZone));
-      const start = trackedPeriod(row)?.start;
-      return {
-        id: row.id,
-        monday,
-        from: start && start < monday ? start : monday,
-      };
-    });
-    const [occurrences, periods] = await Promise.all([
-      this.occurrenceRows(
-        or(
-          ...bounds.map((bound) =>
-            and(
-              eq(counterOccurrences.counterId, bound.id),
-              gte(counterOccurrences.localDate, bound.from),
-            ),
-          ),
-        ),
-      ),
+    const ids = rows.map((row) => row.id);
+    // Totals and streaks need the whole history.
+    const [occurrences, snapshots] = await Promise.all([
+      this.occurrenceRows(inArray(counterOccurrences.counterId, ids)),
       this.db
         .select()
         .from(counterPeriods)
-        .where(
-          or(
-            ...bounds.map((bound) =>
-              and(
-                eq(counterPeriods.counterId, bound.id),
-                gte(counterPeriods.endDate, bound.monday),
-              ),
-            ),
-          ),
-        ),
+        .where(inArray(counterPeriods.counterId, ids)),
     ]);
-    return rows.map((row) =>
-      toCounter({
+    return rows.map((row) => {
+      const own = snapshots.filter((snapshot) => snapshot.counterId === row.id);
+      const periods = trackedPeriods(row, own);
+      return toCounter({
         counter: row,
         occurrences: occurrences
           .filter((occurrence) => occurrence.counterId === row.id)
-          .map((occurrence) => toCounterOccurrence(row, occurrence)),
-        closedPeriods: periods
-          .filter((period) => period.counterId === row.id)
-          .map(toClosedPeriod),
+          .map((occurrence) => toCounterOccurrence(row, periods, occurrence)),
+        snapshots: own,
+        until,
         now,
-      }),
-    );
+      });
+    });
   }
 
   private async detail(
     workspaceId: string,
     counterId: string,
     now: Date,
+    until?: string,
   ): Promise<CounterDetail> {
     const row = await this.requireCounter(this.db, workspaceId, counterId);
-    const [occurrences, periods, links] = await Promise.all([
+    const [occurrences, snapshots, links] = await Promise.all([
       this.occurrenceRows(eq(counterOccurrences.counterId, row.id)),
       this.db
         .select()
@@ -432,14 +466,16 @@ export class CountersService {
         .where(eq(counterLinks.counterId, row.id))
         .orderBy(asc(counterLinks.createdAt), asc(counterLinks.id)),
     ]);
+    const periods = trackedPeriods(row, snapshots);
     const history = occurrences.map((occurrence) =>
-      toCounterOccurrence(row, occurrence),
+      toCounterOccurrence(row, periods, occurrence),
     );
     return {
       ...toCounter({
         counter: row,
         occurrences: history,
-        closedPeriods: periods.map(toClosedPeriod),
+        snapshots,
+        until,
         now,
       }),
       history,
@@ -536,12 +572,4 @@ function withRuleChange(
     return advanceCursor(pending, counter.closedThrough);
   }
   return pending;
-}
-
-function toClosedPeriod(period: typeof counterPeriods.$inferSelect) {
-  return {
-    start: period.startDate,
-    end: period.endDate,
-    target: period.target,
-  };
 }

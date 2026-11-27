@@ -3,11 +3,14 @@ import { TaskStatus } from "@repo/api/todex";
 import type { Counter, CounterDay, Task } from "@repo/api/todex";
 
 import {
+  dayClickChange,
   dayLabel,
+  dayShare,
   formatLocalDate,
-  isSkipCovered,
+  groupBySpace,
   linkCandidates,
   progressLabel,
+  streakLabel,
 } from "./counter-helpers";
 
 describe("progressLabel", () => {
@@ -57,10 +60,104 @@ describe("dayLabel", () => {
   });
 });
 
-describe("isSkipCovered", () => {
-  it("blocks skipping once completions and skips reach the Target", () => {
-    expect(isSkipCovered(counter())).toBe(false);
-    expect(isSkipCovered(counter({ target: 3 }))).toBe(true);
+describe("dayLabel with a skip", () => {
+  it("shows the reason", () => {
+    const skipped = day({
+      skipped: 1,
+      occurrences: [{ status: "skipped", skipReason: "Travelling" } as never],
+    });
+    expect(dayLabel(skipped, "en-US")).toBe(
+      "Fri, Nov 27: 1 skipped (Travelling)",
+    );
+  });
+});
+
+describe("dayClickChange", () => {
+  it("completes a day that has room, one step at a time", () => {
+    expect(dayClickChange(day({ canComplete: true }))).toEqual({
+      status: "completed",
+      count: 1,
+    });
+    expect(
+      dayClickChange(day({ canComplete: true, completed: 1, capacity: 2 })),
+    ).toEqual({ status: "completed", count: 2 });
+  });
+
+  it("clears a day that is already full", () => {
+    expect(dayClickChange(day({ completed: 1, canMark: true }))).toEqual({
+      status: "empty",
+    });
+  });
+
+  it("does nothing when the Target is covered or the day is inert", () => {
+    expect(dayClickChange(day())).toBeNull();
+    expect(dayClickChange(day({ loggable: false, completed: 1 }))).toBeNull();
+  });
+});
+
+describe("streakLabel", () => {
+  it("counts in the Counter's periods", () => {
+    const streak = (value: number, overrides: Partial<Counter> = {}) =>
+      streakLabel(
+        counter({ stats: { totalDays: 0, streak: value }, ...overrides }),
+      );
+    expect(streak(1, { frequency: "daily" })).toBe("1 day");
+    expect(streak(4)).toBe("4 weeks");
+    expect(streak(0, { frequency: "monthly" })).toBe("0 months");
+    expect(streak(2, { interval: 2 })).toBe("2 periods");
+  });
+});
+
+describe("dayShare", () => {
+  const withDay = (overrides: Partial<CounterDay>) =>
+    counter({ week: [day(overrides)] });
+
+  it("compares full days with the Counters tracked that day", () => {
+    expect(
+      dayShare(
+        [
+          withDay({ fill: "filled" }),
+          withDay({ fill: "partial" }),
+          withDay({ tracked: false }),
+        ],
+        0,
+      ),
+    ).toBe(0.5);
+  });
+
+  it("is empty when nothing is tracked", () => {
+    expect(dayShare([withDay({ tracked: false })], 0)).toBeNull();
+    expect(dayShare([], 0)).toBeNull();
+  });
+});
+
+describe("groupBySpace", () => {
+  const spaces = [
+    { id: "personal", name: "Personal", color: "#111111" },
+    { id: "growth", name: "Growth", color: "#222222" },
+    { id: "empty", name: "Empty", color: "#333333" },
+  ];
+
+  it("follows the space order and puts space-free Counters last", () => {
+    const groups = groupBySpace(
+      [
+        counter({ id: "free" }),
+        counter({ id: "b", spaceId: "growth" }),
+        counter({ id: "a", spaceId: "personal" }),
+        counter({ id: "gone", spaceId: "unknown" }),
+      ],
+      spaces,
+    );
+    expect(
+      groups.map((group) => [
+        group.name,
+        group.counters.map((item) => item.id),
+      ]),
+    ).toEqual([
+      ["Personal", ["a"]],
+      ["Growth", ["b"]],
+      ["No space", ["free", "gone"]],
+    ]);
   });
 });
 
@@ -98,6 +195,8 @@ function counter(overrides: Partial<Counter> = {}): Counter {
   return {
     id: "counter",
     name: "Gym",
+    spaceId: null,
+    countsSpaceTasks: false,
     frequency: "weekly",
     interval: 1,
     target: 4,
@@ -114,6 +213,7 @@ function counter(overrides: Partial<Counter> = {}): Counter {
       isOpen: true,
     },
     pendingChange: null,
+    stats: { totalDays: 0, streak: 0 },
     week: [],
     ...overrides,
   };
@@ -122,11 +222,15 @@ function counter(overrides: Partial<Counter> = {}): Counter {
 function day(overrides: Partial<CounterDay> = {}): CounterDay {
   return {
     date: "2026-11-27",
+    tracked: true,
+    loggable: true,
     fill: "empty",
+    capacity: 1,
     completed: 0,
     skipped: 0,
     failed: 0,
-    loggable: true,
+    canComplete: false,
+    canMark: false,
     occurrences: [],
     ...overrides,
   };

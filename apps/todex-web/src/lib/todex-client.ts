@@ -9,8 +9,7 @@ import {
   CounterSchema,
   CreateCounterBodySchema,
   LinkCounterTaskBodySchema,
-  LogCounterOccurrenceBodySchema,
-  LogCounterOccurrenceResultSchema,
+  SetCounterDayBodySchema,
   UpdateCounterBodySchema,
   CreateSpaceSectionBodySchema,
   CreateCalendarEventBodySchema,
@@ -460,10 +459,18 @@ export const todexClient = {
     },
   },
   counters: {
-    list: (status: CounterStatus) =>
-      call("get", `/v1/counters?status=${status}`, z.array(CounterSchema)),
-    get: (counterId: string) =>
-      call("get", `/v1/counters/${counterId}`, CounterDetailSchema),
+    list: (status: CounterStatus, until: string) =>
+      call(
+        "get",
+        `/v1/counters?${new URLSearchParams({ status, until })}`,
+        z.array(CounterSchema),
+      ),
+    get: (counterId: string, until: string) =>
+      call(
+        "get",
+        `/v1/counters/${counterId}?${new URLSearchParams({ until })}`,
+        CounterDetailSchema,
+      ),
     create: (body: unknown) =>
       call(
         "post",
@@ -482,12 +489,12 @@ export const todexClient = {
       call("post", `/v1/counters/${counterId}/archive`, CounterDetailSchema),
     restore: (counterId: string) =>
       call("post", `/v1/counters/${counterId}/restore`, CounterDetailSchema),
-    log: (counterId: string, body: unknown) =>
+    setDay: (counterId: string, date: string, body: unknown) =>
       call(
-        "post",
-        `/v1/counters/${counterId}/occurrences`,
-        LogCounterOccurrenceResultSchema,
-        LogCounterOccurrenceBodySchema.parse(body),
+        "put",
+        `/v1/counters/${counterId}/days/${date}`,
+        CounterSchema,
+        SetCounterDayBodySchema.parse(body),
       ),
     removeOccurrence: (counterId: string, occurrenceId: string) =>
       call(

@@ -2,12 +2,12 @@ import "reflect-metadata";
 import { randomUUID } from "crypto";
 import { asc, eq } from "drizzle-orm";
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
-import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { CreateCounterBodySchema } from "@repo/api/todex";
-import type { CreateCounterBody } from "@repo/api/todex";
+import type { CreateCounterBody, SetCounterDayBody } from "@repo/api/todex";
 
+import { migrateTestDatabase } from "../../../test/migrate-test-database";
 import { users } from "../../db/auth-schema";
 import { ensureOwnerWorkspace } from "../../db/ensure-workspace";
 import { counterOccurrences, counterPeriods } from "../../db/schema";
@@ -25,7 +25,7 @@ describe.skipIf(!databaseUrl)("CountersService (database)", () => {
   beforeAll(async () => {
     pool = new Pool({ connectionString: databaseUrl });
     database = drizzle(pool);
-    await migrate(database, { migrationsFolder: "drizzle" });
+    await migrateTestDatabase(pool);
     service = new CountersService(database);
     workspaceId = await seedWorkspace(database);
     otherWorkspaceId = await seedWorkspace(database);
@@ -54,20 +54,13 @@ describe.skipIf(!databaseUrl)("CountersService (database)", () => {
     );
   }
 
-  function log(
+  function mark(
     counterId: string,
     now: string,
-    date?: string,
-    skipReason?: string,
+    date: string,
+    change: SetCounterDayBody = { status: "completed", count: 1 },
   ) {
-    return service.logOccurrence(
-      workspaceId,
-      counterId,
-      skipReason === undefined
-        ? { status: "completed", date }
-        : { status: "skipped", date, skipReason },
-      at(now),
-    );
+    return service.setDay(workspaceId, counterId, date, change, at(now));
   }
 
   function snapshots(counterId: string) {
@@ -87,36 +80,79 @@ describe.skipIf(!databaseUrl)("CountersService (database)", () => {
       isOpen: true,
       completed: 0,
     });
-    const result = await log(counter.id, "2026-11-28", "2026-11-23");
-    expect(result.counter.period?.completed).toBe(1);
-    expect(result.counter.week[0]?.fill).toBe("filled");
+    const marked = await mark(counter.id, "2026-11-28", "2026-11-23");
+    expect(marked.period?.completed).toBe(1);
+    expect(marked.week.map((day) => day.date)).toContain("2026-11-23");
   });
 
-  it("rejects future days and closed periods", async () => {
+  it("rejects future days and days before tracking began", async () => {
     const counter = await create("2026-11-28");
-    await expect(log(counter.id, "2026-11-28", "2026-11-29")).rejects.toThrow(
-      "open period",
-    );
-    await expect(log(counter.id, "2026-11-28", "2026-11-22")).rejects.toThrow(
-      "open period",
-    );
+    for (const date of ["2026-11-29", "2026-11-22"]) {
+      await expect(mark(counter.id, "2026-11-28", date)).rejects.toThrow(
+        "tracked days",
+      );
+    }
   });
 
-  it("blocks a skip once the target is covered but keeps completions open", async () => {
+  it("limits a period to its Target and a weekly day to one mark", async () => {
     const counter = await create("2026-11-28", { target: 2 });
-    await log(counter.id, "2026-11-28");
-    await log(counter.id, "2026-11-28", undefined, "Sick");
     await expect(
-      log(counter.id, "2026-11-28", undefined, "Again"),
-    ).rejects.toThrow("Target");
-    await log(counter.id, "2026-11-28");
-    const over = await log(counter.id, "2026-11-28");
-    expect(over.counter.period).toMatchObject({ completed: 3, skipped: 1 });
+      mark(counter.id, "2026-11-28", "2026-11-28", {
+        status: "completed",
+        count: 2,
+      }),
+    ).rejects.toThrow("at most 1");
+    await mark(counter.id, "2026-11-28", "2026-11-28");
+    await mark(counter.id, "2026-11-28", "2026-11-27", {
+      status: "skipped",
+      skipReason: "Sick",
+    });
+    for (const change of [
+      { status: "completed", count: 1 },
+      { status: "failed" },
+    ] as const) {
+      await expect(
+        mark(counter.id, "2026-11-28", "2026-11-26", change),
+      ).rejects.toThrow("already covered");
+    }
+  });
+
+  it("repeats the same day without adding marks", async () => {
+    const counter = await create("2026-11-27", {
+      frequency: "daily",
+      target: 3,
+    });
+    const change = { status: "completed", count: 2 } as const;
+    await mark(counter.id, "2026-11-27", "2026-11-27", change);
+    const again = await mark(counter.id, "2026-11-27", "2026-11-27", change);
+    expect(again.period?.completed).toBe(2);
+    expect(again.week[6]).toMatchObject({ fill: "partial", capacity: 3 });
+  });
+
+  it("switches a day between completed, failed, skipped and empty", async () => {
+    const counter = await create("2026-11-28", { target: 1 });
+    const set = (change: SetCounterDayBody) =>
+      mark(counter.id, "2026-11-28", "2026-11-28", change);
+    expect((await set({ status: "failed" })).period).toMatchObject({
+      failed: 1,
+      completed: 0,
+    });
+    expect(
+      (await set({ status: "skipped", skipReason: "Rest" })).period,
+    ).toMatchObject({ skipped: 1, failed: 0 });
+    expect((await set({ status: "completed", count: 1 })).period).toMatchObject(
+      { completed: 1, skipped: 0 },
+    );
+    expect((await set({ status: "empty" })).period).toMatchObject({
+      completed: 0,
+      skipped: 0,
+      failed: 0,
+    });
   });
 
   it("closes a late-started period against the full target", async () => {
     const counter = await create("2026-11-28");
-    await log(counter.id, "2026-11-28");
+    await mark(counter.id, "2026-11-28", "2026-11-28");
     const next = await service.get(workspaceId, counter.id, at("2026-11-30"));
     expect(await snapshots(counter.id)).toMatchObject([
       {
@@ -135,7 +171,9 @@ describe.skipIf(!databaseUrl)("CountersService (database)", () => {
       "2026-11-27",
       "2026-11-29",
     ]);
-    expect(next.history.some((item) => item.deletable)).toBe(false);
+    expect(
+      next.history.filter((item) => item.deletable).map((item) => item.status),
+    ).toEqual(["completed"]);
     expect(next.period).toMatchObject({
       start: "2026-11-30",
       end: "2026-12-06",
@@ -166,6 +204,80 @@ describe.skipIf(!databaseUrl)("CountersService (database)", () => {
       .where(eq(counterOccurrences.counterId, counter.id));
     expect(occurrences).toHaveLength(4);
     expect(occurrences.every((item) => item.source === "system")).toBe(true);
+  });
+
+  it("resettles a closed day when it is marked later", async () => {
+    const counter = await create("2026-11-01", {
+      frequency: "daily",
+      target: 1,
+    });
+    await service.get(workspaceId, counter.id, at("2026-11-03"));
+    const first = async () => (await snapshots(counter.id))[0];
+    const set = (change: SetCounterDayBody) =>
+      mark(counter.id, "2026-11-03", "2026-11-01", change);
+
+    await set({ status: "completed", count: 1 });
+    expect(await first()).toMatchObject({
+      completed: 1,
+      failed: 0,
+      outcome: "met",
+    });
+    await set({ status: "skipped", skipReason: "Sick" });
+    expect(await first()).toMatchObject({ skipped: 1, outcome: "excused" });
+    const cleared = await set({ status: "empty" });
+    expect(await first()).toMatchObject({ failed: 1, outcome: "failed" });
+    expect(cleared.week.find((day) => day.date === "2026-11-01")).toMatchObject(
+      { failed: 1, canComplete: true },
+    );
+    expect(await snapshots(counter.id)).toHaveLength(2);
+  });
+
+  it("moves default fails when an earlier week day is completed", async () => {
+    const counter = await create("2026-11-23");
+    await service.get(workspaceId, counter.id, at("2026-11-30"));
+    await mark(counter.id, "2026-11-30", "2026-11-29");
+    const detail = await service.get(workspaceId, counter.id, at("2026-11-30"));
+    expect((await snapshots(counter.id))[0]).toMatchObject({
+      completed: 1,
+      failed: 3,
+    });
+    expect(
+      detail.history
+        .filter((item) => item.source === "system")
+        .map((item) => item.date),
+    ).toEqual(["2026-11-28", "2026-11-27", "2026-11-26"]);
+  });
+
+  it("counts total days and the current streak", async () => {
+    const counter = await create("2026-11-01", {
+      frequency: "daily",
+      target: 1,
+    });
+    await mark(counter.id, "2026-11-01", "2026-11-01");
+    await mark(counter.id, "2026-11-02", "2026-11-02");
+    const running = await service.get(
+      workspaceId,
+      counter.id,
+      at("2026-11-03"),
+    );
+    expect(running.stats).toEqual({ totalDays: 2, streak: 2 });
+    const failed = await mark(counter.id, "2026-11-03", "2026-11-03", {
+      status: "failed",
+    });
+    expect(failed.stats).toEqual({ totalDays: 2, streak: 0 });
+  });
+
+  it("returns the seven days ending on the requested date", async () => {
+    const own = await seedWorkspace(database);
+    await create("2026-11-01", { frequency: "daily", target: 1 }, own);
+    const [counter] = await service.list(
+      own,
+      "active",
+      at("2026-11-20"),
+      "2026-11-10",
+    );
+    expect(counter?.week[0]?.date).toBe("2026-11-04");
+    expect(counter?.week[6]?.date).toBe("2026-11-10");
   });
 
   it("applies a target change from the next period", async () => {
@@ -232,14 +344,16 @@ describe.skipIf(!databaseUrl)("CountersService (database)", () => {
       frequency: "daily",
       target: 1,
     });
-    await log(counter.id, "2026-11-03");
+    await mark(counter.id, "2026-11-03", "2026-11-03");
     const archived = await service.archive(
       workspaceId,
       counter.id,
       at("2026-11-03"),
     );
     expect(archived.period).toBeNull();
-    await expect(log(counter.id, "2026-11-03")).rejects.toThrow("Restore");
+    await expect(mark(counter.id, "2026-11-03", "2026-11-03")).rejects.toThrow(
+      "Restore",
+    );
     await service.closeDue(workspaceId, at("2026-11-09"));
     expect(await snapshots(counter.id)).toHaveLength(0);
 
@@ -260,35 +374,37 @@ describe.skipIf(!databaseUrl)("CountersService (database)", () => {
       period: { start: "2026-11-11", end: "2026-11-11", isOpen: false },
     });
     expect(restored.history).toHaveLength(1);
-    await expect(log(counter.id, "2026-11-10")).rejects.toThrow("open period");
-    await log(counter.id, "2026-11-11");
+    await expect(mark(counter.id, "2026-11-10", "2026-11-10")).rejects.toThrow(
+      "tracked days",
+    );
+    await mark(counter.id, "2026-11-11", "2026-11-11");
     expect(await snapshots(counter.id)).toHaveLength(0);
   });
 
-  it("deletes only manual occurrences of the open period", async () => {
+  it("removes any mark except a default fail", async () => {
     const counter = await create("2026-11-23", { target: 2 });
-    const logged = await log(counter.id, "2026-11-23");
-    const removed = await service.deleteOccurrence(
+    await mark(counter.id, "2026-11-23", "2026-11-23");
+    const closed = await service.get(workspaceId, counter.id, at("2026-11-30"));
+    const failed = closed.history.find((item) => item.source === "system");
+    await expect(
+      service.deleteOccurrence(
+        workspaceId,
+        counter.id,
+        failed?.id ?? "",
+        at("2026-11-30"),
+      ),
+    ).rejects.toThrow("default fail");
+    const logged = closed.history.find((item) => item.source === "manual");
+    await service.deleteOccurrence(
       workspaceId,
       counter.id,
-      logged.occurrenceId,
-      at("2026-11-23"),
+      logged?.id ?? "",
+      at("2026-11-30"),
     );
-    expect(removed.period?.completed).toBe(0);
-
-    const kept = await log(counter.id, "2026-11-23");
-    const closed = await service.get(workspaceId, counter.id, at("2026-11-30"));
-    const failed = closed.history.find((item) => item.status === "failed");
-    for (const occurrenceId of [kept.occurrenceId, failed?.id ?? ""]) {
-      await expect(
-        service.deleteOccurrence(
-          workspaceId,
-          counter.id,
-          occurrenceId,
-          at("2026-11-30"),
-        ),
-      ).rejects.toThrow();
-    }
+    expect((await snapshots(counter.id))[0]).toMatchObject({
+      completed: 0,
+      failed: 2,
+    });
   });
 
   it("dates occurrences in the Counter time zone", async () => {
@@ -298,10 +414,11 @@ describe.skipIf(!databaseUrl)("CountersService (database)", () => {
       timeZone: "Europe/Kyiv",
     });
     expect(counter.today).toBe("2026-11-28");
-    const logged = await log(counter.id, "2026-11-27T22:30:00Z");
-    expect(logged.counter.week.find((day) => day.completed === 1)?.date).toBe(
-      "2026-11-28",
-    );
+    const marked = await mark(counter.id, "2026-11-27T22:30:00Z", "2026-11-28");
+    expect(marked.week[6]).toMatchObject({
+      date: "2026-11-28",
+      completed: 1,
+    });
   });
 
   it("lists by status", async () => {
@@ -322,13 +439,17 @@ describe.skipIf(!databaseUrl)("CountersService (database)", () => {
       service.get(otherWorkspaceId, counter.id, now),
     ).rejects.toThrow("Counter not found");
     await expect(
-      service.logOccurrence(
+      service.setDay(
         otherWorkspaceId,
         counter.id,
-        { status: "completed" },
+        "2026-11-23",
+        { status: "failed" },
         now,
       ),
     ).rejects.toThrow("Counter not found");
+    await expect(
+      create("2026-11-23", { spaceId: randomUUID() }),
+    ).rejects.toThrow("Space not found");
     await expect(
       service.archive(otherWorkspaceId, counter.id, now),
     ).rejects.toThrow("Counter not found");

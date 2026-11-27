@@ -8,6 +8,7 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
+  Switch,
 } from "@repo/ui";
 import type { CounterDetail } from "@repo/api/todex";
 
@@ -19,7 +20,11 @@ import { linkCandidates } from "./counter-helpers";
 import { useCounterActions } from "./use-counters";
 
 export function CounterLinks({ counter }: { counter: CounterDetail }) {
-  const { removeLink } = useCounterActions(counter.id);
+  const { removeLink, update } = useCounterActions(counter.id);
+  const {
+    state: { boards },
+  } = useTasks();
+  const space = boards.find((board) => board.id === counter.spaceId);
 
   return (
     <section aria-labelledby="counter-links-heading">
@@ -29,6 +34,19 @@ export function CounterLinks({ counter }: { counter: CounterDetail }) {
         </h2>
         <LinkTaskPicker counter={counter} />
       </div>
+      {space ? (
+        <label className="mb-2 flex items-center justify-between gap-3 rounded-xl border border-border px-4 py-2 text-sm">
+          Any task completed in {space.name} counts
+          <Switch
+            checked={counter.countsSpaceTasks}
+            disabled={update.isPending}
+            onCheckedChange={(countsSpaceTasks) =>
+              update.mutate({ countsSpaceTasks })
+            }
+            aria-label={`Any task completed in ${space.name} counts`}
+          />
+        </label>
+      ) : null}
       {counter.links.length === 0 ? (
         <p className="text-sm text-muted-foreground">
           Link a task and completing it counts here.

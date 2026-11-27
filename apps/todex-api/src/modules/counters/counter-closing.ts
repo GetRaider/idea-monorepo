@@ -9,7 +9,12 @@ import {
   counters,
   type CounterRow,
 } from "../../db/schema";
-import { localDate, openPeriod, settlePeriod } from "./counter-periods";
+import {
+  localDate,
+  openPeriod,
+  settlePeriod,
+  type TrackedPeriod,
+} from "./counter-periods";
 
 /** Serializes every writer of one Counter. Must run inside a transaction. */
 export async function lockCounter(
@@ -41,46 +46,75 @@ export async function closeEndedPeriods(
       current.anchorDate,
       current.closedThrough,
     );
-    const occurrences = await tx
-      .select({
-        date: counterOccurrences.localDate,
-        status: counterOccurrences.status,
-      })
-      .from(counterOccurrences)
-      .where(
-        and(
-          eq(counterOccurrences.counterId, current.id),
-          between(counterOccurrences.localDate, period.start, period.end),
-        ),
-      );
-    const settlement = settlePeriod(period, current.target, occurrences);
-    await tx.insert(counterPeriods).values({
-      id: randomUUID(),
-      counterId: current.id,
-      startDate: period.start,
-      endDate: period.end,
-      target: current.target,
-      completed: settlement.completed,
-      skipped: settlement.skipped,
-      failed: settlement.failed,
-      outcome: settlement.outcome,
-      createdAt: now,
-    });
-    if (settlement.failedDates.length > 0) {
-      await tx.insert(counterOccurrences).values(
-        settlement.failedDates.map((date) => ({
-          id: randomUUID(),
-          counterId: current.id,
-          localDate: date,
-          status: "failed" as const,
-          source: "system" as const,
-          createdAt: now,
-        })),
-      );
-    }
+    await settleSnapshot(
+      tx,
+      current.id,
+      { ...period, target: current.target },
+      now,
+    );
     current = { ...current, ...advanceCursor(current, period.end) };
   }
   return saveCounter(tx, current, now);
+}
+
+/**
+ * Writes the snapshot of a closed period from its hand and Task entries and
+ * rebuilds its default fails. Rerun whenever such a period changes.
+ */
+export async function settleSnapshot(
+  tx: NodePgDatabase,
+  counterId: string,
+  period: TrackedPeriod,
+  now: Date,
+): Promise<void> {
+  const inPeriod = and(
+    eq(counterOccurrences.counterId, counterId),
+    between(counterOccurrences.localDate, period.start, period.end),
+  );
+  await tx
+    .delete(counterOccurrences)
+    .where(and(inPeriod, eq(counterOccurrences.source, "system")));
+  const entries = await tx
+    .select({
+      date: counterOccurrences.localDate,
+      status: counterOccurrences.status,
+    })
+    .from(counterOccurrences)
+    .where(inPeriod);
+  const settlement = settlePeriod(period, period.target, entries);
+  const totals = {
+    endDate: period.end,
+    target: period.target,
+    completed: settlement.completed,
+    skipped: settlement.skipped,
+    failed: settlement.failed,
+    outcome: settlement.outcome,
+  };
+  await tx
+    .insert(counterPeriods)
+    .values({
+      id: randomUUID(),
+      counterId,
+      startDate: period.start,
+      createdAt: now,
+      ...totals,
+    })
+    .onConflictDoUpdate({
+      target: [counterPeriods.counterId, counterPeriods.startDate],
+      set: totals,
+    });
+  if (settlement.failedDates.length > 0) {
+    await tx.insert(counterOccurrences).values(
+      settlement.failedDates.map((date) => ({
+        id: randomUUID(),
+        counterId,
+        localDate: date,
+        status: "failed" as const,
+        source: "system" as const,
+        createdAt: now,
+      })),
+    );
+  }
 }
 
 /** Moves the cursor and lets a pending change take effect on the next day. */

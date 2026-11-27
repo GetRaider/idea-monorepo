@@ -8,18 +8,22 @@ import type { Counter, CounterStatus } from "@repo/api/todex";
 import { NewButton } from "@components/new-button";
 
 import { CounterFormDialog } from "./counter-form-dialog";
-import { CounterRow } from "./counter-row";
+import { dayShare } from "./counter-helpers";
+import { CounterSections } from "./counter-sections";
+import { useWeekWindow } from "./use-week-window";
 import {
   useCounterActions,
   useCounterList,
   useCreateCounter,
 } from "./use-counters";
+import { CounterWeekHeader, WeekControls } from "./week-header";
 
 export default function CountersPage() {
   const router = useRouter();
   const [status, setStatus] = useState<CounterStatus>("active");
   const [isCreating, setIsCreating] = useState(false);
-  const { data, isPending, isError } = useCounterList(status);
+  const { weeksBack, setWeeksBack, today, until } = useWeekWindow();
+  const { data, isPending, isError } = useCounterList(status, until);
   const createCounter = useCreateCounter((counterId) => {
     setIsCreating(false);
     router.push(`/planning/counters/${counterId}`);
@@ -34,7 +38,8 @@ export default function CountersPage() {
         </p>
       );
     }
-    if (data.length === 0) {
+    const days = data[0]?.week;
+    if (!days) {
       return (
         <p className="text-sm text-muted-foreground">
           {status === "active"
@@ -43,20 +48,26 @@ export default function CountersPage() {
         </p>
       );
     }
+    if (status === "archived") {
+      return (
+        <CounterSections
+          counters={data}
+          renderAction={(counter) => <RestoreButton counter={counter} />}
+        />
+      );
+    }
     return (
-      <ul className="divide-y divide-border rounded-xl border border-border">
-        {data.map((counter) => (
-          <CounterRow
-            key={counter.id}
-            counter={counter}
-            action={
-              status === "archived" ? (
-                <RestoreButton counter={counter} />
-              ) : undefined
-            }
-          />
-        ))}
-      </ul>
+      <div className="flex flex-col gap-4">
+        <CounterWeekHeader
+          days={days}
+          today={today}
+          ringShare={(column) => dayShare(data, column)}
+          controls={
+            <WeekControls weeksBack={weeksBack} onChange={setWeeksBack} />
+          }
+        />
+        <CounterSections counters={data} />
+      </div>
     );
   }
 

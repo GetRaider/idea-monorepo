@@ -31,6 +31,8 @@ const targetSchema = z.number().int().min(1).max(COUNTER_TARGET_MAX);
 
 const intervalSchema = z.number().int().min(1).max(2);
 
+const spaceIdSchema = z.string().min(1);
+
 const ruleShape = {
   frequency: CounterFrequencySchema,
   interval: intervalSchema,
@@ -51,17 +53,24 @@ export const CounterOccurrenceSchema = z.object({
 
 export const CounterDaySchema = z.object({
   date: localDateSchema,
+  /** Inside the open period or a closed one. */
+  tracked: z.boolean(),
+  loggable: z.boolean(),
   fill: z.enum(["empty", "partial", "filled"]),
+  capacity: z.number().int().positive(),
   completed: z.number().int().nonnegative(),
   skipped: z.number().int().nonnegative(),
   failed: z.number().int().nonnegative(),
-  loggable: z.boolean(),
+  canComplete: z.boolean(),
+  canMark: z.boolean(),
   occurrences: z.array(CounterOccurrenceSchema),
 });
 
 export const CounterSchema = z.object({
   id: z.string(),
   name: z.string(),
+  spaceId: z.string().nullable(),
+  countsSpaceTasks: z.boolean(),
   ...ruleShape,
   timeZone: z.string(),
   showInToday: z.boolean(),
@@ -80,6 +89,10 @@ export const CounterSchema = z.object({
   pendingChange: z
     .object({ ...ruleShape, effectiveDate: localDateSchema.nullable() })
     .nullable(),
+  stats: z.object({
+    totalDays: z.number().int().nonnegative(),
+    streak: z.number().int().nonnegative(),
+  }),
   week: z.array(CounterDaySchema).length(7),
 });
 
@@ -97,7 +110,14 @@ export const CounterDetailSchema = CounterSchema.extend({
   history: z.array(CounterOccurrenceSchema),
 });
 
-export const ListCountersQuerySchema = z.object({
+export const CounterDateSchema = localDateSchema;
+
+export const CounterDetailQuerySchema = z.object({
+  /** Last day of the seven-day strip; today when omitted. */
+  until: localDateSchema.optional(),
+});
+
+export const ListCountersQuerySchema = CounterDetailQuerySchema.extend({
   status: CounterStatusSchema.default("active"),
 });
 
@@ -107,6 +127,8 @@ export const CreateCounterBodySchema = z
     ...ruleShape,
     timeZone: TimeZoneSchema,
     showInToday: z.boolean().default(true),
+    spaceId: spaceIdSchema.nullable().default(null),
+    countsSpaceTasks: z.boolean().default(false),
   })
   .strict()
   .refine(isSupportedRecurrence, {
@@ -121,6 +143,8 @@ export const UpdateCounterBodySchema = z
     interval: intervalSchema.optional(),
     target: targetSchema.optional(),
     showInToday: z.boolean().optional(),
+    spaceId: spaceIdSchema.nullable().optional(),
+    countsSpaceTasks: z.boolean().optional(),
   })
   .strict()
   .refine(
@@ -138,26 +162,17 @@ export const UpdateCounterBodySchema = z
     { message: "Unsupported recurrence", path: ["interval"] },
   );
 
-export const LogCounterOccurrenceBodySchema = z.discriminatedUnion("status", [
-  z
-    .object({
-      status: z.literal("completed"),
-      date: localDateSchema.optional(),
-    })
-    .strict(),
+export const SetCounterDayBodySchema = z.discriminatedUnion("status", [
+  z.object({ status: z.literal("completed"), count: targetSchema }).strict(),
+  z.object({ status: z.literal("failed") }).strict(),
   z
     .object({
       status: z.literal("skipped"),
-      date: localDateSchema.optional(),
       skipReason: z.string().trim().min(1).max(COUNTER_SKIP_REASON_MAX_LENGTH),
     })
     .strict(),
+  z.object({ status: z.literal("empty") }).strict(),
 ]);
-
-export const LogCounterOccurrenceResultSchema = z.object({
-  counter: CounterSchema,
-  occurrenceId: z.string(),
-});
 
 export const LinkCounterTaskBodySchema = z
   .object({ taskId: z.string().min(1) })
@@ -195,14 +210,10 @@ export type CounterPendingChange = NonNullable<Counter["pendingChange"]>;
 export type CounterLink = z.infer<typeof CounterLinkSchema>;
 export type CounterDetail = z.infer<typeof CounterDetailSchema>;
 export type ListCountersQuery = z.infer<typeof ListCountersQuerySchema>;
+export type CounterDetailQuery = z.infer<typeof CounterDetailQuerySchema>;
 export type CreateCounterBody = z.infer<typeof CreateCounterBodySchema>;
 export type UpdateCounterBody = z.infer<typeof UpdateCounterBodySchema>;
-export type LogCounterOccurrenceBody = z.infer<
-  typeof LogCounterOccurrenceBodySchema
->;
-export type LogCounterOccurrenceResult = z.infer<
-  typeof LogCounterOccurrenceResultSchema
->;
+export type SetCounterDayBody = z.infer<typeof SetCounterDayBodySchema>;
 export type LinkCounterTaskBody = z.infer<typeof LinkCounterTaskBodySchema>;
 
 export interface CounterRule {

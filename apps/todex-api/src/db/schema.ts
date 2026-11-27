@@ -1276,6 +1276,10 @@ export const counters = pgTable(
     workspaceId: text("workspace_id")
       .notNull()
       .references(() => workspaces.id, { onDelete: "cascade" }),
+    spaceId: text("space_id").references(() => spaces.id, {
+      onDelete: "set null",
+    }),
+    countsSpaceTasks: boolean("counts_space_tasks").notNull().default(false),
     name: text("name").notNull(),
     frequency: counterFrequencyEnum("frequency").notNull(),
     interval: integer("interval").notNull(),
@@ -1295,6 +1299,7 @@ export const counters = pgTable(
   },
   (table) => [
     index("counters_workspace_status_idx").on(table.workspaceId, table.status),
+    index("counters_space_id_idx").on(table.spaceId),
     check("counters_target_positive", sql`${table.target} > 0`),
     check("counters_interval_positive", sql`${table.interval} > 0`),
   ],
@@ -1426,6 +1431,7 @@ export type AgentChunkRow = typeof agentChunks.$inferSelect;
 export type CounterRow = typeof counters.$inferSelect;
 export type CounterLinkRow = typeof counterLinks.$inferSelect;
 export type CounterOccurrenceRow = typeof counterOccurrences.$inferSelect;
+export type CounterPeriodRow = typeof counterPeriods.$inferSelect;
 export type DocRow = typeof docs.$inferSelect;
 export type CalendarEventRow = typeof calendarEvents.$inferSelect;
 export type CalendarEventTemplateRow =

@@ -59,8 +59,8 @@ function occurrenceNote(occurrence: CounterOccurrence): string {
   if (occurrence.source === "task") {
     return `Task: ${occurrence.taskSummary ?? "no longer linked"}`;
   }
-  if (occurrence.source === "system") return "Target not reached";
-  return "Logged by hand";
+  if (occurrence.source === "system") return "Not done";
+  return "Marked by hand";
 }
 
 const STATUS_LABEL: Record<CounterOccurrence["status"], string> = {

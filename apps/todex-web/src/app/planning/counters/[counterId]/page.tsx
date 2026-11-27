@@ -11,12 +11,16 @@ import { CounterFormDialog } from "../counter-form-dialog";
 import { formatLocalDate } from "../counter-helpers";
 import { CounterHistory } from "../counter-history";
 import { CounterLinks } from "../counter-links";
-import { CounterTracker } from "../counter-tracker";
+import { CounterStats } from "../counter-row";
+import { DayStrip } from "../day-strip";
+import { useWeekWindow } from "../use-week-window";
 import { useCounter, useCounterActions } from "../use-counters";
+import { CounterWeekHeader, WeekControls } from "../week-header";
 
 export default function CounterPage() {
   const { counterId } = useParams<{ counterId: string }>();
-  const { data, isPending, isError } = useCounter(counterId);
+  const week = useWeekWindow();
+  const { data, isPending, isError } = useCounter(counterId, week.until);
 
   if (isPending) return <Spinner className="flex-1" />;
   if (isError) {
@@ -29,10 +33,16 @@ export default function CounterPage() {
       </p>
     );
   }
-  return <CounterCard counter={data} />;
+  return <CounterCard counter={data} week={week} />;
 }
 
-function CounterCard({ counter }: { counter: CounterDetail }) {
+function CounterCard({
+  counter,
+  week,
+}: {
+  counter: CounterDetail;
+  week: ReturnType<typeof useWeekWindow>;
+}) {
   const { update, setStatus, isPending } = useCounterActions(counter.id);
   const [isEditing, setIsEditing] = useState(false);
   const isArchived = counter.status === "archived";
@@ -93,7 +103,24 @@ function CounterCard({ counter }: { counter: CounterDetail }) {
           Show in Today
         </label>
       </header>
-      <CounterTracker counter={counter} showCompleteAction />
+      <div className="flex flex-col gap-2">
+        <CounterWeekHeader
+          days={counter.week}
+          today={week.today}
+          controls={
+            <WeekControls
+              weeksBack={week.weeksBack}
+              onChange={week.setWeeksBack}
+            />
+          }
+        />
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-white/[0.02] px-4 py-3">
+          <div className="min-w-0 flex-1">
+            <CounterStats counter={counter} />
+          </div>
+          <DayStrip counter={counter} />
+        </div>
+      </div>
       <CounterLinks counter={counter} />
       <CounterHistory counter={counter} />
       {isEditing ? (

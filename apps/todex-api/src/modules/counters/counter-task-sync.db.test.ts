@@ -2,7 +2,6 @@ import "reflect-metadata";
 import { randomUUID } from "crypto";
 import { and, eq } from "drizzle-orm";
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
-import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
@@ -12,6 +11,7 @@ import {
   TaskStatus,
 } from "@repo/api/todex";
 
+import { migrateTestDatabase } from "../../../test/migrate-test-database";
 import { users } from "../../db/auth-schema";
 import { ensureOwnerWorkspace } from "../../db/ensure-workspace";
 import { tasks } from "../../db/schema";
@@ -42,7 +42,7 @@ describe.skipIf(!databaseUrl)("Counter task integration (database)", () => {
   beforeAll(async () => {
     pool = new Pool({ connectionString: databaseUrl });
     database = drizzle(pool);
-    await migrate(database, { migrationsFolder: "drizzle" });
+    await migrateTestDatabase(pool);
     const workspaceService = new WorkspaceService(database);
     const relations = new RelationsService(database);
     spacesService = new SpacesService(
@@ -78,7 +78,10 @@ describe.skipIf(!databaseUrl)("Counter task integration (database)", () => {
     await pool.end();
   });
 
-  function createCounter(now = new Date()) {
+  function createCounter(
+    now = new Date(),
+    extra: Record<string, unknown> = {},
+  ) {
     return counterService.create(
       workspaceId,
       CreateCounterBodySchema.parse({
@@ -87,6 +90,7 @@ describe.skipIf(!databaseUrl)("Counter task integration (database)", () => {
         interval: 1,
         target: 1,
         timeZone: "UTC",
+        ...extra,
       }),
       now,
     );
@@ -133,6 +137,22 @@ describe.skipIf(!databaseUrl)("Counter task integration (database)", () => {
     });
   }
 
+  function completeByHand(counterId: string) {
+    return counterService.setDay(
+      workspaceId,
+      counterId,
+      localDate(new Date(), "UTC"),
+      { status: "completed", count: 1 },
+    );
+  }
+
+  async function newSpace() {
+    const space = await spacesService.create(workspaceId, {
+      name: `Space ${randomUUID()}`,
+    });
+    return space.id;
+  }
+
   async function history(counterId: string) {
     return (await counterService.get(workspaceId, counterId)).history;
   }
@@ -155,7 +175,7 @@ describe.skipIf(!databaseUrl)("Counter task integration (database)", () => {
           source: "task",
           taskId: task.id,
           date: localDate(new Date(), "UTC"),
-          deletable: false,
+          deletable: true,
         },
       ]);
     }
@@ -180,10 +200,10 @@ describe.skipIf(!databaseUrl)("Counter task integration (database)", () => {
   });
 
   it("removes the completion on reopen and records a new one afterwards", async () => {
-    const { counter, task } = await linkedTask();
-    await counterService.logOccurrence(workspaceId, counter.id, {
-      status: "completed",
-    });
+    const counter = await createCounter(new Date(), { target: 2 });
+    const task = await createTask();
+    await counterService.addLink(workspaceId, counter.id, task.id);
+    await completeByHand(counter.id);
     await setStatus(task.id, TaskStatus.DONE);
     await setStatus(task.id, TaskStatus.IN_PROGRESS);
     expect(await history(counter.id)).toMatchObject([{ source: "manual" }]);
@@ -205,10 +225,10 @@ describe.skipIf(!databaseUrl)("Counter task integration (database)", () => {
   });
 
   it("removes the completion of a deleted Task and keeps manual entries", async () => {
-    const { counter, task } = await linkedTask();
-    await counterService.logOccurrence(workspaceId, counter.id, {
-      status: "completed",
-    });
+    const counter = await createCounter(new Date(), { target: 2 });
+    const task = await createTask();
+    await counterService.addLink(workspaceId, counter.id, task.id);
+    await completeByHand(counter.id);
     await setStatus(task.id, TaskStatus.DONE);
     await removeTask(task.id);
     const detail = await counterService.get(workspaceId, counter.id);
@@ -314,6 +334,81 @@ describe.skipIf(!databaseUrl)("Counter task integration (database)", () => {
     expect(detail.links).toMatchObject([
       { kind: "series", taskId: null, title: "Weekly review" },
     ]);
+  });
+
+  it("counts any Task of the Counter's space when asked to", async () => {
+    const watched = await newSpace();
+    const counter = await createCounter(new Date(), {
+      target: 3,
+      spaceId: watched,
+      countsSpaceTasks: true,
+    });
+    const parent = await createTask({ spaceId: watched });
+    const child = await createTask({
+      spaceId: watched,
+      parentTaskId: parent.id,
+    });
+    const elsewhere = await createTask({ spaceId: await newSpace() });
+    for (const task of [child, parent, elsewhere]) {
+      await setStatus(task.id, TaskStatus.DONE);
+    }
+    expect(
+      (await history(counter.id)).map((item) => item.taskId).sort(),
+    ).toEqual([parent.id, child.id].sort());
+    await counterService.update(workspaceId, counter.id, {
+      countsSpaceTasks: false,
+    });
+    const later = await createTask({ spaceId: watched });
+    await setStatus(later.id, TaskStatus.DONE);
+    expect(await history(counter.id)).toHaveLength(2);
+  });
+
+  it("never lets Task completions exceed the day or the Target", async () => {
+    const daily = await newSpace();
+    const twice = await createCounter(new Date(), {
+      target: 2,
+      spaceId: daily,
+      countsSpaceTasks: true,
+    });
+    const weekly = await createCounter(new Date(), {
+      frequency: "weekly",
+      target: 4,
+      spaceId: daily,
+      countsSpaceTasks: true,
+    });
+    for (let index = 0; index < 3; index += 1) {
+      const task = await createTask({ spaceId: daily });
+      await setStatus(task.id, TaskStatus.DONE);
+    }
+    expect(await history(twice.id)).toHaveLength(2);
+    expect(await history(weekly.id)).toHaveLength(1);
+  });
+
+  it("replaces a hand-set skip with a Task completion", async () => {
+    const { counter, task } = await linkedTask();
+    await counterService.setDay(
+      workspaceId,
+      counter.id,
+      localDate(new Date(), "UTC"),
+      { status: "skipped", skipReason: "Busy" },
+    );
+    await setStatus(task.id, TaskStatus.DONE);
+    expect(await history(counter.id)).toMatchObject([
+      { status: "completed", source: "task" },
+    ]);
+  });
+
+  it("leaves a Counter space-free when its space is deleted", async () => {
+    const doomed = await newSpace();
+    const counter = await createCounter(new Date(), {
+      spaceId: doomed,
+      countsSpaceTasks: true,
+    });
+    await completeByHand(counter.id);
+    await spacesService.remove(workspaceId, doomed);
+    const detail = await counterService.get(workspaceId, counter.id);
+    expect(detail).toMatchObject({ spaceId: null, countsSpaceTasks: false });
+    expect(detail.history).toHaveLength(1);
   });
 
   it("ignores duplicate links and rejects another workspace's Task", async () => {

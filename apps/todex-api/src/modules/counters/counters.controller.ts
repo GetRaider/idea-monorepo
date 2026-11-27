@@ -6,22 +6,26 @@ import {
   Param,
   Patch,
   Post,
+  Put,
   Query,
   Req,
   UseGuards,
 } from "@nestjs/common";
 import {
+  CounterDateSchema,
+  CounterDetailQuerySchema,
   CreateCounterBodySchema,
   LinkCounterTaskBodySchema,
   ListCountersQuerySchema,
-  LogCounterOccurrenceBodySchema,
+  SetCounterDayBodySchema,
   UpdateCounterBodySchema,
 } from "@repo/api/todex";
 import type {
+  CounterDetailQuery,
   CreateCounterBody,
   LinkCounterTaskBody,
   ListCountersQuery,
-  LogCounterOccurrenceBody,
+  SetCounterDayBody,
   UpdateCounterBody,
 } from "@repo/api/todex";
 
@@ -42,7 +46,12 @@ export class CountersController {
     @Req() request: WorkspaceRequest,
     @Query(zodPipe(ListCountersQuerySchema)) query: ListCountersQuery,
   ) {
-    return this.countersService.list(request.workspaceId, query.status);
+    return this.countersService.list(
+      request.workspaceId,
+      query.status,
+      new Date(),
+      query.until,
+    );
   }
 
   @Post()
@@ -54,8 +63,17 @@ export class CountersController {
   }
 
   @Get(":id")
-  async get(@Req() request: WorkspaceRequest, @Param("id") counterId: string) {
-    return this.countersService.get(request.workspaceId, counterId);
+  async get(
+    @Req() request: WorkspaceRequest,
+    @Param("id") counterId: string,
+    @Query(zodPipe(CounterDetailQuerySchema)) query: CounterDetailQuery,
+  ) {
+    return this.countersService.get(
+      request.workspaceId,
+      counterId,
+      new Date(),
+      query.until,
+    );
   }
 
   @Patch(":id")
@@ -83,16 +101,17 @@ export class CountersController {
     return this.countersService.restore(request.workspaceId, counterId);
   }
 
-  @Post(":id/occurrences")
-  async logOccurrence(
+  @Put(":id/days/:date")
+  async setDay(
     @Req() request: WorkspaceRequest,
     @Param("id") counterId: string,
-    @Body(zodPipe(LogCounterOccurrenceBodySchema))
-    body: LogCounterOccurrenceBody,
+    @Param("date", zodPipe(CounterDateSchema)) date: string,
+    @Body(zodPipe(SetCounterDayBodySchema)) body: SetCounterDayBody,
   ) {
-    return this.countersService.logOccurrence(
+    return this.countersService.setDay(
       request.workspaceId,
       counterId,
+      date,
       body,
     );
   }

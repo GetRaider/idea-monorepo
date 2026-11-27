@@ -243,6 +243,38 @@ export function CounterIcon(props: IconProps) {
   );
 }
 
+export function BoltIcon(props: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...iconSvgProps(props)}
+    >
+      <path d="M13 2 4 14h7l-1 8 9-12h-7z" />
+    </svg>
+  );
+}
+
+export function FlameIcon(props: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...iconSvgProps(props)}
+    >
+      <path d="M12 22c4 0 7-2.7 7-6.7 0-3.3-2-5.6-3.5-7.3-.4 1.6-1.4 2.5-2.5 2.8.4-3.4-1.2-6.7-4-8.8.2 3.7-1.8 5.5-3 7.3A8 8 0 0 0 5 15.3C5 19.3 8 22 12 22z" />
+    </svg>
+  );
+}
+
 export function GoalIcon(props: IconProps) {
   return (
     <svg

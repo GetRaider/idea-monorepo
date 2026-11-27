@@ -1,17 +1,22 @@
 import { describe, expect, it } from "vitest";
 import {
   CreateCounterBodySchema,
-  LogCounterOccurrenceBodySchema,
+  SetCounterDayBodySchema,
   UpdateCounterBodySchema,
 } from "@repo/api/todex";
 
 import {
+  calendarDays,
+  currentStreak,
+  dayCapacity,
   localDate,
   mondayOf,
   openPeriod,
   periodContaining,
+  planDay,
   settlePeriod,
-  weekDays,
+  totalDays,
+  type CounterEntry,
 } from "./counter-periods";
 
 describe("localDate", () => {
@@ -162,91 +167,272 @@ describe("settlePeriod", () => {
   });
 });
 
-describe("weekDays", () => {
+describe("settlePeriod with hand-set fails", () => {
+  const week = { start: "2026-11-23", end: "2026-11-29" };
+
+  it("counts them and only adds default fails for untouched slots", () => {
+    expect(
+      settlePeriod(week, 3, [
+        { date: "2026-11-23", status: "completed" },
+        { date: "2026-11-29", status: "failed" },
+      ]),
+    ).toEqual({
+      completed: 1,
+      skipped: 0,
+      failed: 2,
+      outcome: "failed",
+      failedDates: ["2026-11-28"],
+    });
+  });
+});
+
+describe("dayCapacity", () => {
+  const week = { start: "2026-11-23", end: "2026-11-29" };
+  const day = { start: "2026-11-27", end: "2026-11-27" };
+
+  it("is the Target for every day and one for most longer periods", () => {
+    expect(dayCapacity(day, 1)).toBe(1);
+    expect(dayCapacity(day, 3)).toBe(3);
+    expect(dayCapacity(week, 4)).toBe(1);
+    expect(dayCapacity(week, 7)).toBe(1);
+  });
+
+  it("grows only when the Target cannot fit one per day", () => {
+    expect(dayCapacity(week, 10)).toBe(2);
+    expect(dayCapacity({ start: "2026-11-27", end: "2026-11-28" }, 3)).toBe(2);
+  });
+});
+
+describe("planDay", () => {
+  const week = { start: "2026-11-23", end: "2026-11-29", target: 4 };
+  const day = { start: "2026-11-27", end: "2026-11-27", target: 3 };
+
+  it("adds completions up to the count asked for", () => {
+    expect(
+      planDay({
+        period: day,
+        dayEntries: [entry("a", "completed")],
+        otherDays: 0,
+        change: { status: "completed", count: 3 },
+      }),
+    ).toEqual({ removeIds: [], add: ["completed", "completed"] });
+  });
+
+  it("replaces a fail or skip when the day is completed", () => {
+    expect(
+      planDay({
+        period: week,
+        dayEntries: [entry("a", "skipped")],
+        otherDays: 3,
+        change: { status: "completed", count: 1 },
+      }),
+    ).toEqual({ removeIds: ["a"], add: ["completed"] });
+  });
+
+  it("keeps Task completions before hand-made ones when lowering", () => {
+    expect(
+      planDay({
+        period: day,
+        dayEntries: [
+          entry("hand", "completed"),
+          entry("task", "completed", "task"),
+        ],
+        otherDays: 0,
+        change: { status: "completed", count: 1 },
+      }),
+    ).toEqual({ removeIds: ["hand"], add: [] });
+  });
+
+  it("refuses more than the day or the Target can hold", () => {
+    expect(
+      planDay({
+        period: week,
+        dayEntries: [],
+        otherDays: 0,
+        change: { status: "completed", count: 2 },
+      }),
+    ).toEqual({ error: "This day holds at most 1" });
+    for (const change of [
+      { status: "completed", count: 1 },
+      { status: "failed" },
+      { status: "skipped", skipReason: "Sick" },
+    ] as const) {
+      expect(
+        planDay({ period: week, dayEntries: [], otherDays: 4, change }),
+      ).toEqual({ error: "The Target for this period is already covered" });
+    }
+  });
+
+  it("marks the rest of a partly done day", () => {
+    expect(
+      planDay({
+        period: day,
+        dayEntries: [entry("a", "completed")],
+        otherDays: 0,
+        change: { status: "skipped", skipReason: "Sick" },
+      }),
+    ).toEqual({ removeIds: [], add: ["skipped", "skipped"] });
+  });
+
+  it("replaces the completions of a full day when it is failed", () => {
+    expect(
+      planDay({
+        period: week,
+        dayEntries: [entry("a", "completed")],
+        otherDays: 0,
+        change: { status: "failed" },
+      }),
+    ).toEqual({ removeIds: ["a"], add: ["failed"] });
+  });
+
+  it("clears everything on the day", () => {
+    expect(
+      planDay({
+        period: week,
+        dayEntries: [entry("a", "failed")],
+        otherDays: 4,
+        change: { status: "empty" },
+      }),
+    ).toEqual({ removeIds: ["a"], add: [] });
+  });
+});
+
+describe("calendarDays", () => {
   const base = {
+    until: "2026-11-27",
     today: "2026-11-27",
-    rule: { frequency: "daily", interval: 1, target: 2 } as const,
-    period: { start: "2026-11-27", end: "2026-11-27" },
-    closedPeriods: [],
-    occurrences: [],
+    isActive: true,
+    periods: [
+      { start: "2026-11-16", end: "2026-11-22", target: 2 },
+      { start: "2026-11-23", end: "2026-11-29", target: 1 },
+    ],
+    entries: [],
   };
 
-  it("returns Monday to Sunday around today", () => {
-    const days = weekDays(base);
-    expect(days.map((day) => day.date)).toEqual([
+  it("returns the seven days ending on the requested date", () => {
+    expect(calendarDays(base).map((item) => item.date)).toEqual([
+      "2026-11-21",
+      "2026-11-22",
       "2026-11-23",
       "2026-11-24",
       "2026-11-25",
       "2026-11-26",
       "2026-11-27",
-      "2026-11-28",
-      "2026-11-29",
     ]);
   });
 
-  it("allows logging only inside the open period up to today", () => {
-    const days = weekDays({
+  it("allows marking any tracked day up to today, closed ones included", () => {
+    const days = calendarDays({ ...base, until: "2026-11-28" });
+    expect(days.map((item) => item.loggable)).toEqual([
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+    ]);
+  });
+
+  it("leaves untracked days and archived Counters inert", () => {
+    const early = calendarDays({ ...base, until: "2026-11-17" });
+    expect(early[0]).toMatchObject({ tracked: false, loggable: false });
+    expect(early[6]).toMatchObject({ tracked: true, loggable: true });
+    expect(
+      calendarDays({ ...base, isActive: false }).some((item) => item.loggable),
+    ).toBe(false);
+  });
+
+  it("stops completing once the period Target is covered", () => {
+    const days = calendarDays({
       ...base,
-      rule: { frequency: "weekly", interval: 1, target: 4 },
-      period: { start: "2026-11-23", end: "2026-11-29" },
+      entries: [entry("a", "completed", "manual", "2026-11-23")],
     });
-    expect(days.map((day) => day.loggable)).toEqual([
-      true,
-      true,
-      true,
-      true,
-      true,
-      false,
-      false,
-    ]);
+    expect(days[2]).toMatchObject({
+      fill: "filled",
+      canComplete: false,
+      canMark: true,
+    });
+    expect(days[3]).toMatchObject({
+      fill: "empty",
+      canComplete: false,
+      canMark: false,
+    });
   });
 
-  it("allows nothing without a period or before it starts", () => {
-    expect(
-      weekDays({ ...base, period: null }).some((day) => day.loggable),
-    ).toBe(false);
-    expect(
-      weekDays({
-        ...base,
-        period: { start: "2026-11-28", end: "2026-11-28" },
-      }).some((day) => day.loggable),
-    ).toBe(false);
+  it("lets a default fail be completed", () => {
+    const days = calendarDays({
+      ...base,
+      entries: [entry("a", "failed", "system", "2026-11-22")],
+    });
+    expect(days[1]).toMatchObject({ failed: 1, canComplete: true });
   });
 
-  it("shows partial days only for every-day counters with target 2+", () => {
-    const occurrences = [
-      { date: "2026-11-27", status: "completed" as const },
-      { date: "2026-11-27", status: "skipped" as const },
-    ];
-    expect(weekDays({ ...base, occurrences })[4]).toMatchObject({
+  it("shows part of a multi-completion day", () => {
+    const days = calendarDays({
+      ...base,
+      periods: [{ start: "2026-11-27", end: "2026-11-27", target: 2 }],
+      entries: [entry("a", "completed", "manual", "2026-11-27")],
+    });
+    expect(days[6]).toMatchObject({
       fill: "partial",
-      completed: 1,
-      skipped: 1,
+      capacity: 2,
+      canComplete: true,
     });
+  });
+});
+
+describe("currentStreak", () => {
+  const closed = (...outcomes: ("met" | "excused" | "failed")[]) =>
+    outcomes.map((outcome, index) => ({
+      start: `2026-11-${String(index + 1).padStart(2, "0")}`,
+      outcome,
+    }));
+
+  it("counts met periods back to the last failed one", () => {
     expect(
-      weekDays({
-        ...base,
-        rule: { frequency: "daily", interval: 2, target: 2 },
-        occurrences,
-      })[4]?.fill,
-    ).toBe("filled");
+      currentStreak(closed("met", "failed", "met", "excused", "met"), null),
+    ).toBe(2);
+    expect(currentStreak(closed("met", "failed"), null)).toBe(0);
   });
 
-  it("judges a closed day by the target in its snapshot", () => {
-    const days = weekDays({
-      ...base,
-      closedPeriods: [{ start: "2026-11-26", end: "2026-11-26", target: 1 }],
-      occurrences: [{ date: "2026-11-26", status: "completed" }],
-    });
-    expect(days[3]?.fill).toBe("filled");
+  it("adds the open period once its Target is reached", () => {
+    const history = closed("met");
+    expect(
+      currentStreak(history, { completed: 1, target: 2, hasFail: false }),
+    ).toBe(1);
+    expect(
+      currentStreak(history, { completed: 2, target: 2, hasFail: false }),
+    ).toBe(2);
   });
 
-  it("never counts skipped or failed toward the fill", () => {
-    const days = weekDays({
-      ...base,
-      occurrences: [{ date: "2026-11-26", status: "failed" }],
-    });
-    expect(days[3]).toMatchObject({ fill: "empty", failed: 1 });
+  it("resets at once on a hand-set fail in the open period", () => {
+    expect(
+      currentStreak(closed("met", "met"), {
+        completed: 1,
+        target: 2,
+        hasFail: true,
+      }),
+    ).toBe(0);
+  });
+});
+
+describe("totalDays", () => {
+  it("counts days whose completions fill the day", () => {
+    const periods = [
+      { start: "2026-11-26", end: "2026-11-26", target: 2 },
+      { start: "2026-11-27", end: "2026-11-27", target: 1 },
+    ];
+    expect(
+      totalDays(
+        [
+          entry("a", "completed", "manual", "2026-11-26"),
+          entry("b", "completed", "manual", "2026-11-27"),
+          entry("c", "skipped", "manual", "2026-11-25"),
+        ],
+        periods,
+      ),
+    ).toBe(1);
   });
 });
 
@@ -286,24 +472,24 @@ describe("counter contracts", () => {
     }
   });
 
-  it("requires a skip reason and never accepts Failed", () => {
-    expect(
-      LogCounterOccurrenceBodySchema.safeParse({ status: "skipped" }).success,
-    ).toBe(false);
-    expect(
-      LogCounterOccurrenceBodySchema.safeParse({
-        status: "skipped",
-        skipReason: "   ",
-      }).success,
-    ).toBe(false);
-    expect(
-      LogCounterOccurrenceBodySchema.safeParse({ status: "failed" }).success,
-    ).toBe(false);
-    expect(
-      LogCounterOccurrenceBodySchema.safeParse({
-        status: "completed",
-        date: "2026-02-30",
-      }).success,
-    ).toBe(false);
+  it("validates how a day is set", () => {
+    const accepts = (body: unknown) =>
+      SetCounterDayBodySchema.safeParse(body).success;
+    expect(accepts({ status: "completed", count: 1 })).toBe(true);
+    expect(accepts({ status: "completed", count: 0 })).toBe(false);
+    expect(accepts({ status: "completed" })).toBe(false);
+    expect(accepts({ status: "failed" })).toBe(true);
+    expect(accepts({ status: "empty" })).toBe(true);
+    expect(accepts({ status: "skipped" })).toBe(false);
+    expect(accepts({ status: "skipped", skipReason: "   " })).toBe(false);
   });
 });
+
+function entry(
+  id: string,
+  status: CounterEntry["status"],
+  source: CounterEntry["source"] = "manual",
+  date = "2026-11-27",
+): CounterEntry {
+  return { id, status, source, date };
+}

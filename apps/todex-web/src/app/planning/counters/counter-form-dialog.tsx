@@ -17,6 +17,8 @@ import {
 import { COUNTER_RECURRENCES, COUNTER_TARGET_MAX } from "@repo/api/todex";
 import type { Counter, CounterRule } from "@repo/api/todex";
 
+import { useTasks } from "../tasks-provider";
+
 export function CounterFormDialog({
   counter,
   isPending,
@@ -29,6 +31,14 @@ export function CounterFormDialog({
   const [recurrence, setRecurrence] = useState(recurrenceValue(initial));
   const [target, setTarget] = useState(String(initial.target));
   const [showInToday, setShowInToday] = useState(counter?.showInToday ?? true);
+  const {
+    state: { boards },
+  } = useTasks();
+  const [spaceId, setSpaceId] = useState(counter?.spaceId ?? NO_SPACE);
+  const [countsSpaceTasks, setCountsSpaceTasks] = useState(
+    counter?.countsSpaceTasks ?? false,
+  );
+  const hasSpace = spaceId !== NO_SPACE;
   const targetNumber = Number(target);
   const isValid =
     name.trim() !== "" &&
@@ -48,6 +58,8 @@ export function CounterFormDialog({
       interval: rule.interval,
       target: targetNumber,
       showInToday,
+      spaceId: hasSpace ? spaceId : null,
+      countsSpaceTasks: hasSpace && countsSpaceTasks,
     });
   }
 
@@ -108,6 +120,32 @@ export function CounterFormDialog({
             />
           </div>
         </div>
+        <div className="space-y-2">
+          <Label htmlFor="counter-space">Space</Label>
+          <Select value={spaceId} onValueChange={setSpaceId}>
+            <SelectTrigger id="counter-space">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="z-[5000]">
+              <SelectItem value={NO_SPACE}>No space</SelectItem>
+              {boards.map((board) => (
+                <SelectItem key={board.id} value={board.id}>
+                  {board.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        {hasSpace ? (
+          <label className="flex items-center justify-between gap-3 text-sm">
+            Complete when any task in this space is done
+            <Switch
+              checked={countsSpaceTasks}
+              onCheckedChange={setCountsSpaceTasks}
+              aria-label="Complete when any task in this space is done"
+            />
+          </label>
+        ) : null}
         <label className="flex items-center justify-between gap-3 text-sm">
           Show in Today
           <Switch
@@ -133,6 +171,8 @@ function recurrenceValue(rule: Pick<CounterRule, "frequency" | "interval">) {
   return `${rule.frequency}-${rule.interval}`;
 }
 
+const NO_SPACE = "none";
+
 const DEFAULT_RULE: CounterRule = {
   frequency: "weekly",
   interval: 1,
@@ -142,6 +182,8 @@ const DEFAULT_RULE: CounterRule = {
 export type CounterFormValues = CounterRule & {
   name: string;
   showInToday: boolean;
+  spaceId: string | null;
+  countsSpaceTasks: boolean;
 };
 
 interface CounterFormDialogProps {

@@ -27,7 +27,7 @@ Settled with the product owner:
 | Spaces                   | A Counter belongs to a space or to none, and can count every Task completed in its space ("Link to Space")                              |
 | Show in Today/Tomorrow   | One switch. Today and Tomorrow each list the Counters scheduled that day; tomorrow cannot be marked yet                                 |
 | Reopen or delete a Task  | Today's completion is removed. Earlier days keep theirs                                                                                 |
-| Day marks in a row       | Name and numbers on the left, days on the right filling the width, week arrows beside the days                                          |
+| Day marks in a row       | Days fill the full width, aligned under the date bar; name, rule and numbers sit on a line above them                                   |
 | Detail page              | The Today/Tomorrow switch sits with Edit and Archive. Linked tasks and History are collapsed until opened                               |
 | Linking Tasks            | A search field with a dropdown above the list of linked Tasks                                                                           |
 
@@ -196,8 +196,8 @@ The server computes schedules, limits, progress and stats. The web renders them.
 ## 8. Web
 
 - Sidebar: a **Counters** row in Planning → Views, before Goals.
-- `/planning/counters`: Active / Archived beside New counter; a full-width date bar with progress rings and arrows beside the days; rows grouped under collapsible space headers ("No space" last). A row shows the space-tinted initial, name, rule, total, streak and today's progress on the left, and the seven day circles on the right. Archived rows offer Restore.
-- `/planning/counters/[counterId]`: header with the Today/Tomorrow switch, Edit and Archive; one card with Total / Streak / Today tiles on the left, and dates over day circles between the week arrows on the right; collapsed **Linked tasks** (with the "Link to Space" switch and its info tooltip beside the title) and collapsed **History**.
+- `/planning/counters`: Active / Archived beside New counter; a full-width date bar with progress rings and arrows beside the dates; rows grouped under collapsible space headers ("No space" last). A row shows the space-tinted initial, name and rule, with total, streak and today's progress, above seven day circles that span the row. Archived rows offer Restore. "Back to today" appears in the page header while an earlier week is shown.
+- `/planning/counters/[counterId]`: header with the Today/Tomorrow switch, Edit and Archive; one card with Total / Streak / Today tiles filling its left side, and dates over day circles between the week arrows on the right; collapsed **Linked tasks** (with the "Link to Space" switch and its info tooltip beside the title) and collapsed **History**.
 - Linked tasks: a search field with a keyboard-friendly dropdown that stays open to link several Tasks, above the list of links.
 - Form: name; repeat (Daily with "every N days", Days of the week, Monthly); times per day; space; switches.
 - Today and Tomorrow: a **Counters** block with the same rows, listing the Counters scheduled that day. Tomorrow's strip ends on tomorrow.

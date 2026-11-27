@@ -8,13 +8,6 @@ import { ChevronIcon } from "@components/icons";
 import { formatLocalDate, weekdayName } from "./counter-helpers";
 import { CheckMark, ProgressRing } from "./day-circle";
 
-/**
- * The date header and every Counter row share these, so the day columns line up:
- * details keep a column on the left and days fill the rest of the width.
- */
-export const COUNTER_LINE = "flex flex-wrap items-center gap-x-4 gap-y-2";
-export const DETAILS_AREA = "min-w-0 flex-[0_1_20rem]";
-export const DAYS_AREA = "min-w-0 flex-[1_1_22rem]";
 export const DAY_COLUMNS = "grid min-w-0 flex-1 grid-cols-7";
 
 /** Seven day columns between two narrow slots for the week arrows. */
@@ -42,7 +35,6 @@ export function CounterWeekHeader({
   ringShare,
   before,
   after,
-  aside,
   className,
 }: {
   days: readonly { date: string }[];
@@ -50,40 +42,34 @@ export function CounterWeekHeader({
   ringShare?: (column: number) => number | null;
   before?: ReactNode;
   after?: ReactNode;
-  aside?: ReactNode;
   className?: string;
 }) {
   return (
     // The border and side padding match the rows', which keeps columns aligned.
-    <div
-      className={cn(COUNTER_LINE, "border border-transparent px-3", className)}
-    >
-      <div className={DETAILS_AREA}>{aside}</div>
-      <div className={DAYS_AREA}>
-        <DayTrack before={before} after={after}>
-          <ol className={DAY_COLUMNS}>
-            {days.map((day, column) => (
-              <li
-                key={day.date}
-                aria-label={formatLocalDate(day.date)}
-                className="flex flex-col items-center gap-1 text-xs text-muted-foreground"
+    <div className={cn("border border-transparent px-3", className)}>
+      <DayTrack before={before} after={after}>
+        <ol className={DAY_COLUMNS}>
+          {days.map((day, column) => (
+            <li
+              key={day.date}
+              aria-label={formatLocalDate(day.date)}
+              className="flex flex-col items-center gap-1 text-xs text-muted-foreground"
+            >
+              <span>{weekdayName(day.date)}</span>
+              <span
+                className={cn(
+                  "flex size-6 items-center justify-center rounded-full tabular-nums",
+                  day.date === today &&
+                    "bg-foreground font-semibold text-background",
+                )}
               >
-                <span>{weekdayName(day.date)}</span>
-                <span
-                  className={cn(
-                    "flex size-6 items-center justify-center rounded-full tabular-nums",
-                    day.date === today &&
-                      "bg-foreground font-semibold text-background",
-                  )}
-                >
-                  {Number(day.date.slice(8))}
-                </span>
-                {ringShare ? <DayRing share={ringShare(column)} /> : null}
-              </li>
-            ))}
-          </ol>
-        </DayTrack>
-      </div>
+                {Number(day.date.slice(8))}
+              </span>
+              {ringShare ? <DayRing share={ringShare(column)} /> : null}
+            </li>
+          ))}
+        </ol>
+      </DayTrack>
     </div>
   );
 }

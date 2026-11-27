@@ -10,7 +10,7 @@ import { BoltIcon, FlameIcon } from "@components/icons";
 
 import { countLabel, progressLabel } from "./counter-helpers";
 import { DayStrip } from "./day-strip";
-import { COUNTER_LINE, DAYS_AREA, DETAILS_AREA, DayTrack } from "./week-header";
+import { DayTrack } from "./week-header";
 
 export function CounterRow({
   counter,
@@ -20,58 +20,52 @@ export function CounterRow({
   counter: Counter;
   /** The space color; space-free Counters stay neutral. */
   color: string | null;
-  /** Replaces the day strip, for archived Counters. */
+  /** Shown instead of the day strip, for archived Counters. */
   action?: ReactNode;
 }) {
   return (
-    <li
-      className={cn(
-        COUNTER_LINE,
-        "rounded-2xl border border-border bg-white/[0.02] px-3 py-3",
-      )}
-    >
-      <div className={cn(DETAILS_AREA, "flex items-center gap-3")}>
-        <span
-          aria-hidden="true"
-          className={cn(
-            "hidden size-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold sm:flex",
-            color
-              ? "bg-[var(--counter-color)] text-black"
-              : "bg-surface text-foreground",
-          )}
-          style={color ? { ["--counter-color" as string]: color } : undefined}
-        >
-          {counter.name.charAt(0).toUpperCase()}
-        </span>
-        <div className="min-w-0">
-          <Link
-            href={`/planning/counters/${counter.id}`}
-            className="block truncate text-sm font-medium hover:underline"
+    <li className="flex flex-col gap-2 rounded-2xl border border-border bg-white/[0.02] px-3 py-3">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
+          <span
+            aria-hidden="true"
+            className={cn(
+              "flex size-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold",
+              color
+                ? "bg-[var(--counter-color)] text-black"
+                : "bg-surface text-foreground",
+            )}
+            style={color ? { ["--counter-color" as string]: color } : undefined}
           >
-            {counter.name}
-          </Link>
-          <p className="text-xs text-muted-foreground">
-            {formatCounterRule(counter)}
-          </p>
-          <CounterStats counter={counter} />
+            {counter.name.charAt(0).toUpperCase()}
+          </span>
+          <div className="flex min-w-0 flex-wrap items-baseline gap-x-2">
+            <Link
+              href={`/planning/counters/${counter.id}`}
+              className="max-w-full truncate text-sm font-medium hover:underline"
+            >
+              {counter.name}
+            </Link>
+            <p className="text-xs text-muted-foreground">
+              {formatCounterRule(counter)}
+            </p>
+          </div>
         </div>
+        <CounterStats counter={counter} />
+        {action}
       </div>
-      <div className={DAYS_AREA}>
-        {action ? (
-          <div className="flex justify-end">{action}</div>
-        ) : (
-          <DayTrack>
-            <DayStrip counter={counter} />
-          </DayTrack>
-        )}
-      </div>
+      {action ? null : (
+        <DayTrack>
+          <DayStrip counter={counter} />
+        </DayTrack>
+      )}
     </li>
   );
 }
 
 function CounterStats({ counter }: { counter: Counter }) {
   return (
-    <p className="mt-1 flex flex-wrap items-center gap-x-3 text-xs tabular-nums text-muted-foreground">
+    <p className="flex flex-wrap items-center gap-x-3 text-xs tabular-nums text-muted-foreground">
       <span className="flex items-center gap-1" title="Total completed days">
         <BoltIcon size={12} aria-label="Total" />
         {countLabel(counter.stats.totalDays, "day")}

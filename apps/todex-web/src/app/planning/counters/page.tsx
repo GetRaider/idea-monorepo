@@ -76,7 +76,6 @@ export default function CountersPage() {
               onChange={setWeeksBack}
             />
           }
-          aside={<BackToToday weeksBack={weeksBack} onChange={setWeeksBack} />}
           className="rounded-2xl border-border bg-white/[0.02] py-3"
         />
         <CounterSections counters={data} />
@@ -88,7 +87,10 @@ export default function CountersPage() {
     <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-auto px-6 pb-6 pt-3">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold tracking-tight">Counters</h1>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-4">
+          {status === "active" ? (
+            <BackToToday weeksBack={weeksBack} onChange={setWeeksBack} />
+          ) : null}
           <div role="group" aria-label="Counter status" className="flex gap-1">
             {STATUS_TABS.map((tab) => (
               <button

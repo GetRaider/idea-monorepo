@@ -9,7 +9,7 @@ import { countLabel, formatDayAndMonth } from "./counter-helpers";
 export function CounterStatTiles({ counter }: { counter: Counter }) {
   const { today, nextDate } = counter.progress;
   return (
-    <dl className="grid grid-cols-3 gap-2">
+    <dl className="grid h-full grid-cols-3 gap-2">
       <Tile label="Total" icon={<BoltIcon size={12} />}>
         {countLabel(counter.stats.totalDays, "day")}
       </Tile>
@@ -37,12 +37,12 @@ function Tile({
   children: ReactNode;
 }) {
   return (
-    <div className="rounded-xl bg-white/[0.04] px-3 py-2">
+    <div className="flex flex-col justify-center rounded-xl bg-white/[0.04] px-3 py-2">
       <dt className="flex items-center gap-1 text-xs text-muted-foreground">
         {icon}
         {label}
       </dt>
-      <dd className="mt-1 truncate text-base font-semibold tabular-nums">
+      <dd className="mt-1 truncate text-xl font-semibold tabular-nums">
         {children}
       </dd>
     </div>

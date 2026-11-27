@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { Button, Spinner, Switch, cn } from "@repo/ui";
+import { Button, Spinner, Switch } from "@repo/ui";
 import { formatCounterRule } from "@repo/api/todex";
 import type { CounterDetail } from "@repo/api/todex";
 
@@ -17,10 +17,7 @@ import { useWeekWindow } from "../use-week-window";
 import { useCounter, useCounterActions } from "../use-counters";
 import {
   BackToToday,
-  COUNTER_LINE,
   CounterWeekHeader,
-  DAYS_AREA,
-  DETAILS_AREA,
   DayTrack,
   WeekArrow,
 } from "../week-header";
@@ -70,6 +67,10 @@ function CounterCard({
             <span className="truncate">{counter.name}</span>
           </h1>
           <div className="flex flex-wrap items-center gap-2">
+            <BackToToday
+              weeksBack={week.weeksBack}
+              onChange={week.setWeeksBack}
+            />
             <label className="mr-2 flex items-center gap-2 text-sm">
               <Switch
                 checked={counter.showInToday}
@@ -111,41 +112,35 @@ function CounterCard({
           </p>
         ) : null}
       </header>
-      <div className="flex flex-col gap-2 rounded-2xl border border-border bg-white/[0.02] py-4">
-        <CounterWeekHeader
-          days={counter.week}
-          today={week.today}
-          aside={
-            <BackToToday
-              weeksBack={week.weeksBack}
-              onChange={week.setWeeksBack}
-            />
-          }
-        />
-        <div className={cn(COUNTER_LINE, "border-x border-transparent px-3")}>
-          <div className={DETAILS_AREA}>
-            <CounterStatTiles counter={counter} />
-          </div>
-          <div className={DAYS_AREA}>
-            <DayTrack
-              before={
-                <WeekArrow
-                  direction="earlier"
-                  weeksBack={week.weeksBack}
-                  onChange={week.setWeeksBack}
-                />
-              }
-              after={
-                <WeekArrow
-                  direction="later"
-                  weeksBack={week.weeksBack}
-                  onChange={week.setWeeksBack}
-                />
-              }
-            >
-              <DayStrip counter={counter} />
-            </DayTrack>
-          </div>
+      <div className="flex flex-wrap gap-4 rounded-2xl border border-border bg-white/[0.02] p-3">
+        {/* Beside the days it keeps its width; on its own line it fills it. */}
+        <div className="min-w-0 flex-[1_1_22rem]">
+          <CounterStatTiles counter={counter} />
+        </div>
+        <div className="flex min-w-0 flex-[999_1_22rem] flex-col gap-2 py-1">
+          <CounterWeekHeader
+            days={counter.week}
+            today={week.today}
+            className="border-0 px-0"
+          />
+          <DayTrack
+            before={
+              <WeekArrow
+                direction="earlier"
+                weeksBack={week.weeksBack}
+                onChange={week.setWeeksBack}
+              />
+            }
+            after={
+              <WeekArrow
+                direction="later"
+                weeksBack={week.weeksBack}
+                onChange={week.setWeeksBack}
+              />
+            }
+          >
+            <DayStrip counter={counter} />
+          </DayTrack>
         </div>
       </div>
       <CounterLinks counter={counter} />

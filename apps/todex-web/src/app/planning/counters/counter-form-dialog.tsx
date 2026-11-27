@@ -30,6 +30,7 @@ import { useCounterSections } from "./use-counters";
 
 export function CounterFormDialog({
   counter,
+  defaultSectionId,
   isPending,
   onSubmit,
   onClose,
@@ -44,7 +45,7 @@ export function CounterFormDialog({
   const [showInToday, setShowInToday] = useState(counter?.showInToday ?? true);
   const { data: sections = [] } = useCounterSections();
   const [sectionId, setSectionId] = useState(
-    counter?.sectionId ?? NO_SECTION_ID,
+    counter?.sectionId ?? defaultSectionId ?? NO_SECTION_ID,
   );
   const [color, setColor] = useState<SpaceColor>(
     counter?.color ?? DEFAULT_SPACE_COLOR,
@@ -164,6 +165,8 @@ export type CounterFormValues = CounterRule & {
 
 interface CounterFormDialogProps {
   counter?: Counter;
+  /** The section a new Counter starts in. */
+  defaultSectionId?: string | null;
   isPending: boolean;
   onSubmit: (values: CounterFormValues) => void;
   onClose: () => void;

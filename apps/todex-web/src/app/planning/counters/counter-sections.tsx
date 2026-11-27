@@ -49,6 +49,7 @@ export function CounterSections({
   sections,
   selectedColumn = null,
   renderAction,
+  onCreate,
 }: {
   counters: Counter[];
   sections: CounterSection[];
@@ -56,6 +57,8 @@ export function CounterSections({
   selectedColumn?: number | null;
   /** Replaces the day strip; such rows cannot be dragged. */
   renderAction?: (counter: Counter) => ReactNode;
+  /** Starts a new Counter in a section, offered where there are none. */
+  onCreate?: (sectionId: string | null) => void;
 }) {
   const move = useMoveCounter();
   const sectionActions = useSectionActions();
@@ -188,7 +191,7 @@ export function CounterSections({
             disabled={sectionActions.remove.isPending}
             onSelect={() => sectionActions.remove.mutate(sectionId)}
           >
-            Delete section
+            Delete
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -241,6 +244,7 @@ export function CounterSections({
               <SectionEndZone
                 groupId={group.id}
                 isEmpty={group.shown.length === 0}
+                onCreate={onCreate && (() => onCreate(group.sectionId))}
               />
             </Collapsible>
           );

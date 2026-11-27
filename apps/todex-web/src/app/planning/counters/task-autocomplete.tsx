@@ -5,11 +5,12 @@ import { useQuery } from "@tanstack/react-query";
 import { Input, cn } from "@repo/ui";
 import type { CounterDetail, Task } from "@repo/api/todex";
 
-import { RepeatIcon } from "@components/icons";
+import { RepeatIcon, SearchIcon } from "@components/icons";
 import { todexClient } from "@lib/todex-client";
 
 import { useTasks } from "../tasks-provider";
 import { linkCandidates } from "./counter-helpers";
+import { SpaceDot } from "./space-dot";
 import { useCounterActions } from "./use-counters";
 
 /** Search field with a dropdown; stays open so several Tasks can be linked. */
@@ -76,7 +77,12 @@ export function TaskAutocomplete({ counter }: { counter: CounterDetail }) {
 
   return (
     <div className="relative">
+      <SearchIcon
+        size={14}
+        className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+      />
       <Input
+        className="h-10 rounded-lg bg-white/[0.04] pl-9"
         role="combobox"
         aria-label="Search tasks to link"
         aria-expanded={open}
@@ -123,6 +129,11 @@ export function TaskAutocomplete({ counter }: { counter: CounterDetail }) {
                 onMouseEnter={() => setHighlighted(index)}
                 onClick={() => link(task)}
               >
+                <SpaceDot
+                  color={
+                    boards.find((board) => board.id === task.spaceId)?.color
+                  }
+                />
                 <span className="min-w-0 flex-1 truncate">{task.summary}</span>
                 {task.seriesId ? <RepeatIcon size={12} /> : null}
                 <span className="text-xs text-muted-foreground">

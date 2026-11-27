@@ -618,6 +618,7 @@ export class CountersService {
         seriesId: link.seriesId,
         title: task.summary,
         taskKey: task.taskKey,
+        spaceId: task.spaceId,
       };
     });
   }

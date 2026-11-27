@@ -149,6 +149,8 @@ export const CounterLinkSchema = z.object({
   seriesId: z.string().nullable(),
   title: z.string(),
   taskKey: z.string().nullable(),
+  /** The linked space the picked Task is in. */
+  spaceId: z.string(),
 });
 
 export const CounterDetailSchema = CounterSchema.extend({

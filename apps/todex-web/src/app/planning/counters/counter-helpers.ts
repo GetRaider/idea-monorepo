@@ -55,6 +55,12 @@ export function scheduleFromDraft(
   return parsed.success ? parsed.data : null;
 }
 
+/** "Health", "Health and Growth", "Health, Growth and Home". */
+export function joinNames(names: readonly string[]): string {
+  if (names.length < 2) return names.join("");
+  return `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
+}
+
 export function countLabel(count: number, unit: string): string {
   return `${count} ${count === 1 ? unit : `${unit}s`}`;
 }

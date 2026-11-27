@@ -2,8 +2,10 @@
 
 import type { ReactNode } from "react";
 import { useDndContext, useDraggable, useDroppable } from "@dnd-kit/core";
-import { cn } from "@repo/ui";
+import { Button, cn } from "@repo/ui";
 import type { Counter } from "@repo/api/todex";
+
+import { PlusIcon } from "@components/icons";
 
 import { CounterRow } from "./counter-row";
 
@@ -99,23 +101,33 @@ export function SectionHeader({
 export function SectionEndZone({
   groupId,
   isEmpty,
+  onCreate,
 }: {
   groupId: string;
   isEmpty: boolean;
+  onCreate?: () => void;
 }) {
   const isSectionDrag = useDragKind() === "section";
   const { setNodeRef, isOver } = useSectionEnd("end", groupId, isSectionDrag);
   if (isEmpty) {
     return (
-      <p
+      <div
         ref={setNodeRef}
         className={cn(
-          "mb-4 rounded-xl border border-dashed border-border py-3 text-center text-xs text-muted-foreground",
-          isOver && "bg-surface text-foreground",
+          "mb-4 flex justify-center rounded-xl border border-dashed border-border py-1",
+          isOver && "bg-surface",
         )}
       >
-        Drop counters here
-      </p>
+        <Button
+          size="sm"
+          variant="ghost"
+          className="text-muted-foreground"
+          onClick={onCreate}
+        >
+          <PlusIcon size={14} />
+          New
+        </Button>
+      </div>
     );
   }
   return (

@@ -10,6 +10,7 @@ import {
   formatDayAndMonth,
   formatLocalDate,
   groupBySection,
+  joinNames,
   linkCandidates,
   placeCounter,
   scheduleDraft,
@@ -189,6 +190,16 @@ describe("groupBySection", () => {
       "career",
       "none",
     ]);
+  });
+});
+
+describe("joinNames", () => {
+  it("reads as a sentence", () => {
+    expect(joinNames(["Health"])).toBe("Health");
+    expect(joinNames(["Health", "Growth"])).toBe("Health and Growth");
+    expect(joinNames(["Health", "Growth", "Home"])).toBe(
+      "Health, Growth and Home",
+    );
   });
 });
 

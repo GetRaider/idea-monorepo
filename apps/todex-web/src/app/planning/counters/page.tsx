@@ -1,8 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button, Spinner, cn } from "@repo/ui";
+import {
+  Button,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  Spinner,
+  cn,
+} from "@repo/ui";
 import type { Counter, CounterStatus } from "@repo/api/todex";
 
 import { NewButton } from "@components/new-button";
@@ -24,18 +32,28 @@ import { BackToToday, CounterWeekHeader, WeekArrow } from "./week-header";
 export default function CountersPage() {
   const router = useRouter();
   const [status, setStatus] = useState<CounterStatus>("active");
-  const [isCreating, setIsCreating] = useState(false);
+  // Which dialog is open; a new counter remembers the section it starts in.
+  const [creating, setCreating] = useState<Creating | null>(null);
+  const createAfterClose = useRef<Creating | null>(null);
   const { weeksBack, setWeeksBack, today, until } = useWeekWindow();
   // A column of the week, so the choice stays put while browsing weeks.
   const [selectedColumn, setSelectedColumn] = useState<number | null>(null);
   const { data, isPending, isError } = useCounterList(status, until);
   const sectionsQuery = useCounterSections();
   const sectionActions = useSectionActions();
-  const [isAddingSection, setIsAddingSection] = useState(false);
   const createCounter = useCreateCounter((counterId) => {
-    setIsCreating(false);
+    setCreating(null);
     router.push(`/planning/counters/${counterId}`);
   });
+
+  // A dialog opens once the menu is gone, or the menu takes focus back.
+  function openDialogAfterClose(event: Event) {
+    const next = createAfterClose.current;
+    if (!next) return;
+    createAfterClose.current = null;
+    event.preventDefault();
+    setCreating(next);
+  }
 
   function renderList() {
     if (isPending || sectionsQuery.isPending) {
@@ -121,6 +139,7 @@ export default function CountersPage() {
           counters={data}
           sections={sections}
           selectedColumn={days ? selectedColumn : null}
+          onCreate={(sectionId) => setCreating({ kind: "counter", sectionId })}
         />
       </div>
     );
@@ -158,34 +177,56 @@ export default function CountersPage() {
               </button>
             ))}
           </div>
-          {status === "active" ? (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setIsAddingSection(true)}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <NewButton />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="end"
+              onCloseAutoFocus={openDialogAfterClose}
             >
-              New section
-            </Button>
-          ) : null}
-          <NewButton onClick={() => setIsCreating(true)} />
+              <DropdownMenuItem
+                onSelect={() => {
+                  createAfterClose.current = {
+                    kind: "counter",
+                    sectionId: null,
+                  };
+                }}
+              >
+                Counter
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => {
+                  createAfterClose.current = { kind: "section" };
+                }}
+              >
+                Section
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
       {renderList()}
-      {isAddingSection ? (
+      {creating?.kind === "section" ? (
         <SectionNameDialog
           isPending={sectionActions.create.isPending}
-          onClose={() => setIsAddingSection(false)}
+          onClose={() => setCreating(null)}
           onSubmit={(name) =>
             sectionActions.create.mutate(name, {
-              onSuccess: () => setIsAddingSection(false),
+              onSuccess: () => {
+                setCreating(null);
+                // Sections are listed on the active tab only.
+                setStatus("active");
+              },
             })
           }
         />
       ) : null}
-      {isCreating ? (
+      {creating?.kind === "counter" ? (
         <CounterFormDialog
+          defaultSectionId={creating.sectionId}
           isPending={createCounter.isPending}
-          onClose={() => setIsCreating(false)}
+          onClose={() => setCreating(null)}
           onSubmit={(values) =>
             createCounter.mutate({
               ...values,
@@ -216,3 +257,7 @@ const STATUS_TABS = [
   { status: "active", label: "Active" },
   { status: "archived", label: "Archived" },
 ] as const;
+
+type Creating =
+  | { kind: "section" }
+  | { kind: "counter"; sectionId: string | null };

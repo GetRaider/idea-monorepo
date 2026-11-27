@@ -3,7 +3,7 @@ import type { Counter } from "@repo/api/todex";
 
 import { BoltIcon, FlameIcon } from "@components/icons";
 
-import { countLabel, formatLocalDate } from "./counter-helpers";
+import { countLabel, formatDayAndMonth } from "./counter-helpers";
 
 /** The headline numbers of one Counter, beside its days. */
 export function CounterStatTiles({ counter }: { counter: Counter }) {
@@ -21,7 +21,7 @@ export function CounterStatTiles({ counter }: { counter: Counter }) {
           {today.completed} / {today.target}
         </Tile>
       ) : (
-        <Tile label="Next">{nextDate ? formatLocalDate(nextDate) : "—"}</Tile>
+        <Tile label="Next">{nextDate ? formatDayAndMonth(nextDate) : "—"}</Tile>
       )}
     </dl>
   );

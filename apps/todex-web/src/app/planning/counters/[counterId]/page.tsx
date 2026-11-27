@@ -123,6 +123,9 @@ function CounterCard({
           }
         />
         <div className={cn(COUNTER_LINE, "border-x border-transparent px-3")}>
+          <div className={DETAILS_AREA}>
+            <CounterStatTiles counter={counter} />
+          </div>
           <div className={DAYS_AREA}>
             <DayTrack
               before={
@@ -142,9 +145,6 @@ function CounterCard({
             >
               <DayStrip counter={counter} />
             </DayTrack>
-          </div>
-          <div className={DETAILS_AREA}>
-            <CounterStatTiles counter={counter} />
           </div>
         </div>
       </div>

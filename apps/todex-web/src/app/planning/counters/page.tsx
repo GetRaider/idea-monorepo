@@ -77,6 +77,7 @@ export default function CountersPage() {
             />
           }
           aside={<BackToToday weeksBack={weeksBack} onChange={setWeeksBack} />}
+          className="rounded-2xl border-border bg-white/[0.02] py-3"
         />
         <CounterSections counters={data} />
       </div>
@@ -85,27 +86,29 @@ export default function CountersPage() {
 
   return (
     <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-auto px-6 pb-6 pt-3">
-      <div className="mb-6 flex items-center justify-between gap-4">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold tracking-tight">Counters</h1>
-        <NewButton onClick={() => setIsCreating(true)} />
-      </div>
-      <div className="mb-4 flex gap-1">
-        {STATUS_TABS.map((tab) => (
-          <button
-            key={tab.status}
-            type="button"
-            aria-pressed={status === tab.status}
-            className={cn(
-              "rounded-md px-3 py-2 text-sm",
-              status === tab.status
-                ? "bg-surface text-foreground"
-                : "text-muted-foreground hover:bg-surface hover:text-foreground",
-            )}
-            onClick={() => setStatus(tab.status)}
-          >
-            {tab.label}
-          </button>
-        ))}
+        <div className="flex items-center gap-4">
+          <div role="group" aria-label="Counter status" className="flex gap-1">
+            {STATUS_TABS.map((tab) => (
+              <button
+                key={tab.status}
+                type="button"
+                aria-pressed={status === tab.status}
+                className={cn(
+                  "rounded-md px-3 py-1.5 text-sm",
+                  status === tab.status
+                    ? "bg-surface text-foreground"
+                    : "text-muted-foreground hover:bg-surface hover:text-foreground",
+                )}
+                onClick={() => setStatus(tab.status)}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+          <NewButton onClick={() => setIsCreating(true)} />
+        </div>
       </div>
       {renderList()}
       {isCreating ? (

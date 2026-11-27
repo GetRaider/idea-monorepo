@@ -10,11 +10,11 @@ import { CheckMark, ProgressRing } from "./day-circle";
 
 /**
  * The date header and every Counter row share these, so the day columns line up:
- * days take the wider left side, details the right.
+ * details keep a column on the left and days fill the rest of the width.
  */
 export const COUNTER_LINE = "flex flex-wrap items-center gap-x-4 gap-y-2";
-export const DAYS_AREA = "min-w-0 flex-[5_1_22rem]";
-export const DETAILS_AREA = "min-w-0 flex-[3_1_12rem]";
+export const DETAILS_AREA = "min-w-0 flex-[0_1_20rem]";
+export const DAYS_AREA = "min-w-0 flex-[1_1_22rem]";
 export const DAY_COLUMNS = "grid min-w-0 flex-1 grid-cols-7";
 
 /** Seven day columns between two narrow slots for the week arrows. */
@@ -43,6 +43,7 @@ export function CounterWeekHeader({
   before,
   after,
   aside,
+  className,
 }: {
   days: readonly { date: string }[];
   today: string;
@@ -50,10 +51,14 @@ export function CounterWeekHeader({
   before?: ReactNode;
   after?: ReactNode;
   aside?: ReactNode;
+  className?: string;
 }) {
   return (
-    // The side border and padding match the rows', which keeps columns aligned.
-    <div className={cn(COUNTER_LINE, "border-x border-transparent px-3")}>
+    // The border and side padding match the rows', which keeps columns aligned.
+    <div
+      className={cn(COUNTER_LINE, "border border-transparent px-3", className)}
+    >
+      <div className={DETAILS_AREA}>{aside}</div>
       <div className={DAYS_AREA}>
         <DayTrack before={before} after={after}>
           <ol className={DAY_COLUMNS}>
@@ -79,7 +84,6 @@ export function CounterWeekHeader({
           </ol>
         </DayTrack>
       </div>
-      <div className={cn(DETAILS_AREA, "flex justify-end")}>{aside}</div>
     </div>
   );
 }

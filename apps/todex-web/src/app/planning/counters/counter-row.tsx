@@ -30,26 +30,7 @@ export function CounterRow({
         "rounded-2xl border border-border bg-white/[0.02] px-3 py-3",
       )}
     >
-      <div className={DAYS_AREA}>
-        {action ?? (
-          <DayTrack>
-            <DayStrip counter={counter} />
-          </DayTrack>
-        )}
-      </div>
-      <div className={cn(DETAILS_AREA, "flex items-center justify-end gap-3")}>
-        <div className="min-w-0 text-right">
-          <Link
-            href={`/planning/counters/${counter.id}`}
-            className="block truncate text-sm font-medium hover:underline"
-          >
-            {counter.name}
-          </Link>
-          <p className="truncate text-xs text-muted-foreground">
-            {formatCounterRule(counter)}
-          </p>
-          <CounterStats counter={counter} />
-        </div>
+      <div className={cn(DETAILS_AREA, "flex items-center gap-3")}>
         <span
           aria-hidden="true"
           className={cn(
@@ -62,6 +43,27 @@ export function CounterRow({
         >
           {counter.name.charAt(0).toUpperCase()}
         </span>
+        <div className="min-w-0">
+          <Link
+            href={`/planning/counters/${counter.id}`}
+            className="block truncate text-sm font-medium hover:underline"
+          >
+            {counter.name}
+          </Link>
+          <p className="text-xs text-muted-foreground">
+            {formatCounterRule(counter)}
+          </p>
+          <CounterStats counter={counter} />
+        </div>
+      </div>
+      <div className={DAYS_AREA}>
+        {action ? (
+          <div className="flex justify-end">{action}</div>
+        ) : (
+          <DayTrack>
+            <DayStrip counter={counter} />
+          </DayTrack>
+        )}
       </div>
     </li>
   );
@@ -69,7 +71,7 @@ export function CounterRow({
 
 function CounterStats({ counter }: { counter: Counter }) {
   return (
-    <p className="mt-1 flex flex-wrap items-center justify-end gap-x-3 text-xs tabular-nums text-muted-foreground">
+    <p className="mt-1 flex flex-wrap items-center gap-x-3 text-xs tabular-nums text-muted-foreground">
       <span className="flex items-center gap-1" title="Total completed days">
         <BoltIcon size={12} aria-label="Total" />
         {countLabel(counter.stats.totalDays, "day")}

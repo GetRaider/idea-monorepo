@@ -6,6 +6,7 @@ import {
   dayClickChange,
   dayLabel,
   dayShare,
+  formatDayAndMonth,
   formatLocalDate,
   groupBySpace,
   linkCandidates,
@@ -95,6 +96,7 @@ describe("scheduleFromDraft", () => {
 describe("formatLocalDate", () => {
   it("never shifts the date by the viewer's time zone", () => {
     expect(formatLocalDate("2026-11-27", "en-US")).toBe("Fri, Nov 27");
+    expect(formatDayAndMonth("2026-11-27", "en-US")).toBe("Nov 27");
   });
 });
 

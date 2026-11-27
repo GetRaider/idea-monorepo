@@ -73,6 +73,11 @@ export function formatLocalDate(date: string, locale?: string): string {
   });
 }
 
+/** Short enough for a stat tile. */
+export function formatDayAndMonth(date: string, locale?: string): string {
+  return formatDate(date, locale, { month: "short", day: "numeric" });
+}
+
 export function weekdayName(date: string, locale?: string): string {
   return formatDate(date, locale, { weekday: "short" });
 }

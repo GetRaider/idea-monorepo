@@ -309,6 +309,13 @@
       "when": 1795863600000,
       "tag": "0043_counter_sections_and_spaces",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1795867200000,
+      "tag": "0044_counters_preference",
+      "breakpoints": true
     }
   ]
 }

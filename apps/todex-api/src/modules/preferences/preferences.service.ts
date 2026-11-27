@@ -16,8 +16,7 @@ export class PreferencesService {
       .from(userPreferences)
       .where(eq(userPreferences.userId, userId))
       .limit(1);
-    if (!row) return { calendarEnabled: false };
-    return { calendarEnabled: row.calendarEnabled };
+    return toPreferences(row ?? DEFAULTS);
   }
 
   async update(
@@ -26,13 +25,25 @@ export class PreferencesService {
   ): Promise<UserPreferences> {
     const [row] = await this.db
       .insert(userPreferences)
-      .values({ userId, calendarEnabled: body.calendarEnabled })
+      .values({ userId, ...body })
       .onConflictDoUpdate({
         target: userPreferences.userId,
-        set: { calendarEnabled: body.calendarEnabled },
+        set: body,
       })
       .returning();
-    if (!row) return { calendarEnabled: body.calendarEnabled };
-    return { calendarEnabled: row.calendarEnabled };
+    return toPreferences(row ?? { ...DEFAULTS, ...body });
   }
+}
+
+/** Every module is hidden until the user turns it on. */
+const DEFAULTS: UserPreferences = {
+  calendarEnabled: false,
+  countersEnabled: false,
+};
+
+function toPreferences(row: UserPreferences): UserPreferences {
+  return {
+    calendarEnabled: row.calendarEnabled,
+    countersEnabled: row.countersEnabled,
+  };
 }

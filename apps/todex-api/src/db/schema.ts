@@ -138,6 +138,7 @@ export const userPreferences = pgTable("user_preferences", {
     .primaryKey()
     .references(() => users.id, { onDelete: "cascade" }),
   calendarEnabled: boolean("calendar_enabled").notNull().default(false),
+  countersEnabled: boolean("counters_enabled").notNull().default(false),
 });
 
 export const spaceFolders = pgTable(

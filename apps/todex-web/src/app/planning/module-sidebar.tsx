@@ -43,6 +43,7 @@ import {
 import { tasksUrlHelper } from "@/helpers/tasks-url.helper";
 import { todexClient } from "@lib/todex-client";
 import { useCalendarEnabled } from "../settings/use-calendar-enabled";
+import { useCountersEnabled } from "../settings/use-counters-enabled";
 
 import {
   ModuleSidebarFrame,
@@ -65,6 +66,7 @@ export function TasksModuleSidebar() {
   const { open: isOpen } = useModuleSidebar();
   const pathname = usePathname() ?? "";
   const { enabled: calendarEnabled } = useCalendarEnabled();
+  const { enabled: countersEnabled } = useCountersEnabled();
   const [width, setWidth] = useState(TASKS_SIDEBAR_DEFAULT_WIDTH);
 
   useEffect(() => {
@@ -130,15 +132,17 @@ export function TasksModuleSidebar() {
             label="Tomorrow"
             count={tomorrowCount}
           />
-          <NavRow
-            href="/planning/counters"
-            active={
-              pathname === "/planning/counters" ||
-              pathname.startsWith("/planning/counters/")
-            }
-            icon={<CounterIcon size={16} />}
-            label="Counters"
-          />
+          {countersEnabled ? (
+            <NavRow
+              href="/planning/counters"
+              active={
+                pathname === "/planning/counters" ||
+                pathname.startsWith("/planning/counters/")
+              }
+              icon={<CounterIcon size={16} />}
+              label="Counters"
+            />
+          ) : null}
           <NavRow
             href="/planning/goals"
             active={

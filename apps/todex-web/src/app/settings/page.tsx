@@ -3,6 +3,7 @@
 import { Suspense } from "react";
 
 import { CalendarModuleSettings } from "./calendar-module-settings";
+import { CountersModuleSettings } from "./counters-module-settings";
 import { GoogleCalendarSettings } from "./google-calendar-settings";
 import { McpAccessSettings } from "./mcp-access";
 
@@ -12,6 +13,7 @@ export default function SettingsPage() {
       <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
       <Suspense>
         <CalendarModuleSettings />
+        <CountersModuleSettings />
         <GoogleCalendarSettings />
         <McpAccessSettings />
       </Suspense>

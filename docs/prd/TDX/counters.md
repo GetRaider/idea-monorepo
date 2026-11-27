@@ -28,6 +28,7 @@ Settled with the product owner:
 | Links                    | A Counter links any number of spaces. Tasks can be picked only from linked spaces; with none linked, nothing can be picked                                                                                        |
 | Any task counts          | One switch per Counter, off and disabled without a linked space. On: every Task completed in a linked space counts and the picked Tasks are set aside. Off: only picked Tasks count                               |
 | Color                    | Each Counter has its own, from the space palette                                                                                                                                                                  |
+| Visibility               | Counters are turned on in Settings and are off by default, like Calendar                                                                                                                                          |
 | Show in Today/Tomorrow   | One switch. Today and Tomorrow each list the Counters scheduled that day; tomorrow cannot be marked yet                                                                                                           |
 | Reopen or delete a Task  | Today's completion is removed. Earlier days keep theirs                                                                                                                                                           |
 | Counter row              | One line, as in TickTick habits: initial, name, total and streak on the left; compact day circles on the right. The date bar above the list spans the full width                                                  |
@@ -77,7 +78,7 @@ Engineering calls (change if wrong):
 
 ## 4. Data model
 
-Migrations `0039` to `0043`. Dates are Postgres `date` read as `YYYY-MM-DD` strings.
+Migrations `0039` to `0044`. Dates are Postgres `date` read as `YYYY-MM-DD` strings.
 
 **`counters`**
 
@@ -212,6 +213,7 @@ The server computes schedules, limits, progress and stats. The web renders them.
 
 ## 8. Web
 
+- Settings: **Show Counters**, off by default, stored as `countersEnabled` in the user preferences (migration `0044`), like Calendar. While off, the sidebar row and the Today and Tomorrow blocks are hidden and the Counters pages redirect to Overview. Counters keep running: days still close and linked Tasks still count.
 - Sidebar: a **Counters** row in Planning → Views, before Goals.
 - `/planning/counters`: Active / Archived and a New menu (Counter, Section); a full-width date bar with progress rings and arrows beside the dates; rows grouped under the user's collapsible sections, then "No section". A section heading has Rename and Delete; an empty section offers "+ New", which starts a Counter in it. A row shows the Counter's colored initial, name, total and streak on the left and seven compact day circles on the right; hovering the name shows the repeat rule. Archived rows offer Restore. "Back to today" appears in the page header while an earlier week is shown. Clicking a date picks that day (again, or "Show all", clears it). Dragging a row by its name reorders it or moves it to another section; dragging a heading reorders sections (onto "No section" moves one to the end).
 - `/planning/counters/[counterId]`: header with the Today/Tomorrow switch, Edit and Archive; one card with Total / Streak / Today tiles filling its left side, and dates over day circles between the week arrows on the right; collapsed **Links** and collapsed **History**.

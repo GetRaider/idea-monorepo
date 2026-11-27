@@ -3,19 +3,22 @@
 import Link from "next/link";
 import { addDaysToDate } from "@repo/api/todex";
 
+import { useCountersEnabled } from "../../settings/use-counters-enabled";
 import { groupBySection, localToday } from "./counter-helpers";
 import { CounterRow } from "./counter-row";
 import { useCounterList, useCounterSections } from "./use-counters";
 
 /**
- * The Counters scheduled for one day, in Today or Tomorrow. Kept visually apart
- * from Tasks so the two are never mistaken for each other.
+ * The Counters scheduled for one day, in Today or Tomorrow. Nothing is loaded
+ * while the module is turned off.
  */
-export function CountersScheduleBlock({
-  schedule,
-}: {
-  schedule: "today" | "tomorrow";
-}) {
+export function CountersScheduleBlock({ schedule }: ScheduleProps) {
+  const { enabled } = useCountersEnabled();
+  return enabled ? <ScheduledCounters schedule={schedule} /> : null;
+}
+
+/** Kept visually apart from Tasks so the two are never mistaken for each other. */
+function ScheduledCounters({ schedule }: ScheduleProps) {
   const sections = useCounterSections();
   const today = localToday();
   const date = schedule === "today" ? today : addDaysToDate(today, 1);
@@ -60,4 +63,8 @@ export function CountersScheduleBlock({
       </ul>
     </section>
   );
+}
+
+interface ScheduleProps {
+  schedule: "today" | "tomorrow";
 }

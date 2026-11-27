@@ -274,6 +274,48 @@
       "when": 1795216000000,
       "tag": "0038_knowledge_database_pages",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1795766400000,
+      "tag": "0039_counters",
+      "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1795773600000,
+      "tag": "0040_counter_spaces",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1795856400000,
+      "tag": "0041_counter_days",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1795860000000,
+      "tag": "0042_counter_positions",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1795863600000,
+      "tag": "0043_counter_sections_and_spaces",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1795867200000,
+      "tag": "0044_counters_preference",
+      "breakpoints": true
     }
   ]
 }

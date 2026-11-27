@@ -29,6 +29,7 @@ import type {
 } from "@repo/api/todex";
 
 import { DRIZZLE_DB } from "../../db/tokens";
+import { moveTaskLinksToSeries } from "../counters/counter-task-sync";
 import { recurrenceForGeneratedTask } from "./repeat-schedule";
 import {
   docs,
@@ -196,6 +197,7 @@ export class RecurrenceService {
           updatedAt: now,
         })
         .where(eq(tasks.id, task.id));
+      await moveTaskLinksToSeries(tx, task.id, seriesId);
       return seriesId;
     });
   }

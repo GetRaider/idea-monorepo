@@ -4,16 +4,18 @@ export const TASK_WEEKDAYS = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"] as const
 
 export const TaskWeekdaySchema = z.enum(TASK_WEEKDAYS);
 
+export const TimeZoneSchema = z
+  .string()
+  .min(1)
+  .max(100)
+  .refine(isTimeZone, { message: "Expected an IANA time zone" });
+
 export const TaskRecurrenceSchema = z
   .object({
     frequency: z.enum(["daily", "weekly", "monthly", "yearly"]),
     interval: z.number().int().min(1).max(99),
     weekdays: z.array(TaskWeekdaySchema).min(1).max(7).optional(),
-    timeZone: z
-      .string()
-      .min(1)
-      .max(100)
-      .refine(isTimeZone, { message: "Expected an IANA time zone" }),
+    timeZone: TimeZoneSchema,
     end: z.discriminatedUnion("type", [
       z.object({ type: z.literal("never") }),
       z.object({

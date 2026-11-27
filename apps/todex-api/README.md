@@ -90,6 +90,13 @@ The same conversation can create a doc. `create_doc` takes `type` `common` or `g
 
 `GET /health` must report Postgres and Redis up. Unit tests do not need either service or Ollama: `pnpm --filter todex-api test`.
 
+Counter database tests are skipped unless `COUNTERS_TEST_DATABASE_URL` points at a Postgres database. They apply the migrations and leave seeded rows behind, so use a throwaway one:
+
+```bash
+docker compose exec db createdb -U postgres todex_test
+COUNTERS_TEST_DATABASE_URL=postgres://postgres:password@localhost:5434/todex_test pnpm test
+```
+
 Same `idempotencyKey` on a second message POST in that conversation returns the original job. Omit the key to start a new turn. A worker retry of the same job must not insert a second task for the same tool call.
 
 A completed run enqueues a separate memory job. That job may store short workspace facts from the transcript. The next turn includes those memories after the system prompt and before the transcript.

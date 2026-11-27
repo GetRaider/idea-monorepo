@@ -9,6 +9,9 @@ import {
   type KnowledgeCellValue,
   type KnowledgePropertyType,
   type KnowledgeView,
+  type CounterRule,
+  type CounterSchedule,
+  type SpaceColor,
   type ProseDoc,
   type ExecutionInterval,
   type SeriesTemplate,
@@ -18,6 +21,7 @@ import { sql } from "drizzle-orm";
 import {
   boolean,
   check,
+  date,
   foreignKey,
   index,
   doublePrecision,
@@ -134,6 +138,7 @@ export const userPreferences = pgTable("user_preferences", {
     .primaryKey()
     .references(() => users.id, { onDelete: "cascade" }),
   calendarEnabled: boolean("calendar_enabled").notNull().default(false),
+  countersEnabled: boolean("counters_enabled").notNull().default(false),
 });
 
 export const spaceFolders = pgTable(
@@ -1238,6 +1243,203 @@ export const agentMemories = pgTable(
   ],
 );
 
+export const counterStatusEnum = pgEnum("counter_status", [
+  "active",
+  "archived",
+]);
+
+export const counterOccurrenceStatusEnum = pgEnum("counter_occurrence_status", [
+  "completed",
+  "skipped",
+  "failed",
+]);
+
+export const counterOccurrenceSourceEnum = pgEnum("counter_occurrence_source", [
+  "manual",
+  "task",
+  "system",
+]);
+
+export const counterDayOutcomeEnum = pgEnum("counter_day_outcome", [
+  "met",
+  "excused",
+  "failed",
+]);
+
+export const counterSections = pgTable(
+  "counter_sections",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    position: doublePrecision("position").notNull(),
+    createdAt: timestamp("created_at")
+      .$defaultFn(() => new Date())
+      .notNull(),
+    updatedAt: timestamp("updated_at")
+      .$defaultFn(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("counter_sections_workspace_id_idx").on(table.workspaceId),
+  ],
+);
+
+export const counters = pgTable(
+  "counters",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    sectionId: text("section_id").references(() => counterSections.id, {
+      onDelete: "set null",
+    }),
+    /** Every Task completed in a linked space counts, not only picked ones. */
+    countsAnyTask: boolean("counts_any_task").notNull().default(false),
+    color: text("color").$type<SpaceColor>().notNull().default("#B8A4D1"),
+    name: text("name").notNull(),
+    schedule: jsonb("schedule").$type<CounterSchedule>().notNull(),
+    target: integer("target").notNull(),
+    timeZone: text("time_zone").notNull(),
+    anchorDate: date("anchor_date", { mode: "string" }).notNull(),
+    showInToday: boolean("show_in_today").notNull().default(true),
+    /** Order within the workspace; a space section shows its own in this order. */
+    position: doublePrecision("position").notNull().default(0),
+    status: counterStatusEnum("status").notNull().default("active"),
+    closedThrough: date("closed_through", { mode: "string" }).notNull(),
+    pendingChange: jsonb("pending_change").$type<CounterRule | null>(),
+    createdAt: timestamp("created_at")
+      .$defaultFn(() => new Date())
+      .notNull(),
+    updatedAt: timestamp("updated_at")
+      .$defaultFn(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("counters_workspace_status_idx").on(table.workspaceId, table.status),
+    index("counters_section_id_idx").on(table.sectionId),
+    check("counters_target_positive", sql`${table.target} > 0`),
+  ],
+);
+
+export const counterSpaces = pgTable(
+  "counter_spaces",
+  {
+    counterId: text("counter_id")
+      .notNull()
+      .references(() => counters.id, { onDelete: "cascade" }),
+    spaceId: text("space_id")
+      .notNull()
+      .references(() => spaces.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at")
+      .$defaultFn(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    primaryKey({
+      name: "counter_spaces_pk",
+      columns: [table.counterId, table.spaceId],
+    }),
+    index("counter_spaces_space_id_idx").on(table.spaceId),
+  ],
+);
+
+export const counterLinks = pgTable(
+  "counter_links",
+  {
+    id: text("id").primaryKey(),
+    counterId: text("counter_id")
+      .notNull()
+      .references(() => counters.id, { onDelete: "cascade" }),
+    taskId: text("task_id").references(() => tasks.id, { onDelete: "cascade" }),
+    // No foreign key: the link must keep working after the series is deleted.
+    seriesId: text("series_id"),
+    createdAt: timestamp("created_at")
+      .$defaultFn(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("counter_links_counter_task_unique").on(
+      table.counterId,
+      table.taskId,
+    ),
+    uniqueIndex("counter_links_counter_series_unique").on(
+      table.counterId,
+      table.seriesId,
+    ),
+    index("counter_links_task_id_idx").on(table.taskId),
+    index("counter_links_series_id_idx").on(table.seriesId),
+    check(
+      "counter_links_one_target",
+      sql`num_nonnulls(${table.taskId}, ${table.seriesId}) = 1`,
+    ),
+  ],
+);
+
+export const counterOccurrences = pgTable(
+  "counter_occurrences",
+  {
+    id: text("id").primaryKey(),
+    counterId: text("counter_id")
+      .notNull()
+      .references(() => counters.id, { onDelete: "cascade" }),
+    localDate: date("local_date", { mode: "string" }).notNull(),
+    status: counterOccurrenceStatusEnum("status").notNull(),
+    skipReason: text("skip_reason"),
+    source: counterOccurrenceSourceEnum("source").notNull(),
+    taskId: text("task_id").references(() => tasks.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at")
+      .$defaultFn(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("counter_occurrences_counter_task_unique")
+      .on(table.counterId, table.taskId)
+      .where(sql`${table.taskId} is not null`),
+    index("counter_occurrences_counter_date_idx").on(
+      table.counterId,
+      table.localDate,
+    ),
+    index("counter_occurrences_task_id_idx").on(table.taskId),
+    check(
+      "counter_occurrences_skip_reason",
+      sql`(${table.status} = 'skipped') = (${table.skipReason} is not null)`,
+    ),
+  ],
+);
+
+export const counterDays = pgTable(
+  "counter_days",
+  {
+    id: text("id").primaryKey(),
+    counterId: text("counter_id")
+      .notNull()
+      .references(() => counters.id, { onDelete: "cascade" }),
+    localDate: date("local_date", { mode: "string" }).notNull(),
+    /** False for days marked by choice, which never get a default fail. */
+    required: boolean("required").notNull().default(true),
+    target: integer("target").notNull(),
+    completed: integer("completed").notNull(),
+    skipped: integer("skipped").notNull(),
+    failed: integer("failed").notNull(),
+    outcome: counterDayOutcomeEnum("outcome").notNull(),
+    createdAt: timestamp("created_at")
+      .$defaultFn(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("counter_days_counter_date_unique").on(
+      table.counterId,
+      table.localDate,
+    ),
+  ],
+);
+
 export type ConversationRow = typeof conversations.$inferSelect;
 export type ConversationMessageRow = typeof conversationMessages.$inferSelect;
 export type JobRow = typeof jobs.$inferSelect;
@@ -1269,6 +1471,11 @@ export type AgentToolAllowRow = typeof agentToolAllows.$inferSelect;
 export type AgentDocumentRow = typeof agentDocuments.$inferSelect;
 export type AgentChunkRow = typeof agentChunks.$inferSelect;
 
+export type CounterRow = typeof counters.$inferSelect;
+export type CounterLinkRow = typeof counterLinks.$inferSelect;
+export type CounterSectionRow = typeof counterSections.$inferSelect;
+export type CounterOccurrenceRow = typeof counterOccurrences.$inferSelect;
+export type CounterDayRow = typeof counterDays.$inferSelect;
 export type DocRow = typeof docs.$inferSelect;
 export type CalendarEventRow = typeof calendarEvents.$inferSelect;
 export type CalendarEventTemplateRow =

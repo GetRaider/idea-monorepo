@@ -5,6 +5,15 @@ import {
   SpaceProgressStageSchema,
   CalendarEventSchema,
   CalendarEventTemplateSchema,
+  CounterDetailSchema,
+  CounterSchema,
+  CounterSectionSchema,
+  CreateCounterBodySchema,
+  CreateCounterSectionBodySchema,
+  UpdateCounterSectionBodySchema,
+  LinkCounterTaskBodySchema,
+  SetCounterDayBodySchema,
+  UpdateCounterBodySchema,
   CreateSpaceSectionBodySchema,
   CreateCalendarEventBodySchema,
   CreateCalendarEventTemplateBodySchema,
@@ -67,6 +76,7 @@ import {
   WorkspaceMemberProfileSchema,
   WorkspaceSchema,
 } from "@repo/api/todex";
+import type { CounterStatus } from "@repo/api/todex";
 import { z } from "zod";
 
 import { env } from "./env";
@@ -450,6 +460,88 @@ export const todexClient = {
           z.object({ ok: z.boolean() }),
         ),
     },
+  },
+  counters: {
+    list: (status: CounterStatus, until: string) =>
+      call(
+        "get",
+        `/v1/counters?${new URLSearchParams({ status, until })}`,
+        z.array(CounterSchema),
+      ),
+    get: (counterId: string, until: string) =>
+      call(
+        "get",
+        `/v1/counters/${counterId}?${new URLSearchParams({ until })}`,
+        CounterDetailSchema,
+      ),
+    create: (body: unknown) =>
+      call(
+        "post",
+        "/v1/counters",
+        CounterDetailSchema,
+        CreateCounterBodySchema.parse(body),
+      ),
+    update: (counterId: string, body: unknown) =>
+      call(
+        "patch",
+        `/v1/counters/${counterId}`,
+        CounterDetailSchema,
+        UpdateCounterBodySchema.parse(body),
+      ),
+    archive: (counterId: string) =>
+      call("post", `/v1/counters/${counterId}/archive`, CounterDetailSchema),
+    restore: (counterId: string) =>
+      call("post", `/v1/counters/${counterId}/restore`, CounterDetailSchema),
+    setDay: (counterId: string, date: string, body: unknown) =>
+      call(
+        "put",
+        `/v1/counters/${counterId}/days/${date}`,
+        CounterSchema,
+        SetCounterDayBodySchema.parse(body),
+      ),
+    removeOccurrence: (counterId: string, occurrenceId: string) =>
+      call(
+        "delete",
+        `/v1/counters/${counterId}/occurrences/${occurrenceId}`,
+        CounterSchema,
+      ),
+    addLink: (counterId: string, taskId: string) =>
+      call(
+        "post",
+        `/v1/counters/${counterId}/links`,
+        CounterDetailSchema,
+        LinkCounterTaskBodySchema.parse({ taskId }),
+      ),
+    removeLink: (counterId: string, linkId: string) =>
+      call(
+        "delete",
+        `/v1/counters/${counterId}/links/${linkId}`,
+        CounterDetailSchema,
+      ),
+  },
+  counterSections: {
+    list: () =>
+      call("get", "/v1/counter-sections", z.array(CounterSectionSchema)),
+    create: (body: unknown) =>
+      call(
+        "post",
+        "/v1/counter-sections",
+        CounterSectionSchema,
+        CreateCounterSectionBodySchema.parse(body),
+      ),
+    update: (sectionId: string, body: unknown) =>
+      call(
+        "patch",
+        `/v1/counter-sections/${sectionId}`,
+        CounterSectionSchema,
+        UpdateCounterSectionBodySchema.parse(body),
+      ),
+    remove: (sectionId: string) =>
+      call(
+        "delete",
+        `/v1/counter-sections/${sectionId}`,
+        z.object({ ok: z.boolean() }),
+      ),
   },
   execution: {
     state: () => call("get", "/v1/execution", ExecutionStateSchema),

@@ -42,6 +42,7 @@ import {
   type NestedTask,
   type TaskCreateDraft,
 } from "./task-helpers";
+import { COUNTERS_QUERY_KEY } from "./counters/use-counters";
 import {
   applyTaskSelection,
   selectionForContextTarget,
@@ -251,6 +252,8 @@ export function TasksProvider({ children }: { children: ReactNode }) {
 
   const invalidateTasks = () => {
     void queryClient.invalidateQueries({ queryKey: ["tasks"] });
+    // Completing, reopening or deleting a Task changes linked Counters.
+    void queryClient.invalidateQueries({ queryKey: COUNTERS_QUERY_KEY });
   };
 
   const invalidateSpaces = () => {

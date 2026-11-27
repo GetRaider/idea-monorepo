@@ -100,6 +100,8 @@ export const CounterSchema = z.object({
   name: z.string(),
   spaceId: z.string().nullable(),
   countsSpaceTasks: z.boolean(),
+  /** Counters are listed from the lowest position up. */
+  position: z.number(),
   ...ruleShape,
   timeZone: z.string(),
   showInToday: z.boolean(),
@@ -170,6 +172,7 @@ export const UpdateCounterBodySchema = z
     showInToday: z.boolean().optional(),
     spaceId: spaceIdSchema.nullable().optional(),
     countsSpaceTasks: z.boolean().optional(),
+    position: z.number().finite().optional(),
   })
   .strict();
 

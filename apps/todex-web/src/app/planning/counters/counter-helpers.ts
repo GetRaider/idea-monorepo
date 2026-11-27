@@ -1,5 +1,6 @@
 import {
   CounterScheduleSchema,
+  positionForDrop,
   TASK_WEEKDAYS,
   TaskStatus,
 } from "@repo/api/todex";
@@ -16,6 +17,8 @@ import type {
 const LINK_CANDIDATE_LIMIT = 20;
 
 const NO_SPACE_NAME = "No space";
+
+const NO_SPACE_GROUP_ID = "none";
 
 /** The form keeps a value for every repeat kind, so switching loses nothing. */
 export function scheduleDraft(
@@ -127,6 +130,7 @@ export function dayShare(
 export function groupBySpace(
   counters: readonly Counter[],
   spaces: readonly { id: string; name: string; color: string }[],
+  { includeEmpty = false } = {},
 ): CounterGroup[] {
   const known = new Set(spaces.map((space) => space.id));
   const groups: CounterGroup[] = spaces.map((space) => ({
@@ -136,14 +140,49 @@ export function groupBySpace(
     counters: counters.filter((counter) => counter.spaceId === space.id),
   }));
   groups.push({
-    id: "none",
+    id: NO_SPACE_GROUP_ID,
     name: NO_SPACE_NAME,
     color: null,
     counters: counters.filter(
       (counter) => !counter.spaceId || !known.has(counter.spaceId),
     ),
   });
+  if (includeEmpty) return groups;
   return groups.filter((group) => group.counters.length > 0);
+}
+
+/**
+ * Where a Counter lands when dropped into a section before another one, or at
+ * its end. Null when nothing would change.
+ */
+export function counterMove(
+  group: CounterGroup,
+  counterId: string,
+  beforeId: string | null,
+): CounterMove | null {
+  const position = positionForDrop(
+    group.counters.map((counter) => counter.id),
+    (id) =>
+      group.counters.find((counter) => counter.id === id)?.position ?? null,
+    counterId,
+    beforeId,
+  );
+  if (position === null) return null;
+  const spaceId = group.id === NO_SPACE_GROUP_ID ? null : group.id;
+  return { spaceId, position };
+}
+
+/** The list as it will read once the move is saved. */
+export function placeCounter(
+  counters: readonly Counter[],
+  counterId: string,
+  move: CounterMove,
+): Counter[] {
+  return counters
+    .map((counter) =>
+      counter.id === counterId ? { ...counter, ...move } : counter,
+    )
+    .sort((left, right) => left.position - right.position);
 }
 
 /** Open Tasks that can still be linked, with a repeating Task listed once. */
@@ -214,4 +253,9 @@ export interface ScheduleDraft {
   weekInterval: number;
   weekdays: TaskWeekday[];
   monthDay: string;
+}
+
+export interface CounterMove {
+  spaceId: string | null;
+  position: number;
 }

@@ -23,9 +23,11 @@ import { DAY_COLUMNS } from "./week-header";
 /** Seven days of one Counter: click completes, the context menu does the rest. */
 export function DayStrip({
   counter,
+  selectedDate,
   className = DAY_COLUMNS,
 }: {
   counter: Counter;
+  selectedDate?: string;
   /** Column layout; the days spread over the available width by default. */
   className?: string;
 }) {
@@ -36,7 +38,14 @@ export function DayStrip({
     <>
       <ol className={className} aria-label={`Days of ${counter.name}`}>
         {counter.week.map((day) => (
-          <li key={day.date} className="flex justify-center">
+          <li
+            key={day.date}
+            className={cn(
+              "flex justify-center rounded-full",
+              day.date === selectedDate &&
+                "bg-white/[0.14] ring-2 ring-inset ring-white/60",
+            )}
+          >
             <DayButton
               day={day}
               isPending={isPending}

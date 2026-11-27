@@ -8,6 +8,7 @@ import {
 } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type {
+  Counter,
   CounterStatus,
   CreateCounterBody,
   SetCounterDayBody,
@@ -15,6 +16,8 @@ import type {
 } from "@repo/api/todex";
 
 import { todexClient } from "@lib/todex-client";
+
+import { placeCounter, type CounterMove } from "./counter-helpers";
 
 export const COUNTERS_QUERY_KEY = ["counters"] as const;
 
@@ -43,6 +46,35 @@ export function useCreateCounter(onCreated: (counterId: string) => void) {
     mutationFn: (body: CreateCounterBody) => todexClient.counters.create(body),
     onSuccess: (counter) => onCreated(counter.id),
     onError: showError,
+    onSettled: invalidate,
+  });
+}
+
+/** Reorders a Counter, in or across space sections, without waiting. */
+export function useMoveCounter() {
+  const queryClient = useQueryClient();
+  const invalidate = useInvalidateCounters();
+  const listKey = [...COUNTERS_QUERY_KEY, "list"];
+  return useMutation({
+    mutationFn: ({ counterId, ...move }: CounterMove & { counterId: string }) =>
+      todexClient.counters.update(counterId, move),
+    onMutate: async ({ counterId, ...move }) => {
+      await queryClient.cancelQueries({ queryKey: listKey });
+      const previous = queryClient.getQueriesData<Counter[]>({
+        queryKey: listKey,
+      });
+      queryClient.setQueriesData<Counter[]>(
+        { queryKey: listKey },
+        (counters) => counters && placeCounter(counters, counterId, move),
+      );
+      return { previous };
+    },
+    onError: (error, _input, context) => {
+      for (const [queryKey, counters] of context?.previous ?? []) {
+        queryClient.setQueryData(queryKey, counters);
+      }
+      showError(error);
+    },
     onSettled: invalidate,
   });
 }

@@ -1281,6 +1281,8 @@ export const counters = pgTable(
     timeZone: text("time_zone").notNull(),
     anchorDate: date("anchor_date", { mode: "string" }).notNull(),
     showInToday: boolean("show_in_today").notNull().default(true),
+    /** Order within the workspace; a space section shows its own in this order. */
+    position: doublePrecision("position").notNull().default(0),
     status: counterStatusEnum("status").notNull().default("active"),
     closedThrough: date("closed_through", { mode: "string" }).notNull(),
     pendingChange: jsonb("pending_change").$type<CounterRule | null>(),

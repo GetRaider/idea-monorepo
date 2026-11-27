@@ -8,7 +8,7 @@ import type { Counter, CounterStatus } from "@repo/api/todex";
 import { NewButton } from "@components/new-button";
 
 import { CounterFormDialog } from "./counter-form-dialog";
-import { dayShare } from "./counter-helpers";
+import { dayShare, formatLocalDate } from "./counter-helpers";
 import { CounterSections } from "./counter-sections";
 import { useWeekWindow } from "./use-week-window";
 import {
@@ -23,6 +23,8 @@ export default function CountersPage() {
   const [status, setStatus] = useState<CounterStatus>("active");
   const [isCreating, setIsCreating] = useState(false);
   const { weeksBack, setWeeksBack, today, until } = useWeekWindow();
+  // A column of the week, so the choice stays put while browsing weeks.
+  const [selectedColumn, setSelectedColumn] = useState<number | null>(null);
   const { data, isPending, isError } = useCounterList(status, until);
   const createCounter = useCreateCounter((counterId) => {
     setIsCreating(false);
@@ -56,12 +58,21 @@ export default function CountersPage() {
         />
       );
     }
+    const selectedDate =
+      selectedColumn === null ? undefined : days[selectedColumn]?.date;
+    const hasScheduled =
+      selectedColumn === null ||
+      data.some((counter) => counter.week[selectedColumn]?.tracked);
     return (
       <div className="flex flex-col gap-4">
         <CounterWeekHeader
           days={days}
           today={today}
           ringShare={(column) => dayShare(data, column)}
+          selectedColumn={selectedColumn}
+          onSelect={(column) =>
+            setSelectedColumn(column === selectedColumn ? null : column)
+          }
           before={
             <WeekArrow
               direction="earlier"
@@ -78,7 +89,22 @@ export default function CountersPage() {
           }
           className="rounded-2xl border-border bg-white/[0.02] py-3"
         />
-        <CounterSections counters={data} />
+        {selectedDate ? (
+          <div className="flex flex-wrap items-center gap-3 text-sm">
+            <p aria-live="polite" className="text-muted-foreground">
+              {hasScheduled ? "Scheduled on" : "Nothing is scheduled on"}{" "}
+              {formatLocalDate(selectedDate)}
+            </p>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setSelectedColumn(null)}
+            >
+              Show all
+            </Button>
+          </div>
+        ) : null}
+        <CounterSections counters={data} selectedColumn={selectedColumn} />
       </div>
     );
   }
@@ -89,7 +115,13 @@ export default function CountersPage() {
         <h1 className="text-2xl font-semibold tracking-tight">Counters</h1>
         <div className="flex flex-wrap items-center gap-4">
           {status === "active" ? (
-            <BackToToday weeksBack={weeksBack} onChange={setWeeksBack} />
+            <BackToToday
+              weeksBack={weeksBack}
+              onChange={(next) => {
+                setWeeksBack(next);
+                setSelectedColumn(null);
+              }}
+            />
           ) : null}
           <div role="group" aria-label="Counter status" className="flex gap-1">
             {STATUS_TABS.map((tab) => (

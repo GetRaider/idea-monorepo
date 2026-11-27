@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import type { HTMLAttributes, ReactNode, Ref } from "react";
 import Link from "next/link";
 import { cn } from "@repo/ui";
 import { formatCounterRule } from "@repo/api/todex";
@@ -16,16 +16,38 @@ export function CounterRow({
   counter,
   color,
   action,
+  selectedDate,
+  handleProps,
+  className,
+  ref,
 }: {
   counter: Counter;
   /** The space color; space-free Counters stay neutral. */
   color: string | null;
   /** Replaces the day strip, for archived Counters. */
   action?: ReactNode;
+  selectedDate?: string;
+  /** Makes the name side of the row a drag handle. */
+  handleProps?: HTMLAttributes<HTMLElement>;
+  className?: string;
+  ref?: Ref<HTMLLIElement>;
 }) {
   return (
-    <li className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl border border-border bg-white/[0.02] px-3 py-3">
-      <div className="flex min-w-0 flex-[1_1_12rem] items-center gap-3">
+    <li
+      ref={ref}
+      className={cn(
+        "flex flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl border border-border bg-white/[0.02] px-3 py-3",
+        className,
+      )}
+    >
+      {/* Not the whole row: day menus and dialogs must never start a drag. */}
+      <div
+        {...handleProps}
+        className={cn(
+          "flex min-w-0 flex-[1_1_12rem] items-center gap-3",
+          handleProps && "cursor-grab select-none",
+        )}
+      >
         <span
           aria-hidden="true"
           className={cn(
@@ -43,6 +65,8 @@ export function CounterRow({
             href={`/planning/counters/${counter.id}`}
             className="block truncate text-sm font-medium hover:underline"
             title={formatCounterRule(counter)}
+            // The browser's own link drag would take over the row drag.
+            draggable={false}
           >
             {counter.name}
           </Link>
@@ -51,7 +75,11 @@ export function CounterRow({
       </div>
       <div className="ml-auto">
         {action ?? (
-          <DayStrip counter={counter} className={COMPACT_DAY_COLUMNS} />
+          <DayStrip
+            counter={counter}
+            selectedDate={selectedDate}
+            className={COMPACT_DAY_COLUMNS}
+          />
         )}
       </div>
     </li>

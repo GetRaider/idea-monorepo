@@ -7,7 +7,6 @@ import { useTasks } from "../tasks-provider";
 import { localToday } from "./counter-helpers";
 import { CounterRow } from "./counter-row";
 import { useCounterList } from "./use-counters";
-import { COMPACT_DAY_COLUMNS, DayDates } from "./week-header";
 
 /**
  * The Counters scheduled for one day, in Today or Tomorrow. Kept visually apart
@@ -28,7 +27,6 @@ export function CountersScheduleBlock({
   const counters = (data ?? []).filter(
     (counter) => counter.showInToday && counter.week[6]?.tracked,
   );
-  const days = counters[0]?.week;
 
   if (isError) {
     return (
@@ -37,7 +35,7 @@ export function CountersScheduleBlock({
       </p>
     );
   }
-  if (!days) return null;
+  if (counters.length === 0) return null;
 
   return (
     <section
@@ -57,10 +55,6 @@ export function CountersScheduleBlock({
         >
           All
         </Link>
-      </div>
-      {/* The border and padding match the rows', which keeps dates aligned. */}
-      <div className="flex justify-end border border-transparent px-3">
-        <DayDates days={days} today={today} className={COMPACT_DAY_COLUMNS} />
       </div>
       <ul className="flex flex-col gap-2">
         {counters.map((counter) => (

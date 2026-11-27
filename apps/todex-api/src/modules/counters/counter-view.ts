@@ -103,6 +103,7 @@ export function toCounter(input: {
     name: counter.name,
     spaceId: counter.spaceId,
     countsSpaceTasks: counter.spaceId !== null && counter.countsSpaceTasks,
+    position: counter.position,
     schedule: counter.schedule,
     target: counter.target,
     timeZone: counter.timeZone,

@@ -13,12 +13,13 @@ import {
   eq,
   getTableColumns,
   inArray,
+  max,
   ne,
   or,
   type SQL,
 } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import { addDaysToDate } from "@repo/api/todex";
+import { addDaysToDate, positionAfterHighest } from "@repo/api/todex";
 import type {
   Counter,
   CounterDetail,
@@ -102,7 +103,11 @@ export class CountersService {
       .where(
         and(eq(counters.workspaceId, workspaceId), eq(counters.status, status)),
       )
-      .orderBy(asc(counters.createdAt), asc(counters.id));
+      .orderBy(
+        asc(counters.position),
+        asc(counters.createdAt),
+        asc(counters.id),
+      );
     return this.summaries(rows, now, until);
   }
 
@@ -124,6 +129,10 @@ export class CountersService {
     if (body.spaceId) await this.requireSpace(workspaceId, body.spaceId);
     const today = localDate(now, body.timeZone);
     const id = randomUUID();
+    const [last] = await this.db
+      .select({ position: max(counters.position) })
+      .from(counters)
+      .where(eq(counters.workspaceId, workspaceId));
     await this.db.insert(counters).values({
       id,
       workspaceId,
@@ -131,6 +140,7 @@ export class CountersService {
       // Zod infers optional keys without strict null checks.
       schedule: body.schedule!,
       countsSpaceTasks: body.spaceId !== null && body.countsSpaceTasks,
+      position: positionAfterHighest(last?.position ?? null),
       anchorDate: today,
       closedThrough: addDaysToDate(today, -1),
       status: "active",
@@ -154,6 +164,7 @@ export class CountersService {
         ...counter,
         name: body.name ?? counter.name,
         showInToday: body.showInToday ?? counter.showInToday,
+        position: body.position ?? counter.position,
         spaceId,
         countsSpaceTasks:
           spaceId !== null &&

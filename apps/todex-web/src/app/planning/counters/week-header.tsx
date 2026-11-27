@@ -36,6 +36,8 @@ export function CounterWeekHeader({
   days,
   today,
   ringShare,
+  selectedColumn,
+  onSelect,
   before,
   after,
   className,
@@ -43,6 +45,9 @@ export function CounterWeekHeader({
   days: readonly { date: string }[];
   today: string;
   ringShare?: (column: number) => number | null;
+  selectedColumn?: number | null;
+  /** Makes each date a button that picks that day. */
+  onSelect?: (column: number) => void;
   before?: ReactNode;
   after?: ReactNode;
   className?: string;
@@ -50,45 +55,54 @@ export function CounterWeekHeader({
   return (
     <div className={cn("border border-transparent px-3", className)}>
       <DayTrack before={before} after={after}>
-        <DayDates days={days} today={today} ringShare={ringShare} />
+        <ol className={DAY_COLUMNS}>
+          {days.map((day, column) => {
+            const content = (
+              <>
+                <span>{weekdayName(day.date)}</span>
+                <span
+                  className={cn(
+                    "flex size-6 items-center justify-center rounded-full tabular-nums",
+                    day.date === today &&
+                      "bg-foreground font-semibold text-background",
+                  )}
+                >
+                  {Number(day.date.slice(8))}
+                </span>
+                {ringShare ? <DayRing share={ringShare(column)} /> : null}
+              </>
+            );
+            return (
+              <li
+                key={day.date}
+                aria-label={onSelect ? undefined : formatLocalDate(day.date)}
+                className="flex justify-center text-xs text-muted-foreground"
+              >
+                {onSelect ? (
+                  <button
+                    type="button"
+                    aria-label={formatLocalDate(day.date)}
+                    aria-pressed={selectedColumn === column}
+                    className={cn(
+                      "flex w-full max-w-16 flex-col items-center gap-1 rounded-xl py-1 hover:bg-surface hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                      selectedColumn === column &&
+                        "bg-white/[0.14] text-foreground hover:bg-white/[0.14]",
+                    )}
+                    onClick={() => onSelect(column)}
+                  >
+                    {content}
+                  </button>
+                ) : (
+                  <span className="flex flex-col items-center gap-1">
+                    {content}
+                  </span>
+                )}
+              </li>
+            );
+          })}
+        </ol>
       </DayTrack>
     </div>
-  );
-}
-
-export function DayDates({
-  days,
-  today,
-  ringShare,
-  className = DAY_COLUMNS,
-}: {
-  days: readonly { date: string }[];
-  today: string;
-  ringShare?: (column: number) => number | null;
-  className?: string;
-}) {
-  return (
-    <ol className={className}>
-      {days.map((day, column) => (
-        <li
-          key={day.date}
-          aria-label={formatLocalDate(day.date)}
-          className="flex flex-col items-center gap-1 text-xs text-muted-foreground"
-        >
-          <span>{weekdayName(day.date)}</span>
-          <span
-            className={cn(
-              "flex size-6 items-center justify-center rounded-full tabular-nums",
-              day.date === today &&
-                "bg-foreground font-semibold text-background",
-            )}
-          >
-            {Number(day.date.slice(8))}
-          </span>
-          {ringShare ? <DayRing share={ringShare(column)} /> : null}
-        </li>
-      ))}
-    </ol>
   );
 }
 

@@ -3,6 +3,7 @@ import { TaskStatus } from "@repo/api/todex";
 import type { Counter, CounterDay, Task } from "@repo/api/todex";
 
 import {
+  counterMove,
   dayClickChange,
   dayLabel,
   dayShare,
@@ -10,6 +11,7 @@ import {
   formatLocalDate,
   groupBySpace,
   linkCandidates,
+  placeCounter,
   scheduleDraft,
   scheduleFromDraft,
 } from "./counter-helpers";
@@ -185,6 +187,77 @@ describe("groupBySpace", () => {
   });
 });
 
+describe("counterMove", () => {
+  const spaces = [
+    { id: "personal", name: "Personal", color: "#111111" },
+    { id: "growth", name: "Growth", color: "#222222" },
+  ];
+  const groups = groupBySpace(
+    [
+      counter({ id: "a", spaceId: "personal", position: 0 }),
+      counter({ id: "b", spaceId: "personal", position: 1024 }),
+      counter({ id: "c", spaceId: "personal", position: 2048 }),
+      counter({ id: "free", position: 3072 }),
+    ],
+    spaces,
+    { includeEmpty: true },
+  );
+  const [personal, growth, none] = groups;
+
+  it("keeps empty sections as drop targets when asked", () => {
+    expect(groups.map((group) => group.name)).toEqual([
+      "Personal",
+      "Growth",
+      "No space",
+    ]);
+  });
+
+  it("places a Counter between its new neighbours", () => {
+    expect(counterMove(personal!, "c", "b")).toEqual({
+      spaceId: "personal",
+      position: 512,
+    });
+    expect(counterMove(personal!, "a", null)).toEqual({
+      spaceId: "personal",
+      position: 3072,
+    });
+  });
+
+  it("changes the space when dropped into another section", () => {
+    expect(counterMove(growth!, "a", null)).toEqual({
+      spaceId: "growth",
+      position: 0,
+    });
+    expect(counterMove(none!, "a", "free")).toEqual({
+      spaceId: null,
+      position: 2048,
+    });
+  });
+
+  it("does nothing when the order would not change", () => {
+    expect(counterMove(personal!, "a", "a")).toBeNull();
+    expect(counterMove(personal!, "a", "b")).toBeNull();
+    expect(counterMove(personal!, "c", null)).toBeNull();
+  });
+});
+
+describe("placeCounter", () => {
+  it("moves and re-sorts the list at once", () => {
+    const list = [
+      counter({ id: "a", position: 0 }),
+      counter({ id: "b", position: 1024 }),
+    ];
+    expect(
+      placeCounter(list, "b", { spaceId: "growth", position: -1024 }).map(
+        (item) => [item.id, item.spaceId],
+      ),
+    ).toEqual([
+      ["b", "growth"],
+      ["a", null],
+    ]);
+  });
+});
+
 describe("linkCandidates", () => {
   const tasks = [
     task({ id: "plain", summary: "Weekly review", taskKey: "T-1" }),
@@ -221,6 +294,7 @@ function counter(overrides: Partial<Counter> = {}): Counter {
     name: "Gym",
     spaceId: null,
     countsSpaceTasks: false,
+    position: 0,
     schedule: { frequency: "daily", interval: 1 },
     target: 3,
     timeZone: "UTC",

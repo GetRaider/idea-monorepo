@@ -445,6 +445,35 @@ describe.skipIf(!databaseUrl)("CountersService (database)", () => {
     });
   });
 
+  it("lists in position order and moves a Counter between spaces", async () => {
+    const own = await seedWorkspace(database);
+    const first = await create("2026-11-23", { name: "A" }, own);
+    const second = await create("2026-11-23", { name: "B" }, own);
+    const names = async () =>
+      (await service.list(own, "active", at("2026-11-23"))).map(
+        (item) => item.name,
+      );
+    expect(second.position).toBeGreaterThan(first.position);
+    expect(await names()).toEqual(["A", "B"]);
+
+    const moved = await service.update(
+      own,
+      second.id,
+      { position: first.position - 1 },
+      at("2026-11-23"),
+    );
+    expect(moved.spaceId).toBeNull();
+    expect(await names()).toEqual(["B", "A"]);
+    await expect(
+      service.update(
+        own,
+        second.id,
+        { spaceId: randomUUID(), position: 0 },
+        at("2026-11-23"),
+      ),
+    ).rejects.toThrow("Space not found");
+  });
+
   it("lists by status", async () => {
     const own = await seedWorkspace(database);
     const first = await create("2026-11-23", { name: "A" }, own);

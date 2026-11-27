@@ -28,6 +28,8 @@ Settled with the product owner:
 | Show in Today/Tomorrow   | One switch. Today and Tomorrow each list the Counters scheduled that day; tomorrow cannot be marked yet                                                          |
 | Reopen or delete a Task  | Today's completion is removed. Earlier days keep theirs                                                                                                          |
 | Counter row              | One line, as in TickTick habits: initial, name, total and streak on the left; compact day circles on the right. The date bar above the list spans the full width |
+| Order                    | Counters are dragged by their name side, within a space section or into another one, which changes their space                                                   |
+| Picking a day            | Clicking a date on the Counters page lists only the Counters scheduled that day and highlights that day in their rows; the circles stay editable                 |
 | Detail page              | The Today/Tomorrow switch sits with Edit and Archive. Linked tasks and History are collapsed until opened                                                        |
 | Linking Tasks            | A search field with a dropdown above the list of linked Tasks                                                                                                    |
 
@@ -70,7 +72,7 @@ Engineering calls (change if wrong):
 
 ## 4. Data model
 
-Migrations `0039` to `0041`. Dates are Postgres `date` read as `YYYY-MM-DD` strings.
+Migrations `0039` to `0042`. Dates are Postgres `date` read as `YYYY-MM-DD` strings.
 
 **`counters`**
 
@@ -86,6 +88,7 @@ Migrations `0039` to `0041`. Dates are Postgres `date` read as `YYYY-MM-DD` stri
 | `time_zone`                | text                      | IANA                                                                                        |
 | `anchor_date`              | date                      | Origin for intervals                                                                        |
 | `show_in_today`            | bool                      | Today and Tomorrow                                                                          |
+| `position`                 | double                    | Order from low to high; new Counters go last                                                |
 | `status`                   | enum `active`, `archived` |                                                                                             |
 | `closed_through`           | date                      | Last day that is closed                                                                     |
 | `pending_change`           | jsonb null                | `{ schedule, target }` from tomorrow                                                        |
@@ -181,14 +184,14 @@ Zod contracts in `packages/api/src/todex/counters.ts`. Controller `counters`, be
 | `GET /v1/counters`                                  | `status`, `until?`                                                       | `Counter[]`     |
 | `POST /v1/counters`                                 | name, schedule, target, timeZone, showInToday, spaceId, countsSpaceTasks | `CounterDetail` |
 | `GET /v1/counters/:id`                              | `until?`                                                                 | `CounterDetail` |
-| `PATCH /v1/counters/:id`                            | any of the above except timeZone                                         | `CounterDetail` |
+| `PATCH /v1/counters/:id`                            | any of the above except timeZone, or position                            | `CounterDetail` |
 | `POST /v1/counters/:id/archive`, `/restore`         |                                                                          | `CounterDetail` |
 | `PUT /v1/counters/:id/days/:date`                   | status (`completed` + count, `failed`, `skipped` + skipReason, `empty`)  | `Counter`       |
 | `DELETE /v1/counters/:id/occurrences/:occurrenceId` |                                                                          | `Counter`       |
 | `POST /v1/counters/:id/links`                       | taskId                                                                   | `CounterDetail` |
 | `DELETE /v1/counters/:id/links/:linkId`             |                                                                          | `CounterDetail` |
 
-`Counter`: id, name, spaceId, countsSpaceTasks, schedule, target, timeZone, showInToday, status, today, `progress` (`today`: completed and goal, or null; `nextDate`), `pendingChange`, `stats` (`totalDays`, `streak`), `week` (7 days).
+`Counter`: id, name, spaceId, countsSpaceTasks, position, schedule, target, timeZone, showInToday, status, today, `progress` (`today`: completed and goal, or null; `nextDate`), `pendingChange`, `stats` (`totalDays`, `streak`), `week` (7 days).
 `CounterDetail` adds `links` and `history` (all entries, newest first, each with `deletable`: not a default Fail and the Counter active).
 
 The server computes schedules, limits, progress and stats. The web renders them.
@@ -196,11 +199,11 @@ The server computes schedules, limits, progress and stats. The web renders them.
 ## 8. Web
 
 - Sidebar: a **Counters** row in Planning → Views, before Goals.
-- `/planning/counters`: Active / Archived beside New counter; a full-width date bar with progress rings and arrows beside the dates; rows grouped under collapsible space headers ("No space" last). A row shows the space-tinted initial, name, total and streak on the left and seven compact day circles on the right; hovering the name shows the repeat rule. Archived rows offer Restore. "Back to today" appears in the page header while an earlier week is shown.
+- `/planning/counters`: Active / Archived beside New counter; a full-width date bar with progress rings and arrows beside the dates; rows grouped under collapsible space headers ("No space" last). A row shows the space-tinted initial, name, total and streak on the left and seven compact day circles on the right; hovering the name shows the repeat rule. Archived rows offer Restore. "Back to today" appears in the page header while an earlier week is shown. Clicking a date picks that day (again, or "Show all", clears it). Dragging a row by its name reorders it; dropping into another section moves it to that space, and empty sections appear while dragging.
 - `/planning/counters/[counterId]`: header with the Today/Tomorrow switch, Edit and Archive; one card with Total / Streak / Today tiles filling its left side, and dates over day circles between the week arrows on the right; collapsed **Linked tasks** (with the "Link to Space" switch and its info tooltip beside the title) and collapsed **History**.
 - Linked tasks: a search field with a keyboard-friendly dropdown that stays open to link several Tasks, above the list of links.
 - Form: name; repeat (Daily with "every N days", Days of the week, Monthly); times per day; space; switches.
-- Today and Tomorrow: a **Counters** block with the same rows, dates aligned above the circles, listing the Counters scheduled that day. Tomorrow's strip ends on tomorrow.
+- Today and Tomorrow: a **Counters** block with the same rows and no date header, listing the Counters scheduled that day in the saved order. Tomorrow's strip ends on tomorrow.
 - Day circle: **click** adds a completion (a goal of 2+ takes one click each); clicking a full day clears it. **Right-click** (or two-finger click, long press) offers Fail, Skip… and Clear. Marks: check, ring with the count, red cross, dashed amber dash, open circle; a dashed circle is upcoming and a dot is off the schedule.
 - Task status, move and delete mutations also invalidate the `counters` query.
 

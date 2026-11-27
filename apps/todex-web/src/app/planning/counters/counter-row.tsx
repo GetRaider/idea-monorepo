@@ -14,7 +14,6 @@ import { COMPACT_DAY_COLUMNS } from "./week-header";
 
 export function CounterRow({
   counter,
-  color,
   action,
   selectedDate,
   handleProps,
@@ -22,8 +21,6 @@ export function CounterRow({
   ref,
 }: {
   counter: Counter;
-  /** The space color; space-free Counters stay neutral. */
-  color: string | null;
   /** Replaces the day strip, for archived Counters. */
   action?: ReactNode;
   selectedDate?: string;
@@ -50,13 +47,8 @@ export function CounterRow({
       >
         <span
           aria-hidden="true"
-          className={cn(
-            "flex size-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold",
-            color
-              ? "bg-[var(--counter-color)] text-black"
-              : "bg-surface text-foreground",
-          )}
-          style={color ? { ["--counter-color" as string]: color } : undefined}
+          className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[var(--counter-color)] text-sm font-semibold text-black"
+          style={{ ["--counter-color" as string]: counter.color }}
         >
           {counter.name.charAt(0).toUpperCase()}
         </span>

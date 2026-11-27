@@ -7,7 +7,10 @@ import {
   CalendarEventTemplateSchema,
   CounterDetailSchema,
   CounterSchema,
+  CounterSectionSchema,
   CreateCounterBodySchema,
+  CreateCounterSectionBodySchema,
+  UpdateCounterSectionBodySchema,
   LinkCounterTaskBodySchema,
   SetCounterDayBodySchema,
   UpdateCounterBodySchema,
@@ -514,6 +517,30 @@ export const todexClient = {
         "delete",
         `/v1/counters/${counterId}/links/${linkId}`,
         CounterDetailSchema,
+      ),
+  },
+  counterSections: {
+    list: () =>
+      call("get", "/v1/counter-sections", z.array(CounterSectionSchema)),
+    create: (body: unknown) =>
+      call(
+        "post",
+        "/v1/counter-sections",
+        CounterSectionSchema,
+        CreateCounterSectionBodySchema.parse(body),
+      ),
+    update: (sectionId: string, body: unknown) =>
+      call(
+        "patch",
+        `/v1/counter-sections/${sectionId}`,
+        CounterSectionSchema,
+        UpdateCounterSectionBodySchema.parse(body),
+      ),
+    remove: (sectionId: string) =>
+      call(
+        "delete",
+        `/v1/counter-sections/${sectionId}`,
+        z.object({ ok: z.boolean() }),
       ),
   },
   execution: {

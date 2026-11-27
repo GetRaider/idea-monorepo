@@ -11,6 +11,7 @@ import { migrateTestDatabase } from "../../../test/migrate-test-database";
 import { users } from "../../db/auth-schema";
 import { ensureOwnerWorkspace } from "../../db/ensure-workspace";
 import { counterDays, counterOccurrences } from "../../db/schema";
+import { CounterSectionsService } from "./counter-sections.service";
 import { CountersService } from "./counters.service";
 
 const databaseUrl = process.env.COUNTERS_TEST_DATABASE_URL;
@@ -27,6 +28,7 @@ describe.skipIf(!databaseUrl)("CountersService (database)", () => {
   let pool: Pool;
   let database: NodePgDatabase;
   let service: CountersService;
+  let sectionService: CounterSectionsService;
   let workspaceId = "";
   let otherWorkspaceId = "";
 
@@ -35,6 +37,7 @@ describe.skipIf(!databaseUrl)("CountersService (database)", () => {
     database = drizzle(pool);
     await migrateTestDatabase(pool);
     service = new CountersService(database);
+    sectionService = new CounterSectionsService(database);
     workspaceId = await seedWorkspace(database);
     otherWorkspaceId = await seedWorkspace(database);
   });
@@ -445,7 +448,7 @@ describe.skipIf(!databaseUrl)("CountersService (database)", () => {
     });
   });
 
-  it("lists in position order and moves a Counter between spaces", async () => {
+  it("lists Counters in position order", async () => {
     const own = await seedWorkspace(database);
     const first = await create("2026-11-23", { name: "A" }, own);
     const second = await create("2026-11-23", { name: "B" }, own);
@@ -456,19 +459,66 @@ describe.skipIf(!databaseUrl)("CountersService (database)", () => {
     expect(second.position).toBeGreaterThan(first.position);
     expect(await names()).toEqual(["A", "B"]);
 
-    const moved = await service.update(
+    await service.update(
       own,
       second.id,
       { position: first.position - 1 },
       at("2026-11-23"),
     );
-    expect(moved.spaceId).toBeNull();
     expect(await names()).toEqual(["B", "A"]);
+  });
+
+  it("keeps the user's sections in order and renames them", async () => {
+    const own = await seedWorkspace(database);
+    const morning = await sectionService.create(own, { name: "Morning" });
+    const career = await sectionService.create(own, { name: "Career" });
+    expect(career.position).toBeGreaterThan(morning.position);
+
+    await sectionService.update(own, career.id, {
+      name: "Work",
+      position: morning.position - 1,
+    });
+    expect(
+      (await sectionService.list(own)).map((section) => section.name),
+    ).toEqual(["Work", "Morning"]);
+  });
+
+  it("keeps a section's Counters when the section is deleted", async () => {
+    const own = await seedWorkspace(database);
+    const section = await sectionService.create(own, { name: "Health" });
+    const counter = await create(
+      "2026-11-23",
+      { sectionId: section.id, color: "#93B7CC" },
+      own,
+    );
+    expect(counter).toMatchObject({
+      sectionId: section.id,
+      color: "#93B7CC",
+    });
+
+    await sectionService.remove(own, section.id);
+    const kept = await service.get(own, counter.id, at("2026-11-23"));
+    expect(kept.sectionId).toBeNull();
+  });
+
+  it("hides sections and spaces from other workspaces", async () => {
+    const own = await seedWorkspace(database);
+    const section = await sectionService.create(own, { name: "Private" });
+    const counter = await create("2026-11-23");
+    await expect(
+      create("2026-11-23", { sectionId: section.id }),
+    ).rejects.toThrow("Section not found");
+    await expect(
+      sectionService.update(otherWorkspaceId, section.id, { name: "Mine" }),
+    ).rejects.toThrow("Section not found");
+    await expect(
+      sectionService.remove(otherWorkspaceId, section.id),
+    ).rejects.toThrow("Section not found");
     await expect(
       service.update(
-        own,
-        second.id,
-        { spaceId: randomUUID(), position: 0 },
+        workspaceId,
+        counter.id,
+        { spaceIds: [randomUUID()] },
         at("2026-11-23"),
       ),
     ).rejects.toThrow("Space not found");
@@ -500,9 +550,6 @@ describe.skipIf(!databaseUrl)("CountersService (database)", () => {
         now,
       ),
     ).rejects.toThrow("Counter not found");
-    await expect(
-      create("2026-11-23", { spaceId: randomUUID() }),
-    ).rejects.toThrow("Space not found");
     await expect(
       service.archive(otherWorkspaceId, counter.id, now),
     ).rejects.toThrow("Counter not found");

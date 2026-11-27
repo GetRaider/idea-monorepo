@@ -9,6 +9,7 @@ import {
 import { toast } from "sonner";
 import type {
   Counter,
+  CounterSection,
   CounterStatus,
   CreateCounterBody,
   SetCounterDayBody,
@@ -20,6 +21,8 @@ import { todexClient } from "@lib/todex-client";
 import { placeCounter, type CounterMove } from "./counter-helpers";
 
 export const COUNTERS_QUERY_KEY = ["counters"] as const;
+
+const SECTIONS_QUERY_KEY = [...COUNTERS_QUERY_KEY, "sections"] as const;
 
 // Task completions change Counters from other screens, so reads are never fresh.
 export function useCounterList(status: CounterStatus, until: string) {
@@ -38,6 +41,57 @@ export function useCounter(counterId: string, until: string) {
     staleTime: 0,
     placeholderData: keepPreviousData,
   });
+}
+
+export function useCounterSections() {
+  return useQuery({
+    queryKey: SECTIONS_QUERY_KEY,
+    queryFn: () => todexClient.counterSections.list(),
+  });
+}
+
+export function useSectionActions() {
+  const queryClient = useQueryClient();
+  const invalidate = useInvalidateCounters();
+  const create = useMutation({
+    mutationFn: (name: string) => todexClient.counterSections.create({ name }),
+    onError: showError,
+    onSettled: invalidate,
+  });
+  const rename = useMutation({
+    mutationFn: (input: { sectionId: string; name: string }) =>
+      todexClient.counterSections.update(input.sectionId, { name: input.name }),
+    onError: showError,
+    onSettled: invalidate,
+  });
+  // Shown in its new place without waiting for the save.
+  const move = useMutation({
+    mutationFn: (input: { sectionId: string; position: number }) =>
+      todexClient.counterSections.update(input.sectionId, {
+        position: input.position,
+      }),
+    onMutate: async ({ sectionId, position }) => {
+      await queryClient.cancelQueries({ queryKey: SECTIONS_QUERY_KEY });
+      queryClient.setQueryData<CounterSection[]>(
+        SECTIONS_QUERY_KEY,
+        (sections) =>
+          sections
+            ?.map((section) =>
+              section.id === sectionId ? { ...section, position } : section,
+            )
+            .sort((left, right) => left.position - right.position),
+      );
+    },
+    onError: showError,
+    onSettled: invalidate,
+  });
+  const remove = useMutation({
+    mutationFn: (sectionId: string) =>
+      todexClient.counterSections.remove(sectionId),
+    onError: showError,
+    onSettled: invalidate,
+  });
+  return { create, rename, move, remove };
 }
 
 export function useCreateCounter(onCreated: (counterId: string) => void) {

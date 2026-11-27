@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useDraggable, useDroppable } from "@dnd-kit/core";
+import { useDndContext, useDraggable, useDroppable } from "@dnd-kit/core";
 import { cn } from "@repo/ui";
 import type { Counter } from "@repo/api/todex";
 
@@ -11,18 +11,21 @@ import { CounterRow } from "./counter-row";
 export function DraggableCounterRow({
   groupId,
   counter,
-  color,
   selectedDate,
 }: {
   groupId: string;
   counter: Counter;
-  color: string | null;
   selectedDate?: string;
 }) {
-  const draggable = useDraggable({ id: counter.id });
+  const isSectionDrag = useDragKind() === "section";
+  const draggable = useDraggable({
+    id: counter.id,
+    data: { kind: "counter" } satisfies CounterDrag,
+  });
   const droppable = useDroppable({
     id: `row:${counter.id}`,
     data: { groupId, beforeId: counter.id } satisfies CounterDrop,
+    disabled: isSectionDrag,
   });
   const isTarget = droppable.isOver && !draggable.isDragging;
 
@@ -33,7 +36,6 @@ export function DraggableCounterRow({
         droppable.setNodeRef(node);
       }}
       counter={counter}
-      color={color}
       selectedDate={selectedDate}
       handleProps={draggable.listeners}
       className={cn(
@@ -46,25 +48,53 @@ export function DraggableCounterRow({
   );
 }
 
-/** Dropping on a header puts the Counter at the end of that section. */
-export function SectionHeaderZone({
+/**
+ * A section heading. A Counter dropped on it goes to the section's end; the
+ * user's own sections can be dragged by it onto one another.
+ */
+export function SectionHeader({
   groupId,
+  sectionId,
   children,
+  menu,
 }: {
   groupId: string;
+  /** Null for the "No section" heading, which stays last. */
+  sectionId: string | null;
   children: ReactNode;
+  menu?: ReactNode;
 }) {
-  const { setNodeRef, isOver } = useSectionEnd("header", groupId);
+  const draggable = useDraggable({
+    id: `section:${groupId}`,
+    data: { kind: "section", sectionId: groupId } satisfies CounterDrag,
+    disabled: sectionId === null,
+  });
+  const droppable = useSectionEnd("header", groupId, false);
+
   return (
-    <div ref={setNodeRef} className={cn("rounded-xl", isOver && "bg-surface")}>
-      {children}
+    <div
+      ref={(node) => {
+        draggable.setNodeRef(node);
+        droppable.setNodeRef(node);
+      }}
+      className={cn(
+        "mb-2 flex items-center gap-1 rounded-xl",
+        droppable.isOver && !draggable.isDragging && "bg-surface",
+        draggable.isDragging && "opacity-40",
+      )}
+    >
+      {/* The menu stays outside, so using it never starts a drag. */}
+      <div {...draggable.listeners} className="flex min-w-0 items-center">
+        {children}
+      </div>
+      {menu}
     </div>
   );
 }
 
 /**
- * The space under a section, which also takes a drop at its end. It is always
- * there, so a drag never shifts the rows.
+ * The space under a section, which also takes a Counter at its end. It is
+ * always there, so a drag never shifts the rows.
  */
 export function SectionEndZone({
   groupId,
@@ -73,7 +103,8 @@ export function SectionEndZone({
   groupId: string;
   isEmpty: boolean;
 }) {
-  const { setNodeRef, isOver } = useSectionEnd("end", groupId);
+  const isSectionDrag = useDragKind() === "section";
+  const { setNodeRef, isOver } = useSectionEnd("end", groupId, isSectionDrag);
   if (isEmpty) {
     return (
       <p
@@ -83,7 +114,7 @@ export function SectionEndZone({
           isOver && "bg-surface text-foreground",
         )}
       >
-        Drop here
+        Drop counters here
       </p>
     );
   }
@@ -96,12 +127,26 @@ export function SectionEndZone({
   );
 }
 
-function useSectionEnd(place: "header" | "end", groupId: string) {
+function useSectionEnd(
+  place: "header" | "end",
+  groupId: string,
+  disabled: boolean,
+) {
   return useDroppable({
     id: `${place}:${groupId}`,
     data: { groupId, beforeId: null } satisfies CounterDrop,
+    disabled,
   });
 }
+
+function useDragKind() {
+  const { active } = useDndContext();
+  return (active?.data.current as CounterDrag | undefined)?.kind;
+}
+
+export type CounterDrag =
+  | { kind: "counter" }
+  | { kind: "section"; sectionId: string };
 
 export interface CounterDrop {
   groupId: string;

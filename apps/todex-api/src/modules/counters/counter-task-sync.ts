@@ -7,6 +7,7 @@ import {
   counterLinks,
   counterOccurrences,
   counters,
+  counterSpaces,
   type TaskRow,
 } from "../../db/schema";
 import { closeEndedDays, lockCounter, saveDay } from "./counter-closing";
@@ -14,9 +15,10 @@ import { localDate } from "./counter-schedule";
 import { targetResolver } from "./counter-view";
 
 /**
- * Call inside the transaction that moves a Task to Done. Each Counter linked to
- * the Task, or counting its space, gets one completion dated today in its time
- * zone, as long as today is scheduled and still has room.
+ * Call inside the transaction that moves a Task to Done. Each Counter that links
+ * the Task's space, and counts any Task or has this one picked, gets one
+ * completion dated today in its time zone, as long as today is scheduled and
+ * still has room.
  */
 export async function recordTaskCompletion(
   tx: NodePgDatabase,
@@ -136,32 +138,32 @@ async function countersFor(
   const seriesIds = [task.seriesId, task.originSeriesId].filter(
     (seriesId): seriesId is string => seriesId !== null,
   );
-  const linked = await tx
+  // Only a linked space counts, whether the Task was picked or not.
+  const inLinkedSpace = and(
+    eq(counters.workspaceId, task.workspaceId),
+    eq(counters.status, "active"),
+    eq(counterSpaces.spaceId, task.spaceId),
+  );
+  const picked = await tx
     .select({ counterId: counterLinks.counterId })
     .from(counterLinks)
     .innerJoin(counters, eq(counters.id, counterLinks.counterId))
+    .innerJoin(counterSpaces, eq(counterSpaces.counterId, counters.id))
     .where(
       and(
-        eq(counters.workspaceId, task.workspaceId),
-        eq(counters.status, "active"),
+        inLinkedSpace,
         or(
           eq(counterLinks.taskId, task.id),
           inArray(counterLinks.seriesId, seriesIds),
         ),
       ),
     );
-  const watchingSpace = await tx
+  const countingAny = await tx
     .select({ counterId: counters.id })
     .from(counters)
-    .where(
-      and(
-        eq(counters.workspaceId, task.workspaceId),
-        eq(counters.status, "active"),
-        eq(counters.spaceId, task.spaceId),
-        eq(counters.countsSpaceTasks, true),
-      ),
-    );
-  return orderedCounterIds([...linked, ...watchingSpace]);
+    .innerJoin(counterSpaces, eq(counterSpaces.counterId, counters.id))
+    .where(and(inLinkedSpace, eq(counters.countsAnyTask, true)));
+  return orderedCounterIds([...picked, ...countingAny]);
 }
 
 async function savedDay(tx: NodePgDatabase, counterId: string, date: string) {

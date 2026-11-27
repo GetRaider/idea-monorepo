@@ -302,6 +302,13 @@
       "when": 1795860000000,
       "tag": "0042_counter_positions",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1795863600000,
+      "tag": "0043_counter_sections_and_spaces",
+      "breakpoints": true
     }
   ]
 }

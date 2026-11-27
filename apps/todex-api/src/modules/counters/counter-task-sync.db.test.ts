@@ -79,11 +79,16 @@ describe.skipIf(!databaseUrl)("Counter task integration (database)", () => {
     await pool.end();
   });
 
-  function createCounter(
+  /** A Counter linked to the test space unless other spaces are given. */
+  async function createCounter(
     now = new Date(),
-    extra: Record<string, unknown> = {},
+    {
+      spaceIds = [spaceId],
+      countsAnyTask = false,
+      ...extra
+    }: CounterOptions = {},
   ) {
-    return counterService.create(
+    const counter = await counterService.create(
       workspaceId,
       CreateCounterBodySchema.parse({
         name: "Review",
@@ -92,6 +97,12 @@ describe.skipIf(!databaseUrl)("Counter task integration (database)", () => {
         timeZone: "UTC",
         ...extra,
       }),
+      now,
+    );
+    return counterService.update(
+      workspaceId,
+      counter.id,
+      { spaceIds, countsAnyTask },
       now,
     );
   }
@@ -109,8 +120,11 @@ describe.skipIf(!databaseUrl)("Counter task integration (database)", () => {
     );
   }
 
-  async function linkedTask(extra: Record<string, unknown> = {}) {
-    const counter = await createCounter();
+  async function linkedTask(
+    extra: Record<string, unknown> = {},
+    options: CounterOptions = {},
+  ) {
+    const counter = await createCounter(new Date(), options);
     const task = await createTask(extra);
     await counterService.addLink(workspaceId, counter.id, task.id);
     return { counter, task };
@@ -246,7 +260,10 @@ describe.skipIf(!databaseUrl)("Counter task integration (database)", () => {
 
   it("removes completions when a space is deleted", async () => {
     const doomed = await spacesService.create(workspaceId, { name: "Doomed" });
-    const { counter, task } = await linkedTask({ spaceId: doomed.id });
+    const { counter, task } = await linkedTask(
+      { spaceId: doomed.id },
+      { spaceIds: [doomed.id] },
+    );
     await setStatus(task.id, TaskStatus.DONE);
     await spacesService.remove(workspaceId, doomed.id);
     expect(await history(counter.id)).toHaveLength(0);
@@ -336,39 +353,41 @@ describe.skipIf(!databaseUrl)("Counter task integration (database)", () => {
     ]);
   });
 
-  it("counts any Task of the Counter's space when asked to", async () => {
-    const watched = await newSpace();
+  it("counts any Task of the linked spaces when asked to", async () => {
+    const first = await newSpace();
+    const second = await newSpace();
     const counter = await createCounter(new Date(), {
-      target: 3,
-      spaceId: watched,
-      countsSpaceTasks: true,
+      target: 5,
+      spaceIds: [first, second],
+      countsAnyTask: true,
     });
-    const parent = await createTask({ spaceId: watched });
+    const parent = await createTask({ spaceId: first });
     const child = await createTask({
-      spaceId: watched,
+      spaceId: first,
       parentTaskId: parent.id,
     });
+    const other = await createTask({ spaceId: second });
     const elsewhere = await createTask({ spaceId: await newSpace() });
-    for (const task of [child, parent, elsewhere]) {
+    for (const task of [child, parent, other, elsewhere]) {
       await setStatus(task.id, TaskStatus.DONE);
     }
     expect(
       (await history(counter.id)).map((item) => item.taskId).sort(),
-    ).toEqual([parent.id, child.id].sort());
+    ).toEqual([parent.id, child.id, other.id].sort());
     await counterService.update(workspaceId, counter.id, {
-      countsSpaceTasks: false,
+      countsAnyTask: false,
     });
-    const later = await createTask({ spaceId: watched });
+    const later = await createTask({ spaceId: first });
     await setStatus(later.id, TaskStatus.DONE);
-    expect(await history(counter.id)).toHaveLength(2);
+    expect(await history(counter.id)).toHaveLength(3);
   });
 
   it("never lets Task completions exceed the day's target", async () => {
     const busy = await newSpace();
     const counter = await createCounter(new Date(), {
       target: 2,
-      spaceId: busy,
-      countsSpaceTasks: true,
+      spaceIds: [busy],
+      countsAnyTask: true,
     });
     for (let index = 0; index < 3; index += 1) {
       const task = await createTask({ spaceId: busy });
@@ -379,13 +398,80 @@ describe.skipIf(!databaseUrl)("Counter task integration (database)", () => {
 
   it("ignores a Task completed on a day off the schedule", async () => {
     const notToday = TASK_WEEKDAYS[(new Date().getUTCDay() + 1) % 7];
-    const counter = await createCounter(new Date(), {
-      schedule: { frequency: "weekly", interval: 1, weekdays: [notToday] },
-    });
-    const task = await createTask();
-    await counterService.addLink(workspaceId, counter.id, task.id);
+    const { counter, task } = await linkedTask(
+      {},
+      { schedule: { frequency: "weekly", interval: 1, weekdays: [notToday] } },
+    );
     await setStatus(task.id, TaskStatus.DONE);
     expect(await history(counter.id)).toHaveLength(0);
+  });
+
+  it("counts a picked Task once when any Task counts too", async () => {
+    const { counter, task } = await linkedTask({}, { target: 3 });
+    await counterService.update(workspaceId, counter.id, {
+      countsAnyTask: true,
+    });
+    await setStatus(task.id, TaskStatus.DONE);
+    expect(await history(counter.id)).toHaveLength(1);
+  });
+
+  it("links Tasks only from linked spaces", async () => {
+    const unlinked = await createTask({ spaceId: await newSpace() });
+    const counter = await createCounter();
+    await expect(
+      counterService.addLink(workspaceId, counter.id, unlinked.id),
+    ).rejects.toThrow("Link the Task's space first");
+
+    const bare = await createCounter(new Date(), {
+      spaceIds: [],
+      countsAnyTask: true,
+    });
+    expect(bare.countsAnyTask).toBe(false);
+    const task = await createTask();
+    await expect(
+      counterService.addLink(workspaceId, bare.id, task.id),
+    ).rejects.toThrow("Link the Task's space first");
+  });
+
+  it("drops picked Tasks and stops counting with the last space", async () => {
+    const kept = await newSpace();
+    const removed = await newSpace();
+    const counter = await createCounter(new Date(), {
+      spaceIds: [kept, removed],
+      countsAnyTask: true,
+    });
+    const staying = await createTask({ spaceId: kept });
+    const leaving = await createTask({ spaceId: removed });
+    for (const task of [staying, leaving]) {
+      await counterService.addLink(workspaceId, counter.id, task.id);
+    }
+    const narrowed = await counterService.update(workspaceId, counter.id, {
+      spaceIds: [kept],
+    });
+    expect(narrowed.links.map((link) => link.taskId)).toEqual([staying.id]);
+    expect(narrowed.countsAnyTask).toBe(true);
+
+    const empty = await counterService.update(workspaceId, counter.id, {
+      spaceIds: [],
+    });
+    expect(empty).toMatchObject({ links: [], countsAnyTask: false });
+    // Linking the space again brings neither the pick nor the switch back.
+    const relinked = await counterService.update(workspaceId, counter.id, {
+      spaceIds: [removed],
+    });
+    expect(relinked).toMatchObject({ links: [], countsAnyTask: false });
+  });
+
+  it("ignores a picked Task that moved to an unlinked space", async () => {
+    const { counter, task } = await linkedTask();
+    const current = await currentTask(task.id);
+    await taskService.update(workspaceId, task.id, {
+      spaceId: await newSpace(),
+      version: current.version,
+    });
+    await setStatus(task.id, TaskStatus.DONE);
+    const detail = await counterService.get(workspaceId, counter.id);
+    expect(detail).toMatchObject({ links: [], history: [] });
   });
 
   it("replaces a hand-set skip with a Task completion", async () => {
@@ -402,16 +488,16 @@ describe.skipIf(!databaseUrl)("Counter task integration (database)", () => {
     ]);
   });
 
-  it("leaves a Counter space-free when its space is deleted", async () => {
+  it("unlinks a deleted space and keeps the Counter's history", async () => {
     const doomed = await newSpace();
     const counter = await createCounter(new Date(), {
-      spaceId: doomed,
-      countsSpaceTasks: true,
+      spaceIds: [doomed],
+      countsAnyTask: true,
     });
     await completeByHand(counter.id);
     await spacesService.remove(workspaceId, doomed);
     const detail = await counterService.get(workspaceId, counter.id);
-    expect(detail).toMatchObject({ spaceId: null, countsSpaceTasks: false });
+    expect(detail).toMatchObject({ spaceIds: [], countsAnyTask: false });
     expect(detail.history).toHaveLength(1);
   });
 
@@ -434,3 +520,8 @@ describe.skipIf(!databaseUrl)("Counter task integration (database)", () => {
     expect(removed.links).toHaveLength(0);
   });
 });
+
+type CounterOptions = Record<string, unknown> & {
+  spaceIds?: string[];
+  countsAnyTask?: boolean;
+};

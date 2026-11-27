@@ -14,16 +14,19 @@ import {
   SelectValue,
   Switch,
 } from "@repo/ui";
-import { COUNTER_TARGET_MAX } from "@repo/api/todex";
-import type { Counter, CounterRule } from "@repo/api/todex";
+import { COUNTER_TARGET_MAX, DEFAULT_SPACE_COLOR } from "@repo/api/todex";
+import type { Counter, CounterRule, SpaceColor } from "@repo/api/todex";
 
-import { useTasks } from "../tasks-provider";
+import { SpaceColorPicker } from "@components/space-color-picker";
+
 import {
   localToday,
   scheduleDraft,
   scheduleFromDraft,
 } from "./counter-helpers";
+import { NO_SECTION_ID } from "./counter-helpers";
 import { ScheduleFields } from "./schedule-fields";
+import { useCounterSections } from "./use-counters";
 
 export function CounterFormDialog({
   counter,
@@ -39,14 +42,13 @@ export function CounterFormDialog({
   );
   const [target, setTarget] = useState(String(initial.target));
   const [showInToday, setShowInToday] = useState(counter?.showInToday ?? true);
-  const {
-    state: { boards },
-  } = useTasks();
-  const [spaceId, setSpaceId] = useState(counter?.spaceId ?? NO_SPACE);
-  const [countsSpaceTasks, setCountsSpaceTasks] = useState(
-    counter?.countsSpaceTasks ?? false,
+  const { data: sections = [] } = useCounterSections();
+  const [sectionId, setSectionId] = useState(
+    counter?.sectionId ?? NO_SECTION_ID,
   );
-  const hasSpace = spaceId !== NO_SPACE;
+  const [color, setColor] = useState<SpaceColor>(
+    counter?.color ?? DEFAULT_SPACE_COLOR,
+  );
   const schedule = scheduleFromDraft(draft);
   const targetNumber = Number(target);
   const isValid =
@@ -64,8 +66,8 @@ export function CounterFormDialog({
       schedule,
       target: targetNumber,
       showInToday,
-      spaceId: hasSpace ? spaceId : null,
-      countsSpaceTasks: hasSpace && countsSpaceTasks,
+      sectionId: sectionId === NO_SECTION_ID ? null : sectionId,
+      color,
     });
   }
 
@@ -108,31 +110,25 @@ export function CounterFormDialog({
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="counter-space">Space</Label>
-          <Select value={spaceId} onValueChange={setSpaceId}>
-            <SelectTrigger id="counter-space">
+          <Label htmlFor="counter-section">Section</Label>
+          <Select value={sectionId} onValueChange={setSectionId}>
+            <SelectTrigger id="counter-section">
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="z-[5000]">
-              <SelectItem value={NO_SPACE}>No space</SelectItem>
-              {boards.map((board) => (
-                <SelectItem key={board.id} value={board.id}>
-                  {board.name}
+              <SelectItem value={NO_SECTION_ID}>No section</SelectItem>
+              {sections.map((section) => (
+                <SelectItem key={section.id} value={section.id}>
+                  {section.name}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
-        {hasSpace ? (
-          <label className="flex items-center justify-between gap-3 text-sm">
-            Complete when any task in this space is done
-            <Switch
-              checked={countsSpaceTasks}
-              onCheckedChange={setCountsSpaceTasks}
-              aria-label="Complete when any task in this space is done"
-            />
-          </label>
-        ) : null}
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Color</p>
+          <SpaceColorPicker value={color} onChange={setColor} />
+        </div>
         <label className="flex items-center justify-between gap-3 text-sm">
           Show in Today/Tomorrow
           <Switch
@@ -154,8 +150,6 @@ export function CounterFormDialog({
   );
 }
 
-const NO_SPACE = "none";
-
 const DEFAULT_RULE: CounterRule = {
   schedule: { frequency: "daily", interval: 1 },
   target: 1,
@@ -164,8 +158,8 @@ const DEFAULT_RULE: CounterRule = {
 export type CounterFormValues = CounterRule & {
   name: string;
   showInToday: boolean;
-  spaceId: string | null;
-  countsSpaceTasks: boolean;
+  sectionId: string | null;
+  color: SpaceColor;
 };
 
 interface CounterFormDialogProps {

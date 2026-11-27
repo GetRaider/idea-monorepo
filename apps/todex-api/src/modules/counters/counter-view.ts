@@ -80,6 +80,7 @@ export function toCounter(input: {
   counter: CounterRow;
   occurrences: readonly CounterOccurrence[];
   days: readonly CounterDayRow[];
+  spaceIds: string[];
   until?: string;
   now: Date;
 }): Counter {
@@ -101,8 +102,10 @@ export function toCounter(input: {
   return {
     id: counter.id,
     name: counter.name,
-    spaceId: counter.spaceId,
-    countsSpaceTasks: counter.spaceId !== null && counter.countsSpaceTasks,
+    sectionId: counter.sectionId,
+    color: counter.color,
+    spaceIds: input.spaceIds,
+    countsAnyTask: input.spaceIds.length > 0 && counter.countsAnyTask,
     position: counter.position,
     schedule: counter.schedule,
     target: counter.target,

@@ -3,10 +3,9 @@
 import Link from "next/link";
 import { addDaysToDate } from "@repo/api/todex";
 
-import { useTasks } from "../tasks-provider";
-import { localToday } from "./counter-helpers";
+import { groupBySection, localToday } from "./counter-helpers";
 import { CounterRow } from "./counter-row";
-import { useCounterList } from "./use-counters";
+import { useCounterList, useCounterSections } from "./use-counters";
 
 /**
  * The Counters scheduled for one day, in Today or Tomorrow. Kept visually apart
@@ -17,16 +16,14 @@ export function CountersScheduleBlock({
 }: {
   schedule: "today" | "tomorrow";
 }) {
-  const {
-    state: { boards },
-  } = useTasks();
+  const sections = useCounterSections();
   const today = localToday();
   const date = schedule === "today" ? today : addDaysToDate(today, 1);
   const { data, isError } = useCounterList("active", date);
-  // The strip ends on the block's own day.
-  const counters = (data ?? []).filter(
-    (counter) => counter.showInToday && counter.week[6]?.tracked,
-  );
+  // The strip ends on the block's own day. The order is the Counters page's.
+  const counters = groupBySection(data ?? [], sections.data ?? [])
+    .flatMap((group) => group.counters)
+    .filter((counter) => counter.showInToday && counter.week[6]?.tracked);
 
   if (isError) {
     return (
@@ -58,14 +55,7 @@ export function CountersScheduleBlock({
       </div>
       <ul className="flex flex-col gap-2">
         {counters.map((counter) => (
-          <CounterRow
-            key={counter.id}
-            counter={counter}
-            color={
-              boards.find((board) => board.id === counter.spaceId)?.color ??
-              null
-            }
-          />
+          <CounterRow key={counter.id} counter={counter} />
         ))}
       </ul>
     </section>

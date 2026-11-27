@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { IsoDateTimeSchema } from "./iso.ts";
+import { DEFAULT_SPACE_COLOR, SpaceColorSchema } from "./space-colors.ts";
 import { TaskWeekdaySchema, TimeZoneSchema } from "./recurrence.ts";
 
 export const COUNTER_TARGET_MAX = 999;
@@ -61,7 +62,15 @@ const nameSchema = z.string().trim().min(1).max(200);
 
 const targetSchema = z.number().int().min(1).max(COUNTER_TARGET_MAX);
 
-const spaceIdSchema = z.string().min(1);
+const idSchema = z.string().min(1);
+
+const spaceIdsSchema = z
+  .array(idSchema)
+  .refine((ids) => new Set(ids).size === ids.length, {
+    message: "Duplicate space",
+  });
+
+const sectionNameSchema = z.string().trim().min(1).max(100);
 
 const ruleShape = {
   schedule: CounterScheduleSchema,
@@ -98,8 +107,13 @@ export const CounterDaySchema = z.object({
 export const CounterSchema = z.object({
   id: z.string(),
   name: z.string(),
-  spaceId: z.string().nullable(),
-  countsSpaceTasks: z.boolean(),
+  /** The Counters page section it sits in. */
+  sectionId: z.string().nullable(),
+  color: SpaceColorSchema,
+  /** Spaces whose Task completions may count. */
+  spaceIds: z.array(z.string()),
+  /** Every Task completed in a linked space counts, not only picked ones. */
+  countsAnyTask: z.boolean(),
   /** Counters are listed from the lowest position up. */
   position: z.number(),
   ...ruleShape,
@@ -159,8 +173,8 @@ export const CreateCounterBodySchema = z
     ...ruleShape,
     timeZone: TimeZoneSchema,
     showInToday: z.boolean().default(true),
-    spaceId: spaceIdSchema.nullable().default(null),
-    countsSpaceTasks: z.boolean().default(false),
+    sectionId: idSchema.nullable().default(null),
+    color: SpaceColorSchema.default(DEFAULT_SPACE_COLOR),
   })
   .strict();
 
@@ -170,8 +184,28 @@ export const UpdateCounterBodySchema = z
     schedule: CounterScheduleSchema.optional(),
     target: targetSchema.optional(),
     showInToday: z.boolean().optional(),
-    spaceId: spaceIdSchema.nullable().optional(),
-    countsSpaceTasks: z.boolean().optional(),
+    sectionId: idSchema.nullable().optional(),
+    color: SpaceColorSchema.optional(),
+    /** The whole set; spaces left out are unlinked with their picked Tasks. */
+    spaceIds: spaceIdsSchema.optional(),
+    countsAnyTask: z.boolean().optional(),
+    position: z.number().finite().optional(),
+  })
+  .strict();
+
+export const CounterSectionSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  position: z.number(),
+});
+
+export const CreateCounterSectionBodySchema = z
+  .object({ name: sectionNameSchema })
+  .strict();
+
+export const UpdateCounterSectionBodySchema = z
+  .object({
+    name: sectionNameSchema.optional(),
     position: z.number().finite().optional(),
   })
   .strict();
@@ -226,6 +260,13 @@ export type CounterFill = CounterDay["fill"];
 export type Counter = z.infer<typeof CounterSchema>;
 export type CounterPendingChange = NonNullable<Counter["pendingChange"]>;
 export type CounterLink = z.infer<typeof CounterLinkSchema>;
+export type CounterSection = z.infer<typeof CounterSectionSchema>;
+export type CreateCounterSectionBody = z.infer<
+  typeof CreateCounterSectionBodySchema
+>;
+export type UpdateCounterSectionBody = z.infer<
+  typeof UpdateCounterSectionBodySchema
+>;
 export type CounterDetail = z.infer<typeof CounterDetailSchema>;
 export type ListCountersQuery = z.infer<typeof ListCountersQuerySchema>;
 export type CounterDetailQuery = z.infer<typeof CounterDetailQuerySchema>;

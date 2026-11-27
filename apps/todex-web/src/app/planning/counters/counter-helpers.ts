@@ -9,6 +9,7 @@ import type {
   CounterDay,
   CounterLink,
   CounterSchedule,
+  CounterSection,
   SetCounterDayBody,
   Task,
   TaskWeekday,
@@ -16,9 +17,9 @@ import type {
 
 const LINK_CANDIDATE_LIMIT = 20;
 
-const NO_SPACE_NAME = "No space";
+const NO_SECTION_NAME = "No section";
 
-const NO_SPACE_GROUP_ID = "none";
+export const NO_SECTION_ID = "none";
 
 /** The form keeps a value for every repeat kind, so switching loses nothing. */
 export function scheduleDraft(
@@ -127,28 +128,52 @@ export function dayShare(
   return done / tracked.length;
 }
 
-export function groupBySpace(
+/**
+ * Counters under the user's sections in their order, then those in none. Empty
+ * sections are included.
+ */
+export function groupBySection(
   counters: readonly Counter[],
-  spaces: readonly { id: string; name: string; color: string }[],
-  { includeEmpty = false } = {},
+  sections: readonly CounterSection[],
 ): CounterGroup[] {
-  const known = new Set(spaces.map((space) => space.id));
-  const groups: CounterGroup[] = spaces.map((space) => ({
-    id: space.id,
-    name: space.name,
-    color: space.color,
-    counters: counters.filter((counter) => counter.spaceId === space.id),
+  const known = new Set(sections.map((section) => section.id));
+  const groups: CounterGroup[] = sections.map((section) => ({
+    id: section.id,
+    name: section.name,
+    sectionId: section.id,
+    counters: counters.filter((counter) => counter.sectionId === section.id),
   }));
   groups.push({
-    id: NO_SPACE_GROUP_ID,
-    name: NO_SPACE_NAME,
-    color: null,
+    id: NO_SECTION_ID,
+    name: NO_SECTION_NAME,
+    sectionId: null,
     counters: counters.filter(
-      (counter) => !counter.spaceId || !known.has(counter.spaceId),
+      (counter) => !counter.sectionId || !known.has(counter.sectionId),
     ),
   });
-  if (includeEmpty) return groups;
-  return groups.filter((group) => group.counters.length > 0);
+  return groups;
+}
+
+/**
+ * The new position of a section dropped on another one, taking its place; with
+ * no target it goes to the end. Null when nothing would change.
+ */
+export function sectionMove(
+  sections: readonly CounterSection[],
+  sectionId: string,
+  targetId: string | null,
+): number | null {
+  const ids = sections.map((section) => section.id);
+  const from = ids.indexOf(sectionId);
+  const to = targetId === null ? -1 : ids.indexOf(targetId);
+  // Moving down lands after the target, moving up before it.
+  const beforeId = to > from ? (ids[to + 1] ?? null) : targetId;
+  return positionForDrop(
+    ids,
+    (id) => sections.find((section) => section.id === id)?.position ?? null,
+    sectionId,
+    beforeId,
+  );
 }
 
 /**
@@ -168,8 +193,7 @@ export function counterMove(
     beforeId,
   );
   if (position === null) return null;
-  const spaceId = group.id === NO_SPACE_GROUP_ID ? null : group.id;
-  return { spaceId, position };
+  return { sectionId: group.sectionId, position };
 }
 
 /** The list as it will read once the move is saved. */
@@ -243,7 +267,8 @@ function draftSchedule(draft: ScheduleDraft) {
 export interface CounterGroup {
   id: string;
   name: string;
-  color: string | null;
+  /** Null for Counters in no section. */
+  sectionId: string | null;
   counters: Counter[];
 }
 
@@ -256,6 +281,6 @@ export interface ScheduleDraft {
 }
 
 export interface CounterMove {
-  spaceId: string | null;
+  sectionId: string | null;
   position: number;
 }

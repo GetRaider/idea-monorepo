@@ -17,18 +17,22 @@ export function TaskAutocomplete({ counter }: { counter: CounterDetail }) {
   const {
     state: { boards },
   } = useTasks();
+  // Only Tasks of linked spaces can be picked.
+  const spaceIds = boards
+    .map((board) => board.id)
+    .filter((id) => counter.spaceIds.includes(id));
+  const isLocked = spaceIds.length === 0;
   const { addLink } = useCounterActions(counter.id);
   const listId = useId();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [highlighted, setHighlighted] = useState(0);
-  // Same key as the sidebar counts, so the list is usually already cached.
   const tasksQuery = useQuery({
-    queryKey: ["tasks", "root", boards.map((board) => board.id).join("\n")],
-    enabled: open && boards.length > 0,
+    queryKey: ["tasks", "root", spaceIds.join("\n")],
+    enabled: open && !isLocked,
     queryFn: () =>
       Promise.all(
-        boards.map((board) => todexClient.tasks.list({ spaceId: board.id })),
+        spaceIds.map((spaceId) => todexClient.tasks.list({ spaceId })),
       ).then((lists) => lists.flat()),
   });
   const candidates = linkCandidates(
@@ -82,7 +86,8 @@ export function TaskAutocomplete({ counter }: { counter: CounterDetail }) {
           open && activeTask ? `${listId}-${activeTask.id}` : undefined
         }
         autoComplete="off"
-        placeholder="Search tasks to link…"
+        disabled={isLocked}
+        placeholder={isLocked ? "Link a space first" : "Search tasks to link…"}
         value={search}
         onFocus={() => setOpen(true)}
         onClick={() => setOpen(true)}
@@ -94,7 +99,7 @@ export function TaskAutocomplete({ counter }: { counter: CounterDetail }) {
           setOpen(true);
         }}
       />
-      {open ? (
+      {open && !isLocked ? (
         <div className="absolute inset-x-0 top-full z-20 mt-1 rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md">
           <ul
             id={listId}

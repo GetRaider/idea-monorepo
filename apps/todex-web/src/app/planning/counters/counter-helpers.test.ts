@@ -9,11 +9,12 @@ import {
   dayShare,
   formatDayAndMonth,
   formatLocalDate,
-  groupBySpace,
+  groupBySection,
   linkCandidates,
   placeCounter,
   scheduleDraft,
   scheduleFromDraft,
+  sectionMove,
 } from "./counter-helpers";
 
 describe("scheduleDraft", () => {
@@ -157,22 +158,18 @@ describe("dayShare", () => {
   });
 });
 
-describe("groupBySpace", () => {
-  const spaces = [
-    { id: "personal", name: "Personal", color: "#111111" },
-    { id: "growth", name: "Growth", color: "#222222" },
-    { id: "empty", name: "Empty", color: "#333333" },
-  ];
+describe("groupBySection", () => {
+  const sections = [section("morning", 0), section("career", 1024)];
 
-  it("follows the space order and puts space-free Counters last", () => {
-    const groups = groupBySpace(
+  it("follows the section order and puts unsectioned Counters last", () => {
+    const groups = groupBySection(
       [
         counter({ id: "free" }),
-        counter({ id: "b", spaceId: "growth" }),
-        counter({ id: "a", spaceId: "personal" }),
-        counter({ id: "gone", spaceId: "unknown" }),
+        counter({ id: "b", sectionId: "career" }),
+        counter({ id: "a", sectionId: "morning" }),
+        counter({ id: "gone", sectionId: "unknown" }),
       ],
-      spaces,
+      sections,
     );
     expect(
       groups.map((group) => [
@@ -180,64 +177,77 @@ describe("groupBySpace", () => {
         group.counters.map((item) => item.id),
       ]),
     ).toEqual([
-      ["Personal", ["a"]],
-      ["Growth", ["b"]],
-      ["No space", ["free", "gone"]],
+      ["morning", ["a"]],
+      ["career", ["b"]],
+      ["No section", ["free", "gone"]],
+    ]);
+  });
+
+  it("keeps empty sections", () => {
+    expect(groupBySection([], sections).map((group) => group.id)).toEqual([
+      "morning",
+      "career",
+      "none",
     ]);
   });
 });
 
-describe("counterMove", () => {
-  const spaces = [
-    { id: "personal", name: "Personal", color: "#111111" },
-    { id: "growth", name: "Growth", color: "#222222" },
-  ];
-  const groups = groupBySpace(
-    [
-      counter({ id: "a", spaceId: "personal", position: 0 }),
-      counter({ id: "b", spaceId: "personal", position: 1024 }),
-      counter({ id: "c", spaceId: "personal", position: 2048 }),
-      counter({ id: "free", position: 3072 }),
-    ],
-    spaces,
-    { includeEmpty: true },
-  );
-  const [personal, growth, none] = groups;
+describe("sectionMove", () => {
+  const sections = [section("a", 0), section("b", 1024), section("c", 2048)];
 
-  it("keeps empty sections as drop targets when asked", () => {
-    expect(groups.map((group) => group.name)).toEqual([
-      "Personal",
-      "Growth",
-      "No space",
-    ]);
+  it("takes the place of the section it is dropped on", () => {
+    expect(sectionMove(sections, "c", "b")).toBe(512);
+    expect(sectionMove(sections, "a", "b")).toBe(1536);
+    expect(sectionMove(sections, "a", "c")).toBe(3072);
   });
 
+  it("goes to the end without a target", () => {
+    expect(sectionMove(sections, "a", null)).toBe(3072);
+  });
+
+  it("does nothing when the order would not change", () => {
+    expect(sectionMove(sections, "a", "a")).toBeNull();
+    expect(sectionMove(sections, "c", null)).toBeNull();
+  });
+});
+
+describe("counterMove", () => {
+  const [morning, career, none] = groupBySection(
+    [
+      counter({ id: "a", sectionId: "morning", position: 0 }),
+      counter({ id: "b", sectionId: "morning", position: 1024 }),
+      counter({ id: "c", sectionId: "morning", position: 2048 }),
+      counter({ id: "free", position: 3072 }),
+    ],
+    [section("morning", 0), section("career", 1024)],
+  );
+
   it("places a Counter between its new neighbours", () => {
-    expect(counterMove(personal!, "c", "b")).toEqual({
-      spaceId: "personal",
+    expect(counterMove(morning!, "c", "b")).toEqual({
+      sectionId: "morning",
       position: 512,
     });
-    expect(counterMove(personal!, "a", null)).toEqual({
-      spaceId: "personal",
+    expect(counterMove(morning!, "a", null)).toEqual({
+      sectionId: "morning",
       position: 3072,
     });
   });
 
-  it("changes the space when dropped into another section", () => {
-    expect(counterMove(growth!, "a", null)).toEqual({
-      spaceId: "growth",
+  it("changes the section when dropped into another one", () => {
+    expect(counterMove(career!, "a", null)).toEqual({
+      sectionId: "career",
       position: 0,
     });
     expect(counterMove(none!, "a", "free")).toEqual({
-      spaceId: null,
+      sectionId: null,
       position: 2048,
     });
   });
 
   it("does nothing when the order would not change", () => {
-    expect(counterMove(personal!, "a", "a")).toBeNull();
-    expect(counterMove(personal!, "a", "b")).toBeNull();
-    expect(counterMove(personal!, "c", null)).toBeNull();
+    expect(counterMove(morning!, "a", "a")).toBeNull();
+    expect(counterMove(morning!, "a", "b")).toBeNull();
+    expect(counterMove(morning!, "c", null)).toBeNull();
   });
 });
 
@@ -248,11 +258,11 @@ describe("placeCounter", () => {
       counter({ id: "b", position: 1024 }),
     ];
     expect(
-      placeCounter(list, "b", { spaceId: "growth", position: -1024 }).map(
-        (item) => [item.id, item.spaceId],
+      placeCounter(list, "b", { sectionId: "career", position: -1024 }).map(
+        (item) => [item.id, item.sectionId],
       ),
     ).toEqual([
-      ["b", "growth"],
+      ["b", "career"],
       ["a", null],
     ]);
   });
@@ -292,8 +302,10 @@ function counter(overrides: Partial<Counter> = {}): Counter {
   return {
     id: "counter",
     name: "Gym",
-    spaceId: null,
-    countsSpaceTasks: false,
+    sectionId: null,
+    color: "#B8A4D1",
+    spaceIds: [],
+    countsAnyTask: false,
     position: 0,
     schedule: { frequency: "daily", interval: 1 },
     target: 3,
@@ -310,6 +322,10 @@ function counter(overrides: Partial<Counter> = {}): Counter {
     week: [],
     ...overrides,
   };
+}
+
+function section(id: string, position: number) {
+  return { id, name: id, position };
 }
 
 function day(overrides: Partial<CounterDay> = {}): CounterDay {

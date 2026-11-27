@@ -11,6 +11,7 @@ import {
   type KnowledgeView,
   type CounterRule,
   type CounterSchedule,
+  type SpaceColor,
   type ProseDoc,
   type ExecutionInterval,
   type SeriesTemplate,
@@ -1264,6 +1265,27 @@ export const counterDayOutcomeEnum = pgEnum("counter_day_outcome", [
   "failed",
 ]);
 
+export const counterSections = pgTable(
+  "counter_sections",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    position: doublePrecision("position").notNull(),
+    createdAt: timestamp("created_at")
+      .$defaultFn(() => new Date())
+      .notNull(),
+    updatedAt: timestamp("updated_at")
+      .$defaultFn(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("counter_sections_workspace_id_idx").on(table.workspaceId),
+  ],
+);
+
 export const counters = pgTable(
   "counters",
   {
@@ -1271,10 +1293,12 @@ export const counters = pgTable(
     workspaceId: text("workspace_id")
       .notNull()
       .references(() => workspaces.id, { onDelete: "cascade" }),
-    spaceId: text("space_id").references(() => spaces.id, {
+    sectionId: text("section_id").references(() => counterSections.id, {
       onDelete: "set null",
     }),
-    countsSpaceTasks: boolean("counts_space_tasks").notNull().default(false),
+    /** Every Task completed in a linked space counts, not only picked ones. */
+    countsAnyTask: boolean("counts_any_task").notNull().default(false),
+    color: text("color").$type<SpaceColor>().notNull().default("#B8A4D1"),
     name: text("name").notNull(),
     schedule: jsonb("schedule").$type<CounterSchedule>().notNull(),
     target: integer("target").notNull(),
@@ -1295,8 +1319,30 @@ export const counters = pgTable(
   },
   (table) => [
     index("counters_workspace_status_idx").on(table.workspaceId, table.status),
-    index("counters_space_id_idx").on(table.spaceId),
+    index("counters_section_id_idx").on(table.sectionId),
     check("counters_target_positive", sql`${table.target} > 0`),
+  ],
+);
+
+export const counterSpaces = pgTable(
+  "counter_spaces",
+  {
+    counterId: text("counter_id")
+      .notNull()
+      .references(() => counters.id, { onDelete: "cascade" }),
+    spaceId: text("space_id")
+      .notNull()
+      .references(() => spaces.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at")
+      .$defaultFn(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    primaryKey({
+      name: "counter_spaces_pk",
+      columns: [table.counterId, table.spaceId],
+    }),
+    index("counter_spaces_space_id_idx").on(table.spaceId),
   ],
 );
 
@@ -1426,6 +1472,7 @@ export type AgentChunkRow = typeof agentChunks.$inferSelect;
 
 export type CounterRow = typeof counters.$inferSelect;
 export type CounterLinkRow = typeof counterLinks.$inferSelect;
+export type CounterSectionRow = typeof counterSections.$inferSelect;
 export type CounterOccurrenceRow = typeof counterOccurrences.$inferSelect;
 export type CounterDayRow = typeof counterDays.$inferSelect;
 export type DocRow = typeof docs.$inferSelect;

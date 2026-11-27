@@ -15,7 +15,6 @@ import {
   inArray,
   max,
   ne,
-  or,
   type SQL,
 } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
@@ -35,6 +34,8 @@ import {
   counterLinks,
   counterOccurrences,
   counters,
+  counterSections,
+  counterSpaces,
   spaces,
   tasks,
   type CounterLinkRow,
@@ -48,6 +49,7 @@ import {
   saveCounter,
   saveDay,
 } from "./counter-closing";
+import { dropLinksInSpaces, resolveLinks } from "./counter-links";
 import { planDay } from "./counter-days";
 import { isSameSchedule, isScheduled, localDate } from "./counter-schedule";
 import {
@@ -126,7 +128,7 @@ export class CountersService {
     body: CreateCounterBody,
     now = new Date(),
   ): Promise<CounterDetail> {
-    if (body.spaceId) await this.requireSpace(workspaceId, body.spaceId);
+    await this.requireSection(workspaceId, body.sectionId);
     const today = localDate(now, body.timeZone);
     const id = randomUUID();
     const [last] = await this.db
@@ -139,7 +141,6 @@ export class CountersService {
       ...body,
       // Zod infers optional keys without strict null checks.
       schedule: body.schedule!,
-      countsSpaceTasks: body.spaceId !== null && body.countsSpaceTasks,
       position: positionAfterHighest(last?.position ?? null),
       anchorDate: today,
       closedThrough: addDaysToDate(today, -1),
@@ -156,19 +157,21 @@ export class CountersService {
     body: UpdateCounterBody,
     now = new Date(),
   ): Promise<CounterDetail> {
-    if (body.spaceId) await this.requireSpace(workspaceId, body.spaceId);
+    await this.requireSection(workspaceId, body.sectionId);
+    await this.requireSpaces(workspaceId, body.spaceIds ?? []);
     await this.change(workspaceId, counterId, now, async (tx, counter) => {
-      const spaceId =
-        body.spaceId === undefined ? counter.spaceId : body.spaceId;
+      const spaceIds = await this.linkSpaces(tx, counter, body.spaceIds, now);
       const renamed = {
         ...counter,
         name: body.name ?? counter.name,
         showInToday: body.showInToday ?? counter.showInToday,
         position: body.position ?? counter.position,
-        spaceId,
-        countsSpaceTasks:
-          spaceId !== null &&
-          (body.countsSpaceTasks ?? counter.countsSpaceTasks),
+        sectionId:
+          body.sectionId === undefined ? counter.sectionId : body.sectionId,
+        color: body.color ?? counter.color,
+        // Counting any Task means nothing without a linked space.
+        countsAnyTask:
+          spaceIds.length > 0 && (body.countsAnyTask ?? counter.countsAnyTask),
       };
       await saveCounter(tx, withRuleChange(renamed, body, now), now);
     });
@@ -322,10 +325,18 @@ export class CountersService {
   ): Promise<CounterDetail> {
     await this.requireCounter(this.db, workspaceId, counterId);
     const [task] = await this.db
-      .select({ id: tasks.id, seriesId: tasks.seriesId })
+      .select({
+        id: tasks.id,
+        seriesId: tasks.seriesId,
+        spaceId: tasks.spaceId,
+      })
       .from(tasks)
       .where(and(eq(tasks.id, taskId), eq(tasks.workspaceId, workspaceId)));
     if (!task) throw new NotFoundException("Task not found");
+    const spaceIds = await this.spaceIdsOf(this.db, counterId);
+    if (!spaceIds.includes(task.spaceId)) {
+      throw new BadRequestException("Link the Task's space first");
+    }
     // No Counter lock here: Task completion locks the Task first, then the Counter.
     await this.db
       .insert(counterLinks)
@@ -410,12 +421,81 @@ export class CountersService {
       .where(eq(counterDays.counterId, counterId));
   }
 
-  private async requireSpace(workspaceId: string, spaceId: string) {
-    const [space] = await this.db
+  /** Applies a new set of linked spaces and returns the set now in force. */
+  private async linkSpaces(
+    tx: NodePgDatabase,
+    counter: CounterRow,
+    requested: string[] | undefined,
+    now: Date,
+  ): Promise<string[]> {
+    const current = await this.spaceIdsOf(tx, counter.id);
+    if (!requested) return current;
+    const removed = current.filter((id) => !requested.includes(id));
+    const added = requested.filter((id) => !current.includes(id));
+    if (removed.length > 0) {
+      await dropLinksInSpaces(tx, counter.workspaceId, counter.id, removed);
+      await tx
+        .delete(counterSpaces)
+        .where(
+          and(
+            eq(counterSpaces.counterId, counter.id),
+            inArray(counterSpaces.spaceId, removed),
+          ),
+        );
+    }
+    if (added.length > 0) {
+      await tx.insert(counterSpaces).values(
+        added.map((spaceId) => ({
+          counterId: counter.id,
+          spaceId,
+          createdAt: now,
+        })),
+      );
+    }
+    return requested;
+  }
+
+  private async spaceIdsOf(db: NodePgDatabase, counterId: string) {
+    const rows = await this.spaceRows(db, [counterId]);
+    return rows.map((row) => row.spaceId);
+  }
+
+  private spaceRows(db: NodePgDatabase, counterIds: string[]) {
+    return db
+      .select()
+      .from(counterSpaces)
+      .where(inArray(counterSpaces.counterId, counterIds))
+      .orderBy(asc(counterSpaces.createdAt), asc(counterSpaces.spaceId));
+  }
+
+  private async requireSection(
+    workspaceId: string,
+    sectionId: string | null | undefined,
+  ) {
+    if (!sectionId) return;
+    const [section] = await this.db
+      .select({ id: counterSections.id })
+      .from(counterSections)
+      .where(
+        and(
+          eq(counterSections.id, sectionId),
+          eq(counterSections.workspaceId, workspaceId),
+        ),
+      );
+    if (!section) throw new NotFoundException("Section not found");
+  }
+
+  private async requireSpaces(workspaceId: string, spaceIds: string[]) {
+    if (spaceIds.length === 0) return;
+    const found = await this.db
       .select({ id: spaces.id })
       .from(spaces)
-      .where(and(eq(spaces.id, spaceId), eq(spaces.workspaceId, workspaceId)));
-    if (!space) throw new NotFoundException("Space not found");
+      .where(
+        and(inArray(spaces.id, spaceIds), eq(spaces.workspaceId, workspaceId)),
+      );
+    if (found.length !== spaceIds.length) {
+      throw new NotFoundException("Space not found");
+    }
   }
 
   private async requireCounter(
@@ -448,12 +528,13 @@ export class CountersService {
     if (rows.length === 0) return [];
     const ids = rows.map((row) => row.id);
     // Totals and streaks need the whole history.
-    const [occurrences, days] = await Promise.all([
+    const [occurrences, days, linkedSpaces] = await Promise.all([
       this.occurrenceRows(inArray(counterOccurrences.counterId, ids)),
       this.db
         .select()
         .from(counterDays)
         .where(inArray(counterDays.counterId, ids)),
+      this.spaceRows(this.db, ids),
     ]);
     return rows.map((row) =>
       toCounter({
@@ -462,6 +543,9 @@ export class CountersService {
           .filter((occurrence) => occurrence.counterId === row.id)
           .map((occurrence) => toCounterOccurrence(row, occurrence)),
         days: days.filter((day) => day.counterId === row.id),
+        spaceIds: linkedSpaces
+          .filter((linked) => linked.counterId === row.id)
+          .map((linked) => linked.spaceId),
         until,
         now,
       }),
@@ -475,9 +559,10 @@ export class CountersService {
     until?: string,
   ): Promise<CounterDetail> {
     const row = await this.requireCounter(this.db, workspaceId, counterId);
-    const [occurrences, days, links] = await Promise.all([
+    const [occurrences, days, spaceIds, links] = await Promise.all([
       this.occurrenceRows(eq(counterOccurrences.counterId, row.id)),
       this.daysOf(this.db, row.id),
+      this.spaceIdsOf(this.db, row.id),
       this.db
         .select()
         .from(counterLinks)
@@ -492,11 +577,12 @@ export class CountersService {
         counter: row,
         occurrences: history,
         days,
+        spaceIds,
         until,
         now,
       }),
       history,
-      links: await this.describeLinks(workspaceId, links),
+      links: await this.describeLinks(workspaceId, links, spaceIds),
     };
   }
 
@@ -516,47 +602,22 @@ export class CountersService {
       );
   }
 
+  /** Picked Tasks, leaving out any that moved to a space no longer linked. */
   private async describeLinks(
     workspaceId: string,
     links: CounterLinkRow[],
+    spaceIds: string[],
   ): Promise<CounterLink[]> {
-    if (links.length === 0) return [];
-    const taskIds = links.flatMap((link) => link.taskId ?? []);
-    const seriesIds = links.flatMap((link) => link.seriesId ?? []);
-    const rows = await this.db
-      .select({
-        id: tasks.id,
-        summary: tasks.summary,
-        taskKey: tasks.taskKey,
-        seriesId: tasks.seriesId,
-        originSeriesId: tasks.originSeriesId,
-      })
-      .from(tasks)
-      .where(
-        and(
-          eq(tasks.workspaceId, workspaceId),
-          or(
-            inArray(tasks.id, taskIds),
-            inArray(tasks.seriesId, seriesIds),
-            inArray(tasks.originSeriesId, seriesIds),
-          ),
-        ),
-      )
-      .orderBy(desc(tasks.createdAt), desc(tasks.id));
-    return links.map((link) => {
-      const task = rows.find((row) =>
-        link.taskId
-          ? row.id === link.taskId
-          : row.seriesId === link.seriesId ||
-            row.originSeriesId === link.seriesId,
-      );
+    const resolved = await resolveLinks(this.db, workspaceId, links);
+    return resolved.flatMap(({ link, task }) => {
+      if (!task || !spaceIds.includes(task.spaceId)) return [];
       return {
         id: link.id,
-        kind: link.seriesId ? "series" : "task",
+        kind: link.seriesId ? ("series" as const) : ("task" as const),
         taskId: link.taskId,
         seriesId: link.seriesId,
-        title: task?.summary ?? "Deleted series",
-        taskKey: task?.taskKey ?? null,
+        title: task.summary,
+        taskKey: task.taskKey,
       };
     });
   }

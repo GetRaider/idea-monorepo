@@ -10,11 +10,14 @@ import { NewButton } from "@components/new-button";
 import { CounterFormDialog } from "./counter-form-dialog";
 import { dayShare, formatLocalDate } from "./counter-helpers";
 import { CounterSections } from "./counter-sections";
+import { SectionNameDialog } from "./section-name-dialog";
 import { useWeekWindow } from "./use-week-window";
 import {
   useCounterActions,
   useCounterList,
+  useCounterSections,
   useCreateCounter,
+  useSectionActions,
 } from "./use-counters";
 import { BackToToday, CounterWeekHeader, WeekArrow } from "./week-header";
 
@@ -26,22 +29,29 @@ export default function CountersPage() {
   // A column of the week, so the choice stays put while browsing weeks.
   const [selectedColumn, setSelectedColumn] = useState<number | null>(null);
   const { data, isPending, isError } = useCounterList(status, until);
+  const sectionsQuery = useCounterSections();
+  const sectionActions = useSectionActions();
+  const [isAddingSection, setIsAddingSection] = useState(false);
   const createCounter = useCreateCounter((counterId) => {
     setIsCreating(false);
     router.push(`/planning/counters/${counterId}`);
   });
 
   function renderList() {
-    if (isPending) return <Spinner className="flex-1" />;
-    if (isError) {
+    if (isPending || sectionsQuery.isPending) {
+      return <Spinner className="flex-1" />;
+    }
+    if (isError || sectionsQuery.isError) {
       return (
         <p className="text-sm text-muted-foreground">
           Could not load counters.
         </p>
       );
     }
+    const sections = sectionsQuery.data;
     const days = data[0]?.week;
-    if (!days) {
+    // Empty sections are still worth showing on the active list.
+    if (!days && (status === "archived" || sections.length === 0)) {
       return (
         <p className="text-sm text-muted-foreground">
           {status === "active"
@@ -54,41 +64,44 @@ export default function CountersPage() {
       return (
         <CounterSections
           counters={data}
+          sections={sections}
           renderAction={(counter) => <RestoreButton counter={counter} />}
         />
       );
     }
     const selectedDate =
-      selectedColumn === null ? undefined : days[selectedColumn]?.date;
+      selectedColumn === null ? undefined : days?.[selectedColumn]?.date;
     const hasScheduled =
       selectedColumn === null ||
       data.some((counter) => counter.week[selectedColumn]?.tracked);
     return (
       <div className="flex flex-col gap-4">
-        <CounterWeekHeader
-          days={days}
-          today={today}
-          ringShare={(column) => dayShare(data, column)}
-          selectedColumn={selectedColumn}
-          onSelect={(column) =>
-            setSelectedColumn(column === selectedColumn ? null : column)
-          }
-          before={
-            <WeekArrow
-              direction="earlier"
-              weeksBack={weeksBack}
-              onChange={setWeeksBack}
-            />
-          }
-          after={
-            <WeekArrow
-              direction="later"
-              weeksBack={weeksBack}
-              onChange={setWeeksBack}
-            />
-          }
-          className="rounded-2xl border-border bg-white/[0.02] py-3"
-        />
+        {days ? (
+          <CounterWeekHeader
+            days={days}
+            today={today}
+            ringShare={(column) => dayShare(data, column)}
+            selectedColumn={selectedColumn}
+            onSelect={(column) =>
+              setSelectedColumn(column === selectedColumn ? null : column)
+            }
+            before={
+              <WeekArrow
+                direction="earlier"
+                weeksBack={weeksBack}
+                onChange={setWeeksBack}
+              />
+            }
+            after={
+              <WeekArrow
+                direction="later"
+                weeksBack={weeksBack}
+                onChange={setWeeksBack}
+              />
+            }
+            className="rounded-2xl border-border bg-white/[0.02] py-3"
+          />
+        ) : null}
         {selectedDate ? (
           <div className="flex flex-wrap items-center gap-3 text-sm">
             <p aria-live="polite" className="text-muted-foreground">
@@ -104,7 +117,11 @@ export default function CountersPage() {
             </Button>
           </div>
         ) : null}
-        <CounterSections counters={data} selectedColumn={selectedColumn} />
+        <CounterSections
+          counters={data}
+          sections={sections}
+          selectedColumn={days ? selectedColumn : null}
+        />
       </div>
     );
   }
@@ -141,10 +158,30 @@ export default function CountersPage() {
               </button>
             ))}
           </div>
+          {status === "active" ? (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setIsAddingSection(true)}
+            >
+              New section
+            </Button>
+          ) : null}
           <NewButton onClick={() => setIsCreating(true)} />
         </div>
       </div>
       {renderList()}
+      {isAddingSection ? (
+        <SectionNameDialog
+          isPending={sectionActions.create.isPending}
+          onClose={() => setIsAddingSection(false)}
+          onSubmit={(name) =>
+            sectionActions.create.mutate(name, {
+              onSuccess: () => setIsAddingSection(false),
+            })
+          }
+        />
+      ) : null}
       {isCreating ? (
         <CounterFormDialog
           isPending={createCounter.isPending}

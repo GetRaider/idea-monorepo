@@ -13,6 +13,7 @@ import { McpModule } from "./mcp/mcp.module";
 import { ContentIndexModule } from "./content-index/content-index.module";
 import { SpacesModule } from "./spaces/spaces.module";
 import { CalendarModule } from "./calendar/calendar.module";
+import { CountersModule } from "./counters/counters.module";
 import { DocsModule } from "./docs/docs.module";
 import { KnowledgeDatabasesModule } from "./knowledge-databases/knowledge-databases.module";
 import { ExecutionModule } from "./execution/execution.module";
@@ -41,6 +42,7 @@ import { WorkspaceModule } from "./workspace/workspace.module";
     KnowledgeDatabasesModule,
     ExecutionModule,
     CalendarModule,
+    CountersModule,
     SpacesModule,
     EpicsModule,
     PreferencesModule,

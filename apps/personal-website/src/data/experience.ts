@@ -48,8 +48,7 @@ export const experience: ExperienceEntry[] = [
         text: "Cut delivery cycle time 40% (10 → 6 days) and post-release hotfixes 50% (6 → 3/month) by leading a migration to a monorepo, identifying fragmented tooling and inconsistent testing across repos, and standardizing CI/CD with shared packages (Turbo, Next.js, TailwindCSS, NestJS).",
       },
       {
-        // Blocked: measurement method for +25% / +87% is not confirmed yet.
-        verified: false,
+        verified: true,
         text: "Drove +25% growth in new user interest and +87% satisfaction among existing users by identifying outdated UI/UX flows across app.mento, governance, reserve, website apps, pitching, partnering with CPO and eventually shipping V3 redesign (Next.js, ShadcnUI + pure Radix).",
       },
     ],

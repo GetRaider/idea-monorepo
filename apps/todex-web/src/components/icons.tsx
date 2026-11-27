@@ -227,6 +227,22 @@ export function KnowledgeIcon(props: IconProps) {
   );
 }
 
+export function CounterIcon(props: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...iconSvgProps(props)}
+    >
+      <path d="M5 5v14M9.5 5v14M14 5v14M18.5 5v14M2.5 15.5l19-7" />
+    </svg>
+  );
+}
+
 export function GoalIcon(props: IconProps) {
   return (
     <svg

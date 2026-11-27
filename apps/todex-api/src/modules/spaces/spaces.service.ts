@@ -41,6 +41,7 @@ import {
 import { DRIZZLE_DB } from "../../db/tokens";
 import { SpaceFoldersService } from "../folders/space-folders.service";
 import { RelationsService } from "../relations/relations.service";
+import { revertTaskCompletions } from "../counters/counter-task-sync";
 import { RecurrenceService } from "../tasks/recurrence.service";
 import { WorkspaceService } from "../workspace/workspace.service";
 import {
@@ -263,6 +264,11 @@ export class SpacesService {
       await new RecurrenceService(this.db).deleteSeriesInSpace(
         workspaceId,
         existing.id,
+      );
+      await revertTaskCompletions(
+        tx,
+        taskRows.map((row) => row.id),
+        new Date(),
       );
       await tx.delete(tasks).where(eq(tasks.spaceId, existing.id));
       await tx.delete(spaces).where(eq(spaces.id, existing.id));

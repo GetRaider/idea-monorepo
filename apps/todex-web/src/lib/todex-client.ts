@@ -5,6 +5,13 @@ import {
   SpaceProgressStageSchema,
   CalendarEventSchema,
   CalendarEventTemplateSchema,
+  CounterDetailSchema,
+  CounterSchema,
+  CreateCounterBodySchema,
+  LinkCounterTaskBodySchema,
+  LogCounterOccurrenceBodySchema,
+  LogCounterOccurrenceResultSchema,
+  UpdateCounterBodySchema,
   CreateSpaceSectionBodySchema,
   CreateCalendarEventBodySchema,
   CreateCalendarEventTemplateBodySchema,
@@ -67,6 +74,7 @@ import {
   WorkspaceMemberProfileSchema,
   WorkspaceSchema,
 } from "@repo/api/todex";
+import type { CounterStatus } from "@repo/api/todex";
 import { z } from "zod";
 
 import { env } from "./env";
@@ -450,6 +458,56 @@ export const todexClient = {
           z.object({ ok: z.boolean() }),
         ),
     },
+  },
+  counters: {
+    list: (status: CounterStatus) =>
+      call("get", `/v1/counters?status=${status}`, z.array(CounterSchema)),
+    get: (counterId: string) =>
+      call("get", `/v1/counters/${counterId}`, CounterDetailSchema),
+    create: (body: unknown) =>
+      call(
+        "post",
+        "/v1/counters",
+        CounterDetailSchema,
+        CreateCounterBodySchema.parse(body),
+      ),
+    update: (counterId: string, body: unknown) =>
+      call(
+        "patch",
+        `/v1/counters/${counterId}`,
+        CounterDetailSchema,
+        UpdateCounterBodySchema.parse(body),
+      ),
+    archive: (counterId: string) =>
+      call("post", `/v1/counters/${counterId}/archive`, CounterDetailSchema),
+    restore: (counterId: string) =>
+      call("post", `/v1/counters/${counterId}/restore`, CounterDetailSchema),
+    log: (counterId: string, body: unknown) =>
+      call(
+        "post",
+        `/v1/counters/${counterId}/occurrences`,
+        LogCounterOccurrenceResultSchema,
+        LogCounterOccurrenceBodySchema.parse(body),
+      ),
+    removeOccurrence: (counterId: string, occurrenceId: string) =>
+      call(
+        "delete",
+        `/v1/counters/${counterId}/occurrences/${occurrenceId}`,
+        CounterSchema,
+      ),
+    addLink: (counterId: string, taskId: string) =>
+      call(
+        "post",
+        `/v1/counters/${counterId}/links`,
+        CounterDetailSchema,
+        LinkCounterTaskBodySchema.parse({ taskId }),
+      ),
+    removeLink: (counterId: string, linkId: string) =>
+      call(
+        "delete",
+        `/v1/counters/${counterId}/links/${linkId}`,
+        CounterDetailSchema,
+      ),
   },
   execution: {
     state: () => call("get", "/v1/execution", ExecutionStateSchema),

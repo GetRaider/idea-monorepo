@@ -62,6 +62,7 @@ import {
   TasksBreadcrumb,
 } from "./task-board.ui";
 import { useBoardPreferences } from "./board-preferences-provider";
+import { CountersTodayBlock } from "./counters/counters-today-block";
 import {
   useCollapsedScheduleBoards,
   type BoardListSubmode,
@@ -585,6 +586,9 @@ export function TaskList() {
             )}
           </div>
         </div>
+        {view.kind === "schedule" && view.schedule === "today" ? (
+          <CountersTodayBlock />
+        ) : null}
         {view.kind === "schedule" && boards.length === 0 ? (
           <div className="mb-3 flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2 text-sm text-muted-foreground">
             <span>Create a space to schedule tasks.</span>

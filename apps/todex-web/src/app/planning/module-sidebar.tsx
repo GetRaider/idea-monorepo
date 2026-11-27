@@ -19,6 +19,7 @@ import { TaskStatus } from "@repo/api/todex";
 
 import {
   CalendarDaysIcon,
+  CounterIcon,
   FolderIcon,
   GoalIcon,
   InboxIcon,
@@ -128,6 +129,15 @@ export function TasksModuleSidebar() {
             icon={<SunriseIcon size={16} />}
             label="Tomorrow"
             count={tomorrowCount}
+          />
+          <NavRow
+            href="/planning/counters"
+            active={
+              pathname === "/planning/counters" ||
+              pathname.startsWith("/planning/counters/")
+            }
+            icon={<CounterIcon size={16} />}
+            label="Counters"
           />
           <NavRow
             href="/planning/goals"

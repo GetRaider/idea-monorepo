@@ -74,6 +74,10 @@ import {
   refreshLease,
   TaskLifecycleException,
 } from "./task-lifecycle";
+import {
+  recordTaskCompletion,
+  revertTaskCompletions,
+} from "../counters/counter-task-sync";
 import { RecurrenceService } from "./recurrence.service";
 
 @Injectable()
@@ -372,6 +376,9 @@ export class TasksService {
           version: current?.version,
         });
       }
+      if (!closing && reopens(existing.status, body.status)) {
+        await revertTaskCompletions(tx, [row.id], new Date());
+      }
       if (scheduleSlots !== undefined) {
         await this.replaceSlots(tx, row, scheduleSlots);
       }
@@ -459,6 +466,9 @@ export class TasksService {
         throw new TaskLifecycleException("conflict", {
           version: existing.version,
         });
+      }
+      if (!closing && reopens(existing.status, body.status)) {
+        await revertTaskCompletions(tx, [existing.id], new Date());
       }
       await this.writePositions(tx, destinationIds, {
         movedId: existing.id,
@@ -1283,6 +1293,11 @@ export class TasksService {
             ...children.map((child) => child.id),
           ]),
         );
+      await revertTaskCompletions(
+        tx,
+        [input.task.id, ...children.map((child) => child.id)],
+        now,
+      );
       await tx.delete(tasks).where(eq(tasks.id, input.task.id));
       return;
     }
@@ -1304,6 +1319,14 @@ export class TasksService {
       throw new TaskLifecycleException("conflict", {
         version: current?.version,
       });
+    }
+    if (reopens(lockedParent.status, input.action)) {
+      await revertTaskCompletions(tx, [parent.id], now);
+    } else if (
+      input.action === TaskStatus.DONE &&
+      lockedParent.status !== TaskStatus.DONE
+    ) {
+      await recordTaskCompletion(tx, parent, now);
     }
     if (rereadUnfinished.length > 0) {
       await tx
@@ -1398,6 +1421,11 @@ export class TasksService {
         .where(eq(tasks.id, id));
     }
   }
+}
+
+/** Whether a Task stops being Done. */
+function reopens(from: TaskRow["status"], to?: TaskRow["status"]): boolean {
+  return from === TaskStatus.DONE && to !== undefined && to !== TaskStatus.DONE;
 }
 
 function textFromHtml(value: string): string {

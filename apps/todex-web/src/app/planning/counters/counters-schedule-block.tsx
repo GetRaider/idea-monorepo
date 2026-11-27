@@ -7,7 +7,7 @@ import { useTasks } from "../tasks-provider";
 import { localToday } from "./counter-helpers";
 import { CounterRow } from "./counter-row";
 import { useCounterList } from "./use-counters";
-import { CounterWeekHeader } from "./week-header";
+import { COMPACT_DAY_COLUMNS, DayDates } from "./week-header";
 
 /**
  * The Counters scheduled for one day, in Today or Tomorrow. Kept visually apart
@@ -58,7 +58,10 @@ export function CountersScheduleBlock({
           All
         </Link>
       </div>
-      <CounterWeekHeader days={days} today={today} />
+      {/* The border and padding match the rows', which keeps dates aligned. */}
+      <div className="flex justify-end border border-transparent px-3">
+        <DayDates days={days} today={today} className={COMPACT_DAY_COLUMNS} />
+      </div>
       <ul className="flex flex-col gap-2">
         {counters.map((counter) => (
           <CounterRow

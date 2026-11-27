@@ -17,15 +17,6 @@ const LINK_CANDIDATE_LIMIT = 20;
 
 const NO_SPACE_NAME = "No space";
 
-export function progressLabel(counter: Counter, locale?: string): string {
-  if (counter.status === "archived") return "Archived";
-  const { today, nextDate } = counter.progress;
-  if (today) return `${today.completed} / ${today.target} today`;
-  return nextDate
-    ? `Next ${formatLocalDate(nextDate, locale)}`
-    : "Not scheduled";
-}
-
 /** The form keeps a value for every repeat kind, so switching loses nothing. */
 export function scheduleDraft(
   schedule: CounterSchedule,

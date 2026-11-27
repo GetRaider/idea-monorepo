@@ -14,22 +14,22 @@ Examples: Software Growth, every day, 1 per day. Sport Training, Mon, Wed, Fri, 
 
 Settled with the product owner:
 
-| Question                 | Decision                                                                                                                                |
-| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
-| Goal                     | A count per scheduled day, 1 by default. Replaces the PRD's Target per period                                                           |
-| Repeat                   | Every N days, chosen weekdays (every week or every 2 weeks), or monthly on one day of the month                                         |
-| Who sets each status     | Completed and Skipped are set by hand (Skipped needs a reason). Failed is the default for an untouched slot and can also be set by hand |
-| Which days can be marked | Every scheduled day up to today, including days before the Counter existed. Marking one day never locks another. Never the future       |
-| Days before the Counter  | Never failed by default                                                                                                                 |
-| Marks per day            | Limited to the goal                                                                                                                     |
-| Day strip                | The last 7 days, with arrows to earlier weeks                                                                                           |
-| Extras                   | Total completed days and current streak per Counter, a progress ring above each date on the list                                        |
-| Spaces                   | A Counter belongs to a space or to none, and can count every Task completed in its space ("Link to Space")                              |
-| Show in Today/Tomorrow   | One switch. Today and Tomorrow each list the Counters scheduled that day; tomorrow cannot be marked yet                                 |
-| Reopen or delete a Task  | Today's completion is removed. Earlier days keep theirs                                                                                 |
-| Day marks in a row       | Days fill the full width, aligned under the date bar; name, rule and numbers sit on a line above them                                   |
-| Detail page              | The Today/Tomorrow switch sits with Edit and Archive. Linked tasks and History are collapsed until opened                               |
-| Linking Tasks            | A search field with a dropdown above the list of linked Tasks                                                                           |
+| Question                 | Decision                                                                                                                                                         |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Goal                     | A count per scheduled day, 1 by default. Replaces the PRD's Target per period                                                                                    |
+| Repeat                   | Every N days, chosen weekdays (every week or every 2 weeks), or monthly on one day of the month                                                                  |
+| Who sets each status     | Completed and Skipped are set by hand (Skipped needs a reason). Failed is the default for an untouched slot and can also be set by hand                          |
+| Which days can be marked | Every scheduled day up to today, including days before the Counter existed. Marking one day never locks another. Never the future                                |
+| Days before the Counter  | Never failed by default                                                                                                                                          |
+| Marks per day            | Limited to the goal                                                                                                                                              |
+| Day strip                | The last 7 days, with arrows to earlier weeks                                                                                                                    |
+| Extras                   | Total completed days and current streak per Counter, a progress ring above each date on the list                                                                 |
+| Spaces                   | A Counter belongs to a space or to none, and can count every Task completed in its space ("Link to Space")                                                       |
+| Show in Today/Tomorrow   | One switch. Today and Tomorrow each list the Counters scheduled that day; tomorrow cannot be marked yet                                                          |
+| Reopen or delete a Task  | Today's completion is removed. Earlier days keep theirs                                                                                                          |
+| Counter row              | One line, as in TickTick habits: initial, name, total and streak on the left; compact day circles on the right. The date bar above the list spans the full width |
+| Detail page              | The Today/Tomorrow switch sits with Edit and Archive. Linked tasks and History are collapsed until opened                                                        |
+| Linking Tasks            | A search field with a dropdown above the list of linked Tasks                                                                                                    |
 
 Engineering calls (change if wrong):
 
@@ -196,11 +196,11 @@ The server computes schedules, limits, progress and stats. The web renders them.
 ## 8. Web
 
 - Sidebar: a **Counters** row in Planning → Views, before Goals.
-- `/planning/counters`: Active / Archived beside New counter; a full-width date bar with progress rings and arrows beside the dates; rows grouped under collapsible space headers ("No space" last). A row shows the space-tinted initial, name and rule, with total, streak and today's progress, above seven day circles that span the row. Archived rows offer Restore. "Back to today" appears in the page header while an earlier week is shown.
+- `/planning/counters`: Active / Archived beside New counter; a full-width date bar with progress rings and arrows beside the dates; rows grouped under collapsible space headers ("No space" last). A row shows the space-tinted initial, name, total and streak on the left and seven compact day circles on the right; hovering the name shows the repeat rule. Archived rows offer Restore. "Back to today" appears in the page header while an earlier week is shown.
 - `/planning/counters/[counterId]`: header with the Today/Tomorrow switch, Edit and Archive; one card with Total / Streak / Today tiles filling its left side, and dates over day circles between the week arrows on the right; collapsed **Linked tasks** (with the "Link to Space" switch and its info tooltip beside the title) and collapsed **History**.
 - Linked tasks: a search field with a keyboard-friendly dropdown that stays open to link several Tasks, above the list of links.
 - Form: name; repeat (Daily with "every N days", Days of the week, Monthly); times per day; space; switches.
-- Today and Tomorrow: a **Counters** block with the same rows, listing the Counters scheduled that day. Tomorrow's strip ends on tomorrow.
+- Today and Tomorrow: a **Counters** block with the same rows, dates aligned above the circles, listing the Counters scheduled that day. Tomorrow's strip ends on tomorrow.
 - Day circle: **click** adds a completion (a goal of 2+ takes one click each); clicking a full day clears it. **Right-click** (or two-finger click, long press) offers Fail, Skip… and Clear. Marks: check, ring with the count, red cross, dashed amber dash, open circle; a dashed circle is upcoming and a dot is off the schedule.
 - Task status, move and delete mutations also invalidate the `counters` query.
 

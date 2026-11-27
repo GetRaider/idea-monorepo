@@ -21,13 +21,20 @@ import { useCounterActions } from "./use-counters";
 import { DAY_COLUMNS } from "./week-header";
 
 /** Seven days of one Counter: click completes, the context menu does the rest. */
-export function DayStrip({ counter }: { counter: Counter }) {
+export function DayStrip({
+  counter,
+  className = DAY_COLUMNS,
+}: {
+  counter: Counter;
+  /** Column layout; the days spread over the available width by default. */
+  className?: string;
+}) {
   const { setDay, isPending } = useCounterActions(counter.id);
   const [skipDate, setSkipDate] = useState<string | null>(null);
 
   return (
     <>
-      <ol className={DAY_COLUMNS} aria-label={`Days of ${counter.name}`}>
+      <ol className={className} aria-label={`Days of ${counter.name}`}>
         {counter.week.map((day) => (
           <li key={day.date} className="flex justify-center">
             <DayButton

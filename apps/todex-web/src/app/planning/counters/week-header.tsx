@@ -9,6 +9,9 @@ import { formatLocalDate, weekdayName } from "./counter-helpers";
 import { CheckMark, ProgressRing } from "./day-circle";
 
 export const DAY_COLUMNS = "grid min-w-0 flex-1 grid-cols-7";
+/** Seven columns only as wide as their circles, as a Counter row shows them. */
+export const COMPACT_DAY_COLUMNS =
+  "grid w-[15.75rem] shrink-0 grid-cols-7 sm:w-[19.25rem]";
 
 /** Seven day columns between two narrow slots for the week arrows. */
 export function DayTrack({
@@ -45,32 +48,47 @@ export function CounterWeekHeader({
   className?: string;
 }) {
   return (
-    // The border and side padding match the rows', which keeps columns aligned.
     <div className={cn("border border-transparent px-3", className)}>
       <DayTrack before={before} after={after}>
-        <ol className={DAY_COLUMNS}>
-          {days.map((day, column) => (
-            <li
-              key={day.date}
-              aria-label={formatLocalDate(day.date)}
-              className="flex flex-col items-center gap-1 text-xs text-muted-foreground"
-            >
-              <span>{weekdayName(day.date)}</span>
-              <span
-                className={cn(
-                  "flex size-6 items-center justify-center rounded-full tabular-nums",
-                  day.date === today &&
-                    "bg-foreground font-semibold text-background",
-                )}
-              >
-                {Number(day.date.slice(8))}
-              </span>
-              {ringShare ? <DayRing share={ringShare(column)} /> : null}
-            </li>
-          ))}
-        </ol>
+        <DayDates days={days} today={today} ringShare={ringShare} />
       </DayTrack>
     </div>
+  );
+}
+
+export function DayDates({
+  days,
+  today,
+  ringShare,
+  className = DAY_COLUMNS,
+}: {
+  days: readonly { date: string }[];
+  today: string;
+  ringShare?: (column: number) => number | null;
+  className?: string;
+}) {
+  return (
+    <ol className={className}>
+      {days.map((day, column) => (
+        <li
+          key={day.date}
+          aria-label={formatLocalDate(day.date)}
+          className="flex flex-col items-center gap-1 text-xs text-muted-foreground"
+        >
+          <span>{weekdayName(day.date)}</span>
+          <span
+            className={cn(
+              "flex size-6 items-center justify-center rounded-full tabular-nums",
+              day.date === today &&
+                "bg-foreground font-semibold text-background",
+            )}
+          >
+            {Number(day.date.slice(8))}
+          </span>
+          {ringShare ? <DayRing share={ringShare(column)} /> : null}
+        </li>
+      ))}
+    </ol>
   );
 }
 

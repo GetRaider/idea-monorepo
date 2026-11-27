@@ -10,24 +10,9 @@ import {
   formatLocalDate,
   groupBySpace,
   linkCandidates,
-  progressLabel,
   scheduleDraft,
   scheduleFromDraft,
 } from "./counter-helpers";
-
-describe("progressLabel", () => {
-  it("shows how far today has got", () => {
-    expect(progressLabel(counter())).toBe("1 / 3 today");
-  });
-
-  it("names the next day when today is off the schedule", () => {
-    const resting = counter({
-      progress: { today: null, nextDate: "2026-11-30" },
-    });
-    expect(progressLabel(resting, "en-US")).toBe("Next Mon, Nov 30");
-    expect(progressLabel(counter({ status: "archived" }))).toBe("Archived");
-  });
-});
 
 describe("scheduleDraft", () => {
   // 2026-11-27 is a Friday.
